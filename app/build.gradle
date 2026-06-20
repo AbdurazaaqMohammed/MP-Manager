@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "io.github.abdurazaaqmohammed.MPManager"
+        minSdk 19
+        targetSdk 35
+        multiDexEnabled true
+        versionCode 1
+        versionName "0.1"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    namespace 'io.github.abdurazaaqmohammed.MPManager'
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
+    }
+}
+
+dependencies {
+  //  implementation files('libs/androidx-collections.jar')
+   // implementation files('libs/animato.jar')
+    //implementation files('libs/antlr.jar')
+    //implementation files('libs/APKEditor-1.4.8.jar')
+    implementation files('libs/JCommand.jar')
+    implementation("com.google.android.material:material:1.12.0")
+    // implementation files('libs/commons-io.jar')
+   // implementation files('libs/guava-27.1.jar')
+   // implementation files('libs/jadx-dex-input-1.4.7.jar')
+   // implementation files('libs/javax.jar')
+   // implementation files('libs/kotlin-runtime.jar')
+    implementation files('libs/smali.jar')
+   // implementation 'io.github.skylot:jadx-core:1.4.7'
+    //implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
+    implementation 'net.lingala.zip4j:zip4j:2.11.6'
+    implementation 'io.github.java-diff-utils:java-diff-utils:4.12'
+    implementation(platform("io.github.Rosemoe.sora-editor:bom:0.23.6"))
+    implementation 'io.github.Rosemoe.sora-editor:editor'
+    implementation 'androidx.preference:preference:1.2.1'
+}

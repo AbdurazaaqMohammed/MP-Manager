@@ -1,0 +1,176 @@
+<resources>
+    <string name="app_name" translatable="false">MP Manager</string>
+    <string name="merge">Select split APK to Merge/AntiSplit</string>
+    <string name="success_saved">File saved successfully to %s</string>
+    <string name="enable_logs" >Enable logs</string>
+    <string name="ask">Ask where to save the file each time</string>
+    <string name="grant_storage">Storage permission needed to save to the same dir as the selected file</string>
+    <string name="no_filepath">"Can\'t write to the filepath "</string>
+    <string name="output">"Output directory: "</string>
+    <string name="show_dialog">Show dialog allowing selection of which splits to include</string>
+    <string name="nothing">Nothing selected</string>
+    <string name="change_text_color">Change text color</string>
+    <string name="change_background_color">Change background color</string>
+    <string name="all">Select All</string>
+    <string name="for_device">Select all splits for your device specifications</string>
+    <string name="lang_for_device">Select language for your device</string>
+    <string name="arch_for_device">Select architecture for your device</string>
+    <string name="dpi_for_device">Select screen widths for your device</string>
+    <string name="select_splits">Select splits</string>
+    <string name="sign_apk">Sign the APK after merging</string>
+    <string name="automatically_select">Automatically select splits for your device specifications</string>
+    <string name="sign_failed">Failed to sign APK, saving without signing</string>
+    <string name="signing">Signing APK…</string>
+    <string name="saving">Saving…</string>
+    <string name="removed_table_entry">"Removed table-entry : "</string>
+    <string name="sanitizing_manifest">Sanitizing manifest…</string>
+    <string name="skipping">"Skipping "</string>
+    <string name="not_apk">: Not an APK file</string>
+    <string name="unselected">: Unselected</string>
+    <string name="searching">Searching apk files…</string>
+    <string name="cancel">Cancel</string>
+    <string name="select">Select</string>
+    <string name="label_parent_directory">Parent Directory</string>
+    <string name="last_edit">Last edited: </string>
+    <string name="error_dir_access">Directory cannot be accessed</string>
+    <string name="lang" translatable="false">Language</string>
+    <string name="update">Update available</string>
+    <string name="new_ver">New version of AntiSplit M is available</string>
+    <string name="dl">Download</string>
+    <string name="auto_update">Check for updates automatically</string>
+    <string name="check_update_now">Check for update now</string>
+    <string name="no_update_found">No update found</string>
+    <string name="settings">Settings</string>
+    <string name="close">Close</string>
+    <string name="mismatch">The following splits (%1$s) have mismatched version codes. They are only language codes, so the app can run without them, but these languages will not work in the app. Do you want to continue with merging anyway?</string>
+    <string name="warning">Warning</string>
+    <string name="mismatch_base">" version code does not match that of base.apk"</string>
+    <string-array name="langs_display">
+        <item>English</item>
+        <item>Español</item>
+        <item>Français</item>
+        <item>Bahasa Indonesia</item>
+        <item>Italiano</item>
+        <item>русский язык</item>
+        <item>Türkçe</item>
+        <item>українська мова</item>
+        <item>Português</item>
+        <item>简体中文</item>
+    </string-array>
+    <string-array name="langs">
+        <item>en</item>
+        <item>es</item>
+        <item>fr</item>
+        <item>in</item>
+        <item>it</item>
+        <item>ru</item>
+        <item>tr</item>
+        <item>uk</item>
+        <item>pt-BR</item>
+        <item>zh-CN</item>
+    </string-array>
+    <string name="label_parent_dir" translatable="false">…</string>
+    <string name="create_issue">Create GitHub Issue</string>
+    <string name="copy_log">Copy log</string>
+    <string name="pause">Pause button</string>
+    <string name="copied_log">Copied log</string>
+    <string name="select_from_installed_apps">Select from Installed Apps</string>
+    <string name="app_icon_list_label">App icon</string>
+    <string name="install">Install</string>
+    <string name="app_name_display" translatable="false">%s %s %s</string>
+    <string name="last_update">Last updated %s</string>
+    <string name="first_installed">First installed %s</string>
+    <string name="show_icons">Show icons in app list</string>
+    <string name="merge_splits">Merge/AntiSplit split apps by default</string>
+    <string name="changes_msg">Changes will be applied on next launch</string>
+    <string name="show_last_updated">Show last updated date</string>
+    <string name="show_first_install">Show first installed date</string>
+    <string name="show_pkg">Show package name</string>
+    <string name="show_app">Show app name</string>
+    <string name="show_v_code">Show version code</string>
+    <string name="show_v_name">Show version name</string>
+    <string name="extract_and_share">Extract and share</string>
+    <string name="antisplit_merge_and_share">AntiSplit/merge and share</string>
+    <string name="extract_apk_and_save">Extract APK and save</string>
+    <string name="extract_base_apk_and_save">Extract base.apk and save</string>
+    <string name="extract_split_apk_and_save">Extract split APK and save</string>
+    <string name="share_app_icon">Share app icon</string>
+    <string name="save_app_icon">Save app icon</string>
+    <string name="antisplit_merge_and_save">AntiSplit/merge and save</string>
+    <string name="more_information">More information</string>
+    <string name="filter">Filter</string>
+    <string name="app_info">App Info</string>
+    <string name="uninstall">Uninstall</string>
+    <string name="launch">Launch</string>
+    <string name="warn_sign">After merging, the original signature of an APK will be invalid and it must be signed in order to install it. This will break updating the app from official sources. Some apps verify the signature of the APK or take other measures to check if the app was modified, which may cause it to crash on startup.</string>
+    <string name="user_apps">User apps</string>
+    <string name="system_apps">System apps</string>
+    <string name="share_apk">Share APK</string>
+    <string name="display_nfo">Display information</string>
+    <string name="display_functions">Display functions</string>
+    <string name="extract_icon">%sExtract icon</string>
+    <string name="extract_res">%sExtract resources.arsc</string>
+    <string name="extract_dex">%sExtract classes.dex files</string>
+    <string name="extract_manifest">%sExtract AndroidManifest.xml</string>
+    <string name="extract_base">%sExtract base.apk</string>
+    <string name="extract_libs">%sExtract libs</string>
+    <string name="choose_split">%sChoose split from Split APK to extract</string>
+    <string name="show">"Show "</string>
+    <string name="confirm">Confirm</string>
+    <string name="black_theme">Black theme</string>
+    <string name="dark_theme">Dark theme</string>
+    <string name="light_theme">Light theme</string>
+    <string name="system_theme">System theme</string>
+    <string name="func">Functionality</string>
+    <string name="pkg_name_save">Save files with package name instead of app name</string>
+    <string name="split">Split</string>
+    <string name="adding">Adding %1$s</string>
+    <string name="adding_to">Adding %1$s to %2$s</string>
+    <string name="extracting">Extracting %1$s</string>
+    <string name="extracting_to">Extracting %1$s to %2$s</string>
+    <string name="android_ver_text">%1$s (SDK %2$d)</string>
+    <string name="menu">menu\n</string>
+    <string name="search">search</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="save">Save</string>
+    <string name="edit">Edit</string>
+    <string name="file_options">File Options</string>
+    <string name="public_xml">(optional) Select resource ids xml file (public.xml)</string>
+    <string name="clean_meta">Cleans META-INF directory along with signature block</string>
+    <string name="fix_types">Correct resource type names based on usages and values</string>
+    <string name="force_delete_output_path">Force delete output path</string>
+    <string name="skip_manifest_protection">Skip Manifest Protection</string>
+    <string name="confuse_zip_structure">Confuse Zip Structure</string>
+    <string name="dex_protection_level">Dex Protection Level</string>
+    <string name="copying">"Copying %1$s"</string>
+    <string name="signing_">signing %1$s</string>
+    <string name="signed">Signed %1$s</string>
+    <string name="deleting">Deleting %1$s</string>
+    <string name="compressing">Compressing</string>
+    <string name="compress">Compress</string>
+    <string name="hist">Search History</string>
+    <string name="filename">File name</string>
+    <string name="install_location">Install Location</string>
+    <string name="version_code">Version Code</string>
+    <string name="version_name">Version Name</string>
+    <string name="minimum_android_version">Minimum Android Version</string>
+    <string name="change_app_launcher_icon">Change App Launcher Icon</string>
+    <string name="appname">App Name</string>
+    <string name="edit_all_ac">Edit All Activities / Properties From Manifest</string>
+    <string name="auto_sign">Auto Sign</string>
+    <string name="sign_set">Signature Settings</string>
+    <string name="target_android_version">Target Android Version</string>
+    <string name="compression_level">Compression Level</string>
+    <string name="pw_zip">Password (no encryption if empty)</string>
+    <string name="unknown">Unknown</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="sync">Sync selected pane to unselected pane</string>
+    <string name="parent_dir">Parent directory</string>
+    <string name="current_folder_path">Current Folder Path</string>
+    <string name="more">More</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="newFileOrFolder">New file or folder</string>
+    <string name="search_activities">Search activities</string>
+</resources>

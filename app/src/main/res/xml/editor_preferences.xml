@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+                  xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="Display Settings">
+        <DropDownPreference
+            android:key="pref_theme"
+            android:title="Theme"
+            android:entries="@array/theme_entries"
+            android:entryValues="@array/theme_values"
+            android:summary="Set the theme for the editor"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:key="pref_font_size"
+            android:title="Font Size"
+            android:summary="Set the font size for the editor"
+            android:defaultValue="14"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_show_line_numbers"
+            android:title="Show Line Numbers"
+            android:summary="Display line numbers on the left side"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_word_wrap"
+            android:title="Word Wrap"
+            android:summary="Wrap long lines to fit the screen"
+            android:defaultValue="false"/>
+            
+        <SwitchPreferenceCompat
+            android:key="pref_syntax_highlight"
+            android:title="Syntax Highlighting"
+            android:summary="Enable syntax highlighting for code files"
+            android:defaultValue="true"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Editing Settings">
+        <EditTextPreference
+            android:key="pref_tab_size"
+            android:title="Tab Size"
+            android:summary="Number of spaces for a tab"
+            android:defaultValue="4"/>
+            
+        <SwitchPreferenceCompat
+            android:key="pref_use_spaces"
+            android:title="Use Spaces for Indentation"
+            android:summary="Insert spaces instead of tab characters"
+            android:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            android:key="pref_auto_indent"
+            android:title="Auto Indent"
+            android:summary="Automatically indent new lines"
+            android:defaultValue="true"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Advanced Configuration">
+       <Preference
+            android:key="pref_import_syntax"
+            android:title="Import Syntax"
+            android:summary="Import custom syntax highlighting definitions"/>
+            
+      <Preference
+            android:key="pref_bottom_bar_buttons"
+            android:title="Manage Bottom Bar Buttons"
+            android:summary="Configure actions shown on the editor's bottom bar"/>
+    </PreferenceCategory>
+
+</PreferenceScreen>

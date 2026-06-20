@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer-array name="framework_versions">
+        <item>22</item>
+        <item>23</item>
+        <item>24</item>
+        <item>25</item>
+        <item>26</item>
+        <item>27</item>
+        <item>28</item>
+        <item>29</item>
+        <item>30</item>
+        <item>31</item>
+        <item>32</item>
+        <item>33</item>
+        <item>34</item>
+        <item>35</item>
+    </integer-array>
+
+    <string-array name="theme_entries">
+        <item>Dracula</item>
+        <item>Eclipse</item>
+        <item>VS2019</item>
+        <item>GitHub</item>
+        <item>NotepadXX</item>
+    </string-array>
+
+    <string-array name="theme_values">
+        <item>drac</item>
+        <item>ecl</item>
+        <item>vs</item>
+        <item>gh</item>
+        <item>np</item>
+    </string-array>
+
+    <string-array name="install_locations">
+        <item>Auto</item>
+        <item>Internal Only</item>
+        <item>Prefer External</item>
+        <item>Default</item>
+    </string-array>
+</resources>

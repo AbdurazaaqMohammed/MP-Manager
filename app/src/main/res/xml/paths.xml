@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path
+        name="internal"
+        path="."/>
+    <external-path name="external_files" path="."/>
+    <external-path path="Android/data/io.github.abdurazaaqmohammed.MPManager/" name="files_root1" />
+    <external-path path="/data/user/0/io.github.abdurazaaqmohammed.MPManager/" name="files_root2" />
+    <external-path path="/data/user/0/io.github.abdurazaaqmohammed.MPManager/cache" name="files_root3" />
+    <external-path path="/data/data/io.github.abdurazaaqmohammed.MPManager/" name="files_root4" />
+    <external-path path="/data/data/io.github.abdurazaaqmohammed.MPManager/cache" name="files_root5" />
+    <root-path name="root" path="." />
+</paths>

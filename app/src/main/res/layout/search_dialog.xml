@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/searchQuery"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/search"
+            android:completionThreshold="1"
+            android:singleLine="true" />
+
+        <ImageView
+            android:id="@+id/searchHistoryDropdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/arrow_drop_down_24px"
+            android:padding="8dp"
+            android:contentDescription="@string/hist"
+            app:tint="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <CheckBox
+        android:id="@+id/searchSubfolders"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Search subfolders"/>
+
+    <TextView
+        android:id="@+id/advancedSearchToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Advanced Search ▼"
+        android:textStyle="bold"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp"
+        android:textColor="?attr/colorPrimary"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <LinearLayout
+        android:id="@+id/advancedSearchLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <CheckBox
+            android:id="@+id/matchCase"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Match case"/>
+
+        <CheckBox
+            android:id="@+id/useRegex"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Use Regex"/>
+
+        <EditText
+            android:id="@+id/textInsideFile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Text inside file..."
+            android:inputType="text"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="File Size (bytes)"
+            android:paddingTop="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/minFileSize"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Min Size"
+                android:inputType="number"/>
+
+            <EditText
+                android:id="@+id/maxFileSize"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Max Size"
+                android:inputType="number"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

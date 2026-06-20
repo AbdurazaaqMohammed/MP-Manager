@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+    <ImageView
+        android:id="@+id/apkIcon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:src="@drawable/baseline_menu_24"
+        android:layout_marginEnd="10dp"
+        android:contentDescription="Icon of the APK" />
+
+    <TextView
+        android:id="@+id/apkTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@id/apkIcon"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/apkVersionName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@id/apkIcon"
+        android:layout_below="@id/apkTitle"
+        android:textSize="16sp"
+        android:textColor="@android:color/darker_gray" />
+
+    <TextView
+        android:id="@+id/pkgNameTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/apkIcon"
+        android:paddingEnd="20dp"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:text="Package name" />
+
+    <TextView
+        android:id="@+id/pkgName"
+        android:layout_width="220dp"
+        android:gravity="end"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/apkVersionName"
+        android:layout_toEndOf="@id/pkgNameTitle"
+        android:layout_alignParentEnd="true"
+        android:textColor="@android:color/white"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/verCodeTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/pkgName"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:text="Version code" />
+
+    <TextView
+        android:id="@+id/verCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/pkgName"
+        android:layout_alignParentEnd="true"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"/>
+
+    <TextView
+        android:id="@+id/fileSizeTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/verCodeTitle"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:text="File size" />
+
+    <TextView
+        android:id="@+id/fileSize"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/verCode"
+        android:layout_alignParentEnd="true"
+        android:textColor="@android:color/white"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/signaturesInApkTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/fileSizeTitle"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:text="Signatures" />
+
+    <TextView
+        android:id="@+id/signaturesInApk"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/fileSize"
+        android:layout_alignParentEnd="true"
+        android:textColor="@android:color/white"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/protectedTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/signaturesInApkTitle"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:text="Protected" />
+
+    <TextView
+        android:id="@+id/protectedDisplay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/signaturesInApk"
+        android:layout_alignParentEnd="true"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/quickEdit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/protectedDisplay"
+        android:text="Quick Edit"
+        />
+
+</RelativeLayout>

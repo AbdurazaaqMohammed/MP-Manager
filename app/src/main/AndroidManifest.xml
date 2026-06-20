@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:installLocation="preferExternal"
+    package="io.github.abdurazaaqmohammed.MPManager">
+    <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:ignore="RequestInstallPackagesPolicy" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="PackageVisibilityPolicy" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" android:minSdkVersion="30"/>
+       <application
+           android:requestLegacyExternalStorage="true"
+           android:largeHeap="true"
+           android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+           android:name="androidx.multidex.MultiDexApplication"
+           android:icon="@mipmap/ic_launcher"
+            android:label="MP Manager">
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.MPManager.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+           <activity
+               android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+               android:name="io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity"
+            android:exported="false">
+        </activity>
+       <activity
+           android:name="io.github.abdurazaaqmohammed.AdvancedTextEditorActivity"
+           android:windowSoftInputMode="adjustResize|stateHidden"
+           android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="io.github.abdurazaaqmohammed.EditorSettingsActivity"
+            android:exported="false">
+        </activity>
+        <activity
+            android:name="io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        </activity>
+           <provider
+               android:name="androidx.core.content.FileProvider"
+               android:authorities="io.github.abdurazaaqmohammed.MPManager.provider"
+               android:exported="false"
+               android:grantUriPermissions="true">
+               <meta-data
+                   android:name="android.support.FILE_PROVIDER_PATHS"
+                   android:resource="@xml/paths"/>
+           </provider>
+           <service android:name="com.faith.apkinstaller.APKInstallService" />
+       </application>
+</manifest>

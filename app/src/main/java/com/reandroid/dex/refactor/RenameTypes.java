@@ -1,0 +1,462 @@
+/*
+ *  Copyright (C) 2022 github.com/REAndroid
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.reandroid.dex.refactor;
+
+import com.reandroid.dex.common.DexUtils;
+import com.reandroid.dex.dalvik.DalvikSignature;
+import com.reandroid.dex.id.StringId;
+import com.reandroid.dex.id.TypeId;
+import com.reandroid.dex.key.DalvikSignatureKey;
+import com.reandroid.dex.key.Key;
+import com.reandroid.dex.key.KeyPair;
+import com.reandroid.dex.key.KeyReference;
+import com.reandroid.dex.key.PackageKey;
+import com.reandroid.dex.key.StringKey;
+import com.reandroid.dex.key.TypeKey;
+import com.reandroid.dex.model.DexClass;
+import com.reandroid.dex.model.DexClassRepository;
+import com.reandroid.dex.sections.SectionType;
+import com.reandroid.dex.smali.SmaliDirective;
+import com.reandroid.utils.CompareUtil;
+import com.reandroid.utils.ObjectsUtil;
+import com.reandroid.utils.StringsUtil;
+import com.reandroid.utils.collection.ArrayCollection;
+import com.reandroid.utils.collection.ComputeIterator;
+
+import java.util.*;
+
+public class RenameTypes extends Rename<TypeKey> {
+
+    private final List<KeyPair<PackageKey, PackageKey>> packageKeyList;
+    private final List<KeyPair<PackageKey, PackageKey>> subPackageKeyList;
+
+    private final Set<String> renamedStrings;
+    private final Map<String, String> stringMap;
+
+    private int arrayDepth;
+    private boolean renameSourceClassName;
+    private boolean skipSourceRenameRootPackageClass;
+    private boolean fixAccessibility;
+    private boolean fixInnerSimpleName;
+    private boolean fixSourceFileName;
+    private boolean renameInnerClasses;
+
+    private boolean mChanged;
+
+    public RenameTypes() {
+        super();
+        this.packageKeyList = new ArrayCollection<>();
+        this.subPackageKeyList = new ArrayCollection<>();
+
+        this.renamedStrings = new HashSet<>();
+        this.stringMap = new HashMap<>();
+        this.arrayDepth = DEFAULT_ARRAY_DEPTH;
+        this.renameSourceClassName = true;
+        this.skipSourceRenameRootPackageClass = true;
+        this.fixAccessibility = true;
+        this.fixInnerSimpleName = true;
+        this.fixSourceFileName = false;
+        this.renameInnerClasses = false;
+
+        this.mChanged = true;
+    }
+
+    public void addPackage(DexClassRepository classRepository, String search, String replace, boolean includeSubPackages) {
+        addPackage(classRepository, new KeyPair<>(PackageKey.of(search), PackageKey.of(replace)), includeSubPackages);
+    }
+    public void addPackage(DexClassRepository classRepository, PackageKey search, PackageKey replace) {
+        addPackage(classRepository, new KeyPair<>(search, replace), true);
+    }
+    public void addPackage(DexClassRepository classRepository, PackageKey search, PackageKey replace, boolean includeSubPackages) {
+        addPackage(classRepository, new KeyPair<>(search, replace), includeSubPackages);
+    }
+    public void addPackage(DexClassRepository classRepository, KeyPair<PackageKey, PackageKey> packagePair, boolean includeSubPackages) {
+        if (packagePair == null || !packagePair.isValid()) {
+            return;
+        }
+        packagePair = packagePair.dualChecking();
+        if (packageKeyList.contains(packagePair) || subPackageKeyList.contains(packagePair)) {
+            return;
+        }
+        PackageKey search = packagePair.getFirst();
+        PackageKey replace = packagePair.getSecond();
+        Iterator<TypeId> iterator = classRepository.getItemsIfKey(SectionType.TYPE_ID,
+                key -> ((TypeKey) key).isPackage(search, includeSubPackages));
+
+        List<KeyPair<TypeKey, TypeKey>> keyPairList = new ArrayCollection<>();
+
+        while (iterator.hasNext()) {
+            TypeKey typeSearch = iterator.next().getKey();
+            TypeKey typeReplace = typeSearch.renamePackage(search, replace);
+            KeyPair<TypeKey, TypeKey> typePair = new KeyPair<>(typeSearch, typeReplace);
+            keyPairList.add(typePair);
+            if (classRepository.containsClass(typeReplace)) {
+                lockAll(keyPairList);
+                keyPairList.clear();
+                break;
+            }
+        }
+        if (includeSubPackages) {
+            subPackageKeyList.add(packagePair);
+        } else {
+            packageKeyList.add(packagePair);
+        }
+        addAll(keyPairList);
+    }
+    private void validatePackageName(String packageName) {
+        if (StringsUtil.isEmpty(packageName)) {
+            throw new IllegalArgumentException("Empty package name: " + packageName);
+        }
+        if (packageName.charAt(0) != 'L') {
+            throw new IllegalArgumentException(
+                    "Package name should start with 'L': " + packageName);
+        }
+        int i = packageName.length() - 1;
+        if (i != 0 && packageName.charAt(i) != '/') {
+            throw new IllegalArgumentException(
+                    "Non root package name should end with '/': " + packageName);
+        }
+    }
+    @Override
+    public void add(DexClassRepository classRepository, KeyPair<TypeKey, TypeKey> keyPair) {
+        if (validateAndAdd(classRepository, keyPair)) {
+            if (renameInnerClasses) {
+                TypeKey search = keyPair.getFirst();
+                TypeKey replace = keyPair.getSecond();
+                Iterator<TypeId> iterator = classRepository.getItemsIfKey(SectionType.TYPE_ID,
+                        key -> search.isOuterOf(key.getDeclaring()));
+                String replacePrefix = replace.getTypeName().replace(';', '$');
+                int prefixLength = search.getTypeName().length();
+                while (iterator.hasNext()) {
+                    TypeKey typeSearch = iterator.next()
+                            .getKey().getDeclaring();
+                    TypeKey typeReplace = TypeKey.create(
+                            replacePrefix + typeSearch.getTypeName().substring(prefixLength));
+                    validateAndAdd(classRepository, new KeyPair<>(typeSearch, typeReplace));
+                }
+            }
+        }
+    }
+    private boolean validateAndAdd(DexClassRepository classRepository, KeyPair<TypeKey, TypeKey> keyPair) {
+        if (keyPair == null || !keyPair.isValid()) {
+            return false;
+        }
+        KeyPair<TypeKey, TypeKey> existing = get(keyPair.getFirst());
+        if (existing != null && existing.equalsBoth(keyPair)) {
+            return true;
+        }
+        if (classRepository.containsClass(keyPair.getSecond())) {
+            lock(keyPair);
+            return false;
+        } else {
+            add(keyPair);
+            return true;
+        }
+    }
+
+
+    @Override
+    public int apply(DexClassRepository classRepository) {
+        if (isEmpty()) {
+            return 0;
+        }
+        this.renamedStrings.clear();
+        buildRenameMap();
+        if (stringMap.isEmpty()) {
+            return 0;
+        }
+        renameStringIds(classRepository);
+        int size = renameAnnotationSignatures(classRepository);
+        applyReferences(classRepository.getExternalReferences());
+        size += renamedStrings.size();
+        if (size != 0) {
+            classRepository.clearPoolMap();
+        }
+        applyFix(classRepository);
+        return size;
+    }
+
+    @Override
+    public KeyPair<?, ?> apply(KeyPair<?, ?> keyPair) {
+        return super.apply(keyPair);
+    }
+    @Override
+    public Key replaceKey(Key key, Key search, Key replace) {
+        key = super.replaceKey(key, search, replace);
+        if (!(key instanceof TypeKey)) {
+            return key;
+        }
+        TypeKey result = (TypeKey) key;
+        PackageKey packageKey = result.getPackage();
+        for (KeyPair<PackageKey, PackageKey> keyPair : packageKeyList) {
+            PackageKey searchPackage = keyPair.getFirst();
+            if (packageKey.equals(searchPackage)) {
+                return result.setPackage(keyPair.getSecond());
+            }
+        }
+        for (KeyPair<PackageKey, PackageKey> keyPair : subPackageKeyList) {
+            PackageKey searchPackage = keyPair.getFirst();
+            if (searchPackage.contains(packageKey)) {
+                return result.renamePackage(searchPackage, keyPair.getSecond());
+            }
+        }
+        return result;
+    }
+
+    private void renameStringIds(DexClassRepository classRepository) {
+        Map<String, String> map = this.stringMap;
+        if (map.isEmpty()) {
+            return;
+        }
+        Iterator<StringId> iterator = classRepository.getClonedItems(SectionType.STRING_ID);
+        while (iterator.hasNext()) {
+            StringId stringId = iterator.next();
+            String text = map.get(stringId.getString());
+            if (text != null) {
+                setString(stringId, text);
+            }
+        }
+    }
+    private int renameAnnotationSignatures(DexClassRepository classRepository) {
+        int count = 0;
+        Iterator<DalvikSignature> iterator = ComputeIterator.of(
+                classRepository.getItems(SectionType.ANNOTATION_ITEM),
+                annotationItem -> DalvikSignature.of(annotationItem.asAnnotated()));
+        while (iterator.hasNext()) {
+            DalvikSignature dalvikSignature = iterator.next();
+            DalvikSignatureKey signatureKey = dalvikSignature.getSignature();
+            if (signatureKey == null) {
+                // unlikely
+                continue;
+            }
+            DalvikSignatureKey update = replaceInKey(signatureKey);
+            if (signatureKey != update) {
+                dalvikSignature.setSignature(update);
+                count ++;
+            }
+        }
+        return count;
+    }
+
+    public boolean scanReferences(Iterator<? extends KeyReference> iterator) {
+        boolean result = false;
+        while (iterator.hasNext()) {
+            result = applyReference(iterator.next()) || result;
+        }
+        return result;
+    }
+    public boolean applyReferences(Iterator<? extends KeyReference> iterator) {
+        boolean result = false;
+        while (iterator.hasNext()) {
+            result = applyReference(iterator.next()) || result;
+        }
+        return result;
+    }
+    public boolean applyReference(KeyReference reference) {
+        if (reference == null) {
+            return false;
+        }
+        Key key = getReferenceReplace(reference.getKey());
+        if (key != null) {
+            reference.setKey(key);
+            return true;
+        }
+        return false;
+    }
+    public Key getReferenceReplace(Key search) {
+        if (search == null) {
+            return null;
+        }
+        Key replaceKey = getReplace(search);
+        if (replaceKey != null) {
+            return replaceKey;
+        }
+        replaceKey = replaceInKey(search);
+        if (replaceKey != null && replaceKey != search) {
+            return replaceKey;
+        }
+        Map<String, String> map = this.stringMap;
+        if (search instanceof TypeKey) {
+            TypeKey typeKey = (TypeKey) search;
+            String replace = map.get(typeKey.getSourceName());
+            if (replace != null) {
+                return TypeKey.parse(replace);
+            }
+            replace = map.get(typeKey.getTypeName());
+            if (replace != null) {
+                return TypeKey.create(replace);
+            }
+        } else if (search instanceof StringKey) {
+            StringKey stringKey = (StringKey) search;
+            String replace = map.get(stringKey.getString());
+            if (replace != null) {
+                return StringKey.create(replace);
+            }
+        }
+        return null;
+    }
+    private void applyFix(DexClassRepository classRepository) {
+        Set<String> renamedSet = this.renamedStrings;
+        if (renamedSet.isEmpty()) {
+            return;
+        }
+
+        boolean fixAccessibility = this.fixAccessibility;
+        boolean fixInnerSimpleName = this.fixInnerSimpleName;
+        boolean fixSourceFileName = this.fixSourceFileName;
+
+        if (!fixAccessibility && !fixInnerSimpleName && !fixSourceFileName) {
+            return;
+        }
+
+        Iterator<DexClass> iterator = classRepository.getDexClasses(
+                typeKey -> renamedSet.contains(typeKey.getTypeName()));
+
+        while (iterator.hasNext()) {
+            DexClass dexClass = iterator.next();
+            if (fixAccessibility) {
+                dexClass.fixAccessibility();
+            }
+            if (fixInnerSimpleName) {
+                dexClass.fixDalvikInnerClassName();
+            }
+            if (fixSourceFileName) {
+                TypeKey typeKey = dexClass.getKey();
+                if (isSimpleNameChanged(typeKey)) {
+                    dexClass.setSourceFile(DexUtils.toSourceFileName(typeKey.getTypeName()));
+                }
+            }
+        }
+    }
+    private boolean isSimpleNameChanged(TypeKey typeKey) {
+        KeyPair<TypeKey, TypeKey> keyPair = getFlipped(typeKey);
+        if (keyPair == null) {
+            return false;
+        }
+        return !keyPair.getFirst().getSimpleName().equals(
+                keyPair.getSecond().getSimpleName());
+    }
+    private void setString(StringId stringId, String value) {
+        stringId.setString(value);
+        renamedStrings.add(value);
+    }
+
+    public void setArrayDepth(int arrayDepth) {
+        if (arrayDepth < 0) {
+            arrayDepth = DEFAULT_ARRAY_DEPTH;
+        }
+        this.arrayDepth = arrayDepth;
+    }
+    public void setRenameSourceClassName(boolean renameSourceClassName) {
+        this.renameSourceClassName = renameSourceClassName;
+    }
+    public void setSkipSourceRenameRootPackageClass(boolean skipSourceRenameRootPackageClass) {
+        this.skipSourceRenameRootPackageClass = skipSourceRenameRootPackageClass;
+    }
+    public void setFixAccessibility(boolean fixAccessibility) {
+        this.fixAccessibility = fixAccessibility;
+    }
+    public void setFixInnerSimpleName(boolean fixInnerSimpleName) {
+        this.fixInnerSimpleName = fixInnerSimpleName;
+    }
+    public void setRenameInnerClasses(boolean renameInnerClasses) {
+        this.renameInnerClasses = renameInnerClasses;
+    }
+    public void setFixSourceFileName(boolean fixSourceFileName) {
+        this.fixSourceFileName = fixSourceFileName;
+    }
+
+    private void buildRenameMap() {
+        if (!mChanged) {
+            return;
+        }
+        mChanged = false;
+        List<KeyPair<TypeKey, TypeKey>> list = toList();
+        boolean renameSource = this.renameSourceClassName;
+        boolean skipSourceRenameRootPackageClass = this.skipSourceRenameRootPackageClass;
+
+        int size = list.size();
+
+        Map<String, String> map = this.stringMap;
+
+        int arrayDepth = this.arrayDepth + 1;
+
+        for (int i = 0; i < size; i++) {
+
+            KeyPair<TypeKey, TypeKey> keyPair = list.get(i);
+            TypeKey first = keyPair.getFirst();
+            TypeKey second = keyPair.getSecond();
+
+            String name1 = first.getTypeName();
+            String name2 = second.getTypeName();
+            map.put(name1, name2);
+
+            for (int j = 1; j < arrayDepth; j++) {
+                name1 = first.getArrayType(j);
+                name2 = second.getArrayType(j);
+                map.put(name1, name2);
+            }
+            if (renameSource) {
+                name1 = first.getTypeName();
+                if (!skipSourceRenameRootPackageClass || name1.indexOf('/') > 0) {
+                    name1 = first.getSourceName();
+                    name2 = second.getSourceName();
+                    map.put(name1, name2);
+                }
+            }
+        }
+    }
+
+    @Override
+    public TypeKey getReplace(Key search) {
+        TypeKey result = null;
+        if (search instanceof TypeKey) {
+            result = super.getReplace(search);
+            if (result == null) {
+                String replace = stringMap.get(search.toString());
+                if (replace != null) {
+                    result = TypeKey.create(replace);
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public void close() {
+        super.close();
+        stringMap.clear();
+        renamedStrings.clear();
+        mChanged = true;
+    }
+    @Override
+    protected void onChanged() {
+        super.onChanged();
+        mChanged = true;
+    }
+
+    @Override
+    public List<KeyPair<TypeKey, TypeKey>> toList() {
+        return super.toList(CompareUtil.getInverseComparator());
+    }
+
+    @Override
+    public SmaliDirective getSmaliDirective() {
+        return SmaliDirective.CLASS;
+    }
+
+    public static final int DEFAULT_ARRAY_DEPTH = ObjectsUtil.of(3);
+}
