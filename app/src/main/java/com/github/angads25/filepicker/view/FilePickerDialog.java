@@ -105,12 +105,6 @@ public class FilePickerDialog extends Dialog implements AdapterView.OnItemClickL
         if (size == 0) {
             select.setEnabled(false);
             int color;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                color = context.getResources().getColor(R.color.colorAccent, context.getTheme());
-            } else {
-                color = context.getResources().getColor(R.color.colorAccent);
-            }
-            select.setTextColor(Color.argb(128, Color.red(color), Color.green(color), Color.blue(color)));
         }
         dname = findViewById(R.id.dname);
         title = findViewById(R.id.title);
@@ -142,24 +136,11 @@ public class FilePickerDialog extends Dialog implements AdapterView.OnItemClickL
             if (size1 == 0) {
                 select.setEnabled(false);
                 int color;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    color = context.getResources().getColor(R.color.colorAccent, context.getTheme());
-                }
-                else {
-                    color = context.getResources().getColor(R.color.colorAccent);
-                }
-                select.setTextColor(Color.argb(128, Color.red(color), Color.green(color), Color.blue(color)));
                 select.setText(positiveBtnNameStr);
             } else {
                 select.setEnabled(true);
                 int color;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    color = context.getResources().getColor(R.color.colorAccent, context.getTheme());
-                }
-                else {
-                    color = context.getResources().getColor(R.color.colorAccent);
-                }
-                select.setTextColor(color);
+
                 String button_label = positiveBtnNameStr + " (" + size1 + ") ";
                 select.setText(button_label);
             }
@@ -207,7 +188,7 @@ public class FilePickerDialog extends Dialog implements AdapterView.OnItemClickL
                 positiveBtnNameStr
         );
         select.setText(positiveBtnNameStr);
-        if (Utility.checkStorageAccessPermissions(context)) {
+        if (true) { //Utility.checkStorageAccessPermissions(context)
             File currLoc;
             internalList.clear();
             if (properties.offset.isDirectory() && validateOffsetPath()) {
@@ -398,7 +379,7 @@ public class FilePickerDialog extends Dialog implements AdapterView.OnItemClickL
 
     @Override
     public void show() {
-        if (!Utility.checkStorageAccessPermissions(context)) {
+        if (false) { //!Utility.checkStorageAccessPermissions(context)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 ((Activity) context).requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, EXTERNAL_READ_PERMISSION_GRANT);
             }

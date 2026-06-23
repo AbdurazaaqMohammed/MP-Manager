@@ -95,12 +95,7 @@ public class FileListAdapter extends BaseAdapter{
         view.setAnimation(animation);
         if (item.isDirectory()) {
             holder.type_icon.setImageResource(R.drawable.folder_24px);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                holder.type_icon.setColorFilter(context.getResources().getColor(R.color.colorPrimary,context.getTheme()));
-            }
-            else
-            {   holder.type_icon.setColorFilter(context.getResources().getColor(R.color.colorPrimary));
-            }
+
             if(properties.selection_type == DialogConfigs.FILE_SELECT)
             {   holder.fmark.setVisibility(View.INVISIBLE);
             }
@@ -110,12 +105,7 @@ public class FileListAdapter extends BaseAdapter{
         }
         else {
             holder.type_icon.setImageResource(R.drawable.baseline_insert_drive_file_24);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                holder.type_icon.setColorFilter(context.getResources().getColor(R.color.colorAccent,context.getTheme()));
-            }
-            else
-            {   holder.type_icon.setColorFilter(context.getResources().getColor(R.color.colorAccent));
-            }
+
             if(properties.selection_type == DialogConfigs.DIR_SELECT)
             {   holder.fmark.setVisibility(View.INVISIBLE);
             }
