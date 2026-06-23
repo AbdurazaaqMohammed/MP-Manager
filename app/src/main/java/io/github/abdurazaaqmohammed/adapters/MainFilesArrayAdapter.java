@@ -1,10 +1,5 @@
 package io.github.abdurazaaqmohammed.adapters;
 
-import static io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter.OptionItem.TYPE_EDIT_NUMBER;
-import static io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter.OptionItem.TYPE_EDIT_TEXT;
-import static io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter.OptionItem.TYPE_SPINNER;
-import static io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter.OptionItem.TYPE_SWITCH;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -33,21 +28,18 @@ import androidx.core.content.res.ResourcesCompat;
 import android.provider.MediaStore;
 import android.text.ClipboardManager;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.util.LruCache;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -71,6 +63,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkModule;
@@ -90,12 +83,10 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import org.apache.commons.io.FilenameUtils;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -111,17 +102,21 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.github.abdurazaaqmohammed.AdvancedTextEditorActivity;
+import io.github.abdurazaaqmohammed.TextEditorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
+import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
+import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
+import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -222,20 +217,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
         MaterialCheckBox autosign = quickEditDialog.findViewById(R.id.autosign);
         autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
-        quickEditDialog.findViewById(R.id.sign_settings).setOnClickListener(v -> {
-            CharSequence[] items1 = new CharSequence[] {
-                    "Pick signature file (current: " + new File(context.signatureKeyPath).getName() + ")", "V1", "V2", "V3",
-                    "V4" };
-            MaterialAlertDialogBuilder builder = dialogUtil.getDialogBuilder().setTitle("Signature Options");
-
-            SignListAdapter adapter1 = new SignListAdapter(context, items1, settings.getBoolean("v1", true),
-                    settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false));
-            ListView listView = new ListView(context);
-            listView.setAdapter(adapter1);
-
-            builder.setView(listView).setNegativeButton("Cancel", null).setPositiveButton("OK", (dialog, which) -> LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("v1", adapter1.v1).putBoolean("v2", adapter1.v2)
-                    .putBoolean("v3", adapter1.v3).putBoolean("v4", adapter1.v4))).show();
-        });
+        quickEditDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
 
         AlertDialog menuDialog = dialogUtil.getDialogBuilder()
                 .setCustomTitle(uiHelper.getTitle("Fast Edit Attributes"))
@@ -404,9 +386,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
                 if (entries == null) {
-                    context.handler.post(() ->
-                            Toast.makeText(context, "Could not decode AndroidManifest.xml",
-                                    Toast.LENGTH_SHORT).show());
+                    context.handler.post(() -> Toast.makeText(context, "Could not decode AndroidManifest.xml", Toast.LENGTH_SHORT).show());
                     return;
                 }
                 context.handler.post(() -> showManifestTreeDialog(apkFile, entries));
@@ -908,6 +888,190 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
         }
     }
 
+    private void showDecompileOptionsDialog(File file, String fileName) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+
+        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_decompile_options, null);
+
+        MaterialAutoCompleteTextView frameworkVersion = dialogView.findViewById(R.id.frameworkVersion);
+        MaterialAutoCompleteTextView decodeTypes = dialogView.findViewById(R.id.decodeTypes);
+        MaterialAutoCompleteTextView dexLibrary = dialogView.findViewById(R.id.dexLibrary);
+        TextInputEditText loadDex = dialogView.findViewById(R.id.loadDex);
+        CompoundButton flagDex = dialogView.findViewById(R.id.flagDex);
+        CompoundButton noDexDebug = dialogView.findViewById(R.id.noDexDebug);
+        CompoundButton dexMarkers = dialogView.findViewById(R.id.dexMarkers);
+        CompoundButton flagForce = dialogView.findViewById(R.id.flagForce);
+        CompoundButton keepResPath = dialogView.findViewById(R.id.keepResPath);
+        CompoundButton splitJson = dialogView.findViewById(R.id.splitJson);
+        CompoundButton vrd = dialogView.findViewById(R.id.vrd);
+
+        int[] frameworkVersions = context.getResources().getIntArray(R.array.framework_versions);
+        int savedFramework = settings.getInt("fwVer", 35);
+        int frameworkSelection = savedFramework > frameworkVersions.length ? 0 : savedFramework;
+        String[] frameworkStrings = new String[frameworkVersions.length];
+        for (int i = 0; i < frameworkVersions.length; i++) {
+            frameworkStrings[i] = Integer.toString(frameworkVersions[i]);
+        }
+        ArrayAdapter<String> frameworkAdapter = new ArrayAdapter<>(context,
+                android.R.layout.simple_dropdown_item_1line, frameworkStrings);
+        frameworkVersion.setAdapter(frameworkAdapter);
+        frameworkVersion.setText(frameworkStrings[frameworkSelection], false);
+        frameworkVersion.setOnItemClickListener((parent, view, position, id) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putInt("fwVer", frameworkVersions[position])
+            );
+        });
+
+        String[] decodeTypesArray = new String[]{"xml", "json", "raw", "sig"};
+        int savedDecodeType = settings.getInt("decodeTypes", 0);
+        ArrayAdapter<String> decodeAdapter = new ArrayAdapter<>(context,
+                android.R.layout.simple_dropdown_item_1line, decodeTypesArray);
+        decodeTypes.setAdapter(decodeAdapter);
+        decodeTypes.setText(decodeTypesArray[savedDecodeType], false);
+        decodeTypes.setOnItemClickListener((parent, view, position, id) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putInt("decodeTypes", position)
+            );
+        });
+
+        String[] dexLibraryArray = new String[]{"Internal (dex up to 042)", "jf (dex versions 035 and below)"};
+        int savedDexLib = settings.getInt("dexLib", 0);
+        ArrayAdapter<String> dexAdapter = new ArrayAdapter<>(context,
+                android.R.layout.simple_dropdown_item_1line, dexLibraryArray);
+        dexLibrary.setAdapter(dexAdapter);
+        dexLibrary.setText(dexLibraryArray[savedDexLib], false);
+        dexLibrary.setOnItemClickListener((parent, view, position, id) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putInt("dexLib", position)
+            );
+        });
+
+        int savedLoadDex = settings.getInt("loadDex", 3);
+        loadDex.setText(String.valueOf(savedLoadDex));
+        loadDex.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                try {
+                    LegacyUtils.applySharedPrefEditor(
+                            settings.edit().putInt("loadDex", Integer.parseInt(s.toString()))
+                    );
+                } catch (NumberFormatException ignored) {}
+            }
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+        });
+
+        flagDex.setChecked(settings.getBoolean("flagDex", false));
+        flagDex.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("flagDex", isChecked)
+            );
+        });
+
+        noDexDebug.setChecked(settings.getBoolean("noDexDebug", true));
+        noDexDebug.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("noDexDebug", isChecked)
+            );
+        });
+
+        dexMarkers.setChecked(settings.getBoolean("dexMarkers", false));
+        dexMarkers.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("dexMarkers", isChecked)
+            );
+        });
+
+        flagForce.setChecked(settings.getBoolean("flagForce", false));
+        flagForce.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("flagForce", isChecked)
+            );
+        });
+
+        keepResPath.setChecked(settings.getBoolean("keepResPath", false));
+        keepResPath.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("keepResPath", isChecked)
+            );
+        });
+
+        splitJson.setChecked(settings.getBoolean("splitJson", true));
+        splitJson.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("splitJson", isChecked)
+            );
+        });
+
+        vrd.setChecked(settings.getBoolean("vrd", true));
+        vrd.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LegacyUtils.applySharedPrefEditor(
+                    settings.edit().putBoolean("vrd", isChecked)
+            );
+        });
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        builder.setTitle("Decompile Options")
+                .setView(dialogView)
+                .setPositiveButton("Decompile", (d, which) -> {
+
+                    DialogUtil dialogUtil = new DialogUtil(context);
+                    AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
+                    dialogUtil.styleAlertDialog(progressDialog);
+                    TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+                    APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+
+                    new Thread(() -> {
+                        try {
+                            int fwVer = settings.getInt("fwVer", 35);
+                            int loadDexValue = settings.getInt("loadDex", 3);
+                            int decodeTypesValue = settings.getInt("decodeTypes", 0);
+                            int dexLibValue = settings.getInt("dexLib", 0);
+                            boolean keepDex = settings.getBoolean("flagDex", false);
+                            boolean noDexDebugValue = settings.getBoolean("noDexDebug", true);
+                            boolean dexMarkersValue = settings.getBoolean("dexMarkers", false);
+                            boolean forceDeleteOutputPath = settings.getBoolean("flagForce", false);
+                            boolean keepResPathValue = settings.getBoolean("keepResPath", false);
+                            boolean splitJsonValue = settings.getBoolean("splitJson", true);
+                            boolean vrdValue = settings.getBoolean("vrd", true);
+                            DecompileOptions decompileOptions = new DecompileOptions();
+                            decompileOptions.inputFile = file;
+                            File outputFile = new File(file.getPath().replaceFirst('.' + FilenameUtils.getExtension(fileName) + "$", ""));
+                            outputFile.mkdir();
+                            decompileOptions.outputFile = outputFile;
+                            decompileOptions.frameworkVersion = fwVer;
+                            decompileOptions.loadDex = loadDexValue;
+                            decompileOptions.type = decodeTypesValue == 0 ? "xml"
+                                    : decodeTypesValue == 1 ? "json"
+                                    : decodeTypesValue == 2 ? "raw" : "sig";
+                            decompileOptions.dexLib = dexLibValue == 0 ? "internal" : "jf";
+                            decompileOptions.dex = keepDex;
+                            decompileOptions.dexMarkers = dexMarkersValue;
+                            decompileOptions.force = forceDeleteOutputPath;
+                            decompileOptions.keepResPath = keepResPathValue;
+                            decompileOptions.noDexDebug = noDexDebugValue;
+                            decompileOptions.splitJson = splitJsonValue;
+                            decompileOptions.validateResDir = vrdValue;
+                            Decompiler decompiler = decompileOptions.newCommandExecutor(logger);
+                            decompiler.setEnableLog(true);
+                            decompiler.runCommand();
+                            logger.close();
+                            context.handler.post(() -> {
+                                progressDialog.dismiss();
+                                Toast.makeText(context, "Decompiled to " + outputFile.getName(), Toast.LENGTH_SHORT).show();
+                                context.reloadCurrentFolder();
+                            });
+                        } catch (Exception e) {
+                            progressDialog.dismiss();
+                            new ErrorUtil(context).showError(e);
+                            logger.close();
+                        }
+                    }).start();
+                })
+                .setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
     @NonNull
     @Override
     public View getView(int position, View convertView, @NonNull ViewGroup parent) {
@@ -947,21 +1111,16 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
             if (fileName.endsWith(".txt") || fileName.endsWith(".json")
                     || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
                     || fileName.endsWith(".gradle") || fileName.endsWith(".properties")) {
-                context.startActivity(new Intent(context, AdvancedTextEditorActivity.class) .putExtra("path", file.getPath()));
+                context.startActivity(new Intent(context, TextEditorActivity.class) .putExtra("path", file.getPath()));
             } else if(fileName.endsWith(".xml")) {
-                // You can't read twice from the same InputStream, so to check if the xml is binary or not we need 2 InputStream, if its from an APK it should always be binary
-                try (InputStream is = FileUtils.getInputStream(file);
-                     InputStreamReader isr = new InputStreamReader(is);
-                     BufferedReader abr = new BufferedReader(isr)) {
-
-                    if (abr.readLine().startsWith("<?xml version=")) {
-                        context.startActivity(new Intent(context, AdvancedTextEditorActivity.class).putExtra("path", file.getPath()));
-                    } else try (InputStream is2 = FileUtils.getInputStream(file)) {
-                        context.startActivity(new Intent(context, AdvancedTextEditorActivity.class)
-                                .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
-                                .putExtra("axml", true)
-                                .putExtra("path", file.getPath()));
-                    }
+                try (InputStream is = FileUtils.getInputStream(file)) {
+                    if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(file)) {
+                            context.startActivity(new Intent(context, TextEditorActivity.class)
+                                    .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
+                                    .putExtra("axml", true)
+                                    .putExtra("path", file.getPath()));
+                        }
+                    else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getPath()));
                 } catch (Exception e) {
                     new ErrorUtil(context).showError(e);
                 }
@@ -1061,326 +1220,9 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                             AlertDialog alertDialog = dialogUtil.getDialogBuilder()
                                     .setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                                         dialog12.dismiss();
-                                        if (which1 == 0) {
-                                            sign(false, file);
-                                        } else if (which1 == 2) {
-                                            SharedPreferences settings = PreferenceManager
-                                                    .getDefaultSharedPreferences(context);
-                                            ListView decompileOptionsView = new ListView(context);
-
-                                            List<OptionItem> optionItems = new ArrayList<>();
-                                            optionItems.add(new OptionItem(TYPE_SPINNER, "Framework Version", "fwVer",
-                                                    settings.getInt("fwVer", 35)));
-                                            optionItems.add(new OptionItem(TYPE_EDIT_NUMBER,
-                                                    "Number of dex files to load at once", "loadDex",
-                                                    settings.getInt("loadDex", 3)));
-                                            optionItems.add(new OptionItem(TYPE_SPINNER, "Decode Types", "decodeTypes",
-                                                    settings.getInt("decodeTypes", 0)));
-                                            optionItems.add(new OptionItem(TYPE_SPINNER, "DEX Library", "dexLib",
-                                                    settings.getInt("dexLib", 0)));
-                                            optionItems.add(new OptionItem(TYPE_SWITCH, "Don't decode DEX", "flagDex",
-                                                    settings.getBoolean("flagDex", false)));
-                                            optionItems.add(new OptionItem(TYPE_SWITCH, "Remove debug information",
-                                                    "noDexDebug", settings.getBoolean("noDexDebug", true)));
-                                            optionItems.add(new OptionItem(TYPE_SWITCH, "Dump DEX Markers",
-                                                    "dexMarkers", settings.getBoolean("dexMarkers", false)));
-                                            optionItems.add(new OptionItem(TYPE_SWITCH, "Force delete output path",
-                                                    "flagForce", settings.getBoolean("flagForce", false)));
-                                            optionItems.add(new OptionItem(TYPE_SWITCH, "Keep original res paths",
-                                                    "keepResPath", settings.getBoolean("keepResPath", false)));
-                                            optionItems
-                                                    .add(new OptionItem(TYPE_SWITCH, "Split JSON (use for large files)",
-                                                            "splitJson", settings.getBoolean("splitJson", true)));
-                                            optionItems.add(new OptionItem(TYPE_SWITCH, "Validate res directory", "vrd",
-                                                    settings.getBoolean("vrd", true)));
-
-                                            final LayoutInflater inflater = LayoutInflater.from(context);
-                                            BaseAdapter adapter = new BaseAdapter() {
-                                                @Override
-                                                public int getCount() {
-                                                    return optionItems.size();
-                                                }
-
-                                                @Override
-                                                public OptionItem getItem(int position12) {
-                                                    return optionItems.get(position12);
-                                                }
-
-                                                @Override
-                                                public long getItemId(int position12) {
-                                                    return position12;
-                                                }
-
-                                                @Override
-                                                public View getView(int position12, View convertView1,
-                                                                    ViewGroup parent12) {
-                                                    OptionItem item1 = getItem(position12);
-                                                    if (convertView1 == null) {
-                                                        switch (item1.type) {
-                                                            case TYPE_SPINNER:
-                                                                convertView1 = inflater.inflate(R.layout.item_spinner,
-                                                                        parent12, false);
-                                                                TextView textView = convertView1.findViewById(R.id.selectedInSpinner);
-                                                                ColorUtil.setTextViewColor(textView, Color.WHITE);
-                                                                if (position12 == 0) {
-                                                                    int[] frameworkVersions = context.getResources().getIntArray(R.array.framework_versions);
-                                                                    int savedValue = settings.getInt(item1.key,
-                                                                            (int) item1.defaultValue);
-                                                                    int currentSelection = savedValue > frameworkVersions.length ? 0 : savedValue;
-                                                                    textView.setText(Integer.toString(savedValue));
-                                                                    textView.setPadding(16, 16, 16, 16);
-                                                                    textView.setTextSize(TypedValue.COMPLEX_UNIT_SP,
-                                                                            18);
-                                                                    convertView1.setOnClickListener(v12 -> {
-                                                                        MaterialAlertDialogBuilder builder = dialogUtil
-                                                                                .getDialogBuilder();
-                                                                        builder.setTitle("Select Framework Version");
-                                                                        String[] frameworkStrings = new String[frameworkVersions.length];
-                                                                        for (int i = 0; i < frameworkVersions.length; i++) frameworkStrings[i] = Integer.toString(frameworkVersions[i]);
-                                                                        builder.setSingleChoiceItems(frameworkStrings,
-                                                                                currentSelection,
-                                                                                (dialog12b, which1b) -> {
-                                                                                    LegacyUtils.applySharedPrefEditor(
-                                                                                            settings.edit().putInt(
-                                                                                                    item1.key,
-                                                                                                    frameworkVersions[which1b]));
-                                                                                    textView.setText(
-                                                                                            frameworkStrings[which1b]);
-                                                                                    dialog12b.dismiss();
-                                                                                });
-                                                                        builder.setNegativeButton("Cancel", null);
-                                                                        dialogUtil.styleAlertDialog(builder.create());
-                                                                    });
-                                                                } else if (position12 == 2) {
-                                                                    int savedValue = settings.getInt(item1.key,
-                                                                            (int) item1.defaultValue);
-                                                                    String[] types = new String[]{"xml", "json",
-                                                                            "raw", "sig"};
-                                                                    textView.setText(types[savedValue]);
-                                                                    textView.setPadding(16, 16, 16, 16);
-                                                                    textView.setTextSize(TypedValue.COMPLEX_UNIT_SP,
-                                                                            18);
-                                                                    convertView1.setOnClickListener(v12 -> {
-                                                                        MaterialAlertDialogBuilder builder = dialogUtil
-                                                                                .getDialogBuilder();
-                                                                        builder.setTitle("Select decode type");
-                                                                        builder.setSingleChoiceItems(types, savedValue,
-                                                                                (dialog12b, which1b) -> {
-                                                                                    LegacyUtils.applySharedPrefEditor(
-                                                                                            settings.edit().putInt(
-                                                                                                    item1.key,
-                                                                                                    which1b));
-                                                                                    textView.setText(types[which1b]);
-                                                                                    dialog12b.dismiss();
-                                                                                });
-                                                                        builder.setNegativeButton("Cancel", null);
-                                                                        dialogUtil.styleAlertDialog(builder.create());
-                                                                    });
-                                                                } else if (position12 == 3) {
-                                                                    int savedValue = settings.getInt(item1.key,
-                                                                            (int) item1.defaultValue);
-                                                                    String[] types = new String[]{ "Internal (dex up to 042)", "jf (dex versions 035 and below)"};
-                                                                    textView.setText(types[savedValue]);
-                                                                    textView.setPadding(16, 16, 16, 16);
-                                                                    textView.setTextSize(TypedValue.COMPLEX_UNIT_SP,
-                                                                            18);
-                                                                    convertView1.setOnClickListener(v12 -> {
-                                                                        MaterialAlertDialogBuilder builder = dialogUtil
-                                                                                .getDialogBuilder();
-                                                                        builder.setTitle("Select dex decoder");
-                                                                        builder.setSingleChoiceItems(types, savedValue,
-                                                                                (dialog12b, which1b) -> {
-                                                                                    LegacyUtils.applySharedPrefEditor(
-                                                                                            settings.edit().putInt(
-                                                                                                    item1.key,
-                                                                                                    which1b));
-                                                                                    textView.setText(types[which1b]);
-                                                                                    dialog12b.dismiss();
-                                                                                });
-                                                                        builder.setNegativeButton("Cancel", null);
-                                                                        dialogUtil.styleAlertDialog(builder.create());
-                                                                    });
-                                                                }
-                                                                break;
-
-                                                            case TYPE_SWITCH:
-                                                                convertView1 = inflater.inflate(R.layout.item_switch,
-                                                                        parent12, false);
-                                                                CheckBox switchView = convertView1
-                                                                        .findViewById(R.id.switch_view);
-                                                                switchView.setSaveEnabled(false);
-                                                                switchView.setOnCheckedChangeListener(null);
-                                                                boolean isChecked = settings.getBoolean(item1.key,
-                                                                        (boolean) item1.defaultValue);
-                                                                switchView.setChecked(isChecked);
-                                                                switchView.setOnCheckedChangeListener(
-                                                                        (buttonView, isChecked1) -> LegacyUtils
-                                                                                .applySharedPrefEditor(settings.edit()
-                                                                                        .putBoolean(item1.key,
-                                                                                                isChecked1)));
-                                                                convertView1
-                                                                        .setOnClickListener(v1 -> switchView.toggle());
-                                                                break;
-
-                                                            case TYPE_EDIT_NUMBER:
-                                                                convertView1 = inflater.inflate(
-                                                                        R.layout.item_edit_number, parent12, false);
-                                                                EditText editTextNumber = convertView1.findViewById(R.id.edit_text);
-                                                                editTextNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
-                                                                editTextNumber.setFocusable(true);
-                                                                editTextNumber.setFocusableInTouchMode(true);
-                                                                uiHelper.styleEditText(editTextNumber);
-                                                                int numValue = settings.getInt(item1.key, (int) item1.defaultValue);
-                                                                editTextNumber.setText(String.valueOf(numValue));
-                                                                editTextNumber.addTextChangedListener(new TextWatcher() {
-                                                                            @Override
-                                                                            public void afterTextChanged(Editable s) {
-                                                                                try { LegacyUtils.applySharedPrefEditor(settings.edit().putInt(item1.key, Integer.parseInt(s.toString()))); } catch (NumberFormatException ignored) { }
-                                                                            }
-
-                                                                            @Override
-                                                                            public void beforeTextChanged(
-                                                                                    CharSequence s, int start,
-                                                                                    int count, int after) {
-                                                                            }
-
-                                                                            @Override
-                                                                            public void onTextChanged(CharSequence s,
-                                                                                                      int start, int before, int count) {
-                                                                            }
-                                                                        });
-                                                                break;
-
-                                                            case TYPE_EDIT_TEXT:
-                                                                convertView1 = inflater.inflate(R.layout.item_edit_text,
-                                                                        parent12, false);
-                                                                EditText editText = convertView1
-                                                                        .findViewById(R.id.edit_text);
-                                                                editText.setFocusable(true);
-                                                                editText.setFocusableInTouchMode(true);
-                                                                uiHelper.styleEditText(editText);
-                                                                String strValue = settings.getString(item1.key,
-                                                                        (String) item1.defaultValue);
-                                                                editText.setText(strValue);
-                                                                editText.addTextChangedListener(new TextWatcher() {
-                                                                    @Override
-                                                                    public void afterTextChanged(Editable s) {
-                                                                        LegacyUtils.applySharedPrefEditor(
-                                                                                settings.edit().putString(item1.key,
-                                                                                        s.toString()));
-                                                                    }
-
-                                                                    @Override
-                                                                    public void beforeTextChanged(CharSequence s,
-                                                                                                  int start, int count, int after) {
-                                                                    }
-
-                                                                    @Override
-                                                                    public void onTextChanged(CharSequence s, int start,
-                                                                                              int before, int count) {
-                                                                    }
-                                                                });
-                                                                editText.setInputType(
-                                                                        InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                                                                break;
-                                                        }
-                                                    }
-
-                                                    TextView title = convertView1.findViewById(R.id.title);
-                                                    if (title != null) {
-                                                        title.setText(item1.title);
-                                                        ColorUtil.setTextViewColor(title, Color.WHITE);
-                                                    }
-                                                    return convertView1;
-                                                }
-                                            };
-                                            decompileOptionsView.setAdapter(adapter);
-
-                                            AlertDialog ad2 = dialogUtil.getDialogBuilder()
-                                                    .setTitle("Decompile Options")
-                                                    .setView(decompileOptionsView)
-                                                    .setPositiveButton("Decompile", (d, which2) -> {
-                                                        int fwVer = settings.getInt("fwVer", 35);
-                                                        int loadDex = settings.getInt("loadDex", 3);
-                                                        int decodeTypes = settings.getInt("decodeTypes", 0);
-                                                        int dexLib = settings.getInt("dexLib", 0);
-                                                        boolean keepDex = settings.getBoolean("flagDex", false);
-                                                        boolean dexMarkers = settings.getBoolean("dexMarkers", false);
-                                                        boolean forceDeleteOutputPath = settings.getBoolean("flagForce",
-                                                                false);
-                                                        boolean keepResPath = settings.getBoolean("keepResPath", false);
-                                                        boolean noDexDebug = settings.getBoolean("noDexDebug", true);
-                                                        boolean splitJson = settings.getBoolean("splitJson", true);
-                                                        boolean vrd = settings.getBoolean("vrd", true);
-                                                        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                                                        dialogUtil.styleAlertDialog(progressDialog);
-                                                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                                        APKLogger logger = new APKLogger() {
-                                                            @Override
-                                                            public void logMessage(String s) {
-                                                                context.handler.post(() -> progressText.setText(s));
-                                                            }
-
-                                                            @Override
-                                                            public void logError(String s, Throwable throwable) {
-                                                                new ErrorUtil(context).showError(throwable);
-                                                            }
-
-                                                            @Override
-                                                            public void logVerbose(String s) {
-                                                                context.handler.post(() -> progressText.setText(s));
-                                                            }
-                                                        };
-                                                        DecompileOptions decompileOptions = new DecompileOptions();
-                                                        decompileOptions.inputFile = file;
-                                                        File outputFile = new File(file.getPath().replaceFirst(FilenameUtils.getExtension(fileName) + "$", ""));
-                                                        outputFile.mkdir();
-                                                        decompileOptions.outputFile = outputFile;
-                                                        decompileOptions.frameworkVersion = fwVer;
-                                                        decompileOptions.loadDex = loadDex;
-                                                        decompileOptions.type = decodeTypes == 0 ? "xml"
-                                                                : decodeTypes == 1 ? "json"
-                                                                : decodeTypes == 2 ? "raw" : "sig";
-                                                        decompileOptions.dexLib = dexLib == 0 ? "internal" : "jf";
-                                                        decompileOptions.dex = keepDex;
-                                                        decompileOptions.dexMarkers = dexMarkers;
-                                                        decompileOptions.force = forceDeleteOutputPath;
-                                                        decompileOptions.keepResPath = keepResPath;
-                                                        decompileOptions.noDexDebug = noDexDebug;
-                                                        decompileOptions.splitJson = splitJson;
-                                                        decompileOptions.validateResDir = vrd;
-                                                        Decompiler decompiler = decompileOptions
-                                                                .newCommandExecutor(logger);
-                                                        new RunUtil(context.handler, context,
-                                                                "Decompiled to " + outputFile.getName())
-                                                                .runInBackground(() -> {
-                                                                    try {
-                                                                        decompiler.setEnableLog(true);
-                                                                        try {
-                                                                            decompiler.runCommand();
-                                                                            progressDialog.dismiss();
-                                                                        } catch (IOException e) {
-                                                                            progressDialog.dismiss();
-                                                                            new ErrorUtil(context).showError(e);
-                                                                        }
-                                                                        return true;
-                                                                    } catch (Exception e) {
-                                                                        progressDialog.dismiss();
-                                                                        return false;
-                                                                    }
-                                                                }, context::reloadCurrentFolder);
-                                                    })
-                                                    .setNegativeButton("Cancel", null)
-                                                    .create();
-                                            dialogUtil.styleAlertDialog(ad2);
-                                            Window window = ad2.getWindow();
-                                            if (window != null) {
-                                                window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                                        | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-                                                window.setSoftInputMode(
-                                                        WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-                                            }
-                                        } else if (which1 == 3) {
+                                        if (which1 == 0) sign(false, file);
+                                        else if (which1 == 2) showDecompileOptionsDialog(file, fileName);
+                                        else if (which1 == 3) {
                                             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                                             boolean forceDeleteOutputPath = settings.getBoolean("flagForce", false);
                                             boolean cleanMeta = settings.getBoolean("cleanMeta", true);
@@ -1445,27 +1287,13 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                         AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
                                                         dialogUtil.styleAlertDialog(progressDialog);
                                                         TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                                        APKLogger logger = new APKLogger() {
-                                                            @Override
-                                                            public void logMessage(String s) {
-                                                                context.handler.post(() -> progressText.setText(s));
-                                                            }
-
-                                                            @Override
-                                                            public void logError(String s, Throwable throwable) {
-                                                                new ErrorUtil(context).showError(throwable);
-                                                            }
-
-                                                            @Override
-                                                            public void logVerbose(String s) {
-                                                                context.handler.post(() -> progressText.setText(s));
-                                                            }
-                                                        };
+                                                        APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
                                                         new Thread(() -> {
                                                             try {
                                                                 String pXmlFilePath = publicXmlPath[0];
                                                                 if(!TextUtils.isEmpty(pXmlFilePath)) options.publicXml = new File(pXmlFilePath);
                                                                 options.newCommandExecutor(logger).runCommand();
+                                                                logger.close();
                                                                 context.handler.post(() -> {
                                                                     progressDialog.dismiss();
                                                                     Toast.makeText(context, "Refactored", Toast.LENGTH_SHORT).show();
@@ -1474,6 +1302,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                                 context.handler.post(() -> {
                                                                     progressDialog.dismiss();
                                                                     new ErrorUtil(context).showError(e);
+                                                                    logger.close();
                                                                 });
                                                             }
                                                         }).start();
@@ -1575,32 +1404,21 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                         dialogUtil.styleAlertDialog(progressDialog);
                                                         TextView progressText = progressDialog
                                                                 .findViewById(R.id.dialogTitle);
-                                                        APKLogger logger = new APKLogger() {
-                                                            @Override
-                                                            public void logMessage(String s) {
-                                                                context.handler.post(() -> progressText.setText(s));
-                                                            }
-
-                                                            @Override
-                                                            public void logError(String s, Throwable throwable) {
-                                                                new ErrorUtil(context).showError(throwable);
-                                                            }
-
-                                                            @Override
-                                                            public void logVerbose(String s) {
-                                                                context.handler.post(() -> progressText.setText(s));
-                                                            }
-                                                        };
-                                                        new RunUtil(context.handler, context, "Protected")
-                                                                .runInBackground(() -> {
-                                                                    try {
-                                                                        options.newCommandExecutor(logger).runCommand();
-                                                                        return true;
-                                                                    } catch (IOException e) {
-                                                                        new ErrorUtil(context).showError(e);
-                                                                        return false;
-                                                                    }
+                                                        APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                                        new Thread(() -> {
+                                                            try {
+                                                                options.newCommandExecutor(logger).runCommand();
+                                                                logger.close();
+                                                                context.handler.post(() -> {
+                                                                    dialog2.dismiss();
+                                                                    Toast.makeText(context, context.rss.getString(R.string.protectd), Toast.LENGTH_SHORT).show();
                                                                 });
+                                                            } catch (Exception e) {
+                                                                context.handler.post(dialog2::dismiss);
+                                                                new ErrorUtil(context).showError(e);
+                                                                logger.close();
+                                                            }
+                                                        }).start();
                                                     }).create());
                                         } else if (which1 == 5) {
                                             showEditManifestDialog(file);
@@ -1686,7 +1504,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
             boolean multi = !selectedPositions.isEmpty();
             String direction = pane1 ? "->" : "<-";
             String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark" };
-            java.util.List<String> itemsList = new java.util.ArrayList<>(java.util.Arrays.asList(baseItems));
+            List<String> itemsList = new ArrayList<>(Arrays.asList(baseItems));
 
             MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) ((ListView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
             Object compareFile1 = null;
@@ -1697,8 +1515,8 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                 String name1 = compareFile1 instanceof File ? ((File)compareFile1).getName() : ((ZipEntryInfo)compareFile1).getName();
                 String name2 = compareFile2 instanceof File ? ((File)compareFile2).getName() : ((ZipEntryInfo)compareFile2).getName();
 
-                String ext1 = org.apache.commons.io.FilenameUtils.getExtension(name1).toLowerCase();
-                String ext2 = org.apache.commons.io.FilenameUtils.getExtension(name2).toLowerCase();
+                String ext1 = FilenameUtils.getExtension(name1).toLowerCase();
+                String ext2 = FilenameUtils.getExtension(name2).toLowerCase();
 
                 boolean isZip1 = ext1.equals("zip") || ext1.equals("apk") || ext1.equals("jar");
                 boolean isZip2 = ext2.equals("zip") || ext2.equals("apk") || ext2.equals("jar");
@@ -1735,7 +1553,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                     String selectedAction = items[position1];
                     switch (selectedAction) {
                         case "Compare Text":
-                            context.startActivity(new Intent(context, io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity.class)
+                            context.startActivity(new Intent(context, CompareTextActivity.class)
                                     .putExtra("file1", finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getFullPath())
                                     .putExtra("file2", finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getFullPath())
                                     .putExtra("isZip1", finalCompareFile1 instanceof ZipEntryInfo)
@@ -1746,14 +1564,14 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                             progressDialog.dismiss();
                             return;
                         case "Compare ZIP":
-                            new io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog(context,
+                            new CompareZipDialog(context,
                                     finalCompareFile1 instanceof File ? (File) finalCompareFile1 : ((ZipEntryInfo) finalCompareFile1).getZipFile(),
                                     finalCompareFile2 instanceof File ? (File) finalCompareFile2 : ((ZipEntryInfo) finalCompareFile2).getZipFile()
                             ).show();
                             progressDialog.dismiss();
                             return;
                         case "Compare ARSC":
-                            new io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog(context,
+                            new CompareArscDialog(context,
                                     finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getZipFile().getAbsolutePath(),
                                     finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath()
                             ).show();
@@ -1847,7 +1665,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                     try (ZipFile zf = new ZipFile(zipFile)) {
                                                         String entryName = entry.getName();
                                                         if (entry.isDirectory()) {
-                                                            // I dont know why this doesnt work
+                                                            // I dont know why this doesnt work it says it should delete folder entry
                                                             //entryName += '/';
                                                             //zf.renameFile((ent), s);
                                                             Map<String, String> map = new HashMap<>();
@@ -1886,9 +1704,19 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                 case 3:
                                     MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
                                     CharSequence filesToDisplay = getFilesToDisplay(multi, position);
-                                    deleteDialog.setTitle("Alert")
-                                            .setMessage("Are you sure you want to delete " + filesToDisplay + "?")
-                                            .setPositiveButton("Yes", (dialog3, which) -> new Thread(() -> {
+                                    SharedPreferences settings = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+                                    boolean[] sign = new boolean[1];
+                                    File zipFile = isInZip ? entry.getZipFile() : null;
+                                    if(isInZip && zipFile.getName().endsWith(".apk")) {
+                                        LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
+                                        ll.<TextView>findViewById(R.id.modifiedText).setText("Are you sure you want to delete " + filesToDisplay + "?");
+                                        CheckBox autosign = ll.findViewById(R.id.autosign);
+                                        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                                        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                                        ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                                        deleteDialog.setView(ll);
+                                    } else deleteDialog.setMessage("Are you sure you want to delete " + filesToDisplay + "?");
+                                    deleteDialog.setTitle("Alert").setPositiveButton("Yes", (dialog3, which) -> new Thread(() -> {
                                                 try {
                                                     if (multi) {
                                                         if (!isInZip) {
@@ -1896,8 +1724,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                             for (int i : selectedPositions) {
                                                                 selectedFile = (File) values[i];
                                                                 File finalSelectedFile1 = selectedFile;
-                                                                if (finalSelectedFile1 != null)
-                                                                    handler.post(() -> progressText.setText("Deleting " + finalSelectedFile1.getName()));
+                                                                if (finalSelectedFile1 != null) handler.post(() -> progressText.setText("Deleting " + finalSelectedFile1.getName()));
 
                                                                 if (selectedFile.isDirectory())
                                                                     Util.deleteDir(selectedFile);
@@ -1910,9 +1737,12 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                             }
                                                         } else {
                                                             List<ZipEntryInfo> selected = new ArrayList<>();
-                                                            for (int i : selectedPositions)
-                                                                selected.add((ZipEntryInfo) values[i]);
+                                                            for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
                                                             deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
+                                                            if(sign[0]) new SignWrapper(
+                                                                    settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
+                                                                    settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                                                    settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                         }
                                                     } else if (!isInZip) {
                                                         handler.post(() -> progressText.setText("Deleting " + file.getName()));
@@ -1924,6 +1754,10 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                         handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
                                                     } else {
                                                         deleteZipEntry(entry);
+                                                        if(sign[0]) new SignWrapper(
+                                                                settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
+                                                                settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                                                settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                     }
                                                     handler.post(progressDialog::dismiss);
                                                 } catch (Exception e) {
@@ -1946,7 +1780,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
 
                                     TextInputEditText filenameEditText = compressView.findViewById(R.id.filename_compress_edittext);
                                     filenameEditText.setText(multi ? parentFileName + ".zip" : fileName.replace(FilenameUtils.getExtension(fileName), "zip"));
-                                    SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                                    settings = PreferenceManager.getDefaultSharedPreferences(context);
 
                                     AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);
                                     compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
@@ -2171,9 +2005,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
     private CharSequence getFilesToDisplay(boolean multi, int position) {
         if (multi) {
             StringBuilder sb = new StringBuilder();
-            for (int i : selectedPositions) {
-                sb.append(',').append(isInZip ? ((ZipEntryInfo) values[i]).getName() : ((File) values[i]).getName());
-            }
+            for (int i : selectedPositions) sb.append(',').append(isInZip ? ((ZipEntryInfo) values[i]).getName() : ((File) values[i]).getName());
             return sb.deleteCharAt(0);
         }
         return isInZip ? ((ZipEntryInfo) values[position]).getName() : ((File) values[position]).getName();
@@ -2368,22 +2200,21 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
         else try (ZipFile zf = new ZipFile(zipFile);
              InputStream is = zf.getInputStream(zf.getFileHeader(fullPath))) {
             final String name = zipEntry.getName();
-            //File tempFile = File.createTempFile("zip_", "_" + name, context.getCacheDir());
             File tempFolder = new File(context.getCacheDir() + File.separator + UUID.randomUUID());
             tempFolder.mkdir();
             File tempFile = new File(tempFolder, name);
             tempFile.createNewFile();
             if(name.endsWith(".xml")) {
-                try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc"))) {
+                boolean isAxml = FileUtils.isAxml(is);
+                if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
                     ResourceTableParser rtp = new ResourceTableParser(rssStream);
-                    context.startActivity(new Intent(context, AdvancedTextEditorActivity.class)
-                            .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is, rtp.parse()).decodeAsString())
+                    context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                            .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2, rtp.parse()).decodeAsString())
                             .putExtra("zf", zipFile.getPath())
                             .putExtra("zipEntryPath", fullPath)
                             .putExtra("axml", true)
-                            .putExtra("path", tempFile.getPath()));
-
-                }
+                            .putExtra("path", tempFile.getPath()), 757);
+                } else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", tempFile.getPath()));
             } else {
                 FileUtils.copyFile(is, tempFile);
                 Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", tempFile);

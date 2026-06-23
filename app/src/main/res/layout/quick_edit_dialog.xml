@@ -135,7 +135,9 @@
                 android:maxLines="3"
                 android:singleLine="false" />
         </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.button.MaterialButton
+            android:layout_marginTop="8dp"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:id="@+id/editall"
@@ -145,16 +147,15 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:id="@+id/signBox"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:text="@string/auto_sign"
                 android:textSize="20sp"
                 android:id="@+id/autosign"
                 android:layout_gravity="start"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-            </com.google.android.material.checkbox.MaterialCheckBox>
+                android:layout_height="wrap_content" />
             <com.google.android.material.button.MaterialButton
                 android:layout_gravity="end"
                 android:id="@+id/sign_settings"
