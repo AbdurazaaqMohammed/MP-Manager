@@ -8,19 +8,21 @@ import androidx.preference.DropDownPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import com.google.android.material.color.DynamicColors;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class EditorSettingsActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         android.content.SharedPreferences settings = androidx.preference.PreferenceManager
                 .getDefaultSharedPreferences(this);
         boolean dark = (getResources().getConfiguration().uiMode
                 & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
         setTheme(settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
 
-        super.onCreate(savedInstanceState);
 
         getSupportFragmentManager()
                 .beginTransaction()

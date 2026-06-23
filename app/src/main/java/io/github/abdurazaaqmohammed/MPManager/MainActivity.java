@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.MPManager;
 
 import android.Manifest;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,24 +14,25 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
+import android.text.Editable;
 import android.text.TextUtils;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
 import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
@@ -39,16 +41,27 @@ import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.LegacyUtils;
+import io.github.abdurazaaqmohammed.utils.LogUtil;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.CheckBox;
 import android.widget.ListView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -61,8 +74,6 @@ import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.res.Resources;
 import android.database.Cursor;
-import android.text.Html;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.AutoCompleteTextView;
@@ -74,18 +85,25 @@ import android.view.SubMenu;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Collections;
 import java.util.Locale;
 
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.github.paul035.LocaleHelper;
+import com.reandroid.apk.APKLogger;
+import com.reandroid.apkeditor.compile.BuildOptions;
+import com.reandroid.apkeditor.compile.Builder;
 import com.reandroid.utils.StringsUtil;
 import com.reandroid.utils.io.FileUtil;
+
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionMethod;
 
 public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
@@ -93,7 +111,6 @@ public class MainActivity extends AppCompatActivity {
     private File homeDir2;
     private String lastVerChecked;
     public File pane1Folder;
-    private boolean checkForUpdates;
     public File pane2Folder;
     public int lastPaneSelected = 1;
     public DialogUtil dialogUtil;
@@ -120,123 +137,6 @@ public class MainActivity extends AppCompatActivity {
     private List<ZipEntryInfo> currentPane2ZipEntries;
     private String currentPane1Filter = "";
     private String currentPane2Filter = "";
-
-    private void checkForUpdates(boolean toast) {
-        new Thread(() -> {
-            try {
-                HttpURLConnection conn = (HttpURLConnection) new URL(
-                        "https://api.github.com/repos/AbdurazaaqMohammed/MP-Manager/releases").openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent",
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0");
-                conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-
-                try (InputStream inputStream = conn.getInputStream();
-                        InputStreamReader in = new InputStreamReader(inputStream);
-                        BufferedReader reader = new BufferedReader(in)) {
-                    String line;
-                    String latestVersion = "";
-                    String changelog = "";
-                    String dl = "";
-                    boolean rightBranch = false;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.contains("browser_download_url")) {
-                            dl = line.split("\"")[3];
-                            latestVersion = line.split("/")[7];
-                            rightBranch = latestVersion.charAt(0) == '2';
-                        } else if (line.contains("body") && rightBranch) {
-                            changelog = line.split("\"")[3];
-                            break;
-                        }
-                    }
-                    String currentVer;
-                    try {
-                        currentVer = (MainActivity.this).getPackageManager()
-                                .getPackageInfo((MainActivity.this).getPackageName(), 0).versionName;
-                    } catch (Exception e) {
-                        currentVer = null;
-                    }
-                    boolean newVer = false;
-                    char[] curr = TextUtils.isEmpty(currentVer) ? new char[] { '2', '2', '7' }
-                            : currentVer.replace(".", "").toCharArray();
-                    char[] latest = latestVersion.replace(".", "").toCharArray();
-
-                    int maxLength = Math.max(curr.length, latest.length);
-                    for (int i = 0; i < maxLength; i++) {
-                        char currChar = i < curr.length ? curr[i] : '0';
-                        char latestChar = i < latest.length ? latest[i] : '0';
-
-                        if (latestChar > currChar) {
-                            newVer = true;
-                            break;
-                        } else if (latestChar < currChar) {
-                            break;
-                        }
-                    }
-
-                    if (newVer) {
-                        if (!toast && !TextUtils.isEmpty(lastVerChecked) && lastVerChecked.equals(latestVersion))
-                            return;
-                        String ending = ".apk";
-                        String filename = "MP Manager.v" + latestVersion + ending;
-                        String link = dl.endsWith(ending) ? dl : dl + File.separator + filename;
-                        MaterialTextView changelogText = new MaterialTextView(MainActivity.this);
-                        String linebreak = "<br />";
-                        changelogText.setText(Html.fromHtml(
-                                rss.getString(R.string.new_ver) + " (" + latestVersion + ")" + linebreak + linebreak
-                                        + "Changelog:" + linebreak + changelog.replace("\\r\\n", linebreak)));
-                        int padding = 16;
-                        changelogText.setPadding(padding, padding, padding, padding);
-                        MaterialTextView title = new MaterialTextView(MainActivity.this);
-                        title.setText(rss.getString(R.string.update));
-                        int size = 20;
-                        title.setPadding(size, size, size, size);
-                        title.setTextSize(size);
-                        title.setGravity(Gravity.CENTER);
-
-                        String finalLatestVersion = latestVersion;
-                        handler.post(() -> {
-                            AlertDialog alertDialog = new MaterialAlertDialogBuilder(MainActivity.this)
-                                    .setCustomTitle(title).setView(changelogText)
-                                    .setPositiveButton(rss.getString(R.string.dl), (dialog, which) -> {
-                                        if (checkUpdateAfterStoragePermission == null)
-                                            checkUpdateAfterStoragePermission = () -> {
-                                                DownloadManager.Request request = new DownloadManager.Request(
-                                                        Uri.parse(link))
-                                                        .setTitle(filename).setDescription(filename)
-                                                        .setMimeType("application/vnd.android.package-archive")
-                                                        .setDestinationInExternalPublicDir(
-                                                                Environment.DIRECTORY_DOWNLOADS, filename)
-                                                        .setNotificationVisibility(
-                                                                DownloadManager.Request.VISIBILITY_VISIBLE
-                                                                        | DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                                                downloadId = ((DownloadManager) MainActivity.this
-                                                        .getSystemService(DOWNLOAD_SERVICE)).enqueue(request);
-                                            };
-                                        if (Build.VERSION.SDK_INT < 29
-                                                && doesNotHaveStoragePerm(this))
-                                            MainActivity.this.checkStoragePerm();
-                                        else
-                                            checkUpdateAfterStoragePermission.run();
-                                    })
-                                    .setNegativeButton("Go to GitHub Release", (dialog, which) -> MainActivity.this
-                                            .startActivity(new Intent(Intent.ACTION_VIEW).setData(Uri.parse(
-                                                    "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/latest"))))
-                                    .setNeutralButton(rss.getString(R.string.cancel), null).create();
-                            alertDialog.setOnDismissListener(dialog -> lastVerChecked = finalLatestVersion);
-                            MainActivity.this.runOnUiThread(alertDialog::show);
-                        });
-                    } else if (toast)
-                        handler.post(() -> MainActivity.this.runOnUiThread(() -> Toast.makeText(MainActivity.this,
-                                rss.getString(R.string.no_update_found), Toast.LENGTH_SHORT).show()));
-                }
-            } catch (Exception e) {
-                if (toast)
-                    runOnUiThread(() -> Toast
-                            .makeText(MainActivity.this, "Failed to check for update", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
 
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
@@ -265,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         settings.edit()
                 .putString("bookmarks", bookmarks.toString())
-                .putString("keyPath", signatureKeyPath)
+                //.putString("keyPath", signatureKeyPath)
                 .putBoolean("systemTheme", systemTheme)
                 .putInt("theme", theme)
                 .apply();
@@ -310,14 +210,62 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == 0) if (doesNotHaveStoragePerm(this)) {
             Toast.makeText(this, "Storage perm needed as file manager", Toast.LENGTH_LONG).show();
         } else recreate();
-        else if (requestCode == 11 && resultCode == RESULT_OK) {
-            String dirToLoad = data.getStringExtra("dirToLoad");
-            if (dirToLoad != null) {
-                loadFolderInPane(new File(dirToLoad), lastPaneSelected == 1);
-            } else {
-                Uri path = data.getData();
-                if (path != null)
-                    loadFolderInPane(new File(path.toString()), lastPaneSelected == 1);
+        else {
+            boolean pane1 = lastPaneSelected == 1;
+            if (requestCode == 11 && resultCode == RESULT_OK) {
+                String dirToLoad = data.getStringExtra("dirToLoad");
+                if (dirToLoad != null) {
+                    loadFolderInPane(new File(dirToLoad), pane1);
+                } else {
+                    Uri path = data.getData();
+                    if (path != null) loadFolderInPane(new File(path.toString()), pane1);
+                }
+            } else if(requestCode == 757) {
+                Uri uri = data.getData();
+                String path = uri.getPath();
+                if(path.startsWith(getCacheDir().getPath())) {
+                    SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+                    String name = path.substring(path.lastIndexOf("/") + 1);
+                    LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.item_modified_dialog, null);
+                    File file = pane1 ? pane1Folder : pane2Folder;
+                    String zipFileName = file.getName();
+                    ll.<TextView>findViewById(R.id.modifiedText).setText(rss.getString(R.string.file_modified, name, (zipFileName.endsWith(".apk") ? "APK" : "ZIP")));
+                    CheckBox autosign = ll.findViewById(R.id.autosign);
+                    boolean[] sign = new boolean[1];
+                    autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                    autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                    ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+                        .setTitle("File modified")
+                        .setView(ll)
+                        .setPositiveButton("Yes", (dialog, which) -> {
+                            dialog.dismiss();
+                            AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
+                            progressDialog.show();
+                            TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+                            progressText.setText(rss.getString(R.string.adding, name));
+                            new Thread(() -> {
+                                try(ZipFile zf = new ZipFile(file)) {
+                                    ZipParameters zp = new ZipParameters();
+                                    boolean store = name.equals("AndroidManifest.xml") || name.equals("resources.arsc");
+                                    zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                    zf.addFile(path, zp);
+                                    if(sign[0]) new SignWrapper(
+                                            settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
+                                            settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                            settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(file);
+                                    handler.post(() -> {
+                                        progressDialog.dismiss();
+                                        loadZipFolderInPane(file, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false);
+                                    });
+                                } catch (Exception e) {
+                                    handler.post(progressDialog::dismiss);
+                                    new ErrorUtil(this).showError(e);
+                                }
+                            }).start();
+                        }).setNegativeButton(rss.getString(R.string.cancel), null);
+                    builder.show();
+                }
             }
         }
     }
@@ -376,7 +324,7 @@ public class MainActivity extends AppCompatActivity {
                         if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(columnIndex)) {
                             int columnIndex1 = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
                             String fileUri = cursor.getString(columnIndex1);
-                            io.github.abdurazaaqmohammed.utils.InstallUtil.installApk(MainActivity.this,
+                            InstallUtil.installApk(MainActivity.this,
                                     Uri.parse(fileUri));
                         }
                     }
@@ -387,27 +335,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        android.content.SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         boolean dark = (getResources().getConfiguration().uiMode
-                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         setTheme(theme = settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
-
         super.onCreate(savedInstanceState);
         DynamicColors.applyToActivitiesIfAvailable(getApplication());
-        // WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         setContentView(R.layout.activity_main);
         checkStoragePerm();
-        filePicker = registerForActivityResult(
-                new ActivityResultContracts.OpenDocument(),
-                uri -> {
-                    if (uri != null && filePickerCallback != null) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            filePickerCallback.accept(uri);
-                        }
-                    }
-                    filePickerCallback = null;
-                });
+
         String deviceLang = Locale.getDefault().getLanguage();
         boolean supportedLang = deviceLang.equals("ar") || deviceLang.equals("es") || deviceLang.equals("de")
                 || deviceLang.equals("fr") || deviceLang.equals("in") || deviceLang.equals("it")
@@ -419,17 +356,16 @@ public class MainActivity extends AppCompatActivity {
         boolean useDeviceRss = lang.equals(deviceLang);
         rss = useDeviceRss ? getResources() : LocaleHelper.setLocale(this, lang).getResources();
 
-        if (theme == R.style.Theme_MyApp_Black)
-            findViewById(R.id.main).setBackgroundColor(Color.BLACK);
+        if (theme == R.style.Theme_MyApp_Black) findViewById(R.id.main).setBackgroundColor(Color.BLACK);
 
         if (Build.VERSION.SDK_INT > 20) {
-            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             int transparent = Color.TRANSPARENT;
             getWindow().setNavigationBarColor(transparent);
             getWindow().setStatusBarColor(transparent);
         }
 
-        if (!io.github.abdurazaaqmohammed.utils.LegacyUtils.supportsWriteExternalStorage) {
+        if (!LegacyUtils.supportsWriteExternalStorage) {
             // EdgeToEdge.enable(this);
             getWindow().setStatusBarContrastEnforced(true);
             getWindow().setNavigationBarContrastEnforced(true);
@@ -474,9 +410,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
 
-            lastVerChecked = settings.getString("lastVerChecked", null);
-        if ((checkForUpdates = settings.getBoolean("checkForUpdates", true)))
-            checkForUpdates(false);
+        lastVerChecked = settings.getString("lastVerChecked", null);
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
@@ -488,8 +422,7 @@ public class MainActivity extends AppCompatActivity {
         bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
-                isBookmarksDrawerOpen = (newState == BottomSheetBehavior.STATE_EXPANDED
-                        || newState == BottomSheetBehavior.STATE_HALF_EXPANDED);
+                isBookmarksDrawerOpen = (newState == BottomSheetBehavior.STATE_EXPANDED || newState == BottomSheetBehavior.STATE_HALF_EXPANDED);
             }
 
             @Override
@@ -591,6 +524,7 @@ public class MainActivity extends AppCompatActivity {
         dialogUtil = new DialogUtil(this);
         uiHelper = new UIHelper(this);
 
+        logEnabled = settings.getBoolean("logEnabled", false);
         systemTheme = settings.getBoolean("systemTheme", true);
         String homeDir1Path = settings.getString("home1", null);
         homeDir1 = TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory() : new File(homeDir1Path);
@@ -603,8 +537,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         TextView currentFolderView = findViewById(R.id.currentFolderPath);
-        currentFolderView.setText(
-                TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory().getPath() : homeDir1Path);
+        currentFolderView.setText(TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory().getPath() : homeDir1Path);
         currentFolderView.setOnClickListener(v -> {
             EditText input = new EditText(MainActivity.this);
             input.setHint("Enter path");
@@ -718,7 +651,7 @@ public class MainActivity extends AppCompatActivity {
                 if (selectionStart != selectionEnd) {
                     input.getText().delete(selectionStart, selectionEnd);
                 }
-                CharSequence text = ((android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
+                CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
                         .getText();
                 if (!TextUtils.isEmpty(text))
                     input.getText().insert(selectionStart, text);
@@ -764,70 +697,88 @@ public class MainActivity extends AppCompatActivity {
 
             popup.setOnMenuItemClickListener(item -> {
                 String title = item.getTitle().toString();
-                if ("Refresh".equals(title)) {
-                    reloadCurrentFolder();
-                } else if ("Filter".equals(title)) {
-                    LinearLayout pathLayout = (LinearLayout) ((LinearLayout) findViewById(R.id.topBar)).getChildAt(1);
-                    EditText filterBar = (EditText) ((LinearLayout) findViewById(R.id.topBar)).getChildAt(2);
-                    if (pathLayout.getVisibility() == View.VISIBLE) {
-                        pathLayout.setVisibility(View.GONE);
-                        filterBar.setVisibility(View.VISIBLE);
-                        filterBar.requestFocus();
-                    } else {
-                        pathLayout.setVisibility(View.VISIBLE);
-                        filterBar.setVisibility(View.GONE);
-                        filterBar.setText("");
+                switch (title) {
+                    case "Refresh":
+                        reloadCurrentFolder();
+                        break;
+                    case "Filter":
+                        LinearLayout topBar = findViewById(R.id.topBar);
+                        LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
+                        EditText filterBar = (EditText) topBar.getChildAt(2);
+                        if (pathLayout.getVisibility() == View.VISIBLE) {
+                            pathLayout.setVisibility(View.GONE);
+                            filterBar.setVisibility(View.VISIBLE);
+                            filterBar.requestFocus();
+                        } else {
+                            pathLayout.setVisibility(View.VISIBLE);
+                            filterBar.setVisibility(View.GONE);
+                            filterBar.setText("");
+                        }
+                        break;
+                    case "Search":
+                        showSearchDialog();
+                        break;
+                    case "Select all":
+                        if (adapter != null) adapter.selectAll();
+                        break;
+                    case "Sort":
+                        showSortDialog();
+                        break;
+                    case "Show system hidden files": {
+                        boolean isChecked = !item.isChecked();
+                        item.setChecked(isChecked);
+                        prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
+                        reloadCurrentFolder();
+                        break;
                     }
-                } else if ("Search".equals(title)) {
-                    showSearchDialog();
-                } else if ("Select all".equals(title)) {
-                    if (adapter != null)
-                        adapter.selectAll();
-                } else if ("Sort".equals(title)) {
-                    showSortDialog();
-                } else if ("Show system hidden files".equals(title)) {
-                    boolean isChecked = !item.isChecked();
-                    item.setChecked(isChecked);
-                    prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
-                    reloadCurrentFolder();
-                } else if ("Show manually hidden files".equals(title)) {
-                    boolean isChecked = !item.isChecked();
-                    item.setChecked(isChecked);
-                    prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
-                    reloadCurrentFolder();
-                } else if ("Hide selected files".equals(title)) {
-                    Set<String> manualHidden = new HashSet<>(
-                            prefs.getStringSet("manually_hidden_files", new HashSet<>()));
-                    for (Object obj : adapter.getSelectedFiles()) {
-                        if (obj instanceof File)
-                            manualHidden.add(((File) obj).getPath());
-                        else if (obj instanceof ZipEntryInfo)
-                            manualHidden.add(((ZipEntryInfo) obj).getFullPath());
+                    case "Show manually hidden files": {
+                        boolean isChecked = !item.isChecked();
+                        item.setChecked(isChecked);
+                        prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
+                        reloadCurrentFolder();
+                        break;
                     }
-                    prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
-                    adapter.clearSelection();
-                    reloadCurrentFolder();
-                } else if ("Edit hidden files".equals(title)) {
-                    showEditHiddenFilesDialog();
-                } else if ("Add to bookmarks".equals(title)) {
-                    boolean isPane1 = lastPaneSelected == 1;
-                    addBookmark(isPane1 ? pane1Folder : pane2Folder);
-                    Toast.makeText(MainActivity.this, "Added to bookmarks", Toast.LENGTH_SHORT).show();
-                } else if ("Set as home folder".equals(title)) {
-                    boolean isPane1 = lastPaneSelected == 1;
-                    prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
-                            .apply();
-                    Toast.makeText(MainActivity.this, "Set as home folder", Toast.LENGTH_SHORT).show();
-                } else if ("Swap panes".equals(title)) {
-                    File temp = pane1Folder;
-                    pane1Folder = pane2Folder;
-                    pane2Folder = temp;
-                    loadFolderInPane(pane1Folder, true);
-                    loadFolderInPane(pane2Folder, false);
-                } else if ("Preferences".equals(title)) {
-                    showSettingsDialog();
-                } else if ("Exit".equals(title)) {
-                    finishAffinity();
+                    case "Hide selected files":
+                        Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
+                        for (Object obj : adapter.getSelectedFiles()) {
+                            if (obj instanceof File)
+                                manualHidden.add(((File) obj).getPath());
+                            else if (obj instanceof ZipEntryInfo)
+                                manualHidden.add(((ZipEntryInfo) obj).getFullPath());
+                        }
+                        prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
+                        adapter.clearSelection();
+                        reloadCurrentFolder();
+                        break;
+                    case "Edit hidden files":
+                        showEditHiddenFilesDialog();
+                        break;
+                    case "Add to bookmarks": {
+                        boolean isPane1 = lastPaneSelected == 1;
+                        addBookmark(isPane1 ? pane1Folder : pane2Folder);
+                        Toast.makeText(MainActivity.this, "Added to bookmarks", Toast.LENGTH_SHORT).show();
+                        break;
+                    }
+                    case "Set as home folder": {
+                        boolean isPane1 = lastPaneSelected == 1;
+                        prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
+                                .apply();
+                        Toast.makeText(MainActivity.this, "Set as home folder", Toast.LENGTH_SHORT).show();
+                        break;
+                    }
+                    case "Swap panes":
+                        File temp = pane1Folder;
+                        pane1Folder = pane2Folder;
+                        pane2Folder = temp;
+                        loadFolderInPane(pane1Folder, true);
+                        loadFolderInPane(pane2Folder, false);
+                        break;
+                    case "Preferences":
+                        showSettingsDialog();
+                        break;
+                    case "Exit":
+                        finishAffinity();
+                        break;
                 }
                 return true;
             });
@@ -848,9 +799,7 @@ public class MainActivity extends AppCompatActivity {
                     File parentInZip = new File(adapter.currentZipPath).getParentFile();
                     loadZipFolderInPane(zipFile, parentInZip != null ? parentInZip.getPath() : "", isPane1, true);
                 }
-            } else {
-                loadFolderInPane((File) adapter.getItem(0), isPane1);
-            }
+            } else loadFolderInPane((File) adapter.getItem(0), isPane1);
         });
         setupFilterBar();
     }
@@ -865,13 +814,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (isSidebarDrawerOpen) {
-            closeSidebarDrawer();
-        } else if (isBookmarksDrawerOpen) {
-            closeBookmarksDrawer();
-        } else {
+        if (isSidebarDrawerOpen) closeSidebarDrawer();
+        else if (isBookmarksDrawerOpen) closeBookmarksDrawer();
+        else {
             ViewGroup topBar = findViewById(R.id.topBar);
-            EditText filterBar =k; (EditText) topBar.getChildAt(2);
+            EditText filterBar = (EditText) topBar.getChildAt(2);
             if (filterBar.getVisibility() == View.VISIBLE) {
                 topBar.getChildAt(1).setVisibility(View.VISIBLE);
                 filterBar.setVisibility(View.GONE);
@@ -960,7 +907,95 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Could not open folder " + folder.getName(), Toast.LENGTH_SHORT).show();
             return;
         }
+        Arrays.sort(files);
+        View buildButton = findViewById(R.id.build);
+        boolean xml;
+        boolean json = false;
+        boolean raw;
+        if(Arrays.binarySearch(files, new File(folder, "AndroidManifest.xml")) >= 0
+                && (Arrays.binarySearch(files, new File(folder, "classes.dex")) >= 0 || Arrays.binarySearch(files, new File(folder, "classes")) >= 0 || Arrays.binarySearch(files, new File(folder, "smali")) >= 0)
+                && ((xml = Arrays.binarySearch(files, new File(folder, "resources")) >= 0 || Arrays.binarySearch(files, new File(folder, "res")) >= 0)
+                || (json = Arrays.binarySearch(files, new File(folder, "uncompressed-files.json")) >= 0)
+                || (raw = Arrays.binarySearch(files, new File(folder, "resources.arsc")) >= 0))) {
+            buildButton.setVisibility(View.VISIBLE);
+            boolean finalJson = json;
+            buildButton.setOnClickListener(v1 -> {
+                BuildOptions bo = new BuildOptions();
+                LayoutInflater inflater = LayoutInflater.from(this);
+                View content = inflater.inflate(R.layout.dialog_build_options_content, null, false);
+
+                RadioGroup rgExtract = content.findViewById(R.id.rg_extract_native_libs);
+                RadioGroup rgDexLib = content.findViewById(R.id.rg_dex_lib);
+
+                CheckBox cbVrd = content.findViewById(R.id.cb_vrd);
+                CheckBox cbNoCache = content.findViewById(R.id.cb_no_cache);
+                CheckBox cbDexProfile = content.findViewById(R.id.cb_dex_profile);
+
+                TextInputEditText etResDir = content.findViewById(R.id.et_res_dir);
+
+                rgExtract.addView(uiHelper.makeRadioButton("manifest", "Default"));
+                rgExtract.addView(uiHelper.makeRadioButton("none", "None"));
+                rgExtract.addView(uiHelper.makeRadioButton("false", "False"));
+                rgExtract.addView(uiHelper.makeRadioButton("true", "True"));
+                UIHelper.selectRadioByValue(rgExtract, bo.extractNativeLibs != null ? bo.extractNativeLibs : "Default");
+
+                rgDexLib.addView(uiHelper.makeRadioButton(BuildOptions.DEX_LIB_INTERNAL, "Internal (supports dex versions up to 042)"));
+                rgDexLib.addView(uiHelper.makeRadioButton(BuildOptions.DEX_LIB_JF, "jf (supports dex versions 035 and below)"));
+                UIHelper.selectRadioByValue(rgDexLib, bo.dexLib != null ? bo.dexLib : BuildOptions.DEX_LIB_INTERNAL);
+
+                cbVrd.setChecked(bo.validateResDir);
+                cbNoCache.setChecked(bo.noCache);
+                cbDexProfile.setChecked(bo.dexProfile);
+
+                if (bo.resDirName != null) etResDir.setText(bo.resDirName);
+                SharedPreferences settings = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+                final boolean[] sign = new boolean[1];
+                CheckBox autosign = content.findViewById(R.id.autosign);
+                autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                content.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Build Options")
+                        .setView(content)
+                        .setPositiveButton("OK", (dialog, which) -> {
+                            AlertDialog ad = dialogUtil.getProgressDialog(true);
+                            ad.show();
+                            TextView progressText = ad.findViewById(R.id.dialogTitle);
+                            bo.type = xml ? BuildOptions.TYPE_XML : finalJson ? BuildOptions.TYPE_JSON : BuildOptions.TYPE_RAW;
+                            bo.extractNativeLibs = UIHelper.radioGroupValue(rgExtract, "manifest");
+                            bo.dexLib = UIHelper.radioGroupValue(rgDexLib, BuildOptions.DEX_LIB_INTERNAL);
+                            bo.validateResDir = cbVrd.isChecked();
+                            bo.noCache = cbNoCache.isChecked();
+                            bo.dexProfile = cbDexProfile.isChecked();
+                            CharSequence resDirName = (etResDir.getText());
+                            String resDir = TextUtils.isEmpty(resDirName) ? "" : resDirName.toString().trim();
+                            bo.resDirName = resDir.isEmpty() ? null : resDir;
+                            bo.inputFile = folder;
+                            bo.outputFile = new File(folder, folder.getName() + ".apk");
+                            new Thread(() -> {
+                                try {
+                                    APKLogger logger = LogUtil.getApkLogger(progressText, handler, this);
+                                    new Builder(bo, logger).runCommand();
+                                    logger.close();
+                                    if(sign[0]) new SignWrapper(
+                                            settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
+                                            settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                            settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(bo.outputFile);
+                                    handler.post(ad::dismiss);
+                                } catch (Exception e) {
+                                    handler.post(ad::dismiss);
+                                    new ErrorUtil(MainActivity.this).showError(e);
+                                }
+                            }).start();
+                        })
+                        .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                        .show();
+            });
+        } else buildButton.setVisibility(View.GONE);
+
         sortFiles(files, folder.getPath());
+
         if (pane1) {
             currentPane1Files = files;
             pane1Folder = folder;
@@ -1007,18 +1042,17 @@ public class MainActivity extends AppCompatActivity {
                     entries.add(parent);
                 }
 
-                Enumeration<? extends ZipEntry> e = zf.entries();
+                List<FileHeader> fhs = zf.getFileHeaders();
                 String prefix = parentPath; // already normalized with trailing slash if non-empty
-                while (e.hasMoreElements()) {
-                    ZipEntry entry = e.nextElement();
-                    String entryPath = entry.getName().replace('\\','/');
+                for (FileHeader fh : fhs) {
+                    String entryPath = fh.getFileName().replace('\\','/');
                     if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
                     String rest = entryPath.substring(prefix.length()); // e.g., "subdir/file" or "file.txt" or "subdir/"
                     // direct child if rest has no further '/'
                     int nextSlash = rest.indexOf('/');
                     if (nextSlash == -1) {
                         // file directly inside current folder
-                        ZipEntryInfo info = new ZipEntryInfo(entry, zipFile, path);
+                        ZipEntryInfo info = new ZipEntryInfo(fh, zipFile, path);
                         if (isNotHidden(info)) entries.add(info);
                     } else {
                         // it's inside a subdirectory; we should add a single synthetic directory entry for that subdir
@@ -1026,7 +1060,8 @@ public class MainActivity extends AppCompatActivity {
                         String childFullPath = prefix + childDirName; // full path of the child dir
                         // add only once: track seen dirs with a Set<String>
                         if (seenDirs.add(childFullPath)) {
-                            ZipEntry syntheticDir = new ZipEntry(childFullPath);
+                            FileHeader syntheticDir = new FileHeader();
+                            syntheticDir.setFileName(childFullPath);
                             ZipEntryInfo info = new ZipEntryInfo(syntheticDir, zipFile, path); // or use new ctor
                             if (isNotHidden(info)) entries.add(info);
                         }
@@ -1072,16 +1107,7 @@ public class MainActivity extends AppCompatActivity {
         loadFolderInPane(folder, pane1, true);
     }
 
-
-   private androidx.activity.result.ActivityResultLauncher<String[]> filePicker;
-   private java.util.function.Consumer<Uri> filePickerCallback;
-
-    public void pickFile(String[] mimeTypes, java.util.function.Consumer<Uri> callback) {
-       filePickerCallback = callback;
-       filePicker.launch(mimeTypes);
-   }
-
-        public static class NavigationHistoryEntry {
+    public static class NavigationHistoryEntry {
         private final File file;
         private final boolean isZip;
         private final String zipPath;
@@ -1114,15 +1140,14 @@ public class MainActivity extends AppCompatActivity {
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
         currentFolderPath.setText(curr.getPath());
         uiHelper.scrollTextView(currentFolderPath);
-        if (files == null) {
-            this.<TextView>findViewById(R.id.folderCount).setText("Folders: 0 Files: 0");
-            return;
+        if (files == null) this.<TextView>findViewById(R.id.folderCount).setText("Folders: 0 Files: 0");
+        else {
+            File[] folders = curr.listFiles(File::isDirectory);
+            int foldersCount = folders == null ? 0 : folders.length;
+            this.<TextView>findViewById(R.id.folderCount).setText(
+                    new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
+                            .append(files.length - foldersCount));
         }
-        File[] folders = curr.listFiles(File::isDirectory);
-        int foldersCount = folders == null ? 0 : folders.length;
-        this.<TextView>findViewById(R.id.folderCount).setText(
-                new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
-                        .append(files.length - foldersCount));
     }
 
     public void setCurrentPane(int pane) {
@@ -1237,7 +1262,7 @@ public class MainActivity extends AppCompatActivity {
                 .create();
 
         dialog.setOnShowListener(d -> {
-            android.widget.Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             positiveButton.setOnClickListener(v -> {
                 String query = searchQuery.getText().toString();
                 if (TextUtils.isEmpty(query)) {
@@ -1292,11 +1317,11 @@ public class MainActivity extends AppCompatActivity {
 
         new Thread(() -> {
             List<File> results = new ArrayList<>();
-            java.util.regex.Pattern pattern = null;
+            Pattern pattern = null;
             if (regex) {
                 try {
-                    pattern = java.util.regex.Pattern.compile(finalQuery,
-                            mCase ? 0 : java.util.regex.Pattern.CASE_INSENSITIVE);
+                    pattern = Pattern.compile(finalQuery,
+                            mCase ? 0 : Pattern.CASE_INSENSITIVE);
                 } catch (Exception e) {
                     handler.post(() -> {
                         progressDialog.dismiss();
@@ -1308,7 +1333,7 @@ public class MainActivity extends AppCompatActivity {
                 // finalQuery = finalQuery.toLowerCase();
             }
 
-            final java.util.regex.Pattern finalPattern = pattern;
+            final Pattern finalPattern = pattern;
 
             searchRecursive(startDir, results, mCase ? finalQuery : finalQuery.toLowerCase(), subfolders, mCase, regex,
                     finalPattern, textInside, minSize,
@@ -1329,7 +1354,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void searchRecursive(File dir, List<File> results, String query, boolean subfolders, boolean mCase,
-            boolean regex, java.util.regex.Pattern pattern, String textInside, long minSize, long maxSize) {
+            boolean regex, Pattern pattern, String textInside, long minSize, long maxSize) {
         File[] files = dir.listFiles();
         if (files == null)
             return;
@@ -1355,7 +1380,7 @@ public class MainActivity extends AppCompatActivity {
             if (f.isFile() && !TextUtils.isEmpty(textInside)) {
                 matchText = false;
                 if (f.length() < 10485760) { // Limit to 10MB files to prevent OOM
-                    try (BufferedReader br = new BufferedReader(new java.io.FileReader(f))) {
+                    try (BufferedReader br = new BufferedReader(new FileReader(f))) {
                         String line;
                         while ((line = br.readLine()) != null) {
                             if (mCase ? line.contains(textInside)
@@ -1380,12 +1405,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showSettingsDialog() {
-        android.content.SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        ScrollView settingsDialog = (ScrollView) LayoutInflater.from(MainActivity.this)
-                .inflate(R.layout.settings_dialog, null);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        ScrollView settingsDialog = (ScrollView) LayoutInflater.from(MainActivity.this).inflate(R.layout.settings_dialog, null);
 
-        com.google.android.material.button.MaterialButtonToggleGroup themeButtons = settingsDialog
-                .findViewById(R.id.themeToggleGroup);
+        MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
         themeButtons.check(
                 systemTheme ? R.id.systemThemeButton
                         : theme == R.style.Theme_MyApp_Light ? R.id.lightThemeButton
@@ -1393,7 +1416,7 @@ public class MainActivity extends AppCompatActivity {
                                         : R.id.blackThemeButton);
         for (int i = 0; i < themeButtons.getChildCount(); i++) {
             View child = themeButtons.getChildAt(i);
-            if (child instanceof com.google.android.material.button.MaterialButton) {
+            if (child instanceof MaterialButton) {
                 child.setOnLongClickListener(v3 -> {
                     int buttonId = v3.getId();
                     if (buttonId == R.id.lightThemeButton) {
@@ -1426,7 +1449,7 @@ public class MainActivity extends AppCompatActivity {
                     systemTheme = true;
                     themeButtons.check(R.id.systemThemeButton);
                     theme = ((getResources().getConfiguration().uiMode
-                            & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+                            & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
                                     ? R.style.Theme_MyApp_Dark
                                     : R.style.Theme_MyApp_Light;
                 }
@@ -1437,19 +1460,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        android.widget.Button checkUpdateNow = settingsDialog.findViewById(R.id.checkUpdateNow);
-        android.widget.CompoundButton updateSwitch = settingsDialog.findViewById(R.id.updateToggle);
-        updateSwitch.setChecked(checkForUpdates);
-        updateSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> checkUpdateNow
-                .setVisibility((checkForUpdates = isChecked) ? View.GONE : View.VISIBLE));
-        checkUpdateNow.setVisibility(checkForUpdates ? View.GONE : View.VISIBLE);
-        checkUpdateNow.setOnClickListener(v1 -> MainActivity.this.checkForUpdates(true));
-
-        android.widget.CompoundButton logSwitch = settingsDialog.findViewById(R.id.logToggle);
+        CompoundButton logSwitch = settingsDialog.findViewById(R.id.logToggle);
         logSwitch.setChecked(logEnabled);
-        logSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> logEnabled = isChecked);
+        logSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("logEnabled", logEnabled = isChecked).apply());
 
-        AlertDialog builder = new com.google.android.material.dialog.MaterialAlertDialogBuilder(
+        CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
+        autosign.setChecked(settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
+        settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+        AlertDialog builder = new MaterialAlertDialogBuilder(
                 this)
                 .setTitle("Settings")
                 .setView(settingsDialog)
@@ -1467,7 +1486,7 @@ public class MainActivity extends AppCompatActivity {
         filterBar.setSingleLine(true);
         topBar.addView(filterBar, 2);
 
-        filterBar.addTextChangedListener(new android.text.TextWatcher() {
+        filterBar.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -1482,7 +1501,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void afterTextChanged(android.text.Editable s) {
+            public void afterTextChanged(Editable s) {
             }
         });
     }
@@ -1523,13 +1542,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isNotHidden(File f) {
-        android.content.SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean showSystem = prefs.getBoolean("show_system_hidden", false);
         boolean showManual = prefs.getBoolean("show_manually_hidden", false);
         if (!showSystem && (f.isHidden() || f.getName().startsWith(".")))
             return false;
         if (!showManual) {
-            java.util.Set<String> manualHidden = prefs.getStringSet("manually_hidden_files", new java.util.HashSet<>());
+            Set<String> manualHidden = prefs.getStringSet("manually_hidden_files", new HashSet<>());
             if (manualHidden.contains(f.getPath()))
                 return false;
         }
@@ -1537,13 +1556,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isNotHidden(ZipEntryInfo e) {
-        android.content.SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean showSystem = prefs.getBoolean("show_system_hidden", false);
         boolean showManual = prefs.getBoolean("show_manually_hidden", false);
         if (!showSystem && e.getName().startsWith("."))
             return false;
         if (!showManual) {
-            java.util.Set<String> manualHidden = prefs.getStringSet("manually_hidden_files", new java.util.HashSet<>());
+            Set<String> manualHidden = prefs.getStringSet("manually_hidden_files", new HashSet<>());
             if (manualHidden.contains(e.getFullPath()))
                 return false;
         }
@@ -1567,9 +1586,9 @@ public class MainActivity extends AppCompatActivity {
         layout.setPadding(32, 32, 32, 32);
 
         String[] sortOptions = { "Name", "Size", "Date", "Type" };
-        android.widget.RadioGroup radioGroup = new android.widget.RadioGroup(this);
+        RadioGroup radioGroup = new RadioGroup(this);
         for (int i = 0; i < sortOptions.length; i++) {
-            android.widget.RadioButton rb = new android.widget.RadioButton(this);
+            RadioButton rb = new RadioButton(this);
             rb.setText(sortOptions[i]);
             rb.setId(i);
             radioGroup.addView(rb);
@@ -1646,7 +1665,7 @@ public class MainActivity extends AppCompatActivity {
         int sortBy = prefs.getInt("sort_by_" + folderPath, prefs.getInt("sort_by", 0));
         boolean reverse = prefs.getBoolean("sort_reverse_" + folderPath, prefs.getBoolean("sort_reverse", false));
         Arrays.sort(files, (f1, f2) -> {
-            int result = 0;
+            int result;
             switch (sortBy) {
                 case 1:
                     result = Long.compare(f1.length(), f2.length());
@@ -1655,11 +1674,10 @@ public class MainActivity extends AppCompatActivity {
                     result = Long.compare(f1.lastModified(), f2.lastModified());
                     break;
                 case 3:
-                    String ext1 = getExt(f1.getName());
-                    String ext2 = getExt(f2.getName());
+                    String ext1 = this.getExt(f1.getName());
+                    String ext2 = this.getExt(f2.getName());
                     result = ext1.compareToIgnoreCase(ext2);
-                    if (result == 0)
-                        result = f1.getName().compareToIgnoreCase(f2.getName());
+                    if (result == 0) result = f1.getName().compareToIgnoreCase(f2.getName());
                     break;
                 default:
                     result = f1.getName().compareToIgnoreCase(f2.getName());
@@ -1713,10 +1731,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void forceShowIcons(PopupMenu popupMenu) {
         try {
-            java.lang.reflect.Field field = popupMenu.getClass().getDeclaredField("mPopup");
+            Field field = popupMenu.getClass().getDeclaredField("mPopup");
             field.setAccessible(true);
             Object menuPopupHelper = field.get(popupMenu);
-            java.lang.reflect.Method setForceIcons = menuPopupHelper.getClass().getDeclaredMethod("setForceShowIcon",
+            Method setForceIcons = menuPopupHelper.getClass().getDeclaredMethod("setForceShowIcon",
                     boolean.class);
             setForceIcons.invoke(menuPopupHelper, true);
         } catch (Exception e) {
