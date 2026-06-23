@@ -97,10 +97,12 @@ public class ProtectorOptions extends Options {
     }
 
     public String[] loadDirectoryNameDictionary() {
-        return loadDictionary(dic_dir_name, "/protect_dic_dir_name.txt");
+        return new String[]{"AndroidManifest.xml", "/AndroidManifest.xml", "resources.arsc", "/resources.arsc", "classes.dex", "/classes.dex", "kotlin", "META-INF", "", "kotlin/annotation", "kotlin/collections", "kotlin/coroutines", "kotlin/internal", "kotlin/ranges", "kotlin/reflect", "res/values/arrays.xml", "res/values/attrs.xml", "res/values/bools.xml", "res/values/colors.xml", "res/values/dimens.xml", "res/values/drawables.xml", "res/values/ids.xml", "res/values/integers.xml", "res/values/plurals.xml", "res/values/public.xml", "res/values/strings.xml", "res/values/styles.xml"};
+        // return loadDictionary(dic_dir_name, "/protect_dic_dir_name.txt");
     }
     public String[] loadFileNameDictionary() {
-        return loadDictionary(dic_file_name, "/protect_dic_file_name.txt");
+        return new String[]{".", "//", "///", "////", "\\\\", "\\\\\\", "\\/", " ", "  ", "classes.dex", "AndroidManifest.xml", "AndroidManifest", "resources.arsc"};
+        //return loadDictionary(dic_file_name, "/protect_dic_file_name.txt");
     }
 
     private String[] loadDictionary(File file, String resource) {
