@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.adapters;
 
+import net.lingala.zip4j.model.FileHeader;
+
 import java.io.File;
 import java.util.zip.ZipEntry;
 
@@ -19,15 +21,15 @@ public class ZipEntryInfo {
         this.zipFile = zipFile;
     }
 
-    public ZipEntryInfo(ZipEntry entry, File zipFile, String parentPath) {
-        String entryName = entry.getName().replace('\\','/');
-        boolean isDir = entry.isDirectory() || entryName.endsWith("/");
+    public ZipEntryInfo(FileHeader fileHeader, File zipFile, String parentPath) {
+        String entryName = fileHeader.getFileName().replace('\\','/');
+        boolean isDir = fileHeader.isDirectory() || entryName.endsWith("/");
         this.fullPath = entryName;
         this.isDirectory = isDir;
         String cleaned = isDir ? entryName.replaceAll("/+$","") : entryName;
         this.name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/')+1);
-        this.size = entry.getSize() < 0 ? 0 : entry.getSize();
-        this.lastModified = entry.getTime() >= 0 ? entry.getTime() : 0L;
+        this.size = fileHeader.getUncompressedSize() < 0 ? 0 : fileHeader.getUncompressedSize();
+        this.lastModified = fileHeader.getLastModifiedTime() >= 0 ? fileHeader.getLastModifiedTime() : 0L;
 
         this.zipFile = zipFile;
     }
