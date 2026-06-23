@@ -13,6 +13,11 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.github.angads25.filepicker.model.DialogConfigs;
+import com.github.angads25.filepicker.model.DialogProperties;
+import com.github.angads25.filepicker.view.FilePickerDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.File;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -50,9 +55,26 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
         if (position == 0) {
             checkBox.setVisibility(View.GONE);
             convertView.setOnClickListener(v -> {
-                EditText pathInput = new EditText(context);
+                final String[] path = new String[1];
+                MaterialButton mb = new MaterialButton(context);
+                mb.setText("Pick signature file");
+                mb.setOnClickListener(v5 -> {
+                    DialogProperties properties = new DialogProperties();
+                    properties.selection_mode = DialogConfigs.SINGLE_MODE;
+                    properties.selection_type = DialogConfigs.FILE_SELECT;
+                    properties.root = new File(DialogConfigs.DEFAULT_DIR);
+                    properties.error_dir = new File(DialogConfigs.DEFAULT_DIR);
+                    properties.offset = new File(DialogConfigs.DEFAULT_DIR);
+
+                    properties.extensions = new String[]{"jks", "keystore", "p12", "pfx"};
+                    FilePickerDialog fpd = new FilePickerDialog(context, properties);
+                    fpd.setDialogSelectionListener(files -> path[0] = files[0]);
+
+                    fpd.show();
+                });
+
                 EditText pwInput = new EditText(context);
-                pathInput.setHint("Enter path to signature key");
+                mb.setContentDescription("Choose signature key");
                 pwInput.setHint("Enter password");
 
                 LinearLayout layout = new LinearLayout(context);
@@ -61,7 +83,7 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
 
                 pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-                layout.addView(pathInput);
+                layout.addView(mb);
                 TextView warning = new TextView(context);
                 warning.setText("Warning: The password will be saved in plain text.");
                 layout.addView(warning);
@@ -70,17 +92,16 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
                 new MaterialAlertDialogBuilder(context)
                         .setView(layout)
                         .setPositiveButton("OK", (dialogInterface, i) -> {
-                            String path = pathInput.getText().toString();
                             String password = pwInput.getText().toString();
-                            if (TextUtils.isEmpty(path)) {
+                            if (TextUtils.isEmpty(path[0])) {
                                 Toast.makeText(context, "No path entered", Toast.LENGTH_SHORT).show();
                             } else if (TextUtils.isEmpty(password)) {
                                 Toast.makeText(context, "No password entered", Toast.LENGTH_SHORT).show();
-                            } else if (!new File(path).exists()) {
+                            } else if (!new File(path[0]).exists()) {
                                 Toast.makeText(context, "Invalid file path", Toast.LENGTH_SHORT).show();
                             } else {
                                 LegacyUtils.applySharedPrefEditor(PreferenceManager.getDefaultSharedPreferences(context).edit()
-                                        .putString("keyPath", path)
+                                        .putString("keyPath", path[0])
                                         .putString("signatureKeyPassword", password));
                                 Toast.makeText(context, "Signature file set", Toast.LENGTH_SHORT).show();
                             }
