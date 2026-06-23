@@ -16,6 +16,8 @@
 
 package com.github.angads25.filepicker.model;
 
+import android.os.Environment;
+
 /**<p>
  * Created by Angad Singh on 11-07-2016.
  * </p>
@@ -55,7 +57,7 @@ public abstract class DialogConfigs {
 
     /*  PARENT_DIRECTORY*/
     public static final String DIRECTORY_SEPERATOR = "/";
-    public static final String STORAGE_DIR = "mnt";
+    public static final String STORAGE_DIR = Environment.getExternalStorageDirectory().getPath();
 
     /*  DEFAULT_DIR is the default mount point of the SDCARD. It is the default
      *  mount point.
