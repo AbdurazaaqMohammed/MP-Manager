@@ -4,28 +4,12 @@
         tools:ignore="ResourceCycle">
         <item name="widgetLayout">@layout/preference_switch</item>
     </style>
-    <style name="Theme.MyApp.Black" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.MyApp.Black" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="backgroundColor">@android:color/transparent</item>
-        <item name="colorPrimary">@color/main_500</item>
-        <item name="colorPrimaryVariant">@color/main_dark_800</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/secondary_600</item>
-        <item name="colorAccent">@color/secondary_600</item>
     </style>
-    <style name="Theme.MyApp.Dark" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/main_500</item>
-        <item name="colorPrimaryVariant">@color/main_dark_800</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/secondary_600</item>
-        <item name="colorAccent">@color/secondary_600</item>
+    <style name="Theme.MyApp.Dark" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
     </style>
 
-    <style name="Theme.MyApp.Light" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/main_500</item>
-        <item name="colorPrimaryVariant">@color/main_dark_800</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/secondary_600</item>
-        <item name="colorAccent">@color/secondary_600</item>
+    <style name="Theme.MyApp.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
     </style>
 </resources>
