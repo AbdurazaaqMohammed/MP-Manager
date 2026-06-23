@@ -34,7 +34,7 @@
             android:exported="false">
         </activity>
        <activity
-           android:name="io.github.abdurazaaqmohammed.AdvancedTextEditorActivity"
+           android:name="io.github.abdurazaaqmohammed.TextEditorActivity"
            android:windowSoftInputMode="adjustResize|stateHidden"
            android:exported="true">
             <intent-filter>
