@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Options"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set extractNativeLibs" />
+
+        <RadioGroup
+            android:id="@+id/rg_extract_native_libs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+        <!-- dex-lib -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Dex library to use" />
+
+        <RadioGroup
+            android:id="@+id/rg_dex_lib"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+        <!-- flags -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Flags" />
+
+        <CheckBox
+            android:id="@+id/cb_vrd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Validate resources dir name (eg. if a drawable resource file path is 'res/abc.png' then it will be moved to 'res/drawable/abc.png)'" />
+
+        <CheckBox
+            android:id="@+id/cb_no_cache"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ignore built cached .dex files and rebuild smali files" />
+
+        <CheckBox
+            android:id="@+id/cb_dex_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Encode decoded dex profile json files to binary assets/dexopt files" />
+
+        <!-- res-dir -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Resource files root dir name"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_res_dir"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </com.google.android.material.textfield.TextInputLayout>
+        <FrameLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/signBox"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:text="@string/auto_sign"
+                android:textSize="20sp"
+                android:id="@+id/autosign"
+                android:layout_gravity="start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+            <com.google.android.material.button.MaterialButton
+                android:layout_gravity="end"
+                android:id="@+id/sign_settings"
+                android:text="@string/sign_set"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </FrameLayout>
+    </LinearLayout>
+</ScrollView>
