@@ -117,25 +117,6 @@
             android:layout_height="1dp"
             android:background="?android:attr/listDivider" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/updateToggle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:text="@string/auto_update" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?android:attr/listDivider" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/checkUpdateNow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/check_update_now"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -148,30 +129,26 @@
             android:text="@string/lang"
             style="@style/Widget.Material3.Button.OutlinedButton" />
 
-<!--
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:id="@+id/suffixLayout"
+        <FrameLayout
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/suffix"
-            app:endIconMode="clear_text"
-            app:boxBackgroundMode="outline"
-            android:layout_marginTop="5dp"
-            app:boxCornerRadiusTopStart="24dp"
-            app:boxCornerRadiusTopEnd="24dp"
-            app:boxCornerRadiusBottomStart="24dp"
-            app:boxCornerRadiusBottomEnd="24dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/filter_button"
-            app:layout_constraintTop_toTopOf="parent">
+            android:id="@+id/signBox"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:text="@string/auto_sign"
+                android:textSize="20sp"
+                android:id="@+id/autosign"
+                android:layout_gravity="start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+            <com.google.android.material.button.MaterialButton
+                android:layout_gravity="end"
+                android:id="@+id/sign_settings"
+                android:text="@string/sign_set"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </FrameLayout>
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/suffixInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:importantForAutofill="no"
-                android:inputType="text" />
-        </com.google.android.material.textfield.TextInputLayout>
--->
     </LinearLayout>
 </ScrollView>

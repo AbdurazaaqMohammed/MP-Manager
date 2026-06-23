@@ -2,7 +2,7 @@
     <string name="app_name" translatable="false">MP Manager</string>
     <string name="merge">Select split APK to Merge/AntiSplit</string>
     <string name="success_saved">File saved successfully to %s</string>
-    <string name="enable_logs" >Enable logs</string>
+    <string name="enable_logs" >Save logs</string>
     <string name="ask">Ask where to save the file each time</string>
     <string name="grant_storage">Storage permission needed to save to the same dir as the selected file</string>
     <string name="no_filepath">"Can\'t write to the filepath "</string>
@@ -159,7 +159,7 @@
     <string name="appname">App Name</string>
     <string name="edit_all_ac">Edit All Activities / Properties From Manifest</string>
     <string name="auto_sign">Auto Sign</string>
-    <string name="sign_set">Signature Settings</string>
+    <string name="sign_set">Sign Settings</string>
     <string name="target_android_version">Target Android Version</string>
     <string name="compression_level">Compression Level</string>
     <string name="pw_zip">Password (no encryption if empty)</string>
@@ -173,4 +173,9 @@
     <string name="bookmarks">Bookmarks</string>
     <string name="newFileOrFolder">New file or folder</string>
     <string name="search_activities">Search activities</string>
+    <string name="save_confirm">Do you want to save %1$s?</string>
+    <string name="framework_version">Framework Version</string>
+    <string name="protectd">Protected</string>
+    <string name="signature_options">Signature Options</string>
+    <string name="file_modified">File %1$s has been modified, do you want to update the %2$s</string>
 </resources>
