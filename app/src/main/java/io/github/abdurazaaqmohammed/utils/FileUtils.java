@@ -4,18 +4,25 @@ import android.content.Context;
 
 import org.apache.commons.io.FilenameUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 
 public class FileUtils {
 
-    public static File copyFileFromAssetsAndGetFile(String fileName, Context context) throws IOException {
+    public static boolean isAxml(InputStream inputStream) throws IOException {
+        try (InputStreamReader isr = new InputStreamReader(inputStream); BufferedReader abr = new BufferedReader(isr)) {
+            return !abr.readLine().startsWith("<?xml version=");
+        }
+    }
+     public static File copyFileFromAssetsAndGetFile(String fileName, Context context) throws IOException {
         File destinationFile = new File(context.getFilesDir(), fileName);
         if(!destinationFile.exists()) try(InputStream is = context.getAssets().open(fileName)) {
             copyFile(is, destinationFile);
