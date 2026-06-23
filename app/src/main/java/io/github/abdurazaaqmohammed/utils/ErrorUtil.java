@@ -3,12 +3,9 @@ package io.github.abdurazaaqmohammed.utils;
 import static io.github.abdurazaaqmohammed.MPManager.MainActivity.doesNotHaveStoragePerm;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Build;
 import android.view.ViewGroup;
 import android.widget.ScrollView;
@@ -17,7 +14,7 @@ import android.widget.Toast;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class ErrorUtil {
     private final Activity context;
@@ -42,12 +39,13 @@ public class ErrorUtil {
         try {
             currentVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
         } catch (Exception ex) {
-            currentVer = "1.6.6.4";
+            currentVer = "1.0";
         }
         fullLog.append(currentVer).append('\n').append("Storage permission granted: ").append(!doesNotHaveStoragePerm(context));
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Create issue", (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/AbdurazaaqMohammed/AntiSplit-M/issues/new?title=Crash%20Report&body=" + fullLog))));
+                        .setNeutralButton(R.string.copy_log, (dialog, which) -> copyText(fullLog));
+                //.setPositiveButton("Create issue", (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/AbdurazaaqMohammed/MP-Manager/issues/new?title=Crash%20Report&body=" + fullLog))));
         context.runOnUiThread(() -> {
             TextView title = new TextView(context);
             title.setText(mainErr);
