@@ -2,19 +2,16 @@ package io.github.abdurazaaqmohammed.utils;
 
 
 import android.app.Activity;
-import android.content.Context;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.widget.Toast;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
-import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class RunUtil {
 
@@ -38,11 +35,6 @@ public class RunUtil {
         this.reloadFolder = reloadFolder;
     }
 
-    public static void runAble(Runnable runnable) throws ExecutionException, InterruptedException {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.submit(runnable).get();
-    }
-
     public static void runInBg(Callable<Boolean> callable, Handler handler, Runnable runnable, Activity context) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Future<Boolean> future = executor.submit(callable);
@@ -54,8 +46,6 @@ public class RunUtil {
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
-
-
         });
     }
 
