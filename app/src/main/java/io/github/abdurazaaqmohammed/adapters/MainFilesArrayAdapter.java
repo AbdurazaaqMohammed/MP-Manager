@@ -2034,6 +2034,11 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
 
                                     for (int i = 0; i < labels.length; i++) {
                                         TextView textView = new TextView(context);
+                                        textView.setOnLongClickListener(v9 -> {
+                                            ((ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE)).setText(textView.getText());
+                                            Toast.makeText(context, ("Copied"), Toast.LENGTH_SHORT).show();
+                                            return false;
+                                        });
                                         switch (i) {
                                             case 0:
                                                 textView.setText(getFilesToDisplay(multi, position));
