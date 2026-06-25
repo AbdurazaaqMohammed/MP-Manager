@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/opt"
+        android:textStyle="bold"
+        android:textSize="16sp"/>
+
+    <FrameLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:text="@string/delete_useless_files"
+            android:textSize="20sp"
+            android:id="@+id/files_to_delete"
+            android:layout_gravity="start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <com.google.android.material.button.MaterialButton
+            android:layout_gravity="end"
+            android:id="@+id/choose_files_delete"
+            android:text="@string/files_to_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/signBox"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:text="@string/auto_sign"
+            android:textSize="20sp"
+            android:id="@+id/autosign"
+            android:layout_gravity="start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <com.google.android.material.button.MaterialButton
+            android:layout_gravity="end"
+            android:id="@+id/sign_settings"
+            android:text="@string/sign_set"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </FrameLayout>
+</LinearLayout>

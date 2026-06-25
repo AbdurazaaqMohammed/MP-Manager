@@ -651,8 +651,7 @@ public class MainActivity extends AppCompatActivity {
                 if (selectionStart != selectionEnd) {
                     input.getText().delete(selectionStart, selectionEnd);
                 }
-                CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
-                        .getText();
+                CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
                 if (!TextUtils.isEmpty(text))
                     input.getText().insert(selectionStart, text);
             });

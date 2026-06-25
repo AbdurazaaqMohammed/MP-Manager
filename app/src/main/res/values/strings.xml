@@ -178,4 +178,10 @@
     <string name="protectd">Protected</string>
     <string name="signature_options">Signature Options</string>
     <string name="file_modified">File %1$s has been modified, do you want to update the %2$s</string>
+    <string name="clone">Clone APK</string>
+    <string name="pkgName">Package name</string>
+    <string name="opt">Optimize APK</string>
+    <string name="delete_useless_files">Delete useless files</string>
+    <string name="files_to_delete">Files To Delete</string>
+    <string name="add">Add</string>
 </resources>
