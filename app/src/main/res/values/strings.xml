@@ -27,7 +27,7 @@
     <string name="skipping">"Skipping "</string>
     <string name="not_apk">: Not an APK file</string>
     <string name="unselected">: Unselected</string>
-    <string name="searching">Searching apk files…</string>
+    <string name="searching">Searching files…</string>
     <string name="cancel">Cancel</string>
     <string name="select">Select</string>
     <string name="label_parent_directory">Parent Directory</string>

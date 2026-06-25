@@ -926,8 +926,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
 
         String[] decodeTypesArray = new String[]{"xml", "json", "raw", "sig"};
         int savedDecodeType = settings.getInt("decodeTypes", 0);
-        ArrayAdapter<String> decodeAdapter = new ArrayAdapter<>(context,
-                android.R.layout.simple_dropdown_item_1line, decodeTypesArray);
+        ArrayAdapter<String> decodeAdapter = new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, decodeTypesArray);
         decodeTypes.setAdapter(decodeAdapter);
         decodeTypes.setText(decodeTypesArray[savedDecodeType], false);
         decodeTypes.setOnItemClickListener((parent, view, position, id) -> {

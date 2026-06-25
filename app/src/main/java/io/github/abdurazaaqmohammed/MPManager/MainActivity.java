@@ -405,9 +405,7 @@ public class MainActivity extends AppCompatActivity {
                 FileUtils.copyFile(is34, new File(frameworks, "android_34.apk"));
                 FileUtils.copyFile(is35, new File(frameworks, "android_35.apk"));
                 FileUtils.copyFile(is36, new File(frameworks, "android_36.apk"));
-            } catch (Exception exception) {
-
-            }
+            } catch (Exception ignored) { }
         }).start();
 
         lastVerChecked = settings.getString("lastVerChecked", null);
@@ -624,8 +622,7 @@ public class MainActivity extends AppCompatActivity {
                         if (new File(ogFolder, inputStr).mkdir())
                             loadFolderInPane(ogFolder, isPane1);
                         else
-                            Toast.makeText(MainActivity.this, "Failed to create folder " + inputStr, Toast.LENGTH_SHORT)
-                                    .show();
+                            Toast.makeText(MainActivity.this, "Failed to create folder " + inputStr, Toast.LENGTH_SHORT).show();
                     })
                     .setNeutralButton("Paste", null)
                     .setPositiveButton("File", (dialog, which) -> {
@@ -636,12 +633,10 @@ public class MainActivity extends AppCompatActivity {
                             if (new File(ogFolder, inputStr).createNewFile()) {
                                 loadFolderInPane(ogFolder, isPane1);
                             } else {
-                                Toast.makeText(MainActivity.this, "Failed to create file " + inputStr,
-                                        Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Failed to create file " + inputStr, Toast.LENGTH_SHORT).show();
                             }
                         } catch (IOException e) {
-                            Toast.makeText(MainActivity.this, "Failed to create file " + inputStr, Toast.LENGTH_SHORT)
-                                    .show();
+                            Toast.makeText(MainActivity.this, "Failed to create file " + inputStr, Toast.LENGTH_SHORT).show();
                         }
                     }).create();
             ad.show();
@@ -910,12 +905,11 @@ public class MainActivity extends AppCompatActivity {
         View buildButton = findViewById(R.id.build);
         boolean xml;
         boolean json = false;
-        boolean raw;
         if(Arrays.binarySearch(files, new File(folder, "AndroidManifest.xml")) >= 0
                 && (Arrays.binarySearch(files, new File(folder, "classes.dex")) >= 0 || Arrays.binarySearch(files, new File(folder, "classes")) >= 0 || Arrays.binarySearch(files, new File(folder, "smali")) >= 0)
                 && ((xml = Arrays.binarySearch(files, new File(folder, "resources")) >= 0 || Arrays.binarySearch(files, new File(folder, "res")) >= 0)
                 || (json = Arrays.binarySearch(files, new File(folder, "uncompressed-files.json")) >= 0)
-                || (raw = Arrays.binarySearch(files, new File(folder, "resources.arsc")) >= 0))) {
+                || (Arrays.binarySearch(files, new File(folder, "resources.arsc")) >= 0))) {
             buildButton.setVisibility(View.VISIBLE);
             boolean finalJson = json;
             buildButton.setOnClickListener(v1 -> {
@@ -1311,25 +1305,20 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
         dialogUtil.styleAlertDialog(progressDialog);
         TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-        progressText.setText("Searching...");
+        progressText.setText(rss.getString(R.string.searching));
         final String finalQuery = query;
 
         new Thread(() -> {
             List<File> results = new ArrayList<>();
             Pattern pattern = null;
-            if (regex) {
-                try {
-                    pattern = Pattern.compile(finalQuery,
-                            mCase ? 0 : Pattern.CASE_INSENSITIVE);
-                } catch (Exception e) {
-                    handler.post(() -> {
-                        progressDialog.dismiss();
-                        Toast.makeText(this, "Invalid Regex", Toast.LENGTH_SHORT).show();
-                    });
-                    return;
-                }
-            } else if (!mCase) {
-                // finalQuery = finalQuery.toLowerCase();
+            if (regex) try {
+                pattern = Pattern.compile(finalQuery, mCase ? 0 : Pattern.CASE_INSENSITIVE);
+            } catch (Exception e) {
+                handler.post(() -> {
+                    progressDialog.dismiss();
+                    Toast.makeText(this, "Invalid Regex", Toast.LENGTH_SHORT).show();
+                });
+                return;
             }
 
             final Pattern finalPattern = pattern;
@@ -1340,9 +1329,8 @@ public class MainActivity extends AppCompatActivity {
 
             handler.post(() -> {
                 progressDialog.dismiss();
-                if (results.isEmpty()) {
-                    Toast.makeText(this, "No files found", Toast.LENGTH_SHORT).show();
-                } else {
+                if (results.isEmpty()) Toast.makeText(this, "No files found", Toast.LENGTH_SHORT).show();
+                else {
                     File[] resArray = results.toArray(new File[0]);
                     setCurrentFolder(startDir.getPath() + " (Search Results)", Arrays.asList(resArray));
                     ListView pane = findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
@@ -1358,7 +1346,7 @@ public class MainActivity extends AppCompatActivity {
         if (files == null)
             return;
         for (File f : files) {
-            boolean matchName = false;
+            boolean matchName;
             String name = f.getName();
             if (regex && pattern != null) {
                 matchName = pattern.matcher(name).find();
@@ -1544,37 +1532,21 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean showSystem = prefs.getBoolean("show_system_hidden", false);
         boolean showManual = prefs.getBoolean("show_manually_hidden", false);
-        if (!showSystem && (f.isHidden() || f.getName().startsWith(".")))
-            return false;
-        if (!showManual) {
-            Set<String> manualHidden = prefs.getStringSet("manually_hidden_files", new HashSet<>());
-            if (manualHidden.contains(f.getPath()))
-                return false;
-        }
-        return true;
+        return (showSystem || (!f.isHidden() && !f.getName().startsWith("."))) && (showManual || !prefs.getStringSet("manually_hidden_files", new HashSet<>()).contains(f.getPath()));
     }
 
     private boolean isNotHidden(ZipEntryInfo e) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean showSystem = prefs.getBoolean("show_system_hidden", false);
         boolean showManual = prefs.getBoolean("show_manually_hidden", false);
-        if (!showSystem && e.getName().startsWith("."))
-            return false;
-        if (!showManual) {
-            Set<String> manualHidden = prefs.getStringSet("manually_hidden_files", new HashSet<>());
-            if (manualHidden.contains(e.getFullPath()))
-                return false;
-        }
-        return true;
+        return (showSystem || !e.getName().startsWith(".")) && (showManual || !prefs.getStringSet("manually_hidden_files", new HashSet<>()).contains(e.getFullPath()));
     }
 
     private void showSortDialog() {
         boolean isPane1 = lastPaneSelected == 1;
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-        if (adapter == null)
-            return;
-        String currentPath = adapter.isInZip ? adapter.currentZipPath
-                : (isPane1 ? pane1Folder.getPath() : pane2Folder.getPath());
+        if (adapter == null) return;
+        String currentPath = adapter.isInZip ? adapter.currentZipPath : (isPane1 ? pane1Folder.getPath() : pane2Folder.getPath());
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         int sortBy = prefs.getInt("sort_by_" + currentPath, prefs.getInt("sort_by", 0));
@@ -1643,8 +1615,9 @@ public class MainActivity extends AppCompatActivity {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             String path = hiddenList.get(position);
             hiddenList.remove(position);
-            manualHidden.remove(path);
-            prefs.edit().putStringSet("manually_hidden_files", new HashSet<>(manualHidden)).apply();
+            HashSet<String> values = new HashSet<>(manualHidden);
+            values.remove(path);
+            prefs.edit().putStringSet("manually_hidden_files", values).apply();
             adapter.notifyDataSetChanged();
             Toast.makeText(this, "Unhidden: " + path, Toast.LENGTH_SHORT).show();
         });
@@ -1701,7 +1674,7 @@ public class MainActivity extends AppCompatActivity {
                 return -1;
             if (e2.getName().equals(".."))
                 return 1;
-            int result = 0;
+            int result;
             switch (sortBy) {
                 case 1:
                     result = Long.compare(e1.getSize(), e2.getSize());
@@ -1713,8 +1686,7 @@ public class MainActivity extends AppCompatActivity {
                     String ext1 = getExt(e1.getName());
                     String ext2 = getExt(e2.getName());
                     result = ext1.compareToIgnoreCase(ext2);
-                    if (result == 0)
-                        result = e1.getName().compareToIgnoreCase(e2.getName());
+                    if (result == 0) result = e1.getName().compareToIgnoreCase(e2.getName());
                     break;
                 default:
                     result = e1.getName().compareToIgnoreCase(e2.getName());
