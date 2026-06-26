@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.MPManager;
 import android.Manifest;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -27,6 +28,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -94,6 +97,7 @@ import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.github.paul035.LocaleHelper;
+import com.google.common.io.Files;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apkeditor.compile.BuildOptions;
 import com.reandroid.apkeditor.compile.Builder;
@@ -1216,7 +1220,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showSearchDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.search_dialog, null);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_search, null);
         AutoCompleteTextView searchQuery = dialogView.findViewById(R.id.searchQuery);
         ImageView searchHistoryDropdown = dialogView.findViewById(R.id.searchHistoryDropdown);
         CheckBox searchSubfolders = dialogView.findViewById(R.id.searchSubfolders);
@@ -1393,7 +1397,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSettingsDialog() {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        ScrollView settingsDialog = (ScrollView) LayoutInflater.from(MainActivity.this).inflate(R.layout.settings_dialog, null);
+        ScrollView settingsDialog = (ScrollView) LayoutInflater.from(MainActivity.this).inflate(R.layout.dialog_settings, null);
 
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
         themeButtons.check(
@@ -1455,13 +1459,29 @@ public class MainActivity extends AppCompatActivity {
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-        AlertDialog builder = new MaterialAlertDialogBuilder(
-                this)
-                .setTitle("Settings")
-                .setView(settingsDialog)
-                .create();
-        dialogUtil.styleAlertDialog(builder);
-        builder.show();
+        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> {
+            String[] projects = new String[] {"MP Manager", "Open Source Projects Used", "APKEditor", "ApkCloner", "Sora Editor", "zip4j", "aXML", "Commons Collections", "material-design-icons", "android-filepicker", "java-diff-utils", "guava"};
+            String[] authors = new String[] {"AbdurazaaqMohammed", "", "REAndroid", "developer-krushna", "Rosemoe", "srikanth-lingala", "apk-editor", "apache", "google", "singhangadin", "java-diff-utils", "google"};
+            String[] copyright = new String[] {"", "", "2022 github.com/REAndroid", "2025 Krushna Chandra", "2020-2026  Rosemoe", "2026 srikanth-lingala", "2023-2026 APK Explorer & Editor <apkeditor@protonmail.com>", "2001-2026 The Apache Software Foundation", "2026 Google", "2016 Angad Singh", "2026 java-diff-utils", "2026 Google"};
+            String[] strings = new String[projects.length];
+            for (int i = 0, projectsLength = projects.length; i < projectsLength; i++) {
+                String project = projects[i];
+                String author = authors[i];
+                strings[i] = i == 1 ? project : (author + " - " + project);
+            }
+            new MaterialAlertDialogBuilder(this).setTitle("About").setItems(strings, (dialog, which) -> {
+                if(which == 1) return;
+                String license = "";
+                try {
+                    license = Files.asCharSource(FileUtils.copyFileFromAssetsAndGetFile(which == 4 ? "LGPL-2.1.txt" : which == 6 ? "GPL-3.0+.txt" : "Apache-2.0.txt", this), StandardCharsets.UTF_8).read();
+                } catch (Exception ignored) {}
+                new MaterialAlertDialogBuilder(this).setTitle(projects[which]).setMessage(which == 0 ? "Version 0.1\nA free dual pane, Material Design file manager for Android with focus on APKs and the goal to be an open source alternative to MT Manager" : license.replaceFirst("[<\\[](?:yyyy|year)[]>]\\s+[\\[<]name of (?:author|copyright owner)[>\\]]", copyright[which])).setPositiveButton("GitHub", (dialog1, which1) -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/" + authors[which] + '/' + projects[which].toLowerCase().replace(' ', '-')));
+                    startActivity(intent);
+                }).setNegativeButton(rss.getString(R.string.cancel), null).show();
+            }).show();
+        });
+        new MaterialAlertDialogBuilder(this).setTitle("Settings").setView(settingsDialog).show();
     }
 
     private void setupFilterBar() {

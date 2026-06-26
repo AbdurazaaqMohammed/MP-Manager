@@ -96,18 +96,19 @@
             android:background="?android:attr/listDivider" />
 
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/dropdown_menu"
+            android:id="@+id/zip_c_dropdown_menu"
             style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Select Item">
+            android:hint="@string/compression_level">
 
             <AutoCompleteTextView
-                android:id="@+id/auto_complete_tv"
+                android:id="@+id/zip_c_tv"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="none"
                 android:singleLine="false"
+                android:hint="@string/compression_level"
                 android:lines="2"
                 android:maxLines="3"/>
         </com.google.android.material.textfield.TextInputLayout>
@@ -149,6 +150,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </FrameLayout>
-
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/about"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/about"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
     </LinearLayout>
 </ScrollView>
