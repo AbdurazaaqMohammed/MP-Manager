@@ -48,7 +48,7 @@ public class TypeNameMap implements Comparator<TypeNameMap.TypeName> {
     }
     public List<TypeName> listTypeNames(){
         List<TypeName> results=new ArrayList<>(this.map.values());
-        results.sort(this);
+        Collections.sort(results, this);
         return results;
     }
     public int count(){

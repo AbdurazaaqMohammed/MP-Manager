@@ -37,6 +37,7 @@
 package mt.modder.hub.apkCloner.util;
 
 import android.content.*;
+import android.text.TextUtils;
 
 import java.io.*;
 import java.util.*;
@@ -70,7 +71,7 @@ public class ApkCloner {
 	private Context mContext;
 
     public static String changeEndCharacter(final String text) {
-        if (text.length() > 0) {
+        if (!(TextUtils.isEmpty(text))) {
             char lastChar = text.charAt(text.length() - 1);
             if (Character.isLowerCase(lastChar)) {
                 String alphabet = "abcdefghijklmnopqrstuvwxyz";
@@ -170,7 +171,7 @@ public class ApkCloner {
                         mCallBack.onProgress(copiedBytes, totalBytes); // Update progress
                     }
                 }
-                zos.closeEntry();
+				zos.closeEntry();
 
 				// Copy other files from the temporary zip to the final output APK
 				mCallBack.onMessage(processing.replace(" ","") + "...");
@@ -388,7 +389,7 @@ public class ApkCloner {
         while (activityAliasMatcher.find()) {
             int activityAliasStart = activityAliasMatcher.start(1);
             activityAliasSB.append(modifiedRelativeClassNameString.substring(lastActivityAliasMatchEnd, activityAliasStart));
-            activityAliasSB.append(oldPackageName);
+			activityAliasSB.append(oldPackageName);
 			lastActivityAliasMatchEnd = activityAliasStart;
         }
         activityAliasSB.append(modifiedRelativeClassNameString.substring(lastActivityAliasMatchEnd));

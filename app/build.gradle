@@ -3,12 +3,12 @@ plugins {
 }
 
 android {
-    compileSdk 35
+    compileSdk 37
 
     defaultConfig {
         applicationId "io.github.abdurazaaqmohammed.MPManager"
         minSdk 19
-        targetSdk 35
+        targetSdk 37
         multiDexEnabled true
         versionCode 1
         versionName "0.1"
@@ -51,11 +51,13 @@ dependencies {
    // implementation files('libs/javax.jar')
    // implementation files('libs/kotlin-runtime.jar')
     implementation files('libs/smali.jar')
+    implementation files('libs/editor-debug.aar')
    // implementation 'io.github.skylot:jadx-core:1.4.7'
     //implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
-    implementation 'io.github.java-diff-utils:java-diff-utils:4.12'
+    implementation 'io.github.java-diff-utils:java-diff-utils:4.17'
     implementation(platform("io.github.Rosemoe.sora-editor:bom:0.23.6"))
-    implementation 'io.github.Rosemoe.sora-editor:editor'
+    implementation("androidx.collection:collection:1.6.0-rc01")
+    //implementation 'io.github.Rosemoe.sora-editor:editor'
     implementation 'androidx.preference:preference:1.2.1'
 }

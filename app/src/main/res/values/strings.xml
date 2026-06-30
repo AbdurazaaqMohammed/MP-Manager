@@ -136,7 +136,7 @@
     <string name="save">Save</string>
     <string name="edit">Edit</string>
     <string name="file_options">File Options</string>
-    <string name="public_xml">(optional) Select resource ids xml file (public.xml)</string>
+    <string name="public_xml">(optional) Select resource ids XML file (public.xml)</string>
     <string name="clean_meta">Cleans META-INF directory along with signature block</string>
     <string name="fix_types">Correct resource type names based on usages and values</string>
     <string name="force_delete_output_path">Force delete output path</string>

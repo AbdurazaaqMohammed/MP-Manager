@@ -85,7 +85,7 @@ public class TextEditorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_advanced_editor);
+        setContentView(R.layout.activity_editor);
 
         sharedPreferences = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -259,11 +259,14 @@ public class TextEditorActivity extends AppCompatActivity {
 
     @Override
     public void onDestroy() {
-        if(!manualFinish && editor != null && editor.canUndo()) {
-            boolean isFromFile = currentFile != null;
-            if(isFromFile) try (OutputStream os = FileUtils.getOutputStream(new File(getCacheDir(), currentFile.getPath().replace(File.separator, ".")))) {
-                os.write(editor.getText().toString().getBytes(Charset.forName(currentCharset)));
-            } catch (Exception ignored) { }
+        if(editor != null) {
+            editor.release();
+            if(!manualFinish && editor.canUndo()) {
+                boolean isFromFile = currentFile != null;
+                if(isFromFile) try (OutputStream os = FileUtils.getOutputStream(new File(getCacheDir(), currentFile.getPath().replace(File.separator, ".")))) {
+                    os.write(editor.getText().toString().getBytes(Charset.forName(currentCharset)));
+                } catch (Exception ignored) { }
+            }
         }
         super.onDestroy();
     }

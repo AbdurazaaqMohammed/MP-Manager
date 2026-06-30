@@ -17,6 +17,7 @@ package com.reandroid.apkeditor.utils;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -34,13 +35,7 @@ public class StringHelper {
         return String.valueOf(true);
     }
     public static List<String> sortAscending(List<String> nameList){
-        Comparator<String> cmp=new Comparator<String>() {
-            @Override
-            public int compare(String s1, String s2) {
-                return s1.compareTo(s2);
-            }
-        };
-        nameList.sort(cmp);
+        Collections.sort(nameList, String::compareTo);
         return nameList;
     }
     public static void printNameAndValues(StringBuilder builder, String tab, int totalWidth, Object[][] objTable){

@@ -34,10 +34,11 @@ public class ErrorUtil {
         for (StackTraceElement line : e.getStackTrace()) stackTrace.append(line).append('\n');
         StringBuilder fullLog = new StringBuilder(stackTrace).append('\n')
                 .append("SDK ").append(Build.VERSION.SDK_INT).append('\n')
-                .append("MP Manager").append(' ');
+                .append("MP Manager ").append('v');
         String currentVer;
         try {
-            currentVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+            //currentVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+            currentVer = "1.0";
         } catch (Exception ex) {
             currentVer = "1.0";
         }
