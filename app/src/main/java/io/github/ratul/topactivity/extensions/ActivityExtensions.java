@@ -32,7 +32,6 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.utils.DatabaseUtil;
 
@@ -66,18 +65,15 @@ public final class ActivityExtensions {
         }
         if (mode == AppOpsManager.MODE_DEFAULT) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                return activity.checkCallingOrSelfPermission(Manifest.permission.PACKAGE_USAGE_STATS)
-                        == PackageManager.PERMISSION_GRANTED;
+                return activity.checkCallingOrSelfPermission(Manifest.permission.PACKAGE_USAGE_STATS) == PackageManager.PERMISSION_GRANTED;
             }
             return true;
         }
         return mode == AppOpsManager.MODE_ALLOWED;
     }
 
-    public static boolean isAccessibilityNotStarted(AppCompatActivity activity) {
-        return activity.getResources().getBoolean(R.bool.global_version)
-                && DatabaseUtil.useAccessibility()
-                && AccessibilityMonitoringService.getInstance() == null;
+    public static boolean isAccessibilityNotStarted() {
+        return DatabaseUtil.useAccessibility() && AccessibilityMonitoringService.getInstance() == null;
     }
 
     public static void openLink(AppCompatActivity activity, String url) {

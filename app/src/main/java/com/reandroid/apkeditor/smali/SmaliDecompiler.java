@@ -32,13 +32,6 @@ import com.reandroid.dex.smali.SmaliWriterSetting;
 import com.reandroid.dex.smali.formatters.ResourceIdComment;
 
 import org.apache.commons.collections4.Predicate;
-import org.jf.baksmali.Baksmali;
-import org.jf.baksmali.BaksmaliOptions;
-import org.jf.dexlib2.Opcodes;
-import org.jf.dexlib2.VersionMap;
-import org.jf.dexlib2.dexbacked.DexBackedDexFile;
-import org.jf.dexlib2.dexbacked.raw.HeaderItem;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -50,9 +43,9 @@ public class SmaliDecompiler implements DexDecoder {
 
     private final TableBlock tableBlock;
     private final DecompileOptions decompileOptions;
-    private ResourceComment mComment;
+   // private ResourceComment mComment;
     private SmaliWriterSetting smaliWriterSetting;
-    private Opcodes mCurrentOpcodes;
+    //private Opcodes mCurrentOpcodes;
     private APKLogger apkLogger;
     private boolean mDexForCommentLoaded;
 
@@ -63,11 +56,13 @@ public class SmaliDecompiler implements DexDecoder {
 
     @Override
     public void decodeDex(DexFileInputSource inputSource, File mainDir) throws IOException {
-        if (DecompileOptions.DEX_LIB_INTERNAL.equals(decompileOptions.dexLib)) {
+        disassembleWithInternalDexLib(inputSource, mainDir);
+
+       /* if (DecompileOptions.DEX_LIB_INTERNAL.equals(decompileOptions.dexLib)) {
             disassembleWithInternalDexLib(inputSource, mainDir);
         } else {
             disassembleWithJesusFrekeLib(inputSource, mainDir);
-        }
+        }*/
     }
     @Override
     public void decodeDex(ApkModule apkModule, File mainDirectory) throws IOException {
@@ -140,7 +135,7 @@ public class SmaliDecompiler implements DexDecoder {
         mDexForCommentLoaded = true;
         return dexDirectory;
     }
-    private void disassembleWithJesusFrekeLib(DexFileInputSource inputSource, File mainDir) throws IOException {
+   /* private void disassembleWithJesusFrekeLib(DexFileInputSource inputSource, File mainDir) throws IOException {
         logMessage("Baksmali: " + inputSource.getAlias());
         File dir = toOutDir(inputSource, mainDir);
         BaksmaliOptions options = new BaksmaliOptions();
@@ -153,7 +148,7 @@ public class SmaliDecompiler implements DexDecoder {
         DexBackedDexFile dexFile = getInputDexFile(inputSource, options);
         Baksmali.disassembleDexFile(dexFile, dir, 1, options);
         writeDexCache(inputSource, mainDir);
-    }
+    }*/
     private void disassembleWithInternalDexLib(DexFileInputSource inputSource, File mainDir) throws IOException {
         Predicate<SectionType<?>> filter;
         if (decompileOptions.noDexDebug) {
@@ -210,7 +205,7 @@ public class SmaliDecompiler implements DexDecoder {
         return new File(mainDir, DexDecoder.SMALI_DIRECTORY_NAME);
     }
 
-    private DexBackedDexFile getInputDexFile(DexFileInputSource inputSource, BaksmaliOptions options) throws IOException {
+   /* private DexBackedDexFile getInputDexFile(DexFileInputSource inputSource, BaksmaliOptions options) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         inputSource.write(outputStream);
         outputStream.close();
@@ -234,7 +229,7 @@ public class SmaliDecompiler implements DexDecoder {
             }
         }
         return mComment;
-    }
+    }*/
 
     private SmaliWriterSetting getSmaliWriterSetting(DexClassRepository classRepository) {
         SmaliWriterSetting setting = getSmaliWriterSetting();

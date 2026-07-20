@@ -21,12 +21,11 @@ import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValue;
 import com.reandroid.arsc.value.ValueType;
-import org.jf.baksmali.CommentProvider;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ResourceComment extends CommentProvider {
+public class ResourceComment /*extends CommentProvider*/ {
 
     private final TableBlock tableBlock;
     private final PackageBlock packageBlock;
@@ -38,7 +37,7 @@ public class ResourceComment extends CommentProvider {
         this.mCommentCache = new HashMap<>();
     }
 
-    @Override
+    //@Override
     public String getComment(int resourceId) {
         if (!PackageBlock.isResourceId(resourceId)) {
             return null;

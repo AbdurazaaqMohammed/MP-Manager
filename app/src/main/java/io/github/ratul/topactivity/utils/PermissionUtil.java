@@ -23,7 +23,7 @@ public class PermissionUtil {
         boolean needsOverlay = DatabaseUtil.getServiceMode().equals("0") && !ActivityExtensions.isSystemOverlayGranted(c);
 
         List<Runnable> actions = new ArrayList<>();
-        if (ActivityExtensions.isAccessibilityNotStarted(c)) {
+        if (ActivityExtensions.isAccessibilityNotStarted()) {
             actions.add(() -> requestAccessibilityPermission(c));
         }
         if (!ActivityExtensions.isUsageStatsGranted(c)) {

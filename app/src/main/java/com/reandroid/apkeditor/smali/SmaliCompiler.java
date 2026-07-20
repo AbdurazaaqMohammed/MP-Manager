@@ -24,10 +24,6 @@ import com.reandroid.archive.InputSource;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
 import com.reandroid.dex.model.DexFile;
 import com.reandroid.utils.StringsUtil;
-import com.reandroid.utils.io.FileUtil;
-import org.jf.dexlib2.extra.DexMarker;
-import org.jf.smali.Smali;
-import org.jf.smali.SmaliOptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,12 +75,13 @@ public class SmaliCompiler implements DexEncoder {
         }
     }
     private InputSource build(String progress, File classesDir, File dexCacheFile) throws IOException {
-        if(BuildOptions.DEX_LIB_INTERNAL.equals(buildOptions.dexLib)) {
-            return buildWithInternalLib(progress, classesDir, dexCacheFile);
-        }
-        return buildWithJesusFreke(progress, classesDir, dexCacheFile);
+        return buildWithInternalLib(progress, classesDir, dexCacheFile);
+        //if(BuildOptions.DEX_LIB_INTERNAL.equals(buildOptions.dexLib)) {
+      //      return buildWithInternalLib(progress, classesDir, dexCacheFile);
+       // }
+       // return buildWithJesusFreke(progress, classesDir, dexCacheFile);
     }
-    private InputSource buildWithJesusFreke(String progress, File classesDir, File dexCacheFile) throws IOException {
+    /*private InputSource buildWithJesusFreke(String progress, File classesDir, File dexCacheFile) throws IOException {
         logMessage(progress + "Smali<JF>: " + dexCacheFile.getName());
         SmaliOptions smaliOptions = new SmaliOptions();
         FileUtil.ensureParentDirectory(dexCacheFile);
@@ -104,7 +101,7 @@ public class SmaliCompiler implements DexEncoder {
             throw new IOException("Failed to build smali, check the logs");
         }
         return new FileInputSource(dexCacheFile, dexCacheFile.getName());
-    }
+    }*/
     private InputSource buildWithInternalLib(String progress, File classesDir, File dexCacheFile) throws IOException {
         logMessage(progress + "Smali<INTERNAL>: " + dexCacheFile.getName());
         DexFile dexFile = DexFile.createDefault();

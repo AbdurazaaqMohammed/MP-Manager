@@ -20,7 +20,6 @@ import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -186,7 +185,7 @@ public class SettingsActivity extends AppCompatActivity {
         boolean needsOverlay = DatabaseUtil.getServiceMode().equals("0") && !ActivityExtensions.isSystemOverlayGranted(this);
 
         List<Runnable> actions = new ArrayList<>();
-        if (ActivityExtensions.isAccessibilityNotStarted(this)) {
+        if (ActivityExtensions.isAccessibilityNotStarted()) {
             actions.add(this::requestAccessibilityPermission);
         }
         if (!ActivityExtensions.isUsageStatsGranted(this)) {

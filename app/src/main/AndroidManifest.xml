@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="preferExternal"
     package="io.github.abdurazaaqmohammed.MPManager">
-    <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora" />
+    <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora.langs.java" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -29,7 +29,7 @@
            android:requestLegacyExternalStorage="true"
            android:largeHeap="true"
            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-           android:name="androidx.multidex.MultiDexApplication"
+           android:name="io.github.ratul.topactivity.App"
            android:icon="@mipmap/ic_launcher"
            android:label="MP Manager">
         <activity
@@ -72,6 +72,31 @@
             android:theme="@style/Theme.Material3.DayNight.NoActionBar">
         </activity>
            <activity
+               android:name="modder.hub.dexeditor.activity.SettingsActivity"
+               android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+               android:hardwareAccelerated="true"
+               android:supportsPictureInPicture="true" />
+           <activity
+               android:name="modder.hub.dexeditor.activity.EditFloatingMenusActivity"
+               android:configChanges="orientation|screenSize" />
+           <activity
+               android:name="modder.hub.dexeditor.activity.AIOverViewActivity"
+               android:configChanges="orientation|screenSize" />
+           <provider
+               android:name="androidx.startup.InitializationProvider"
+               android:authorities="io.github.abdurazaaqmohammed.MPManager.androidx-startup"
+               android:exported="false"
+               tools:ignore="MissingClass">
+               <meta-data
+                   android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                   android:value="androidx.startup" />
+               <meta-data
+                   android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                   android:value="androidx.startup" />
+           </provider>
+           <activity
+               android:name="modder.hub.dexeditor.activity.DexEditorActivity"
+               android:configChanges="orientation|screenSize" />
            <provider
                android:name="androidx.core.content.FileProvider"
                android:authorities="io.github.abdurazaaqmohammed.MPManager.provider"

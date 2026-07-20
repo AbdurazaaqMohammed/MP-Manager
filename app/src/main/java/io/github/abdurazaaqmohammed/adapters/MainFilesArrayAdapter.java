@@ -129,6 +129,8 @@ import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import modder.hub.dexeditor.activity.DexEditorActivity;
+import modder.hub.dexeditor.utils.DexFileSelector;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
@@ -2362,7 +2364,24 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
             tempFolder.mkdir();
             File tempFile = new File(tempFolder, name);
             tempFile.createNewFile();
-            if(name.endsWith(".xml")) {
+            if(name.endsWith(".dex")) new Thread(() -> {
+                try {
+                    FileHeader fh = zf.getFileHeader("classes.dex");
+
+                    int i = 2;
+                    while (fh != null) {
+                        zf.extractFile(fh, outputDir);
+                        fh = zf.getFileHeader("classes" + i + ".dex");
+                        i++;
+                    }
+                    DexFileSelector dexSelector = new DexFileSelector(context, outputDir + File.separatorChar + name);
+                    dexSelector.setOnFilesSelectedListener(selectedFilePaths -> context.startActivityForResult(new Intent(context, DexEditorActivity.class).putStringArrayListExtra("SelectedDexFiles", (ArrayList<String>) selectedFilePaths), 757));
+                    context.handler.post(dexSelector::showDialog);
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+            else if(name.endsWith(".xml")) {
                 boolean isAxml = FileUtils.isAxml(is);
                 if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
                     ResourceTableParser rtp = new ResourceTableParser(rssStream);

@@ -37,9 +37,6 @@ android {
     packaging {
         resources.excludes.add("META-INF/DEPENDENCIES")
     }
-    kotlinOptions {
-        jvmTarget = '1.8'
-    }
 }
 
 dependencies {
@@ -47,20 +44,39 @@ dependencies {
     implementation 'com.android.volley:volley:1.2.1'
     implementation 'androidx.startup:startup-runtime:1.1.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    //implementation files('libs/animato.jar')
+    implementation files('libs/antlr.jar')
+    implementation 'androidx.recyclerview:recyclerview:1.4.0-alpha01'
     implementation files('libs/JCommand.jar')
     implementation files('libs/bin-zip.jar')
     implementation files('libs/arsc-parser.jar')
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.google.guava:guava:33.6.0-android")
+    implementation 'com.beust:jcommander:1.82'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+    //implementation 'com.github.AtifSayings:Animatoo:1.0.1'
+    //implementation 'com.github.chrisbanes:PhotoView:2.3.0'
+    implementation 'io.github.skylot:jadx-core:1.4.7'
+    implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
+    implementation 'io.github.skylot:jadx-dex-input:1.4.7'
+    implementation 'org.slf4j:slf4j-android:1.7.36'
     implementation "androidx.preference:preference:1.2.1"
     implementation "androidx.collection:collection:1.6.0"
+    implementation 'io.noties.markwon:core:4.6.2'
+    implementation 'com.google.code.gson:gson:2.14.0'
+    implementation 'org.jruby.joni:joni:2.2.7'
+    implementation 'io.github.Rosemoe.sora-editor:language-java:0.23.6'
+    implementation 'com.squareup.okhttp3:okhttp:3.12.13'
     implementation files('libs/commons-io.jar')
+    //implementation files('libs/smali.jar')
     implementation files('libs/editor-debug.aar')
+    implementation files('libs/language-textmate-debug.aar')
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'io.github.java-diff-utils:java-diff-utils:4.17'
     implementation(platform("io.github.Rosemoe.sora-editor:bom:0.23.6"))
     implementation("androidx.collection:collection:1.6.0-rc01")
     implementation 'androidx.preference:preference:1.2.1'
+    implementation "androidx.biometric:biometric:1.1.0"
 
     implementation files('libs/ftp4j-1.7.2.jar')
     implementation("org.apache.ftpserver:ftplet-api:1.2.1")
