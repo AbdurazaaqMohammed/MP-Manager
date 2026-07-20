@@ -1631,18 +1631,48 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                 switch (which) {
                                     case 0:
                                         if (LegacyUtils.aboveSdk20) {
-                                            new RunUtil(context).runInBackground(() -> {
-                                                try (ArchiveFile archiveFile = new ArchiveFile(file)) {
-                                                    return (new APKInstallHelper(context).installApk(
-                                                            archiveFile.getInputSources(archiveEntry -> archiveEntry.getName().endsWith(".apk"))) == PackageInstaller.STATUS_SUCCESS);
-                                                }
-                                            });
+                                            AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
+                                            dialogUtil.styleAlertDialog(progressDialog);
+                                            TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+                                            APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                            new Thread(() -> {
+                                                BroadcastReceiver receiver = null;
+                                                try (ZipFile zf = new ZipFile(file)) {
+                                                    int sessionId = new APKInstallHelper(context).installApk(zf, logger);
+                                                    receiver = new BroadcastReceiver() {
+                                                        @Override public void onReceive(Context context, Intent intent) {
+                                                            if ("DISMISS_DIALOG".equals(intent.getAction())) {
+                                                                ((MainActivity) context).handler.post(() -> {
+                                                                    progressDialog.dismiss();
+                                                                    new MaterialAlertDialogBuilder(context).setTitle("Installed").setPositiveButton("Launch", (d, w) -> {
+                                                                        String packageName;
+                                                                        PackageManager pm = context.getPackageManager();
+                                                                        PackageInstaller.SessionInfo sessionInfo = pm.getPackageInstaller().getSessionInfo(sessionId);
+                                                                        if (sessionInfo == null) {
+                                                                            List<PackageInfo> installedPackages = pm.getInstalledPackages(0);
+                                                                            Collections.sort(installedPackages, (o1, o2) -> Long.compare(o2.lastUpdateTime, o1.lastUpdateTime));
+                                                                            packageName = installedPackages.get(0).packageName;
+                                                                        } else packageName = sessionInfo.getAppPackageName();
+                                                                        Intent launchIntent;
+                                                                        if (TextUtils.isEmpty(packageName) || (launchIntent = pm.getLaunchIntentForPackage(packageName)) == null) {
+                                                                            Toast.makeText(context, "Unable to launch " + packageName, Toast.LENGTH_SHORT).show();
+                                                                        } else context.startActivity(launchIntent);
+                                                                    }).setNegativeButton(R.string.cancel, null).show();
+                                                                });
+                                                                context.unregisterReceiver(this);
+                                                            }
+                                                        }
+                                                    };
+                                                    if (Build.VERSION.SDK_INT >= 33) {
+                                                        context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"), RECEIVER_NOT_EXPORTED);
+                                                    } else context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"));
+                                                } catch (Exception e) {progressDialog.dismiss(); new ErrorUtil(context).showError(e); if(receiver != null) context.unregisterReceiver(receiver);}
+                                            }).start();
                                         } else {
-                                            Toast.makeText(context,
-                                                    "Installing split APKs is not supported on this version of Android :(",
-                                                    Toast.LENGTH_SHORT).show();
-                                            Toast.makeText(context, "You could try merging the APK then installing it",
-                                                    Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(context, "Installing split APKs is not supported on this version of Android :(", Toast.LENGTH_SHORT).show();
+
+                                            // We should check if apk minsdk <20 here
+                                            Toast.makeText(context, "You could try merging the APK then installing it", Toast.LENGTH_SHORT).show();
                                         }
                                         break;
                                     case 1:

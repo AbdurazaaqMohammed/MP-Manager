@@ -5,15 +5,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.os.IBinder;
-import android.util.Log;
-
-import javax.annotation.Nullable;
-
-import android.app.Service;
-import android.content.Intent;
-import android.content.pm.PackageInstaller;
-import android.os.IBinder;
-import android.util.Log;
 
 public class APKInstallService extends Service {
 
@@ -25,17 +16,15 @@ public class APKInstallService extends Service {
 
         switch (status) {
             case PackageInstaller.STATUS_PENDING_USER_ACTION:
-                //Log.d("AppLog", "Requesting user confirmation for installation");
                 Intent confirmationIntent = intent.getParcelableExtra(Intent.EXTRA_INTENT);
                 if (confirmationIntent != null) {
                     confirmationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(confirmationIntent);
-
+                    startActivity(confirmationIntent);
                 }
                 break;
 
             case PackageInstaller.STATUS_SUCCESS:
-                //Log.d("AppLog", "Installation succeeded");
+                sendBroadcast(new Intent("DISMISS_DIALOG"));
                 break;
 
             default:
