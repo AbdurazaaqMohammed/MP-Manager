@@ -1303,9 +1303,11 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                             am.delete();
                                             String rssS = "resources.arsc";
                                             File rss = new File(tempFolder, rssS);
-                                            logger.logMessage(context.rss.getString(R.string.adding, rssS));
-                                            opt.addFile(rss);
-                                            rss.delete();
+                                            if(rss.exists()) { // It's possible to have valid apk with no arsc
+                                                logger.logMessage(context.rss.getString(R.string.adding, rssS));
+                                                opt.addFile(rss);
+                                                rss.delete();
+                                            }
                                             ZipParameters zipParameters = new ZipParameters();
                                             zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
                                             zipParameters.setCompressionLevel(CompressionLevel.MAXIMUM);
@@ -1327,6 +1329,10 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                                 if(relativePath.equals(amS) || relativePath.equals(rssS)) continue;
                                                 logger.logMessage(context.rss.getString(R.string.adding, relativePath));
                                                 ZipParameters params = new ZipParameters(zipParameters); // copy settings
+                                                if(relativePath.startsWith("res/") && !relativePath.endsWith(".xml")) {
+                                                    params.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
+                                                    params.setCompressionMethod(CompressionMethod.STORE);
+                                                }
                                                 params.setFileNameInZip(relativePath);
                                                 opt.addFile(f, params);
                                             }

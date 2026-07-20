@@ -286,10 +286,17 @@ public class MainActivity extends AppCompatActivity {
                             progressText.setText(rss.getString(R.string.adding, name));
                             new Thread(() -> {
                                 try(ZipFile zf = new ZipFile(file)) {
-                                    ZipParameters zp = new ZipParameters();
-                                    boolean store = name.equals("AndroidManifest.xml") || name.equals("resources.arsc");
-                                    zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
-                                    zf.addFile(path, zp);
+                                    boolean dex = name.startsWith("classes") && name.endsWith(".dex");
+                                    if(dex) {
+                                        File modifiedFile = new File(path);
+                                        File folder = modifiedFile.getParentFile();
+                                        zf.addFiles(Arrays.asList(folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"))));
+                                    } else {
+                                        ZipParameters zp = new ZipParameters();
+                                        boolean store = name.equals("AndroidManifest.xml") || name.equals("resources.arsc");
+                                        zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                        zf.addFile(path, zp);
+                                    }
                                     if(sign[0]) new SignWrapper(
                                             settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
                                             settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
@@ -372,7 +379,6 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
         checkStoragePerm();
-
         String deviceLang = Locale.getDefault().getLanguage();
         boolean supportedLang = deviceLang.equals("ar") || deviceLang.equals("es") || deviceLang.equals("de")
                 || deviceLang.equals("fr") || deviceLang.equals("in") || deviceLang.equals("it")
