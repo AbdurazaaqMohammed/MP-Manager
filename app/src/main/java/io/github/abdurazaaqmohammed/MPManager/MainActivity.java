@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.MPManager;
 
+import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPermissions;
+
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
@@ -70,10 +72,13 @@ import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.StorageUtil;
+import io.github.ratul.topactivity.manager.ServiceManager;
+import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.services.PackageMonitoringService;
 
 import android.text.TextWatcher;
 import android.text.format.Formatter;
@@ -484,6 +489,8 @@ public class MainActivity extends AppCompatActivity {
                 drawerLayout.openDrawer(GravityCompat.START);
         };
 
+        LinearLayout container = findViewById(R.id.storageContainer);
+        StorageUtil.populateStorageUI(this, container);
         ListView sidebar = findViewById(R.id.sidebarList);
         String[] options = { "Extract APK", "FTP Server", "FTP Client", "Layout Inspector", "Settings" };
         int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
