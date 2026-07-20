@@ -103,10 +103,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import android.content.res.Configuration;
 
-import android.app.DownloadManager;
-import android.content.BroadcastReceiver;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.AutoCompleteTextView;
@@ -396,6 +393,9 @@ public class MainActivity extends AppCompatActivity {
             getWindow().setStatusBarContrastEnforced(true);
             getWindow().setNavigationBarContrastEnforced(true);
         }
+
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        Security.addProvider(new android.sun.security.provider.JavaKeyStoreProvider());
 
         requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });

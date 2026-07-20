@@ -81,7 +81,6 @@ import com.reandroid.apkeditor.decompile.Decompiler;
 import com.reandroid.apkeditor.protect.ProtectorOptions;
 import com.reandroid.apkeditor.refactor.RefactorOptions;
 import com.reandroid.archive.ArchiveFile;
-import com.reandroid.archive.InputSource;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
@@ -123,11 +122,13 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
@@ -1226,7 +1227,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                     String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK"};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
-                        if (which1 == 0) sign(false, file);
+                        if (which1 == 0) SignatureKeyDialog.show(context, file, false);
                         else if(which1 == 1) {
                             View ll = LayoutInflater.from(context).inflate(R.layout.dialog_opt, null);
 
@@ -1607,13 +1608,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                     }).show();
 
                         })
-                        .setPositiveButton("Install",
-                                (dialog, which) -> context.startActivity(new Intent(
-                                        Intent.ACTION_INSTALL_PACKAGE)
-                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                        .setData(FileProvider.getUriForFile(context,
-                                                "io.github.abdurazaaqmohammed.MPManager.provider", file))))
+                        .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApk(context, file))
                         .setNegativeButton("View", (dialog, which) -> openZipFile(file, null))
                         .create(); dialogUtil.styleAlertDialog(ad);
                 display.findViewById(R.id.quickEdit).setOnClickListener(v7 -> {
@@ -1679,7 +1674,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                         openZipFile(file, null);
                                         break;
                                     case 2:
-                                        sign(true, file);
+                                        SignatureKeyDialog.show(context, file, true);
                                         break;
                                     case 3:
                                         MergeUtil.mergeSplitApk(file, context);
@@ -1740,6 +1735,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                     if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) itemsList.add("Compare Text");
                 }
             }
+
             String[] items = itemsList.toArray(new String[0]);
             
             final Object finalCompareFile1 = compareFile1;
@@ -2150,74 +2146,6 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                 pane1 ? 1 : 2));
 
         return convertView;
-    }
-
-    private void sign(boolean isSplitApk, File file) {
-        CharSequence[] items = new CharSequence[] {
-                "Pick signature file (current: " + new File(context.signatureKeyPath).getName() + ")", "V1", "V2", "V3",
-                "V4" };
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-
-        MaterialAlertDialogBuilder builder = dialogUtil.getDialogBuilder();
-        builder.setCustomTitle(uiHelper.getTitle("Signature Options"));
-
-        SignListAdapter adapter = new SignListAdapter(context, items, settings.getBoolean("v1", true),
-                settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false));
-        ListView listView = new ListView(context);
-        listView.setAdapter(adapter);
-
-        builder.setView(listView);
-        builder.setNegativeButton("Cancel", null);
-        builder.setPositiveButton("Sign", (dialog, which) -> {
-            LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("v1", adapter.v1).putBoolean("v2", adapter.v2).putBoolean("v3", adapter.v3).putBoolean("v4", adapter.v4));
-            AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-            dialogUtil.styleAlertDialog(progressDialog);
-            TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-
-            new Thread(() -> {
-                try {
-                    SignWrapper signWrapper = new SignWrapper(settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                        settings.getString("signatureKeyPassword", "android"), adapter.v1, adapter.v2, adapter.v3,
-                        adapter.v4);
-                    File cacheDir = new File(context.getCacheDir(), UUID.randomUUID().toString());
-                    String sigFileName = file.getName();
-                    File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
-                    if (isSplitApk)
-                        try (ArchiveFile archiveFile = new ArchiveFile(file)) {
-                            for (InputSource inputSource : archiveFile.getInputSources(archiveEntry -> archiveEntry.getName().endsWith(".apk"))) {
-                                context.handler.post(() -> progressText.setText(context.rss.getString(R.string.signing_, inputSource.getAlias())));
-                                File inputApk = inputSource.toFile(cacheDir);
-                                try(InputStream is = inputSource.openStream()) { FileUtils.copyFile(is, inputApk); }
-                                signWrapper.signApk(inputApk, new File(cacheDir, inputSource.getName().replace(".apk", "_signed.apk")));
-                            }
-                            for (File file1 : cacheDir.listFiles()) {
-                                if (file1.getName().endsWith("_signed.apk")) {
-                                    File dest = new File(file1.getPath().replace("_signed.apk", ".apk"));
-                                    if (dest.exists()) dest.delete();
-                                    file1.renameTo(dest);
-                                } else file1.delete();
-                            }
-                            File signedSplitApk = FileUtils.getUnusedFile(file2);
-                            try (ZipFile zf = new ZipFile(signedSplitApk)) {
-                                zf.addFiles(Arrays.asList(cacheDir.listFiles()));
-                            }
-                            context.handler.post(() -> {
-                                progressDialog.dismiss();
-                                dialog.dismiss();
-                                Toast.makeText(context, context.rss.getString(R.string.signed, sigFileName), Toast.LENGTH_SHORT).show();
-                            });
-                        }
-                        else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
-                    } catch (Exception e) {
-                        context.handler.post(() -> {
-                            progressDialog.dismiss();
-                            dialog.dismiss();
-                        });
-                        new ErrorUtil(context).showError(e);
-                    }
-            }).start();
-        });
-        dialogUtil.styleAlertDialog(builder.create());
     }
 
     private CharSequence getFilesToDisplay(boolean multi, int position) {

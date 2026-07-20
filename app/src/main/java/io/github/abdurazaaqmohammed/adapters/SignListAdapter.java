@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.adapters;
 
 import android.content.Context;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -25,7 +26,7 @@ import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 
 public class SignListAdapter extends ArrayAdapter<CharSequence> {
     private final Context context;
-    private final CharSequence[] items;
+    public final CharSequence[] items;
     public boolean v1;
     public boolean v2;
     public boolean v3;
@@ -80,7 +81,6 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
                 LinearLayout layout = new LinearLayout(context);
                 layout.setOrientation(LinearLayout.VERTICAL);
                 layout.setPadding(48, 24, 48, 24);
-
                 pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
                 layout.addView(mb);
