@@ -45,10 +45,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:padding="4dp"
-                app:tint="@android:color/white"
+                app:tint="?attr/colorSurface"
                 android:src="@drawable/call_split_24px"
                 android:contentDescription="@string/split" />
-            </com.google.android.material.card.MaterialCardView>   </RelativeLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </RelativeLayout>
 
         <TextView
             android:id="@+id/appName"

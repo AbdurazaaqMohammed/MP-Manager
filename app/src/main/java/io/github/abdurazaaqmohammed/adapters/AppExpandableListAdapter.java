@@ -186,6 +186,7 @@ public class AppExpandableListAdapter extends BaseExpandableListAdapter {
 
             cardView.getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true);
             cardView.setCardBackgroundColor(typedValue.data);
+            convertView.setBackgroundColor(typedValue.data);
         }
 
         viewHolder.appName.setText(appInfo.name);
