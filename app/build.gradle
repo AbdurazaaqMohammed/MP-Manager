@@ -24,6 +24,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true
     }
     namespace 'io.github.abdurazaaqmohammed.MPManager'
 
@@ -33,31 +34,34 @@ android {
         // Disables dependency metadata when building Android App Bundles.
         includeInBundle = false
     }
+    packaging {
+        resources.excludes.add("META-INF/DEPENDENCIES")
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
 }
 
 dependencies {
-  //  implementation files('libs/androidx-collections.jar')
-   // implementation files('libs/animato.jar')
-    //implementation files('libs/antlr.jar')
-    //implementation files('libs/APKEditor-1.4.8.jar')
+   implementation("androidx.multidex:multidex:2.0.1")
+    implementation 'com.android.volley:volley:1.2.1'
+    implementation 'androidx.startup:startup-runtime:1.1.0'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation files('libs/JCommand.jar')
     implementation files('libs/bin-zip.jar')
     implementation files('libs/arsc-parser.jar')
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.google.guava:guava:33.6.0-android")
-    // implementation files('libs/commons-io.jar')
-   // implementation files('libs/guava-27.1.jar')
-   // implementation files('libs/jadx-dex-input-1.4.7.jar')
-   // implementation files('libs/javax.jar')
-   // implementation files('libs/kotlin-runtime.jar')
-    implementation files('libs/smali.jar')
+    implementation files('libs/commons-io.jar')
     implementation files('libs/editor-debug.aar')
-   // implementation 'io.github.skylot:jadx-core:1.4.7'
-    //implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'io.github.java-diff-utils:java-diff-utils:4.17'
     implementation(platform("io.github.Rosemoe.sora-editor:bom:0.23.6"))
     implementation("androidx.collection:collection:1.6.0-rc01")
-    //implementation 'io.github.Rosemoe.sora-editor:editor'
     implementation 'androidx.preference:preference:1.2.1'
+
+    implementation files('libs/ftp4j-1.7.2.jar')
+    implementation("org.apache.ftpserver:ftplet-api:1.2.1")
+    implementation("org.apache.ftpserver:ftpserver-core:1.2.1")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
 }

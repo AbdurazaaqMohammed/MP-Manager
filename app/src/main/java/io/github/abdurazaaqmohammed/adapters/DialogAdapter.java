@@ -93,7 +93,6 @@ public class DialogAdapter extends ArrayAdapter<String> {
             linearLayout.setGravity(Gravity.CENTER_VERTICAL);
             linearLayout.addView(iconView);
             linearLayout.addView(tv);
-
             return linearLayout;
         }
         return convertView;

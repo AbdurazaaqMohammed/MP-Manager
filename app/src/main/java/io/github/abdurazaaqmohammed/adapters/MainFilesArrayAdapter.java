@@ -134,9 +134,9 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
         List<XMLEntry> entries = decodeManifest(apkFile);
 
         String installLoc = "";
-        TextInputEditText appNameInput = quickEditDialog.findViewById(R.id.appNameInput);
-        TextInputEditText verCodeInput = quickEditDialog.findViewById(R.id.verCodeInput);
-        TextInputEditText verNameInput = quickEditDialog.findViewById(R.id.verNameInput);
+        TextView appNameInput = quickEditDialog.findViewById(R.id.appNameInput);
+        TextView verCodeInput = quickEditDialog.findViewById(R.id.verCodeInput);
+        TextView verNameInput = quickEditDialog.findViewById(R.id.verNameInput);
         AutoCompleteTextView targetSdk = quickEditDialog.findViewById(R.id.targetSdk);
         AutoCompleteTextView minSdk = quickEditDialog.findViewById(R.id.minSdk);
 
@@ -1239,7 +1239,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                 String[] filesFiDelete = (filesToDelete == null) ? new String[] {"assets/audience_network.dex", "androidsupportmultidexversion.txt", "DebugProbesKt.bin", "stamp-cert-sha256", "user-messaging-platform.properties", "transport-runtime.properties", "transport-backend-cct.properties", "transport-api.properties", "protolite-well-known-types.properties", "play-services-tasks.properties", "play-services-stats.properties", "play-services-measurement-sdk-api.properties", "play-services-measurement-sdk.properties", "play-services-measurement-impl.properties", "play-services-measurement-base.properties", "play-services-measurement-api.properties", "play-services-measurement.properties", "play-services-cloud-messaging.properties", "play-services-basement.properties", "play-services-base.properties", "play-services-appset.properties", "play-services-ads-lite.properties", "play-services-ads-identifier.properties", "play-services-ads-base.properties", "play-services-ads.properties", "firebase-abt.properties", "firebase-analytics-ktx.properties", "firebase-analytics.properties", "firebase-annotations.properties", "firebase-common-ktx.properties", "firebase-common.properties", "firebase-components.properties", "firebase-config-ktx.properties", "firebase-config.properties", "firebase-crashlytics-ktx.properties", "firebase-crashlytics.properties", "firebase-datatransport.properties", "firebase-encoders-json.properties", "firebase-encoders-proto.properties", "firebase-encoders.properties", "firebase-iid-interop.properties", "firebase-installations-interop.properties", "firebase-installations.properties", "firebase-measurement-connector.properties", "firebase-messaging-ktx.properties", "firebase-messaging.properties", "firebase-perf-ktx.properties", "firebase-perf.properties"}
                                     : filesToDelete.toArray(new String[0]);
                                 List<String> filesFiDel = new ArrayList<>(Arrays.asList(filesFiDelete));
-                                android.widget.ListView listView = new android.widget.ListView(getContext());
+                                ListView listView = new ListView(getContext());
                                 ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, R.layout.item_bottom_bar_config, filesFiDel) {
                                     @NonNull
                                     @Override
@@ -1560,7 +1560,7 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
                                     APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
                                     new Thread(() -> {
                                         ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
-                                            final android.widget.ProgressBar progressBar = progressDialog.findViewById(R.id.progressBar);
+                                            final ProgressBar progressBar = progressDialog.findViewById(R.id.progressBar);
                                             @Override
                                             public void onMessage(final String msg) {
                                                 logger.logMessage(msg);
@@ -1679,26 +1679,29 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
             String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark" };
             List<String> itemsList = new ArrayList<>(Arrays.asList(baseItems));
 
-            MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) ((ListView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
-            Object compareFile1 = null;
-            Object compareFile2 = null;
-            if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
-                compareFile1 = values[selectedPositions.iterator().next()];
-                compareFile2 = otherPaneAdapter.values[otherPaneAdapter.selectedPositions.iterator().next()];
-                String name1 = compareFile1 instanceof File ? ((File)compareFile1).getName() : ((ZipEntryInfo)compareFile1).getName();
-                String name2 = compareFile2 instanceof File ? ((File)compareFile2).getName() : ((ZipEntryInfo)compareFile2).getName();
+            Adapter a = ((ListView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+             Object compareFile1 = null;
+             Object compareFile2 = null;
+             if(a instanceof MainFilesArrayAdapter) {
+                MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) a;
+                if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
+                    compareFile1 = values[selectedPositions.iterator().next()];
+                    compareFile2 = otherPaneAdapter.values[otherPaneAdapter.selectedPositions.iterator().next()];
+                    String name1 = compareFile1 instanceof File ? ((File)compareFile1).getName() : ((ZipEntryInfo)compareFile1).getName();
+                    String name2 = compareFile2 instanceof File ? ((File)compareFile2).getName() : ((ZipEntryInfo)compareFile2).getName();
 
-                String ext1 = FilenameUtils.getExtension(name1).toLowerCase();
-                String ext2 = FilenameUtils.getExtension(name2).toLowerCase();
+                    String ext1 = FilenameUtils.getExtension(name1).toLowerCase();
+                    String ext2 = FilenameUtils.getExtension(name2).toLowerCase();
 
-                boolean isZip1 = ext1.equals("zip") || ext1.equals("apk") || ext1.equals("jar");
-                boolean isZip2 = ext2.equals("zip") || ext2.equals("apk") || ext2.equals("jar");
-                boolean isArsc1 = ext1.equals("arsc") || ext1.equals("apk");
-                boolean isArsc2 = ext2.equals("arsc") || ext2.equals("apk");
+                    boolean isZip1 = ext1.equals("zip") || ext1.equals("apk") || ext1.equals("jar");
+                    boolean isZip2 = ext2.equals("zip") || ext2.equals("apk") || ext2.equals("jar");
+                    boolean isArsc1 = ext1.equals("arsc") || ext1.equals("apk");
+                    boolean isArsc2 = ext2.equals("arsc") || ext2.equals("apk");
 
-                if (isZip1 && isZip2) itemsList.add("Compare ZIP");
-                if (isArsc1 && isArsc2) itemsList.add("Compare ARSC");
-                if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) itemsList.add("Compare Text");
+                    if (isZip1 && isZip2) itemsList.add("Compare ZIP");
+                    if (isArsc1 && isArsc2) itemsList.add("Compare ARSC");
+                    if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) itemsList.add("Compare Text");
+                }
             }
             String[] items = itemsList.toArray(new String[0]);
             
@@ -2224,7 +2227,12 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
 
     private void copyToDestination(List<Object> items) throws IOException {
         File destinationFolder = pane1 ? context.pane2Folder : context.pane1Folder;
-        MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) ((ListView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+        android.widget.Adapter adapter = ((ListView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+        if (adapter instanceof FtpFilesArrayAdapter) {
+            ((FtpFilesArrayAdapter) adapter).uploadFiles(items);
+            return;
+        }
+        MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) adapter;
         boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
         if (destIsZip) {
             copyToZip(items, destinationFolder, otherPaneAdapter.currentZipPath);
@@ -2378,7 +2386,8 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
         else try (ZipFile zf = new ZipFile(zipFile);
              InputStream is = zf.getInputStream(zf.getFileHeader(fullPath))) {
             final String name = zipEntry.getName();
-            File tempFolder = new File(context.getCacheDir() + File.separator + UUID.randomUUID());
+            String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
+            File tempFolder = new File(outputDir);
             tempFolder.mkdir();
             File tempFile = new File(tempFolder, name);
             tempFile.createNewFile();
@@ -2419,24 +2428,5 @@ public class MainFilesArrayAdapter extends ArrayAdapter<Object> {
             selectedPositions.add(i);
         }
         notifyDataSetChanged();
-    }
-
-    static class OptionItem {
-        static final int TYPE_SPINNER = 0;
-        static final int TYPE_SWITCH = 1;
-        static final int TYPE_EDIT_NUMBER = 2;
-        static final int TYPE_EDIT_TEXT = 3;
-
-        int type;
-        String title;
-        String key;
-        Object defaultValue;
-
-        public OptionItem(int type, String title, String key, Object defaultValue) {
-            this.type = type;
-            this.title = title;
-            this.key = key;
-            this.defaultValue = defaultValue;
-        }
     }
 }

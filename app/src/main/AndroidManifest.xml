@@ -4,6 +4,12 @@
     android:installLocation="preferExternal"
     package="io.github.abdurazaaqmohammed.MPManager">
     <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"
@@ -18,7 +24,7 @@
            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
            android:name="androidx.multidex.MultiDexApplication"
            android:icon="@mipmap/ic_launcher"
-            android:label="MP Manager">
+           android:label="MP Manager">
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.MPManager.MainActivity"
@@ -68,5 +74,11 @@
                    android:resource="@xml/paths"/>
            </provider>
            <service android:name="com.faith.apkinstaller.APKInstallService" />
+           <service
+                android:name=".ftp.FtpForegroundService"
+                android:foregroundServiceType="specialUse"
+                android:exported="false" />
+           <receiver android:name=".ftp.StopReceiver" android:exported="false" />
+           <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
        </application>
 </manifest>

@@ -1,21 +1,28 @@
 package io.github.abdurazaaqmohammed.MPManager;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.text.Editable;
@@ -25,19 +32,37 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.lilincpp.github.libezftp.EZFtpServer;
+import com.lilincpp.github.libezftp.user.EZFtpUser;
+import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
+import com.lilincpp.github.libezftp.IEZFtpServer;
+import com.lilincpp.github.libezftp.EZFtpClient;
+import com.lilincpp.github.libezftp.IEZFtpClient;
+import com.lilincpp.github.libezftp.EZFtpFile;
+import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
+import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
+import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileManager;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
+import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
@@ -50,15 +75,19 @@ import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 
 import android.text.TextWatcher;
+import android.text.format.Formatter;
 import android.view.View;
 import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
 import android.view.WindowManager;
+import android.widget.Adapter;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.CheckBox;
@@ -141,6 +170,10 @@ public class MainActivity extends AppCompatActivity {
     private List<ZipEntryInfo> currentPane2ZipEntries;
     private String currentPane1Filter = "";
     private String currentPane2Filter = "";
+
+    private ProfileManager profileManager;
+    private MaterialAutoCompleteTextView profileSpinner;
+    private ImageButton profileManageButton;
 
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
@@ -312,36 +345,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    long downloadId;
-    private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            isServiceBound = true;
+        }
 
-            if (id == downloadId) {
-                DownloadManager.Query query = new DownloadManager.Query();
-                query.setFilterById(id);
-                DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                try (Cursor cursor = downloadManager.query(query)) {
-                    if (cursor.moveToFirst()) {
-                        int columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                        if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(columnIndex)) {
-                            int columnIndex1 = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
-                            String fileUri = cursor.getString(columnIndex1);
-                            InstallUtil.installApk(MainActivity.this,
-                                    Uri.parse(fileUri));
-                        }
-                    }
-                }
-            }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            isServiceBound = false;
         }
     };
+    private boolean isServiceBound = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode
-                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         setTheme(theme = settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
         super.onCreate(savedInstanceState);
         DynamicColors.applyToActivitiesIfAvailable(getApplication());
@@ -375,6 +396,8 @@ public class MainActivity extends AppCompatActivity {
             getWindow().setNavigationBarContrastEnforced(true);
         }
 
+        requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
 
         new Thread(() -> {
             File frameworks = new File("/storage/emulated/0/MP Manager/frameworks/");
@@ -461,8 +484,8 @@ public class MainActivity extends AppCompatActivity {
         };
 
         ListView sidebar = findViewById(R.id.sidebarList);
-        String[] options = { "Extract APK", "Settings" };
-        int[] icons = {R.drawable.apk_document_24px, R.drawable.baseline_settings_24};
+        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Layout Inspector", "Settings" };
+        int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
         sidebar.setAdapter(new ArrayAdapter<String>(this, R.layout.item_dropdown_option, options) {
             @NonNull
             @Override
@@ -483,6 +506,12 @@ public class MainActivity extends AppCompatActivity {
                     startActivityForResult(new Intent(this, APKExtractorActivity.class), 11);
                     break;
                 case 1:
+                    showFtpServerDialog();
+                    break;
+                case 2:
+                    showFtpClientDialog();
+                    break;
+                case 4:
                     showSettingsDialog();
                     break;
             }
@@ -577,9 +606,10 @@ public class MainActivity extends AppCompatActivity {
         ListView pane2 = findViewById(R.id.listViewPane2);
 
         pane1.setOnTouchListener((v, event) -> {
-
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 1) {
                 lastPaneSelected = 1;
+                Adapter a = pane1.getAdapter();
+                if (!(a instanceof MainFilesArrayAdapter)) return false;
                 MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane1.getAdapter();
                 if (adapter != null) {
                     if (adapter.isInZip) {
@@ -597,6 +627,8 @@ public class MainActivity extends AppCompatActivity {
 
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 2) {
                 lastPaneSelected = 2;
+                Adapter a = pane2.getAdapter();
+                if (!(a instanceof MainFilesArrayAdapter)) return false;
                 MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane2.getAdapter();
                 if (adapter != null) {
                     if (adapter.isInZip) {
@@ -651,17 +683,19 @@ public class MainActivity extends AppCompatActivity {
                     input.getText().delete(selectionStart, selectionEnd);
                 }
                 CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                if (!TextUtils.isEmpty(text))
-                    input.getText().insert(selectionStart, text);
+                if (!TextUtils.isEmpty(text)) input.getText().insert(selectionStart, text);
             });
         });
 
         ImageView syncPaneButton = findViewById(R.id.syncPaneButton);
         syncPaneButton.setOnClickListener(v -> {
-            if (lastPaneSelected == 1)
-                loadFolderInPane(pane2Folder = ((MainFilesArrayAdapter)getCurrentPane().getAdapter()).isInZip ? pane1Folder.getParentFile() : pane1Folder, false);
-            else
-                loadFolderInPane(pane1Folder = ((MainFilesArrayAdapter)getCurrentPane().getAdapter()).isInZip ? pane2Folder.getParentFile() : pane2Folder, true);
+            Adapter a = getCurrentPane().getAdapter();
+            if(a instanceof MainFilesArrayAdapter) {
+                if (lastPaneSelected == 1)
+                    loadFolderInPane(pane2Folder = ((MainFilesArrayAdapter) a).isInZip ? pane1Folder.getParentFile() : pane1Folder, false);
+                else
+                    loadFolderInPane(pane1Folder = ((MainFilesArrayAdapter) a).isInZip ? pane2Folder.getParentFile() : pane2Folder, true);
+            }
         });
 
         ImageView moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
@@ -682,10 +716,13 @@ public class MainActivity extends AppCompatActivity {
             MenuItem manItem = hiddenMenu.add(0, 7, 0, "Show manually hidden files");
             manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
 
-            MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-            MenuItem hideSel = hiddenMenu.add(0, 8, 0, "Hide selected files");
-            hideSel.setEnabled(adapter != null && adapter.isMultiSelectMode());
-            hiddenMenu.add(0, 9, 0, "Edit hidden files").setIcon(R.drawable.baseline_drive_file_rename_outline_24);
+            Adapter a = getCurrentPane().getAdapter();
+            if ((a instanceof MainFilesArrayAdapter)) {
+                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
+                MenuItem hideSel = hiddenMenu.add(0, 8, 0, "Hide selected files");
+                hideSel.setEnabled(adapter != null && adapter.isMultiSelectMode());
+                hiddenMenu.add(0, 9, 0, "Edit hidden files").setIcon(R.drawable.baseline_drive_file_rename_outline_24);
+            }
 
             menu.add(0, 10, 0, "Add to bookmarks").setIcon(R.drawable.baseline_bookmark_24);
             menu.add(0, 11, 0, "Set as home folder").setIcon(R.drawable.baseline_home_24);
@@ -717,7 +754,7 @@ public class MainActivity extends AppCompatActivity {
                         showSearchDialog();
                         break;
                     case "Select all":
-                        if (adapter != null) adapter.selectAll();
+                        if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
                         break;
                     case "Sort":
                         showSortDialog();
@@ -738,14 +775,14 @@ public class MainActivity extends AppCompatActivity {
                     }
                     case "Hide selected files":
                         Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
-                        for (Object obj : adapter.getSelectedFiles()) {
+                        for (Object obj : ((MainFilesArrayAdapter) a).getSelectedFiles()) {
                             if (obj instanceof File)
                                 manualHidden.add(((File) obj).getPath());
                             else if (obj instanceof ZipEntryInfo)
                                 manualHidden.add(((ZipEntryInfo) obj).getFullPath());
                         }
                         prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
-                        adapter.clearSelection();
+                        ((MainFilesArrayAdapter) a).clearSelection();
                         reloadCurrentFolder();
                         break;
                     case "Edit hidden files":
@@ -787,17 +824,33 @@ public class MainActivity extends AppCompatActivity {
         ImageView upButton = findViewById(R.id.upButton);
         upButton.setOnClickListener(v -> {
             boolean isPane1 = lastPaneSelected == 1;
-            MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-            if (adapter.isInZip) {
-                File zipFile = isPane1 ? pane1Folder : pane2Folder;
-                if (TextUtils.isEmpty(adapter.currentZipPath)) {
-                    if (zipFile.getParentFile() != null)
-                        loadFolderInPane(zipFile.getParentFile(), isPane1);
-                } else {
-                    File parentInZip = new File(adapter.currentZipPath).getParentFile();
-                    loadZipFolderInPane(zipFile, parentInZip != null ? parentInZip.getPath() : "", isPane1, true);
-                }
-            } else loadFolderInPane((File) adapter.getItem(0), isPane1);
+            Adapter a = getCurrentPane().getAdapter();
+            if ((a instanceof MainFilesArrayAdapter)) {
+                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
+                if (adapter.isInZip) {
+                    File zipFile = isPane1 ? pane1Folder : pane2Folder;
+                    if (TextUtils.isEmpty(adapter.currentZipPath)) {
+                        if (zipFile.getParentFile() != null)
+                            loadFolderInPane(zipFile.getParentFile(), isPane1);
+                    } else {
+                        File parentInZip = new File(adapter.currentZipPath).getParentFile();
+                        loadZipFolderInPane(zipFile, parentInZip != null ? parentInZip.getPath() : "", isPane1, true);
+                    }
+                } else loadFolderInPane((File) adapter.getItem(0), isPane1);
+            } else {
+                ftpClient.getCurDirPath(new OnEZFtpCallBack<String>() {
+                    @Override
+                    public void onSuccess(String response) {
+                        int startIndex = response.indexOf(File.separator);
+                        int endIndex = response.lastIndexOf(File.separator);
+                        fetchFtpDirAndLoad((startIndex == endIndex) ? File.separator : response.substring(0, endIndex), isPane1);
+                    }
+
+                    @Override
+                    public void onFail(int code, String msg) {
+                    }
+                });
+            }
         });
         setupFilterBar();
     }
@@ -822,23 +875,37 @@ public class MainActivity extends AppCompatActivity {
                 filterBar.setVisibility(View.GONE);
                 filterBar.setText("");
             } else {
-                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-                if (adapter.isMultiSelectMode()) adapter.clearSelection();
-                else {
-                    String s = adapter.currentZipPath;
-                    if(adapter.isInZip && !StringsUtil.isEmpty(s)) {
-                        char[] chars = s.toCharArray();
-                        int i = 0;
-                        for(char c : chars) if (c == File.separatorChar) i++;
-                        boolean inOneLevelInZip = i < 2;
-                        loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, false);
-                    } else if (!navigateBack(lastPaneSelected == 1)) {
+                Adapter a = getCurrentPane().getAdapter();
+                if(a instanceof MainFilesArrayAdapter) {
+                    MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
+                    if (adapter.isMultiSelectMode()) adapter.clearSelection();
+                    else {
+                        String s = adapter.currentZipPath;
+                        if(adapter.isInZip && !StringsUtil.isEmpty(s)) {
+                            char[] chars = s.toCharArray();
+                            int i = 0;
+                            for(char c : chars) if (c == File.separatorChar) i++;
+                            boolean inOneLevelInZip = i < 2;
+                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, false);
+                        } else if (!navigateBack(lastPaneSelected == 1)) {
                         /*String s = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                         File f = new File(s).getParentFile();
                         if(f.canRead()) loadFolderInPane(f, pane1, false);
                         else super.onBackPressed();*/
+                        }
                     }
-                }
+                } else ftpClient.getCurDirPath(new OnEZFtpCallBack<String>() {
+                    @Override
+                    public void onSuccess(String response) {
+                        int startIndex = response.indexOf(File.separator);
+                        int endIndex = response.lastIndexOf(File.separator);
+                        fetchFtpDirAndLoad((startIndex == endIndex) ? File.separator : response.substring(0, endIndex), lastPaneSelected == 1);
+                    }
+
+                    @Override
+                    public void onFail(int code, String msg) {
+                    }
+                });
             }
         }
     }
@@ -896,6 +963,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
+        if (folder instanceof FTPFileWrapper) {
+            loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
+            return;
+        }
         if (folder.getName().endsWith(".zip")) {
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
@@ -1141,16 +1212,17 @@ public class MainActivity extends AppCompatActivity {
         else {
             File[] folders = curr.listFiles(File::isDirectory);
             int foldersCount = folders == null ? 0 : folders.length;
-            this.<TextView>findViewById(R.id.folderCount).setText(
-                    new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
-                            .append(files.length - foldersCount));
+            this.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder("Folders: ").append(foldersCount).append(" Files: ").append(files.length - foldersCount));
         }
     }
 
     public void setCurrentPane(int pane) {
         lastPaneSelected = pane;
-        MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-        if (adapter != null) {
+        Adapter a = getCurrentPane().getAdapter();
+        boolean b = a instanceof MainFilesArrayAdapter;
+        findViewById(R.id.syncPaneButton).setEnabled(b);
+        if (b) {
+            MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
             if (adapter.isInZip) {
                 setCurrentFolder(adapter.currentZipPath, Arrays.asList(adapter.values));
             } else {
@@ -1214,8 +1286,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-
         FileUtil.deleteDirectory(getCacheDir());
+        if (isServiceBound) {
+            getApplicationContext().unbindService(serviceConnection);
+            isServiceBound = false;
+        }
         super.onDestroy();
     }
 
@@ -1300,8 +1375,14 @@ public class MainActivity extends AppCompatActivity {
             long minSize, long maxSize) {
         boolean isPane1 = lastPaneSelected == 1;
         File startDir = isPane1 ? pane1Folder : pane2Folder;
-        MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-        if (adapter != null && adapter.isInZip) {
+
+        Adapter a = getCurrentPane().getAdapter();
+        if (!(a instanceof MainFilesArrayAdapter)) {
+            Toast.makeText(this, "Search in FTP not supported yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
+        if(adapter.isInZip) {
             Toast.makeText(this, "Search in ZIP not supported yet", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -1517,9 +1598,10 @@ public class MainActivity extends AppCompatActivity {
         boolean isPane1 = lastPaneSelected == 1;
         String filter = isPane1 ? currentPane1Filter : currentPane2Filter;
         ListView pane = findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+
+        Adapter a = getCurrentPane().getAdapter();
+        if (!(a instanceof MainFilesArrayAdapter)) return;
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane.getAdapter();
-        if (adapter == null)
-            return;
 
         if (adapter.isInZip) {
             List<ZipEntryInfo> entries = isPane1 ? currentPane1ZipEntries : currentPane2ZipEntries;
@@ -1564,8 +1646,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSortDialog() {
         boolean isPane1 = lastPaneSelected == 1;
+        Adapter a = getCurrentPane().getAdapter();
+        if (!(a instanceof MainFilesArrayAdapter)) return;
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-        if (adapter == null) return;
         String currentPath = adapter.isInZip ? adapter.currentZipPath : (isPane1 ? pane1Folder.getPath() : pane2Folder.getPath());
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -1730,6 +1813,233 @@ public class MainActivity extends AppCompatActivity {
             setForceIcons.invoke(menuPopupHelper, true);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public static IEZFtpServer ftpServer;
+
+    private void showFtpServerDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_ftp_server, null);
+        FrameLayout container = view.findViewById(R.id.container);
+        View header = LayoutInflater.from(this).inflate(R.layout.dialog_ftp_server_header, container, false);
+        container.addView(header, 0);
+
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
+        String ipString = Formatter.formatIpAddress(ipAddress);
+        TextView ipTv = view.findViewById(R.id.ip);
+        ipTv.setText(rss.getString(R.string.ip, ipString));
+        ipTv.setOnLongClickListener(v -> {
+            ((android.text.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
+            Toast.makeText(this, rss.getString(R.string.copied), Toast.LENGTH_SHORT).show();
+            return false;
+        });
+        view.findViewById(R.id.copy).setOnClickListener(v -> {
+            ((android.text.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
+            Toast.makeText(this, rss.getString(R.string.copied), Toast.LENGTH_SHORT).show();
+        });
+        view.findViewById(R.id.share).setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, ipString).setType("text/plain")));
+        EditText portInput = view.findViewById(R.id.portInput);
+        EditText userInput = view.findViewById(R.id.userInput);
+        EditText passInput = view.findViewById(R.id.passInput);
+        profileSpinner = header.findViewById(R.id.profile_spinner);
+        profileManageButton = header.findViewById(R.id.manage_profiles);
+        new ProfileHelper(this, null, portInput, userInput, passInput, profileSpinner, profileManageButton).setupProfileSpinner(true);
+
+        boolean serverNotStarted = ftpServer == null;
+        portInput.setEnabled(serverNotStarted);
+        userInput.setEnabled(serverNotStarted);
+        passInput.setEnabled(serverNotStarted);
+        View pl = header.findViewById(R.id.profile_layout);
+        pl.setEnabled(serverNotStarted);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
+            Toast.makeText(this, "Please allow notifications to show FTP server running", Toast.LENGTH_SHORT).show();
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            /*new MaterialAlertDialogBuilder(this)
+                .setTitle("Notifications")
+                .setMessage("Please allow notifications to show FTP server running")
+                .setPositiveButton("Allow", (dialog, which) -> requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS))
+                .setOnDismissListener(dialog -> requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS))
+                .show();*/
+        }
+
+        // This is very important to have notification so user remember that the FTP server is running and can stop it easily and should be shown always not just if dialog or app closed
+        Intent serviceIntent = new Intent(this, FtpForegroundService.class);
+        serviceIntent.putExtra("io.github.abdurazaaqmohammed.MPManager.ip", ipString);
+
+        AlertDialog ad = dialogUtil.getDialogBuilder()
+                .setTitle("FTP Server")
+                .setView(view)
+                .setOnDismissListener(null)
+                .setPositiveButton(serverNotStarted ? "Start" : "Stop", null)
+                .show();
+                ad.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    TextView tv = (TextView) v;
+                    boolean wasStarted = "Stop".equals(tv.getText().toString());
+                    tv.setText(wasStarted ? "Start" : "Stop");
+                    portInput.setEnabled(wasStarted);
+                    userInput.setEnabled(wasStarted);
+                    passInput.setEnabled(wasStarted);
+                    pl.setEnabled(serverNotStarted);
+                    if(wasStarted) {
+                        if(ftpServer != null) ftpServer.stop();
+                        ftpServer = null;
+                        stopService(serviceIntent);
+                        Toast.makeText(MainActivity.this, "FTP Server stopped", Toast.LENGTH_SHORT).show();
+                    } else {
+                        int port = Integer.parseInt(portInput.getText().toString());
+                        String user = userInput.getText().toString();
+                        String pass = passInput.getText().toString();
+
+                        try {
+                            ftpServer = new EZFtpServer.Builder()
+                                    .setListenPort(port)
+                                    .addUser(new EZFtpUser(user, pass, Environment.getExternalStorageDirectory().getPath(), EZFtpUserPermission.WRITE))
+                                    .create();
+                            ftpServer.start();
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(serviceIntent);
+                            } else {
+                                startService(serviceIntent);
+                            }
+                            Toast.makeText(MainActivity.this, "FTP Server started on port " + port, Toast.LENGTH_SHORT).show();
+                        } catch (Exception e) {
+                            stopService(serviceIntent);
+                            portInput.setEnabled(true);
+                            userInput.setEnabled(true);
+                            passInput.setEnabled(true);
+                            pl.setEnabled(true);
+                            if(ftpServer != null) ftpServer.stop();
+                            tv.setText("Start");
+                            e.printStackTrace();
+                            Toast.makeText(MainActivity.this, "Failed to start FTP server: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                        BroadcastReceiver ftpStopReceiver = new BroadcastReceiver() {
+                            @Override
+                            public void onReceive(Context context, Intent intent) {
+                                if (ad.isShowing()) {
+                                    tv.setText("Start");
+                                    portInput.setEnabled(true);
+                                    userInput.setEnabled(true);
+                                    passInput.setEnabled(true);
+                                    header.setEnabled(true);
+                                }
+                                unregisterReceiver(this);
+                            }
+                        };
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            registerReceiver(ftpStopReceiver, new IntentFilter("io.github.abdurazaaqmohammed.FTP_STOPPED"), Context.RECEIVER_NOT_EXPORTED);
+                        } else registerReceiver(ftpStopReceiver, new IntentFilter("io.github.abdurazaaqmohammed.FTP_STOPPED"));
+                    }
+                });
+    }
+
+    private void showFtpClientDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_ftp_client, null);
+        EditText ipInput = view.findViewById(R.id.ipInput);
+        EditText portInput = view.findViewById(R.id.portInput);
+        EditText userInput = view.findViewById(R.id.userInput);
+        EditText passInput = view.findViewById(R.id.passInput);
+        FrameLayout container = view.findViewById(R.id.container);
+        View header = LayoutInflater.from(this).inflate(R.layout.dialog_ftp_client_header, container, false);
+        container.addView(header, 0);
+
+        profileSpinner = header.findViewById(R.id.profile_spinner);
+        profileManageButton = header.findViewById(R.id.manage_profiles);
+
+        new ProfileHelper(this, ipInput, portInput, userInput, passInput, profileSpinner, profileManageButton).setupProfileSpinner(false);
+        AlertDialog ad = dialogUtil.getDialogBuilder()
+                .setTitle("FTP Client")
+                .setView(view)
+                .setPositiveButton("Connect", (dialog, which) -> {
+
+                    String ip = ipInput.getText().toString().trim();
+                    int port = Integer.parseInt(portInput.getText().toString());
+                    String user = userInput.getText().toString();
+                    String pass = passInput.getText().toString();
+
+                    ftpClient = new EZFtpClient();
+                    ftpClient.connect(ip, port, user, pass, new OnEZFtpCallBack<Void>() {
+                        @Override
+                        public void onSuccess(Void response) {
+                            runOnUiThread(() -> {
+                                Toast.makeText(MainActivity.this, "Connected to FTP", Toast.LENGTH_SHORT).show();
+                                fetchFtpDirAndLoad(File.separator, lastPaneSelected == 1);
+                            });
+                        }
+
+                        @Override
+                        public void onFail(int code, String msg) {
+                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "FTP Connect Failed: " + msg, Toast.LENGTH_SHORT).show());
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private IEZFtpClient ftpClient;
+    
+    public void fetchFtpDirAndLoad(String path, boolean pane1) {
+        if (ftpClient == null || !ftpClient.isConnected()) return;
+        
+        ftpClient.changeDirectory(path, new OnEZFtpCallBack<String>() {
+            @Override
+            public void onSuccess(String newPath) {
+                ftpClient.getCurDirFileList(new OnEZFtpCallBack<List<EZFtpFile>>() {
+                    @Override
+                    public void onSuccess(List<EZFtpFile> response) {
+                        runOnUiThread(() -> {
+                            List<FTPFileWrapper> files = new ArrayList<>();
+                            files.add(new FTPFileWrapper(newPath, new EZFtpFile("..", "",0, 0, new Date())));
+                            int foldersCount = 0;
+                            //int filesCount = 0;
+                            if (response != null) {
+                                for (EZFtpFile f : response) {
+                                    if (f.getType() == EZFtpFile.TYPE_DIRECTORY) foldersCount++;
+                                    //else filesCount++;
+                                    files.add(new FTPFileWrapper(newPath, f));
+                                }
+                            }
+                            ListView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                            pane.setAdapter(new FtpFilesArrayAdapter(MainActivity.this, files.toArray(new FTPFileWrapper[0]), pane1, ftpClient));
+                            TextView currentFolderPath = findViewById(R.id.currentFolderPath);
+                            currentFolderPath.setText(rss.getString(R.string.ftp, path));
+                            uiHelper.scrollTextView(currentFolderPath);
+
+                            MainActivity.this.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder("Folders: ").append(foldersCount).append(" Files: ").append(response.size() - foldersCount));
+                        });
+                    }
+                    @Override
+                    public void onFail(int code, String msg) { }
+                });
+            }
+            @Override
+            public void onFail(int code, String msg) { }
+        });
+    }
+
+    private void loadFtpFolderInPane(FTPFileWrapper folder, boolean pane1) {
+        if (folder.getName().equals("..")) {
+            if (ftpClient != null) {
+                ftpClient.getCurDirPath(new OnEZFtpCallBack<String>() {
+                    @Override
+                    public void onSuccess(String response) {
+                        int startIndex = response.indexOf(File.separator);
+                        int endIndex = response.lastIndexOf(File.separator);
+                        fetchFtpDirAndLoad((startIndex == endIndex) ? File.separator : response.substring(0, endIndex), lastPaneSelected == 1);
+                    }
+
+                    @Override
+                    public void onFail(int code, String msg) {
+                    }
+                });
+            }
+        } else if (folder.isDirectory()) {
+            fetchFtpDirAndLoad(folder.getFtpFile().getName(), pane1);
+        } else {
+            Toast.makeText(this, "FTP File Download coming soon", Toast.LENGTH_SHORT).show();
         }
     }
 }

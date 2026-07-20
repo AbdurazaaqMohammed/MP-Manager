@@ -10,8 +10,6 @@ import android.widget.TextView;
 
 import androidx.core.content.res.ResourcesCompat;
 
-import org.jf.smali.Main;
-
 import java.io.File;
 import java.util.ArrayList;
 
