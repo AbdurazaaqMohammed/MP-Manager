@@ -52,6 +52,8 @@ dependencies {
     implementation files('libs/arsc-parser.jar')
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.google.guava:guava:33.6.0-android")
+    implementation "androidx.preference:preference:1.2.1"
+    implementation "androidx.collection:collection:1.6.0"
     implementation files('libs/commons-io.jar')
     implementation files('libs/editor-debug.aar')
     implementation 'net.lingala.zip4j:zip4j:2.11.6'

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">MP Manager</string>
     <string name="merge">Select split APK to Merge/AntiSplit</string>
     <string name="success_saved">File saved successfully to %s</string>
@@ -177,7 +177,7 @@
     <string name="framework_version">Framework Version</string>
     <string name="protectd">Protected</string>
     <string name="signature_options">Signature Options</string>
-    <string name="file_modified">File %1$s has been modified, do you want to update the %2$s</string>
+    <string name="file_modified">%1$s has been modified, do you want to update the %2$s</string>
     <string name="clone">Clone APK</string>
     <string name="pkgName">Package name</string>
     <string name="opt">Optimize APK</string>
@@ -185,4 +185,105 @@
     <string name="files_to_delete">Files To Delete</string>
     <string name="add">Add</string>
     <string name="about">About</string>
+   <!--
+   Layout Inspector
+   /*
+    *   Copyright (C) 2022 Ratul Hasan
+    *
+    *   This program is free software: you can redistribute it and/or modify
+    *   it under the terms of the GNU General Public License as published by
+    *   the Free Software Foundation, either version 3 of the License, or
+    *   (at your option) any later version.
+    *
+    *   This program is distributed in the hope that it will be useful,
+    *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+    *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    *   GNU General Public License for more details.
+    *
+    *   You should have received a copy of the GNU General Public License
+    *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    */   -->
+    <string name="github" translatable="false">GitHub</string>
+    <string name="accessibility_service_description">We use accessibility service to monitor window state change events. All data is processed offline and no log is kept.</string>
+    <string name="check_for_update">Check for update</string>
+    <string name="checking_for_update">Checking for update</string>
+    <string name="update_available">Update Available</string>
+    <string name="new_version_available">A new version %1$s is available. Do you want to download it?\n\nF-Droid users can wait for the update from F-Droid, which usually arrives within a few hours with the IzzyOnDroid repo, and a few days with F-Droid.org\'s repo.</string>
+    <string name="download">Download</string>
+    <string name="already_using_latest">Already on the latest version</string>
+    <string name="update_check_failed">Failed to check for update</string>
+    <string name="package_label">Package</string>
+    <string name="class_label">Class</string>
+    <string name="use_accessibility_service">Use Accessibility Service</string>
+    <string name="use_accessibility_service_desc">Improve package monitoring significantly</string>
+    <string name="enable">Enable</string>
+    <string name="system_overlay_title">System Overlay</string>
+    <string name="system_overlay_description">Please allow draw over other apps permission for \'%1$s\' to be able to use Layout Inspector</string>
+    <string name="accessibility_permission_title">Accessibility</string>
+    <string name="accessibility_permission_description">Please enable Accessibility Service for \'%1$s\' to be able to use Layout Inspector</string>
+    <string name="usage_access_title">Usage Access</string>
+    <string name="usage_access_description">Please allow Usage Access permission for \'%1$s\' to be able to use Layout Inspector</string>
+    <string name="package_copied">Package copied</string>
+    <string name="class_copied">Class copied</string>
+    <string name="stop">Stop</string>
+    <string name="inspect_mode">Inspect Mode</string>
+    <string name="inspect_mode_on">Inspect mode enabled. Tap on any view to inspect it.</string>
+    <string name="inspect_mode_off">Inspect mode disabled</string>
+    <string name="view_info">⠿ View Info</string>
+    <string name="view_id">View ID Name</string>
+    <string name="view_id_int">View ID</string>
+    <string name="view_id_hex">View ID Hex</string>
+    <string name="view_class">Class</string>
+    <string name="view_text">Text</string>
+    <string name="view_content_desc">Content Description</string>
+    <string name="view_bounds">Bounds</string>
+    <string name="view_location">Location on Screen</string>
+    <string name="view_size">Size</string>
+    <string name="view_visibility">Visibility</string>
+    <string name="view_enabled">Enabled</string>
+    <string name="view_focusable">Focusable</string>
+    <string name="view_clickable">Clickable</string>
+    <string name="view_long_clickable">Long Clickable</string>
+    <string name="view_focused">Focused</string>
+    <string name="view_selected">Selected</string>
+    <string name="view_pressed">Pressed</string>
+    <string name="view_alpha">Alpha</string>
+    <string name="view_rotation">Rotation</string>
+    <string name="view_scale_x">Scale X</string>
+    <string name="view_scale_y">Scale Y</string>
+    <string name="view_translation_x">Translation X</string>
+    <string name="view_translation_y">Translation Y</string>
+    <string name="view_parent">Parent</string>
+    <string name="view_children_count">Children Count</string>
+    <string name="view_children">Children</string>
+    <string name="no_children">No children</string>
+    <string name="tap_view_to_inspect">Tap any view to inspect</string>
+    <string name="inspect_stopped">Inspect mode stopped</string>
+    <string name="view_package">Package</string>
+    <string name="copied_to_clipboard">Copied %1$s</string>
+    <string name="inspecting">Inspecting...</string>
+    <string name="tap_to_inspect">Tap on any view to inspect it</string>
+    <string name="inspect_mode_active">Inspect mode active</string>
+    <string name="notification_channel_name">Activity Info</string>
+    <string name="notification_channel_description">Shows current activity info</string>
+    <string name="auto_update_check">Auto update check</string>
+    <string name="auto_update_desc">To ensure you have the latest features and bug fixes, this app can check at GitHub for new versions. There won\'t be any automated installs, behind your back.\n\nThese updates would not go through the additional screening performed at e.g. IzzyOnDroid or F-Droid.\n\nYou can still turn it on/off later.</string>
+    <string name="use_system_font">Use system font</string>
+    <string name="restart_required">Restart Required</string>
+    <string name="restart">Restart</string>
+    <string name="later">Later</string>
+    <string name="group_miscellaneous">Miscellaneous</string>
+    <string name="service_mode">Service mode</string>
+    <string name="scan_speed">Activity scan speed</string>
+    <string name="history_size">Activity history size</string>
+    <string name="window_size">Popup window size</string>
+    <string name="enable_autostart">Enable Autostart</string>
+    <string name="enable_autostart_desc">Prevent the system from killing the service</string>
+    <string name="auto_update_desc_short">Check GitHub for updates on startup</string>
+    <string name="use_system_font_desc">Use device default font instead of custom font</string>
+    <string name="activity_history">Activity History</string>
+    <string name="clear">Clear history</string>
+    <string name="copy_cls">Copy class name</string>
+    <string name="copy_pkg">Copy package name</string>
+    <string name="child_el_tx">• %1$s%2$s</string>
 </resources>

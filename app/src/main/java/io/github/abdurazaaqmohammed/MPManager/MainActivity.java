@@ -21,6 +21,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
@@ -36,7 +38,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.charset.Charset;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.lilincpp.github.libezftp.EZFtpServer;
@@ -510,6 +511,21 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case 2:
                     showFtpClientDialog();
+                    break;
+                case 3:
+                    if (DataRepository.getInstance().getAppState().isRunning()) {
+                        DataRepository.getInstance().updateStatus(false);
+                        return;
+                    }
+
+                    if (!requestMissingPermissions(this)) return;
+
+                    DataRepository.getInstance().updateStatus(true);
+                    Intent intent = new Intent(this, PackageMonitoringService.class);
+                    startService(intent);
+                    bindService(intent, serviceConnection, BIND_AUTO_CREATE);
+                    new ServiceManager(this).show();
+                    DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                     break;
                 case 4:
                     showSettingsDialog();
