@@ -222,6 +222,35 @@
     <string name="save_password">Save Password</string>
     <string name="signed_by">Signed By</string>
 
+    <string name="current_activity">Current Activity</string>
+    <string name="current_class">Current Class</string>
+    <string name="btn_inspect">Inspect</string>
+    <string name="btn_close">Close</string>
+    <string name="element_bounds">Element Bounds</string>
+    <string name="element_text">Text: %s</string>
+    <string name="element_id">Id: %s</string>
+    <string name="element_class">Class: %s</string>
+    <string name="element_parent">Parent: %s</string>
+    <string name="settings_title">Layout Inspector Settings</string>
+    <string name="accessibility_service_title">Accessibility Service</string>
+    <string name="accessibility_service_desc">Enable the accessibility service to inspect UI elements across all apps</string>
+    <string name="btn_open_accessibility">Open Accessibility Settings</string>
+    <string name="overlay_permission_title">Overlay Permission</string>
+    <string name="overlay_permission_desc">Enable overlay permission to show floating window on top of other apps</string>
+    <string name="btn_open_overlay">Open Overlay Settings</string>
+    <string name="floating_window_title">Floating Inspector Window</string>
+    <string name="floating_window_desc">Show floating window to inspect UI elements on screen</string>
+    <string name="btn_start_floating">Start Floating Window</string>
+    <string name="btn_stop_floating">Stop Floating Window</string>
+    <string name="floating_status_stopped">Status: Stopped</string>
+    <string name="floating_status_running">Status: Running</string>
+    <string name="inspect_mode_hint">Tap any UI element on screen to inspect its properties</string>
+    <string name="element_bounds_format">[%d, %d][%d, %d]</string>
+    <string name="no_text">(no text)</string>
+    <string name="no_id">(no id)</string>
+    <string name="no_parent">(no parent)</string>
+
+
    <!--
    Layout Inspector
    /*
