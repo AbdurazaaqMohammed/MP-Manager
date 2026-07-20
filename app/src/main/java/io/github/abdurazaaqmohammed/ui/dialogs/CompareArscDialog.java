@@ -5,6 +5,7 @@ import android.content.Context;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
 
@@ -71,7 +72,7 @@ public class CompareArscDialog {
         ListView listView = new ListView(context);
         listView.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, differences));
 
-        new AlertDialog.Builder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle("ARSC Differences")
                 .setView(listView)
                 .setPositiveButton("Close", null)

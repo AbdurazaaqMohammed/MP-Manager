@@ -7,6 +7,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -121,7 +123,7 @@ public class CompareZipDialog {
             }
         });
 
-        new AlertDialog.Builder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle("ZIP Differences")
                 .setView(listView)
                 .setPositiveButton("Close", null)
