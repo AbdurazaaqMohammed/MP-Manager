@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="preferExternal"
     package="io.github.abdurazaaqmohammed.MPManager">
-    <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora.langs.java" />
+    <uses-sdk tools:overrideLibrary="io.github.rosemoe.sora.langs.java, androidx.window, androidx.window.core" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -111,6 +111,11 @@
                 android:name=".ftp.FtpForegroundService"
                 android:foregroundServiceType="specialUse"
                 android:exported="false" />
+           <service
+               android:name="io.github.codehasan.colorpicker.services.ColorPickerService"
+               android:enabled="true"
+               android:exported="false"
+               android:foregroundServiceType="mediaProjection" />
            <receiver android:name=".ftp.StopReceiver" android:exported="false" />
            <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
            <service

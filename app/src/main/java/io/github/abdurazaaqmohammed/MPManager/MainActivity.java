@@ -14,6 +14,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -76,9 +77,14 @@ import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
+import io.github.codehasan.colorpicker.ServiceState;
+import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.codehasan.colorpicker.services.ColorPickerService;
+import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.ratul.topactivity.manager.ServiceManager;
 import io.github.ratul.topactivity.repository.DataRepository;
 import io.github.ratul.topactivity.services.PackageMonitoringService;
+import io.github.ratul.topactivity.utils.PermissionUtil;
 
 import android.text.TextWatcher;
 import android.text.format.Formatter;
@@ -101,7 +107,7 @@ import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -146,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
     private File homeDir1;
     private File homeDir2;
+    private MediaProjectionManager mediaProjectionManager;
     private String lastVerChecked;
     public File pane1Folder;
     public File pane2Folder;
@@ -166,7 +173,6 @@ public class MainActivity extends AppCompatActivity {
     public Handler handler;
     private boolean systemTheme;
     public int theme;
-    private Runnable checkUpdateAfterStoragePermission;
 
     private File[] currentPane1Files;
     private File[] currentPane2Files;
@@ -236,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 0) if (doesNotHaveStoragePerm(this)) {
-            Toast.makeText(this, "Storage perm needed as file manager", Toast.LENGTH_LONG).show();
+            Extensions.showMessage(this, "Storage perm needed as file manager");
         } else recreate();
     }
 
@@ -249,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == 0) if (doesNotHaveStoragePerm(this)) {
-            Toast.makeText(this, "Storage perm needed as file manager", Toast.LENGTH_LONG).show();
+            Extensions.showMessage(this, "Storage perm needed as file manager");
         } else recreate();
         else {
             boolean pane1 = lastPaneSelected == 1;
@@ -369,7 +375,16 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private boolean isServiceBound = false;
-
+    private final androidx.activity.result.ActivityResultLauncher<Intent> colorPickerLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result.getResultCode() == RESULT_OK) {
+            Intent serviceIntent = new Intent(this, ColorPickerService.class)
+            .putExtra(ColorPickerService.EXTRA_RESULT_CODE, result.getResultCode())
+            .putExtra(ColorPickerService.EXTRA_RESULT_DATA, result.getData());
+            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.O) startForegroundService(serviceIntent);
+            else startService(serviceIntent);
+        } else {
+            Extensions.showMessage(this, "Screen capture permission needed for color picker");
+        }});
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
@@ -380,6 +395,7 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
         checkStoragePerm();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         String deviceLang = Locale.getDefault().getLanguage();
         boolean supportedLang = deviceLang.equals("ar") || deviceLang.equals("es") || deviceLang.equals("de")
                 || deviceLang.equals("fr") || deviceLang.equals("in") || deviceLang.equals("it")
@@ -499,8 +515,8 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout container = findViewById(R.id.storageContainer);
         StorageUtil.populateStorageUI(this, container);
         ListView sidebar = findViewById(R.id.sidebarList);
-        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Layout Inspector", "Settings" };
-        int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
+        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Settings" };
+        int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
         sidebar.setAdapter(new ArrayAdapter<String>(this, R.layout.item_dropdown_option, options) {
             @NonNull
             @Override
@@ -511,7 +527,8 @@ public class MainActivity extends AppCompatActivity {
 
                 convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
                 convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-
+                if(position == 3 && Build.VERSION.SDK_INT < 24) convertView.setVisibility(View.GONE);
+                if(position == 4 && Build.VERSION.SDK_INT < 20) convertView.setVisibility(View.GONE); // Technically floating window works in sdk 19 but you can't exit the app with it
                 return convertView;
             }
         });
@@ -527,6 +544,42 @@ public class MainActivity extends AppCompatActivity {
                     showFtpClientDialog();
                     break;
                 case 3:
+                    if(Build.VERSION.SDK_INT < 24) return;
+                    PreferencesDialogFragment dialogFragment = new PreferencesDialogFragment();
+                    dialogFragment.show(getSupportFragmentManager(), "preferences_dialog");
+                    handler.post(() -> {
+                        AlertDialog ad = (AlertDialog) dialogFragment.requireDialog();
+                        ((androidx.appcompat.widget.Toolbar) ad.findViewById(R.id.topAppBar)).setOnMenuItemClickListener(item -> {
+                            if (item.getItemId() == R.id.menu_github) {
+                                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/codehasan/ScreenColorPicker")));
+                                return true;
+                            }
+                            return false;
+                        });
+                        boolean isRunning = ServiceState.getInstance().isRunning();
+                        TextView button = ad.getButton(DialogInterface.BUTTON_POSITIVE);
+                        button.setText(isRunning ? "Stop" : "Start");
+                        button.setOnClickListener(v -> {
+                            ad.dismiss();
+                            if (isRunning) ServiceState.getInstance().stopColorPickerService(MainActivity.this);
+                            else {
+                                if (!Settings.canDrawOverlays(MainActivity.this)) {
+                                    PermissionUtil.requestSystemOverlayPermission(MainActivity.this);
+                                    return;
+                                }
+
+                                if (!Extensions.canShowNotification(MainActivity.this)) {
+                                    PermissionUtil.requestNotificationPermission(MainActivity.this);
+                                    return;
+                                }
+
+                                colorPickerLauncher.launch(mediaProjectionManager.createScreenCaptureIntent());
+                            }
+                        });
+                    });
+                    break;
+                case 4:
+                    if(Build.VERSION.SDK_INT < 20) return;
                     if (DataRepository.getInstance().getAppState().isRunning()) {
                         DataRepository.getInstance().updateStatus(false);
                         return;
@@ -541,7 +594,7 @@ public class MainActivity extends AppCompatActivity {
                     new ServiceManager(this).show();
                     DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                     break;
-                case 4:
+                case 5:
                     showSettingsDialog();
                     break;
             }
@@ -617,8 +670,7 @@ public class MainActivity extends AppCompatActivity {
                                 pane2Folder = inputPath;
                             loadFolderInPane(inputPath, isPane1);
                         } else {
-                            Toast.makeText(MainActivity.this, "Failed to navigate to or create path " + inputPath,
-                                    Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(MainActivity.this, "Failed to navigate to or create path " + inputPath);
                         }
                     }).show();
         });
@@ -688,7 +740,7 @@ public class MainActivity extends AppCompatActivity {
                         if (new File(ogFolder, inputStr).mkdir())
                             loadFolderInPane(ogFolder, isPane1);
                         else
-                            Toast.makeText(MainActivity.this, "Failed to create folder " + inputStr, Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(MainActivity.this, "Failed to create folder " + inputStr);
                     })
                     .setNeutralButton("Paste", null)
                     .setPositiveButton("File", (dialog, which) -> {
@@ -699,10 +751,10 @@ public class MainActivity extends AppCompatActivity {
                             if (new File(ogFolder, inputStr).createNewFile()) {
                                 loadFolderInPane(ogFolder, isPane1);
                             } else {
-                                Toast.makeText(MainActivity.this, "Failed to create file " + inputStr, Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(MainActivity.this, "Failed to create file " + inputStr);
                             }
                         } catch (IOException e) {
-                            Toast.makeText(MainActivity.this, "Failed to create file " + inputStr, Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(MainActivity.this, "Failed to create file " + inputStr);
                         }
                     }).create();
             ad.show();
@@ -821,14 +873,14 @@ public class MainActivity extends AppCompatActivity {
                     case "Add to bookmarks": {
                         boolean isPane1 = lastPaneSelected == 1;
                         addBookmark(isPane1 ? pane1Folder : pane2Folder);
-                        Toast.makeText(MainActivity.this, "Added to bookmarks", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(MainActivity.this, "Added to bookmarks");
                         break;
                     }
                     case "Set as home folder": {
                         boolean isPane1 = lastPaneSelected == 1;
                         prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
                                 .apply();
-                        Toast.makeText(MainActivity.this, "Set as home folder", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(MainActivity.this, "Set as home folder");
                         break;
                     }
                     case "Swap panes":
@@ -1003,7 +1055,7 @@ public class MainActivity extends AppCompatActivity {
         }
         File[] files = folder.listFiles(this::isNotHidden);
         if (files == null) {
-            Toast.makeText(this, "Could not open folder " + folder.getName(), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Could not open folder " + folder.getName());
             return;
         }
         Arrays.sort(files);
@@ -1368,7 +1420,7 @@ public class MainActivity extends AppCompatActivity {
             positiveButton.setOnClickListener(v -> {
                 String query = searchQuery.getText().toString();
                 if (TextUtils.isEmpty(query)) {
-                    Toast.makeText(this, "Enter a search query", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Enter a search query");
                     return;
                 }
 
@@ -1408,12 +1460,12 @@ public class MainActivity extends AppCompatActivity {
 
         Adapter a = getCurrentPane().getAdapter();
         if (!(a instanceof MainFilesArrayAdapter)) {
-            Toast.makeText(this, "Search in FTP not supported yet", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Search in FTP not supported yet");
             return;
         }
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
         if(adapter.isInZip) {
-            Toast.makeText(this, "Search in ZIP not supported yet", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Search in ZIP not supported yet");
             return;
         }
 
@@ -1431,7 +1483,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 handler.post(() -> {
                     progressDialog.dismiss();
-                    Toast.makeText(this, "Invalid Regex", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Invalid Regex");
                 });
                 return;
             }
@@ -1444,7 +1496,7 @@ public class MainActivity extends AppCompatActivity {
 
             handler.post(() -> {
                 progressDialog.dismiss();
-                if (results.isEmpty()) Toast.makeText(this, "No files found", Toast.LENGTH_SHORT).show();
+                if (results.isEmpty()) Extensions.showMessage(this, "No files found");
                 else {
                     File[] resArray = results.toArray(new File[0]);
                     setCurrentFolder(startDir.getPath() + " (Search Results)", Arrays.asList(resArray));
@@ -1522,13 +1574,13 @@ public class MainActivity extends AppCompatActivity {
                 child.setOnLongClickListener(v3 -> {
                     int buttonId = v3.getId();
                     if (buttonId == R.id.lightThemeButton) {
-                        Toast.makeText(this, R.string.light_theme, Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, R.string.light_theme);
                     } else if (buttonId == R.id.darkThemeButton) {
-                        Toast.makeText(this, R.string.dark_theme, Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, R.string.dark_theme);
                     } else if (buttonId == R.id.blackThemeButton) {
-                        Toast.makeText(this, R.string.black_theme, Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, R.string.black_theme);
                     } else if (buttonId == R.id.systemThemeButton) {
-                        Toast.makeText(this, R.string.system_theme, Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, R.string.system_theme);
                     }
                     return true;
                 });
@@ -1752,7 +1804,7 @@ public class MainActivity extends AppCompatActivity {
             values.remove(path);
             prefs.edit().putStringSet("manually_hidden_files", values).apply();
             adapter.notifyDataSetChanged();
-            Toast.makeText(this, "Unhidden: " + path, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Unhidden: " + path);
         });
 
         dialog.show();
@@ -1861,12 +1913,12 @@ public class MainActivity extends AppCompatActivity {
         ipTv.setText(rss.getString(R.string.ip, ipString));
         ipTv.setOnLongClickListener(v -> {
             ((android.text.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
-            Toast.makeText(this, rss.getString(R.string.copied), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, rss.getString(R.string.copied));
             return false;
         });
         view.findViewById(R.id.copy).setOnClickListener(v -> {
             ((android.text.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
-            Toast.makeText(this, rss.getString(R.string.copied), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, rss.getString(R.string.copied));
         });
         view.findViewById(R.id.share).setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, ipString).setType("text/plain")));
         EditText portInput = view.findViewById(R.id.portInput);
@@ -1884,7 +1936,7 @@ public class MainActivity extends AppCompatActivity {
         pl.setEnabled(serverNotStarted);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
-            Toast.makeText(this, "Please allow notifications to show FTP server running", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Please allow notifications to show FTP server running");
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             /*new MaterialAlertDialogBuilder(this)
                 .setTitle("Notifications")
@@ -1916,7 +1968,7 @@ public class MainActivity extends AppCompatActivity {
                         if(ftpServer != null) ftpServer.stop();
                         ftpServer = null;
                         stopService(serviceIntent);
-                        Toast.makeText(MainActivity.this, "FTP Server stopped", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(MainActivity.this, "FTP Server stopped");
                     } else {
                         int port = Integer.parseInt(portInput.getText().toString());
                         String user = userInput.getText().toString();
@@ -1933,7 +1985,7 @@ public class MainActivity extends AppCompatActivity {
                             } else {
                                 startService(serviceIntent);
                             }
-                            Toast.makeText(MainActivity.this, "FTP Server started on port " + port, Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(MainActivity.this, "FTP Server started on port " + port);
                         } catch (Exception e) {
                             stopService(serviceIntent);
                             portInput.setEnabled(true);
@@ -1943,7 +1995,7 @@ public class MainActivity extends AppCompatActivity {
                             if(ftpServer != null) ftpServer.stop();
                             tv.setText("Start");
                             e.printStackTrace();
-                            Toast.makeText(MainActivity.this, "Failed to start FTP server: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(MainActivity.this, "Failed to start FTP server: " + e.getMessage());
                         }
                         BroadcastReceiver ftpStopReceiver = new BroadcastReceiver() {
                             @Override
@@ -1994,14 +2046,14 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onSuccess(Void response) {
                             runOnUiThread(() -> {
-                                Toast.makeText(MainActivity.this, "Connected to FTP", Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(MainActivity.this, "Connected to FTP");
                                 fetchFtpDirAndLoad(File.separator, lastPaneSelected == 1);
                             });
                         }
 
                         @Override
                         public void onFail(int code, String msg) {
-                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "FTP Connect Failed: " + msg, Toast.LENGTH_SHORT).show());
+                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "FTP Connect Failed: " + msg));
                         }
                     });
                 })
@@ -2069,7 +2121,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (folder.isDirectory()) {
             fetchFtpDirAndLoad(folder.getFtpFile().getName(), pane1);
         } else {
-            Toast.makeText(this, "FTP File Download coming soon", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "FTP File Download coming soon");
         }
     }
 }

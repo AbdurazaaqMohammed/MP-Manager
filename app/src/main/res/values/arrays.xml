@@ -127,4 +127,40 @@
         <item>1</item>
         <item>2</item>
     </string-array>
+
+    <string-array name="pref_magnifier_size_entries">
+        <item>Large</item>
+        <item>Medium</item>
+        <item>Small</item>
+    </string-array>
+
+    <string-array name="pref_magnifier_size_values">
+        <item>large</item>
+        <item>medium</item>
+        <item>small</item>
+    </string-array>
+
+    <string-array name="pref_capture_range_entries">
+        <item>Large</item>
+        <item>Medium</item>
+        <item>Small</item>
+    </string-array>
+
+    <string-array name="pref_capture_range_values">
+        <item>large</item>
+        <item>medium</item>
+        <item>small</item>
+    </string-array>
+
+    <string-array name="pref_capture_speed_entries">
+        <item>Fast</item>
+        <item>Normal</item>
+        <item>Slow</item>
+    </string-array>
+
+    <string-array name="pref_capture_speed_values">
+        <item>fast</item>
+        <item>normal</item>
+        <item>slow</item>
+    </string-array>
 </resources>

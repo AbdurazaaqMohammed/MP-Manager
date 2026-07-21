@@ -5,13 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class CopyReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String ip = intent.getStringExtra("io.github.abdurazaaqmohammed.MPManager.ip");
         ((android.text.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE)).setText(ip);
-        Toast.makeText(context, (R.string.copied), Toast.LENGTH_SHORT).show();
+        Extensions.showMessage((AppCompatActivity) context, (R.string.copied));
     }
 }

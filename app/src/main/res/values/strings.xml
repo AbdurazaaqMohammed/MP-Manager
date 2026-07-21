@@ -352,4 +352,21 @@
     <string name="copy_cls">Copy class name</string>
     <string name="copy_pkg">Copy package name</string>
     <string name="child_el_tx">• %1$s%2$s</string>
+    <string name="color_picker_active">Color picker running</string>
+    <string name="color">Color\n</string>
+    <string name="coordinates">Coordinates</string>
+    <string name="running">Running</string>
+    <string name="stopped">Stopped</string>
+
+
+    <string name="color_picker">Color Picker</string>
+    <string name="pref_magnifier_size_title">Magnifier Size</string>
+    <string name="pref_capture_range_title">Capture Range</string>
+    <string name="pref_capture_speed_title">Capture Speed</string>
+    <string name="pref_show_grid_lines_title">Show Grid Lines</string>
+    <string name="pref_show_grid_lines_summary">Display grid lines on magnifier</string>
+    <string name="start_color_picker">Start Color Picker</string>
+    <string name="tips">1. Both text and icon on the magnifier are clickable.\n2. Swipe on magnifier for precise fine-tuning.\n3. If your phone lags when picking colors, reduce capture speed.\n4. If you are asked to select a single app or entire screen, select entire screen.</string>
+    <string name="tips_label">Tips</string>
+
 </resources>

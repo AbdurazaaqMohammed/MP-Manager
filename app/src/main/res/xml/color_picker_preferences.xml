@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.preference.ListPreference
+        android:defaultValue="small"
+        android:entries="@array/pref_magnifier_size_entries"
+        android:entryValues="@array/pref_magnifier_size_values"
+        android:icon="@drawable/ic_magnifier"
+        android:key="magnifier_size"
+        android:title="@string/pref_magnifier_size_title"
+        app:useSimpleSummaryProvider="true" />
+
+    <androidx.preference.ListPreference
+        android:defaultValue="small"
+        android:entries="@array/pref_capture_range_entries"
+        android:entryValues="@array/pref_capture_range_values"
+        android:icon="@drawable/ic_capture"
+        android:key="capture_range"
+        android:title="@string/pref_capture_range_title"
+        app:useSimpleSummaryProvider="true" />
+
+    <androidx.preference.ListPreference
+        android:defaultValue="normal"
+        android:entries="@array/pref_capture_speed_entries"
+        android:entryValues="@array/pref_capture_speed_values"
+        android:icon="@drawable/ic_capture"
+        android:key="capture_speed"
+        android:title="@string/pref_capture_speed_title"
+        app:useSimpleSummaryProvider="true" />
+
+    <androidx.preference.SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:icon="@drawable/ic_grid"
+        android:key="show_grid_lines"
+        android:summary="@string/pref_show_grid_lines_summary"
+        android:title="@string/pref_show_grid_lines_title"
+        app:widgetLayout="@layout/layout_material_switch" />
+
+    <PreferenceCategory
+        android:title="@string/tips_label"
+        app:iconSpaceReserved="false">
+        <Preference
+            android:title="@string/tips"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>
