@@ -117,21 +117,15 @@
                 android:layout_gravity="center"
                 android:visibility="gone" />
 
-            <ExpandableListView
+            <modder.hub.dexeditor.views.FastScrollerRecyclerView
                 android:id="@+id/user_app_list_view"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:childDivider="?android:attr/listDivider"
-                android:childIndicator="@null"
-                android:groupIndicator="@null" />
+                android:layout_height="match_parent" />
 
-            <ExpandableListView
+            <modder.hub.dexeditor.views.FastScrollerRecyclerView
                 android:id="@+id/system_app_list_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:childDivider="?android:attr/listDivider"
-                android:childIndicator="@null"
-                android:groupIndicator="@null"
                 android:visibility="gone" />
         </FrameLayout>
 

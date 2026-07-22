@@ -39,7 +39,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.ExpandableListView;
+import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -81,7 +81,7 @@ import org.apache.commons.collections4.Predicate;
 import io.github.abdurazaaqmohammed.adapters.DropdownAdapter;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.AppExpandableListAdapter;
+import io.github.abdurazaaqmohammed.adapters.AppRecyclerViewAdapter;
 import io.github.abdurazaaqmohammed.adapters.ExtractOptionAdapter;
 import io.github.abdurazaaqmohammed.utils.CompareUtils;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -91,7 +91,7 @@ import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 
 public class APKExtractorActivity extends AppCompatActivity {
-    private final AppExpandableListAdapter[] appAdapter = new AppExpandableListAdapter[2];
+    private final AppRecyclerViewAdapter[] appAdapter = new AppRecyclerViewAdapter[2];
     public APKLogger logger;
     public boolean ask = false;
     public boolean errorOccurred;
@@ -135,7 +135,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        AppExpandableListAdapter adapter = getCurrentAdapter();
+        AppRecyclerViewAdapter adapter = getCurrentAdapter();
         if(!adapter.selectedItems.isEmpty()) adapter.clearSelection();
         else super.onBackPressed();
     }
@@ -460,54 +460,21 @@ public class APKExtractorActivity extends AppCompatActivity {
     }
 
     private void reloadListView() {
-        ((ListView) findViewById(system ? R.id.user_app_list_view : R.id.system_app_list_view)).invalidateViews();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
+        getCurrentAdapter().notifyDataSetChanged();
     }
 
     private void setupAppLists() {
-        ExpandableListView userAppListView = findViewById(R.id.user_app_list_view);
-        ExpandableListView systemAppListView = findViewById(R.id.system_app_list_view);
+        FastScrollerRecyclerView userAppListView = findViewById(R.id.user_app_list_view);
+        FastScrollerRecyclerView systemAppListView = findViewById(R.id.system_app_list_view);
 
-        appAdapter[0] = new AppExpandableListAdapter(this, userAppInfoList);
-        userAppListView.setOnItemLongClickListener((parent, view, position, id) -> {
-            long packedPosition = userAppListView.getExpandableListPosition(position);
-            if (ExpandableListView
-                    .getPackedPositionType(packedPosition) == ExpandableListView.PACKED_POSITION_TYPE_GROUP) {
-                findViewById(R.id.confirmButton).setVisibility(View.VISIBLE);
-                appAdapter[0].toggleSelection(ExpandableListView.getPackedPositionGroup(packedPosition));
-                userAppListView.setOnGroupClickListener((parent1, view1, position1, id1) -> {
-                    appAdapter[0].toggleSelection(position1);
-                    return true;
-                });
-                return true;
-            }
-            return false;
-        });
+        appAdapter[0] = new AppRecyclerViewAdapter(this, userAppInfoList);
+        appAdapter[1] = new AppRecyclerViewAdapter(this, systemAppInfoList);
 
-        appAdapter[1] = new AppExpandableListAdapter(this, systemAppInfoList);
-        systemAppListView.setOnItemLongClickListener((parent, view, position, id) -> {
-            long packedPosition = systemAppListView.getExpandableListPosition(position);
-            if (ExpandableListView
-                    .getPackedPositionType(packedPosition) == ExpandableListView.PACKED_POSITION_TYPE_GROUP) {
-                findViewById(R.id.confirmButton).setVisibility(View.VISIBLE);
-                appAdapter[1].toggleSelection(ExpandableListView.getPackedPositionGroup(packedPosition));
-                systemAppListView.setOnGroupClickListener((parent1, view1, position1, id1) -> {
-                    appAdapter[1].toggleSelection(position1);
-                    return true;
-                });
-                return true;
-            }
-            return false;
-        });
+        userAppListView.setAdapter(appAdapter[0]);
+        systemAppListView.setAdapter(appAdapter[1]);
 
         findViewById(R.id.confirmButton).setOnClickListener(v -> {
             v.setVisibility(View.INVISIBLE);
-            systemAppListView.setOnGroupClickListener(null);
-            userAppListView.setOnGroupClickListener(null);
             String[] display = {
                     "Extract APKs", "Share APKs",
                     "Extract resources.arsc files", "Extract classes.dex files",
@@ -529,7 +496,6 @@ public class APKExtractorActivity extends AppCompatActivity {
                     .setView(dialogView)
                     .setNegativeButton(rss.getString(R.string.cancel), (d, w) -> getCurrentAdapter().clearSelection())
                     .create();
-
             styleAlertDialog(alertDialog);
 
             gridView.setOnItemClickListener((parent2, view2, which, id2) -> {
@@ -537,9 +503,6 @@ public class APKExtractorActivity extends AppCompatActivity {
                 performAction(which, getCurrentAdapter());
             });
         });
-
-        userAppListView.setAdapter(appAdapter[0]);
-        systemAppListView.setAdapter(appAdapter[1]);
 
         TabLayout tabLayout = findViewById(R.id.tabLayout);
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -557,14 +520,11 @@ public class APKExtractorActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
+            public void onTabUnselected(TabLayout.Tab tab) {}
 
             @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-            }
+            public void onTabReselected(TabLayout.Tab tab) {}
         });
-
 
         EditText searchBar = findViewById(R.id.search_bar);
         searchBar.addTextChangedListener(new TextWatcher() {
@@ -574,13 +534,12 @@ public class APKExtractorActivity extends AppCompatActivity {
             }
 
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
-            public void afterTextChanged(Editable s) {
-            }
+            public void afterTextChanged(Editable s) {}
         });
+
         findViewById(R.id.filterButton).setOnClickListener(v -> {
             String[] display = new String[] { "Name", "Last updated date", "First install date" };
             AlertDialog ad = new MaterialAlertDialogBuilder(this)
@@ -613,7 +572,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
     }
 
-    public void showListViewDropdown(View anchor, int groupPosition, AppExpandableListAdapter adapter) {
+    public void showListViewDropdown(View anchor, int groupPosition, AppRecyclerViewAdapter adapter) {
         AppInfo ai = adapter.filteredAppInfoList.get(groupPosition);
 
         List<String> displayList = new ArrayList<>();
@@ -843,7 +802,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
     }
 
-    private void performAction(int whichAction, AppExpandableListAdapter adapter) {
+    private void performAction(int whichAction, AppRecyclerViewAdapter adapter) {
         File appFolder = getAppFolder();
         final List<Integer> itemsToProcess = new ArrayList<>(adapter.selectedItems);
         adapter.clearSelection();
@@ -1016,7 +975,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         return bitmap;
     }
 
-    private void loadAdditionalDetails(List<AppInfo> apps, AppExpandableListAdapter adapter) {
+    private void loadAdditionalDetails(List<AppInfo> apps, AppRecyclerViewAdapter adapter) {
         PackageManager pm = getPackageManager();
         for (int i = 0; i < apps.size(); i++) {
             AppInfo app = apps.get(i);
@@ -1267,7 +1226,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         });
     }
 
-    private AppExpandableListAdapter getCurrentAdapter() {
+    private AppRecyclerViewAdapter getCurrentAdapter() {
         return appAdapter[system ? 1 : 0];
     }
 }
