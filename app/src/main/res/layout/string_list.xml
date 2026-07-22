@@ -5,7 +5,7 @@
 		android:id="@+id/linear_bg"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:background="?android:attr/selectableItemBackground"
+		android:background="?attr/selectableItemBackground"
 		android:gravity="center_vertical"
 		android:orientation="horizontal">
 		<LinearLayout

@@ -1159,6 +1159,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
+                } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png")
+                        || fileName.endsWith(".gif") || fileName.endsWith(".bmp") || fileName.endsWith(".webp")
+                        || fileName.endsWith(".ico") || fileName.endsWith(".tiff") || fileName.endsWith(".tif")
+                        || fileName.endsWith(".heic") || fileName.endsWith(".heif")) {
+                    context.openImageViewer(file.getPath());
+                } else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".flac")
+                        || fileName.endsWith(".ogg") || fileName.endsWith(".m4a") || fileName.endsWith(".aac")
+                        || fileName.endsWith(".wma") || fileName.endsWith(".opus")
+                        || fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".avi")
+                        || fileName.endsWith(".mov") || fileName.endsWith(".webm") || fileName.endsWith(".3gp")
+                        || fileName.endsWith(".ts") || fileName.endsWith(".flv") || fileName.endsWith(".wmv")) {
+                    context.playMediaFile(file.getPath());
                 } else if (fileName.endsWith(".apk")) {
                     ViewGroup displayParent = (ViewGroup) holder.itemView.getParent();
                     View display = LayoutInflater.from(context).inflate(R.layout.apk_display, displayParent, false);
@@ -2321,6 +2333,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 for (int i = start; i <= end; i++) {
                     selectedPositions.add(i);
                 }
+                updateFolderCountOnMainScreen(position);
+                rangeStartPosition = null;
+            } else {
+                selectedPositions.add(position);
+                rangeStartPosition = position;
                 updateFolderCountOnMainScreen(position);
             }
         } else {

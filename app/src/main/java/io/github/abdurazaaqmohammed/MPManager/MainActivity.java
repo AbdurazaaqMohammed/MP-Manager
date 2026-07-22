@@ -70,6 +70,10 @@ import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
+import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
+import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
+import io.github.abdurazaaqmohammed.player.PlayerManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -182,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
     private String currentPane1Filter = "";
     private String currentPane2Filter = "";
 
+    private MiniPlayerDialog miniPlayerDialog;
     private ProfileManager profileManager;
     private MaterialAutoCompleteTextView profileSpinner;
     private ImageButton profileManageButton;
@@ -205,6 +210,28 @@ public class MainActivity extends AppCompatActivity {
     public void addBookmark(File toBookmark) {
         bookmarks.add(toBookmark);
         bookmarksAdapter.notifyDataSetChanged();
+    }
+
+    public void openImageViewer(String filePath) {
+        ImageViewerActivity.open(this, filePath);
+    }
+
+    public void playMediaFile(String filePath) {
+        boolean isVideo = filePath.endsWith(".mp4") || filePath.endsWith(".mkv") || filePath.endsWith(".avi")
+                || filePath.endsWith(".mov") || filePath.endsWith(".webm") || filePath.endsWith(".3gp")
+                || filePath.endsWith(".ts") || filePath.endsWith(".flv") || filePath.endsWith(".wmv");
+        boolean useActivity = isVideo || PreferenceManager.getDefaultSharedPreferences(this)
+                .getBoolean("player_open_activity", false);
+        if (useActivity) {
+            MediaPlayerActivity.openAndPlay(this, filePath);
+        } else {
+            PlayerManager pm = PlayerManager.getInstance(this);
+            pm.play(PlayerManager.buildMediaItem(this, filePath));
+            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) {
+                miniPlayerDialog = new MiniPlayerDialog(this);
+                miniPlayerDialog.show();
+            }
+        }
     }
 
     @Override
@@ -1621,6 +1648,10 @@ public class MainActivity extends AppCompatActivity {
         CompoundButton logSwitch = settingsDialog.findViewById(R.id.logToggle);
         logSwitch.setChecked(logEnabled);
         logSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("logEnabled", logEnabled = isChecked).apply());
+
+        CompoundButton playerModeSwitch = settingsDialog.findViewById(R.id.playerModeToggle);
+        playerModeSwitch.setChecked(settings.getBoolean("player_open_activity", false));
+        playerModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("player_open_activity", isChecked).apply());
 
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));

@@ -62,8 +62,9 @@
 
                 <ImageView
                     android:id="@+id/moreOptionsMenu"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_weight="0.1"
+                    android:layout_width="0dp"
+                    android:layout_height="fill_parent"
                     android:src="@drawable/baseline_more_vert_24"
                     android:contentDescription="@string/more"
                     android:background="?attr/selectableItemBackground" />

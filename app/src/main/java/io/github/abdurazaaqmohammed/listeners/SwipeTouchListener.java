@@ -28,6 +28,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
     private float initialX;
     private float initialY;
     private boolean isSwiping;
+    private boolean gestureHandled;
 
     private boolean swipeDecided;
     private final int pane;
@@ -61,6 +62,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
                             } else {
                                 originalClickListener.onClick(null);
                             }
+                            gestureHandled = true;
                             return true;
                         }
                         return false;
@@ -80,6 +82,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
     public boolean onTouch(View v, MotionEvent event) {
         context.setCurrentPane(pane);
         gestureDetector.onTouchEvent(event);
+
         switch (event.getActionMasked()) {
 
             case MotionEvent.ACTION_DOWN:
@@ -87,7 +90,9 @@ public class SwipeTouchListener implements View.OnTouchListener {
                 initialY = event.getRawY();
                 isSwiping = false;
                 swipeDecided = false;
+                gestureHandled = false;
                 v.getParent().requestDisallowInterceptTouchEvent(false);
+                v.onTouchEvent(event);
                 return true;
 
             case MotionEvent.ACTION_MOVE: {
@@ -98,11 +103,13 @@ public class SwipeTouchListener implements View.OnTouchListener {
                     if (Math.abs(dx) > swipeSlopPx || Math.abs(dy) > swipeSlopPx) {
                         swipeDecided = true;
                         if (Math.abs(dx) > Math.abs(dy)) {
-                            // horizontal
                             isSwiping = true;
                             v.getParent().requestDisallowInterceptTouchEvent(true);
+                            MotionEvent cancel = MotionEvent.obtain(event);
+                            cancel.setAction(MotionEvent.ACTION_CANCEL);
+                            v.onTouchEvent(cancel);
+                            cancel.recycle();
                         } else {
-                            // vertical
                             isSwiping = false;
                             v.getParent().requestDisallowInterceptTouchEvent(false);
                             return false;
@@ -121,10 +128,10 @@ public class SwipeTouchListener implements View.OnTouchListener {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
                 if (isSwiping) {
+                    v.onTouchEvent(event);
                     float translation = Math.abs(v.getTranslationX());
                     boolean confirmed = translation >= swipeConfirmPx * 0.75f;
 
-                    //spring back
                     if (confirmed && event.getActionMasked() == MotionEvent.ACTION_UP) {
                         float direction = v.getTranslationX() > 0 ? 1f : -1f;
                         v.animate()
@@ -149,8 +156,10 @@ public class SwipeTouchListener implements View.OnTouchListener {
                     }
                     isSwiping = false;
                     return true;
+                } else if (!gestureHandled) {
+                    v.onTouchEvent(event);
                 }
-                return false;
+                return true;
             }
         }
         return false;
@@ -162,7 +171,6 @@ public class SwipeTouchListener implements View.OnTouchListener {
         if (abs <= threshold) {
             return dx;
         }
-        // Beyond threshold, apply sqrt damping.
         float excess = abs - threshold;
         float damped = threshold + (float) Math.sqrt(excess * threshold * 0.5f);
         return sign * damped;

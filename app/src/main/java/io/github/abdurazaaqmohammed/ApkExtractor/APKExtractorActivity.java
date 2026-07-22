@@ -545,15 +545,11 @@ public class APKExtractorActivity extends AppCompatActivity {
             AlertDialog ad = new MaterialAlertDialogBuilder(this)
                     .setSingleChoiceItems(display, sortMode, (dialog, which) -> {
                         sortMode = which;
-                        Comparator<AppInfo> comparator;
-                        if (sortMode == 0)
-                            comparator = CompareUtils::compareAppInfoByName;
-                        else
-                            comparator = (p1, p2) -> {
-                                long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
-                                long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
-                                return Long.compare(field2, field1);
-                            };
+                        Comparator<AppInfo> comparator = sortMode == 0 ? CompareUtils::compareAppInfoByName : ((p1, p2) -> {
+                            long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
+                            long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
+                            return Long.compare(field2, field1);
+                        });
 
                         Collections.sort(appAdapter[0].appInfoList, comparator);
                         Collections.sort(appAdapter[1].appInfoList, comparator);
