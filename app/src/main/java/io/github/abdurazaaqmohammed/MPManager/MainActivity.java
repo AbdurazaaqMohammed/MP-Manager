@@ -93,7 +93,6 @@ import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
 import android.view.WindowManager;
-import android.widget.Adapter;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -103,6 +102,8 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.CheckBox;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -336,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
         isBookmarksDrawerOpen = false;
     }
 
-    public ListView getCurrentPane() {
+    public RecyclerView getCurrentPane() {
         return findViewById(lastPaneSelected == 1 ? R.id.listViewPane1 : R.id.listViewPane2);
     }
 
@@ -684,13 +685,16 @@ public class MainActivity extends AppCompatActivity {
                             .append(dir1Files.length - foldersCount));
         }
 
-        ListView pane1 = findViewById(R.id.listViewPane1);
-        ListView pane2 = findViewById(R.id.listViewPane2);
+        RecyclerView pane1 = findViewById(R.id.listViewPane1);
+        RecyclerView pane2 = findViewById(R.id.listViewPane2);
+
+        pane1.setLayoutManager(new LinearLayoutManager(this));
+        pane2.setLayoutManager(new LinearLayoutManager(this));
 
         pane1.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 1) {
                 lastPaneSelected = 1;
-                Adapter a = pane1.getAdapter();
+                RecyclerView.Adapter a = pane1.getAdapter();
                 if (!(a instanceof MainFilesArrayAdapter)) return false;
                 MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane1.getAdapter();
                 if (adapter != null) {
@@ -709,7 +713,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 2) {
                 lastPaneSelected = 2;
-                Adapter a = pane2.getAdapter();
+                RecyclerView.Adapter a = pane2.getAdapter();
                 if (!(a instanceof MainFilesArrayAdapter)) return false;
                 MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane2.getAdapter();
                 if (adapter != null) {
@@ -771,7 +775,7 @@ public class MainActivity extends AppCompatActivity {
 
         ImageView syncPaneButton = findViewById(R.id.syncPaneButton);
         syncPaneButton.setOnClickListener(v -> {
-            Adapter a = getCurrentPane().getAdapter();
+            RecyclerView.Adapter a = getCurrentPane().getAdapter();
             if(a instanceof MainFilesArrayAdapter) {
                 if (lastPaneSelected == 1)
                     loadFolderInPane(pane2Folder = ((MainFilesArrayAdapter) a).isInZip ? pane1Folder.getParentFile() : pane1Folder, false);
@@ -798,7 +802,7 @@ public class MainActivity extends AppCompatActivity {
             MenuItem manItem = hiddenMenu.add(0, 7, 0, "Show manually hidden files");
             manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
 
-            Adapter a = getCurrentPane().getAdapter();
+            RecyclerView.Adapter a = getCurrentPane().getAdapter();
             if ((a instanceof MainFilesArrayAdapter)) {
                 MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
                 MenuItem hideSel = hiddenMenu.add(0, 8, 0, "Hide selected files");
@@ -906,7 +910,7 @@ public class MainActivity extends AppCompatActivity {
         ImageView upButton = findViewById(R.id.upButton);
         upButton.setOnClickListener(v -> {
             boolean isPane1 = lastPaneSelected == 1;
-            Adapter a = getCurrentPane().getAdapter();
+            RecyclerView.Adapter a = getCurrentPane().getAdapter();
             if ((a instanceof MainFilesArrayAdapter)) {
                 MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
                 if (adapter.isInZip) {
@@ -957,7 +961,7 @@ public class MainActivity extends AppCompatActivity {
                 filterBar.setVisibility(View.GONE);
                 filterBar.setText("");
             } else {
-                Adapter a = getCurrentPane().getAdapter();
+                RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if(a instanceof MainFilesArrayAdapter) {
                     MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
                     if (adapter.isMultiSelectMode()) adapter.clearSelection();
@@ -1168,7 +1172,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         setCurrentFolder(folder, files);
-        ListView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         pane.setAdapter(new MainFilesArrayAdapter(this, files, folder.getParentFile(), pane1, false, null));
         updateNavigationButtons();
     }
@@ -1242,7 +1246,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             setCurrentFolder(zipFile.getPath() + "!" + path, entries);
-            ListView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             ZipEntryInfo finalParent = parent;
             handler.post(() -> {
                 pane.setAdapter(new MainFilesArrayAdapter(this, entries.toArray(new ZipEntryInfo[0]), finalParent, pane1, true, path));
@@ -1300,7 +1304,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void setCurrentPane(int pane) {
         lastPaneSelected = pane;
-        Adapter a = getCurrentPane().getAdapter();
+        RecyclerView.Adapter a = getCurrentPane().getAdapter();
         boolean b = a instanceof MainFilesArrayAdapter;
         findViewById(R.id.syncPaneButton).setEnabled(b);
         if (b) {
@@ -1458,7 +1462,7 @@ public class MainActivity extends AppCompatActivity {
         boolean isPane1 = lastPaneSelected == 1;
         File startDir = isPane1 ? pane1Folder : pane2Folder;
 
-        Adapter a = getCurrentPane().getAdapter();
+        RecyclerView.Adapter a = getCurrentPane().getAdapter();
         if (!(a instanceof MainFilesArrayAdapter)) {
             Extensions.showMessage(this, "Search in FTP not supported yet");
             return;
@@ -1500,7 +1504,7 @@ public class MainActivity extends AppCompatActivity {
                 else {
                     File[] resArray = results.toArray(new File[0]);
                     setCurrentFolder(startDir.getPath() + " (Search Results)", Arrays.asList(resArray));
-                    ListView pane = findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                    RecyclerView pane = findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
                     pane.setAdapter(new MainFilesArrayAdapter(this, resArray, startDir, isPane1, false, null));
                 }
             });
@@ -1679,9 +1683,9 @@ public class MainActivity extends AppCompatActivity {
     private void applyFilterToCurrentPane() {
         boolean isPane1 = lastPaneSelected == 1;
         String filter = isPane1 ? currentPane1Filter : currentPane2Filter;
-        ListView pane = findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        RecyclerView pane = findViewById(isPane1 ? R.id.listViewPane1 : R.id.listViewPane2);
 
-        Adapter a = getCurrentPane().getAdapter();
+        RecyclerView.Adapter a = getCurrentPane().getAdapter();
         if (!(a instanceof MainFilesArrayAdapter)) return;
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane.getAdapter();
 
@@ -1728,7 +1732,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSortDialog() {
         boolean isPane1 = lastPaneSelected == 1;
-        Adapter a = getCurrentPane().getAdapter();
+        RecyclerView.Adapter a = getCurrentPane().getAdapter();
         if (!(a instanceof MainFilesArrayAdapter)) return;
         MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
         String currentPath = adapter.isInZip ? adapter.currentZipPath : (isPane1 ? pane1Folder.getPath() : pane2Folder.getPath());
@@ -2084,7 +2088,7 @@ public class MainActivity extends AppCompatActivity {
                                     files.add(new FTPFileWrapper(newPath, f));
                                 }
                             }
-                            ListView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
                             pane.setAdapter(new FtpFilesArrayAdapter(MainActivity.this, files.toArray(new FTPFileWrapper[0]), pane1, ftpClient));
                             TextView currentFolderPath = findViewById(R.id.currentFolderPath);
                             currentFolderPath.setText(rss.getString(R.string.ftp, path));

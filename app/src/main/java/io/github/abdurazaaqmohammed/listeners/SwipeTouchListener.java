@@ -4,8 +4,6 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
-import android.widget.ArrayAdapter;
-
 import androidx.annotation.NonNull;
 import androidx.core.view.GestureDetectorCompat;
 
@@ -21,7 +19,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
     private final GestureDetectorCompat gestureDetector;
     private final View.OnClickListener originalClickListener;
     private final View.OnLongClickListener originalLongClickListener;
-    private final ArrayAdapter<?> arrayAdapter;
+    private final Object arrayAdapter;
     private final int position;
 
     private final float swipeSlopPx;
@@ -39,7 +37,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
                               View.OnClickListener clickListener,
                               View.OnLongClickListener longClickListener,
                               int position,
-                              ArrayAdapter<?> arrayAdapter, int pane) {
+                              Object arrayAdapter, int pane) {
         this.originalClickListener = clickListener;
         this.originalLongClickListener = longClickListener;
         this.position = position;

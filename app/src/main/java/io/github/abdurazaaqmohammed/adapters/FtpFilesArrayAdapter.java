@@ -6,8 +6,9 @@ import android.text.format.Formatter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
+
+import androidx.recyclerview.widget.RecyclerView;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -34,7 +35,7 @@ import java.util.List;
 
 import com.lilincpp.github.libezftp.callback.OnEZFtpDataTransferCallback;
 
-public class FtpFilesArrayAdapter extends ArrayAdapter<FTPFileWrapper> {
+public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdapter.ViewHolder> {
 
     private final MainActivity context;
     private final FTPFileWrapper[] values;
@@ -44,7 +45,6 @@ public class FtpFilesArrayAdapter extends ArrayAdapter<FTPFileWrapper> {
     private final DialogUtil dialogUtil;
 
     public FtpFilesArrayAdapter(MainActivity context, FTPFileWrapper[] values, boolean pane1, IEZFtpClient ftpClient) {
-        super(context, R.layout.list_file, values);
         this.context = context;
         this.values = values;
         this.pane1 = pane1;
@@ -52,46 +52,57 @@ public class FtpFilesArrayAdapter extends ArrayAdapter<FTPFileWrapper> {
         this.dialogUtil = new DialogUtil(context);
     }
 
+    public FTPFileWrapper getItem(int position) { return values[position]; }
+
+    @Override
+    public int getItemCount() { return values.length; }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        final TextView fileNameView, fileDateView;
+        final ImageView fileIconView;
+        ViewHolder(View v) {
+            super(v);
+            fileNameView = v.findViewById(R.id.fileName);
+            fileIconView = v.findViewById(R.id.fileIcon);
+            fileDateView = v.findViewById(R.id.fileDate);
+        }
+    }
+
     @NonNull
     @Override
-    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(R.layout.list_file, parent, false);
-        }
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        return new ViewHolder(LayoutInflater.from(context).inflate(R.layout.list_file, parent, false));
+    }
 
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         FTPFileWrapper file = values[position];
-        TextView fileNameView = convertView.findViewById(R.id.fileName);
-        ImageView fileIconView = convertView.findViewById(R.id.fileIcon);
-        TextView fileDateView = convertView.findViewById(R.id.fileDate);
-
-        fileNameView.setText(file.getName());
+        holder.fileNameView.setText(file.getName());
 
         Drawable ic = ResourcesCompat.getDrawable(context.rss, file.isDirectory() ? R.drawable.ic_folder_mt : R.drawable.baseline_insert_drive_file_24, context.getTheme());
-        fileIconView.setImageDrawable(ic);
+        holder.fileIconView.setImageDrawable(ic);
 
         if (file.getName().equals("..")) {
-            fileDateView.setText("");
+            holder.fileDateView.setText("");
         } else {
             String sizeStr = file.isDirectory() ? "" : FileSize.getHumanReadableFileSize(file.length());
             Date date = file.getFtpFile().getModifiedDate();
             String dateStr = date != null ? dateFormat.format(date) : "";
-            fileDateView.setText(dateStr + " " + sizeStr);
+            holder.fileDateView.setText(dateStr + " " + sizeStr);
         }
 
-        convertView.setOnClickListener(v -> {
+        holder.itemView.setOnClickListener(v -> {
             context.setCurrentPane(pane1 ? 1 : 2);
             context.loadFolderInPane(file, pane1, true);
         });
 
-        convertView.setOnLongClickListener(v -> {
+        holder.itemView.setOnLongClickListener(v -> {
             context.setCurrentPane(pane1 ? 1 : 2);
             if (!file.getName().equals("..")) {
-                showContextMenu(v, file);
+                showContextMenu(holder.itemView, file);
             }
             return true;
         });
-
-        return convertView;
     }
 
     private void showContextMenu(View anchor, FTPFileWrapper file) {
