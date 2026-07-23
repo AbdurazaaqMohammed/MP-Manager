@@ -48,14 +48,15 @@
                 android:textSize="12sp"
                 android:singleLine="true"
                 android:text="Resolution" />
+
             <ImageButton
-                android:layout_gravity="end|center"
                 android:id="@+id/btnInfo"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:layout_gravity="end|center"
                 android:background="?attr/selectableItemBackground"
-                android:src="@drawable/baseline_info_24"
-                android:contentDescription="Properties" />
+                android:contentDescription="Properties"
+                android:src="@drawable/baseline_info_24" />
         </FrameLayout>
 
 

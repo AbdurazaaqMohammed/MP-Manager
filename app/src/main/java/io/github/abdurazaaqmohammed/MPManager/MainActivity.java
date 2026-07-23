@@ -450,8 +450,10 @@ public class MainActivity extends AppCompatActivity {
             getWindow().setNavigationBarContrastEnforced(true);
         }
 
-        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-        Security.addProvider(new android.sun.security.provider.JavaKeyStoreProvider());
+        new Thread(() -> {
+            Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+            Security.addProvider(new android.sun.security.provider.JavaKeyStoreProvider());
+        }).start();
 
         requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
@@ -541,7 +543,6 @@ public class MainActivity extends AppCompatActivity {
         };
 
         LinearLayout container = findViewById(R.id.storageContainer);
-        StorageUtil.populateStorageUI(this, container);
         ListView sidebar = findViewById(R.id.sidebarList);
         String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Settings" };
         int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
@@ -703,15 +704,6 @@ public class MainActivity extends AppCompatActivity {
                     }).show();
         });
 
-        File[] dir1Files = homeDir1.listFiles();
-        if (dir1Files != null) {
-            File[] folders = homeDir1.listFiles(File::isDirectory);
-            int foldersCount = folders == null ? 0 : folders.length;
-            this.<TextView>findViewById(R.id.folderCount).setText(
-                    new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
-                            .append(dir1Files.length - foldersCount));
-        }
-
         RecyclerView pane1 = findViewById(R.id.listViewPane1);
         RecyclerView pane2 = findViewById(R.id.listViewPane2);
 
@@ -754,8 +746,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         setupNavigationButtons();
-        loadFolderInPane(homeDir1, true);
-        loadFolderInPane(homeDir2, false);
 
         ImageView addButton = findViewById(R.id.addButton);
         addButton.setOnClickListener(v -> {
@@ -966,6 +956,20 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         setupFilterBar();
+
+        handler.post(() -> {
+            StorageUtil.populateStorageUI(this, container);
+            File[] dir1Files = homeDir1.listFiles();
+            if (dir1Files != null) {
+                File[] folders = homeDir1.listFiles(File::isDirectory);
+                int foldersCount = folders == null ? 0 : folders.length;
+                MainActivity.this.<TextView>findViewById(R.id.folderCount).setText(
+                        new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
+                                .append(dir1Files.length - foldersCount));
+            }
+            loadFolderInPane(homeDir1, true);
+            loadFolderInPane(homeDir2, false);
+        });
     }
 
     private void setupNavigationButtons() {
