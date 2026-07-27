@@ -28,6 +28,14 @@ public class ErrorUtil {
         Toast.makeText(context, ("Copied"), Toast.LENGTH_SHORT).show();
     }
 
+    public void showError(String s) {
+        MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
+                .setMessage(s)
+                .setNegativeButton("Cancel", null)
+                .setNeutralButton(R.string.copy_log, (dialog, which) -> copyText(s));
+        b.show();
+    }
+
     public void showError(Throwable e) {
         final String mainErr = e.toString();
         StringBuilder stackTrace = new StringBuilder().append(mainErr).append('\n');

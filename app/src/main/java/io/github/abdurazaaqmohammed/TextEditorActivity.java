@@ -17,6 +17,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -44,6 +45,7 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.rosemoe.sora.text.Content;
+import io.github.rosemoe.sora.text.ContentListener;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.text.LineSeparator;
 import io.github.rosemoe.sora.widget.CodeEditor;
@@ -81,6 +83,7 @@ public class TextEditorActivity extends AppCompatActivity {
     private boolean isNavigating = false;
 
     private SharedPreferences sharedPreferences;
+    private boolean saved;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -222,24 +225,14 @@ public class TextEditorActivity extends AppCompatActivity {
     private void applyPreferences() {
         sharedPreferences = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
         String colorScheme = sharedPreferences.getString("pref_theme", "drac");
-        EditorColorScheme ecs = null;
-        switch (colorScheme) {
-            case "drac":
-                ecs = (new SchemeDarcula());
-                break;
-            case "ecl":
-                ecs = (new SchemeEclipse());
-                break;
-            case "vs":
-                ecs = (new SchemeVS2019());
-                break;
-            case "gh":
-                ecs = (new SchemeGitHub());
-                break;
-            case "np":
-                ecs = new SchemeNotepadXX();
-                break;
-        }
+        EditorColorScheme ecs = switch (colorScheme) {
+            case "drac" -> (new SchemeDarcula());
+            case "ecl" -> (new SchemeEclipse());
+            case "vs" -> (new SchemeVS2019());
+            case "gh" -> (new SchemeGitHub());
+            case "np" -> new SchemeNotepadXX();
+            default -> null;
+        };
         if (ecs != null) editor.setColorScheme(ecs);
         float fontSize = Float.parseFloat(sharedPreferences.getString("pref_font_size", "14"));
         editor.setTextSize(fontSize);
@@ -277,7 +270,7 @@ public class TextEditorActivity extends AppCompatActivity {
             editor.getSearcher().stopSearch();
             searchPanel.setVisibility(View.GONE);
         }
-        if(editor != null && editor.canUndo()) {
+        if(!saved && editor != null && editor.canUndo()) {
             new MaterialAlertDialogBuilder(this).setTitle("Changes Made")
                     .setPositiveButton("Save and Exit", (dialog, which) -> {
                         manualFinish = true;
@@ -498,7 +491,8 @@ public class TextEditorActivity extends AppCompatActivity {
         boolean inZip = intent.hasExtra("zf");
 
         try (OutputStream os = (currentFile == null ? getContentResolver().openOutputStream(currentFileUri, "wt") : FileUtils.getOutputStream(currentFile))) {
-            final String text = editor.getText().toString();
+            Content editorText = editor.getText();
+            final String text = editorText.toString();
             os.write(axml ? new aXMLEncoder().encodeString(text, this) : text.getBytes(Charset.forName(currentCharset)));
             if(inZip) {
                 /*File zipFile = new File(intent.getStringExtra("zf"));
@@ -521,8 +515,30 @@ public class TextEditorActivity extends AppCompatActivity {
                     }
                     if( tempZipFile.renameTo(zipFile)) Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show();
                 }*/
+
             } else Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
+            saved = true;
+
+            editorText.addContentListener(new ContentListener() {
+                @Override
+                public void beforeReplace(@NonNull Content content) {
+
+                }
+
+                @Override
+                public void afterInsert(@NonNull Content content, int i, int i1, int i2, int i3, @NonNull CharSequence charSequence) {
+                    saved = false;
+                    editorText.removeContentListener(this);
+                }
+
+                @Override
+                public void afterDelete(@NonNull Content content, int i, int i1, int i2, int i3, @NonNull CharSequence charSequence) {
+                    saved = false;
+                    editorText.removeContentListener(this);
+                }
+            });   } catch (Exception e) {
+            saved = false;
+
             new ErrorUtil(this).showError(e);
         }
     }
@@ -710,7 +726,7 @@ public class TextEditorActivity extends AppCompatActivity {
                     startActivity(new Intent(this, EditorSettingsActivity.class));
                     break;
                 case 11: // Close file
-                    if(editor != null && editor.canUndo()) new MaterialAlertDialogBuilder(this).setTitle("Changes Made")
+                    if(!saved && editor != null && editor.canUndo()) new MaterialAlertDialogBuilder(this).setTitle("Changes Made")
                                 .setPositiveButton("Save and Exit", (dialog, which) -> {
                                     saveFile();
                                     manualFinish = true;
