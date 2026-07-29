@@ -369,4 +369,30 @@
     <string name="tips">1. Both text and icon on the magnifier are clickable.\n2. Swipe on magnifier for precise fine-tuning.\n3. If your phone lags when picking colors, reduce capture speed.\n4. If you are asked to select a single app or entire screen, select entire screen.</string>
     <string name="tips_label">Tips</string>
 
+
+    <string name="app_subtitle">Generate commands from file templates</string>
+    <string name="err">Error</string>
+    <string name="select_files">Select File(s)</string>
+    <string name="auto_copy">Auto-copy command to clipboard</string>
+    <string name="auto_copy_desc">Automatically copy generated command when profile is selected</string>
+    <string name="profiles">Profiles</string>
+    <string name="add_profile">Add Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="delete_profile">Delete Profile</string>
+    <string name="delete_confirm">Are you sure you want to delete this profile?</string>
+    <string name="profile_name">Profile Name</string>
+    <string name="command_template">Command Template</string>
+    <string name="command_template_hint">Use %FILE% as placeholder for the file path</string>
+    <string name="copy_all">Copy All</string>
+    <string name="no_profiles">No Profiles</string>
+    <string name="no_profiles_msg">Create a profile first to generate commands.</string>
+    <string name="use_same_profile">Use same profile for all files</string>
+    <string name="generate_mode">Generation Mode</string>
+    <string name="files">Files</string>
+    <string name="manage_profiles">Manage Profiles</string>
+    <string name="command_helper">Command Helper</string>
+    <string name="multiple_files">Multiple files selected. Choose generation mode:</string>
+    <string name="individual_mode">Choose profile for each file individually</string>
+    <string name="single_mode">Use one profile for all files</string>
+    <string name="no_file">No file selected</string>
 </resources>

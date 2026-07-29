@@ -78,8 +78,11 @@ public class DialogAdapter extends ArrayAdapter<String> {
                     ic = android.R.drawable.ic_input_get;
                     break;
                 case 9:
+                    ic = R.drawable.terminal_24px;
+                    break;
                 case 10:
                 case 11:
+                case 12:
                     ic = R.drawable.baseline_swap_horiz_24;
                     break;
                 default:

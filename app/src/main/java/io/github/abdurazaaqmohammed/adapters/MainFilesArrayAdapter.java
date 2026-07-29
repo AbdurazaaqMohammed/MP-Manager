@@ -22,13 +22,16 @@ import android.graphics.drawable.Drawable;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 
+import android.app.Dialog;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import androidx.fragment.app.DialogFragment;
 import androidx.core.content.res.ResourcesCompat;
 
 import android.provider.MediaStore;
@@ -1229,7 +1232,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                     boolean multi = !selectedPositions.isEmpty();
                     String direction = pane1 ? "->" : "<-";
-                    String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark" };
+                    String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark", "Command Helper" };
                     List<String> itemsList = new ArrayList<>(Arrays.asList(baseItems));
 
                     RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
@@ -1306,6 +1309,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath()
                                     ).show();
                                     progressDialog.dismiss();
+                                case "Command Helper":
+                                    pm.dismiss();
+                                    if (isInZip) {
+                                        Toast.makeText(context, "Command Helper not supported for zip entries", Toast.LENGTH_SHORT).show();
+                                        return;
+                                    }
+                                    ArrayList<String> cmdFilePaths = new ArrayList<>();
+                                    if (multi) {
+                                        for (int cmdPos : selectedPositions) cmdFilePaths.add(((File) values[cmdPos]).getAbsolutePath());
+                                    } else {
+                                        cmdFilePaths.add(file.getAbsolutePath());
+                                    }
+                                    showCommandHelperDialog(cmdFilePaths);
                                     return;
                                 default:
                                     switch (position1) {
@@ -2391,5 +2407,409 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             if (pi != null && pi.applicationInfo != null) return pi.applicationInfo.packageName;
         } catch (Exception ignored) {}
         return "";
+    }
+
+    private void showCommandHelperDialog(ArrayList<String> filePaths) {
+        if (filePaths == null || filePaths.isEmpty()) return;
+        ProfileManager chPm = new ProfileManager(context);
+        List<Profile> profiles = chPm.getProfiles();
+        if (profiles.isEmpty()) {
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.no_profiles)
+                    .setMessage(R.string.no_profiles_msg)
+                    .setPositiveButton(R.string.settings, (d, w) -> new CommandHelperSettingsDialog().show(context.getSupportFragmentManager(), "CommandHelperSettings"))
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+            return;
+        }
+        if (filePaths.size() > 1) {
+            showMultiFileCommandDialog(profiles, filePaths, chPm);
+        } else {
+            buildAndShowCommandDialog(profiles, filePaths, true, chPm);
+        }
+    }
+
+    private void showMultiFileCommandDialog(List<Profile> profiles, ArrayList<String> filePaths, ProfileManager chPm) {
+        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
+        builder.setTitle(R.string.multiple_files);
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        layout.setPadding(pad, pad, pad, pad);
+        CheckBox sameProfileCb = new CheckBox(context);
+        sameProfileCb.setText(R.string.use_same_profile);
+        sameProfileCb.setChecked(true);
+        layout.addView(sameProfileCb);
+        builder.setView(layout);
+        builder.setPositiveButton(android.R.string.copy, (d, w) -> buildAndShowCommandDialog(profiles, filePaths, sameProfileCb.isChecked(), chPm));
+        builder.setNegativeButton(R.string.cancel, null);
+        builder.show();
+    }
+
+    private static class CmdViewHolder {
+        LinearLayout card;
+        TextView fileLabel;
+        Spinner spinner;
+        TextView cmdText;
+        MaterialButton copyBtn;
+        MaterialButton termuxBtn;
+        String filePath;
+        boolean hasSpinner;
+    }
+
+    private void buildAndShowCommandDialog(List<Profile> profiles, ArrayList<String> filePaths, boolean sameProfile, ProfileManager chPm) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean autoCopy = prefs.getBoolean("auto_copy", false);
+        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
+        builder.setTitle(R.string.command_helper);
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int p = dp(16);
+        root.setPadding(p, p, p, p);
+        boolean multipleFiles = filePaths.size() > 1;
+        Spinner sharedSpinner = null;
+        if (sameProfile && multipleFiles) {
+            sharedSpinner = createProfileSpinner(profiles);
+            root.addView(sharedSpinner);
+            root.addView(spacer(dp(8)));
+        }
+        List<CmdViewHolder> holders = new ArrayList<>();
+        for (int i = 0; i < filePaths.size(); i++) {
+            String fp = filePaths.get(i);
+            CmdViewHolder h = new CmdViewHolder();
+            h.filePath = fp;
+            h.card = new LinearLayout(context);
+            h.card.setOrientation(LinearLayout.VERTICAL);
+            h.card.setPadding(0, dp(4), 0, dp(4));
+            if (multipleFiles) {
+                h.fileLabel = new TextView(context);
+                h.fileLabel.setText((i + 1) + ". " + new File(fp).getName());
+                h.fileLabel.setTextAppearance(context, android.R.style.TextAppearance_Small);
+                h.card.addView(h.fileLabel);
+            }
+            boolean showIndividualSpinner = !sameProfile || !multipleFiles;
+            if (showIndividualSpinner) {
+                h.spinner = createProfileSpinner(profiles);
+                h.hasSpinner = true;
+                h.card.addView(h.spinner);
+            }
+            h.cmdText = new TextView(context);
+            h.cmdText.setTextAppearance(context, android.R.style.TextAppearance_Medium);
+            h.cmdText.setTypeface(Typeface.MONOSPACE);
+            h.cmdText.setPadding(0, dp(4), 0, dp(4));
+            h.cmdText.setTextIsSelectable(true);
+            h.card.addView(h.cmdText);
+            LinearLayout btnRow = new LinearLayout(context);
+            btnRow.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+            h.copyBtn = new MaterialButton(context);
+            h.copyBtn.setText(multipleFiles ? ("Copy #" + (i + 1)) : "Copy");
+            h.copyBtn.setWidth(0);
+            h.copyBtn.setPadding(5, 0, 5, 0);
+            h.copyBtn.setIconResource(R.drawable.ic_copy);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            h.copyBtn.setLayoutParams(lp);
+            h.copyBtn.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+            btnRow.addView(h.copyBtn);
+
+            h.termuxBtn = new MaterialButton(context);
+            h.termuxBtn.setText("Termux");
+            h.termuxBtn.setWidth(0);
+            h.termuxBtn.setPadding(5, 0, 5, 0);
+            h.termuxBtn.setLayoutParams(lp);
+            h.termuxBtn.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+            h.termuxBtn.setIconResource(R.drawable.terminal_24px);
+            btnRow.addView(h.termuxBtn);
+            h.card.addView(btnRow);
+            root.addView(h.card);
+            if (i < filePaths.size() - 1) root.addView(divider());
+            holders.add(h);
+        }
+        if (multipleFiles) {
+            root.addView(spacer(dp(8)));
+            LinearLayout multiBtnRow = new LinearLayout(context);
+            multiBtnRow.setOrientation(LinearLayout.HORIZONTAL);
+            Button copyAllBtn = new MaterialButton(context);
+            copyAllBtn.setText(R.string.copy_all);
+            multiBtnRow.addView(copyAllBtn);
+            Button termuxAllBtn = new MaterialButton(context);
+            termuxAllBtn.setText("Run All in Termux");
+            multiBtnRow.addView(termuxAllBtn);
+            root.addView(multiBtnRow);
+            copyAllBtn.setOnClickListener(v -> {
+                StringBuilder sb = new StringBuilder();
+                for (CmdViewHolder hldr : holders) {
+                    if (sb.length() > 0) sb.append("\n");
+                    sb.append(hldr.cmdText.getText());
+                }
+                copyToClipboard(sb.toString());
+            });
+            termuxAllBtn.setOnClickListener(v -> {
+                for (CmdViewHolder hldr : holders) {
+                    String cmd = hldr.cmdText.getText().toString();
+                    if (!cmd.isEmpty()) runInTermux(cmd);
+                }
+            });
+        }
+        root.addView(spacer(dp(8)));
+        Button manageBtn = new MaterialButton(context);
+        manageBtn.setText(R.string.manage_profiles);
+        manageBtn.setOnClickListener(v -> new CommandHelperSettingsDialog().show(context.getSupportFragmentManager(), "CommandHelperSettings"));
+        root.addView(manageBtn);
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(root);
+        builder.setView(scroll);
+        builder.setNegativeButton(R.string.close, null);
+        builder.show();
+        for (int i = 0; i < holders.size(); i++) {
+            CmdViewHolder h = holders.get(i);
+            Profile initProfile = profiles.get(0);
+            h.cmdText.setText(initProfile.getGeneratedCommand(h.filePath));
+            if (h.hasSpinner) {
+                final int fi = i;
+                h.spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        Profile p = profiles.get(position);
+                        h.cmdText.setText(p.getGeneratedCommand(h.filePath));
+                    }
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {}
+                });
+            }
+            h.copyBtn.setOnClickListener(v -> {
+                copyToClipboard(h.cmdText.getText().toString());
+            });
+            h.termuxBtn.setOnClickListener(v -> {
+                String cmd = h.cmdText.getText().toString();
+                if (!cmd.isEmpty()) runInTermux(cmd);
+            });
+        }
+        if (sharedSpinner != null) {
+            sharedSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    Profile p = profiles.get(position);
+                    for (CmdViewHolder hldr : holders) hldr.cmdText.setText(p.getGeneratedCommand(hldr.filePath));
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            });
+        }
+        if (autoCopy && !holders.isEmpty()) {
+            copyToClipboard(profiles.get(0).getGeneratedCommand(holders.get(0).filePath));
+        }
+    }
+
+    private Spinner createProfileSpinner(List<Profile> profiles) {
+        Spinner spinner = new Spinner(context);
+        String[] names = new String[profiles.size()];
+        for (int i = 0; i < profiles.size(); i++) names[i] = profiles.get(i).name;
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, names);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        return spinner;
+    }
+
+    private void copyToClipboard(String text) {
+        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null) clipboard.setPrimaryClip(ClipData.newPlainText("Command", text));
+        Extensions.showMessage(context, context.rss.getString(R.string.copied_to_clipboard, text));
+    }
+
+    private void runInTermux(String command) {
+        try {
+            context.getPackageManager().getPackageInfo("com.termux", PackageManager.GET_ACTIVITIES);
+        } catch (PackageManager.NameNotFoundException e) {
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.command_helper)
+                    .setMessage("Warning: Termux was not found on the device")
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton("Download Termux Now", (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-app/releases")))).show();
+            return;
+        }
+        Intent intent = new Intent();
+        intent.setClassName("com.termux", "com.termux.app.RunCommandService");
+        intent.setAction("com.termux.RUN_COMMAND");
+        intent.putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash");
+        intent.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c", command});
+        intent.putExtra("com.termux.RUN_COMMAND_BACKGROUND", false);
+        intent.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
+        try {
+            context.startService(intent);
+        } catch (SecurityException e) {
+            new MaterialAlertDialogBuilder(context).setMessage("Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)").setTitle("Permissions").setPositiveButton("OK", (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
+        } catch (IllegalStateException ise) {
+            // This can happen if Termux is force stopped even if you granted draw over other apps permission
+            context.startActivity(new Intent().setClassName("com.termux", "com.termux.app.TermuxActivity"));
+            context.handler.postDelayed(() -> context.startService(intent), 2000);
+        }
+    }
+
+    private View spacer(int height) {
+        View v = new View(context);
+        v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height));
+        return v;
+    }
+
+    private View divider() {
+        View v = new View(context);
+        v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        v.setBackgroundColor(0x1A000000);
+        v.setMinimumHeight(1);
+        return v;
+    }
+
+    private int dp(int dp) {
+        return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    public static class CommandHelperSettingsDialog extends DialogFragment {
+        private ProfileManager profileManager;
+        private List<Profile> profiles;
+        private ArrayAdapter<String> listAdapter;
+        private ListView profileListView;
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            profileManager = new ProfileManager(getActivity());
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+            LinearLayout root = new LinearLayout(getActivity());
+            root.setOrientation(LinearLayout.VERTICAL);
+
+            CheckBox autoCopyCheck = new CheckBox(getActivity());
+            autoCopyCheck.setText(R.string.auto_copy);
+            autoCopyCheck.setChecked(prefs.getBoolean("auto_copy", false));
+            autoCopyCheck.setOnCheckedChangeListener((buttonView, isChecked) -> prefs.edit().putBoolean("auto_copy", isChecked).apply());
+            root.addView(autoCopyCheck);
+
+            TextView autoCopyDesc = new TextView(getActivity());
+            autoCopyDesc.setText(R.string.auto_copy_desc);
+            autoCopyDesc.setTextAppearance(getActivity(), android.R.style.TextAppearance_Small);
+            autoCopyDesc.setPadding(dp2(32), 0, 0, dp2(8));
+            root.addView(autoCopyDesc);
+
+            View sep = new View(getActivity());
+            sep.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
+            sep.setBackgroundColor(0x1A000000);
+            root.addView(sep);
+
+            TextView profilesTitle = new TextView(getActivity());
+            profilesTitle.setText(R.string.profiles);
+            profilesTitle.setTextAppearance(getActivity(), android.R.style.TextAppearance_Medium);
+            profilesTitle.setTypeface(null, Typeface.BOLD);
+            profilesTitle.setPadding(dp2(16), dp2(16), dp2(16), dp2(8));
+            root.addView(profilesTitle);
+
+            loadProfiles();
+            listAdapter = new ArrayAdapter<String>(getActivity(), com.google.android.material.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
+                @Override
+                public View getView(int pos, View convertView, ViewGroup parent) {
+                    View view = super.getView(pos, convertView, parent);
+                    if (view instanceof TextView) {
+                        TextView tv = (TextView) view;
+                        tv.setText(profiles.get(pos).name);
+                        tv.setPadding(dp2(16), dp2(12), dp2(16), dp2(12));
+                    }
+                    return view;
+                }
+            };
+            profileListView = new ListView(getActivity());
+            profileListView.setAdapter(listAdapter);
+            profileListView.setOnItemClickListener((parent, view, position, id) -> showEditDialog(position));
+            profileListView.setOnItemLongClickListener((parent, view, position, id) -> {
+                showDeleteDialog(position);
+                return true;
+            });
+            root.addView(profileListView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+
+            Button addBtn = new MaterialButton(getActivity());
+            addBtn.setText(R.string.add_profile);
+            addBtn.setOnClickListener(v -> showAddDialog());
+            root.addView(addBtn);
+
+            return new MaterialAlertDialogBuilder(getActivity())
+                    .setTitle(R.string.settings)
+                    .setView(root)
+                    .setPositiveButton(R.string.close, null)
+                    .create();
+        }
+
+        private void loadProfiles() { profiles = profileManager.getProfiles(); }
+
+        private List<String> getProfileNames() {
+            List<String> names = new ArrayList<>();
+            for (Profile p : profiles) names.add(p.name);
+            return names;
+        }
+
+        private void refreshList() {
+            loadProfiles();
+            listAdapter.clear();
+            for (String name : getProfileNames()) listAdapter.add(name);
+            listAdapter.notifyDataSetChanged();
+        }
+
+        private void showAddDialog() { showProfileDialog(-1, null, null); }
+
+        private void showEditDialog(int index) {
+            Profile p = profiles.get(index);
+            showProfileDialog(index, p.name, p.command);
+        }
+
+        private void showProfileDialog(int index, String existingName, String existingCommand) {
+            AlertDialog.Builder builder = new MaterialAlertDialogBuilder(getActivity());
+            builder.setTitle(index < 0 ? R.string.add_profile : R.string.edit_profile);
+            LinearLayout layout = new LinearLayout(getActivity());
+            layout.setOrientation(LinearLayout.VERTICAL);
+            int p = dp2(16);
+            layout.setPadding(p, p, p, p);
+            EditText nameInput = new EditText(getActivity());
+            nameInput.setHint(R.string.profile_name);
+            if (existingName != null) nameInput.setText(existingName);
+            layout.addView(nameInput);
+            EditText cmdInput = new EditText(getActivity());
+            cmdInput.setHint(R.string.command_template_hint);
+            cmdInput.setSingleLine(false);
+            cmdInput.setLines(3);
+            if (existingCommand != null) cmdInput.setText(existingCommand);
+            layout.addView(cmdInput);
+            builder.setView(layout);
+            builder.setPositiveButton(R.string.save, (d, w) -> {
+                String name = nameInput.getText().toString().trim();
+                String cmd = cmdInput.getText().toString().trim();
+                if (TextUtils.isEmpty(name)) {
+                    Toast.makeText(getActivity(), "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (TextUtils.isEmpty(cmd)) {
+                    Toast.makeText(getActivity(), "Command template cannot be empty", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (index < 0) profileManager.addProfile(new Profile(name, cmd));
+                else profileManager.updateProfile(index, new Profile(name, cmd));
+                refreshList();
+            });
+            builder.setNegativeButton(R.string.cancel, null);
+            builder.show();
+        }
+
+        private void showDeleteDialog(int index) {
+            new MaterialAlertDialogBuilder(getActivity())
+                    .setTitle(R.string.delete_profile)
+                    .setMessage(R.string.delete_confirm)
+                    .setPositiveButton(R.string.save, (d, w) -> {
+                        profileManager.deleteProfile(index);
+                        refreshList();
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+        }
+
+        private int dp2(int dp) {
+            return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+        }
     }
 }
