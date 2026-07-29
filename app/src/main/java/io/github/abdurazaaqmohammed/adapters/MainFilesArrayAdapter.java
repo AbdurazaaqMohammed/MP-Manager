@@ -11,7 +11,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -27,6 +26,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 
 import android.app.Dialog;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -35,12 +35,12 @@ import androidx.fragment.app.DialogFragment;
 import androidx.core.content.res.ResourcesCompat;
 
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.ClipboardManager;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
-import android.util.Log;
 import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -57,7 +57,13 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ProgressBar;
+import android.widget.Spinner;
+import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.ScrollView;
+
+import android.content.ClipData;
+import android.graphics.Typeface;
 
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -123,6 +129,8 @@ import java.util.concurrent.Executors;
 import io.github.abdurazaaqmohammed.TextEditorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.commandhelper.ProfileManager;
+import io.github.abdurazaaqmohammed.commandhelper.ProfileManager.Profile;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
@@ -135,8 +143,8 @@ import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
-import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
@@ -199,13 +207,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         final String[] targetSdkVersionSelected = new String[1];
         minSdk.setOnItemClickListener((parent, view, position, id) -> minSdkVersionSelected[0] = (position+1) +"");
         targetSdk.setOnItemClickListener((parent, view, position, id) -> targetSdkVersionSelected[0] = (position+1) +"");
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, R.layout.dropdownitem, versions) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.dropdownitem, versions) {
             @NonNull
             @Override
             public View getView(int position1, @Nullable View convertView, @NonNull ViewGroup parent1) {
-                if (convertView == null) convertView = LayoutInflater.from(context).inflate(R.layout.dropdownitem, parent1, false);
+                if (convertView == null)
+                    convertView = LayoutInflater.from(context).inflate(R.layout.dropdownitem, parent1, false);
                 TextView view1 = (TextView) convertView;
-                view1.setText(rss.getString(R.string.android_ver_text, versions[position1], position1+1));
+                view1.setText(rss.getString(R.string.android_ver_text, versions[position1], position1 + 1));
                 return convertView;
             }
         };
@@ -282,10 +291,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     if(minSdkVersionChanged) sb.append(options[5]).append(", ");
                     if(targetSdkVersionChanged) sb.append(options[6]);
                     sb.append(" updated");
-                    AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                    dialogUtil.styleAlertDialog(progressDialog);
-                    TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                    progressText.setText(rss.getString(R.string.saving));
+                    ProgressManager pm = new ProgressManager(context, true).show();
+                    pm.setText(rss.getString(R.string.saving));
 
                     new RunUtil(context.handler, context, sb)
                             .runInBackground(() -> {
@@ -328,10 +335,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                 settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false));
                                         signWrapper.signApk(apkFile);
                                     }
-                                    context.handler.post(progressDialog::dismiss);
+                                    pm.dismiss();
                                     return true;
                                 } catch (Exception e) {
-                                    context.handler.post(progressDialog::dismiss);
+                                    pm.dismiss();
                                     new ErrorUtil(context).showError(e);
                                     return false;
                                 }
@@ -354,30 +361,21 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         properties.extensions = new String[]{"png", "webp", "jpg", "jpeg"};
         FilePickerDialog fpd = new FilePickerDialog(context, properties);
         fpd.setTitle("Select Icon");
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
+        ProgressManager pm = new ProgressManager(context, true);
 
         fpd.setDialogSelectionListener(files -> new Thread(() -> {
             String iconPath = findIconPathInManifest(apkFile);
 
             try (InputStream is = FileUtils.getInputStream(files[0])) {
-                context.handler.post(() -> {
-                    dialogUtil.styleAlertDialog(progressDialog);
-                    TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                    progressText.setText(context.rss.getString(R.string.adding, files[0]));
-
-                });
+                pm.show().setText(context.rss.getString(R.string.adding, files[0]));
                 replaceZipEntry(apkFile,
                         iconPath != null ? iconPath : "res/mipmap-xxhdpi-v4/ic_launcher.png",
                         is);
-                context.handler.post(() -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(context, "Icon changed", Toast.LENGTH_LONG).show();
-                });
+                pm.dismiss();
+                context.handler.post(() -> Toast.makeText(context, "Icon changed", Toast.LENGTH_LONG).show());
             } catch (Exception e) {
-                context.handler.post(() -> {
-                    progressDialog.dismiss();
-                    new ErrorUtil(context).showError(e);
-                });
+                pm.dismiss();
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
         }).start());
         fpd.show();
@@ -986,11 +984,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setView(dialogView)
                 .setPositiveButton("Decompile", (d, which) -> {
 
-                    DialogUtil dialogUtil = new DialogUtil(context);
-                    AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                    dialogUtil.styleAlertDialog(progressDialog);
-                    TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                    APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                    ProgressManager pm = new ProgressManager(context, true).show();
+                    APKLogger logger = pm.getLogger();
 
                     new Thread(() -> {
                         try {
@@ -1027,13 +1022,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             decompiler.setEnableLog(true);
                             decompiler.runCommand();
                             logger.close();
+                            pm.dismiss();
                             context.handler.post(() -> {
-                                progressDialog.dismiss();
                                 Toast.makeText(context, "Decompiled to " + outputFile.getName(), Toast.LENGTH_SHORT).show();
                                 context.reloadCurrentFolder();
                             });
                         } catch (Exception e) {
-                            progressDialog.dismiss();
+                            pm.dismiss();
                             new ErrorUtil(context).showError(e);
                             logger.close();
                         }
@@ -1148,10 +1143,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                 switch (which) {
                                                     case 0:
                                                         if (LegacyUtils.aboveSdk20) {
-                                                            AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                                                            dialogUtil.styleAlertDialog(progressDialog);
-                                                            TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                                            APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                                            ProgressManager pm = new ProgressManager(context, true).show();
+                                                            APKLogger logger = pm.getLogger();
                                                             new Thread(() -> {
                                                                 BroadcastReceiver receiver = null;
                                                                 try (ZipFile zf = new ZipFile(file)) {
@@ -1159,23 +1152,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                     receiver = new BroadcastReceiver() {
                                                                         @Override public void onReceive(Context context, Intent intent) {
                                                                             if ("DISMISS_DIALOG".equals(intent.getAction())) {
-                                                                                ((MainActivity) context).handler.post(() -> {
-                                                                                    progressDialog.dismiss();
-                                                                                    new MaterialAlertDialogBuilder(context).setTitle("Installed").setPositiveButton("Launch", (d, w) -> {
-                                                                                        String packageName;
-                                                                                        PackageManager pm = context.getPackageManager();
-                                                                                        PackageInstaller.SessionInfo sessionInfo = pm.getPackageInstaller().getSessionInfo(sessionId);
-                                                                                        if (sessionInfo == null) {
-                                                                                            List<PackageInfo> installedPackages = pm.getInstalledPackages(0);
-                                                                                            Collections.sort(installedPackages, (o1, o2) -> Long.compare(o2.lastUpdateTime, o1.lastUpdateTime));
-                                                                                            packageName = installedPackages.get(0).packageName;
-                                                                                        } else packageName = sessionInfo.getAppPackageName();
-                                                                                        Intent launchIntent;
-                                                                                        if (TextUtils.isEmpty(packageName) || (launchIntent = pm.getLaunchIntentForPackage(packageName)) == null) {
-                                                                                            Toast.makeText(context, "Unable to launch " + packageName, Toast.LENGTH_SHORT).show();
-                                                                                        } else context.startActivity(launchIntent);
-                                                                                    }).setNegativeButton(R.string.cancel, null).show();
-                                                                                });
+                                                                                pm.dismiss();
                                                                                 context.unregisterReceiver(this);
                                                                             }
                                                                         }
@@ -1183,7 +1160,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                     if (Build.VERSION.SDK_INT >= 33) {
                                                                         context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"), RECEIVER_NOT_EXPORTED);
                                                                     } else context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"));
-                                                                } catch (Exception e) {progressDialog.dismiss(); new ErrorUtil(context).showError(e); if(receiver != null) context.unregisterReceiver(receiver);}
+                                                                } catch (Exception e) {pm.dismiss(); new ErrorUtil(context).showError(e); if(receiver != null) context.unregisterReceiver(receiver);}
                                                             }).start();
                                                         } else {
                                                             Toast.makeText(context, "Installing split APKs is not supported on this version of Android :(", Toast.LENGTH_SHORT).show();
@@ -1279,9 +1256,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     gridView.setOnItemClickListener((parent1, view, position1, id) -> {
                         dialog.dismiss();
                         Handler handler = context.handler;
-                        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                        dialogUtil.styleAlertDialog(progressDialog);
-                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+                        ProgressManager pm = new ProgressManager(context, true).show();
                         try {
                             String selectedAction = items[position1];
                             switch (selectedAction) {
@@ -1294,21 +1269,22 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             .putExtra("zip1", finalCompareFile1 instanceof ZipEntryInfo ? ((ZipEntryInfo) finalCompareFile1).getZipFile().getAbsolutePath() : null)
                                             .putExtra("zip2", finalCompareFile2 instanceof ZipEntryInfo ? ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath() : null)
                                     );
-                                    progressDialog.dismiss();
+                                    pm.dismiss();
                                     return;
                                 case "Compare ZIP":
                                     new CompareZipDialog(context,
                                             finalCompareFile1 instanceof File ? (File) finalCompareFile1 : ((ZipEntryInfo) finalCompareFile1).getZipFile(),
                                             finalCompareFile2 instanceof File ? (File) finalCompareFile2 : ((ZipEntryInfo) finalCompareFile2).getZipFile()
                                     ).show();
-                                    progressDialog.dismiss();
+                                    pm.dismiss();
                                     return;
                                 case "Compare ARSC":
                                     new CompareArscDialog(context,
                                             finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getZipFile().getAbsolutePath(),
                                             finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath()
                                     ).show();
-                                    progressDialog.dismiss();
+                                    pm.dismiss();
+                                    return;
                                 case "Command Helper":
                                     pm.dismiss();
                                     if (isInZip) {
@@ -1330,23 +1306,23 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                 try {
                                                     if (multi) for (int f : selectedPositions) {
                                                         Object file1 = values[f];
-                                                        handler.post(() -> progressText.setText(context.rss.getString(R.string.copying, file1)));
+                                                        pm.setText(context.rss.getString(R.string.copying, file1));
                                                         copy(file1);
                                                     }
                                                     else {
-                                                        handler.post(() -> progressText.setText(context.rss.getString(R.string.copying, item)));
+                                                        pm.setText(context.rss.getString(R.string.copying, item));
                                                         copy(item);
                                                     }
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                 } catch (Exception e) {
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                     new ErrorUtil(context).showError(e);
                                                 }
                                             }).start();
                                             break;
                                         case 1:
                                             if (context.pane1Folder == context.pane2Folder) {
-                                                progressDialog.dismiss();
+                                                pm.dismiss();
                                                 break;
                                             }
                                             new Thread(() -> {
@@ -1354,9 +1330,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                     if (multi) {
                                                         for (int f : selectedPositions) {
                                                             Object file1 = values[f];
-                                                            handler.post(() -> progressText.setText(context.rss.getString(R.string.copying, file1)));
+pm.setText(context.rss.getString(R.string.copying, file1));
                                                             copy(file1);
-                                                            handler.post(() -> progressText.setText(context.rss.getString(R.string.deleting, file1)));
+                                                            pm.setText(context.rss.getString(R.string.deleting, file1));
                                                             if (file1 instanceof File) {
                                                                 ((File) file1).delete();
                                                             } else if (file1 instanceof ZipEntryInfo) {
@@ -1364,23 +1340,23 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                             }
                                                         }
                                                     } else {
-                                                        handler.post(() -> progressText.setText(context.rss.getString(R.string.copying, item)));
+                                                        pm.setText(context.rss.getString(R.string.copying, item));
                                                         copy(item);
-                                                        handler.post(() -> progressText.setText(context.rss.getString(R.string.deleting, item)));
+                                                        pm.setText(context.rss.getString(R.string.deleting, item));
                                                         if (item instanceof File && ((File) item).delete())
                                                             ;
                                                         else if (item instanceof ZipEntryInfo)
                                                             deleteZipEntry((ZipEntryInfo) item);
                                                     }
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                 } catch (Exception e) {
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                     new ErrorUtil(context).showError(e);
                                                 }
                                             }).start();
                                             break;
                                         case 2:
-                                            handler.post(progressDialog::dismiss);
+                                            pm.dismiss();
                                             if (multi) {
                                                 Toast.makeText(context, "To be implemented", Toast.LENGTH_SHORT).show();
                                                 return;
@@ -1470,7 +1446,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                             for (int i : selectedPositions) {
                                                                 selectedFile = (File) values[i];
                                                                 File finalSelectedFile1 = selectedFile;
-                                                                if (finalSelectedFile1 != null) handler.post(() -> progressText.setText("Deleting " + finalSelectedFile1.getName()));
+                                                                 if (finalSelectedFile1 != null) pm.setText("Deleting " + finalSelectedFile1.getName());
 
                                                                 if (selectedFile.isDirectory())
                                                                     Util.deleteDir(selectedFile);
@@ -1491,7 +1467,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                     settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                         }
                                                     } else if (!isInZip) {
-                                                        handler.post(() -> progressText.setText("Deleting " + file.getName()));
+                                                        pm.setText("Deleting " + file.getName());
 
                                                         if (file.isDirectory())
                                                             Util.deleteDir(file);
@@ -1505,17 +1481,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                 settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
                                                                 settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                     }
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                 } catch (Exception e) {
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                     new ErrorUtil(context).showError(e);
                                                 }
-                                            }).start()).setNegativeButton("Cancel", (dialog1, which1) -> progressDialog.dismiss());
+                                            }).start()).setNegativeButton("Cancel", (dialog1, which1) -> pm.dismiss());
                                             dialogUtil.styleAlertDialog(deleteDialog.create());
                                             break;
                                         case 4:
                                             if (isInZip) {
-                                                progressDialog.dismiss();
+                                                pm.dismiss();
                                                 break;
                                             }
                                             File parentFile2 = file.getParentFile();
@@ -1538,7 +1514,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             compressDialog.setView(compressView);
                                             compressDialog.setNegativeButton(context.rss.getString(R.string.cancel), (dialog5, which) -> handler.post(() -> {
                                                 dialog5.dismiss();
-                                                progressDialog.dismiss();
+                                                pm.dismiss();
                                             }));
                                             compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> new Thread(() -> {
                                                 File outputZip = new File(parentFile2, (multi ? parentFileName : fileName) + ".zip");
@@ -1559,19 +1535,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                             selectedFiles.add((File) values[i]);
                                                         zf.addFiles(selectedFiles, zipParameters);
                                                     } else zf.addFile(file, zipParameters);
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                 } catch (Exception e) {
-                                                    handler.post(progressDialog::dismiss);
+                                                    pm.dismiss();
                                                     new ErrorUtil(context).showError(e);
                                                 }
                                             }).start());
-                                            context.handler.post(() -> {
-                                                compressDialog.show();
-                                                progressText.setText(context.rss.getString(R.string.compressing));
-                                            });
+                                            pm.setText(context.rss.getString(R.string.compressing));
+                                            context.handler.post(compressDialog::show);
                                             break;
                                         case 5:
-                                            progressDialog.dismiss();
+                                            pm.dismiss();
                                             LinearLayout parentLayout = new LinearLayout(context);
                                             parentLayout.setOrientation(LinearLayout.HORIZONTAL);
                                             parentLayout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -2033,10 +2007,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             dialogUtil.getDialogBuilder().setView(ll)
                                     .setNegativeButton(context.rss.getString(R.string.cancel), null)
                                     .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
-                                        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                                        dialogUtil.styleAlertDialog(progressDialog);
-                                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                        APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                        ProgressManager pm = new ProgressManager(context, true).show();
+                                        APKLogger logger = pm.getLogger();
                                         new Thread(() -> {
                                             File tempFolder = new File(context.getCacheDir(), System.currentTimeMillis() + '_' + fileName);
                                             try (ZipFile zf = new ZipFile(file); ZipFile opt = new ZipFile(FileUtils.getUnusedFile(filePath.replace(".apk", "_opt.apk")))) {
@@ -2084,12 +2056,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                         settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
                                                         settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
                                                         settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(opt.getFile());
-                                                context.handler.post(() -> {
-                                                    context.loadFolderInPane(file.getParentFile(), pane1, false);
-                                                    progressDialog.dismiss();
-                                                });
+                                                pm.dismiss();
+                                                context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                                             } catch (Exception e) {
-                                                context.handler.post(progressDialog::dismiss);
+                                                pm.dismiss();
                                                 new ErrorUtil(context).showError(e);
                                             }
                                         }).start();
@@ -2145,19 +2115,20 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         options.cleanMeta = settings.getBoolean("cleanMeta", true);
                                         options.fixTypeNames = settings.getBoolean("fixTypes", true);
                                         options.force = settings.getBoolean("flagForce", false);
-                                        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                                        dialogUtil.styleAlertDialog(progressDialog);
-                                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                        APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                        ProgressManager pm = new ProgressManager(context, true).show();
+                                        APKLogger logger = pm.getLogger();
                                         new Thread(() -> {
                                             try {
                                                 String pXmlFilePath = publicXmlPath[0];
                                                 if (!TextUtils.isEmpty(pXmlFilePath)) options.publicXml = new File(pXmlFilePath);
                                                 options.newCommandExecutor(logger).runCommand();
                                                 logger.close();
-                                                context.handler.post(() -> { progressDialog.dismiss(); Toast.makeText(context, "Refactored", Toast.LENGTH_SHORT).show(); });
+                                                pm.dismiss();
+                                                context.handler.post(() -> Toast.makeText(context, "Refactored", Toast.LENGTH_SHORT).show());
                                             } catch (Exception e) {
-                                                context.handler.post(() -> { progressDialog.dismiss(); new ErrorUtil(context).showError(e); logger.close(); });
+                                                pm.dismiss();
+                                                context.handler.post(() -> new ErrorUtil(context).showError(e));
+                                                logger.close();
                                             }
                                         }).start();
                                     }).create());
@@ -2217,16 +2188,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         options.dexLevel = settings.getInt("dexLevel", 0);
                                         options.force = settings.getBoolean("flagForce", false);
                                         options.outputFile = options.generateOutputFromInput(file);
-                                        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                                        dialogUtil.styleAlertDialog(progressDialog);
-                                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                        APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                        ProgressManager pm = new ProgressManager(context, true).show();
+                                        APKLogger logger = pm.getLogger();
                                         new Thread(() -> {
                                             try {
                                                 options.newCommandExecutor(logger).runCommand();
                                                 logger.close();
+                                                pm.dismiss();
                                                 context.handler.post(() -> { dialog2.dismiss(); Toast.makeText(context, context.rss.getString(R.string.protectd), Toast.LENGTH_SHORT).show(); });
                                             } catch (Exception e) {
+                                                pm.dismiss();
                                                 context.handler.post(dialog2::dismiss);
                                                 new ErrorUtil(context).showError(e);
                                                 logger.close();
@@ -2247,15 +2218,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             dialogUtil.getDialogBuilder().setView(ll)
                                     .setNegativeButton(context.rss.getString(R.string.cancel), null)
                                     .setPositiveButton(context.rss.getString(R.string.clone), (dialog6, which2) -> {
-                                        AlertDialog progressDialog = dialogUtil.getProgressDialog(false);
-                                        dialogUtil.styleAlertDialog(progressDialog);
-                                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                                        APKLogger logger = LogUtil.getApkLogger(progressText, context.handler, context);
+                                        ProgressManager pm = new ProgressManager(context, false).show();
+                                        APKLogger logger = pm.getLogger();
                                         new Thread(() -> {
                                             ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
-                                            final ProgressBar progressBar = progressDialog.findViewById(R.id.progressBar);
                                             @Override public void onMessage(String msg) { logger.logMessage(msg); }
-                                            @Override public void onProgress(int progress, int total) { context.handler.post(() -> { progressBar.setProgress(progress); progressBar.setMax(total); }); }
+                                            @Override public void onProgress(int progress, int total) { pm.setProgress(progress, total); }
                                         });
                                             String pkgNameInput = pkgNameView.getText().toString();
                                             apkCloner.setPath(filePath, pkgNameFromApk, pkgNameInput);
@@ -2265,14 +2233,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                         settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
                                                         settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
                                                         settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(new File(filePath.replace(".apk", "_clone.apk")));
-                                                context.handler.post(() -> { context.loadFolderInPane(file.getParentFile(), pane1, false); progressDialog.dismiss(); });
-                                            } catch (Exception e) { context.handler.post(progressDialog::dismiss); new ErrorUtil(context).showError(e); }
+                                                pm.dismiss();
+                                                context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                            } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
                                         }).start();
                                     }).show();
                         } else if (which1 == 6) {
-                            AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                            dialogUtil.styleAlertDialog(progressDialog);
-                            TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+                            ProgressManager pm = new ProgressManager(context, true).show();
                             new Thread(() -> {
                                 try {
                                     try (ZipFile zf = new ZipFile(file)){
@@ -2281,8 +2248,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     com.dex2c.cli.Main.main(new String[]{"-a", filePath, "-o", filePath.replace(".apk", "_dex2c.apk")});
 
                                     List<String> cmd = new ArrayList<>();
-                                    //cmd.add("su");
-                                    //cmd.add("-c");
                                     cmd.add("/storage/emulated/0/MP Manager/android-ndk-r29/ndk-build");
                                     cmd.add("-C");
                                     cmd.add(context.getFilesDir().getPath());
@@ -2291,23 +2256,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     pb.directory(new File("/sdcard/MP Manager/dataDir"));
                                     pb.redirectErrorStream(true);
                                     Process process = pb.start();
-                                    //StringBuilder output = new StringBuilder();
                                     try (InputStream is = process.getInputStream();
                                             InputStreamReader isr = new InputStreamReader(is);
                                             BufferedReader reader = new BufferedReader(isr)) {
                                         String line;
                                         while ((line = reader.readLine()) != null) {
                                             String finalLine = line;
-                                            context.handler.post(() -> {
-                                                progressText.append(finalLine);
-                                                progressText.append("\n");
-                                            });
+                                            context.handler.post(() -> { pm.setText(finalLine); });
                                         }
                                     }
-                                    context.handler.post(progressDialog::dismiss);
+                                    pm.dismiss();
                                     Extensions.showMessage(context, "Dex2C Done");
                                 } catch (Exception e) {
-                                    context.handler.post(progressDialog::dismiss);
+                                    pm.dismiss();
                                     new ErrorUtil(context).showError(e);
                                 }
                             }).start();

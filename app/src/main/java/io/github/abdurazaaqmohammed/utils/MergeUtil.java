@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.appcompat.app.AlertDialog;
 
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkBundle;
@@ -29,31 +26,11 @@ import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
-import io.github.abdurazaaqmohammed.MPManager.R;
-
 public class MergeUtil {
     public static void mergeSplitApk(File file, MainActivity context) {
-        DialogUtil dialogUtil = new DialogUtil(context);
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-        dialogUtil.styleAlertDialog(progressDialog);
-        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+        ProgressManager pm = new ProgressManager(context, true).show();
         new RunUtil(null, context, null).runInBackground(() -> {
-            APKLogger logger = new APKLogger() {
-                @Override
-                public void logMessage(String s) {
-                    context.handler.post(() -> progressText.setText(s));
-                }
-
-                @Override
-                public void logError(String s, Throwable throwable) {
-                    new ErrorUtil(context).showError(throwable);
-                }
-
-                @Override
-                public void logVerbose(String s) {
-                    context.handler.post(() -> progressText.setText(s));
-                }
-            };
+            APKLogger logger = pm.getLogger();
             File dir = new File(context.getCacheDir(), UUID.randomUUID().toString());
             try(ApkBundle bundle = new ApkBundle(); ArchiveFile zf = new ArchiveFile(file)) {
                 bundle.setAPKLogger(logger);
@@ -74,8 +51,8 @@ public class MergeUtil {
                     logger.logMessage("Writing apk ...");
                     File outputFile = io.github.abdurazaaqmohammed.utils.FileUtils.getUnusedFile(new File(file.getParentFile(), file.getName().replaceFirst("\\.(?:xapk|aspk|apk[sm])", "_antisplit.apk")));
                     mergedModule.writeApk(outputFile);
+                    pm.dismiss();
                     context.handler.post(() -> {
-                        progressDialog.dismiss();
                         Toast.makeText(context, "Saved to: " + outputFile.getName(), Toast.LENGTH_SHORT).show();
                         context.reloadCurrentFolder();
                     });

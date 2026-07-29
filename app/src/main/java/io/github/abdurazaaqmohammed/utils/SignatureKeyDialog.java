@@ -18,7 +18,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
@@ -188,9 +187,7 @@ public class SignatureKeyDialog {
                     LegacyUtils.applySharedPrefEditor(prefs.edit().putBoolean("v1", v1).putBoolean("v2", v2).putBoolean("v3", v3).putBoolean("v4", v4).putString("signedBy", signedByS));
 
                     if(file != null) {
-                        AlertDialog progressDialog = new DialogUtil(activity).getProgressDialog(true);
-                        progressDialog.show();
-                        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+                        ProgressManager pm = new ProgressManager(activity, true).show();
                         if(useBiometrics && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             Executor executor = ContextCompat.getMainExecutor(activity);
                             BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
@@ -215,7 +212,7 @@ public class SignatureKeyDialog {
                                             File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
                                             if (isSplitApk) try (ArchiveFile archiveFile = new ArchiveFile(file)) {
                                                 for (InputSource inputSource : archiveFile.getInputSources(archiveEntry -> archiveEntry.getName().endsWith(".apk"))) {
-                                                    activity.runOnUiThread(() -> progressText.setText(activity.getString(R.string.signing_, inputSource.getAlias())));
+                                                    pm.setText(activity.getString(R.string.signing_, inputSource.getAlias()));
                                                     File inputApk = inputSource.toFile(cacheDir);
                                                     try(InputStream is = inputSource.openStream()) { FileUtils.copyFile(is, inputApk); }
                                                     signWrapper.signApk(inputApk, new File(cacheDir, inputSource.getName().replace(".apk", "_signed.apk")));
@@ -232,13 +229,13 @@ public class SignatureKeyDialog {
                                                     zf.addFiles(Arrays.asList(cacheDir.listFiles()));
                                                 }
                                             } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
+                                            pm.dismiss();
                                             activity.runOnUiThread(() -> {
-                                                progressDialog.dismiss();
                                                 Toast.makeText(activity, activity.getString(R.string.signed, sigFileName), Toast.LENGTH_SHORT).show();
                                                 activity.reloadCurrentFolder();
                                             });
                                         } catch (Exception e) {
-                                            activity.runOnUiThread(progressDialog::dismiss);
+                                            pm.dismiss();
                                             new ErrorUtil(activity).showError(e);
                                         }
                                     }).start();  }
@@ -265,7 +262,7 @@ public class SignatureKeyDialog {
                                 File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
                                 if (isSplitApk) try (ArchiveFile archiveFile = new ArchiveFile(file)) {
                                     for (InputSource inputSource : archiveFile.getInputSources(archiveEntry -> archiveEntry.getName().endsWith(".apk"))) {
-                                        activity.runOnUiThread(() -> progressText.setText(activity.getString(R.string.signing_, inputSource.getAlias())));
+                                        pm.setText(activity.getString(R.string.signing_, inputSource.getAlias()));
                                         File inputApk = inputSource.toFile(cacheDir);
                                         try(InputStream is = inputSource.openStream()) { FileUtils.copyFile(is, inputApk); }
                                         signWrapper.signApk(inputApk, new File(cacheDir, inputSource.getName().replace(".apk", "_signed.apk")));
@@ -282,13 +279,13 @@ public class SignatureKeyDialog {
                                         zf.addFiles(Arrays.asList(cacheDir.listFiles()));
                                     }
                                 } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
+                                pm.dismiss();
                                 activity.runOnUiThread(() -> {
-                                    progressDialog.dismiss();
                                     Toast.makeText(activity, activity.getString(R.string.signed, sigFileName), Toast.LENGTH_SHORT).show();
                                     activity.reloadCurrentFolder();
                                 });
                             } catch (Exception e) {
-                                activity.runOnUiThread(progressDialog::dismiss);
+                                pm.dismiss();
                                 new ErrorUtil(activity).showError(e);
                             }
                         }).start();

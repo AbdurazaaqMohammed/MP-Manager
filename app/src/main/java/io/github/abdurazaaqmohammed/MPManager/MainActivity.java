@@ -28,6 +28,9 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.text.Editable;
@@ -78,7 +81,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
-import io.github.abdurazaaqmohammed.utils.LogUtil;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.codehasan.colorpicker.ServiceState;
@@ -315,10 +318,8 @@ public class MainActivity extends AppCompatActivity {
                         .setView(ll)
                         .setPositiveButton("Yes", (dialog, which) -> {
                             dialog.dismiss();
-                            AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-                            progressDialog.show();
-                            TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-                            progressText.setText(rss.getString(R.string.adding, name));
+                            ProgressManager pm = new ProgressManager(this, true).show();
+                            pm.setText(rss.getString(R.string.adding, name));
                             new Thread(() -> {
                                 try(ZipFile zf = new ZipFile(file)) {
                                     boolean dex = name.startsWith("classes") && name.endsWith(".dex");
@@ -336,12 +337,10 @@ public class MainActivity extends AppCompatActivity {
                                             settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
                                             settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
                                             settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(file);
-                                    handler.post(() -> {
-                                        progressDialog.dismiss();
-                                        loadZipFolderInPane(file, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false);
-                                    });
+                                    pm.dismiss();
+                                    handler.post(() -> loadZipFolderInPane(file, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
                                 } catch (Exception e) {
-                                    handler.post(progressDialog::dismiss);
+                                    pm.dismiss();
                                     new ErrorUtil(this).showError(e);
                                 }
                             }).start();
@@ -420,6 +419,7 @@ public class MainActivity extends AppCompatActivity {
         setTheme(theme = settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
         super.onCreate(savedInstanceState);
         DynamicColors.applyToActivitiesIfAvailable(getApplication());
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
         setContentView(R.layout.activity_main);
         checkStoragePerm();
@@ -435,7 +435,8 @@ public class MainActivity extends AppCompatActivity {
         boolean useDeviceRss = lang.equals(deviceLang);
         rss = useDeviceRss ? getResources() : LocaleHelper.setLocale(this, lang).getResources();
 
-        if (theme == R.style.Theme_MyApp_Black) findViewById(R.id.main).setBackgroundColor(Color.BLACK);
+        View main = findViewById(R.id.main);
+        if (theme == R.style.Theme_MyApp_Black) main.setBackgroundColor(Color.BLACK);
 
         if (Build.VERSION.SDK_INT > 20) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
@@ -1144,9 +1145,7 @@ public class MainActivity extends AppCompatActivity {
                         .setTitle("Build Options")
                         .setView(content)
                         .setPositiveButton("OK", (dialog, which) -> {
-                            AlertDialog ad = dialogUtil.getProgressDialog(true);
-                            ad.show();
-                            TextView progressText = ad.findViewById(R.id.dialogTitle);
+                            ProgressManager pm = new ProgressManager(this, true).show();
                             bo.type = xml ? BuildOptions.TYPE_XML : finalJson ? BuildOptions.TYPE_JSON : BuildOptions.TYPE_RAW;
                             bo.extractNativeLibs = UIHelper.radioGroupValue(rgExtract, "manifest");
                             bo.dexLib = UIHelper.radioGroupValue(rgDexLib, BuildOptions.DEX_LIB_INTERNAL);
@@ -1160,16 +1159,16 @@ public class MainActivity extends AppCompatActivity {
                             bo.outputFile = new File(folder, folder.getName() + ".apk");
                             new Thread(() -> {
                                 try {
-                                    APKLogger logger = LogUtil.getApkLogger(progressText, handler, this);
+                                    APKLogger logger = pm.getLogger();
                                     new Builder(bo, logger).runCommand();
                                     logger.close();
                                     if(sign[0]) new SignWrapper(
                                             settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
                                             settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
                                             settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(bo.outputFile);
-                                    handler.post(ad::dismiss);
+                                    pm.dismiss();
                                 } catch (Exception e) {
-                                    handler.post(ad::dismiss);
+                                    pm.dismiss();
                                     new ErrorUtil(MainActivity.this).showError(e);
                                 }
                             }).start();
@@ -1504,10 +1503,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-        dialogUtil.styleAlertDialog(progressDialog);
-        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
-        progressText.setText(rss.getString(R.string.searching));
+        ProgressManager pm = new ProgressManager(this, true).show();
+        pm.setText(rss.getString(R.string.searching));
         final String finalQuery = query;
 
         new Thread(() -> {
@@ -1517,7 +1514,7 @@ public class MainActivity extends AppCompatActivity {
                 pattern = Pattern.compile(finalQuery, mCase ? 0 : Pattern.CASE_INSENSITIVE);
             } catch (Exception e) {
                 handler.post(() -> {
-                    progressDialog.dismiss();
+                    pm.dismiss();
                     Extensions.showMessage(this, "Invalid Regex");
                 });
                 return;
@@ -1529,8 +1526,8 @@ public class MainActivity extends AppCompatActivity {
                     finalPattern, textInside, minSize,
                     maxSize);
 
+            pm.dismiss();
             handler.post(() -> {
-                progressDialog.dismiss();
                 if (results.isEmpty()) Extensions.showMessage(this, "No files found");
                 else {
                     File[] resArray = results.toArray(new File[0]);

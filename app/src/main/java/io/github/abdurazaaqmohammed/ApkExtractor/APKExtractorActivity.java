@@ -27,6 +27,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import androidx.core.content.FileProvider;
+import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
 
 import android.provider.Settings;
@@ -39,6 +40,8 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
 import android.widget.ScrollView;
@@ -84,10 +87,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.AppRecyclerViewAdapter;
 import io.github.abdurazaaqmohammed.adapters.ExtractOptionAdapter;
 import io.github.abdurazaaqmohammed.utils.CompareUtils;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
-import io.github.abdurazaaqmohammed.utils.LogUtil;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 
 public class APKExtractorActivity extends AppCompatActivity {
@@ -114,7 +115,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     public int theme;
     public boolean showExtractLibs;
     public int sortMode;
-    public DialogUtil dialogUtil;
+
     public Handler handler;
     public File superSplit;
     public Resources rss;
@@ -148,9 +149,9 @@ public class APKExtractorActivity extends AppCompatActivity {
         return showFinishedDialog(outputPath, null);
     }
 
-    public Runnable showFinishedDialog(String outputPath, AlertDialog ad) {
+    public Runnable showFinishedDialog(String outputPath, ProgressManager pm) {
         return () -> {
-            if(ad != null) ad.dismiss();
+            if(pm != null) pm.dismiss();
             if (!errorOccurred)
                 styleAlertDialog(new MaterialAlertDialogBuilder(this)
                         .setTitle("Info")
@@ -175,8 +176,8 @@ public class APKExtractorActivity extends AppCompatActivity {
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         setTheme(theme = themeSettings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
 
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         handler = new Handler(Looper.getMainLooper());
-        dialogUtil = new DialogUtil(this);
         setContentView(R.layout.activity_extractor);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -806,9 +807,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
         String path = appFolder.getPath();
         boolean singleItem = itemsToProcess.size() == 1;
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-        dialogUtil.styleAlertDialog(progressDialog);
-        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+        ProgressManager pm = new ProgressManager(this, true).show();
         switch (whichAction) {
             case 0:
                 for (int i = 0, itemsToProcessSize = itemsToProcess.size(); i < itemsToProcessSize; i++) {
@@ -830,9 +829,9 @@ public class APKExtractorActivity extends AppCompatActivity {
                         try (ArchiveFile zf = new ArchiveFile(new File(ai.filePath))) {
                             InputSource inputSource = zf.getEntrySource(thing);
                             String destName = nameToSaveFile + " v" + ai.versionName + ' ' + thing;
-                            handler.post(() -> progressText.setText("Extracting " + destName));
+                            pm.setText("Extracting " + destName);
                             inputSource.write(FileUtils.getUnusedFile(appFolder, destName));
-                            if (i == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, progressDialog));
+                            if (i == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                         } catch (Exception e) {
                             runOnUiThread(() -> showError(e));
                         }
@@ -853,15 +852,15 @@ public class APKExtractorActivity extends AppCompatActivity {
                              ZipFile ozf = new ZipFile(FileUtils.getUnusedFile(appFolder, destName))) {
                             for (int i = 1; ; i++) {
                                 String entryName = (i == 1) ? classes + dex : classes + i + dex;
-                                handler.post(() -> progressText.setText(rss.getString(R.string.extracting_to, entryName, destName)));
+                                pm.setText(rss.getString(R.string.extracting_to, entryName, destName));
                                 if ((fh = izf.getFileHeader(entryName)) == null) break;
                                 else try(InputStream is = izf.getInputStream(fh)) {
                                     zp.setFileNameInZip(entryName);
-                                    handler.post(() -> progressText.setText(rss.getString(R.string.adding, entryName)));
+                                    pm.setText(rss.getString(R.string.adding, entryName));
                                     ozf.addStream(is, zp);
                                 }
                             }
-                            if (j == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, progressDialog));
+                            if (j == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                         } catch (Exception e) {
                             runOnUiThread(() -> showError(e));
                         }
@@ -879,10 +878,10 @@ public class APKExtractorActivity extends AppCompatActivity {
                         String packageName = ai.packageName;
                         try (ArchiveFile zf = new ArchiveFile(new File(ai.filePath))) {
                             String destName = singleItem ? am : (saveWithPkgName ? packageName : ai.name) + " v" + ai.versionName + ' ' + am;
-                            handler.post(() -> progressText.setText("Extracting " + destName));
+                            pm.setText("Extracting " + destName);
                             zf.getEntrySource(am).write(FileUtils.getUnusedFile(appFolder, destName));
                             if (i == itemsToProcessSize-1) {
-                                handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, progressDialog));
+                                handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                             }
                         } catch (Exception e) {
                             runOnUiThread(() -> showError(e));
@@ -898,19 +897,19 @@ public class APKExtractorActivity extends AppCompatActivity {
                         try {
                             final String pkgName = ai.packageName;
                             String name = (saveWithPkgName ? pkgName : ai.name) + " v" + ai.versionName + "_base.apk";
-                            handler.post(() -> progressText.setText("Extracting " + name));
+                            pm.setText("Extracting " + name);
                             FileUtils.copyFile(new File(ai.filePath), FileUtils.getUnusedFile(appFolder, name));
                         } catch (Exception e) {
                             runOnUiThread(() -> showError(e));
                         }
                     }
-                    handler.post(showFinishedDialog(path, progressDialog));
+                    handler.post(showFinishedDialog(path, pm));
                 }).start();
                 break;
 
-            case 6: //libs
+            case 6:
                 new Thread(() -> {
-                    APKLogger logger = LogUtil.getApkLogger(progressText, handler, this);
+                    APKLogger logger = pm.getLogger();
                     for (int integer : itemsToProcess) {
                         AppInfo ai = adapter.filteredAppInfoList.get(integer);
                         try {
@@ -928,33 +927,33 @@ public class APKExtractorActivity extends AppCompatActivity {
                             }
                             logger.close();
                         } catch (Exception e) {
-                            progressDialog.dismiss();
+                            pm.dismiss();
                             logger.close();
                             showError(e);
                         }
                     }
-                    handler.post(showFinishedDialog(path, progressDialog));
+                    handler.post(showFinishedDialog(path, pm));
                 }).start();
                 break;
 
             case 7:
                 new Thread(() -> {
-                    PackageManager pm = getPackageManager();
+                    PackageManager pmgr = getPackageManager();
                     for (int integer : itemsToProcess) {
                         AppInfo ai = adapter.filteredAppInfoList.get(integer);
                         String name = (saveWithPkgName ? ai.packageName : ai.name) + " v" + ai.versionName + "_icon.png";
-                        handler.post(() -> progressText.setText("Extracting " + name));
+                        pm.setText("Extracting " + name);
                         try (OutputStream os = FileUtils.getOutputStream(FileUtils.getUnusedFile(appFolder, name))) {
-                            PackageInfo packageInfo = pm.getPackageInfo(ai.packageName, 0);
+                            PackageInfo packageInfo = pmgr.getPackageInfo(ai.packageName, 0);
 
-                            Bitmap bm = drawableToBitmap(packageInfo.applicationInfo.loadIcon(pm));
+                            Bitmap bm = drawableToBitmap(packageInfo.applicationInfo.loadIcon(pmgr));
 
                             bm.compress(Bitmap.CompressFormat.PNG, 100, os);
                         } catch (Exception e) {
                             runOnUiThread(() -> showError(e));
                         }
                     }
-                    handler.post(showFinishedDialog(path, progressDialog));
+                    handler.post(showFinishedDialog(path, pm));
                 }).start();
                 break;
         }
@@ -993,9 +992,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         String fileNameString = fileName.toString();
         File output = new File(getAppFolder(), fileNameString);
 
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-        dialogUtil.styleAlertDialog(progressDialog);
-        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+        ProgressManager pm = new ProgressManager(this, true).show();
 
         new Thread(() -> {
             try {
@@ -1005,7 +1002,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                 File finalOutput;
                 if (split && antisplit) try (ApkBundle bundle = new ApkBundle()) {
                     bundle.loadApkDirectory(apkDirectory, false);
-                    APKLogger logger = LogUtil.getApkLogger(progressText, handler, this);
+                    APKLogger logger = pm.getLogger();
                     bundle.setAPKLogger(logger);
                     finalOutput = FileUtils.getUnusedFile(output);
                     MergeUtil.mergeBundle(bundle).renameTo(finalOutput);
@@ -1019,19 +1016,19 @@ public class APKExtractorActivity extends AppCompatActivity {
                         for (File f : apkDirectory.listFiles()) {
                             String name = f.getName();
                             if (f.isFile() && name.endsWith(".apk")) {
-                                handler.post(() -> progressText.setText(rss.getString(R.string.adding_to, name, fileNameString)));
+                                pm.setText(rss.getString(R.string.adding_to, name, fileNameString));
                                 zf.addFile(f, zp);
                             }
                         }
                     }
                     else {
-                        handler.post(() -> progressText.setText(rss.getString(R.string.extracting, fileNameString)));
+                        pm.setText(rss.getString(R.string.extracting, fileNameString));
                         try (OutputStream os = FileUtils.getOutputStream(finalOutput)) {
                             FileUtils.copyFile(baseApk, os);
                         }
                     }
                 }
-                 handler.post(showFinishedDialog ? showFinishedDialog(finalOutput.getPath(), progressDialog) : progressDialog::dismiss);
+                 handler.post(showFinishedDialog ? showFinishedDialog(finalOutput.getPath(), pm) : pm::dismiss);
             } catch (Exception e) {
                 showError(e);
             }
@@ -1039,9 +1036,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     }
 
     private void share(boolean antisplit, List<Integer> itemsToProcess) {
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-        dialogUtil.styleAlertDialog(progressDialog);
-        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+        ProgressManager pm = new ProgressManager(this, true).show();
         ArrayList<Uri> fileUris = new ArrayList<>();
 
         new Thread(() -> {
@@ -1054,7 +1049,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                     if (antisplit) {
                         try (ApkBundle bundle = new ApkBundle()) {
                             bundle.loadApkDirectory(new File(ai.filePath).getParentFile());
-                            APKLogger logger = LogUtil.getApkLogger(progressText, handler, this);
+                            APKLogger logger = pm.getLogger();
                             bundle.setAPKLogger(logger);
                             fileUris.add(FileProvider.getUriForFile(this, authority, MergeUtil.mergeBundle(bundle)));
                             logger.close();
@@ -1073,10 +1068,10 @@ public class APKExtractorActivity extends AppCompatActivity {
                     fileUris.add(FileProvider.getUriForFile(this, authority, new File(ai.filePath)));
                 }
             } catch (Exception e) {
-                progressDialog.dismiss();
+                pm.dismiss();
                 showError(e);
             }
-            progressDialog.dismiss();
+            pm.dismiss();
 
             Intent intent= new Intent(Intent.ACTION_SEND_MULTIPLE)
                     .setType("application/vnd.android.package-archive")
@@ -1088,9 +1083,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     }
 
     public void share(int pos, boolean antisplit) {
-        AlertDialog progressDialog = dialogUtil.getProgressDialog(true);
-        dialogUtil.styleAlertDialog(progressDialog);
-        TextView progressText = progressDialog.findViewById(R.id.dialogTitle);
+        ProgressManager pm = new ProgressManager(this, true).show();
 
         new Thread(() -> {
             try {
@@ -1104,13 +1097,13 @@ public class APKExtractorActivity extends AppCompatActivity {
                     if (antisplit) {
                         try (ApkBundle bundle = new ApkBundle()) {
                             bundle.loadApkDirectory(new File(ai.filePath).getParentFile());
-                            APKLogger logger = LogUtil.getApkLogger(progressText, handler, this);
+                            APKLogger logger = pm.getLogger();
                             bundle.setAPKLogger(logger);
                             new Thread(() -> {
                                 try {
                                     toShare[0] = MergeUtil.mergeBundle(bundle);
                                 } catch (Exception e) {
-                                    handler.post(progressDialog::dismiss);
+                                    pm.dismiss();
                                     showError(e);
                                 }
                             }).start();
@@ -1135,7 +1128,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                     toShare[0] = new File(ai.filePath);
                 }
 
-                progressDialog.dismiss();
+                pm.dismiss();
 
                 Intent intent;
                 if (isMultiple) {
@@ -1151,7 +1144,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(Intent.createChooser(intent, rss.getString(R.string.share_apk)));
             } catch (Exception e) {
-                progressDialog.dismiss();
+                pm.dismiss();
                 showError(e);
             }
         }).start();
