@@ -16,12 +16,16 @@ package io.github.codehasan.colorpicker.extensions;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.util.TypedValue;
+import android.view.View;
 
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.snackbar.Snackbar;
+
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 public final class Extensions {
 
@@ -34,7 +38,8 @@ public final class Extensions {
     }
 
     public static void showMessage(AppCompatActivity activity, String message) {
-        Snackbar.make(activity.getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_SHORT).show();
+        View v = (activity instanceof MainActivity) ? activity.findViewById(R.id.bottomBar) : activity.getWindow().getDecorView().getRootView();
+        Snackbar.make(v, message, Snackbar.LENGTH_SHORT).show();
     }
 
     public static int dp2px(android.content.Context context, float dp) {
