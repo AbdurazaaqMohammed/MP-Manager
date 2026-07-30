@@ -90,7 +90,13 @@ public class ProfileManager {
                 result = result.replace("%NAME%", fName);
                 result = result.replace("%EXT%", "");
             }
+            String shellPath = escapeForShell(filePath);
+            result = result.replace("%FPATH%", shellPath);
             return result;
+        }
+
+        private static String escapeForShell(String path) {
+            return "'" + path.replace("'", "'\\''") + "'";
         }
     }
 }

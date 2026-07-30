@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.adapters;
 
 import android.content.Context;
-import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -15,6 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import com.github.angads25.filepicker.model.DialogConfigs;
 import com.github.angads25.filepicker.model.DialogProperties;
 import com.github.angads25.filepicker.view.FilePickerDialog;
@@ -22,7 +23,6 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.File;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 
 public class SignListAdapter extends ArrayAdapter<CharSequence> {
     private final Context context;
@@ -42,8 +42,9 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
         this.v4 = v4;
     }
 
+    @NonNull
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
         if (convertView == null) {
             convertView = LayoutInflater.from(context).inflate(R.layout.custom_list_item, parent, false);
         }
@@ -100,9 +101,9 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
                             } else if (!new File(path[0]).exists()) {
                                 Toast.makeText(context, "Invalid file path", Toast.LENGTH_SHORT).show();
                             } else {
-                                LegacyUtils.applySharedPrefEditor(PreferenceManager.getDefaultSharedPreferences(context).edit()
-                                        .putString("keyPath", path[0])
-                                        .putString("signatureKeyPassword", password));
+                                PreferenceManager.getDefaultSharedPreferences(context).edit()
+                                                                .putString("keyPath", path[0])
+                                                                .putString("signatureKeyPassword", password).apply();
                                 Toast.makeText(context, "Signature file set", Toast.LENGTH_SHORT).show();
                             }
                         })

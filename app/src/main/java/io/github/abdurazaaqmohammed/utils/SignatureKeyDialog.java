@@ -1,8 +1,5 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import static android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG;
-import static android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
-
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Environment;
@@ -12,13 +9,11 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -28,7 +23,6 @@ import com.github.angads25.filepicker.model.DialogConfigs;
 import com.github.angads25.filepicker.model.DialogProperties;
 import com.github.angads25.filepicker.view.FilePickerDialog;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.archive.ArchiveFile;
 import com.reandroid.archive.InputSource;
@@ -138,10 +132,9 @@ public class SignatureKeyDialog {
                     ddAdapter.notifyDataSetChanged();
                 }
 
-                LegacyUtils.applySharedPrefEditor(prefs.edit()
-                        .putStringSet(PREF_SIGNATURE_PATHS, new HashSet<>(finalSignaturePaths))
-                        .putString("keyPath", path)
-                );
+                prefs.edit()
+                                .putStringSet(PREF_SIGNATURE_PATHS, new HashSet<>(finalSignaturePaths))
+                                .putString("keyPath", path).apply();
 
                 Toast.makeText(activity, "Signature file set", Toast.LENGTH_SHORT).show();
             });
@@ -174,9 +167,9 @@ public class SignatureKeyDialog {
                         return;
                     }
 
-                    LegacyUtils.applySharedPrefEditor(prefs.edit().putString("keyPath", selectedPath));
+                    prefs.edit().putString("keyPath", selectedPath).apply();
 
-                   // if (cbSavePassword.isChecked()) LegacyUtils.applySharedPrefEditor(prefs.edit().putString("signatureKeyPassword", password).putBoolean("save_password", true));
+                    // if (cbSavePassword.isChecked()) LegacyUtils.applySharedPrefEditor(prefs.edit().putString("signatureKeyPassword", password).putBoolean("save_password", true));
                     //else LegacyUtils.applySharedPrefEditor(prefs.edit().remove("signatureKeyPassword").putBoolean("save_password", false));
 
                     boolean v1 = view1.isChecked();
@@ -184,7 +177,7 @@ public class SignatureKeyDialog {
                     boolean v3 = view3.isChecked();
                     boolean v4 = view4.isChecked();
                     String signedByS = signedBy.getText().toString();
-                    LegacyUtils.applySharedPrefEditor(prefs.edit().putBoolean("v1", v1).putBoolean("v2", v2).putBoolean("v3", v3).putBoolean("v4", v4).putString("signedBy", signedByS));
+                    prefs.edit().putBoolean("v1", v1).putBoolean("v2", v2).putBoolean("v3", v3).putBoolean("v4", v4).putString("signedBy", signedByS).apply();
 
                     if(file != null) {
                         ProgressManager pm = new ProgressManager(activity, true).show();

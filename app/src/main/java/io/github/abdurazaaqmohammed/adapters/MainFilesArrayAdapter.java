@@ -30,6 +30,7 @@ import android.app.Dialog;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.DialogFragment;
 import androidx.core.content.res.ResourcesCompat;
@@ -59,10 +60,10 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.ScrollView;
 
 import android.content.ClipData;
+import android.content.DialogInterface;
 import android.graphics.Typeface;
 
 import androidx.core.graphics.drawable.DrawableCompat;
@@ -87,6 +88,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apkeditor.Util;
@@ -886,22 +888,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 android.R.layout.simple_dropdown_item_1line, frameworkStrings);
         frameworkVersion.setAdapter(frameworkAdapter);
         frameworkVersion.setText(frameworkStrings[frameworkSelection], false);
-        frameworkVersion.setOnItemClickListener((parent, view, position, id) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putInt("fwVer", frameworkVersions[position])
-            );
-        });
+        frameworkVersion.setOnItemClickListener((parent, view, position, id) -> settings.edit().putInt("fwVer", frameworkVersions[position]).apply());
 
         String[] decodeTypesArray = new String[]{"xml", "json", "raw", "sig"};
         int savedDecodeType = settings.getInt("decodeTypes", 0);
         ArrayAdapter<String> decodeAdapter = new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, decodeTypesArray);
         decodeTypes.setAdapter(decodeAdapter);
         decodeTypes.setText(decodeTypesArray[savedDecodeType], false);
-        decodeTypes.setOnItemClickListener((parent, view, position, id) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putInt("decodeTypes", position)
-            );
-        });
+        decodeTypes.setOnItemClickListener((parent, view, position, id) -> settings.edit().putInt("decodeTypes", position).apply());
 
         String[] dexLibraryArray = new String[]{"Internal (dex up to 042)", "jf (dex versions 035 and below)"};
         int savedDexLib = settings.getInt("dexLib", 0);
@@ -909,11 +903,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 android.R.layout.simple_dropdown_item_1line, dexLibraryArray);
         dexLibrary.setAdapter(dexAdapter);
         dexLibrary.setText(dexLibraryArray[savedDexLib], false);
-        dexLibrary.setOnItemClickListener((parent, view, position, id) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putInt("dexLib", position)
-            );
-        });
+        dexLibrary.setOnItemClickListener((parent, view, position, id) -> settings.edit().putInt("dexLib", position).apply());
 
         int savedLoadDex = settings.getInt("loadDex", 3);
         loadDex.setText(String.valueOf(savedLoadDex));
@@ -921,9 +911,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             @Override
             public void afterTextChanged(Editable s) {
                 try {
-                    LegacyUtils.applySharedPrefEditor(
-                            settings.edit().putInt("loadDex", Integer.parseInt(s.toString()))
-                    );
+                    settings.edit().putInt("loadDex", Integer.parseInt(s.toString())).apply();
                 } catch (NumberFormatException ignored) {}
             }
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -931,53 +919,25 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         });
 
         flagDex.setChecked(settings.getBoolean("flagDex", false));
-        flagDex.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("flagDex", isChecked)
-            );
-        });
+        flagDex.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("flagDex", isChecked).apply());
 
         noDexDebug.setChecked(settings.getBoolean("noDexDebug", true));
-        noDexDebug.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("noDexDebug", isChecked)
-            );
-        });
+        noDexDebug.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("noDexDebug", isChecked).apply());
 
         dexMarkers.setChecked(settings.getBoolean("dexMarkers", false));
-        dexMarkers.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("dexMarkers", isChecked)
-            );
-        });
+        dexMarkers.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("dexMarkers", isChecked).apply());
 
         flagForce.setChecked(settings.getBoolean("flagForce", false));
-        flagForce.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("flagForce", isChecked)
-            );
-        });
+        flagForce.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("flagForce", isChecked).apply());
 
         keepResPath.setChecked(settings.getBoolean("keepResPath", false));
-        keepResPath.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("keepResPath", isChecked)
-            );
-        });
+        keepResPath.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("keepResPath", isChecked).apply());
 
         splitJson.setChecked(settings.getBoolean("splitJson", true));
-        splitJson.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("splitJson", isChecked)
-            );
-        });
+        splitJson.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("splitJson", isChecked).apply());
 
         vrd.setChecked(settings.getBoolean("vrd", true));
-        vrd.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            LegacyUtils.applySharedPrefEditor(
-                    settings.edit().putBoolean("vrd", isChecked)
-            );
-        });
+        vrd.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("vrd", isChecked).apply());
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         builder.setTitle("Decompile Options")
@@ -1721,8 +1681,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
 
     private void copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
         for (Object item : items) {
-            if (item instanceof File) {
-                File f = (File) item;
+            if (item instanceof File f) {
                 File dest = FileUtils.getUnusedFile(destinationFolder, f.getName());
                 if (f.isDirectory()) {
                     dest.mkdir();
@@ -1942,12 +1901,12 @@ pm.setText(context.rss.getString(R.string.copying, file1));
         TextView signaturesInApk = display.findViewById(R.id.signaturesInApk);
         TextView protectedDisplay = display.findViewById(R.id.protectedDisplay);
         apkIcon.setImageDrawable(cachedApkIcon);
-        apkTitle.setText("Loading\u2026");
-        apkVersionName.setText("Loading\u2026");
-        verCode.setText("Loading\u2026");
-        pkgName.setText("Loading\u2026");
-        signaturesInApk.setText("Loading\u2026");
-        protectedDisplay.setText("Loading\u2026");
+        apkTitle.setText(R.string.loading);
+        apkVersionName.setText(R.string.loading);
+        verCode.setText(R.string.loading);
+        pkgName.setText(R.string.loading);
+        signaturesInApk.setText(R.string.loading);
+        protectedDisplay.setText(R.string.loading);
 
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
@@ -2096,7 +2055,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                             MaterialSwitch cleanMetaSwitch = new MaterialSwitch(context);
                             cleanMetaSwitch.setText(context.rss.getString(R.string.clean_meta));
                             cleanMetaSwitch.setChecked(cleanMeta);
-                            cleanMetaSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("cleanMeta", isChecked2)));
+                            cleanMetaSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("cleanMeta", isChecked2).apply());
                             MaterialSwitch fixTypesSwitch = new MaterialSwitch(context);
                             fixTypesSwitch.setText(R.string.fix_types);
                             fixTypesSwitch.setChecked(fixTypes);
@@ -2104,7 +2063,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                             MaterialSwitch forceSwitch = new MaterialSwitch(context);
                             forceSwitch.setText(context.rss.getString(R.string.force_delete_output_path));
                             forceSwitch.setChecked(forceDeleteOutputPath);
-                            forceSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("flagForce", isChecked2)));
+                            forceSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("flagForce", isChecked2).apply());
                             layout.addView(publicXmlInputView);
                             layout.addView(cleanMetaSwitch);
                             layout.addView(fixTypesSwitch);
@@ -2148,14 +2107,14 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                             CheckBox skipManifestSwtch = skipManifestView.findViewById(R.id.switch_view);
                             skipManifestTitle.setText(context.rss.getString(R.string.skip_manifest_protection));
                             skipManifestSwtch.setChecked(skipManifest);
-                            skipManifestSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("skipManifest", isChecked)));
+                            skipManifestSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("skipManifest", isChecked).apply());
                             skipManifestView.setOnClickListener(v2 -> skipManifestSwtch.toggle());
                             View confuseZipView = layoutInflater.inflate(R.layout.item_switch, layout, false);
                             TextView confuseZipTitle = confuseZipView.findViewById(R.id.title);
                             CheckBox confuseZipSwtch = confuseZipView.findViewById(R.id.switch_view);
                             confuseZipTitle.setText(context.rss.getString(R.string.confuse_zip_structure));
                             confuseZipSwtch.setChecked(confuseZip);
-                            confuseZipSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("confuseZip", isChecked)));
+                            confuseZipSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("confuseZip", isChecked).apply());
                             confuseZipView.setOnClickListener(v2 -> confuseZipSwtch.toggle());
                             View dexLevelView = layoutInflater.inflate(R.layout.item_edit_number, layout, false);
                             TextView dexLevelTitle = dexLevelView.findViewById(R.id.title);
@@ -2166,7 +2125,9 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
                                 @Override public void afterTextChanged(Editable s) {
-                                    try { LegacyUtils.applySharedPrefEditor(settings.edit().putInt("dexLevel", Integer.parseInt(s.toString()))); } catch (Exception ignored) {}
+                                    try {
+                                        settings.edit().putInt("dexLevel", Integer.parseInt(s.toString())).apply();
+                                    } catch (Exception ignored) {}
                                 }
                             });
                             View forceView = layoutInflater.inflate(R.layout.item_switch, layout, false);
@@ -2174,7 +2135,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                             CheckBox forceSwitch = forceView.findViewById(R.id.switch_view);
                             forceTitle.setText(context.rss.getString(R.string.force_delete_output_path));
                             forceSwitch.setChecked(flagForce);
-                            forceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> LegacyUtils.applySharedPrefEditor(settings.edit().putBoolean("flagForce", isChecked)));
+                            forceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("flagForce", isChecked).apply());
                             forceView.setOnClickListener(v2 -> forceSwitch.toggle());
                             layout.addView(skipManifestView);
                             layout.addView(confuseZipView);
@@ -2397,7 +2358,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
         layout.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
         layout.setPadding(pad, pad, pad, pad);
-        CheckBox sameProfileCb = new CheckBox(context);
+        MaterialCheckBox sameProfileCb = new MaterialCheckBox(context);
         sameProfileCb.setText(R.string.use_same_profile);
         sameProfileCb.setChecked(true);
         layout.addView(sameProfileCb);
@@ -2421,6 +2382,8 @@ pm.setText(context.rss.getString(R.string.copying, file1));
     private void buildAndShowCommandDialog(List<Profile> profiles, ArrayList<String> filePaths, boolean sameProfile, ProfileManager chPm) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         boolean autoCopy = prefs.getBoolean("auto_copy", false);
+        int lastProfileIdx = Math.min(prefs.getInt("last_profile_idx", 0), profiles.size() - 1);
+        if (lastProfileIdx < 0) lastProfileIdx = 0;
         AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
         builder.setTitle(R.string.command_helper);
         LinearLayout root = new LinearLayout(context);
@@ -2428,10 +2391,12 @@ pm.setText(context.rss.getString(R.string.copying, file1));
         int p = dp(16);
         root.setPadding(p, p, p, p);
         boolean multipleFiles = filePaths.size() > 1;
-        Spinner sharedSpinner = null;
+        ArrayList<Profile> mutableProfiles = new ArrayList<>(profiles);
+        final Spinner[] sharedSpinnerRef = new Spinner[1];
         if (sameProfile && multipleFiles) {
-            sharedSpinner = createProfileSpinner(profiles);
-            root.addView(sharedSpinner);
+            sharedSpinnerRef[0] = createProfileSpinner(mutableProfiles);
+            sharedSpinnerRef[0].setSelection(lastProfileIdx);
+            root.addView(sharedSpinnerRef[0]);
             root.addView(spacer(dp(8)));
         }
         List<CmdViewHolder> holders = new ArrayList<>();
@@ -2450,7 +2415,8 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             }
             boolean showIndividualSpinner = !sameProfile || !multipleFiles;
             if (showIndividualSpinner) {
-                h.spinner = createProfileSpinner(profiles);
+                h.spinner = createProfileSpinner(mutableProfiles);
+                h.spinner.setSelection(lastProfileIdx);
                 h.hasSpinner = true;
                 h.card.addView(h.spinner);
             }
@@ -2491,10 +2457,10 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             root.addView(spacer(dp(8)));
             LinearLayout multiBtnRow = new LinearLayout(context);
             multiBtnRow.setOrientation(LinearLayout.HORIZONTAL);
-            Button copyAllBtn = new MaterialButton(context);
+            MaterialButton copyAllBtn = new MaterialButton(context);
             copyAllBtn.setText(R.string.copy_all);
             multiBtnRow.addView(copyAllBtn);
-            Button termuxAllBtn = new MaterialButton(context);
+            MaterialButton termuxAllBtn = new MaterialButton(context);
             termuxAllBtn.setText("Run All in Termux");
             multiBtnRow.addView(termuxAllBtn);
             root.addView(multiBtnRow);
@@ -2514,26 +2480,57 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             });
         }
         root.addView(spacer(dp(8)));
-        Button manageBtn = new MaterialButton(context);
+        MaterialButton manageBtn = new MaterialButton(context);
         manageBtn.setText(R.string.manage_profiles);
-        manageBtn.setOnClickListener(v -> new CommandHelperSettingsDialog().show(context.getSupportFragmentManager(), "CommandHelperSettings"));
         root.addView(manageBtn);
         ScrollView scroll = new ScrollView(context);
         scroll.addView(root);
         builder.setView(scroll);
         builder.setNegativeButton(R.string.close, null);
-        builder.show();
+        AlertDialog mainDialog = builder.create();
+        mainDialog.show();
+
+        Runnable refreshCallback = () -> {
+            List<Profile> freshProfiles = chPm.getProfiles();
+            mutableProfiles.clear();
+            mutableProfiles.addAll(freshProfiles);
+            for (CmdViewHolder h : holders) {
+                if (h.hasSpinner && h.spinner != null) {
+                    ArrayAdapter<String> ad = (ArrayAdapter<String>) h.spinner.getAdapter();
+                    ad.clear();
+                    for (Profile pr : freshProfiles) ad.add(pr.name);
+                    ad.notifyDataSetChanged();
+                    int sel = h.spinner.getSelectedItemPosition();
+                    if (sel >= freshProfiles.size()) h.spinner.setSelection(Math.max(0, freshProfiles.size() - 1));
+                }
+            }
+            if (sharedSpinnerRef[0] != null) {
+                ArrayAdapter<String> ad = (ArrayAdapter<String>) sharedSpinnerRef[0].getAdapter();
+                ad.clear();
+                for (Profile pr : freshProfiles) ad.add(pr.name);
+                ad.notifyDataSetChanged();
+                int sel = sharedSpinnerRef[0].getSelectedItemPosition();
+                if (sel >= freshProfiles.size()) sharedSpinnerRef[0].setSelection(Math.max(0, freshProfiles.size() - 1));
+            }
+        };
+
+        manageBtn.setOnClickListener(v -> {
+            CommandHelperSettingsDialog settingsDialog = new CommandHelperSettingsDialog();
+            settingsDialog.onProfilesChanged = refreshCallback;
+            settingsDialog.show(context.getSupportFragmentManager(), "CommandHelperSettings");
+        });
+
         for (int i = 0; i < holders.size(); i++) {
             CmdViewHolder h = holders.get(i);
-            Profile initProfile = profiles.get(0);
+            Profile initProfile = mutableProfiles.get(Math.min(lastProfileIdx, mutableProfiles.size() - 1));
             h.cmdText.setText(initProfile.getGeneratedCommand(h.filePath));
             if (h.hasSpinner) {
-                final int fi = i;
                 h.spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                        Profile p = profiles.get(position);
+                        Profile p = mutableProfiles.get(position);
                         h.cmdText.setText(p.getGeneratedCommand(h.filePath));
+                        prefs.edit().putInt("last_profile_idx", position).apply();
                     }
                     @Override
                     public void onNothingSelected(AdapterView<?> parent) {}
@@ -2547,26 +2544,27 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                 if (!cmd.isEmpty()) runInTermux(cmd);
             });
         }
-        if (sharedSpinner != null) {
-            sharedSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        if (sharedSpinnerRef[0] != null) {
+            sharedSpinnerRef[0].setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    Profile p = profiles.get(position);
+                    Profile p = mutableProfiles.get(position);
                     for (CmdViewHolder hldr : holders) hldr.cmdText.setText(p.getGeneratedCommand(hldr.filePath));
+                    prefs.edit().putInt("last_profile_idx", position).apply();
                 }
                 @Override
                 public void onNothingSelected(AdapterView<?> parent) {}
             });
         }
         if (autoCopy && !holders.isEmpty()) {
-            copyToClipboard(profiles.get(0).getGeneratedCommand(holders.get(0).filePath));
+            copyToClipboard(mutableProfiles.get(Math.min(lastProfileIdx, mutableProfiles.size() - 1)).getGeneratedCommand(holders.get(0).filePath));
         }
     }
 
     private Spinner createProfileSpinner(List<Profile> profiles) {
         Spinner spinner = new Spinner(context);
-        String[] names = new String[profiles.size()];
-        for (int i = 0; i < profiles.size(); i++) names[i] = profiles.get(i).name;
+        ArrayList<String> names = new ArrayList<>();
+        for (int i = 0; i < profiles.size(); i++) names.add(profiles.get(i).name);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, names);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
@@ -2594,7 +2592,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
         intent.setClassName("com.termux", "com.termux.app.RunCommandService");
         intent.setAction("com.termux.RUN_COMMAND");
         intent.putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash");
-        intent.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c", command});
+        intent.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c", command + "; exec bash"});
         intent.putExtra("com.termux.RUN_COMMAND_BACKGROUND", false);
         intent.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
         try {
@@ -2631,6 +2629,13 @@ pm.setText(context.rss.getString(R.string.copying, file1));
         private List<Profile> profiles;
         private ArrayAdapter<String> listAdapter;
         private ListView profileListView;
+        public Runnable onProfilesChanged;
+
+        @Override
+        public void onDismiss(@NonNull DialogInterface dialog) {
+            super.onDismiss(dialog);
+            if (onProfilesChanged != null) onProfilesChanged.run();
+        }
 
         @Override
         public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -2640,7 +2645,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             LinearLayout root = new LinearLayout(getActivity());
             root.setOrientation(LinearLayout.VERTICAL);
 
-            CheckBox autoCopyCheck = new CheckBox(getActivity());
+            MaterialCheckBox autoCopyCheck = new MaterialCheckBox(getActivity());
             autoCopyCheck.setText(R.string.auto_copy);
             autoCopyCheck.setChecked(prefs.getBoolean("auto_copy", false));
             autoCopyCheck.setOnCheckedChangeListener((buttonView, isChecked) -> prefs.edit().putBoolean("auto_copy", isChecked).apply());
@@ -2665,12 +2670,11 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             root.addView(profilesTitle);
 
             loadProfiles();
-            listAdapter = new ArrayAdapter<String>(getActivity(), com.google.android.material.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
+            listAdapter = new ArrayAdapter<>(getActivity(), com.google.android.material.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
                 @Override
                 public View getView(int pos, View convertView, ViewGroup parent) {
                     View view = super.getView(pos, convertView, parent);
-                    if (view instanceof TextView) {
-                        TextView tv = (TextView) view;
+                    if (view instanceof TextView tv) {
                         tv.setText(profiles.get(pos).name);
                         tv.setPadding(dp2(16), dp2(12), dp2(16), dp2(12));
                     }
@@ -2686,7 +2690,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             });
             root.addView(profileListView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
 
-            Button addBtn = new MaterialButton(getActivity());
+            MaterialButton addBtn = new MaterialButton(getActivity());
             addBtn.setText(R.string.add_profile);
             addBtn.setOnClickListener(v -> showAddDialog());
             root.addView(addBtn);
@@ -2713,7 +2717,9 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             listAdapter.notifyDataSetChanged();
         }
 
-        private void showAddDialog() { showProfileDialog(-1, null, null); }
+        private void showAddDialog() {
+            showProfileDialog(-1, null, null);
+        }
 
         private void showEditDialog(int index) {
             Profile p = profiles.get(index);
@@ -2727,16 +2733,77 @@ pm.setText(context.rss.getString(R.string.copying, file1));
             layout.setOrientation(LinearLayout.VERTICAL);
             int p = dp2(16);
             layout.setPadding(p, p, p, p);
-            EditText nameInput = new EditText(getActivity());
+            TextInputLayout nameLayout = new TextInputLayout(getActivity());
+            TextInputEditText nameInput = new TextInputEditText(getActivity());
             nameInput.setHint(R.string.profile_name);
             if (existingName != null) nameInput.setText(existingName);
-            layout.addView(nameInput);
-            EditText cmdInput = new EditText(getActivity());
+            nameLayout.addView(nameInput);
+            layout.addView(nameLayout);
+            TextInputLayout cmdLayout = new TextInputLayout(getActivity());
+            TextInputEditText cmdInput = new TextInputEditText(getActivity());
             cmdInput.setHint(R.string.command_template_hint);
             cmdInput.setSingleLine(false);
             cmdInput.setLines(3);
             if (existingCommand != null) cmdInput.setText(existingCommand);
-            layout.addView(cmdInput);
+            cmdLayout.addView(cmdInput);
+            layout.addView(cmdLayout);
+            MaterialButton placeholderHelpBtn = new MaterialButton(getActivity());
+            placeholderHelpBtn.setText("Placeholder Help");
+            placeholderHelpBtn.setIconResource(R.drawable.baseline_info_24);
+            placeholderHelpBtn.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+            layout.addView(placeholderHelpBtn);
+            placeholderHelpBtn.setOnClickListener(v -> {
+                Context ctx = getContext();
+                MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(ctx);
+                dialogBuilder.setTitle("Command Template Placeholders");
+
+                LinearLayout container = new LinearLayout(ctx);
+                container.setOrientation(LinearLayout.VERTICAL);
+                int pad = (int) (ctx.getResources().getDisplayMetrics().density * 12);
+                container.setPadding(pad, pad, pad, pad);
+
+                String[][] items = new String[][]{
+                        {"%FPATH%", "%FPATH% - Full file path (shell-safe, quoted)"},
+                        {"%FILE%",  "%FILE% - Full file path (raw)"},
+                        {"%FNAME%", "%FNAME% - File name with extension"},
+                        {"%NAME%",  "%NAME% - File name without extension"},
+                        {"%EXT%",   "%EXT% - File extension only"},
+                };
+
+                for (String[] item : items) {
+                    String token = item[0];
+                    String desc = item[1];
+
+                    LinearLayout row = new LinearLayout(ctx);
+                    row.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+                    TextView tv = new TextView(ctx);
+                    LinearLayout.LayoutParams tvLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    tv.setLayoutParams(tvLp);
+                    tv.setText(desc);
+
+                    MaterialButton copyBtn = new MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                    copyBtn.setText(android.R.string.copy);
+                    copyBtn.setOnClickListener(view -> {
+                        ((android.content.ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("placeholder", token));
+                        Extensions.showMessage((AppCompatActivity) getActivity(), getString(R.string.copied_to_clipboard, token));
+                    });
+
+                    row.addView(tv);
+                    row.addView(copyBtn);
+                    container.addView(row);
+                }
+
+                TextView example = new TextView(ctx);
+                example.setText("Example: java -jar tool.jar -i %FPATH% -o %NAME%_modified.%EXT%");
+                example.setPadding(0, pad, 0, 0);
+                container.addView(example);
+
+                dialogBuilder.setView(container);
+                dialogBuilder.setPositiveButton(R.string.close, null);
+                dialogBuilder.show();
+            });
+
             builder.setView(layout);
             builder.setPositiveButton(R.string.save, (d, w) -> {
                 String name = nameInput.getText().toString().trim();
@@ -2753,14 +2820,15 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                 else profileManager.updateProfile(index, new Profile(name, cmd));
                 refreshList();
             });
-            builder.setNegativeButton(R.string.cancel, null);
+            builder.setNegativeButton(android.R.string.cancel, null);
+            if(index >= 0) builder.setNeutralButton(R.string.delete, (dialog, which) -> showDeleteDialog(index));
             builder.show();
         }
 
         private void showDeleteDialog(int index) {
             new MaterialAlertDialogBuilder(getActivity())
                     .setTitle(R.string.delete_profile)
-                    .setMessage(R.string.delete_confirm)
+                    .setMessage(getContext().getString(R.string.delete_confirm, profiles.get(index).name))
                     .setPositiveButton(R.string.save, (d, w) -> {
                         profileManager.deleteProfile(index);
                         refreshList();
