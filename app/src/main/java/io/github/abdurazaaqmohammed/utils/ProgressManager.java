@@ -52,15 +52,12 @@ public class ProgressManager {
         handler.post(() -> {
             if (dismissed || (dialog != null && dialog.isShowing())) return;
             View v = LayoutInflater.from(activity).inflate(R.layout.progress_dialog, null, false);
+            v.findViewById(R.id.hideButton).setOnClickListener(v1 -> hide());
             ProgressBar pb = v.findViewById(R.id.progressBar);
             pb.setIndeterminate(indeterminate);
             if (currentText != null) ((TextView) v.findViewById(R.id.dialogTitle)).setText(currentText);
             if (!indeterminate && maxVal > 0) { pb.setMax(maxVal); pb.setProgress(progressVal); }
-            dialog = new MaterialAlertDialogBuilder(activity)
-                    .setView(v)
-                    .setNeutralButton("Hide", (d, w) -> hide())
-                    .create();
-            dialog.show();
+            dialog = new MaterialAlertDialogBuilder(activity).setView(v).show();
         });
         return this;
     }

@@ -149,6 +149,7 @@ import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
@@ -1216,7 +1217,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     gridView.setOnItemClickListener((parent1, view, position1, id) -> {
                         dialog.dismiss();
                         Handler handler = context.handler;
-                        ProgressManager pm = new ProgressManager(context, true).show();
+                        ProgressManager pm;
                         try {
                             String selectedAction = items[position1];
                             switch (selectedAction) {
@@ -1229,24 +1230,20 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             .putExtra("zip1", finalCompareFile1 instanceof ZipEntryInfo ? ((ZipEntryInfo) finalCompareFile1).getZipFile().getAbsolutePath() : null)
                                             .putExtra("zip2", finalCompareFile2 instanceof ZipEntryInfo ? ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath() : null)
                                     );
-                                    pm.dismiss();
                                     return;
                                 case "Compare ZIP":
                                     new CompareZipDialog(context,
                                             finalCompareFile1 instanceof File ? (File) finalCompareFile1 : ((ZipEntryInfo) finalCompareFile1).getZipFile(),
                                             finalCompareFile2 instanceof File ? (File) finalCompareFile2 : ((ZipEntryInfo) finalCompareFile2).getZipFile()
                                     ).show();
-                                    pm.dismiss();
                                     return;
                                 case "Compare ARSC":
                                     new CompareArscDialog(context,
                                             finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getZipFile().getAbsolutePath(),
                                             finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath()
                                     ).show();
-                                    pm.dismiss();
                                     return;
                                 case "Command Helper":
-                                    pm.dismiss();
                                     if (isInZip) {
                                         Toast.makeText(context, "Command Helper not supported for zip entries", Toast.LENGTH_SHORT).show();
                                         return;
@@ -1262,6 +1259,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 default:
                                     switch (position1) {
                                         case 0:
+                                            pm = new ProgressManager(context, true).show();
                                             new Thread(() -> {
                                                 try {
                                                     if (multi) for (int f : selectedPositions) {
@@ -1282,15 +1280,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             break;
                                         case 1:
                                             if (context.pane1Folder == context.pane2Folder) {
-                                                pm.dismiss();
                                                 break;
                                             }
+                                            pm = new ProgressManager(context, true).show();
                                             new Thread(() -> {
                                                 try {
                                                     if (multi) {
                                                         for (int f : selectedPositions) {
                                                             Object file1 = values[f];
-pm.setText(context.rss.getString(R.string.copying, file1));
+                                                            pm.setText(context.rss.getString(R.string.copying, file1));
                                                             copy(file1);
                                                             pm.setText(context.rss.getString(R.string.deleting, file1));
                                                             if (file1 instanceof File) {
@@ -1316,7 +1314,6 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                             }).start();
                                             break;
                                         case 2:
-                                            pm.dismiss();
                                             if (multi) {
                                                 Toast.makeText(context, "To be implemented", Toast.LENGTH_SHORT).show();
                                                 return;
@@ -1384,6 +1381,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                                     });
                                             break;
                                         case 3:
+                                            pm = new ProgressManager(context, true);
                                             MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
                                             CharSequence filesToDisplay = getFilesToDisplay(multi, finalPosition1);
                                             SharedPreferences settings = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
@@ -1430,41 +1428,32 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                                                         PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                                                         settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                             }
+                                                        } else if (!isInZip) {
+                                                            pm.setText("Deleting " + file.getName());
+
+                                                            if (file.isDirectory())
+                                                                Util.deleteDir(file);
+                                                            else
+                                                                file.delete();
+                                                            handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
                                                         } else {
-                                                            List<ZipEntryInfo> selected = new ArrayList<>();
-                                                            for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
-                                                            deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
-                                                            if(sign[0]) new SignWrapper(
+                                                            deleteZipEntry(entry);
+                                                            if (sign[0]) new SignWrapper(
                                                                     settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                                    settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                                                    PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                                                     settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                         }
-                                                    } else if (!isInZip) {
-                                                        pm.setText("Deleting " + file.getName());
-
-                                                        if (file.isDirectory())
-                                                            Util.deleteDir(file);
-                                                        else
-                                                            file.delete();
-                                                        handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
-                                                    } else {
-                                                        deleteZipEntry(entry);
-                                                        if(sign[0]) new SignWrapper(
-                                                                settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                                settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
-                                                                settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
+                                                        pm.dismiss();
+                                                    } catch (Exception e) {
+                                                        pm.dismiss();
+                                                        new ErrorUtil(context).showError(e);
                                                     }
-                                                    pm.dismiss();
-                                                } catch (Exception e) {
-                                                    pm.dismiss();
-                                                    new ErrorUtil(context).showError(e);
-                                                }
-                                            }).start()).setNegativeButton("Cancel", (dialog1, which1) -> pm.dismiss());
+                                                }).start();
+                                            }).setNegativeButton("Cancel", (dialog1, which1) -> pm.dismiss());
                                             dialogUtil.styleAlertDialog(deleteDialog.create());
                                             break;
                                         case 4:
                                             if (isInZip) {
-                                                pm.dismiss();
                                                 break;
                                             }
                                             File parentFile2 = file.getParentFile();
@@ -1480,45 +1469,44 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                             AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);
                                             compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
                                             List<String> compressionLevels = new ArrayList<>();
-                                            for (CompressionLevel cl : CompressionLevel.values())
-                                                compressionLevels.add(cl.name());
+                                            for (CompressionLevel cl : CompressionLevel.values()) compressionLevels.add(cl.name());
                                             compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, compressionLevels));
                                             compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
                                             compressDialog.setView(compressView);
-                                            compressDialog.setNegativeButton(context.rss.getString(R.string.cancel), (dialog5, which) -> handler.post(() -> {
-                                                dialog5.dismiss();
-                                                pm.dismiss();
-                                            }));
-                                            compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> new Thread(() -> {
-                                                File outputZip = new File(parentFile2, (multi ? parentFileName : fileName) + ".zip");
+                                            compressDialog.setNegativeButton(context.rss.getString(android.R.string.cancel), null);
+                                            pm = new ProgressManager(context, true);
+                                            compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> {
+                                                pm.show();
+                                                new Thread(() -> {
+                                                    File outputZip = new File(parentFile2, (multi ? parentFileName : fileName) + ".zip");
 
-                                                ZipParameters zipParameters = new ZipParameters();
-                                                CompressionLevel compressionLevel = CompressionLevel.valueOf(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
-                                                zipParameters.setCompressionLevel(compressionLevel);
-                                                if (compressionLevel == CompressionLevel.NO_COMPRESSION)
-                                                    zipParameters.setCompressionMethod(CompressionMethod.STORE);
-                                                CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
+                                                    ZipParameters zipParameters = new ZipParameters();
+                                                    CompressionLevel compressionLevel = CompressionLevel.valueOf(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
+                                                    zipParameters.setCompressionLevel(compressionLevel);
+                                                    if (compressionLevel == CompressionLevel.NO_COMPRESSION)
+                                                        zipParameters.setCompressionMethod(CompressionMethod.STORE);
+                                                    CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
 
-                                                try (ZipFile zf = new ZipFile(outputZip)) {
-                                                    if (!TextUtils.isEmpty(pw))
-                                                        zf.setPassword(pw.toString().toCharArray()); // why it not setting password check this
-                                                    if (multi) {
-                                                        List<File> selectedFiles = new ArrayList<>();
-                                                        for (int i : selectedPositions)
-                                                            selectedFiles.add((File) values[i]);
-                                                        zf.addFiles(selectedFiles, zipParameters);
-                                                    } else zf.addFile(file, zipParameters);
-                                                    pm.dismiss();
-                                                } catch (Exception e) {
-                                                    pm.dismiss();
-                                                    new ErrorUtil(context).showError(e);
-                                                }
-                                            }).start());
+                                                    try (ZipFile zf = new ZipFile(outputZip)) {
+                                                        if (!TextUtils.isEmpty(pw))
+                                                            zf.setPassword(pw.toString().toCharArray()); // why it not setting password check this
+                                                        if (multi) {
+                                                            List<File> selectedFiles = new ArrayList<>();
+                                                            for (int i : selectedPositions)
+                                                                selectedFiles.add((File) values[i]);
+                                                            zf.addFiles(selectedFiles, zipParameters);
+                                                        } else zf.addFile(file, zipParameters);
+                                                        pm.dismiss();
+                                                    } catch (Exception e) {
+                                                        pm.dismiss();
+                                                        new ErrorUtil(context).showError(e);
+                                                    }
+                                                }).start();
+                                            });
                                             pm.setText(context.rss.getString(R.string.compressing));
                                             context.handler.post(compressDialog::show);
                                             break;
                                         case 5:
-                                            pm.dismiss();
                                             LinearLayout parentLayout = new LinearLayout(context);
                                             parentLayout.setOrientation(LinearLayout.HORIZONTAL);
                                             parentLayout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -2236,7 +2224,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                         String line;
                                         while ((line = reader.readLine()) != null) {
                                             String finalLine = line;
-                                            context.handler.post(() -> { pm.setText(finalLine); });
+                                            context.handler.post(() -> pm.setText(finalLine));
                                         }
                                     }
                                     pm.dismiss();
@@ -2549,9 +2537,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                     public void onNothingSelected(AdapterView<?> parent) {}
                 });
             }
-            h.copyBtn.setOnClickListener(v -> {
-                copyToClipboard(h.cmdText.getText().toString());
-            });
+            h.copyBtn.setOnClickListener(v -> copyToClipboard(h.cmdText.getText().toString()));
             h.termuxBtn.setOnClickListener(v -> {
                 String cmd = h.cmdText.getText().toString();
                 if (!cmd.isEmpty()) runInTermux(cmd);
