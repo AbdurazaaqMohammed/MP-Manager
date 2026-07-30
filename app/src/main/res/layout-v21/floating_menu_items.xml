@@ -32,7 +32,7 @@
 			android:layout_marginLeft="10dp"
 			android:text="Menu items"
 			android:textSize="14sp"
-			android:textColor="#000000"
+
 			android:focusable="false"
 			android:textAppearance="@style/TextAppearance.Compat.Notification.Title"
 			android:layout_toRightOf="@id/imageView"
@@ -44,7 +44,7 @@
 			android:layout_height="wrap_content"
 			android:padding="8dp"
 			android:textSize="12sp"
-			android:textColor="#000000"
+
 			android:focusable="false"
 			android:layout_alignParentRight="true"
 			android:layout_alignParentEnd="true"

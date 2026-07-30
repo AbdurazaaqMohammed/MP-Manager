@@ -56,7 +56,7 @@
     public class StringAdapter extends RecyclerView.Adapter<StringAdapter.ViewHolder> {
 
         private static final int COLOR_MODIFIED = 0xFF2E7D32; // green
-        private static final int COLOR_NORMAL = 0xFF000000;
+        private final int COLOR_NORMAL;
 
         // Full, unfiltered dataset - kept as a reference to the activity's backing list
         private final List<String> allStrings;
@@ -72,10 +72,11 @@
             void onStringClick(String text);
         }
 
-        public StringAdapter(List<String> strings, OnStringClickListener listener) {
+        public StringAdapter(List<String> strings, OnStringClickListener listener, int color) {
             this.allStrings = strings;
             this.displayedStrings = strings;
             this.listener = listener;
+            COLOR_NORMAL = color;
         }
 
         @NonNull

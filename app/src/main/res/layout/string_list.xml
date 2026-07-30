@@ -19,11 +19,10 @@
 				android:id="@+id/indexName"
 				android:layout_width="match_parent"
 				android:layout_height="match_parent"
-				android:background="#40AD3E"
 				android:gravity="center_horizontal|center_vertical"
 				android:text="S"
 				android:textSize="16sp"
-				android:textColor="#FFFFFF"
+				android:textColor="?attr/colorOnSurface"
 				android:focusable="false" />
 		</LinearLayout>
 		<LinearLayout
@@ -41,7 +40,7 @@
 				android:paddingRight="10dp"
 				android:text="TextView"
 				android:textSize="14sp"
-				android:textColor="#000000"
+
 				android:maxLines="5"
 				android:focusable="false" />
 		</LinearLayout>

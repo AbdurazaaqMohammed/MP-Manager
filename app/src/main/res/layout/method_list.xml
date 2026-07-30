@@ -21,11 +21,11 @@
             android:layout_marginLeft="13dp">
             <TextView
                 android:textSize="14sp"
-                android:textColor="#ffffffff"
+                android:textColor="?attr/colorOnSurface"
                 android:gravity="center"
                 android:layout_gravity="center"
                 android:id="@+id/indexName"
-                android:background="#ffe53935"
+
                 android:focusable="false"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -44,7 +44,7 @@
             android:layout_weight="1.0">
             <TextView
                 android:textSize="12sp"
-                android:textColor="#ff000000"
+
                 android:ellipsize="end"
                 android:id="@+id/method_name"
                 android:paddingRight="10dp"
@@ -55,7 +55,7 @@
                 android:maxLines="1" />
             <TextView
                 android:textSize="11sp"
-                android:textColor="#ff000000"
+
                 android:ellipsize="end"
                 android:id="@+id/return_type"
                 android:paddingRight="10dp"

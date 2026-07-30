@@ -114,7 +114,8 @@ import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
  */
 public class SearchFragment extends Fragment {
 
-    private LinearLayout btnSearchInResults, btnReplaceInResults, btnClearResults, layoutSearchInfo;
+    private LinearLayout layoutSearchInfo;
+    private View btnSearchInResults, btnReplaceInResults, btnClearResults;
     private TextView tvSearchInfo;
     private List<TreeNode> searchResults = new ArrayList<>();
     private TreeAdapter adapter;
@@ -133,7 +134,7 @@ public class SearchFragment extends Fragment {
         recyclerView.setItemViewCacheSize(20);
 
         View headerView = inflater.inflate(R.layout.search_header, recyclerView, false);
-        LinearLayout btnNewSearch = headerView.findViewById(R.id.btn_new_search);
+        View btnNewSearch = headerView.findViewById(R.id.btn_new_search);
         btnSearchInResults = headerView.findViewById(R.id.btn_search_in_results);
         btnReplaceInResults = headerView.findViewById(R.id.btn_replace_in_results);
         btnClearResults = headerView.findViewById(R.id.btn_clear_results);

@@ -36,6 +36,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -60,6 +61,7 @@ import java.util.Objects;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.event.ContentChangeEvent;
 import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
@@ -545,10 +547,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     public void applyPreferences() {
-        SharedPreferences prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext());
         SharedPreferences editorPrefs = requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
-        if (!isSmali && type != TYPE_JAVA) {
-            String colorScheme = prefs.getString("pref_theme", "drac");
+        if (!isSmali) {
+            String colorScheme = editorPrefs.getString("pref_theme", "drac");
             EditorColorScheme ecs = switch (colorScheme) {
                 case "drac" -> new SchemeDarcula();
                 case "ecl" -> new SchemeEclipse();
@@ -564,13 +565,13 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         editor.setTypefaceText(typeface);
         editor.setTypefaceLineNumber(typeface);
         savedFont = fontType;
-        String fontSizeStr = editorPrefs.getString("font_size", prefs.getString("pref_font_size", "14"));
+        String fontSizeStr = editorPrefs.getString("font_size", editorPrefs.getString("pref_font_size", "14"));
         try { editor.setTextSize(Float.parseFloat(fontSizeStr)); } catch (Exception ignored) {}
-        int tabSize = Integer.parseInt(prefs.getString("pref_tab_size", "4"));
+        int tabSize = Integer.parseInt(editorPrefs.getString("pref_tab_size", "4"));
         editor.setTabWidth(tabSize);
-        boolean showLineNumbers = editorPrefs.getBoolean("show_line_numbers", prefs.getBoolean("pref_show_line_numbers", true));
+        boolean showLineNumbers = editorPrefs.getBoolean("show_line_numbers", editorPrefs.getBoolean("pref_show_line_numbers", true));
         editor.setLineNumberEnabled(showLineNumbers);
-        boolean wordWrap = prefs.getBoolean("pref_word_wrap", false);
+        boolean wordWrap = editorPrefs.getBoolean("pref_word_wrap", false);
         editor.setWordwrap(wordWrap);
     }
 
@@ -1283,10 +1284,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            String themeName = "light.json";
+            String themeName = "dark.json";
             IThemeSource themeSource = null;
             try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/light.json"), themeName, null);
+                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/dark.json"), themeName, null);
                 registry.loadTheme(themeSource);
                 registry.setTheme(themeName);
             } catch (Exception e) { Log.e("UnifiedEditor", "Theme load error", e); }

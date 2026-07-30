@@ -14,7 +14,7 @@
             android:id="@+id/menu_close"
             android:layout_width="60dp"
             android:layout_height="match_parent"
-            android:background="#FF5252"
+
             android:scaleType="centerInside"
             android:padding="16dp"
             android:src="@drawable/ic_close_mt"
@@ -24,7 +24,7 @@
             android:id="@+id/menu_locate"
             android:layout_width="60dp"
             android:layout_height="match_parent"
-            android:background="#757575"
+
             android:scaleType="centerInside"
             android:padding="16dp"
             android:src="@drawable/ic_locate"
@@ -46,7 +46,7 @@
             android:layout_height="20dp"
             android:layout_marginEnd="12dp"
             android:src="@drawable/ic_edit_mt"
-            app:tint="#000000" />
+            app:tint="?attr/colorOnSurface" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -58,7 +58,7 @@
                 android:id="@+id/tab_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#000000"
+
                 android:textSize="14sp"
                 android:ellipsize="end"
                 android:singleLine="true" />
@@ -67,7 +67,7 @@
                 android:id="@+id/tab_path"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#80000000"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="11sp"
                 android:ellipsize="start"
                 android:singleLine="true" />

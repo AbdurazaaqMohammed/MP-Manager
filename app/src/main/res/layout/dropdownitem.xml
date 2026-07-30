@@ -7,4 +7,4 @@
     android:ellipsize="end"
     android:background="?attr/selectableItemBackground"
     android:textSize="16sp"
-    android:textColor="@android:color/white"/>
+    android:textColor="?attr/colorOnSurface"/>

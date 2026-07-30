@@ -19,7 +19,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#303030"
+
             android:gravity="left"
             android:orientation="horizontal">
 
@@ -33,7 +33,7 @@
                 android:gravity="start|center_vertical"
                 android:maxLines="1"
                 android:text="Flow Chart"
-                android:textColor="#B0B0B0"
+
                 android:textSize="10sp" />
         </LinearLayout>
 
@@ -42,7 +42,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#303030"
+
             android:gravity="end"
             android:orientation="horizontal">
 
@@ -54,7 +54,7 @@
                 android:layout_marginRight="15dp"
                 android:gravity="center_horizontal|center_vertical"
                 android:text="Graph View"
-                android:textColor="#B0B0B0"
+
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
@@ -62,7 +62,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#E0E0E0" />
+         />
 
     <android.webkit.WebView
         android:id="@+id/webView"

@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="Buffering..."
-            android:textColor="@android:color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
             android:visibility="gone" />
 
@@ -97,9 +97,9 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#99000000"
+
         android:minHeight="?attr/actionBarSize"
-        app:titleTextColor="@android:color/white"
+        app:titleTextColor="?attr/colorOnSurface"
         app:subtitleTextColor="@android:color/darker_gray">
 
         <ImageButton
@@ -127,7 +127,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="#99000000"
+
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingBottom="8dp">
@@ -143,7 +143,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0:00"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
             <SeekBar
@@ -159,7 +159,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0:00"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -240,7 +240,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Speed"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
             <SeekBar
@@ -257,7 +257,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="1.0x"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -311,7 +311,7 @@
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:text="A"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:contentDescription="Set point A" />
 
             <SeekBar
@@ -328,7 +328,7 @@
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:text="B"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:contentDescription="Set point B" />
 
             <ImageButton
@@ -349,6 +349,6 @@
         android:layout_height="200dp"
         android:layout_gravity="bottom"
         android:visibility="gone"
-        android:background="#CC000000" />
+         />
 
 </FrameLayout>

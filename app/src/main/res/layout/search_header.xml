@@ -15,12 +15,12 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:background="#ffbbbbbb" />
+             />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#20888888"
+
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingBottom="6dp"
@@ -33,7 +33,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Function"
-                android:textColor="#808080"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
         </LinearLayout>
@@ -41,118 +41,69 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:background="#ffbbbbbb" />
+             />
     </LinearLayout>
 
-    <LinearLayout
+    <TextView
         android:id="@+id/btn_new_search"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:text="Start a new search"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        app:drawableStartCompat="@drawable/ic_search_mt"
+        android:drawablePadding="16dp"
+        app:drawableTint="?attr/colorOnSurface"
+        android:textSize="16sp" />
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_search_mt"
-            app:tint="#000000" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Start a new search"
-            android:textColor="#000000"
-            android:textSize="16sp" />
-
-    </LinearLayout>
-
-    <LinearLayout
+    <TextView
         android:id="@+id/btn_search_in_results"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:text="Search in current results"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        app:drawableStartCompat="@drawable/ic_search_mt"
+        android:drawablePadding="16dp"
+        app:drawableTint="?attr/colorOnSurface"
+        android:textSize="16sp" />
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_search_mt"
-            app:tint="#000000" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Search in current results"
-            android:textColor="#000000"
-            android:textSize="16sp" />
-
-    </LinearLayout>
-
-    <LinearLayout
+    <TextView
         android:id="@+id/btn_replace_in_results"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:text="Replace in current results"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        app:drawableStartCompat="@drawable/ic_search_replace"
+        android:drawablePadding="16dp"
+        app:drawableTint="?attr/colorOnSurface"
+        android:textSize="16sp" />
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_search_replace"
-            app:tint="#000000" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Replace in current results"
-            android:textColor="#000000"
-            android:textSize="16sp" />
-
-    </LinearLayout>
-
-    <LinearLayout
+    <TextView
         android:id="@+id/btn_clear_results"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:text="Clear search results"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        app:drawableStartCompat="@drawable/ic_close_mt"
+        android:drawablePadding="16dp"
+        app:drawableTint="?attr/colorOnSurface"
+        android:textSize="16sp" />
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_close_mt"
-            app:tint="#000000" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Clear search results"
-            android:textColor="#000000"
-            android:textSize="16sp" />
-
-    </LinearLayout>
-
-    <!-- Search Results Header -->
     <LinearLayout
         android:id="@+id/layout_search_info"
         android:layout_width="match_parent"
@@ -163,12 +114,12 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:background="#ffbbbbbb" />
+             />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#20888888"
+
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingBottom="6dp"
@@ -183,7 +134,7 @@
                 android:layout_weight="1"
                 android:maxLines="3"
                 android:text="search results (0) - "
-                android:textColor="#808080"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
             <ImageView
@@ -192,14 +143,14 @@
                 android:layout_height="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_more_mt"
-                app:tint="#808080" />
+                app:tint="?attr/colorOnSurface" />
 
         </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:background="#ffbbbbbb" />
+             />
     </LinearLayout>
 
 </LinearLayout>

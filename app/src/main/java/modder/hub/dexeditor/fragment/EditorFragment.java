@@ -486,10 +486,10 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            String themeName = "light.json";
+            String themeName = "dark.json";
             IThemeSource themeSource = null;
             try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/light.json"), themeName, null);
+                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/dark.json"), themeName, null);
                 registry.loadTheme(themeSource);
                 registry.setTheme(themeName);
             } catch (Exception e) {
@@ -497,7 +497,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             }
 
             try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/light.json"), themeName, null);
+                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/dark.json"), themeName, null);
                 registry.loadTheme(themeSource);
                 registry.setTheme(themeName);
             } catch (Exception e) {

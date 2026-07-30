@@ -15,7 +15,7 @@
             android:id="@+id/string_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#000000"
+
             android:textSize="14sp"
             android:maxLines="5"
             android:ellipsize="end" />
@@ -25,6 +25,6 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="0.5dp"
-        android:background="#E0E0E0" />
+         />
 
 </LinearLayout>

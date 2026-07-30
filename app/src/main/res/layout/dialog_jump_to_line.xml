@@ -12,8 +12,7 @@
         android:layout_height="wrap_content"
         android:hint="Line number"
         android:inputType="number"
-        android:textColor="#000000"
-        android:textColorHint="#808080"
+        android:textColorHint="?attr/colorOnSurface"
         android:backgroundTint="#42A5F5" />
 
 </LinearLayout>

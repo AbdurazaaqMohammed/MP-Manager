@@ -3,53 +3,60 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@android:color/black"
     android:orientation="vertical">
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btn_strings_reload"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="start"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
             android:text="Reload"
             android:textSize="13sp"
-            app:icon="@drawable/ic_search_replace" />
+            android:padding="10dp"
+            app:drawableStartCompat="@drawable/baseline_refresh_24" />
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btn_strings_filter"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="start"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
-            app:icon="@drawable/baseline_filter_list_24"
+            app:drawableStartCompat="@drawable/baseline_filter_list_24"
             android:text="Filter"
+            android:padding="10dp"
             android:textSize="13sp" />
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btn_strings_replace"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="start"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
             android:text="Replace"
-            app:icon="@drawable/find_replace_24px"
+            app:drawableStartCompat="@drawable/find_replace_24px"
+            android:padding="10dp"
             android:textSize="13sp"/>
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btn_strings_apply"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="start"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
             android:text="Apply changes"
             android:textSize="13sp"
             android:textStyle="bold"
-            app:icon="@drawable/baseline_check_circle_24"
+            android:padding="10dp"
+            app:drawableStartCompat="@drawable/baseline_check_circle_24"
             android:visibility="gone" />
 
 </LinearLayout>

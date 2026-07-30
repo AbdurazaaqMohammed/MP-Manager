@@ -430,7 +430,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             }
         } else {
             if (highlightedFullName != null && highlightedFullName.equals(node.getFullName())) {
-                holder.itemContent.setBackgroundColor(0xFFE1F5FE);
+                //holder.itemContent.setBackgroundColor(0xFFE1F5FE);
                 holder.lastBackgroundRes = -1;
             } else {
                 if (holder.lastBackgroundRes != 0) {

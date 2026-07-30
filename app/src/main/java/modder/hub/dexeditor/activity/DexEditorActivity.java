@@ -75,7 +75,6 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
-import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -96,7 +95,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
@@ -186,7 +184,6 @@ public class DexEditorActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-        Extensions.showMessage(this, theme+"");
         setTheme(theme);
         setContentView(R.layout.dex_editor);
 
@@ -1844,7 +1841,6 @@ public class DexEditorActivity extends AppCompatActivity {
             rv.setTrackVisible(false);
             rv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             rv.setLayoutManager(new LinearLayoutManager(getContext()));
-            rv.setBackgroundColor(Color.WHITE);
 
             if (position == 0) {
                 rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -2103,7 +2099,10 @@ public class DexEditorActivity extends AppCompatActivity {
 
                     // holder trick so the click listener can reference the adapter it belongs to
                     final StringAdapter[] holder = new StringAdapter[1];
-                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text));
+                    boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+                    int theme = requireActivity().getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
+
+                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
                     holder[0] = stringAdapter;
 
                     btnReload.setOnClickListener(v -> {
@@ -2732,7 +2731,9 @@ public class DexEditorActivity extends AppCompatActivity {
             if (position == 0) {
                 isSelected = viewPager.getVisibility() != View.VISIBLE;
                 holder.title.setText("Dex Editor Plus");
-                holder.title.setTextColor(isSelected ? skyColor : Color.BLACK);
+                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+                int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
+                holder.title.setTextColor(isSelected ? skyColor : theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
                 holder.path.setVisibility(View.GONE);
                 holder.icon.setImageResource(R.drawable.ic_home);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -2757,7 +2758,9 @@ public class DexEditorActivity extends AppCompatActivity {
                 EditorTab tab = tabs.get(tabIndex);
                 isSelected = (viewPager.getVisibility() == View.VISIBLE && tabIndex == currentTabIndex);
                 holder.title.setText((tab.isModified ? "*" : "") + tab.title); // highlight the spcific edited classes with star
-                holder.title.setTextColor(isSelected ? skyColor : Color.BLACK);
+                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+                int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
+                holder.title.setTextColor(isSelected ? skyColor : theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
 
                 holder.path.setVisibility(View.VISIBLE);
                 holder.path.setText(tab.className);

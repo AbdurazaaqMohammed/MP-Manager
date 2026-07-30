@@ -14,12 +14,12 @@
 package io.github.codehasan.colorpicker.extensions;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.util.TypedValue;
 import android.view.View;
 
 import androidx.annotation.StringRes;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -29,15 +29,15 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 
 public final class Extensions {
 
-    public static boolean canShowNotification(AppCompatActivity activity) {
-        return ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS)  == PackageManager.PERMISSION_GRANTED;
+    public static boolean canShowNotification(Activity activity) {
+        return ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
     }
 
-    public static void showMessage(AppCompatActivity activity, @StringRes int message) {
+    public static void showMessage(Activity activity, @StringRes int message) {
         showMessage(activity, activity.getString(message));
     }
 
-    public static void showMessage(AppCompatActivity activity, String message) {
+    public static void showMessage(Activity activity, CharSequence message) {
         View v = (activity instanceof MainActivity) ? activity.findViewById(R.id.bottomBar) : activity.getWindow().getDecorView().getRootView();
         Snackbar.make(v, message, Snackbar.LENGTH_SHORT).show();
     }

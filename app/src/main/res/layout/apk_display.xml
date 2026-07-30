@@ -19,7 +19,7 @@
         android:layout_toEndOf="@id/apkIcon"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="@android:color/white" />
+        android:textColor="?attr/colorOnSurface" />
 
     <TextView
         android:id="@+id/apkVersionName"
@@ -37,7 +37,7 @@
         android:layout_below="@id/apkIcon"
         android:paddingEnd="20dp"
         android:textSize="18sp"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:text="Package name" />
 
     <TextView
@@ -48,7 +48,7 @@
         android:layout_below="@id/apkVersionName"
         android:layout_toEndOf="@id/pkgNameTitle"
         android:layout_alignParentEnd="true"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp" />
 
     <TextView
@@ -57,7 +57,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/pkgName"
         android:textSize="18sp"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:text="Version code" />
 
     <TextView
@@ -66,7 +66,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/pkgName"
         android:layout_alignParentEnd="true"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp"/>
 
     <TextView
@@ -75,7 +75,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/verCodeTitle"
         android:textSize="18sp"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:text="File size" />
 
     <TextView
@@ -84,7 +84,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/verCode"
         android:layout_alignParentEnd="true"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp" />
 
     <TextView
@@ -93,7 +93,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/fileSizeTitle"
         android:textSize="18sp"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:text="Signatures" />
 
     <TextView
@@ -102,7 +102,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/fileSize"
         android:layout_alignParentEnd="true"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp" />
 
     <TextView
@@ -111,7 +111,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/signaturesInApkTitle"
         android:textSize="18sp"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:text="Protected" />
 
     <TextView
@@ -120,7 +120,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/signaturesInApk"
         android:layout_alignParentEnd="true"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp"/>
 
     <com.google.android.material.button.MaterialButton

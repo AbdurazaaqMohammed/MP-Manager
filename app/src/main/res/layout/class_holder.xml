@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
@@ -36,7 +37,8 @@
                     android:layout_height="14dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_chevron_right"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    app:tint="?attr/colorOnSurface" />
 
                 <CheckBox
                     android:id="@+id/checkbox"
@@ -46,7 +48,7 @@
                     android:layout_marginLeft="4dp"
                     android:layout_marginRight="4dp"
                     android:background="@null"
-                    android:buttonTint="#42A5F5"
+                    app:buttonTint="#42A5F5"
                     android:clickable="false"
                     android:focusable="false"
                     android:padding="0dp"
@@ -99,7 +101,7 @@
                         android:focusable="false"
                         android:gravity="center_vertical"
                         android:text="TextView"
-                        android:textColor="#ff000000"
+
                         android:textSize="14sp"
                         android:textStyle="normal" />
 
@@ -120,7 +122,7 @@
                 android:id="@+id/divider"
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="#E0E0E0"
+
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>

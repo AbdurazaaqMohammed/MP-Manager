@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<io.github.abdurazaaqmohammed.ui.MyDrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawer_layout"
@@ -97,9 +97,7 @@
                     app:tabIndicatorColor="#03A9F4"
                     app:tabIndicatorHeight="3dp"
                     app:tabMode="fixed"
-                    app:tabSelectedTextColor="#000000"
-                    app:tabTextAppearance="@style/TabTextAppearance"
-                    app:tabTextColor="#808080" />
+                    app:tabTextAppearance="@style/TabTextAppearance" />
 
                 <androidx.viewpager2.widget.ViewPager2
                     android:id="@+id/explorer_view_pager"
@@ -137,7 +135,7 @@
             android:id="@+id/drawer_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="#202020"
+
             app:title="Opened classes" />
 
         <modder.hub.dexeditor.views.FastScrollerRecyclerView
@@ -146,4 +144,4 @@
             android:layout_height="match_parent" />
     </LinearLayout>
 
-</androidx.drawerlayout.widget.DrawerLayout>
+</io.github.abdurazaaqmohammed.ui.MyDrawerLayout>

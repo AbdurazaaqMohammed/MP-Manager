@@ -1,13 +1,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#b6000000"
+
     android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#60111111"
+
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -58,7 +58,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#60808080"
+
         android:orientation="horizontal">
 
         <TextView
@@ -67,7 +67,7 @@
             android:layout_height="match_parent"
             android:layout_marginTop="1dp"
             android:layout_marginEnd="1dp"
-            android:background="#60111111"
+
             android:gravity="center"
             android:padding="8dp"
             android:text="@string/package_label"
@@ -80,7 +80,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="1dp"
-            android:background="#60111111"
+
             android:padding="8dp"
             android:singleLine="false"
             android:textColor="#FFFFFF"
@@ -90,7 +90,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#60808080"
+
         android:orientation="horizontal">
 
         <TextView
@@ -99,7 +99,7 @@
             android:layout_height="match_parent"
             android:layout_marginTop="1dp"
             android:layout_marginEnd="1dp"
-            android:background="#60111111"
+
             android:gravity="center"
             android:padding="8dp"
             android:text="@string/class_label"
@@ -112,7 +112,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="1dp"
-            android:background="#60111111"
+
             android:padding="8dp"
             android:singleLine="false"
             android:textColor="#FFFFFF"

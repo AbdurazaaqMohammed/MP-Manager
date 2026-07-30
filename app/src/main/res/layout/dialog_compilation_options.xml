@@ -13,7 +13,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/compilation_options"
-            android:textColor="#000000"
+
             android:textSize="18sp"
             android:textStyle="bold" />
 

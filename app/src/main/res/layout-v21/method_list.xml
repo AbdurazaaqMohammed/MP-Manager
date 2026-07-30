@@ -44,7 +44,7 @@
             android:layout_weight="1.0">
             <TextView
                 android:textSize="12sp"
-                android:textColor="#ff000000"
+
                 android:ellipsize="end"
                 android:id="@+id/method_name"
                 android:paddingRight="10dp"
@@ -55,7 +55,7 @@
                 android:maxLines="1" />
             <TextView
                 android:textSize="11sp"
-                android:textColor="#ff000000"
+
                 android:ellipsize="end"
                 android:id="@+id/return_type"
                 android:paddingRight="10dp"

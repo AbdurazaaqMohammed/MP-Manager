@@ -9,7 +9,7 @@
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:titleTextColor="@android:color/white"
+        app:titleTextColor="?attr/colorOnSurface"
         app:subtitleTextColor="@android:color/darker_gray"
         android:minHeight="?attr/actionBarSize">
 
@@ -34,7 +34,7 @@
                 android:id="@+id/titleText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:singleLine="true"
                 android:text="Image" />
@@ -90,7 +90,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="@android:color/white"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
             android:text="1/1" />
 
