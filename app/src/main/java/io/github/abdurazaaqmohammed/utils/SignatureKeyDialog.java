@@ -30,7 +30,9 @@ import com.reandroid.archive.InputSource;
 import net.lingala.zip4j.ZipFile;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,6 +44,8 @@ import java.util.concurrent.Executor;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import mt.signature.generate.KeyStoreMakerDialog;
+
+import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 
 public class SignatureKeyDialog {
 
@@ -76,7 +80,7 @@ public class SignatureKeyDialog {
         /*MaterialCheckBox cbSavePassword = view.findViewById(R.id.cb_save_password);
         boolean savePassword = prefs.getBoolean("save_password", false);
         cbSavePassword.setChecked(savePassword);
-        if(savePassword) passwordEt.setText(prefs.getString("signatureKeyPassword", "android"));*/
+        if(savePassword) passwordEt.setText(prefs.getString("keyPass", "android"));*/
         AutoCompleteTextView actv = view.findViewById(R.id.actv_signature_key);
         MaterialButton btnPick = view.findViewById(R.id.btn_pick_file);
 
@@ -88,6 +92,10 @@ public class SignatureKeyDialog {
         view2.setChecked(prefs.getBoolean("v2", true));
         view3.setChecked(prefs.getBoolean("v3", true));
         view4.setChecked(prefs.getBoolean("v4", false));
+
+        CompoundButton cbBiometric = view.findViewById(R.id.cb_biometric);
+        cbBiometric.setVisibility(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? View.VISIBLE : View.GONE);
+        cbBiometric.setChecked(prefs.getBoolean("useBiometrics", false));
 
         ArrayAdapter<String> ddAdapter = new ArrayAdapter<>(
                 activity,
@@ -149,8 +157,9 @@ public class SignatureKeyDialog {
                 .setPositiveButton("OK", (d, which) -> {
                     String selectedPath = actv.getText() != null ? actv.getText().toString() : null;
                     String password = passwordEt.getText() != null ? passwordEt.getText().toString() : null;
-                    boolean useBiometrics = prefs.getBoolean("useBiometrics", false);
-
+                    boolean biometricChecked = cbBiometric.isChecked();
+                    boolean wasUsingBiometrics = prefs.getBoolean("useBiometrics", false);
+                    boolean useBiometrics;
 
                     if (TextUtils.isEmpty(selectedPath)) selectedPath = pickedPath[0];
 
@@ -158,19 +167,36 @@ public class SignatureKeyDialog {
                         Toast.makeText(activity, "No signature selected", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    if (!useBiometrics && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && TextUtils.isEmpty(password)) {
-                        Toast.makeText(activity, "No password entered", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
                     if (!new File(selectedPath).exists()) {
                         Toast.makeText(activity, "Invalid file path", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    prefs.edit().putString("keyPath", selectedPath).apply();
-
-                    // if (cbSavePassword.isChecked()) LegacyUtils.applySharedPrefEditor(prefs.edit().putString("signatureKeyPassword", password).putBoolean("save_password", true));
-                    //else LegacyUtils.applySharedPrefEditor(prefs.edit().remove("signatureKeyPassword").putBoolean("save_password", false));
+                    if (biometricChecked) {
+                        if (!TextUtils.isEmpty(password)) {
+                            if (!verifyKeystorePassword(new File(selectedPath), password)) {
+                                Toast.makeText(activity, "Invalid password", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(password)).apply();
+                            prefs.edit().putBoolean("useBiometrics", true).apply();
+                            useBiometrics = true;
+                        } else if (wasUsingBiometrics) {
+                            useBiometrics = true;
+                        } else {
+                            Toast.makeText(activity, "Enter password first to enable biometrics", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    } else {
+                        if (wasUsingBiometrics) {
+                            prefs.edit().putBoolean("useBiometrics", false).remove("keyPass").apply();
+                        }
+                        if (TextUtils.isEmpty(password)) {
+                            Toast.makeText(activity, "No password entered", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        useBiometrics = false;
+                    }
 
                     boolean v1 = view1.isChecked();
                     boolean v2 = view2.isChecked();
@@ -198,8 +224,9 @@ public class SignatureKeyDialog {
                                     Toast.makeText(activity, "Authentication succeeded!", Toast.LENGTH_SHORT).show();
                                     new Thread(() -> {
                                         try {
+                                            String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", "android"));
                                             SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", activity).getPath())),
-                                                    prefs.getString("keyPass", "android"), v1, v2, v3, v4, signedByS);
+                                                    storedPass, v1, v2, v3, v4, signedByS);
                                             File cacheDir = new File(activity.getCacheDir(), UUID.randomUUID().toString());
                                             String sigFileName = file.getName();
                                             File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
@@ -342,5 +369,25 @@ public class SignatureKeyDialog {
         if (list == null) return s;
         for (String x : list) if (x != null) s.add(x);
         return s;
+    }
+
+    private static boolean verifyKeystorePassword(File keyFile, String password) {
+        try {
+            try (InputStream is = new FileInputStream(keyFile)) {
+                KeyStore ks = KeyStore.getInstance("PKCS12");
+                ks.load(is, password.toCharArray());
+                ks.aliases().nextElement();
+                return true;
+            }
+        } catch (Exception e) {
+            try (InputStream is = new FileInputStream(keyFile)) {
+                KeyStore ks = KeyStore.getInstance("JKS");
+                ks.load(is, password.toCharArray());
+                ks.aliases().nextElement();
+                return true;
+            } catch (Exception e2) {
+                return false;
+            }
+        }
     }
 }

@@ -81,6 +81,7 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -333,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                     if(sign[0]) new SignWrapper(
                                             settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
-                                            settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                            PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                             settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(file);
                                     pm.dismiss();
                                     handler.post(() -> loadZipFolderInPane(file, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
@@ -1162,7 +1163,7 @@ public class MainActivity extends AppCompatActivity {
                                     logger.close();
                                     if(sign[0]) new SignWrapper(
                                             settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
-                                            settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                            PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                             settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(bo.outputFile);
                                     pm.dismiss();
                                 } catch (Exception e) {

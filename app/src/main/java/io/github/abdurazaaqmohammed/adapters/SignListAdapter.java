@@ -23,6 +23,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.File;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 
 public class SignListAdapter extends ArrayAdapter<CharSequence> {
     private final Context context;
@@ -85,9 +86,6 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
                 pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
                 layout.addView(mb);
-                TextView warning = new TextView(context);
-                warning.setText("Warning: The password will be saved in plain text.");
-                layout.addView(warning);
                 layout.addView(pwInput);
 
                 new MaterialAlertDialogBuilder(context)
@@ -103,7 +101,7 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
                             } else {
                                 PreferenceManager.getDefaultSharedPreferences(context).edit()
                                                                 .putString("keyPath", path[0])
-                                                                .putString("signatureKeyPassword", password).apply();
+                                                                .putString("keyPass", PasswordEncryptor.encryptString(password)).apply();
                                 Toast.makeText(context, "Signature file set", Toast.LENGTH_SHORT).show();
                             }
                         })

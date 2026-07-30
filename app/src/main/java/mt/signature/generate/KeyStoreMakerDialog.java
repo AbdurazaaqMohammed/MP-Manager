@@ -37,7 +37,6 @@ package mt.signature.generate;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -83,7 +82,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -103,6 +101,7 @@ import java.util.Random;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 
 public class KeyStoreMakerDialog extends DialogFragment {
 
@@ -180,7 +179,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
             CompoundButton biometrics = view.findViewById(R.id.cb_save_password);
             boolean useBiometrics = biometrics.isChecked();
             s.edit().putBoolean("useBiometrics", useBiometrics).apply();
-            if(useBiometrics) s.edit().putString("keyPass", keyPass.getText().toString()).apply();
+            if(useBiometrics) s.edit().putString("keyPass", PasswordEncryptor.encryptString(keyPass.getText().toString())).apply();
         });
 
         return builder.create();

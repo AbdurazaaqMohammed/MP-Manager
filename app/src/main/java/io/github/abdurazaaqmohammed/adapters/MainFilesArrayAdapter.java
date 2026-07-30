@@ -333,7 +333,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         SignWrapper signWrapper = new SignWrapper(
                                                 settings.getString("keyPath",
                                                         FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                                PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                                 settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false));
                                         signWrapper.signApk(apkFile);
                                     }
@@ -1398,24 +1398,37 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                                 ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
                                                 deleteDialog.setView(ll);
                                             } else deleteDialog.setMessage("Are you sure you want to delete " + filesToDisplay + "?");
-                                            deleteDialog.setTitle("Alert").setPositiveButton("Yes", (dialog3, which) -> new Thread(() -> {
-                                                try {
-                                                    if (multi) {
-                                                        if (!isInZip) {
-                                                            File selectedFile = null;
-                                                            for (int i : selectedPositions) {
-                                                                selectedFile = (File) values[i];
-                                                                File finalSelectedFile1 = selectedFile;
-                                                                 if (finalSelectedFile1 != null) pm.setText("Deleting " + finalSelectedFile1.getName());
+                                            deleteDialog.setTitle("Alert").setPositiveButton("Yes", (dialog3, which) -> {
+                                                pm.show();
+                                                new Thread(() -> {
+                                                    try {
+                                                        if (multi) {
+                                                            if (!isInZip) {
+                                                                File selectedFile = null;
+                                                                for (int i : selectedPositions) {
+                                                                    selectedFile = (File) values[i];
+                                                                    File finalSelectedFile1 = selectedFile;
+                                                                    if (finalSelectedFile1 != null)
+                                                                        pm.setText("Deleting " + finalSelectedFile1.getName());
 
-                                                                if (selectedFile.isDirectory())
-                                                                    Util.deleteDir(selectedFile);
-                                                                else
-                                                                    selectedFile.delete();
-                                                            }
-                                                            if (selectedFile != null) {
-                                                                File finalSelectedFile = selectedFile;
-                                                                handler.post(() -> context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1));
+                                                                    if (selectedFile.isDirectory())
+                                                                        Util.deleteDir(selectedFile);
+                                                                    else
+                                                                        selectedFile.delete();
+                                                                }
+                                                                if (selectedFile != null) {
+                                                                    File finalSelectedFile = selectedFile;
+                                                                    handler.post(() -> context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1));
+                                                                }
+                                                            } else {
+                                                                List<ZipEntryInfo> selected = new ArrayList<>();
+                                                                for (int i : selectedPositions)
+                                                                    selected.add((ZipEntryInfo) values[i]);
+                                                                deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
+                                                                if (sign[0]) new SignWrapper(
+                                                                        settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
+                                                                        PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
+                                                                        settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                             }
                                                         } else {
                                                             List<ZipEntryInfo> selected = new ArrayList<>();
@@ -2013,7 +2026,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                                 }
                                                 if (sign[0]) new SignWrapper(
                                                         settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                        settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                                        PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                                         settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(opt.getFile());
                                                 pm.dismiss();
                                                 context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
@@ -2192,7 +2205,7 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                                 apkCloner.processApk();
                                                 if (sign[0]) new SignWrapper(
                                                         settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                        settings.getString("signatureKeyPassword", "android"), settings.getBoolean("v1", true),
+                                                        PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
                                                         settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(new File(filePath.replace(".apk", "_clone.apk")));
                                                 pm.dismiss();
                                                 context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
