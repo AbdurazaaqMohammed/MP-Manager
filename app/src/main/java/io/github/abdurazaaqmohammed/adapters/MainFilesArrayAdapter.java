@@ -139,6 +139,7 @@ import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
@@ -2471,7 +2472,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     if (sb.length() > 0) sb.append("\n");
                     sb.append(hldr.cmdText.getText());
                 }
-                copyToClipboard(sb.toString());
+                CopyUtil.copyToClipboard(context, sb);
             });
             termuxAllBtn.setOnClickListener(v -> {
                 for (CmdViewHolder hldr : holders) {
@@ -2537,7 +2538,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     public void onNothingSelected(AdapterView<?> parent) {}
                 });
             }
-            h.copyBtn.setOnClickListener(v -> copyToClipboard(h.cmdText.getText().toString()));
+            h.copyBtn.setOnClickListener(v -> CopyUtil.copyToClipboard(context, h.cmdText.getText()));
             h.termuxBtn.setOnClickListener(v -> {
                 String cmd = h.cmdText.getText().toString();
                 if (!cmd.isEmpty()) runInTermux(cmd);
@@ -2556,7 +2557,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             });
         }
         if (autoCopy && !holders.isEmpty()) {
-            copyToClipboard(mutableProfiles.get(Math.min(lastProfileIdx, mutableProfiles.size() - 1)).getGeneratedCommand(holders.get(0).filePath));
+            CopyUtil.copyToClipboard(context, mutableProfiles.get(Math.min(lastProfileIdx, mutableProfiles.size() - 1)).getGeneratedCommand(holders.get(0).filePath));
         }
     }
 
@@ -2568,12 +2569,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
         return spinner;
-    }
-
-    private void copyToClipboard(String text) {
-        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard != null) clipboard.setPrimaryClip(ClipData.newPlainText("Command", text));
-        Extensions.showMessage(context, context.rss.getString(R.string.copied_to_clipboard, text));
     }
 
     private void runInTermux(String command) {

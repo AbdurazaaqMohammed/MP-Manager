@@ -44,6 +44,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputLayout;
 import com.lilincpp.github.libezftp.EZFtpServer;
 import com.lilincpp.github.libezftp.user.EZFtpUser;
 import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
@@ -75,6 +76,7 @@ import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
 import io.github.abdurazaaqmohammed.player.PlayerManager;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -681,17 +683,22 @@ public class MainActivity extends AppCompatActivity {
 
         TextView currentFolderView = findViewById(R.id.currentFolderPath);
         currentFolderView.setText(TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory().getPath() : homeDir1Path);
+        currentFolderView.setOnLongClickListener(v -> {
+            CopyUtil.copyToClipboard(this, ((TextView) v).getText());
+            return false;
+        });
         currentFolderView.setOnClickListener(v -> {
-            EditText input = new EditText(MainActivity.this);
-            input.setHint("Enter path");
+
+            View textInputLayout = LayoutInflater.from(this).inflate(R.layout.material_edittext, null);//new TextInputLayout(this, null, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox);
+            TextInputEditText input = textInputLayout.findViewById(R.id.m_et_edittext);
+            input.setText(((TextView) v).getText());
             dialogUtil.getDialogBuilder()
-                    .setTitle("Enter path")
-                    .setView(input)
+                    .setTitle(R.string.path)
+                    .setView(textInputLayout)
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("OK", (dialog, which) -> {
                         File inputPath = new File(input.getText().toString());
-                        if (inputPath.exists() && inputPath.isDirectory()
-                                || (!inputPath.exists() && inputPath.mkdirs())) {
+                        if (inputPath.exists() && inputPath.isDirectory() || (!inputPath.exists() && inputPath.mkdirs())) {
                             boolean isPane1 = lastPaneSelected == 1;
                             if (isPane1)
                                 pane1Folder = inputPath;

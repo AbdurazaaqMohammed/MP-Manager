@@ -396,4 +396,6 @@
     <string name="single_mode">Use one profile for all files</string>
     <string name="no_file">No file selected</string>
     <string name="loading">Loading…</string>
+    <string name="enter_path">Enter path</string>
+    <string name="path">Path</string>
 </resources>
