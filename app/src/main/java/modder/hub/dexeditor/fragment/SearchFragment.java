@@ -102,6 +102,7 @@ import modder.hub.dexeditor.utils.TreeHelper;
 import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.AlertProgress;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 
 // Author : @developer-krushna
 // Got some LOGICS from AI but thought , idea other resources copied from mt manager interface
@@ -711,7 +712,7 @@ public class SearchFragment extends Fragment {
             for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
                 DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
                 if (tab.type == 0) { // Smali
-                    EditorFragment editorFrag = activity.getFragmentAtIndex(i);
+                    UnifiedEditorFragment editorFrag = activity.getFragmentAtIndex(i);
                     if (editorFrag != null && editorFrag.getEditor() != null) {
                         openTabsContent.put(tab.className, editorFrag.getEditor().getText().toString());
                     } else {
@@ -936,7 +937,7 @@ public class SearchFragment extends Fragment {
                         if (tab.className.equals(className) && tab.type == 0) {
                             tab.content = newText;
                             tab.isModified = false;
-                            EditorFragment fragment = activity.getFragmentAtIndex(i);
+                            UnifiedEditorFragment fragment = activity.getFragmentAtIndex(i);
                             if (fragment != null && fragment.getEditor() != null) {
                                 fragment.getEditor().setText(newText);
                             }
@@ -1111,7 +1112,7 @@ public class SearchFragment extends Fragment {
             for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
                 DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
                 if (tab.type == 0) {
-                    EditorFragment editorFrag = activity.getFragmentAtIndex(i);
+                    UnifiedEditorFragment editorFrag = activity.getFragmentAtIndex(i);
                     if (editorFrag != null && editorFrag.getEditor() != null) {
                         openEditorsContent.put(tab.className, editorFrag.getEditor().getText().toString());
                     } else if (tab.isModified) {

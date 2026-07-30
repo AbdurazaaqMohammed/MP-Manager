@@ -100,6 +100,7 @@ import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.utils.ViewAnimationHelper;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
+import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 
 /*
 Author @developer-krushna
@@ -380,7 +381,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     public void updateEditorLineNumber(String lineNumber) {
         if (getActivity() instanceof DexEditorActivity) {
             DexEditorActivity activity = (DexEditorActivity) getActivity();
-            EditorFragment editorFragment = activity.getCurrentFragment();
+            UnifiedEditorFragment editorFragment = activity.getCurrentFragment();
             if (editorFragment != null) {
                 editorFragment._updateEditorLineNumber(lineNumber);
             }

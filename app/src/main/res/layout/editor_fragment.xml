@@ -3,14 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+
     android:orientation="vertical">
 
     <LinearLayout
         android:id="@+id/linear_header"
         android:layout_width="match_parent"
         android:layout_height="20dp"
-        android:background="#FFFFFF"
+
         android:baselineAligned="false"
         android:orientation="horizontal"
         android:paddingTop="0.1dp">
@@ -94,7 +94,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:padding="8dp"
-            android:background="#FFFFFF"
+
             app:lnPanelPosition="center"
             app:lnPanelPositionMode="follow" />
 
@@ -109,7 +109,7 @@
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:background="@android:color/white"
+
         android:overScrollMode="never"
         android:scrollbars="none">
 

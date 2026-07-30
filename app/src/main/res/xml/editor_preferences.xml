@@ -11,11 +11,21 @@
             android:summary="Set the theme for the editor"
             app:useSimpleSummaryProvider="true" />
 
-        <EditTextPreference
+        <ListPreference
+            android:key="font_type"
+            android:title="Font Type"
+            android:entries="@array/font_styles"
+            android:entryValues="@array/font_style_values"
+            android:defaultValue="normal"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
             android:key="pref_font_size"
             android:title="Font Size"
-            android:summary="Set the font size for the editor"
-            android:defaultValue="14"/>
+            android:entries="@array/font_sizes"
+            android:entryValues="@array/font_size_values"
+            android:defaultValue="14"
+            app:useSimpleSummaryProvider="true" />
 
         <SwitchPreferenceCompat
             android:key="pref_show_line_numbers"
@@ -66,6 +76,11 @@
             android:key="pref_bottom_bar_buttons"
             android:title="Manage Bottom Bar Buttons"
             android:summary="Configure actions shown on the editor's bottom bar"/>
+
+      <Preference
+            android:key="edit_floating_menus"
+            android:title="Edit Floating Menus"
+            android:summary="Customize the floating text action menu items"/>
     </PreferenceCategory>
 
 </PreferenceScreen>

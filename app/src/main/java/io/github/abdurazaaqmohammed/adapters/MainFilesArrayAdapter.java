@@ -128,7 +128,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-import io.github.abdurazaaqmohammed.TextEditorActivity;
+import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.commandhelper.ProfileManager;
@@ -1846,7 +1846,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         i++;
                     }
                     DexFileSelector dexSelector = new DexFileSelector(context, outputDir + File.separatorChar + name);
-                    dexSelector.setOnFilesSelectedListener(selectedFilePaths -> context.startActivityForResult(new Intent(context, DexEditorActivity.class).putStringArrayListExtra("SelectedDexFiles", (ArrayList<String>) selectedFilePaths), 757));
+                    dexSelector.setOnFilesSelectedListener(selectedFilePaths -> context.startActivityForResult(new Intent(context, DexEditorActivity.class).putExtra("theme", context.theme).putStringArrayListExtra("SelectedDexFiles", (ArrayList<String>) selectedFilePaths), 757));
                     context.handler.post(dexSelector::showDialog);
                 } catch (Exception e) {
                     new ErrorUtil(context).showError(e);

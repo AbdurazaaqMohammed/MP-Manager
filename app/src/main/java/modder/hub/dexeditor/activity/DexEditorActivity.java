@@ -39,6 +39,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.LightingColorFilter;
 import android.net.Uri;
@@ -57,6 +58,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -73,6 +75,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -93,6 +96,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
@@ -101,7 +105,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import modder.hub.dexeditor.adapter.HeaderAdapter;
 import modder.hub.dexeditor.adapter.StringAdapter;
 import modder.hub.dexeditor.adapter.TreeAdapter;
-import modder.hub.dexeditor.fragment.EditorFragment;
+import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import modder.hub.dexeditor.fragment.SearchFragment;
 import modder.hub.dexeditor.fragment.SmaliMethodFieldListFragment;
 import modder.hub.dexeditor.model.TreeNode;
@@ -180,6 +184,10 @@ public class DexEditorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
+        Extensions.showMessage(this, theme+"");
+        setTheme(theme);
         setContentView(R.layout.dex_editor);
 
         initialize(savedInstanceState);
@@ -190,7 +198,7 @@ public class DexEditorActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        EditorFragment.clearCache();
+        UnifiedEditorFragment.clearCache();
     }
 
     @SuppressLint("MissingSuperCall")
@@ -260,6 +268,36 @@ public class DexEditorActivity extends AppCompatActivity {
             androidx.core.graphics.drawable.DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), Color.WHITE);
         }
         setupDrawerToolbar();
+
+        ImageButton btnUndo = findViewById(R.id.btn_undo);
+        ImageButton btnRedo = findViewById(R.id.btn_redo);
+        ImageButton btnSave = findViewById(R.id.btn_save);
+        ImageButton btnEdit = findViewById(R.id.btn_edit);
+        ImageButton btnFile = findViewById(R.id.btn_file);
+
+        if (btnUndo != null) btnUndo.setOnClickListener(v -> {
+            UnifiedEditorFragment f = getCurrentFragment();
+            if (f != null && f.getEditor() != null && f.getEditor().canUndo()) {
+                f.getEditor().undo();
+                handleUndoRedo();
+            }
+        });
+        if (btnRedo != null) btnRedo.setOnClickListener(v -> {
+            UnifiedEditorFragment f = getCurrentFragment();
+            if (f != null && f.getEditor() != null && f.getEditor().canRedo()) {
+                f.getEditor().redo();
+                handleUndoRedo();
+            }
+        });
+        if (btnSave != null) btnSave.setOnClickListener(v -> saveCurrentTab());
+        if (btnEdit != null) btnEdit.setOnClickListener(v -> {
+            UnifiedEditorFragment f = getCurrentFragment();
+            if (f != null) f.showEditMenu(btnEdit);
+        });
+        if (btnFile != null) btnFile.setOnClickListener(v -> {
+            UnifiedEditorFragment f = getCurrentFragment();
+            if (f != null) f.showFileMenu(btnFile);
+        });
 
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawerLayout.addDrawerListener(drawerToggle);
@@ -377,7 +415,7 @@ public class DexEditorActivity extends AppCompatActivity {
             @Override
             public void run() {
                 SmaliInstructionHelper.init(getApplicationContext());
-                EditorFragment.ensureLanguageInitialized(getApplicationContext());
+                UnifiedEditorFragment.ensureLanguageInitialized(getApplicationContext());
             }
         }).start();
 
@@ -485,13 +523,20 @@ public class DexEditorActivity extends AppCompatActivity {
     private void updateToolbar() {
         if (getSupportActionBar() == null) return;
 
-        if (viewPager.getVisibility() == View.VISIBLE && currentTabIndex != -1 && currentTabIndex < tabs.size()) {
+        boolean editorVisible = viewPager.getVisibility() == View.VISIBLE && currentTabIndex != -1 && currentTabIndex < tabs.size();
+        if (editorVisible) {
             getSupportActionBar().setTitle(tabs.get(currentTabIndex).title);
             getSupportActionBar().setSubtitle(null);
         } else {
             getSupportActionBar().setTitle("Dex Editor Plus");
             setToolbarSubtitle(null);
         }
+        int btnVis = editorVisible ? View.VISIBLE : View.GONE;
+        findViewById(R.id.btn_undo).setVisibility(btnVis);
+        findViewById(R.id.btn_redo).setVisibility(btnVis);
+        findViewById(R.id.btn_save).setVisibility(btnVis);
+        findViewById(R.id.btn_edit).setVisibility(btnVis);
+        findViewById(R.id.btn_file).setVisibility(btnVis);
 
         drawerToggle.setDrawerIndicatorEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -592,7 +637,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 closeTabWithPrompt(currentTabIndex);
                 return true;
             } else if (id == R.id.preference) {
-                startActivity(new Intent(DexEditorActivity.this, SettingsActivity.class));
+                startActivity(new Intent(DexEditorActivity.this, io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity.class));
                 return true;
             }
 
@@ -600,7 +645,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 return super.onOptionsItemSelected(item);
             }
 
-            EditorFragment editorFragment = getCurrentFragment();
+            UnifiedEditorFragment editorFragment = getCurrentFragment();
             if (editorFragment == null) return super.onOptionsItemSelected(item);
 
             CodeEditor editor = editorFragment.getEditor();
@@ -687,7 +732,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 closeTabWithPrompt(currentTabIndex);
                 return true;
             } else if (id == R.id.preference) {
-                startActivity(new Intent(DexEditorActivity.this, SettingsActivity.class));
+                startActivity(new Intent(DexEditorActivity.this, io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity.class));
                 return true;
             }
         }
@@ -695,7 +740,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     // get the smali instruction from cursor position in editor
-    public String getCurrentLineSmaliInstruction(EditorFragment fragment) {
+    public String getCurrentLineSmaliInstruction(UnifiedEditorFragment fragment) {
         CodeEditor editor = fragment.getEditor();
         Cursor cursor = editor.getCursor();
         Content content = editor.getText();
@@ -726,7 +771,7 @@ public class DexEditorActivity extends AppCompatActivity {
         final EditorTab tab = tabs.get(index);
         final String className = tab.className;
 
-        EditorFragment fragment = getFragmentAtIndex(index);
+        UnifiedEditorFragment fragment = getFragmentAtIndex(index);
         if (fragment != null) {
             fragment.setClosing(true);
         }
@@ -767,7 +812,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     // smali2java
-    private void smali2java(EditorFragment fragment) {
+    public void smali2java(UnifiedEditorFragment fragment) {
         String code = fragment.getCode();
         String className = fragment.getClassName();
         String title = SmaliHelper.extractSimpleName(className) + ".java";
@@ -809,7 +854,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     // smali toggle comment
-    private void toggleComment(EditorFragment fragment) {
+    private void toggleComment(UnifiedEditorFragment fragment) {
         try {
             TextActionWindow window = (TextActionWindow) fragment.getEditor().getComponent(EditorTextActionWindow.class);
             window.toggleComment();
@@ -818,7 +863,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     // jump to line
-    private void showJumpToLineDialog(EditorFragment fragment) {
+    private void showJumpToLineDialog(UnifiedEditorFragment fragment) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_jump_to_line, null);
         EditText editText = view.findViewById(R.id.editText);
         CodeEditor smaliEditor = fragment.getEditor();
@@ -857,7 +902,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
     public void handleUndoRedo() {
         if (optionsMenu == null || viewPager.getVisibility() != View.VISIBLE) return;
-        EditorFragment fragment = getCurrentFragment();
+        UnifiedEditorFragment fragment = getCurrentFragment();
         if (fragment != null && fragment.getEditor() != null) {
             MenuItem undo = optionsMenu.findItem(R.id.undo);
             MenuItem redo = optionsMenu.findItem(R.id.redo);
@@ -892,18 +937,22 @@ public class DexEditorActivity extends AppCompatActivity {
                     redo.getIcon().setAlpha(redo.isEnabled() ? 255 : 100);
                 }
             }
+            ImageButton btnUndo = findViewById(R.id.btn_undo);
+            ImageButton btnRedo = findViewById(R.id.btn_redo);
+            if (btnUndo != null) btnUndo.setEnabled(fragment.getEditor().canUndo());
+            if (btnRedo != null) btnRedo.setEnabled(fragment.getEditor().canRedo());
         }
     }
 
-    public EditorFragment getCurrentFragment() {
+    public UnifiedEditorFragment getCurrentFragment() {
         return getFragmentAtIndex(viewPager.getCurrentItem());
     }
 
-    public EditorFragment getFragmentAtIndex(int index) {
+    public UnifiedEditorFragment getFragmentAtIndex(int index) {
         if (index < 0 || index >= tabs.size()) return null;
         Fragment fragment = getSupportFragmentManager().findFragmentByTag("f" + tabs.get(index).id);
-        if (fragment instanceof EditorFragment) {
-            return (EditorFragment) fragment;
+        if (fragment instanceof UnifiedEditorFragment) {
+            return (UnifiedEditorFragment) fragment;
         }
         return null;
     }
@@ -1044,7 +1093,7 @@ public class DexEditorActivity extends AppCompatActivity {
             targetTab.pendingQuery = query;
 
             // If fragment is already ready, navigate now
-            EditorFragment fragment = getFragmentAtIndex(tabIndex);
+            UnifiedEditorFragment fragment = getFragmentAtIndex(tabIndex);
             if (fragment != null && fragment.getEditor() != null && fragment.getEditor().getText().getLineCount() > lineNumber) {
                 fragment.navigateTo(lineNumber, column, query);
                 // Clear pending once navigated
@@ -1186,7 +1235,7 @@ public class DexEditorActivity extends AppCompatActivity {
         for (int i = 0; i < tabs.size(); i++) {
             EditorTab tab = tabs.get(i);
             if (tab.className.equals(className)) {
-                EditorFragment fragment = getFragmentAtIndex(i);
+                UnifiedEditorFragment fragment = getFragmentAtIndex(i);
                 if (fragment != null && fragment.getEditor() != null) {
                     String currentText = fragment.getEditor().getText().toString();
                     tab.content = currentText; // Update current content to preserve it on recreation
@@ -1320,7 +1369,7 @@ public class DexEditorActivity extends AppCompatActivity {
             String className = SmaliHelper.smali2OnlySlash(split[0]);
             String methodName = split[1];
             if (className.equals(currentClassName)) {
-                EditorFragment fragment = getCurrentFragment();
+                UnifiedEditorFragment fragment = getCurrentFragment();
                 if (fragment != null) {
                     fragment.extractMethodFieldInfo(methodName);
                 }
@@ -1341,7 +1390,7 @@ public class DexEditorActivity extends AppCompatActivity {
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
             public void run() {
-                EditorFragment fragment = getCurrentFragment();
+                UnifiedEditorFragment fragment = getCurrentFragment();
                 if (fragment != null) {
                     fragment.extractMethodFieldInfo(methodName);
                 }
@@ -1449,7 +1498,7 @@ public class DexEditorActivity extends AppCompatActivity {
             return;
         }
 
-        final EditorFragment fragment = (EditorFragment) getSupportFragmentManager().findFragmentByTag("f" + tab.id);
+        final UnifiedEditorFragment fragment = (UnifiedEditorFragment) getSupportFragmentManager().findFragmentByTag("f" + tab.id);
         if (fragment == null) {
             if (onSaved != null) onSaved.run();
             return;
@@ -2252,7 +2301,7 @@ public class DexEditorActivity extends AppCompatActivity {
             for (int i = 0; i < tabs.size(); i++) {
                 EditorTab tab = tabs.get(i);
                 if (tab.type == 0) {
-                    EditorFragment ef = activity.getFragmentAtIndex(i);
+                    UnifiedEditorFragment ef = activity.getFragmentAtIndex(i);
                     if (ef != null && ef.getEditor() != null) {
                         openTabsContent.put(tab.className, ef.getEditor().getText().toString());
                     } else {
@@ -2319,7 +2368,7 @@ public class DexEditorActivity extends AppCompatActivity {
                                 EditorTab tab = tabs.get(i);
                                 if (tab.className.equals(e.getKey()) && tab.type == 0) {
                                     tab.content = e.getValue();
-                                    EditorFragment ef = activity.getFragmentAtIndex(i);
+                                    UnifiedEditorFragment ef = activity.getFragmentAtIndex(i);
                                     if (ef != null && ef.getEditor() != null) ef.getEditor().setText(e.getValue());
                                 }
                             }
@@ -2637,7 +2686,7 @@ public class DexEditorActivity extends AppCompatActivity {
             if (tab.type == 2) {
                 return modder.hub.dexeditor.fragment.GraphFragment.newInstance(tab.className, tab.title, tab.subtitle, tab.content);
             }
-            return EditorFragment.newInstance(tab.className, tab.title, tab.content, tab.type);
+            return UnifiedEditorFragment.newInstance(tab.className, tab.title, tab.content, tab.type);
         }
 
         @Override

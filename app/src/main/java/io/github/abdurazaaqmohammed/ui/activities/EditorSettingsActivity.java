@@ -1,16 +1,12 @@
-package io.github.abdurazaaqmohammed;
+package io.github.abdurazaaqmohammed.ui.activities;
 
 import android.os.Bundle;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.preference.DropDownPreference;
-import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
-import com.google.android.material.color.DynamicColors;
-
 import io.github.abdurazaaqmohammed.MPManager.R;
+import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
 public class EditorSettingsActivity extends AppCompatActivity {
 
@@ -44,9 +40,16 @@ public class EditorSettingsActivity extends AppCompatActivity {
     public static class SettingsFragment extends PreferenceFragmentCompat {
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            getPreferenceManager().setSharedPreferencesName("editor_prefs");
             setPreferencesFromResource(R.xml.editor_preferences, rootKey);
-            DropDownPreference dropDownPreference = findPreference("pref_theme");
 
+            androidx.preference.Preference floatingMenu = findPreference("edit_floating_menus");
+            if (floatingMenu != null) {
+                floatingMenu.setOnPreferenceClickListener(pref -> {
+                    startActivity(new android.content.Intent(getActivity(), EditFloatingMenusActivity.class));
+                    return true;
+                });
+            }
         }
 
         @Override
@@ -111,12 +114,10 @@ public class EditorSettingsActivity extends AppCompatActivity {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(getContext())
                     .setTitle("Manage Bottom Bar")
                     .setView(listView)
-                    .setPositiveButton("Add New", (dialog, which) -> {
-                        showAddEditButtonDialog(finalArray, -1, null, () -> {
-                            prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString()).apply();
-                            showBottomBarManagementDialog(); // Refresh
-                        });
-                    })
+                    .setPositiveButton("Add New", (dialog, which) -> showAddEditButtonDialog(finalArray, -1, null, () -> {
+                        prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString()).apply();
+                        showBottomBarManagementDialog(); // Refresh
+                    }))
                     .setNegativeButton("Close", null)
                     .show();
         }

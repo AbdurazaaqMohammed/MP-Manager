@@ -23,7 +23,59 @@
                 android:layout_height="?attr/actionBarSize"
                 android:background="?attr/colorPrimary"
                 app:subtitleTextAppearance="@style/ToolbarSmallSubtitle"
-                app:popupTheme="@style/AppTheme.PopupOverlay" />
+                app:popupTheme="@style/AppTheme.PopupOverlay">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btn_undo"
+                        android:enabled="false"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/undo_24px"
+                        android:contentDescription="@string/undo"/>
+
+                    <ImageButton
+                        android:id="@+id/btn_redo"
+                        android:enabled="false"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/undo_24px"
+                        android:scaleX="-1"
+                        android:contentDescription="@string/redo"/>
+
+                    <ImageButton
+                        android:id="@+id/btn_save"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/save_24px"
+                        android:contentDescription="@string/save"/>
+
+                    <ImageButton
+                        android:id="@+id/btn_edit"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/editor_text_select_start"
+                        android:contentDescription="@string/edit"/>
+
+                    <ImageButton
+                        android:id="@+id/btn_file"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/baseline_more_vert_24"
+                        android:contentDescription="@string/file_options"/>
+
+                </LinearLayout>
+            </androidx.appcompat.widget.Toolbar>
         </com.google.android.material.appbar.AppBarLayout>
 
         <FrameLayout
@@ -41,7 +93,6 @@
                     android:id="@+id/explorer_tab_layout"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="#FFFFFF"
                     app:tabGravity="fill"
                     app:tabIndicatorColor="#03A9F4"
                     app:tabIndicatorHeight="3dp"
@@ -53,15 +104,13 @@
                 <androidx.viewpager2.widget.ViewPager2
                     android:id="@+id/explorer_view_pager"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#FFFFFF" />
+                    android:layout_height="match_parent" />
             </LinearLayout>
 
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/view_pager"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#FFFFFF"
                 android:visibility="gone" />
 
         </FrameLayout>
@@ -82,7 +131,6 @@
         android:layout_width="280dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="#FFFFFF"
         android:orientation="vertical">
 
         <androidx.appcompat.widget.Toolbar
@@ -90,14 +138,12 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="#202020"
-            app:title="Opened classes"
-            app:titleTextColor="#FFFFFF" />
+            app:title="Opened classes" />
 
         <modder.hub.dexeditor.views.FastScrollerRecyclerView
             android:id="@+id/tabs_recycler_view"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#FFFFFF" />
+            android:layout_height="match_parent" />
     </LinearLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -38,7 +38,7 @@
         android:orientation="horizontal"
         android:padding="12dp"
         android:gravity="center_vertical"
-        android:background="#FFFFFF">
+        >
 
         <ImageView
             android:id="@+id/tab_icon"
