@@ -1991,13 +1991,13 @@ pm.setText(context.rss.getString(R.string.copying, file1));
                                                 String amS = "AndroidManifest.xml";
                                                 File am = new File(tempFolder, amS);
                                                 logger.logMessage(context.rss.getString(R.string.adding, amS));
-                                                opt.addFile(am);
+                                                opt.addFile(am, zp);
                                                 am.delete();
                                                 String rssS = "resources.arsc";
                                                 File rss = new File(tempFolder, rssS);
                                                 if (rss.exists()) {
                                                     logger.logMessage(context.rss.getString(R.string.adding, rssS));
-                                                    opt.addFile(rss);
+                                                    opt.addFile(rss, zp);
                                                     rss.delete();
                                                 }
                                                 ZipParameters zipParameters = new ZipParameters();
