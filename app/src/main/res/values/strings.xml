@@ -419,4 +419,5 @@
     <string name="nothing_found_to_paste">Nothing found to paste</string>
     <string name="folder">Folder</string>
     <string name="file">File</string>
+    <string name="hide">Hide</string>
 </resources>

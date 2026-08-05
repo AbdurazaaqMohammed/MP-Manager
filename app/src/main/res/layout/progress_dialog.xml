@@ -4,18 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <com.google.android.material.button.MaterialButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:id="@+id/hideButton"
-        style="@style/Widget.Material3.Button.OutlinedButton"
-        android:text="Hide"/>
+<com.google.android.material.button.MaterialButton
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignParentEnd="true"
+    android:id="@+id/hideButton"
+    style="@style/Widget.Material3.Button.OutlinedButton"
+    android:text="@string/hide"/>
 
 <TextView
     android:id="@+id/dialogTitle"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:layout_toStartOf="@id/hideButton"
+    android:layout_alignParentStart="true"
     android:text="@string/loading"
     android:textSize="18sp"
     android:textStyle="bold"
