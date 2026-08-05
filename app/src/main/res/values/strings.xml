@@ -185,6 +185,11 @@
     <string name="files_to_delete">Files To Delete</string>
     <string name="add">Add</string>
     <string name="about">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_description">A free dual pane, Material Design file manager for Android with focus on APKs and the goal to be an open source alternative to MT Manager.</string>
+    <string name="about_by_author">by %1$s</string>
+    <string name="about_open_source_projects">Open Source Projects Used</string>
+    <string name="about_tap_for_license">Tap a project to view its license and source link</string>
 
     <string name="select_all">Select All</string>
     <string name="paste">Paste</string>
