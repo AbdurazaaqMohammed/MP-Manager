@@ -1842,6 +1842,7 @@ public class MainActivity extends AppCompatActivity {
     private void sortZipEntries(List<ZipEntryInfo> entries, String folderPath) {
         if (entries == null)
             return;
+        boolean isApk = isZipFolderApk(folderPath);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         int sortBy = prefs.getInt("sort_by_" + folderPath, prefs.getInt("sort_by", 0));
         boolean reverse = prefs.getBoolean("sort_reverse_" + folderPath, prefs.getBoolean("sort_reverse", false));
@@ -1850,30 +1851,64 @@ public class MainActivity extends AppCompatActivity {
                 return -1;
             if (e2.getName().equals(".."))
                 return 1;
-            int result;
-            switch (sortBy) {
-                case 1:
-                    result = Long.compare(e1.getSize(), e2.getSize());
-                    break;
-                case 2:
-                    result = Long.compare(e1.getLastModified(), e2.getLastModified());
-                    break;
-                case 3:
-                    String ext1 = getExt(e1.getName());
-                    String ext2 = getExt(e2.getName());
-                    result = ext1.compareToIgnoreCase(ext2);
-                    if (result == 0) result = e1.getName().compareToIgnoreCase(e2.getName());
-                    break;
-                default:
-                    result = e1.getName().compareToIgnoreCase(e2.getName());
-                    break;
+            if (isApk) {
+                int p1 = apkEntryPriority(e1);
+                int p2 = apkEntryPriority(e2);
+                if (p1 != p2)
+                    return Integer.compare(p1, p2);
+                if (p1 == APK_PRIORITY_CLASSES) return Integer.compare(classesDexIndex(e1.getName()), classesDexIndex(e2.getName()));
+                return compareZipEntries(e1, e2, sortBy);
             }
+            int result = compareZipEntries(e1, e2, sortBy);
             if (e1.isDirectory() && !e2.isDirectory())
                 return -1;
             if (!e1.isDirectory() && e2.isDirectory())
                 return 1;
             return reverse ? -result : result;
         });
+    }
+
+    private static final int APK_PRIORITY_DIR = 0;
+    private static final int APK_PRIORITY_MANIFEST = 1;
+    private static final int APK_PRIORITY_CLASSES = 2;
+    private static final int APK_PRIORITY_ARSC = 3;
+    private static final int APK_PRIORITY_OTHER = 4;
+
+    private boolean isZipFolderApk(String folderPath) {
+        int bang = folderPath.indexOf('!');
+        String zipPath = bang == -1 ? folderPath : folderPath.substring(0, bang);
+        return zipPath.toLowerCase().endsWith(".apk");
+    }
+
+    private int apkEntryPriority(ZipEntryInfo entry) {
+        if (entry.isDirectory()) return APK_PRIORITY_DIR;
+        String name = entry.getName();
+        if (name.equalsIgnoreCase("AndroidManifest.xml")) return APK_PRIORITY_MANIFEST;
+        if (name.matches("classes\\d*\\.dex")) return APK_PRIORITY_CLASSES;
+        if (name.equals("resources.arsc")) return APK_PRIORITY_ARSC;
+        return APK_PRIORITY_OTHER;
+    }
+
+    private int classesDexIndex(String name) {
+        String num = name.substring("classes".length(), name.length() - ".dex".length());
+        if (num.isEmpty()) return 1;
+        try {
+            return Integer.parseInt(num);
+        } catch (NumberFormatException e) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    private int compareZipEntries(ZipEntryInfo e1, ZipEntryInfo e2, int sortBy) {
+        return switch (sortBy) {
+            case 1 -> Long.compare(e1.getSize(), e2.getSize());
+            case 2 -> Long.compare(e1.getLastModified(), e2.getLastModified());
+            case 3 -> {
+                int ext = getExt(e1.getName()).compareToIgnoreCase(getExt(e2.getName()));
+                yield ext == 0 ? e1.getName().compareToIgnoreCase(e2.getName()) : ext;
+            }
+            default -> e1.getName().compareToIgnoreCase(e2.getName());
+        };
     }
 
     private void forceShowIcons(PopupMenu popupMenu) {
