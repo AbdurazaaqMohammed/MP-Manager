@@ -50,6 +50,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -99,6 +100,7 @@ import com.reandroid.apkeditor.refactor.RefactorOptions;
 import com.reandroid.archive.ArchiveFile;
 
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionLevel;
@@ -154,7 +156,6 @@ import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
-import modder.hub.dexeditor.utils.DexFileSelector;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {
@@ -732,7 +733,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (d == null) return null;
         d = d.mutate();
         DrawableCompat.setTint(d, color);
-        //d.setTint(color);
         return d;
     }
 
@@ -1430,12 +1430,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                         settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                                             }
                                                         } else if (!isInZip) {
-                                                            pm.setText("Deleting " + file.getName());
+                                                            int total = (int) Util.countInsideFolder(file).total();
+                                                            pm.setProgress(0, total);
+                                                            pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
-                                                            if (file.isDirectory())
-                                                                Util.deleteDir(file);
-                                                            else
-                                                                file.delete();
+                                                            if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                                            else file.delete();
                                                             handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
                                                         } else {
                                                             deleteZipEntry(entry);
@@ -1835,23 +1835,99 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             tempFolder.mkdir();
             File tempFile = new File(tempFolder, name);
             tempFile.createNewFile();
-            if(name.endsWith(".dex")) new Thread(() -> {
-                try {
-                    FileHeader fh = zf.getFileHeader("classes.dex");
+            if(name.endsWith(".dex")) {
+                List<String> dexFiles = new ArrayList<>();
+                new Thread(() -> {
+                    try {
+                        FileHeader fh = zf.getFileHeader("classes.dex");
+                        int i = 2;
+                        while (fh != null) {
+                            dexFiles.add(fh.getFileName());
+                            //zf.extractFile(fh, outputDir);
+                            fh = zf.getFileHeader("classes" + i + ".dex");
+                            i++;
+                        }
+                        ProgressManager pm = new ProgressManager(context, false);
+                        int finalI = i;
+                        Thread t = new Thread(() -> {
+                            try {
+                                for (int j = 0, dexFilesSize = dexFiles.size(); j < dexFilesSize; j++) {
+                                    String df = dexFiles.get(j);
+                                    if (pm.dialog != null && pm.dialog.isShowing()) {
+                                        pm.setProgress(j, finalI);
+                                        pm.setText(context.rss.getString(R.string.extracting, df));
+                                    }
+                                    zf.extractFile(zf.getFileHeader(df), outputDir);
+                                }
+                            } catch (ZipException e) {
+                            throw new RuntimeException(e);
+                        }});
+                        t.start();
+                        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+                        builder.setTitle("MultiDex");
+                        CharSequence[] fileNames = new String[dexFiles.size()];
+                        for (int j = 0; j < dexFiles.size(); j++) fileNames[j] = dexFiles.get(j);
 
-                    int i = 2;
-                    while (fh != null) {
-                        zf.extractFile(fh, outputDir);
-                        fh = zf.getFileHeader("classes" + i + ".dex");
-                        i++;
+                        boolean[] selectedItems = new boolean[dexFiles.size()];
+                        int initialIndex = Integer.parseInt(name.replace("classes", "").replace(".dex", "")) - 1;
+                        if (initialIndex != -1) selectedItems[initialIndex] = true;
+                        builder.setMultiChoiceItems(fileNames, selectedItems, (dialog, which, isChecked) -> selectedItems[which] = isChecked);
+
+                        builder.setNeutralButton("Select All", null).setPositiveButton("OK", (dialog, which) -> {
+                           ArrayList<String> selectedPaths = new ArrayList<>();
+                            for (int k = 0; k < selectedItems.length; k++) {
+                                if (selectedItems[k]) selectedPaths.add(new File(tempFolder, dexFiles.get(k)).getPath());
+                            }
+                            if(t.isAlive()) {
+                                pm.show();
+                                try {
+                                    t.join();
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+
+                            context.startActivityForResult(new Intent(context, DexEditorActivity.class)
+                                        .putExtra("theme", context.theme)
+                                        .putStringArrayListExtra("SelectedDexFiles", selectedPaths), 757);
+                        });
+                        builder.setNegativeButton("Cancel", null);
+
+                        context.handler.post(() -> {
+                            AlertDialog dialog = builder.create();
+
+                            dialog.setOnShowListener(dialogInterface -> {
+                                Button invertButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+                                invertButton.setOnClickListener(v -> {
+                                    String buttonText = invertButton.getText().toString();
+
+                                    if (buttonText.equals("Select All")) {
+                                        // First click: select all
+                                        for (int i1 = 0; i1 < selectedItems.length; i1++) {
+                                            selectedItems[i1] = true;
+                                            dialog.getListView().setItemChecked(i1, true);
+                                        }
+                                        invertButton.setText("Invert Selection");
+                                    } else {
+                                        // Subsequent clicks: invert selection
+                                        for (int i1 = 0; i1 < selectedItems.length; i1++) {
+                                            selectedItems[i1] = !selectedItems[i1];
+                                            dialog.getListView().setItemChecked(i1, selectedItems[i1]);
+                                        }
+                                    }
+                                });
+                            });
+                            dialog.show();
+                        });
+
+//                        DexFileSelector dexSelector = new DexFileSelector(context, outputDir + File.separatorChar + name);
+//                        dexSelector.setOnFilesSelectedListener(selectedFilePaths -> context.startActivityForResult(new Intent(context, DexEditorActivity.class).putExtra("theme", context.theme).putStringArrayListExtra("SelectedDexFiles", (ArrayList<String>) selectedFilePaths), 757));
+//                        context.handler.post(dexSelector::showDialog);
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
                     }
-                    DexFileSelector dexSelector = new DexFileSelector(context, outputDir + File.separatorChar + name);
-                    dexSelector.setOnFilesSelectedListener(selectedFilePaths -> context.startActivityForResult(new Intent(context, DexEditorActivity.class).putExtra("theme", context.theme).putStringArrayListExtra("SelectedDexFiles", (ArrayList<String>) selectedFilePaths), 757));
-                    context.handler.post(dexSelector::showDialog);
-                } catch (Exception e) {
-                    new ErrorUtil(context).showError(e);
-                }
-            }).start();
+                }).start();
+            }
             else if(name.endsWith(".xml")) {
                 boolean isAxml = FileUtils.isAxml(is);
                 if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
@@ -1885,9 +1961,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     public void selectAll() {
         isMultiSelectMode = true;
-        for (int i = (isInZip ? 0 : 1); i < values.length; i++) {
-            selectedPositions.add(i);
-        }
+        for (int i = (isInZip ? 0 : 1); i < values.length; i++) selectedPositions.add(i);
         notifyDataSetChanged();
     }
 
@@ -2306,7 +2380,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     protectedStr = context.rss.getString(R.string.unknown);
                 }
 
-                String finalSignatureStr = signatureStr;
                 String finalProtectedStr = protectedStr;
                 context.handler.post(() -> {
                     apkIcon.setImageDrawable(icon);
@@ -2315,19 +2388,28 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     verCode.setText(Integer.toString(vCode));
                     pkgName.setText(pkg);
                     uiHelper.scrollTextView(pkgName);
-                    signaturesInApk.setText(finalSignatureStr);
+                    signaturesInApk.setText(signatureStr);
                     protectedDisplay.setText(finalProtectedStr);
                 });
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
+            View.OnLongClickListener lcl = v -> {
+                if(v instanceof TextView tv) CopyUtil.copyToClipboard(context, tv.getText());
+                return false;
+            };
+            signaturesInApk.setOnLongClickListener(lcl);
+            protectedDisplay.setOnLongClickListener(lcl);
+            pkgName.setOnLongClickListener(lcl);
+            apkTitle.setOnLongClickListener(lcl);
+            apkVersionName.setOnLongClickListener(lcl);
+            verCode.setOnLongClickListener(lcl);
         }).start();
     }
 
     private String getPackageNameFromApk(String filePath) {
         try {
-            PackageManager pm = context.getPackageManager();
-            PackageInfo pi = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
+            PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
             if (pi != null && pi.applicationInfo != null) return pi.applicationInfo.packageName;
         } catch (Exception ignored) {}
         return "";
@@ -2346,11 +2428,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     .show();
             return;
         }
-        if (filePaths.size() > 1) {
-            showMultiFileCommandDialog(profiles, filePaths, chPm);
-        } else {
-            buildAndShowCommandDialog(profiles, filePaths, true, chPm);
-        }
+        if (filePaths.size() > 1) showMultiFileCommandDialog(profiles, filePaths, chPm);
+        else buildAndShowCommandDialog(profiles, filePaths, true, chPm);
     }
 
     private void showMultiFileCommandDialog(List<Profile> profiles, ArrayList<String> filePaths, ProfileManager chPm) {

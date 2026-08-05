@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -15,6 +14,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.preference.PreferenceManager;
@@ -29,10 +29,10 @@ import java.io.IOException;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class ProgressManager {
-    private final Activity activity;
+    private final AppCompatActivity activity;
     private final Handler handler;
     private final boolean indeterminate;
-    private AlertDialog dialog;
+    public AlertDialog dialog;
     private String currentText;
     private int progressVal, maxVal;
     private boolean hidden, dismissed;
@@ -41,7 +41,7 @@ public class ProgressManager {
     private static final String CHANNEL_ID = "progress_channel";
     private static final int NOTIFICATION_ID = 1001;
 
-    public ProgressManager(Activity activity, boolean indeterminate) {
+    public ProgressManager(AppCompatActivity activity, boolean indeterminate) {
         this.activity = activity;
         this.handler = new Handler(Looper.getMainLooper());
         this.indeterminate = indeterminate;
