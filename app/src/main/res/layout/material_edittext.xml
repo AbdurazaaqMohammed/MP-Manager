@@ -11,6 +11,7 @@
         android:id="@+id/m_et_edittext"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:layout_margin="5dp"
         android:importantForAutofill="no"
         android:hint="@string/enter_path"
         android:inputType="text"

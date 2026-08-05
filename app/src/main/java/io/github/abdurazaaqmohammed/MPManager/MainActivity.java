@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.MPManager;
 
+import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
 import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPermissions;
 
 import android.Manifest;
@@ -44,7 +45,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
-import com.google.android.material.textfield.TextInputLayout;
 import com.lilincpp.github.libezftp.EZFtpServer;
 import com.lilincpp.github.libezftp.user.EZFtpUser;
 import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
@@ -53,7 +53,7 @@ import com.lilincpp.github.libezftp.EZFtpClient;
 import com.lilincpp.github.libezftp.IEZFtpClient;
 import com.lilincpp.github.libezftp.EZFtpFile;
 import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
-import java.nio.charset.StandardCharsets;
+
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -66,7 +66,6 @@ import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
-import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileManager;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
@@ -145,7 +144,6 @@ import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.github.paul035.LocaleHelper;
-import com.google.common.io.Files;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apkeditor.compile.BuildOptions;
 import com.reandroid.apkeditor.compile.Builder;
@@ -157,12 +155,12 @@ import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
+@SuppressWarnings("SequencedCollectionMethodCanBeUsed")
 public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
     private File homeDir1;
     private File homeDir2;
     private MediaProjectionManager mediaProjectionManager;
-    private String lastVerChecked;
     public File pane1Folder;
     public File pane2Folder;
     public int lastPaneSelected = 1;
@@ -191,7 +189,6 @@ public class MainActivity extends AppCompatActivity {
     private String currentPane2Filter = "";
 
     private MiniPlayerDialog miniPlayerDialog;
-    private ProfileManager profileManager;
     private MaterialAutoCompleteTextView profileSpinner;
     private ImageButton profileManageButton;
 
@@ -203,8 +200,7 @@ public class MainActivity extends AppCompatActivity {
             for (String bookmark : savedBookmarks) {
                 if (!TextUtils.isEmpty(bookmark)) {
                     File bookmarked = new File(bookmark);
-                    if (bookmarked.exists())
-                        bookmarks.add(bookmarked);
+                    if (bookmarked.exists()) bookmarks.add(bookmarked);
                 }
             }
         }
@@ -224,17 +220,12 @@ public class MainActivity extends AppCompatActivity {
         boolean isVideo = filePath.endsWith(".mp4") || filePath.endsWith(".mkv") || filePath.endsWith(".avi")
                 || filePath.endsWith(".mov") || filePath.endsWith(".webm") || filePath.endsWith(".3gp")
                 || filePath.endsWith(".ts") || filePath.endsWith(".flv") || filePath.endsWith(".wmv");
-        boolean useActivity = isVideo || PreferenceManager.getDefaultSharedPreferences(this)
-                .getBoolean("player_open_activity", false);
-        if (useActivity) {
-            MediaPlayerActivity.openAndPlay(this, filePath);
-        } else {
+        boolean useActivity = isVideo || PreferenceManager.getDefaultSharedPreferences(this).getBoolean("player_open_activity", false);
+        if (useActivity) MediaPlayerActivity.openAndPlay(this, filePath);
+        else {
             PlayerManager pm = PlayerManager.getInstance(this);
             pm.play(PlayerManager.buildMediaItem(this, filePath));
-            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) {
-                miniPlayerDialog = new MiniPlayerDialog(this);
-                miniPlayerDialog.show();
-            }
+            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
         }
     }
 
@@ -244,7 +235,6 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         settings.edit()
                 .putString("bookmarks", bookmarks.toString())
-                //.putString("keyPath", signatureKeyPath)
                 .putBoolean("systemTheme", systemTheme)
                 .putInt("theme", theme)
                 .apply();
@@ -265,22 +255,17 @@ public class MainActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 startActivityForResult(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
                         Uri.parse("package:" + getPackageName())), 0);
-            } else if (Build.VERSION.SDK_INT > 22)
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+            } else if (Build.VERSION.SDK_INT > 22) requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 0) if (doesNotHaveStoragePerm(this)) {
-            Extensions.showMessage(this, "Storage perm needed as file manager");
-        } else recreate();
-    }
-
-
-    public static boolean doesNotHaveStoragePerm(Context context) {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ? !Environment.isExternalStorageManager() : Build.VERSION.SDK_INT > 22 && context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED;
+        if (requestCode == 0) {
+            if (doesNotHaveStoragePerm(this)) Extensions.showMessage(this, "Storage perm needed as file manager");
+            else recreate();
+        }
     }
 
     @Override
@@ -293,9 +278,8 @@ public class MainActivity extends AppCompatActivity {
             boolean pane1 = lastPaneSelected == 1;
             if (requestCode == 11 && resultCode == RESULT_OK) {
                 String dirToLoad = data.getStringExtra("dirToLoad");
-                if (dirToLoad != null) {
-                    loadFolderInPane(new File(dirToLoad), pane1);
-                } else {
+                if (dirToLoad != null) loadFolderInPane(new File(dirToLoad), pane1);
+                else {
                     Uri path = data.getData();
                     if (path != null) loadFolderInPane(new File(path.toString()), pane1);
                 }
@@ -314,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
                     autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                     autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                     ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-                    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+                    new MaterialAlertDialogBuilder(this)
                         .setTitle("File modified")
                         .setView(ll)
                         .setPositiveButton("Yes", (dialog, which) -> {
@@ -345,8 +329,7 @@ public class MainActivity extends AppCompatActivity {
                                     new ErrorUtil(this).showError(e);
                                 }
                             }).start();
-                        }).setNegativeButton(rss.getString(R.string.cancel), null);
-                    builder.show();
+                        }).setNegativeButton(rss.getString(R.string.cancel), null).show();
                 }
             }
         }
@@ -403,7 +386,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private boolean isServiceBound = false;
-    private final androidx.activity.result.ActivityResultLauncher<Intent> colorPickerLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+    private final ActivityResultLauncher<Intent> colorPickerLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
         if (result.getResultCode() == RESULT_OK) {
             Intent serviceIntent = new Intent(this, ColorPickerService.class)
             .putExtra(ColorPickerService.EXTRA_RESULT_CODE, result.getResultCode())
@@ -411,7 +394,7 @@ public class MainActivity extends AppCompatActivity {
             if(Build.VERSION.SDK_INT > Build.VERSION_CODES.O) startForegroundService(serviceIntent);
             else startService(serviceIntent);
         } else {
-            Extensions.showMessage(this, "Screen capture permission needed for color picker");
+            Extensions.showMessage(this, rss.getString(R.string.screen_capture_permission_needed_for_color_picker));
         }});
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -447,7 +430,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (!LegacyUtils.supportsWriteExternalStorage) {
-            // EdgeToEdge.enable(this);
             getWindow().setStatusBarContrastEnforced(true);
             getWindow().setNavigationBarContrastEnforced(true);
         }
@@ -457,8 +439,7 @@ public class MainActivity extends AppCompatActivity {
             Security.addProvider(new android.sun.security.provider.JavaKeyStoreProvider());
         }).start();
 
-        requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
 
         new Thread(() -> {
             File frameworks = new File("/storage/emulated/0/MP Manager/frameworks/");
@@ -495,8 +476,6 @@ public class MainActivity extends AppCompatActivity {
                 FileUtils.copyFile(is36, new File(frameworks, "android_36.apk"));
             } catch (Exception ignored) { }
         }).start();
-
-        lastVerChecked = settings.getString("lastVerChecked", null);
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
@@ -546,9 +525,9 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout container = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
-        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Settings" };
+        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Settings"};
         int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
-        sidebar.setAdapter(new ArrayAdapter<String>(this, R.layout.item_dropdown_option, options) {
+        sidebar.setAdapter(new ArrayAdapter<>(this, R.layout.item_dropdown_option, options) {
             @NonNull
             @Override
             public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
@@ -558,8 +537,10 @@ public class MainActivity extends AppCompatActivity {
 
                 convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
                 convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-                if(position == 3 && Build.VERSION.SDK_INT < 24) convertView.setVisibility(View.GONE);
-                if(position == 4 && Build.VERSION.SDK_INT < 20) convertView.setVisibility(View.GONE); // Technically floating window works in sdk 19 but you can't exit the app with it
+                if (position == 3 && Build.VERSION.SDK_INT < 24)
+                    convertView.setVisibility(View.GONE);
+                if (position == 4 && Build.VERSION.SDK_INT < 20)
+                    convertView.setVisibility(View.GONE); // Technically floating window works in sdk 19 but you can't exit the app with it
                 return convertView;
             }
         });
@@ -634,16 +615,15 @@ public class MainActivity extends AppCompatActivity {
         GestureDetectorCompat bottomBarGestureDetector = new GestureDetectorCompat(this,
                 new GestureDetector.SimpleOnGestureListener() {
                     @Override
-                    public boolean onDown(MotionEvent e) {
+                    public boolean onDown(@NonNull MotionEvent e) {
                         return true; // MUST return true to receive subsequent events
                     }
 
                     @Override
-                    public boolean onFling(MotionEvent e1, MotionEvent e2,
-                            float velocityX, float velocityY) {
-                        if (e1 != null && e2 != null
-                                && e1.getY() - e2.getY() > 50 // upward movement (px)
-                                && velocityY < -200) { // negative = upward velocity
+                    public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2,
+                                           float velocityX, float velocityY) {
+                        // upward movement (px)
+                        if (e1 != null && e1.getY() - e2.getY() > 50 && velocityY < -200) { // negative = upward velocity
                             openBookmarksDrawer();
                             return true;
                         }
@@ -681,35 +661,7 @@ public class MainActivity extends AppCompatActivity {
             new ErrorUtil(this).showError(e);
         }
 
-        TextView currentFolderView = findViewById(R.id.currentFolderPath);
-        currentFolderView.setText(TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory().getPath() : homeDir1Path);
-        currentFolderView.setOnLongClickListener(v -> {
-            CopyUtil.copyToClipboard(this, ((TextView) v).getText());
-            return false;
-        });
-        currentFolderView.setOnClickListener(v -> {
 
-            View textInputLayout = LayoutInflater.from(this).inflate(R.layout.material_edittext, null);//new TextInputLayout(this, null, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox);
-            TextInputEditText input = textInputLayout.findViewById(R.id.m_et_edittext);
-            input.setText(((TextView) v).getText());
-            dialogUtil.getDialogBuilder()
-                    .setTitle(R.string.path)
-                    .setView(textInputLayout)
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("OK", (dialog, which) -> {
-                        File inputPath = new File(input.getText().toString());
-                        if (inputPath.exists() && inputPath.isDirectory() || (!inputPath.exists() && inputPath.mkdirs())) {
-                            boolean isPane1 = lastPaneSelected == 1;
-                            if (isPane1)
-                                pane1Folder = inputPath;
-                            else
-                                pane2Folder = inputPath;
-                            loadFolderInPane(inputPath, isPane1);
-                        } else {
-                            Extensions.showMessage(MainActivity.this, "Failed to navigate to or create path " + inputPath);
-                        }
-                    }).show();
-        });
 
         RecyclerView pane1 = findViewById(R.id.listViewPane1);
         RecyclerView pane2 = findViewById(R.id.listViewPane2);
@@ -736,7 +688,6 @@ public class MainActivity extends AppCompatActivity {
 
 
         pane2.setOnTouchListener((v, event) -> {
-
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 2) {
                 lastPaneSelected = 2;
                 RecyclerView.Adapter a = pane2.getAdapter();
@@ -752,219 +703,257 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        setupNavigationButtons();
-
-        ImageView addButton = findViewById(R.id.addButton);
-        addButton.setOnClickListener(v -> {
-            EditText input = new EditText(MainActivity.this);
-            input.setHint("Enter name");
-            AlertDialog ad = dialogUtil.getDialogBuilder()
-                    .setTitle("Create")
-                    .setView(input)
-                    .setNegativeButton("Folder", (dialog, which) -> {
-                        boolean isPane1 = lastPaneSelected == 1;
-                        File ogFolder = isPane1 ? pane1Folder : pane2Folder;
-                        String inputStr = input.getText().toString();
-                        if (new File(ogFolder, inputStr).mkdir())
-                            loadFolderInPane(ogFolder, isPane1);
-                        else
-                            Extensions.showMessage(MainActivity.this, "Failed to create folder " + inputStr);
-                    })
-                    .setNeutralButton("Paste", null)
-                    .setPositiveButton("File", (dialog, which) -> {
-                        boolean isPane1 = lastPaneSelected == 1;
-                        File ogFolder = isPane1 ? pane1Folder : pane2Folder;
-                        String inputStr = input.getText().toString();
-                        try {
-                            if (new File(ogFolder, inputStr).createNewFile()) {
-                                loadFolderInPane(ogFolder, isPane1);
+        new Thread(() -> {
+            TextView currentFolderView = findViewById(R.id.currentFolderPath);
+            currentFolderView.setText(TextUtils.isEmpty(homeDir1Path) ? Environment.getExternalStorageDirectory().getPath() : homeDir1Path);
+            currentFolderView.setOnLongClickListener(v -> {
+                CopyUtil.copyToClipboard(this, ((TextView) v).getText());
+                return false;
+            });
+            currentFolderView.setOnClickListener(v -> {
+                View textInputLayout = LayoutInflater.from(this).inflate(R.layout.material_edittext, null);//new TextInputLayout(this, null, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox);
+                EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
+                input.setText(((TextView) v).getText());
+                AlertDialog ad = dialogUtil.getDialogBuilder()
+                        .setTitle(R.string.path)
+                        .setView(textInputLayout)
+                        .setNegativeButton("Cancel", null)
+                        .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
+                        .setPositiveButton("OK", (dialog, which) -> {
+                            File inputPath = new File(input.getText().toString());
+                            if (inputPath.exists() && inputPath.isDirectory() || (!inputPath.exists() && inputPath.mkdirs())) {
+                                boolean isPane1 = lastPaneSelected == 1;
+                                if (isPane1)
+                                    pane1Folder = inputPath;
+                                else
+                                    pane2Folder = inputPath;
+                                loadFolderInPane(inputPath, isPane1);
                             } else {
-                                Extensions.showMessage(MainActivity.this, "Failed to create file " + inputStr);
+                                Extensions.showMessage(MainActivity.this, "Failed to navigate to or create path " + inputPath);
                             }
-                        } catch (IOException e) {
-                            Extensions.showMessage(MainActivity.this, "Failed to create file " + inputStr);
-                        }
-                    }).create();
-            ad.show();
-            ad.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
-                int selectionStart = input.getSelectionStart();
-                int selectionEnd = input.getSelectionEnd();
-                if (selectionStart != selectionEnd) {
-                    input.getText().delete(selectionStart, selectionEnd);
-                }
-                CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                if (!TextUtils.isEmpty(text)) input.getText().insert(selectionStart, text);
-            });
-        });
-
-        ImageView syncPaneButton = findViewById(R.id.syncPaneButton);
-        syncPaneButton.setOnClickListener(v -> {
-            RecyclerView.Adapter a = getCurrentPane().getAdapter();
-            if(a instanceof MainFilesArrayAdapter) {
-                if (lastPaneSelected == 1)
-                    loadFolderInPane(pane2Folder = ((MainFilesArrayAdapter) a).isInZip ? pane1Folder.getParentFile() : pane1Folder, false);
-                else
-                    loadFolderInPane(pane1Folder = ((MainFilesArrayAdapter) a).isInZip ? pane2Folder.getParentFile() : pane2Folder, true);
-            }
-        });
-
-        ImageView moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
-        moreOptionsMenu.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(MainActivity.this, v);
-            Menu menu = popup.getMenu();
-            menu.add(0, 0, 0, "Refresh").setIcon(R.drawable.baseline_refresh_24);
-            menu.add(0, 1, 0, "Filter").setIcon(R.drawable.baseline_filter_list_24);
-            menu.add(0, 2, 0, "Search").setIcon(R.drawable.baseline_search_24);
-            menu.add(0, 3, 0, "Select all").setIcon(R.drawable.baseline_select_all_24);
-            menu.add(0, 4, 0, "Sort").setIcon(R.drawable.baseline_sort_24);
-
-            SubMenu hiddenMenu = menu.addSubMenu(0, 5, 0, "Hidden files");
-            hiddenMenu.setIcon(R.drawable.visibility_off_24px);
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-            MenuItem sysItem = hiddenMenu.add(0, 6, 0, "Show system hidden files");
-            sysItem.setCheckable(true).setChecked(prefs.getBoolean("show_system_hidden", false));
-            MenuItem manItem = hiddenMenu.add(0, 7, 0, "Show manually hidden files");
-            manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
-
-            RecyclerView.Adapter a = getCurrentPane().getAdapter();
-            if ((a instanceof MainFilesArrayAdapter)) {
-                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-                MenuItem hideSel = hiddenMenu.add(0, 8, 0, "Hide selected files");
-                hideSel.setEnabled(adapter != null && adapter.isMultiSelectMode());
-                hiddenMenu.add(0, 9, 0, "Edit hidden files").setIcon(R.drawable.baseline_drive_file_rename_outline_24);
-            }
-
-            menu.add(0, 10, 0, "Add to bookmarks").setIcon(R.drawable.baseline_bookmark_24);
-            menu.add(0, 11, 0, "Set as home folder").setIcon(R.drawable.baseline_home_24);
-            menu.add(0, 12, 0, "Swap panes").setIcon(R.drawable.baseline_swap_horiz_24);
-            menu.add(0, 13, 0, "Preferences").setIcon(R.drawable.baseline_settings_24);
-            menu.add(0, 14, 0, "Exit").setIcon(R.drawable.baseline_exit_to_app_24);
-
-            popup.setOnMenuItemClickListener(item -> {
-                String title = item.getTitle().toString();
-                switch (title) {
-                    case "Refresh":
-                        reloadCurrentFolder();
-                        break;
-                    case "Filter":
-                        LinearLayout topBar = findViewById(R.id.topBar);
-                        LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
-                        EditText filterBar = (EditText) topBar.getChildAt(2);
-                        if (pathLayout.getVisibility() == View.VISIBLE) {
-                            pathLayout.setVisibility(View.GONE);
-                            filterBar.setVisibility(View.VISIBLE);
-                            filterBar.requestFocus();
-                        } else {
-                            pathLayout.setVisibility(View.VISIBLE);
-                            filterBar.setVisibility(View.GONE);
-                            filterBar.setText("");
-                        }
-                        break;
-                    case "Search":
-                        showSearchDialog();
-                        break;
-                    case "Select all":
-                        if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
-                        break;
-                    case "Sort":
-                        showSortDialog();
-                        break;
-                    case "Show system hidden files": {
-                        boolean isChecked = !item.isChecked();
-                        item.setChecked(isChecked);
-                        prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
-                        reloadCurrentFolder();
-                        break;
+                        }).show();
+                ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
+                    int selectionStart = input.getSelectionStart();
+                    int selectionEnd = input.getSelectionEnd();
+                    if (selectionStart != selectionEnd) {
+                        input.getText().delete(selectionStart, selectionEnd);
                     }
-                    case "Show manually hidden files": {
-                        boolean isChecked = !item.isChecked();
-                        item.setChecked(isChecked);
-                        prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
-                        reloadCurrentFolder();
-                        break;
-                    }
-                    case "Hide selected files":
-                        Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
-                        for (Object obj : ((MainFilesArrayAdapter) a).getSelectedFiles()) {
-                            if (obj instanceof File)
-                                manualHidden.add(((File) obj).getPath());
-                            else if (obj instanceof ZipEntryInfo)
-                                manualHidden.add(((ZipEntryInfo) obj).getFullPath());
-                        }
-                        prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
-                        ((MainFilesArrayAdapter) a).clearSelection();
-                        reloadCurrentFolder();
-                        break;
-                    case "Edit hidden files":
-                        showEditHiddenFilesDialog();
-                        break;
-                    case "Add to bookmarks": {
-                        boolean isPane1 = lastPaneSelected == 1;
-                        addBookmark(isPane1 ? pane1Folder : pane2Folder);
-                        Extensions.showMessage(MainActivity.this, "Added to bookmarks");
-                        break;
-                    }
-                    case "Set as home folder": {
-                        boolean isPane1 = lastPaneSelected == 1;
-                        prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
-                                .apply();
-                        Extensions.showMessage(MainActivity.this, "Set as home folder");
-                        break;
-                    }
-                    case "Swap panes":
-                        File temp = pane1Folder;
-                        pane1Folder = pane2Folder;
-                        pane2Folder = temp;
-                        loadFolderInPane(pane1Folder, true);
-                        loadFolderInPane(pane2Folder, false);
-                        break;
-                    case "Preferences":
-                        showSettingsDialog();
-                        break;
-                    case "Exit":
-                        finishAffinity();
-                        break;
-                }
-                return true;
-            });
-            forceShowIcons(popup);
-            popup.show();
-        });
-
-        ImageView upButton = findViewById(R.id.upButton);
-        upButton.setOnClickListener(v -> {
-            boolean isPane1 = lastPaneSelected == 1;
-            RecyclerView.Adapter a = getCurrentPane().getAdapter();
-            if ((a instanceof MainFilesArrayAdapter)) {
-                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
-                if (adapter.isInZip) {
-                    File zipFile = isPane1 ? pane1Folder : pane2Folder;
-                    if (TextUtils.isEmpty(adapter.currentZipPath)) {
-                        if (zipFile.getParentFile() != null)
-                            loadFolderInPane(zipFile.getParentFile(), isPane1);
-                    } else {
-                        File parentInZip = new File(adapter.currentZipPath).getParentFile();
-                        loadZipFolderInPane(zipFile, parentInZip != null ? parentInZip.getPath() : "", isPane1, true);
-                    }
-                } else loadFolderInPane((File) adapter.getItem(0), isPane1);
-            } else {
-                ftpClient.getCurDirPath(new OnEZFtpCallBack<String>() {
-                    @Override
-                    public void onSuccess(String response) {
-                        int startIndex = response.indexOf(File.separator);
-                        int endIndex = response.lastIndexOf(File.separator);
-                        fetchFtpDirAndLoad((startIndex == endIndex) ? File.separator : response.substring(0, endIndex), isPane1);
-                    }
-
-                    @Override
-                    public void onFail(int code, String msg) {
-                    }
+                    CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
+                    if (TextUtils.isEmpty(text)) Extensions.showMessage(this, rss.getString(R.string.nothing_found_to_paste));
+                    else input.getText().insert(selectionStart, text);
                 });
-            }
-        });
-        setupFilterBar();
+            });
+            View addButton = findViewById(R.id.addButton);
+            addButton.setOnLongClickListener(this::showMsgOnLongPress);
+            addButton.setOnClickListener(v -> {
+                View textInputLayout = LayoutInflater.from(this).inflate(R.layout.enter_name, null);
+                EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
+                AlertDialog ad = dialogUtil.getDialogBuilder()
+                        .setTitle("Create")
+                        .setView(textInputLayout)
+                        .setNegativeButton(rss.getString(R.string.folder), (dialog, which) -> {
+                            boolean isPane1 = lastPaneSelected == 1;
+                            File ogFolder = isPane1 ? pane1Folder : pane2Folder;
+                            String inputStr = input.getText().toString();
+                            if (new File(ogFolder, inputStr).mkdir()) loadFolderInPane(ogFolder, isPane1);
+                            else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_folder, inputStr));
+                        })
+                        .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
+                        .setPositiveButton(rss.getString(R.string.file), (dialog, which) -> {
+                            boolean isPane1 = lastPaneSelected == 1;
+                            File ogFolder = isPane1 ? pane1Folder : pane2Folder;
+                            String inputStr = input.getText().toString();
+                            try {
+                                if (new File(ogFolder, inputStr).createNewFile()) loadFolderInPane(ogFolder, isPane1);
+                                else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
+                            } catch (IOException e) {
+                                Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
+                            }
+                        }).show();
+                ad.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
+                    int selectionStart = input.getSelectionStart();
+                    int selectionEnd = input.getSelectionEnd();
+                    if (selectionStart != selectionEnd) {
+                        input.getText().delete(selectionStart, selectionEnd);
+                    }
+                    CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
+                    if (TextUtils.isEmpty(text)) Extensions.showMessage(MainActivity.this, rss.getString(R.string.nothing_found_to_paste));
+                    else input.getText().insert(selectionStart, text);
+                });
+            });
+
+            View syncPaneButton = findViewById(R.id.syncPaneButton);
+            syncPaneButton.setOnLongClickListener(this::showMsgOnLongPress);
+            syncPaneButton.setOnClickListener(v -> {
+                RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                if(a instanceof MainFilesArrayAdapter mainFilesArrayAdapter) {
+                    if (lastPaneSelected == 1)
+                        loadFolderInPane(pane2Folder = mainFilesArrayAdapter.isInZip ? pane1Folder.getParentFile() : pane1Folder, false);
+                    else
+                        loadFolderInPane(pane1Folder = mainFilesArrayAdapter.isInZip ? pane2Folder.getParentFile() : pane2Folder, true);
+                }
+            });
+
+            View moreOptionsMenu = findViewById(R.id.moreOptionsMenu);
+            moreOptionsMenu.setOnLongClickListener(this::showMsgOnLongPress);
+            moreOptionsMenu.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(MainActivity.this, v);
+                Menu menu = popup.getMenu();
+                menu.add(0, 0, 0, "Refresh").setIcon(R.drawable.baseline_refresh_24);
+                menu.add(0, 1, 0, "Filter").setIcon(R.drawable.baseline_filter_list_24);
+                menu.add(0, 2, 0, "Search").setIcon(R.drawable.baseline_search_24);
+                menu.add(0, 3, 0, "Select all").setIcon(R.drawable.baseline_select_all_24);
+                menu.add(0, 4, 0, "Sort").setIcon(R.drawable.baseline_sort_24);
+
+                SubMenu hiddenMenu = menu.addSubMenu(0, 5, 0, "Hidden files");
+                hiddenMenu.setIcon(R.drawable.visibility_off_24px);
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                MenuItem sysItem = hiddenMenu.add(0, 6, 0, "Show system hidden files");
+                sysItem.setCheckable(true).setChecked(prefs.getBoolean("show_system_hidden", false));
+                MenuItem manItem = hiddenMenu.add(0, 7, 0, "Show manually hidden files");
+                manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
+
+                RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                if ((a instanceof MainFilesArrayAdapter)) {
+                    MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
+                    MenuItem hideSel = hiddenMenu.add(0, 8, 0, "Hide selected files");
+                    hideSel.setEnabled(adapter != null && adapter.isMultiSelectMode());
+                    hiddenMenu.add(0, 9, 0, "Edit hidden files").setIcon(R.drawable.baseline_drive_file_rename_outline_24);
+                }
+
+                menu.add(0, 10, 0, "Add to bookmarks").setIcon(R.drawable.baseline_bookmark_24);
+                menu.add(0, 11, 0, "Set as home folder").setIcon(R.drawable.baseline_home_24);
+                menu.add(0, 12, 0, "Swap panes").setIcon(R.drawable.baseline_swap_horiz_24);
+                menu.add(0, 13, 0, "Preferences").setIcon(R.drawable.baseline_settings_24);
+                menu.add(0, 14, 0, "Exit").setIcon(R.drawable.baseline_exit_to_app_24);
+
+                popup.setOnMenuItemClickListener(item -> {
+                    String title = item.getTitle().toString();
+                    switch (title) {
+                        case "Refresh":
+                            reloadCurrentFolder();
+                            break;
+                        case "Filter":
+                            LinearLayout topBar = findViewById(R.id.topBar);
+                            LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
+                            EditText filterBar = (EditText) topBar.getChildAt(2);
+                            if (pathLayout.getVisibility() == View.VISIBLE) {
+                                pathLayout.setVisibility(View.GONE);
+                                filterBar.setVisibility(View.VISIBLE);
+                                filterBar.requestFocus();
+                            } else {
+                                pathLayout.setVisibility(View.VISIBLE);
+                                filterBar.setVisibility(View.GONE);
+                                filterBar.setText("");
+                            }
+                            break;
+                        case "Search":
+                            showSearchDialog();
+                            break;
+                        case "Select all":
+                            if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
+                            break;
+                        case "Sort":
+                            showSortDialog();
+                            break;
+                        case "Show system hidden files": {
+                            boolean isChecked = !item.isChecked();
+                            item.setChecked(isChecked);
+                            prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
+                            reloadCurrentFolder();
+                            break;
+                        }
+                        case "Show manually hidden files": {
+                            boolean isChecked = !item.isChecked();
+                            item.setChecked(isChecked);
+                            prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
+                            reloadCurrentFolder();
+                            break;
+                        }
+                        case "Hide selected files":
+                            Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
+                            for (Object obj : ((MainFilesArrayAdapter) a).getSelectedFiles()) {
+                                if (obj instanceof File)
+                                    manualHidden.add(((File) obj).getPath());
+                                else if (obj instanceof ZipEntryInfo)
+                                    manualHidden.add(((ZipEntryInfo) obj).getFullPath());
+                            }
+                            prefs.edit().putStringSet("manually_hidden_files", manualHidden).apply();
+                            ((MainFilesArrayAdapter) a).clearSelection();
+                            reloadCurrentFolder();
+                            break;
+                        case "Edit hidden files":
+                            showEditHiddenFilesDialog();
+                            break;
+                        case "Add to bookmarks": {
+                            boolean isPane1 = lastPaneSelected == 1;
+                            addBookmark(isPane1 ? pane1Folder : pane2Folder);
+                            Extensions.showMessage(MainActivity.this, "Added to bookmarks");
+                            break;
+                        }
+                        case "Set as home folder": {
+                            boolean isPane1 = lastPaneSelected == 1;
+                            prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
+                                    .apply();
+                            Extensions.showMessage(MainActivity.this, "Set as home folder");
+                            break;
+                        }
+                        case "Swap panes":
+                            File temp = pane1Folder;
+                            pane1Folder = pane2Folder;
+                            pane2Folder = temp;
+                            loadFolderInPane(pane1Folder, true);
+                            loadFolderInPane(pane2Folder, false);
+                            break;
+                        case "Preferences":
+                            showSettingsDialog();
+                            break;
+                        case "Exit":
+                            finishAffinity();
+                            break;
+                    }
+                    return true;
+                });
+                forceShowIcons(popup);
+                popup.show();
+            });
+
+            View upButton = findViewById(R.id.upButton);
+            upButton.setOnLongClickListener(this::showMsgOnLongPress);
+            upButton.setOnClickListener(v -> {
+                boolean isPane1 = lastPaneSelected == 1;
+                RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                if ((a instanceof MainFilesArrayAdapter adapter)) {
+                    if (adapter.isInZip) {
+                        File zipFile = isPane1 ? pane1Folder : pane2Folder;
+                        if (TextUtils.isEmpty(adapter.currentZipPath)) {
+                            if (zipFile.getParentFile() != null)
+                                loadFolderInPane(zipFile.getParentFile(), isPane1);
+                        } else {
+                            File parentInZip = new File(adapter.currentZipPath).getParentFile();
+                            loadZipFolderInPane(zipFile, parentInZip != null ? parentInZip.getPath() : "", isPane1, true);
+                        }
+                    } else loadFolderInPane((File) adapter.getItem(0), isPane1);
+                } else {
+                    ftpClient.getCurDirPath(new OnEZFtpCallBack<>() {
+                        @Override
+                        public void onSuccess(String response) {
+                            int startIndex = response.indexOf(File.separator);
+                            int endIndex = response.lastIndexOf(File.separator);
+                            fetchFtpDirAndLoad((startIndex == endIndex) ? File.separator : response.substring(0, endIndex), isPane1);
+                        }
+
+                        @Override
+                        public void onFail(int code, String msg) {
+                        }
+                    });
+                }
+            });
+            setupFilterBar();
+        }).start();
 
         handler.post(() -> {
+            setupNavigationButtons();
             StorageUtil.populateStorageUI(this, container);
             File[] dir1Files = homeDir1.listFiles();
             if (dir1Files != null) {
@@ -980,8 +969,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupNavigationButtons() {
-        ImageView backButton = findViewById(R.id.backButton);
-        ImageView forwardButton = findViewById(R.id.forwardButton);
+        View backButton = findViewById(R.id.backButton);
+        View forwardButton = findViewById(R.id.forwardButton);
+        backButton.setOnLongClickListener(this::showMsgOnLongPress);
+        forwardButton.setOnLongClickListener(this::showMsgOnLongPress);
         backButton.setOnClickListener(v -> navigateBack(lastPaneSelected == 1));
         forwardButton.setOnClickListener(v -> navigateForward(lastPaneSelected == 1));
         updateNavigationButtons();
@@ -1000,8 +991,7 @@ public class MainActivity extends AppCompatActivity {
                 filterBar.setText("");
             } else {
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
-                if(a instanceof MainFilesArrayAdapter) {
-                    MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
+                if(a instanceof MainFilesArrayAdapter adapter) {
                     if (adapter.isMultiSelectMode()) adapter.clearSelection();
                     else {
                         String s = adapter.currentZipPath;
@@ -1018,7 +1008,7 @@ public class MainActivity extends AppCompatActivity {
                         else super.onBackPressed();*/
                         }
                     }
-                } else ftpClient.getCurDirPath(new OnEZFtpCallBack<String>() {
+                } else ftpClient.getCurDirPath(new OnEZFtpCallBack<>() {
                     @Override
                     public void onSuccess(String response) {
                         int startIndex = response.indexOf(File.separator);
@@ -1050,9 +1040,9 @@ public class MainActivity extends AppCompatActivity {
                 if (pane1) pane1HistoryIndex = historyIndex;
                 else pane2HistoryIndex = historyIndex;
                 if (entry.isZip()) {
-                    loadZipFolderInPane(entry.getFile(), entry.getZipPath(), pane1, false);
+                    loadZipFolderInPane(entry.file(), entry.zipPath(), pane1, false);
                 } else {
-                    loadFolderInPane(entry.getFile(), pane1, false);
+                    loadFolderInPane(entry.file(), pane1, false);
                 }
                 return true;
             } else return false;
@@ -1069,21 +1059,19 @@ public class MainActivity extends AppCompatActivity {
             else
                 pane2HistoryIndex = historyIndex;
             if (entry.isZip()) {
-                loadZipFolderInPane(entry.getFile(), entry.getZipPath(), pane1, false);
+                loadZipFolderInPane(entry.file(), entry.zipPath(), pane1, false);
             } else {
-                loadFolderInPane(entry.getFile(), pane1, false);
+                loadFolderInPane(entry.file(), pane1, false);
             }
         }
     }
 
     private void updateNavigationButtons() {
-        ImageView backButton = findViewById(R.id.backButton);
-        ImageView forwardButton = findViewById(R.id.forwardButton);
         boolean canGoBack = lastPaneSelected == 1 ? pane1HistoryIndex > 0 : pane2HistoryIndex > 0;
         boolean canGoForward = lastPaneSelected == 1 ? pane1HistoryIndex < pane1History.size() - 1
                 : pane2HistoryIndex < pane2History.size() - 1;
-        backButton.setEnabled(canGoBack);
-        forwardButton.setEnabled(canGoForward);
+        findViewById(R.id.backButton).setEnabled(canGoBack);
+        findViewById(R.id.forwardButton).setEnabled(canGoForward);
     }
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
@@ -1217,7 +1205,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             List<ZipEntryInfo> entries = new ArrayList<>();
             ZipEntryInfo parent = null;
-            HashSet<String> seenDirs = new HashSet<String>() {
+            HashSet<String> seenDirs = new HashSet<>() {
             };
             try (ZipFile zf = new ZipFile(zipFile)) {
                 String parentPath = TextUtils.isEmpty(path) ? "" : path;
@@ -1297,28 +1285,13 @@ public class MainActivity extends AppCompatActivity {
         loadFolderInPane(folder, pane1, true);
     }
 
-    public static class NavigationHistoryEntry {
-        private final File file;
-        private final boolean isZip;
-        private final String zipPath;
+    private boolean showMsgOnLongPress(View v) {
+        CharSequence contentDescription = v.getContentDescription();
+        if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
+        return false;
+    }
 
-        public NavigationHistoryEntry(File file, boolean isZip, String zipPath) {
-            this.file = file;
-            this.isZip = isZip;
-            this.zipPath = zipPath;
-        }
-
-        public File getFile() {
-            return file;
-        }
-
-        public boolean isZip() {
-            return isZip;
-        }
-
-        public String getZipPath() {
-            return zipPath;
-        }
+    public record NavigationHistoryEntry(File file, boolean isZip, String zipPath) {
     }
 
     public void reloadCurrentFolder() {
@@ -1499,11 +1472,10 @@ public class MainActivity extends AppCompatActivity {
         File startDir = isPane1 ? pane1Folder : pane2Folder;
 
         RecyclerView.Adapter a = getCurrentPane().getAdapter();
-        if (!(a instanceof MainFilesArrayAdapter)) {
+        if (!(a instanceof MainFilesArrayAdapter adapter)) {
             Extensions.showMessage(this, "Search in FTP not supported yet");
             return;
         }
-        MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) a;
         if(adapter.isInZip) {
             Extensions.showMessage(this, "Search in ZIP not supported yet");
             return;
@@ -1664,28 +1636,7 @@ public class MainActivity extends AppCompatActivity {
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> {
-            String[] projects = new String[] {"MP Manager", "Open Source Projects Used", "APKEditor", "ApkCloner", "Sora Editor", "zip4j", "aXML", "Commons Collections", "material-design-icons", "android-filepicker", "java-diff-utils", "guava"};
-            String[] authors = new String[] {"AbdurazaaqMohammed", "", "REAndroid", "developer-krushna", "Rosemoe", "srikanth-lingala", "apk-editor", "apache", "google", "singhangadin", "java-diff-utils", "google"};
-            String[] copyright = new String[] {"", "", "2022 github.com/REAndroid", "2025 Krushna Chandra", "2020-2026  Rosemoe", "2026 srikanth-lingala", "2023-2026 APK Explorer & Editor <apkeditor@protonmail.com>", "2001-2026 The Apache Software Foundation", "2026 Google", "2016 Angad Singh", "2026 java-diff-utils", "2026 Google"};
-            String[] strings = new String[projects.length];
-            for (int i = 0, projectsLength = projects.length; i < projectsLength; i++) {
-                String project = projects[i];
-                String author = authors[i];
-                strings[i] = i == 1 ? project : (author + " - " + project);
-            }
-            new MaterialAlertDialogBuilder(this).setTitle("About").setItems(strings, (dialog, which) -> {
-                if(which == 1) return;
-                String license = "";
-                try {
-                    license = Files.asCharSource(FileUtils.copyFileFromAssetsAndGetFile(which == 4 ? "LGPL-2.1.txt" : which == 6 ? "GPL-3.0+.txt" : "Apache-2.0.txt", this), StandardCharsets.UTF_8).read();
-                } catch (Exception ignored) {}
-                new MaterialAlertDialogBuilder(this).setTitle(projects[which]).setMessage(which == 0 ? "Version 0.1\nA free dual pane, Material Design file manager for Android with focus on APKs and the goal to be an open source alternative to MT Manager" : license.replaceFirst("[<\\[](?:yyyy|year)[]>]\\s+[\\[<]name of (?:author|copyright owner)[>\\]]", copyright[which])).setPositiveButton("GitHub", (dialog1, which1) -> {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/" + authors[which] + '/' + projects[which].toLowerCase().replace(' ', '-')));
-                    startActivity(intent);
-                }).setNegativeButton(rss.getString(R.string.cancel), null).show();
-            }).show();
-        });
+        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
         new MaterialAlertDialogBuilder(this).setTitle("Settings").setView(settingsDialog).show();
     }
 
@@ -1705,10 +1656,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (lastPaneSelected == 1)
-                    currentPane1Filter = s.toString().toLowerCase();
-                else
-                    currentPane2Filter = s.toString().toLowerCase();
+                if (lastPaneSelected == 1) currentPane1Filter = s.toString().toLowerCase();
+                else currentPane2Filter = s.toString().toLowerCase();
                 applyFilterToCurrentPane();
             }
 
@@ -1795,12 +1744,12 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(radioGroup);
 
         CheckBox cbReverse = new CheckBox(this);
-        cbReverse.setText("Reverse order");
+        cbReverse.setText(rss.getString(R.string.reverse_order));
         cbReverse.setChecked(reverse);
         layout.addView(cbReverse);
 
         CheckBox cbOnlyThisFolder = new CheckBox(this);
-        cbOnlyThisFolder.setText("Only for this folder");
+        cbOnlyThisFolder.setText(rss.getString(R.string.only_for_this_folder));
         layout.addView(cbOnlyThisFolder);
 
         dialogUtil.getDialogBuilder()
@@ -2010,7 +1959,7 @@ public class MainActivity extends AppCompatActivity {
                         if(ftpServer != null) ftpServer.stop();
                         ftpServer = null;
                         stopService(serviceIntent);
-                        Extensions.showMessage(MainActivity.this, "FTP Server stopped");
+                        Extensions.showMessage(MainActivity.this, rss.getString(R.string.ftp_server_stopped));
                     } else {
                         int port = Integer.parseInt(portInput.getText().toString());
                         String user = userInput.getText().toString();
@@ -2027,7 +1976,7 @@ public class MainActivity extends AppCompatActivity {
                             } else {
                                 startService(serviceIntent);
                             }
-                            Extensions.showMessage(MainActivity.this, "FTP Server started on port " + port);
+                            Extensions.showMessage(MainActivity.this, rss.getString(R.string.ftp_server_started, port));
                         } catch (Exception e) {
                             stopService(serviceIntent);
                             portInput.setEnabled(true);
@@ -2035,15 +1984,15 @@ public class MainActivity extends AppCompatActivity {
                             passInput.setEnabled(true);
                             pl.setEnabled(true);
                             if(ftpServer != null) ftpServer.stop();
-                            tv.setText("Start");
+                            tv.setText(rss.getString(R.string.start));
                             e.printStackTrace();
-                            Extensions.showMessage(MainActivity.this, "Failed to start FTP server: " + e.getMessage());
+                            Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_start_ftp_server, e.getMessage()));
                         }
                         BroadcastReceiver ftpStopReceiver = new BroadcastReceiver() {
                             @Override
                             public void onReceive(Context context, Intent intent) {
                                 if (ad.isShowing()) {
-                                    tv.setText("Start");
+                                    tv.setText(rss.getString(R.string.start));
                                     portInput.setEnabled(true);
                                     userInput.setEnabled(true);
                                     passInput.setEnabled(true);
@@ -2073,7 +2022,7 @@ public class MainActivity extends AppCompatActivity {
         profileManageButton = header.findViewById(R.id.manage_profiles);
 
         new ProfileHelper(this, ipInput, portInput, userInput, passInput, profileSpinner, profileManageButton).setupProfileSpinner(false);
-        AlertDialog ad = dialogUtil.getDialogBuilder()
+        dialogUtil.getDialogBuilder()
                 .setTitle("FTP Client")
                 .setView(view)
                 .setPositiveButton("Connect", (dialog, which) -> {
@@ -2084,18 +2033,18 @@ public class MainActivity extends AppCompatActivity {
                     String pass = passInput.getText().toString();
 
                     ftpClient = new EZFtpClient();
-                    ftpClient.connect(ip, port, user, pass, new OnEZFtpCallBack<Void>() {
+                    ftpClient.connect(ip, port, user, pass, new OnEZFtpCallBack<>() {
                         @Override
                         public void onSuccess(Void response) {
                             runOnUiThread(() -> {
-                                Extensions.showMessage(MainActivity.this, "Connected to FTP");
+                                Extensions.showMessage(MainActivity.this, rss.getString(R.string.connected_to_ftp));
                                 fetchFtpDirAndLoad(File.separator, lastPaneSelected == 1);
                             });
                         }
 
                         @Override
                         public void onFail(int code, String msg) {
-                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "FTP Connect Failed: " + msg));
+                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, rss.getString(R.string.ftp_connect_failed, msg)));
                         }
                     });
                 })
@@ -2108,15 +2057,15 @@ public class MainActivity extends AppCompatActivity {
     public void fetchFtpDirAndLoad(String path, boolean pane1) {
         if (ftpClient == null || !ftpClient.isConnected()) return;
         
-        ftpClient.changeDirectory(path, new OnEZFtpCallBack<String>() {
+        ftpClient.changeDirectory(path, new OnEZFtpCallBack<>() {
             @Override
             public void onSuccess(String newPath) {
-                ftpClient.getCurDirFileList(new OnEZFtpCallBack<List<EZFtpFile>>() {
+                ftpClient.getCurDirFileList(new OnEZFtpCallBack<>() {
                     @Override
                     public void onSuccess(List<EZFtpFile> response) {
                         runOnUiThread(() -> {
                             List<FTPFileWrapper> files = new ArrayList<>();
-                            files.add(new FTPFileWrapper(newPath, new EZFtpFile("..", "",0, 0, new Date())));
+                            files.add(new FTPFileWrapper(newPath, new EZFtpFile("..", "", 0, 0, new Date())));
                             int foldersCount = 0;
                             //int filesCount = 0;
                             if (response != null) {
@@ -2135,19 +2084,23 @@ public class MainActivity extends AppCompatActivity {
                             MainActivity.this.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder("Folders: ").append(foldersCount).append(" Files: ").append(response.size() - foldersCount));
                         });
                     }
+
                     @Override
-                    public void onFail(int code, String msg) { }
+                    public void onFail(int code, String msg) {
+                    }
                 });
             }
+
             @Override
-            public void onFail(int code, String msg) { }
+            public void onFail(int code, String msg) {
+            }
         });
     }
 
     private void loadFtpFolderInPane(FTPFileWrapper folder, boolean pane1) {
         if (folder.getName().equals("..")) {
             if (ftpClient != null) {
-                ftpClient.getCurDirPath(new OnEZFtpCallBack<String>() {
+                ftpClient.getCurDirPath(new OnEZFtpCallBack<>() {
                     @Override
                     public void onSuccess(String response) {
                         int startIndex = response.indexOf(File.separator);

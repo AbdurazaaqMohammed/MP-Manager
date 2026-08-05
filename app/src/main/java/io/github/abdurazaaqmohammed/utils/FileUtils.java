@@ -1,6 +1,10 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Environment;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -16,6 +20,10 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 
 public class FileUtils {
+
+    public static boolean doesNotHaveStoragePerm(Context context) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ? !Environment.isExternalStorageManager() : Build.VERSION.SDK_INT > 22 && context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED;
+    }
 
     public static boolean isAxml(InputStream inputStream) throws IOException {
         try (InputStreamReader isr = new InputStreamReader(inputStream); BufferedReader abr = new BufferedReader(isr)) {

@@ -398,4 +398,20 @@
     <string name="loading">Loading…</string>
     <string name="enter_path">Enter path</string>
     <string name="path">Path</string>
+    <string name="start">Start</string>
+    <string name="reverse_order">Reverse order</string>
+    <string name="only_for_this_folder">Only for this folder</string>
+    <string name="ftp_server_started">FTP Server started on port %1$d</string>
+    <string name="failed_to_start_ftp_server">Failed to start FTP server: %1$s</string>
+    <string name="ftp_server_stopped">FTP Server stopped</string>
+    <string name="connected_to_ftp">Connected to FTP</string>
+    <string name="ftp_connect_failed">FTP Connect Failed: %1$s</string>
+    <string name="screen_capture_permission_needed_for_color_picker">Screen capture permission needed for color picker</string>
+    <string name="tg">Telegram Discussion</string>
+    <string name="enter_name">Enter name</string>
+    <string name="failed_to_create_folder">Failed to create folder %1$s</string>
+    <string name="failed_to_create_file">Failed to create file %1$s</string>
+    <string name="nothing_found_to_paste">Nothing found to paste</string>
+    <string name="folder">Folder</string>
+    <string name="file">File</string>
 </resources>
