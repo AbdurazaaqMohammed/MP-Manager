@@ -22,6 +22,9 @@ import com.reandroid.archive.ZipEntryMap;
 import java.io.File;
 import java.util.Iterator;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+
 public class Util {
 
     public static File ensureUniqueFile(File file){
@@ -50,7 +53,56 @@ public class Util {
         }
         return file;
     }
-    public static void deleteDir(File dir){
+    public static class Counts {
+        public long files = 0;
+        public long folders = 0; // counts subfolders (excludes the root)
+        public long total() { return files + folders; }
+    }
+
+    public static Counts countInsideFolder(File root) {
+        Counts c = new Counts();
+        if (root == null || !root.exists() || !root.isDirectory()) return c;
+
+        File[] children = root.listFiles();
+        if (children == null) return c; // permission issues or I/O error
+
+        for (File f : children) {
+            if (f.isDirectory()) {
+                c.folders++;
+                Counts sub = countInsideFolder(f);
+                c.files += sub.files;
+                c.folders += sub.folders;
+            } else {
+                c.files++;
+            }
+        }
+        return c;
+    }
+
+    private static int count;
+
+    public static void deleteDir(File dir, ProgressManager pm, int total) {
+        if(!dir.exists()) {
+            return;
+        }
+        if(dir.isFile()) {
+            if(dir.delete()) count++;
+            pm.setProgress(count, total);
+            pm.setText("Deleting " +  dir.getName());
+            return;
+        }
+        if(!dir.isDirectory()){
+            return;
+        }
+        File[] files=dir.listFiles();
+        if(files==null) {
+            deleteEmptyDirectories(dir);
+            return;
+        }
+        for(File file : files) deleteDir(file);
+        deleteEmptyDirectories(dir);
+    }
+    public static void deleteDir(File dir) {
         if(!dir.exists()){
             return;
         }
@@ -62,13 +114,11 @@ public class Util {
             return;
         }
         File[] files=dir.listFiles();
-        if(files==null){
+        if(files==null) {
             deleteEmptyDirectories(dir);
             return;
         }
-        for(File file:files){
-            deleteDir(file);
-        }
+        for(File file : files) deleteDir(file);
         deleteEmptyDirectories(dir);
     }
     public static void deleteEmptyDirectories(File dir){
