@@ -4,25 +4,19 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
+
 import androidx.exifinterface.media.ExifInterface;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.format.DateFormat;
-import android.view.LayoutInflater;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
@@ -32,11 +26,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -46,7 +37,6 @@ import java.util.Locale;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
 
 public class ImageViewerActivity extends AppCompatActivity {
 
@@ -71,11 +61,11 @@ public class ImageViewerActivity extends AppCompatActivity {
         intent.putExtra("image_path", filePath);
         activity.startActivity(intent);
     }
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         int themeId = PreferenceManager.getDefaultSharedPreferences(this).getInt("theme", 0);
         if (themeId != 0) setTheme(themeId);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
 
@@ -248,7 +238,6 @@ public class ImageViewerActivity extends AppCompatActivity {
                 ExifInterface.TAG_DATETIME, ExifInterface.TAG_EXPOSURE_TIME,
                 ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_ISO_SPEED_RATINGS,
                 ExifInterface.TAG_FOCAL_LENGTH, ExifInterface.TAG_FLASH,
-                ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_APERTURE,
                 ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_APERTURE_VALUE,
                 ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LONGITUDE,
                 ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_DATESTAMP,

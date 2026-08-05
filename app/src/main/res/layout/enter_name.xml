@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.textfield.TextInputLayout
+    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    app:endIconMode="clear_text"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/m_et_edittext"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:importantForAutofill="no"
+        android:hint="@string/enter_name"
+        android:inputType="text"
+        android:maxLines="1" />
+</com.google.android.material.textfield.TextInputLayout>
