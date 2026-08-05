@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
@@ -41,6 +42,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -1284,10 +1286,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            String themeName = "dark.json";
+            boolean dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+            int theme = PreferenceManager.getDefaultSharedPreferences(context).getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
+            String themeName = theme == R.style.Theme_MyApp_Light ? "light.json" : "dark.json";
             IThemeSource themeSource = null;
             try {
-                themeSource = IThemeSource.fromInputStream(context.getAssets().open("themes/dark.json"), themeName, null);
+                themeSource = IThemeSource.fromInputStream(context.getAssets().open( "themes/" + themeName), themeName, null);
                 registry.loadTheme(themeSource);
                 registry.setTheme(themeName);
             } catch (Exception e) { Log.e("UnifiedEditor", "Theme load error", e); }
