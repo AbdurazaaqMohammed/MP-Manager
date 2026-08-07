@@ -45,6 +45,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.tabs.TabLayout;
 import com.lilincpp.github.libezftp.EZFtpServer;
 import com.lilincpp.github.libezftp.user.EZFtpUser;
 import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
@@ -67,6 +68,7 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
+import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
@@ -100,6 +102,7 @@ import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -132,7 +135,6 @@ import android.widget.ScrollView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
-import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -156,8 +158,6 @@ import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
-import org.apache.commons.io.FilenameUtils;
-
 @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
 public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
@@ -175,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
     private int pane2HistoryIndex = -1;
     public ArrayList<File> bookmarks;
     private BookmarksAdapter bookmarksAdapter;
+    private HistoryAdapter historyAdapter;
     public String signatureKeyPath;
     private DrawerLayout drawerLayout;
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
@@ -342,6 +343,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void openBookmarksDrawer() {
         findViewById(R.id.bookmarks_drawer).post(() -> {
+            historyAdapter.setData(lastPaneSelected == 1 ? pane1History : pane2History);
             bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
             isBookmarksDrawerOpen = true;
         });
@@ -520,6 +522,45 @@ public class MainActivity extends AppCompatActivity {
             loadFolderInPane(bookmarked.isFile() ? bookmarked.getParentFile() : bookmarked, lastPaneSelected == 1);
             closeBookmarksDrawer();
         });
+        bookmarksList.setOnItemLongClickListener((parent, view, position, id) -> {
+            new MaterialAlertDialogBuilder(MainActivity.this)
+                    .setMessage(rss.getString(R.string.confirm_delete_bookmark, bookmarks.get(position)))
+                    .setTitle(R.string.warning)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(rss.getString(R.string.delete), (dialog, which) -> {
+                        bookmarks.remove(position);
+                        settings.edit().putString("bookmarks", bookmarks.toString()).apply();
+                        bookmarksAdapter.notifyDataSetChanged();
+                    }).show();
+            return true;
+        });
+
+        ListView historyList = findViewById(R.id.historyList);
+        historyList.setAdapter(historyAdapter = new HistoryAdapter(this, lastPaneSelected == 1 ? pane1History : pane2History));
+        historyList.setOnItemClickListener((parent, view, position, id) -> {
+            NavigationHistoryEntry entry = historyAdapter.getItem(position);
+            if (entry.isZip()) loadZipFolderInPane(entry.file(), entry.zipPath(), lastPaneSelected == 1, false);
+            else loadFolderInPane(entry.file(), lastPaneSelected == 1, false);
+            closeBookmarksDrawer();
+        });
+
+        TabLayout bookmarksTabs = findViewById(R.id.bookmarksTabs);
+        bookmarksTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                boolean showHistory = tab.getPosition() == 1;
+                bookmarksList.setVisibility(showHistory ? View.GONE : View.VISIBLE);
+                historyList.setVisibility(showHistory ? View.VISIBLE : View.GONE);
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
 
         View.OnClickListener toggleSidebarDrawer = v -> {
             if (drawerLayout.isDrawerOpen(GravityCompat.START))
@@ -648,8 +689,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         findViewById(R.id.hamburgerMenu).setOnClickListener(toggleSidebarDrawer);
-
-        findViewById(R.id.bookmarksText).setOnClickListener(v -> closeBookmarksDrawer());
 
         dialogUtil = new DialogUtil(this);
         uiHelper = new UIHelper(this);
@@ -1007,11 +1046,10 @@ public class MainActivity extends AppCompatActivity {
                             for(char c : chars) if (c == File.separatorChar) i++;
                             boolean inOneLevelInZip = i < 2;
                             loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, false);
-                        } else if (!navigateBack(lastPaneSelected == 1)) {
-                        /*String s = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
-                        File f = new File(s).getParentFile();
-                        if(f.canRead()) loadFolderInPane(f, pane1, false);
-                        else super.onBackPressed();*/
+                        } else {
+                            String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
+                            File f = new File(path).getParentFile();
+                            if (f != null && f.canRead()) loadFolderInPane(f, lastPaneSelected == 1, false);
                         }
                     }
                 } else ftpClient.getCurDirPath(new OnEZFtpCallBack<>() {

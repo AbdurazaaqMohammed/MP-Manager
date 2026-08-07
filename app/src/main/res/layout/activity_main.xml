@@ -179,23 +179,44 @@
             app:behavior_hideable="true"
             app:behavior_peekHeight="0dp">
 
-            <TextView
-                android:text="@string/bookmarks"
-                android:id="@+id/bookmarksText"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="20sp"
-                android:gravity="center_horizontal"
-                android:padding="12dp"
-                android:textStyle="bold"
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/bookmarksTabs"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                app:tabGravity="fill"
+                app:tabMode="fixed">
 
-            <ListView
-                android:id="@+id/bookmarksList"
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/bookmarks" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/history" />
+            </com.google.android.material.tabs.TabLayout>
+
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:divider="@android:color/darker_gray"
-                android:dividerHeight="1dp"/>
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <ListView
+                    android:id="@+id/bookmarksList"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:divider="@android:color/darker_gray"
+                    android:dividerHeight="1dp"/>
+
+                <ListView
+                    android:id="@+id/historyList"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:divider="@android:color/darker_gray"
+                    android:dividerHeight="1dp"
+                    android:visibility="gone"/>
+            </FrameLayout>
         </LinearLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

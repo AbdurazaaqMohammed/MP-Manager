@@ -171,6 +171,7 @@
     <string name="current_folder_path">Current Folder Path</string>
     <string name="more">More</string>
     <string name="bookmarks">Bookmarks</string>
+    <string name="history">History</string>
     <string name="newFileOrFolder">New file or folder</string>
     <string name="search_activities">Search activities</string>
     <string name="save_confirm">Do you want to save %1$s?</string>

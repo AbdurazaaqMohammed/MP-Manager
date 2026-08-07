@@ -66,18 +66,6 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
             fileIconView.setImageDrawable(ResourcesCompat.getDrawable(context.rss, R.drawable.folder__61764____the_noun_project, context.getTheme()));
         }
         ColorUtil.changeImageColor(fileIconView.getDrawable(), (context.theme == R.style.Theme_MyApp_Light) ? Color.BLACK : Color.WHITE);
-        convertView.setOnLongClickListener(v -> {
-            new MaterialAlertDialogBuilder(context)
-                    .setMessage(context.rss.getString(R.string.confirm_delete_bookmark, fileName))
-                    .setTitle(R.string.warning)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(context.rss.getString(R.string.delete), (dialog, which) -> {
-                        context.bookmarks.remove(position);
-                        PreferenceManager.getDefaultSharedPreferences(context).edit().putString("bookmarks", context.bookmarks.toString()).apply();
-                        notifyDataSetChanged();
-                    }).show();
-            return false;
-        });
         return convertView;
     }
 }
