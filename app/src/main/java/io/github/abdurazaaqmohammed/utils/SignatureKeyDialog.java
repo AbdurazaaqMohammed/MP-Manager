@@ -45,8 +45,6 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import mt.signature.generate.KeyStoreMakerDialog;
 
-import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
-
 public class SignatureKeyDialog {
 
     public static void show(MainActivity activity) {

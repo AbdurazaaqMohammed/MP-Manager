@@ -154,7 +154,6 @@ import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
@@ -298,58 +297,58 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     if(minSdkVersionChanged) sb.append(options[5]).append(", ");
                     if(targetSdkVersionChanged) sb.append(options[6]);
                     sb.append(" updated");
-                    ProgressManager pm = new ProgressManager(context, true).show();
-                    pm.setText(rss.getString(R.string.saving));
+                    SignWrapper[] wrapper = new SignWrapper[1];
+                    Runnable doEdit = () -> {
+                        ProgressManager pm = new ProgressManager(context, true).show();
+                        pm.setText(rss.getString(R.string.saving));
 
-                    new RunUtil(context.handler, context, sb)
-                            .runInBackground(() -> {
-                                try {
-                                    boolean foundMinSdk2 = false;
-                                    boolean foundInstallLocation = false;
-                                    int entryToRemove = 0;
-                                    for (int i = 0, entriesSize = entries.size(); i < entriesSize; i++) {
-                                        XMLEntry e = entries.get(i);
-                                        String tag = e.getTag();
-                                        if (appNameChanged && tag.contains("android:label"))
-                                            e.setValue(appNameSelected);
-                                        else if (verCodeChanged && tag.contains("android:versionCode"))
-                                            e.setValue(verCodeSelected);
-                                        else if (verNameChanged && tag.contains("android:versionName"))
-                                            e.setValue(verNameSelected);
-                                        else if (!foundMinSdk2 && minSdkVersionChanged && tag.contains("android:minSdkVersion")) {
-                                            foundMinSdk2 = true;
-                                            e.setValue(minSdkVersionSelected[0]);
-                                        } else if (targetSdkVersionChanged && tag.contains("android:targetSdkVersion"))
-                                            e.setValue(targetSdkVersionSelected[0]);
-                                        else if (installLocationChanged && tag.contains("android:installLocation")) {
-                                            foundInstallLocation = true;
-                                            if (installLocationSelected[0].isEmpty()) entryToRemove = i;
-                                            else e.setValue(installLocationSelected[0]);
+                        new RunUtil(context.handler, context, sb)
+                                .runInBackground(() -> {
+                                    try {
+                                        boolean foundMinSdk2 = false;
+                                        boolean foundInstallLocation = false;
+                                        int entryToRemove = 0;
+                                        for (int i = 0, entriesSize = entries.size(); i < entriesSize; i++) {
+                                            XMLEntry e = entries.get(i);
+                                            String tag = e.getTag();
+                                            if (appNameChanged && tag.contains("android:label"))
+                                                e.setValue(appNameSelected);
+                                            else if (verCodeChanged && tag.contains("android:versionCode"))
+                                                e.setValue(verCodeSelected);
+                                            else if (verNameChanged && tag.contains("android:versionName"))
+                                                e.setValue(verNameSelected);
+                                            else if (!foundMinSdk2 && minSdkVersionChanged && tag.contains("android:minSdkVersion")) {
+                                                foundMinSdk2 = true;
+                                                e.setValue(minSdkVersionSelected[0]);
+                                            } else if (targetSdkVersionChanged && tag.contains("android:targetSdkVersion"))
+                                                e.setValue(targetSdkVersionSelected[0]);
+                                            else if (installLocationChanged && tag.contains("android:installLocation")) {
+                                                foundInstallLocation = true;
+                                                if (installLocationSelected[0].isEmpty()) entryToRemove = i;
+                                                else e.setValue(installLocationSelected[0]);
+                                            }
                                         }
-                                    }
-                                    if(installLocationChanged) {
-                                        if(foundInstallLocation) {
-                                            if (entryToRemove != 0) entries.remove(entryToRemove);
-                                        } else entries.add(4, new XMLEntry("android:installLocation", "=\"", installLocationSelected[0], "\""));
-                                    }
+                                        if(installLocationChanged) {
+                                            if(foundInstallLocation) {
+                                                if (entryToRemove != 0) entries.remove(entryToRemove);
+                                            } else entries.add(4, new XMLEntry("android:installLocation", "=\"", installLocationSelected[0], "\""));
+                                        }
 
-                                    writeManifestEntries(apkFile, entries);
-                                    if(sign[0]) {
-                                        SignWrapper signWrapper = new SignWrapper(
-                                                settings.getString("keyPath",
-                                                        FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                                settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false));
-                                        signWrapper.signApk(apkFile);
+                                        writeManifestEntries(apkFile, entries);
+                                        if(sign[0]) wrapper[0].signApk(apkFile);
+                                        pm.dismiss();
+                                        return true;
+                                    } catch (Exception e) {
+                                        pm.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                        return false;
                                     }
-                                    pm.dismiss();
-                                    return true;
-                                } catch (Exception e) {
-                                    pm.dismiss();
-                                    new ErrorUtil(context).showError(e);
-                                    return false;
-                                }
-                            });
+                                });
+                    };
+                    if(sign[0]) SignWrapper.requireAuth(context, sw -> {
+                        wrapper[0] = sw;
+                        doEdit.run();
+                    }); else doEdit.run();
 
                 })
                 .setNegativeButton("Cancel", null)
@@ -1055,10 +1054,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         v -> {
                             context.lastPaneSelected = pane1 ? 1 : 2;
                             context.setCurrentFolder(file.getParentFile(), getOldValues());
+                            String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
                             if (fileName.endsWith(".txt") || fileName.endsWith(".json")
                                 || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
                                 || fileName.endsWith(".gradle") || fileName.endsWith(".properties")) {
-                                context.startActivity(new Intent(context, TextEditorActivity.class) .putExtra("path", file.getPath()));
+                                context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getPath()));
                             } else if(fileName.endsWith(".xml")) {
                                 try (InputStream is = FileUtils.getInputStream(file)) {
                                     if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(file)) {
@@ -1071,23 +1071,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 } catch (Exception e) {
                                     new ErrorUtil(context).showError(e);
                                 }
-                            } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png")
-                                       || fileName.endsWith(".gif") || fileName.endsWith(".bmp") || fileName.endsWith(".webp")
-                                       || fileName.endsWith(".ico") || fileName.endsWith(".tiff") || fileName.endsWith(".tif")
-                                       || fileName.endsWith(".heic") || fileName.endsWith(".heif")) {
+                            } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
                                 context.openImageViewer(file.getPath());
-                            } else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".flac")
-                                       || fileName.endsWith(".ogg") || fileName.endsWith(".m4a") || fileName.endsWith(".aac")
-                                       || fileName.endsWith(".wma") || fileName.endsWith(".opus")
-                                       || fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".avi")
-                                       || fileName.endsWith(".mov") || fileName.endsWith(".webm") || fileName.endsWith(".3gp")
-                                       || fileName.endsWith(".ts") || fileName.endsWith(".flv") || fileName.endsWith(".wmv")) {
+                            } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
                                 context.playMediaFile(file.getPath());
-                            } else if (fileName.endsWith(".apk")) {
+                            } else if ((ext.equals(".apk"))) {
                                 showApkInfoDialog(file, fileName);
                             } else {
                                 String bak = ".bak";
-                                if(fileName.endsWith(bak)) {
+                                if(ext.equals(bak)) {
                                     View et = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
                                     context.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
                                     EditText tv = et.findViewById(R.id.m_et_edittext);
@@ -1416,58 +1408,59 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                 deleteDialog.setView(ll);
                                             } else deleteDialog.setMessage("Are you sure you want to delete " + filesToDisplay + "?");
                                             deleteDialog.setTitle("Alert").setPositiveButton("Yes", (dialog3, which) -> {
-                                                pm.show();
-                                                new Thread(() -> {
-                                                    try {
-                                                        if(isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
-                                                        if (multi) {
-                                                            if (!isInZip) {
-                                                                File selectedFile = null;
-                                                                for (int i : selectedPositions) {
-                                                                    selectedFile = (File) values[i];
-                                                                    File finalSelectedFile1 = selectedFile;
-                                                                    if (finalSelectedFile1 != null)
-                                                                        pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
+                                                SignWrapper[] wrapper = new SignWrapper[1];
+                                                Runnable doDelete = () -> {
+                                                    pm.show();
+                                                    new Thread(() -> {
+                                                        try {
+                                                            if(isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
+                                                            if (multi) {
+                                                                if (!isInZip) {
+                                                                    File selectedFile = null;
+                                                                    for (int i : selectedPositions) {
+                                                                        selectedFile = (File) values[i];
+                                                                        File finalSelectedFile1 = selectedFile;
+                                                                        if (finalSelectedFile1 != null)
+                                                                            pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
 
-                                                                    if (selectedFile.isDirectory())
-                                                                        Util.deleteDir(selectedFile);
-                                                                    else
-                                                                        selectedFile.delete();
+                                                                        if (selectedFile.isDirectory())
+                                                                            Util.deleteDir(selectedFile);
+                                                                        else
+                                                                            selectedFile.delete();
+                                                                    }
+                                                                    if (selectedFile != null) {
+                                                                        File finalSelectedFile = selectedFile;
+                                                                        handler.post(() -> context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1));
+                                                                    }
+                                                                } else {
+                                                                    List<ZipEntryInfo> selected = new ArrayList<>();
+                                                                    for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
+                                                                    deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
+                                                                    if (sign[0]) wrapper[0].signApk(zipFile);
                                                                 }
-                                                                if (selectedFile != null) {
-                                                                    File finalSelectedFile = selectedFile;
-                                                                    handler.post(() -> context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1));
-                                                                }
+                                                            } else if (!isInZip) {
+                                                                int total = (int) Util.countInsideFolder(file).total();
+                                                                pm.setProgress(0, total);
+                                                                pm.setText(context.rss.getString(R.string.deleting, file.getName()));
+
+                                                                if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                                                else file.delete();
+                                                                handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
                                                             } else {
-                                                                List<ZipEntryInfo> selected = new ArrayList<>();
-                                                                for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
-                                                                deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
-                                                                if (sign[0]) new SignWrapper(
-                                                                        settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                                        PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                                                        settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
+                                                                deleteZipEntry(entry);
+                                                                if (sign[0]) wrapper[0].signApk(zipFile);
                                                             }
-                                                        } else if (!isInZip) {
-                                                            int total = (int) Util.countInsideFolder(file).total();
-                                                            pm.setProgress(0, total);
-                                                            pm.setText(context.rss.getString(R.string.deleting, file.getName()));
-
-                                                            if (file.isDirectory()) Util.deleteDir(file, pm, total);
-                                                            else file.delete();
-                                                            handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
-                                                        } else {
-                                                            deleteZipEntry(entry);
-                                                            if (sign[0]) new SignWrapper(
-                                                                    settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                                    PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                                                    settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
+                                                            pm.dismiss();
+                                                        } catch (Exception e) {
+                                                            pm.dismiss();
+                                                            new ErrorUtil(context).showError(e);
                                                         }
-                                                        pm.dismiss();
-                                                    } catch (Exception e) {
-                                                        pm.dismiss();
-                                                        new ErrorUtil(context).showError(e);
-                                                    }
-                                                }).start();
+                                                    }).start();
+                                                };
+                                                if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                                    wrapper[0] = sw;
+                                                    doDelete.run();
+                                                }); else doDelete.run();
                                             }).setNegativeButton("Cancel", (dialog1, which1) -> pm.dismiss());
                                             dialogUtil.styleAlertDialog(deleteDialog.create());
                                             break;
@@ -2060,62 +2053,66 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             dialogUtil.getDialogBuilder().setView(ll)
                                     .setNegativeButton(context.rss.getString(R.string.cancel), null)
                                     .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
-                                        ProgressManager pm = new ProgressManager(context, true).show();
-                                        APKLogger logger = pm.getLogger();
-                                        new Thread(() -> {
-                                            File tempFolder = new File(context.getCacheDir(), System.currentTimeMillis() + '_' + fileName);
-                                            try (ZipFile zf = new ZipFile(file); ZipFile opt = new ZipFile(FileUtils.getUnusedFile(filePath.replace(".apk", "_opt.apk")))) {
-                                                zf.extractAll(tempFolder.getPath());
-                                                ZipParameters zp = new ZipParameters();
-                                                zp.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
-                                                zp.setCompressionMethod(CompressionMethod.STORE);
-                                                String amS = "AndroidManifest.xml";
-                                                File am = new File(tempFolder, amS);
-                                                logger.logMessage(context.rss.getString(R.string.adding, amS));
-                                                opt.addFile(am, zp);
-                                                am.delete();
-                                                String rssS = "resources.arsc";
-                                                File rss = new File(tempFolder, rssS);
-                                                if (rss.exists()) {
-                                                    logger.logMessage(context.rss.getString(R.string.adding, rssS));
-                                                    opt.addFile(rss, zp);
-                                                    rss.delete();
-                                                }
-                                                ZipParameters zipParameters = new ZipParameters();
-                                                zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
-                                                zipParameters.setCompressionLevel(CompressionLevel.MAXIMUM);
-                                                Set<String> filesToDelete;
-                                                ZipParameters zpF = new ZipParameters();
-                                                if (delFiles[0] && (filesToDelete = settings.getStringSet("filesToDelete", null)) != null)
-                                                    zpF.setExcludeFileFilter(file2 -> {
-                                                        String path = file2.getPath();
-                                                        for (String fd : filesToDelete) if (path.endsWith(fd) || path.matches(fd)) return true;
-                                                        return false;
-                                                    });
-                                                List<File> lf = net.lingala.zip4j.util.FileUtils.getFilesInDirectoryRecursive(tempFolder, zpF);
-                                                for (File f : lf) if (!f.isDirectory()) {
-                                                    String relativePath = f.getPath().replace(tempFolder.getPath() + File.separatorChar, "");
-                                                    if (relativePath.equals(amS) || relativePath.equals(rssS)) continue;
-                                                    logger.logMessage(context.rss.getString(R.string.adding, relativePath));
-                                                    ZipParameters params = new ZipParameters(zipParameters);
-                                                    if (relativePath.startsWith("res/") && !relativePath.endsWith(".xml")) {
-                                                        params.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
-                                                        params.setCompressionMethod(CompressionMethod.STORE);
+                                        SignWrapper[] wrapper = new SignWrapper[1];
+                                        Runnable doOpt = () -> {
+                                            ProgressManager pm = new ProgressManager(context, true).show();
+                                            APKLogger logger = pm.getLogger();
+                                            new Thread(() -> {
+                                                File tempFolder = new File(context.getCacheDir(), System.currentTimeMillis() + '_' + fileName);
+                                                try (ZipFile zf = new ZipFile(file); ZipFile opt = new ZipFile(FileUtils.getUnusedFile(filePath.replace(".apk", "_opt.apk")))) {
+                                                    zf.extractAll(tempFolder.getPath());
+                                                    ZipParameters zp = new ZipParameters();
+                                                    zp.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
+                                                    zp.setCompressionMethod(CompressionMethod.STORE);
+                                                    String amS = "AndroidManifest.xml";
+                                                    File am = new File(tempFolder, amS);
+                                                    logger.logMessage(context.rss.getString(R.string.adding, amS));
+                                                    opt.addFile(am, zp);
+                                                    am.delete();
+                                                    String rssS = "resources.arsc";
+                                                    File rss = new File(tempFolder, rssS);
+                                                    if (rss.exists()) {
+                                                        logger.logMessage(context.rss.getString(R.string.adding, rssS));
+                                                        opt.addFile(rss, zp);
+                                                        rss.delete();
                                                     }
-                                                    params.setFileNameInZip(relativePath);
-                                                    opt.addFile(f, params);
+                                                    ZipParameters zipParameters = new ZipParameters();
+                                                    zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
+                                                    zipParameters.setCompressionLevel(CompressionLevel.MAXIMUM);
+                                                    Set<String> filesToDelete;
+                                                    ZipParameters zpF = new ZipParameters();
+                                                    if (delFiles[0] && (filesToDelete = settings.getStringSet("filesToDelete", null)) != null)
+                                                        zpF.setExcludeFileFilter(file2 -> {
+                                                            String path = file2.getPath();
+                                                            for (String fd : filesToDelete) if (path.endsWith(fd) || path.matches(fd)) return true;
+                                                            return false;
+                                                        });
+                                                    List<File> lf = net.lingala.zip4j.util.FileUtils.getFilesInDirectoryRecursive(tempFolder, zpF);
+                                                    for (File f : lf) if (!f.isDirectory()) {
+                                                        String relativePath = f.getPath().replace(tempFolder.getPath() + File.separatorChar, "");
+                                                        if (relativePath.equals(amS) || relativePath.equals(rssS)) continue;
+                                                        logger.logMessage(context.rss.getString(R.string.adding, relativePath));
+                                                        ZipParameters params = new ZipParameters(zipParameters);
+                                                        if (relativePath.startsWith("res/") && !relativePath.endsWith(".xml")) {
+                                                            params.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
+                                                            params.setCompressionMethod(CompressionMethod.STORE);
+                                                        }
+                                                        params.setFileNameInZip(relativePath);
+                                                        opt.addFile(f, params);
+                                                    }
+                                                    if (sign[0]) wrapper[0].signApk(opt.getFile());
+                                                    pm.dismiss();
+                                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                                } catch (Exception e) {
+                                                    pm.dismiss();
+                                                    new ErrorUtil(context).showError(e);
                                                 }
-                                                if (sign[0]) new SignWrapper(
-                                                        settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                        PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                                        settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(opt.getFile());
-                                                pm.dismiss();
-                                                context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                            } catch (Exception e) {
-                                                pm.dismiss();
-                                                new ErrorUtil(context).showError(e);
-                                            }
-                                        }).start();
+                                            }).start();
+                                        };
+                                        if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                            wrapper[0] = sw;
+                                            doOpt.run();
+                                        }); else doOpt.run();
                                     }).show();
                         } else if (which1 == 2) showDecompileOptionsDialog(file, fileName);
                         else if (which1 == 3) {
@@ -2273,25 +2270,29 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             dialogUtil.getDialogBuilder().setView(ll)
                                     .setNegativeButton(context.rss.getString(R.string.cancel), null)
                                     .setPositiveButton(context.rss.getString(R.string.clone), (dialog6, which2) -> {
-                                        ProgressManager pm = new ProgressManager(context, false).show();
-                                        APKLogger logger = pm.getLogger();
-                                        new Thread(() -> {
-                                            ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
-                                            @Override public void onMessage(String msg) { logger.logMessage(msg); }
-                                            @Override public void onProgress(int progress, int total) { pm.setProgress(progress, total); }
-                                        });
-                                            String pkgNameInput = pkgNameView.getText().toString();
-                                            apkCloner.setPath(filePath, pkgNameFromApk, pkgNameInput);
-                                            try {
-                                                apkCloner.processApk();
-                                                if (sign[0]) new SignWrapper(
-                                                        settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),
-                                                        PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                                        settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(new File(filePath.replace(".apk", "_clone.apk")));
-                                                pm.dismiss();
-                                                context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                            } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
-                                        }).start();
+                                        SignWrapper[] wrapper = new SignWrapper[1];
+                                        Runnable doClone = () -> {
+                                            ProgressManager pm = new ProgressManager(context, false).show();
+                                            APKLogger logger = pm.getLogger();
+                                            new Thread(() -> {
+                                                ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
+                                                @Override public void onMessage(String msg) { logger.logMessage(msg); }
+                                                @Override public void onProgress(int progress, int total) { pm.setProgress(progress, total); }
+                                            });
+                                                String pkgNameInput = pkgNameView.getText().toString();
+                                                apkCloner.setPath(filePath, pkgNameFromApk, pkgNameInput);
+                                                try {
+                                                    apkCloner.processApk();
+                                                    if (sign[0]) wrapper[0].signApk(new File(filePath.replace(".apk", "_clone.apk")));
+                                                    pm.dismiss();
+                                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                                } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
+                                            }).start();
+                                        };
+                                        if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                            wrapper[0] = sw;
+                                            doClone.run();
+                                        }); else doClone.run();
                                     }).show();
                         } else if (which1 == 6) {
                             ProgressManager pm = new ProgressManager(context, true).show();

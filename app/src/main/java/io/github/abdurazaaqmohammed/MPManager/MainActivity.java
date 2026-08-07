@@ -84,7 +84,6 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.PasswordEncryptor;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -308,33 +307,37 @@ public class MainActivity extends AppCompatActivity {
                         .setView(ll)
                         .setPositiveButton("Yes", (dialog, which) -> {
                             dialog.dismiss();
-                            ProgressManager pm = new ProgressManager(this, true).show();
-                            pm.setText(rss.getString(R.string.adding, modifiedFileName));
-                            new Thread(() -> {
-                                try(ZipFile zf = new ZipFile(zipFile)) {
-                                    File backup = new File(zipFile.getParent(), zipFileName + ".bak");
-                                    FileUtils.copyFile(zipFile, backup);
-                                    if(modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
-                                        File modifiedFile = new File(path);
-                                        File folder = modifiedFile.getParentFile();
-                                        zf.addFiles(Arrays.asList(folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"))));
-                                    } else {
-                                        ZipParameters zp = new ZipParameters();
-                                        boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
-                                        zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
-                                        zf.addFile(path, zp);
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            Runnable doWork = () -> {
+                                ProgressManager pm = new ProgressManager(this, true).show();
+                                pm.setText(rss.getString(R.string.adding, modifiedFileName));
+                                new Thread(() -> {
+                                    try(ZipFile zf = new ZipFile(zipFile)) {
+                                        File backup = new File(zipFile.getParent(), zipFileName + ".bak");
+                                        FileUtils.copyFile(zipFile, backup);
+                                        if(modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
+                                            File modifiedFile = new File(path);
+                                            File folder = modifiedFile.getParentFile();
+                                            zf.addFiles(Arrays.asList(folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"))));
+                                        } else {
+                                            ZipParameters zp = new ZipParameters();
+                                            boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
+                                            zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                            zf.addFile(path, zp);
+                                        }
+                                        if(sign[0]) wrapper[0].signApk(zipFile);
+                                        pm.dismiss();
+                                        handler.post(() -> loadZipFolderInPane(zipFile, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
+                                    } catch (Exception e) {
+                                        pm.dismiss();
+                                        new ErrorUtil(this).showError(e);
                                     }
-                                    if(sign[0]) new SignWrapper(
-                                            settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
-                                            PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                            settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
-                                    pm.dismiss();
-                                    handler.post(() -> loadZipFolderInPane(zipFile, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
-                                } catch (Exception e) {
-                                    pm.dismiss();
-                                    new ErrorUtil(this).showError(e);
-                                }
-                            }).start();
+                                }).start();
+                            };
+                            if(sign[0]) SignWrapper.requireAuth(this, sw -> {
+                                wrapper[0] = sw;
+                                doWork.run();
+                            }); else doWork.run();
                         }).setNegativeButton(rss.getString(R.string.cancel), null).show();
                 }
             }
@@ -1183,33 +1186,37 @@ public class MainActivity extends AppCompatActivity {
                         .setTitle("Build Options")
                         .setView(content)
                         .setPositiveButton("OK", (dialog, which) -> {
-                            ProgressManager pm = new ProgressManager(this, true).show();
-                            bo.type = xml ? BuildOptions.TYPE_XML : finalJson ? BuildOptions.TYPE_JSON : BuildOptions.TYPE_RAW;
-                            bo.extractNativeLibs = UIHelper.radioGroupValue(rgExtract, "manifest");
-                            bo.dexLib = UIHelper.radioGroupValue(rgDexLib, BuildOptions.DEX_LIB_INTERNAL);
-                            bo.validateResDir = cbVrd.isChecked();
-                            bo.noCache = cbNoCache.isChecked();
-                            bo.dexProfile = cbDexProfile.isChecked();
-                            CharSequence resDirName = (etResDir.getText());
-                            String resDir = TextUtils.isEmpty(resDirName) ? "" : resDirName.toString().trim();
-                            bo.resDirName = resDir.isEmpty() ? null : resDir;
-                            bo.inputFile = folder;
-                            bo.outputFile = new File(folder, folder.getName() + ".apk");
-                            new Thread(() -> {
-                                try {
-                                    APKLogger logger = pm.getLogger();
-                                    new Builder(bo, logger).runCommand();
-                                    logger.close();
-                                    if(sign[0]) new SignWrapper(
-                                            settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
-                                            PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                            settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(bo.outputFile);
-                                    pm.dismiss();
-                                } catch (Exception e) {
-                                    pm.dismiss();
-                                    new ErrorUtil(MainActivity.this).showError(e);
-                                }
-                            }).start();
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            Runnable doBuild = () -> {
+                                ProgressManager pm = new ProgressManager(this, true).show();
+                                bo.type = xml ? BuildOptions.TYPE_XML : finalJson ? BuildOptions.TYPE_JSON : BuildOptions.TYPE_RAW;
+                                bo.extractNativeLibs = UIHelper.radioGroupValue(rgExtract, "manifest");
+                                bo.dexLib = UIHelper.radioGroupValue(rgDexLib, BuildOptions.DEX_LIB_INTERNAL);
+                                bo.validateResDir = cbVrd.isChecked();
+                                bo.noCache = cbNoCache.isChecked();
+                                bo.dexProfile = cbDexProfile.isChecked();
+                                CharSequence resDirName = (etResDir.getText());
+                                String resDir = TextUtils.isEmpty(resDirName) ? "" : resDirName.toString().trim();
+                                bo.resDirName = resDir.isEmpty() ? null : resDir;
+                                bo.inputFile = folder;
+                                bo.outputFile = new File(folder, folder.getName() + ".apk");
+                                new Thread(() -> {
+                                    try {
+                                        APKLogger logger = pm.getLogger();
+                                        new Builder(bo, logger).runCommand();
+                                        logger.close();
+                                        if(sign[0]) wrapper[0].signApk(bo.outputFile);
+                                        pm.dismiss();
+                                    } catch (Exception e) {
+                                        pm.dismiss();
+                                        new ErrorUtil(MainActivity.this).showError(e);
+                                    }
+                                }).start();
+                            };
+                            if(sign[0]) SignWrapper.requireAuth(this, sw -> {
+                                wrapper[0] = sw;
+                                doBuild.run();
+                            }); else doBuild.run();
                         })
                         .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                         .show();
