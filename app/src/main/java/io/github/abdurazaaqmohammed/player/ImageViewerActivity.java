@@ -37,6 +37,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 
 public class ImageViewerActivity extends AppCompatActivity {
 
@@ -50,10 +51,6 @@ public class ImageViewerActivity extends AppCompatActivity {
     private List<String> imagePaths;
     private int currentIndex;
     private final Set<Integer> checkedPositions = new HashSet<>();
-
-    private static final String[] IMAGE_EXTENSIONS = {
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif"
-    };
 
     public static void open(Activity activity, String filePath) {
         Intent intent = new Intent(activity, ImageViewerActivity.class);
@@ -149,18 +146,10 @@ public class ImageViewerActivity extends AppCompatActivity {
             return;
         }
         for (File f : files) {
-            if (f.isFile() && isImageFile(f.getName())) {
+            if (f.isFile() && FileUtils.isImageFile(f.getName())) {
                 imagePaths.add(f.getAbsolutePath());
             }
         }
-    }
-
-    private static boolean isImageFile(String name) {
-        String lower = name.toLowerCase(Locale.ROOT);
-        for (String ext : IMAGE_EXTENSIONS) {
-            if (lower.endsWith(ext)) return true;
-        }
-        return false;
     }
 
     private int getCurrentPage() {

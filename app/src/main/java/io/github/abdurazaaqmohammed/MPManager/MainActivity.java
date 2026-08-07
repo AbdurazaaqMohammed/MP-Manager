@@ -132,6 +132,7 @@ import android.widget.ScrollView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -155,6 +156,8 @@ import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
+import org.apache.commons.io.FilenameUtils;
+
 @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
 public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
@@ -170,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
     private final List<NavigationHistoryEntry> pane2History = new ArrayList<>();
     private int pane1HistoryIndex = -1;
     private int pane2HistoryIndex = -1;
-    private ArrayList<File> bookmarks;
+    public ArrayList<File> bookmarks;
     private BookmarksAdapter bookmarksAdapter;
     public String signatureKeyPath;
     private DrawerLayout drawerLayout;
@@ -288,11 +291,12 @@ public class MainActivity extends AppCompatActivity {
                 String path = uri.getPath();
                 if(path.startsWith(getCacheDir().getPath())) {
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-                    String name = path.substring(path.lastIndexOf("/") + 1);
+                    String modifiedFileName = path.substring(path.lastIndexOf("/") + 1);
                     LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.item_modified_dialog, null);
-                    File file = pane1 ? pane1Folder : pane2Folder;
-                    String zipFileName = file.getName();
-                    ll.<TextView>findViewById(R.id.modifiedText).setText(rss.getString(R.string.file_modified, name, (zipFileName.endsWith(".apk") ? "APK" : "ZIP")));
+                    File zipFile = pane1 ? pane1Folder : pane2Folder;
+                    String zipFileName = zipFile.getName();
+                    boolean isApk = zipFileName.endsWith(".apk");
+                    ll.<TextView>findViewById(R.id.modifiedText).setText(rss.getString(R.string.file_modified, modifiedFileName, (isApk ? "APK" : "ZIP")));
                     CheckBox autosign = ll.findViewById(R.id.autosign);
                     boolean[] sign = new boolean[1];
                     autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
@@ -304,26 +308,27 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton("Yes", (dialog, which) -> {
                             dialog.dismiss();
                             ProgressManager pm = new ProgressManager(this, true).show();
-                            pm.setText(rss.getString(R.string.adding, name));
+                            pm.setText(rss.getString(R.string.adding, modifiedFileName));
                             new Thread(() -> {
-                                try(ZipFile zf = new ZipFile(file)) {
-                                    boolean dex = name.startsWith("classes") && name.endsWith(".dex");
-                                    if(dex) {
+                                try(ZipFile zf = new ZipFile(zipFile)) {
+                                    File backup = new File(zipFile.getParent(), zipFileName + ".bak");
+                                    FileUtils.copyFile(zipFile, backup);
+                                    if(modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
                                         File modifiedFile = new File(path);
                                         File folder = modifiedFile.getParentFile();
                                         zf.addFiles(Arrays.asList(folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"))));
                                     } else {
                                         ZipParameters zp = new ZipParameters();
-                                        boolean store = name.equals("AndroidManifest.xml") || name.equals("resources.arsc");
+                                        boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
                                         zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
                                         zf.addFile(path, zp);
                                     }
                                     if(sign[0]) new SignWrapper(
                                             settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath()),
                                             PasswordEncryptor.decryptString(settings.getString("keyPass", "android")), settings.getBoolean("v1", true),
-                                            settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(file);
+                                            settings.getBoolean("v2", true), settings.getBoolean("v3", true), settings.getBoolean("v4", false)).signApk(zipFile);
                                     pm.dismiss();
-                                    handler.post(() -> loadZipFolderInPane(file, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
+                                    handler.post(() -> loadZipFolderInPane(zipFile, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
                                 } catch (Exception e) {
                                     pm.dismiss();
                                     new ErrorUtil(this).showError(e);
@@ -887,8 +892,9 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         case "Add to bookmarks": {
                             boolean isPane1 = lastPaneSelected == 1;
-                            addBookmark(isPane1 ? pane1Folder : pane2Folder);
-                            Extensions.showMessage(MainActivity.this, "Added to bookmarks");
+                            File toBookmark = isPane1 ? pane1Folder : pane2Folder;
+                            addBookmark(toBookmark);
+                            Extensions.showMessage(MainActivity.this, rss.getString(R.string.added_to_bookmarks, toBookmark.getName()));
                             break;
                         }
                         case "Set as home folder": {

@@ -47,6 +47,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.BaseAdapter;
@@ -707,11 +709,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon;
     private static int cachedIconTheme = -1;
-    private static final String[] IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif"};
-    private static final String[] VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".3gp", ".mov", ".ts", ".m4v", ".flv", ".wmv"};
-    private static final String[] AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"};
-    private static final String[] ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"};
-    private static final String[] TEXT_EXTS = {".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".java", ".kt", ".md", ".smali", ".pro", ".gradle", ".properties"};
 
     private static void ensureCachedIcons(Resources res, int theme) {
         if (cachedIconTheme == theme) return;
@@ -783,28 +780,23 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (".apk".equals(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
             if (!isInZip) loadApkIconAsync(path, fileIconView);
-        } else if (matchExt(ext, IMAGE_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             fileIconView.setImageDrawable(cachedImageIcon);
             if (!isInZip) loadThumbnailAsync(path, fileIconView, false);
-        } else if (matchExt(ext, VIDEO_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
             fileIconView.setImageDrawable(cachedVideoIcon);
             if (!isInZip) loadThumbnailAsync(path, fileIconView, true);
-        } else if (matchExt(ext, AUDIO_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS)) {
             fileIconView.setImageDrawable(cachedMusicIcon);
-        } else if (matchExt(ext, ARCHIVE_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.ARCHIVE_EXTS)) {
             fileIconView.setImageDrawable(cachedArchiveIcon);
         } else if (".pdf".equals(ext)) {
             fileIconView.setImageDrawable(cachedPdfIcon);
-        } else if (matchExt(ext, TEXT_EXTS)) {
+        } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             fileIconView.setImageDrawable(cachedTextIcon);
         } else {
             fileIconView.setImageDrawable(cachedFileIcon);
         }
-    }
-
-    private static boolean matchExt(String ext, String[] extensions) {
-        for (String e : extensions) if (e.equals(ext)) return true;
-        return false;
     }
 
     private void loadApkIconAsync(String path, ImageView fileIconView) {
@@ -1093,64 +1085,90 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 context.playMediaFile(file.getPath());
                             } else if (fileName.endsWith(".apk")) {
                                 showApkInfoDialog(file, fileName);
-                            } else if (fileName.endsWith(".zip")) {
-                                openZipFile(file, null);
-                            } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk")
-                                       || fileName.endsWith(".apkm")) {
-                                String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
-                                dialogUtil.styleAlertDialog(
-                                        dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
-                                            dialog.dismiss();
-                                            try {
-                                                switch (which) {
-                                                    case 0:
-                                                        if (LegacyUtils.aboveSdk20) {
-                                                            ProgressManager pm = new ProgressManager(context, true).show();
-                                                            APKLogger logger = pm.getLogger();
-                                                            new Thread(() -> {
-                                                                BroadcastReceiver receiver = null;
-                                                                try (ZipFile zf = new ZipFile(file)) {
-                                                                    int sessionId = new APKInstallHelper(context).installApk(zf, logger);
-                                                                    receiver = new BroadcastReceiver() {
-                                                                        @Override public void onReceive(Context context, Intent intent) {
-                                                                            if ("DISMISS_DIALOG".equals(intent.getAction())) {
-                                                                                pm.dismiss();
-                                                                                context.unregisterReceiver(this);
-                                                                            }
-                                                                        }
-                                                                    };
-                                                                    if (Build.VERSION.SDK_INT >= 33) {
-                                                                        context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"), RECEIVER_NOT_EXPORTED);
-                                                                    } else context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"));
-                                                                } catch (Exception e) {pm.dismiss(); new ErrorUtil(context).showError(e); if(receiver != null) context.unregisterReceiver(receiver);}
-                                                            }).start();
-                                                        } else {
-                                                            Toast.makeText(context, "Installing split APKs is not supported on this version of Android :(", Toast.LENGTH_SHORT).show();
-
-                                                            // We should check if apk minsdk <20 here
-                                                            Toast.makeText(context, "You could try merging the APK then installing it", Toast.LENGTH_SHORT).show();
-                                                        }
-                                                        break;
-                                                    case 1:
-                                                        openZipFile(file, null);
-                                                        break;
-                                                    case 2:
-                                                        SignatureKeyDialog.show(context, file, true);
-                                                        break;
-                                                    case 3:
-                                                        MergeUtil.mergeSplitApk(file, context);
-                                                        break;
-                                                }
-                                            } catch (Exception e) {
-                                                new ErrorUtil(context).showError(e);
-                                            }
-                                        }).create());
                             } else {
-                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider",
-                                        file);
-                                context.startActivity(new Intent(Intent.ACTION_VIEW)
-                                        .setDataAndType(uri, context.getContentResolver().getType(uri))
-                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+                                String bak = ".bak";
+                                if(fileName.endsWith(bak)) {
+                                    View et = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
+                                    context.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+                                    EditText tv = et.findViewById(R.id.m_et_edittext);
+                                    tv.setText(fileName);
+                                    tv.requestFocus();
+                                    tv.post(() -> {
+                                        tv.setSelection(0, fileName.indexOf(bak));
+                                        InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+                                        if (imm != null) imm.showSoftInput(tv, InputMethodManager.SHOW_IMPLICIT);
+                                    });
+                                    new MaterialAlertDialogBuilder(context)
+                                    .setTitle("Restore backup")
+                                    .setView(et)
+                                    .setPositiveButton("Restore", (dialog, which) -> {
+                                        String bakPath = file.getPath();
+                                        String origPath = bakPath.replace(bak, "");
+                                        File orig = new File(origPath);
+                                        if(orig.exists()) orig.renameTo(new File(fileName + bak));
+                                        file.renameTo(new File(origPath));
+                                        orig.renameTo(new File(bakPath));
+                                    })
+                                    .setNegativeButton(android.R.string.cancel, null).show();
+                                } else if (fileName.endsWith(".zip")) {
+                                    openZipFile(file, null);
+                                } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk")
+                                           || fileName.endsWith(".apkm")) {
+                                    String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
+                                    dialogUtil.styleAlertDialog(
+                                            dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
+                                                dialog.dismiss();
+                                                try {
+                                                    switch (which) {
+                                                        case 0:
+                                                            if (LegacyUtils.aboveSdk20) {
+                                                                ProgressManager pm = new ProgressManager(context, true).show();
+                                                                APKLogger logger = pm.getLogger();
+                                                                new Thread(() -> {
+                                                                    BroadcastReceiver receiver = null;
+                                                                    try (ZipFile zf = new ZipFile(file)) {
+                                                                        int sessionId = new APKInstallHelper(context).installApk(zf, logger);
+                                                                        receiver = new BroadcastReceiver() {
+                                                                            @Override public void onReceive(Context context, Intent intent) {
+                                                                                if ("DISMISS_DIALOG".equals(intent.getAction())) {
+                                                                                    pm.dismiss();
+                                                                                    context.unregisterReceiver(this);
+                                                                                }
+                                                                            }
+                                                                        };
+                                                                        if (Build.VERSION.SDK_INT >= 33) {
+                                                                            context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"), RECEIVER_NOT_EXPORTED);
+                                                                        } else context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"));
+                                                                    } catch (Exception e) {pm.dismiss(); new ErrorUtil(context).showError(e); if(receiver != null) context.unregisterReceiver(receiver);}
+                                                                }).start();
+                                                            } else {
+                                                                Toast.makeText(context, "Installing split APKs is not supported on this version of Android :(", Toast.LENGTH_SHORT).show();
+
+                                                                // We should check if apk minsdk <20 here
+                                                                Toast.makeText(context, "You could try merging the APK then installing it", Toast.LENGTH_SHORT).show();
+                                                            }
+                                                            break;
+                                                        case 1:
+                                                            openZipFile(file, null);
+                                                            break;
+                                                        case 2:
+                                                            SignatureKeyDialog.show(context, file, true);
+                                                            break;
+                                                        case 3:
+                                                            MergeUtil.mergeSplitApk(file, context);
+                                                            break;
+                                                    }
+                                                } catch (Exception e) {
+                                                    new ErrorUtil(context).showError(e);
+                                                }
+                                            }).create());
+                                } else {
+                                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider",
+                                            file);
+                                    context.startActivity(new Intent(Intent.ACTION_VIEW)
+                                            .setDataAndType(uri, context.getContentResolver().getType(uri))
+                                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+                                }
                             }
                         } : (View.OnClickListener) v -> {
                         context.lastPaneSelected = pane1 ? 1 : 2;
@@ -1401,6 +1419,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                 pm.show();
                                                 new Thread(() -> {
                                                     try {
+                                                        if(isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
                                                         if (multi) {
                                                             if (!isInZip) {
                                                                 File selectedFile = null;
@@ -1408,7 +1427,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                     selectedFile = (File) values[i];
                                                                     File finalSelectedFile1 = selectedFile;
                                                                     if (finalSelectedFile1 != null)
-                                                                        pm.setText("Deleting " + finalSelectedFile1.getName());
+                                                                        pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
 
                                                                     if (selectedFile.isDirectory())
                                                                         Util.deleteDir(selectedFile);
@@ -1421,8 +1440,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                                 }
                                                             } else {
                                                                 List<ZipEntryInfo> selected = new ArrayList<>();
-                                                                for (int i : selectedPositions)
-                                                                    selected.add((ZipEntryInfo) values[i]);
+                                                                for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
                                                                 deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
                                                                 if (sign[0]) new SignWrapper(
                                                                         settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", context).getPath()),

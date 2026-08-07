@@ -177,7 +177,7 @@
     <string name="framework_version">Framework Version</string>
     <string name="protectd">Protected</string>
     <string name="signature_options">Signature Options</string>
-    <string name="file_modified">%1$s has been modified, do you want to update the %2$s</string>
+    <string name="file_modified">File %1$s has been modified, do you want to update the %2$s</string>
     <string name="clone">Clone APK</string>
     <string name="pkgName">Package name</string>
     <string name="opt">Optimize APK</string>
@@ -420,4 +420,7 @@
     <string name="folder">Folder</string>
     <string name="file">File</string>
     <string name="hide">Hide</string>
+    <string name="added_to_bookmarks">Added %1$s to bookmarks</string>
+    <string name="filepath">File path</string>
+    <string name="confirm_delete_bookmark">Are you sure you want to delete bookmark %1$s</string>
 </resources>
