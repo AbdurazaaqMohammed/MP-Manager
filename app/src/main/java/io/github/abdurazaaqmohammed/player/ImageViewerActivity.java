@@ -12,7 +12,6 @@ import android.text.format.DateFormat;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -38,15 +37,13 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
 
 public class ImageViewerActivity extends AppCompatActivity {
 
     private RecyclerView pager;
-    private ImagePagerAdapter adapter;
     private TextView titleText, subtitleText, counterText;
     private CheckBox batchCheck;
-    private ImageButton btnShare, btnOpenWith;
-    private View bottomBar, appBar;
 
     private List<String> imagePaths;
     private int currentIndex;
@@ -66,17 +63,56 @@ public class ImageViewerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
 
-        appBar = findViewById(R.id.appBar);
-        bottomBar = findViewById(R.id.bottomBar);
         pager = findViewById(R.id.pager);
         titleText = findViewById(R.id.titleText);
         subtitleText = findViewById(R.id.subtitleText);
         counterText = findViewById(R.id.counterText);
         batchCheck = findViewById(R.id.batchCheck);
-        btnShare = findViewById(R.id.btnShare);
-        btnOpenWith = findViewById(R.id.btnOpenWith);
-        ImageButton btnBack = findViewById(R.id.btnBack);
-        ImageButton btnInfo = findViewById(R.id.btnInfo);
+        View btnShare = findViewById(R.id.btnShare);
+        View btnOpenWith = findViewById(R.id.btnOpenWith);
+        View btnBack = findViewById(R.id.btnBack);
+        View btnInfo = findViewById(R.id.btnInfo);
+
+        findViewById(R.id.btnDelete).setOnClickListener(v -> {
+            StringBuilder sb = new StringBuilder();
+            boolean multi = batchCheck.isChecked() && !checkedPositions.isEmpty();
+            String currPath, currName;
+            if (multi) {
+                currPath = null;
+                currName = null;
+                int size = checkedPositions.size();
+                for (int p : checkedPositions) {
+                    String s = imagePaths.get(p);
+                    sb.append(s.substring(s.lastIndexOf(File.separatorChar) + 1));
+                    if (p < size) sb.append(',').append(' ');
+                }
+            } else {
+                currPath = imagePaths.get(currentIndex);
+                currName = currPath.substring(currPath.lastIndexOf(File.separatorChar) + 1);
+                sb.append(currName);
+            }
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.confirm)
+                    .setMessage(getString(R.string.confirm_delete_f, sb))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.delete, (dialog, which) -> {
+                        ProgressManager pm = new ProgressManager(this, true).show();
+                        new Thread(() -> {
+                            if (multi) for (int p : checkedPositions) {
+                                String pathname = imagePaths.get(p);
+                                int size = checkedPositions.size();
+                                pm.setText(getString(R.string.deleting, pathname.substring(pathname.lastIndexOf(File.separatorChar) + 1)));
+                                pm.setProgress(p, size);
+                                new File(pathname).delete();
+                            } else {
+                                pm.setText(getString(R.string.deleting, currName));
+                                pm.setProgress(0, 1);
+                                new File(currPath).delete();
+                            }
+                            pm.dismiss();
+                        }).start();
+                    }).show();
+        });
 
         String startPath = getIntent().getStringExtra("image_path");
         if (startPath == null || !new File(startPath).exists()) {
@@ -117,7 +153,7 @@ public class ImageViewerActivity extends AppCompatActivity {
         snapHelper.attachToRecyclerView(pager);
 
         pager.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        adapter = new ImagePagerAdapter(imagePaths);
+        ImagePagerAdapter adapter = new ImagePagerAdapter(imagePaths);
         pager.setAdapter(adapter);
         pager.scrollToPosition(currentIndex);
 

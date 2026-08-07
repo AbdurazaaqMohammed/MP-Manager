@@ -423,5 +423,10 @@
     <string name="hide">Hide</string>
     <string name="added_to_bookmarks">Added %1$s to bookmarks</string>
     <string name="filepath">File path</string>
-    <string name="confirm_delete_bookmark">Are you sure you want to delete bookmark %1$s</string>
+    <string name="confirm_delete_bookmark">Are you sure you want to delete bookmark %1$s?</string>
+    <string name="confirm_delete_f">Are you sure you want to delete %1$s?</string>
+    <string name="open_with">Open with</string>
+    <string name="select_for_batch">Select for batch</string>
+    <string name="resolution">Resolution</string>
+    <string name="properties">Properties</string>
 </resources>

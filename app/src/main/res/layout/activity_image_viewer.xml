@@ -19,7 +19,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/chevron_left_24px"
-            android:contentDescription="Back" />
+            android:contentDescription="@string/back" />
 
         <FrameLayout
             android:layout_width="fill_parent"
@@ -37,7 +37,7 @@
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:singleLine="true"
-                android:text="Image" />
+                android:contentDescription="@string/filename" />
 
             <TextView
                 android:layout_gravity="center"
@@ -47,7 +47,7 @@
                 android:textColor="@android:color/darker_gray"
                 android:textSize="12sp"
                 android:singleLine="true"
-                android:text="Resolution" />
+                android:contentDescription="@string/resolution" />
 
             <ImageButton
                 android:id="@+id/btnInfo"
@@ -55,7 +55,7 @@
                 android:layout_height="48dp"
                 android:layout_gravity="end|center"
                 android:background="?attr/selectableItemBackground"
-                android:contentDescription="Properties"
+                android:contentDescription="@string/properties"
                 android:src="@drawable/baseline_info_24" />
         </FrameLayout>
 
@@ -82,7 +82,7 @@
             android:id="@+id/batchCheck"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:contentDescription="Select for batch" />
+            android:contentDescription="@string/select_for_batch" />
 
         <TextView
             android:id="@+id/counterText"
@@ -95,12 +95,20 @@
             android:text="1/1" />
 
         <ImageButton
+            android:id="@+id/btnDelete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackground"
+            android:src="@drawable/baseline_delete_24"
+            android:contentDescription="@string/delete" />
+
+        <ImageButton
             android:id="@+id/btnShare"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/baseline_share_24"
-            android:contentDescription="Share" />
+            android:contentDescription="@string/share" />
 
         <ImageButton
             android:id="@+id/btnOpenWith"
@@ -108,7 +116,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/baseline_open_in_new_24"
-            android:contentDescription="Open with" />
+            android:contentDescription="@string/open_with" />
 
     </LinearLayout>
 
