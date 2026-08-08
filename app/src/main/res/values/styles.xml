@@ -6,6 +6,7 @@
     </style>
     <style name="Theme.MyApp.Black" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="colorSurface">@android:color/black</item>
     </style>
     <style name="Theme.MyApp.Dark" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
     </style>

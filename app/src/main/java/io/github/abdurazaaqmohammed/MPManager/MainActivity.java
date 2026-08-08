@@ -428,10 +428,7 @@ public class MainActivity extends AppCompatActivity {
         lang = settings.getString("lang", supportedLang ? deviceLang : "en");
         boolean useDeviceRss = lang.equals(deviceLang);
         rss = useDeviceRss ? getResources() : LocaleHelper.setLocale(this, lang).getResources();
-
-        View main = findViewById(R.id.main);
-        if (theme == R.style.Theme_MyApp_Black) main.setBackgroundColor(Color.BLACK);
-
+        
         if (Build.VERSION.SDK_INT > 20) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             int transparent = Color.TRANSPARENT;

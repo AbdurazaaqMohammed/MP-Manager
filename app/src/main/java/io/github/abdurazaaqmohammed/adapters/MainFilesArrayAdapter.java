@@ -1104,8 +1104,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     .setNegativeButton(android.R.string.cancel, null).show();
                                 } else if (fileName.endsWith(".zip")) {
                                     openZipFile(file, null);
-                                } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk")
-                                           || fileName.endsWith(".apkm")) {
+                                } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                                     String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
                                     dialogUtil.styleAlertDialog(
                                             dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
