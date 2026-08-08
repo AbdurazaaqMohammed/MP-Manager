@@ -429,4 +429,7 @@
     <string name="select_for_batch">Select for batch</string>
     <string name="resolution">Resolution</string>
     <string name="properties">Properties</string>
+    <string name="preview">Preview</string>
+    <string name="rename">Rename</string>
+    <string name="rename_1">Rename %1$s</string>
 </resources>

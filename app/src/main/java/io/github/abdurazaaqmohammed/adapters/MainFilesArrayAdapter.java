@@ -152,6 +152,7 @@ import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
@@ -351,7 +352,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }); else doEdit.run();
 
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setView(quickEditDialog)
                 .create();
         dialogUtil.styleAlertDialog(menuDialog);
@@ -498,7 +499,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         AlertDialog d = dialogUtil.getDialogBuilder()
                 .setCustomTitle(uiHelper.getTitle("Edit Manifest Entries"))
                 .setView(listView)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton("Save All", (dlg, w) ->
                         new RunUtil(context.handler, context, "Manifest saved")
                                 .runInBackground(() -> {
@@ -547,7 +548,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setCustomTitle(uiHelper.getTitle(
                         "Edit: " + entry.getMiddleTag().trim()))
                 .setView(input)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton("OK", (dlg, w) -> {
                     String newVal = input.getText().toString();
                     boolean wasDisabled = entry.getValue().startsWith("__DISABLED__");
@@ -987,7 +988,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         }
                     }).start();
                 })
-                .setNegativeButton("Cancel", null);
+                .setNegativeButton(android.R.string.cancel, null);
         builder.show();
     }
 
@@ -1325,18 +1326,24 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             break;
                                         case 2:
                                             if (multi) {
-                                                Toast.makeText(context, "To be implemented", Toast.LENGTH_SHORT).show();
+                                                RenameUtil.showMultiRenameDialog(context, selectedPositions, isInZip, values, pane1, currentZipPath);
                                                 return;
                                             }
                                             MaterialAlertDialogBuilder renameDialog = dialogUtil.getDialogBuilder();
-                                            EditText renameInput = new EditText(context);
+                                            View rnm = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
+                                            EditText renameInput = rnm.findViewById(R.id.m_et_edittext);//new EditText(context);
                                             renameInput.setText(fileName);
-                                            renameInput.setBackgroundColor(Color.TRANSPARENT);
+                                            renameInput.requestFocus();
+                                            renameInput.post(() -> {
+                                                renameInput.setSelection(0, fileName.indexOf(FilenameUtils.getExtension(fileName)) - 1);
+                                                InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+                                                if (imm != null) imm.showSoftInput(renameInput, InputMethodManager.SHOW_IMPLICIT);
+                                            });
                                             renameDialog
-                                                    .setCustomTitle(uiHelper.getTitle("Rename " + fileName))
-                                                    .setView(renameInput)
-                                                    .setNegativeButton("Cancel", null)
-                                                    .setNeutralButton("Paste", (dialog1, which) -> {
+                                                    .setTitle(context.rss.getString(R.string.rename_1, fileName))
+                                                    .setView(rnm)
+                                                    .setNegativeButton(android.R.string.cancel, null)
+                                                    .setNeutralButton(android.R.string.paste, (dialog1, which) -> {
                                                         int selectionStart = renameInput.getSelectionStart();
                                                         int selectionEnd = renameInput.getSelectionEnd();
                                                         if (selectionStart != selectionEnd) {
@@ -1347,7 +1354,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                         if (!TextUtils.isEmpty(text))
                                                             renameInput.getText().insert(selectionStart, text);
                                                     })
-                                                    .setPositiveButton("OK", (dialog3, which) -> {
+                                                    .setPositiveButton(android.R.string.ok, (dialog3, which) -> {
                                                         String s = renameInput.getText().toString();
                                                         if(isInZip) {
                                                             File zipFile = entry.getZipFile();
@@ -1460,7 +1467,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                     wrapper[0] = sw;
                                                     doDelete.run();
                                                 }); else doDelete.run();
-                                            }).setNegativeButton("Cancel", (dialog1, which1) -> pm.dismiss());
+                                            }).setNegativeButton(android.R.string.cancel, (dialog1, which1) -> pm.dismiss());
                                             dialogUtil.styleAlertDialog(deleteDialog.create());
                                             break;
                                         case 4:
@@ -1901,7 +1908,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         .putExtra("theme", context.theme)
                                         .putStringArrayListExtra("SelectedDexFiles", selectedPaths), 757);
                         });
-                        builder.setNegativeButton("Cancel", null);
+                        builder.setNegativeButton(android.R.string.cancel, null);
 
                         context.handler.post(() -> {
                             AlertDialog dialog = builder.create();
@@ -2159,7 +2166,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             layout.addView(fixTypesSwitch);
                             layout.addView(forceSwitch);
                             dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
-                                    .setNegativeButton("Cancel", null)
+                                    .setNegativeButton(android.R.string.cancel, null)
                                     .setPositiveButton("Refactor", (dialog2, which3) -> {
                                         options.cleanMeta = settings.getBoolean("cleanMeta", true);
                                         options.fixTypeNames = settings.getBoolean("fixTypes", true);
@@ -2232,7 +2239,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             layout.addView(dexLevelView);
                             layout.addView(forceView);
                             dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
-                                    .setNegativeButton("Cancel", null)
+                                    .setNegativeButton(android.R.string.cancel, null)
                                     .setPositiveButton("Protect", (dialog2, which3) -> {
                                         options.skipManifest = settings.getBoolean("skipManifest", false);
                                         options.confuse_zip = settings.getBoolean("confuseZip", false);
