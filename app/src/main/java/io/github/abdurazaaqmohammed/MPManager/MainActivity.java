@@ -101,7 +101,6 @@ import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -113,6 +112,8 @@ import android.widget.LinearLayout;
 import android.widget.CheckBox;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
+import com.google.android.material.tabs.TabLayoutMediator;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -357,6 +358,20 @@ public class MainActivity extends AppCompatActivity {
         isBookmarksDrawerOpen = false;
     }
 
+    private void reduceDragSensitivity(ViewPager2 viewPager) {
+        try {
+            java.lang.reflect.Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
+            recyclerViewField.setAccessible(true);
+            RecyclerView recyclerView = (RecyclerView) recyclerViewField.get(viewPager);
+
+            java.lang.reflect.Field touchSlopField = RecyclerView.class.getDeclaredField("mTouchSlop");
+            touchSlopField.setAccessible(true);
+            int touchSlop = (int) touchSlopField.get(recyclerView);
+            touchSlopField.set(recyclerView, touchSlop * 2);
+        } catch (Exception ignored) {
+        }
+    }
+
     public RecyclerView getCurrentPane() {
         return findViewById(lastPaneSelected == 1 ? R.id.listViewPane1 : R.id.listViewPane2);
     }
@@ -514,7 +529,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        ListView bookmarksList = findViewById(R.id.bookmarksList);
+        ListView bookmarksList = new ListView(this);
+        bookmarksList.setDivider(null);
+        bookmarksList.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         ArrayList<File> bookmarks1 = getBookmarks();
         bookmarksList.setAdapter(bookmarksAdapter = new BookmarksAdapter(this, bookmarks1));
         bookmarksList.setOnItemClickListener((parent, view, position, id) -> {
@@ -535,7 +552,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        ListView historyList = findViewById(R.id.historyList);
+        ListView historyList = new ListView(this);
+        historyList.setDivider(null);
+        historyList.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         historyList.setAdapter(historyAdapter = new HistoryAdapter(this, lastPaneSelected == 1 ? pane1History : pane2History));
         historyList.setOnItemClickListener((parent, view, position, id) -> {
             NavigationHistoryEntry entry = historyAdapter.getItem(position);
@@ -544,23 +563,34 @@ public class MainActivity extends AppCompatActivity {
             closeBookmarksDrawer();
         });
 
-        TabLayout bookmarksTabs = findViewById(R.id.bookmarksTabs);
-        bookmarksTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+        ViewPager2 bookmarksPager = findViewById(R.id.bookmarksPager);
+        bookmarksPager.setAdapter(new RecyclerView.Adapter<>() {
+            @NonNull
             @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                boolean showHistory = tab.getPosition() == 1;
-                bookmarksList.setVisibility(showHistory ? View.GONE : View.VISIBLE);
-                historyList.setVisibility(showHistory ? View.VISIBLE : View.GONE);
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                return new RecyclerView.ViewHolder(viewType == 0 ? bookmarksList : historyList) {
+                };
             }
 
             @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             }
 
             @Override
-            public void onTabReselected(TabLayout.Tab tab) {
+            public int getItemCount() {
+                return 2;
+            }
+
+            @Override
+            public int getItemViewType(int position) {
+                return position;
             }
         });
+        bookmarksPager.setOffscreenPageLimit(2);
+        reduceDragSensitivity(bookmarksPager);
+
+        TabLayout bookmarksTabs = findViewById(R.id.bookmarksTabs);
+        new TabLayoutMediator(bookmarksTabs, bookmarksPager, (tab, position) -> tab.setText(position == 0 ? rss.getString(R.string.bookmarks) : rss.getString(R.string.history))).attach();
 
         View.OnClickListener toggleSidebarDrawer = v -> {
             if (drawerLayout.isDrawerOpen(GravityCompat.START))

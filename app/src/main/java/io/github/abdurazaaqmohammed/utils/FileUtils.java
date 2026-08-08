@@ -27,6 +27,19 @@ public class FileUtils {
     public static final String[] ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"};
     public static final String[] TEXT_EXTS = {".txt", ".log", ".xml", ".json", ".html", ".css", ".js", ".java", ".kt", ".md", ".smali", ".pro", ".gradle", ".properties"};
 
+    public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {
+        if (files1 == null || files2 == null)
+            return files1 != files2;
+        if (files1.length != files2.length - 1)
+            return true;
+        for (int i = 0; i < files1.length; i++) {
+            if (!files1[i].exists() || !files2[i + 1].exists() || files1[i].length() != files2[i + 1].length()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static boolean matchExt(String ext, String[] extensions) {
         for (String e : extensions) if (e.equals(ext)) return true;
         return false;

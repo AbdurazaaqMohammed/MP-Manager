@@ -197,26 +197,11 @@
                     android:text="@string/history" />
             </com.google.android.material.tabs.TabLayout>
 
-            <FrameLayout
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/bookmarksPager"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <ListView
-                    android:id="@+id/bookmarksList"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:divider="@android:color/darker_gray"
-                    android:dividerHeight="1dp"/>
-
-                <ListView
-                    android:id="@+id/historyList"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:divider="@android:color/darker_gray"
-                    android:dividerHeight="1dp"
-                    android:visibility="gone"/>
-            </FrameLayout>
+                android:layout_weight="1" />
         </LinearLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
