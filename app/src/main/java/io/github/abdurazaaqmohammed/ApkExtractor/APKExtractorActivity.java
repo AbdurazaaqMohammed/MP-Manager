@@ -162,7 +162,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                                     file.isDirectory() ? outputPath : file.getParent()));
                             finish();
                         })
-                        .setPositiveButton("OK", null)
+                        .setPositiveButton(android.R.string.ok, null)
                         .create());
             errorOccurred = false;
         };
@@ -318,7 +318,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                                 signToggle.setChecked(signApk = false);
                                 dialog.dismiss();
                             })
-                            .setPositiveButton("OK", (dialog, which) -> {
+                            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                                 signApk = true;
                                 dialog.dismiss();
                             })

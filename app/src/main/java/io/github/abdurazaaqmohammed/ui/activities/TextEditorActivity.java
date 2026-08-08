@@ -165,7 +165,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                         manualFinish = true;
                         finish();
                     })
-                    .setNeutralButton("Cancel", null)
+                    .setNeutralButton(android.R.string.cancel, null)
                     .setMessage("Do you want to save " + (currentFile != null ? currentFile.getName() : "file") + "?")
                     .show();
         } else {
@@ -213,7 +213,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                         manualFinish = true;
                         finish();
                     })
-                    .setNeutralButton("Cancel", null)
+                    .setNeutralButton(android.R.string.cancel, null)
                     .setMessage("Do you want to save " + (currentFile != null ? currentFile.getName() : "file") + "?")
                     .show();
         } else super.onBackPressed();

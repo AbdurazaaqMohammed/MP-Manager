@@ -162,7 +162,7 @@ public class AIOverViewActivity extends AppCompatActivity {
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Edit Prompt")
                 .setView(container)
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         String customPrompt = input.getText().toString().trim();
@@ -174,7 +174,7 @@ public class AIOverViewActivity extends AppCompatActivity {
                         startAnalysis(customPrompt);
                     }
                 })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         finish();

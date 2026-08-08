@@ -549,7 +549,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         "Edit: " + entry.getMiddleTag().trim()))
                 .setView(input)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("OK", (dlg, w) -> {
+                .setPositiveButton(android.R.string.ok, (dlg, w) -> {
                     String newVal = input.getText().toString();
                     boolean wasDisabled = entry.getValue().startsWith("__DISABLED__");
                     entry.setValue(wasDisabled ? "__DISABLED__" + newVal : newVal);
@@ -1890,7 +1890,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         if (initialIndex != -1) selectedItems[initialIndex] = true;
                         builder.setMultiChoiceItems(fileNames, selectedItems, (dialog, which, isChecked) -> selectedItems[which] = isChecked);
 
-                        builder.setNeutralButton("Select All", null).setPositiveButton("OK", (dialog, which) -> {
+                        builder.setNeutralButton(context.rss.getString(android.R.string.selectAll), null).setPositiveButton(android.R.string.ok, (dialog, which) -> {
                            ArrayList<String> selectedPaths = new ArrayList<>();
                             for (int k = 0; k < selectedItems.length; k++) {
                                 if (selectedItems[k]) selectedPaths.add(new File(tempFolder, dexFiles.get(k)).getPath());
@@ -1918,7 +1918,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 invertButton.setOnClickListener(v -> {
                                     String buttonText = invertButton.getText().toString();
 
-                                    if (buttonText.equals("Select All")) {
+                                    if (buttonText.equals(context.rss.getString(android.R.string.selectAll))) {
                                         // First click: select all
                                         for (int i1 = 0; i1 < selectedItems.length; i1++) {
                                             selectedItems[i1] = true;
@@ -2696,7 +2696,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         try {
             context.startService(intent);
         } catch (SecurityException e) {
-            new MaterialAlertDialogBuilder(context).setMessage("Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)").setTitle("Permissions").setPositiveButton("OK", (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
+            new MaterialAlertDialogBuilder(context).setMessage("Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)").setTitle("Permissions").setPositiveButton(android.R.string.ok, (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
         } catch (IllegalStateException ise) {
             // This can happen if Termux is force stopped even if you granted draw over other apps permission
             context.startActivity(new Intent().setClassName("com.termux", "com.termux.app.TermuxActivity"));

@@ -19,7 +19,7 @@
                 android:layout_width="45dp"
                 android:layout_height="45dp"
                 android:src="@drawable/ic_selectall_mt"
-                android:contentDescription="@string/select_all" />
+                android:contentDescription="@android:string/selectAll" />
             <ImageButton
                 android:id="@+id/panel_btn_copy"
                 android:background="?attr/selectableItemBackground"
@@ -28,7 +28,7 @@
                 android:layout_width="45dp"
                 android:layout_height="45dp"
                 android:src="@drawable/ic_copy_mt"
-                android:contentDescription="copy" />
+                android:contentDescription="@android:string/copy" />
             <ImageButton
                 android:id="@+id/panel_btn_paste"
                 android:background="?attr/selectableItemBackground"
@@ -37,7 +37,7 @@
                 android:layout_width="45dp"
                 android:layout_height="45dp"
                 android:src="@drawable/ic_paste_mt"
-                android:contentDescription="@string/paste" />
+                android:contentDescription="@android:string/paste" />
             <ImageButton
                 android:id="@+id/goto_btn"
                 android:background="?attr/selectableItemBackground"
@@ -64,7 +64,7 @@
                 android:layout_width="45dp"
                 android:layout_height="45dp"
                 android:src="@drawable/ic_cut_mt"
-                android:contentDescription="@string/cut" />
+                android:contentDescription="@android:string/cut" />
             <ImageButton
                 android:id="@+id/panel_btn_long_select"
                 android:background="?attr/selectableItemBackground"

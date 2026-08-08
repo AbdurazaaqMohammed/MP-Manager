@@ -796,7 +796,7 @@ public class DexEditorActivity extends AppCompatActivity {
                             removeTab(tab);
                         }
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show();
         } else {
             clearPositionSaving(className);
@@ -872,8 +872,8 @@ public class DexEditorActivity extends AppCompatActivity {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
                 .setTitle("Jump to line")
                 .setView(view)
-                .setPositiveButton("OK", null)
-                .setNegativeButton("Cancel", null);
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null);
 
         AlertDialog dialog_mt = builder.create();
         dialog_mt.show();
@@ -1323,7 +1323,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         builder.setView(dialogView);
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 sessionOptions.dexVersion = spinnerDexVersion.getSelectedItem().toString();
@@ -1335,7 +1335,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 sessionOptions.removeDebugLocal = swRemoveDebugLocal.isChecked();
             }
         });
-        builder.setNegativeButton("CANCEL", null);
+        builder.setNegativeButton(android.R.string.cancel, null);
         AlertDialog dialog = builder.create();
         dialog.show();
     }
@@ -1451,7 +1451,7 @@ public class DexEditorActivity extends AppCompatActivity {
             builder.setPositiveButton("Save and Exit", (dialog, which) -> new SaveAndExitClickListener().onClick(null, 0));
         }
 
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(android.R.string.cancel, null);
         builder.setNeutralButton("Exit Directly", (dialog, which) -> exitActivity());
         builder.show();
     }
@@ -2143,9 +2143,9 @@ public class DexEditorActivity extends AppCompatActivity {
         final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Edit string")
                 .setView(container)
-                .setPositiveButton("OK", null)
+                .setPositiveButton(android.R.string.ok, null)
                 .setNeutralButton("Search", null)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .create();
         dialog.show();
 
@@ -2210,7 +2210,7 @@ public class DexEditorActivity extends AppCompatActivity {
                     if (find.isEmpty()) return;
                     new StringBatchTask(this, null, find, replace, swMatchCase.isChecked(), null).start();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -2453,7 +2453,7 @@ public class DexEditorActivity extends AppCompatActivity {
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(DexEditorActivity.this);
             builder.setTitle(getString(R.string.error));
             builder.setMessage("UI update failed: " + e.getMessage());
-            builder.setPositiveButton("OK", null);
+            builder.setPositiveButton(android.R.string.ok, null);
             Notify_MT.Dlg_Style(builder);
         }
 

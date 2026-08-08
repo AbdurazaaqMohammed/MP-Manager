@@ -332,7 +332,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
                         new MaterialAlertDialogBuilder(c)
                                 .setTitle("Error")
                                 .setMessage(message)
-                                .setPositiveButton("OK", null)
+                                .setPositiveButton(android.R.string.ok, null)
                                 .show();
                         if (listener != null) {
                             listener.onError(e.toString());

@@ -791,9 +791,9 @@ public class MainActivity extends AppCompatActivity {
                 AlertDialog ad = dialogUtil.getDialogBuilder()
                         .setTitle(R.string.path)
                         .setView(textInputLayout)
-                        .setNegativeButton("Cancel", null)
+                        .setNegativeButton(android.R.string.cancel, null)
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
-                        .setPositiveButton("OK", (dialog, which) -> {
+                        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                             File inputPath = new File(input.getText().toString());
                             if (inputPath.exists() && inputPath.isDirectory() || (!inputPath.exists() && inputPath.mkdirs())) {
                                 boolean isPane1 = lastPaneSelected == 1;
@@ -1212,7 +1212,7 @@ public class MainActivity extends AppCompatActivity {
                 new MaterialAlertDialogBuilder(this)
                         .setTitle("Build Options")
                         .setView(content)
-                        .setPositiveButton("OK", (dialog, which) -> {
+                        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doBuild = () -> {
                                 ProgressManager pm = new ProgressManager(this, true).show();
@@ -1245,7 +1245,7 @@ public class MainActivity extends AppCompatActivity {
                                 doBuild.run();
                             }); else doBuild.run();
                         })
-                        .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                        .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
                         .show();
             });
         } else buildButton.setVisibility(View.GONE);
@@ -1502,7 +1502,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle("Search")
                 .setView(dialogView)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton("Search", null) // Prevent auto-dismiss
                 .create();
 
@@ -1847,7 +1847,7 @@ public class MainActivity extends AppCompatActivity {
                     editor.apply();
                     reloadCurrentFolder();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -2161,7 +2161,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

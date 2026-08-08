@@ -142,7 +142,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         dialogUtil.getDialogBuilder()
                 .setTitle("Rename")
                 .setView(input)
-                .setPositiveButton("OK", (dialog, which) -> {
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {
                         String oldPath = file.getParent() + "/" + file.getName();
@@ -162,7 +162,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                         });
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -204,7 +204,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         dialogUtil.getDialogBuilder()
                 .setTitle("Properties")
                 .setMessage(props)
-                .setPositiveButton("OK", null)
+                .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
 

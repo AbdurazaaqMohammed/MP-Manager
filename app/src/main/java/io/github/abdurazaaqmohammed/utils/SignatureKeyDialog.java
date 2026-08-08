@@ -152,7 +152,7 @@ public class SignatureKeyDialog {
         new MaterialAlertDialogBuilder(activity)
                 .setTitle("Signature Key")
                 .setView(scrollView)
-                .setPositiveButton("OK", (d, which) -> {
+                .setPositiveButton(android.R.string.ok, (d, which) -> {
                     String selectedPath = actv.getText() != null ? actv.getText().toString() : null;
                     String password = passwordEt.getText() != null ? passwordEt.getText().toString() : null;
                     boolean biometricChecked = cbBiometric.isChecked();
@@ -309,7 +309,7 @@ public class SignatureKeyDialog {
                         }).start();
                     }
                 })
-                .setNegativeButton("Cancel", null).setNeutralButton("New Key", (dialog, which) -> {
+                .setNegativeButton(android.R.string.cancel, null).setNeutralButton("New Key", (dialog, which) -> {
                     KeyStoreMakerDialog ksmd = KeyStoreMakerDialog.newInstance();
                     ksmd.setOnKeyGeneratedListener(new KeyStoreMakerDialog.OnKeyGeneratedListener() {
                         @Override

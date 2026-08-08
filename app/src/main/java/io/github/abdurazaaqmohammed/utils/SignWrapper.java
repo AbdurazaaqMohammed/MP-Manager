@@ -153,7 +153,7 @@ public class SignWrapper {
             new MaterialAlertDialogBuilder(activity)
                     .setTitle("Enter password")
                     .setView(layout)
-                    .setPositiveButton("OK", (d, w) -> {
+                    .setPositiveButton(android.R.string.ok, (d, w) -> {
                         String password = pwInput.getText() != null ? pwInput.getText().toString() : "";
                         if (TextUtils.isEmpty(password)) {
                             Toast.makeText(activity, "No password entered", Toast.LENGTH_SHORT).show();
@@ -165,7 +165,7 @@ public class SignWrapper {
                         }
                         callback.onAuthenticated(new SignWrapper(new File(keyPath), password, v1, v2, v3, v4, signedBy));
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show();
         }
     }

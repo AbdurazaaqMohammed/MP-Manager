@@ -34,7 +34,7 @@ public class ErrorUtil {
     public void showError(String s) {
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
                 .setMessage(s)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.copy_log, (dialog, which) -> copyText(s));
         b.show();
     }
@@ -55,7 +55,7 @@ public class ErrorUtil {
         }
         stackTrace.append(currentVer).append('\n').append("Storage permission granted: ").append(!doesNotHaveStoragePerm(context));
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(android.R.string.copy, (dialog, which) -> copyText(stackTrace));
                 //.setPositiveButton("Create issue", (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/AbdurazaaqMohammed/MP-Manager/issues/new?title=Crash%20Report&body=" + fullLog))));
         context.runOnUiThread(() -> {

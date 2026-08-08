@@ -292,7 +292,7 @@ public class SearchFragment extends Fragment {
                             }
                         }
                     })
-                    .setNeutralButton("Cancel", null)
+                    .setNeutralButton(android.R.string.cancel, null)
                     .show();
         } else {
             onProceed.run();
@@ -429,13 +429,13 @@ public class SearchFragment extends Fragment {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
         builder.setTitle("Exclude list");
         builder.setView(layout);
-        builder.setPositiveButton("OK", new android.content.DialogInterface.OnClickListener() {
+        builder.setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface dialog, int which) {
                 prefs.edit().putString("exclude_list", etExcludes.getText().toString()).apply();
             }
         });
-        builder.setNegativeButton("CANCEL", null);
+        builder.setNegativeButton(android.R.string.cancel, null);
         builder.show();
     }
 
@@ -535,8 +535,8 @@ public class SearchFragment extends Fragment {
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Search")
                 .setView(dialogView)
-                .setPositiveButton("OK", null)
-                .setNegativeButton("Cancel", null)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .create();
 
         dialog.show();
@@ -612,7 +612,7 @@ public class SearchFragment extends Fragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Replace")
                 .setView(dialogView)
-                .setPositiveButton("OK", new android.content.DialogInterface.OnClickListener() {
+                .setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
@@ -622,7 +622,7 @@ public class SearchFragment extends Fragment {
                         new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

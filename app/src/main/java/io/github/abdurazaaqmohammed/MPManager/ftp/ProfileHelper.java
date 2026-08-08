@@ -184,7 +184,7 @@ public class ProfileHelper {
 
                     setupProfileSpinner(isServer, newProfile);
                 })
-                .setNegativeButton("Cancel", null);
+                .setNegativeButton(android.R.string.cancel, null);
 
         if (isEdit) {
             builder.setNeutralButton("Delete", allowDelete ? (dialog, which) ->  {

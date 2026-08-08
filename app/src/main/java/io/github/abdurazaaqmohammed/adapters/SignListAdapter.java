@@ -90,7 +90,7 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
 
                 new MaterialAlertDialogBuilder(context)
                         .setView(layout)
-                        .setPositiveButton("OK", (dialogInterface, i) -> {
+                        .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
                             String password = pwInput.getText().toString();
                             if (TextUtils.isEmpty(path[0])) {
                                 Toast.makeText(context, "No path entered", Toast.LENGTH_SHORT).show();
@@ -105,7 +105,7 @@ public class SignListAdapter extends ArrayAdapter<CharSequence> {
                                 Toast.makeText(context, "Signature file set", Toast.LENGTH_SHORT).show();
                             }
                         })
-                        .setNegativeButton("Cancel", null)
+                        .setNegativeButton(android.R.string.cancel, null)
                         .show();
             });
         } else {

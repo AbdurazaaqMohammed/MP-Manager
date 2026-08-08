@@ -105,7 +105,7 @@ public class EditorSettingsActivity extends AppCompatActivity {
                                                 .apply();
                                         showBottomBarManagementDialog(); // Refresh
                                     })
-                                    .setNegativeButton("Cancel", null)
+                                    .setNegativeButton(android.R.string.cancel, null)
                                     .show();
                         }
                     });
@@ -237,7 +237,7 @@ public class EditorSettingsActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show();
         }
 

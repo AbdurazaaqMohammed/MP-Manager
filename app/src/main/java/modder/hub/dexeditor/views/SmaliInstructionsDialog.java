@@ -111,7 +111,7 @@ public class SmaliInstructionsDialog {
 
 		new MaterialAlertDialogBuilder(context)
 				.setView(view)
-				.setPositiveButton("OK", null)
+				.setPositiveButton(android.R.string.ok, null)
 				.show();
 	}
 

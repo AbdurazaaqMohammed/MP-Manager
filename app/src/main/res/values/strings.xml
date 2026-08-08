@@ -11,12 +11,6 @@
     <string name="nothing">Nothing selected</string>
     <string name="change_text_color">Change text color</string>
     <string name="change_background_color">Change background color</string>
-    <string name="all">Select All</string>
-    <string name="for_device">Select all splits for your device specifications</string>
-    <string name="lang_for_device">Select language for your device</string>
-    <string name="arch_for_device">Select architecture for your device</string>
-    <string name="dpi_for_device">Select screen widths for your device</string>
-    <string name="select_splits">Select splits</string>
     <string name="sign_apk">Sign the APK after merging</string>
     <string name="automatically_select">Automatically select splits for your device specifications</string>
     <string name="sign_failed">Failed to sign APK, saving without signing</string>
@@ -192,11 +186,8 @@
     <string name="about_open_source_projects">Open Source Projects Used</string>
     <string name="about_tap_for_license">Tap a project to view its license and source link</string>
 
-    <string name="select_all">Select All</string>
-    <string name="paste">Paste</string>
     <string name="go_to">Go To</string>
     <string name="translate">Translate</string>
-    <string name="cut">Cut</string>
     <string name="long_select">Long Select</string>
     <string name="link">Open link</string>
     <string name="comment">Toggle comment</string>

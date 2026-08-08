@@ -17,8 +17,8 @@ public class PreferencesDialogFragment extends DialogFragment {
     @Override
     public AlertDialog onCreateDialog(Bundle savedInstanceState) {
         return new MaterialAlertDialogBuilder(requireActivity())
-                .setPositiveButton("OK", null)
-                .setNegativeButton("Cancel", null)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setView(R.layout.color_picker_settings)
                 .create();
     }
