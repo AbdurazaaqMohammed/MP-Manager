@@ -44,7 +44,7 @@ public class Refactor extends CommandExecutor<RefactorOptions> {
         }
         if(options.fixTypeNames){
             TypeNameRefactor typeNameRefactor=new TypeNameRefactor(module);
-            typeNameRefactor.setApkLogger(this);
+            typeNameRefactor.setApkLogger(logger);
             typeNameRefactor.refactor();
         }
         if(options.publicXml != null){

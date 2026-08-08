@@ -1193,8 +1193,8 @@ public class MainActivity extends AppCompatActivity {
                 rgExtract.addView(uiHelper.makeRadioButton("true", "True"));
                 UIHelper.selectRadioByValue(rgExtract, bo.extractNativeLibs != null ? bo.extractNativeLibs : "Default");
 
-                rgDexLib.addView(uiHelper.makeRadioButton(BuildOptions.DEX_LIB_INTERNAL, "Internal (supports dex versions up to 042)"));
-                rgDexLib.addView(uiHelper.makeRadioButton(BuildOptions.DEX_LIB_JF, "jf (supports dex versions 035 and below)"));
+                rgDexLib.addView(uiHelper.makeRadioButton(BuildOptions.DEX_LIB_INTERNAL, "Internal (REAndroid)"));
+                rgDexLib.addView(uiHelper.makeRadioButton(BuildOptions.DEX_LIB_JF, "developer-krushna"));
                 UIHelper.selectRadioByValue(rgDexLib, bo.dexLib != null ? bo.dexLib : BuildOptions.DEX_LIB_INTERNAL);
 
                 cbVrd.setChecked(bo.validateResDir);

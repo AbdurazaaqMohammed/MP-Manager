@@ -356,6 +356,7 @@ public enum Opcode
     public final Format format;
     public final int flags;
     public final int referenceType2;
+    public final int value;
 
     Opcode(int opcodeValue, String opcodeName, int referenceType, Format format) {
         this(opcodeValue, opcodeName, referenceType, format, 0);
@@ -385,6 +386,7 @@ public enum Opcode
 
         this.apiToValueMap = apiToValueBuilder.build();
         this.artVersionToValueMap = artVersionToValueBuilder.build();
+        this.value = versionConstraints.isEmpty() ? 0 : versionConstraints.get(0).opcodeValue;
         this.name = opcodeName;
         this.referenceType = referenceType;
         this.referenceType2 = referenceType2;

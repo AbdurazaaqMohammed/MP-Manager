@@ -58,7 +58,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
         BuildOptions options = getOptions();
         ArchiveFile archive = new ArchiveFile(options.inputFile);
         ApkFileWriter apkWriter = new ApkFileWriter(options.outputFile, archive.getInputSources());
-        apkWriter.setAPKLogger(this);
+        apkWriter.setAPKLogger(logger);
         ApkSignatureBlock apkSignatureBlock = new ApkSignatureBlock();
         apkSignatureBlock.scanSplitFiles(options.signaturesDirectory);
         apkWriter.setApkSignatureBlock(apkSignatureBlock);
@@ -70,7 +70,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
     public void buildJson() throws IOException {
         logMessage("Scanning JSON directory ...");
         ApkModuleJsonEncoder encoder=new ApkModuleJsonEncoder();
-        encoder.setApkLogger(this);
+        encoder.setApkLogger(logger);
 
 
         BuildOptions options = getOptions();
@@ -80,7 +80,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
 
         encoder.scanDirectory(options.inputFile);
         ApkModule loadedModule = encoder.getApkModule();
-        loadedModule.setAPKLogger(this);
+        loadedModule.setAPKLogger(logger);
         if(options.resDirName!=null){
             logMessage("Renaming resources root dir: "+options.resDirName);
             loadedModule.setResourcesRootDir(options.resDirName);
@@ -96,7 +96,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
         logMessage("Scanning XML directory ...");
         XmlCoder.getInstance().getSetting().setLogger(this);
         ApkModuleXmlEncoder encoder=new ApkModuleXmlEncoder();
-        encoder.setApkLogger(this);
+        encoder.setApkLogger(logger);
 
         BuildOptions options = getOptions();
 
@@ -104,7 +104,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
         encoder.setDexProfileEncoder(getDexProfileEncoder());
 
         ApkModule loadedModule = encoder.getApkModule();
-        loadedModule.setAPKLogger(this);
+        loadedModule.setAPKLogger(logger);
 
         loadedModule.setPreferredFramework(options.frameworkVersion);
         for (File file : options.frameworks) {
@@ -117,7 +117,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
     public void buildRaw() throws IOException {
         logMessage("Scanning Raw directory ...");
         ApkModuleRawEncoder encoder = new ApkModuleRawEncoder();
-        encoder.setApkLogger(this);
+        encoder.setApkLogger(logger);
 
         BuildOptions options = getOptions();
         if(!options.validateResDir && options.resDirName == null) {
@@ -129,7 +129,7 @@ public class Builder extends CommandExecutor<BuildOptions> {
         encoder.setDexProfileEncoder(getDexProfileEncoder());
 
         ApkModule loadedModule = encoder.getApkModule();
-        loadedModule.setAPKLogger(this);
+        loadedModule.setAPKLogger(logger);
 
         loadedModule.setPreferredFramework(options.frameworkVersion);
         for(File file : options.frameworks){
@@ -151,12 +151,12 @@ public class Builder extends CommandExecutor<BuildOptions> {
     }
     private SmaliCompiler getSmaliCompiler() {
         SmaliCompiler smaliCompiler = new SmaliCompiler(getOptions());
-        smaliCompiler.setApkLogger(this);
+        smaliCompiler.setApkLogger(logger);
         return smaliCompiler;
     }
     private DexProfileEncoder getDexProfileEncoder() {
         DexProfileEncoderImpl encoder = new DexProfileEncoderImpl(getOptions());
-        encoder.setApkLogger(this);
+        encoder.setApkLogger(logger);
         return encoder;
     }
 }

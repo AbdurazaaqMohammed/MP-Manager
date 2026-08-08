@@ -19,7 +19,7 @@ public class CommandExecutor<T extends Options> implements APKLogger, XmlCoderLo
     private final T options;
     private String mLogTag;
     private boolean mEnableLog;
-    private final APKLogger logger;
+    public final APKLogger logger;
 
     public CommandExecutor(T options, String logTag, APKLogger logger) {
         this.options = options;

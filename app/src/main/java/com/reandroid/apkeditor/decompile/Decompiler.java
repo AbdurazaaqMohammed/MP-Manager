@@ -79,7 +79,7 @@ public class Decompiler extends CommandExecutor<DecompileOptions> {
         decoder.sanitizeFilePaths();
         decoder.setDexDecoder(getSmaliDecompiler(apkModule));
         DexProfileDecoderImpl dexProfileDecoder = new DexProfileDecoderImpl(options);
-        dexProfileDecoder.setApkLogger(this);
+        dexProfileDecoder.setApkLogger(logger);
         decoder.setDexProfileDecoder(dexProfileDecoder);
         return decoder;
     }
@@ -89,7 +89,7 @@ public class Decompiler extends CommandExecutor<DecompileOptions> {
         }
         TableBlock tableBlock = getTableBlockForDexComment(apkModule);
         SmaliDecompiler smaliDecompiler = new SmaliDecompiler(tableBlock, getOptions());
-        smaliDecompiler.setApkLogger(this);
+        smaliDecompiler.setApkLogger(logger);
         return smaliDecompiler;
     }
     private TableBlock getTableBlockForDexComment(ApkModule apkModule) throws IOException {

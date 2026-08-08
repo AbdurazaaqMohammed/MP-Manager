@@ -15,6 +15,8 @@
  */
 package com.reandroid.apkeditor.smali;
 
+import com.android.tools.smali.smali.SmaliOptions;
+import com.android.tools.smali.smali2.Smali;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkModuleEncoder;
 import com.reandroid.apk.DexEncoder;
@@ -24,6 +26,9 @@ import com.reandroid.archive.InputSource;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
 import com.reandroid.dex.model.DexFile;
 import com.reandroid.utils.StringsUtil;
+import com.reandroid.utils.io.FileUtil;
+
+import org.antlr.runtime.RecognitionException;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,33 +80,36 @@ public class SmaliCompiler implements DexEncoder {
         }
     }
     private InputSource build(String progress, File classesDir, File dexCacheFile) throws IOException {
-        return buildWithInternalLib(progress, classesDir, dexCacheFile);
-        //if(BuildOptions.DEX_LIB_INTERNAL.equals(buildOptions.dexLib)) {
-      //      return buildWithInternalLib(progress, classesDir, dexCacheFile);
-       // }
-       // return buildWithJesusFreke(progress, classesDir, dexCacheFile);
+        if(BuildOptions.DEX_LIB_INTERNAL.equals(buildOptions.dexLib)) {
+            return buildWithInternalLib(progress, classesDir, dexCacheFile);
+        }
+        return buildWithJesusFreke(progress, classesDir, dexCacheFile);
     }
-    /*private InputSource buildWithJesusFreke(String progress, File classesDir, File dexCacheFile) throws IOException {
+    private InputSource buildWithJesusFreke(String progress, File classesDir, File dexCacheFile) throws IOException {
         logMessage(progress + "Smali<JF>: " + dexCacheFile.getName());
         SmaliOptions smaliOptions = new SmaliOptions();
         FileUtil.ensureParentDirectory(dexCacheFile);
         smaliOptions.outputDexFile = dexCacheFile.getAbsolutePath();
-        File marker = new File(classesDir, DexMarker.FILE_NAME);
-        if(marker.isFile()){
-            smaliOptions.markersListFile = marker.getAbsolutePath();
-        }
+//        File marker = new File(classesDir, DexMarker.FILE_NAME);
+//        if(marker.isFile()){
+//            smaliOptions.markersListFile = marker.getAbsolutePath();
+//        }
         if(smaliOptions.jobs <= 0){
             smaliOptions.jobs = 1;
         }
         if (this.minSdkVersion != null) {
             smaliOptions.apiLevel = this.minSdkVersion;
         }
-        boolean success = Smali.assemble(smaliOptions, classesDir.getAbsolutePath());
-        if(!success){
-            throw new IOException("Failed to build smali, check the logs");
+        try {
+            Smali.assemble(classesDir.getAbsolutePath(), smaliOptions);
+        } catch (RecognitionException e) {
+            throw new RuntimeException(e);
         }
+//        if(!success){
+//            throw new IOException("Failed to build smali, check the logs");
+//        }
         return new FileInputSource(dexCacheFile, dexCacheFile.getName());
-    }*/
+    }
     private InputSource buildWithInternalLib(String progress, File classesDir, File dexCacheFile) throws IOException {
         logMessage(progress + "Smali<INTERNAL>: " + dexCacheFile.getName());
         DexFile dexFile = DexFile.createDefault();
@@ -182,25 +190,13 @@ public class SmaliCompiler implements DexEncoder {
         if (api <= 23) {
             return 35;
         }
-        switch (api) {
-            case 24:
-            case 25:
-                return 37;
-            case 26:
-            case 27:
-                return 38;
-            case 28:
-                return 39;
-            case 29:
-            case 30:
-            case 31:
-            case 32:
-            case 33:
-            case 34:
-                return 40;
-            case 35:
-                return 41;
-        }
-        return 39;
+        return switch (api) {
+            case 24, 25 -> 37;
+            case 26, 27 -> 38;
+            case 28 -> 39;
+            case 29, 30, 31, 32, 33, 34 -> 40;
+            case 35 -> 41;
+            default -> 39;
+        };
     }
 }

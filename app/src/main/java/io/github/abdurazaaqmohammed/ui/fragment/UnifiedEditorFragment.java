@@ -1006,7 +1006,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         }
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -1040,7 +1040,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Statistics")
                 .setMessage("Bytes: " + bytes + "\nCharacters: " + chars + "\nWords: " + words + "\nLines: " + lines)
-                .setPositiveButton("OK", null)
+                .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
 
@@ -1270,7 +1270,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 .setPositiveButton("Save", (dialog, which) -> {
                     // handled via listview
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

@@ -100,7 +100,7 @@ public class Smali {
         return classDef;
     }
 
-    public static ClassDef assemble(String smaliCode, SmaliOptions options) throws Exception {
+    public static ClassDef assemble(String smaliCode, SmaliOptions options) throws IOException, RecognitionException {
         DexBuilder dexBuilder = new DexBuilder(Opcodes.forApi(options.apiLevel));
 
         SmaliCatchErrFlexLexer lexer = new SmaliCatchErrFlexLexer(new StringReader(smaliCode), options.apiLevel);
@@ -114,11 +114,11 @@ public class Smali {
         SmaliCatchErrParser.smali_file_return result = parser.smali_file();
 
         if (lexer.getNumberOfSyntaxErrors() > 0) {
-            throw new Exception(lexer.getErrorsString());
+            throw new IOException(lexer.getErrorsString());
         }
 
         if (parser.getNumberOfSyntaxErrors() > 0) {
-            throw new Exception(parser.getErrorsString());
+            throw new IOException(parser.getErrorsString());
         }
 
         CommonTree t = result.getTree();
@@ -134,7 +134,7 @@ public class Smali {
         ClassDef classDef = treeWalker.smali_file();
 
         if (treeWalker.getNumberOfSyntaxErrors() > 0) {
-            throw new Exception(treeWalker.getErrorsString());
+            throw new IOException(treeWalker.getErrorsString());
         }
 
         return classDef;

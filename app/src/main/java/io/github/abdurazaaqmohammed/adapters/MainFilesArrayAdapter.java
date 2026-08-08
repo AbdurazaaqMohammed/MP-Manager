@@ -891,7 +891,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         decodeTypes.setText(decodeTypesArray[savedDecodeType], false);
         decodeTypes.setOnItemClickListener((parent, view, position, id) -> settings.edit().putInt("decodeTypes", position).apply());
 
-        String[] dexLibraryArray = new String[]{"Internal (dex up to 042)", "jf (dex versions 035 and below)"};
+        String[] dexLibraryArray = new String[]{"Internal (REAndroid)", "developer-krushna"};
         int savedDexLib = settings.getInt("dexLib", 0);
         ArrayAdapter<String> dexAdapter = new ArrayAdapter<>(context,
                 android.R.layout.simple_dropdown_item_1line, dexLibraryArray);
