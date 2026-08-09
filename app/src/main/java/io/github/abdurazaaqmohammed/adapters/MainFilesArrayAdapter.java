@@ -1866,9 +1866,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         }
                         ProgressManager pm = new ProgressManager(context, false);
                         int finalI = i;
+                        int size = dexFiles.size();
                         Thread t = new Thread(() -> {
                             try {
-                                for (int j = 0, dexFilesSize = dexFiles.size(); j < dexFilesSize; j++) {
+                                for (int j = 0; j < size; j++) {
                                     String df = dexFiles.get(j);
                                     if (pm.dialog != null && pm.dialog.isShowing()) {
                                         pm.setProgress(j, finalI);
@@ -1882,12 +1883,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         t.start();
                         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
                         builder.setTitle("MultiDex");
-                        CharSequence[] fileNames = new String[dexFiles.size()];
-                        for (int j = 0; j < dexFiles.size(); j++) fileNames[j] = dexFiles.get(j);
+                        CharSequence[] fileNames = new String[size];
+                        for (int j = 0; j < size; j++) fileNames[j] = dexFiles.get(j);
 
-                        boolean[] selectedItems = new boolean[dexFiles.size()];
-                        int initialIndex = Integer.parseInt(name.replace("classes", "").replace(".dex", "")) - 1;
-                        if (initialIndex != -1) selectedItems[initialIndex] = true;
+                        boolean[] selectedItems = new boolean[size];
+                        String classesNo = name.replace("classes", "").replace(".dex", "");
+                        try {
+                            int initialIndex = TextUtils.isEmpty(classesNo) ? 0 : (Integer.parseInt(classesNo) - 1);
+                            if (initialIndex != -1) selectedItems[initialIndex] = true;
+                        } catch (NumberFormatException ignored) { }
                         builder.setMultiChoiceItems(fileNames, selectedItems, (dialog, which, isChecked) -> selectedItems[which] = isChecked);
 
                         builder.setNeutralButton(context.rss.getString(android.R.string.selectAll), null).setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -2004,8 +2008,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton("More", (dialog, which) -> {
-                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)",
-                            "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", "Dex2C"};
+                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK"};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
@@ -2300,7 +2303,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             doClone.run();
                                         }); else doClone.run();
                                     }).show();
-                        } else if (which1 == 6) {
+                        } /*else if (which1 == 6) {
                             ProgressManager pm = new ProgressManager(context, true).show();
                             new Thread(() -> {
                                 try {
@@ -2334,7 +2337,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     new ErrorUtil(context).showError(e);
                                 }
                             }).start();
-                        }
+                        }*/
                     }).show();
                 })
                 .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApk(context, file))
