@@ -68,7 +68,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.14.0'
     implementation 'org.jruby.joni:joni:2.2.7'
     implementation files('libs/language-java-debug.aar')//'io.github.Rosemoe.sora-editor:language-java:0.23.6'
-    implementation 'com.squareup.okhttp3:okhttp:3.12.13'
+    //implementation 'com.squareup.okhttp3:okhttp:3.12.13'
     implementation files('libs/commons-io.jar')
     //implementation files('libs/smali.jar')
     implementation files('libs/editor-debug.aar')

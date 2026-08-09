@@ -78,7 +78,7 @@ public class UIHelper {
                 new AboutLibrary("jadx", "skylot", "https://github.com/skylot/jadx", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("AndroidX", "Google", "https://github.com/androidx/androidx", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Material Components", "Google", "https://github.com/material-components/material-components-android", "Apache-2.0", "Apache-2.0.txt"),
-                new AboutLibrary("OkHttp", "Square", "https://github.com/square/okhttp", "Apache-2.0", "Apache-2.0.txt"),
+                //new AboutLibrary("OkHttp", "Square", "https://github.com/square/okhttp", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Gson", "Google", "https://github.com/google/gson", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Commons IO", "Apache Software Foundation", "https://github.com/apache/commons-io", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Markwon", "noties", "https://github.com/noties/Markwon", "Apache-2.0", "Apache-2.0.txt"),
