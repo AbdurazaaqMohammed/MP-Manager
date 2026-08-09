@@ -184,20 +184,20 @@
             android:visibility="gone" />
     </FrameLayout>
 
-    <HorizontalScrollView
-        android:id="@+id/symbol_input_container"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
+<!--    <HorizontalScrollView-->
+<!--        android:id="@+id/symbol_input_container"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="48dp"-->
 
-        android:overScrollMode="never"
-        android:scrollbars="none"
-        android:visibility="gone">
+<!--        android:overScrollMode="never"-->
+<!--        android:scrollbars="none"-->
+<!--        android:visibility="gone">-->
 
-        <io.github.rosemoe.sora.widget.SymbolInputView
-            android:id="@+id/symbol_input"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent" />
-    </HorizontalScrollView>
+<!--        <io.github.rosemoe.sora.widget.SymbolInputView-->
+<!--            android:id="@+id/symbol_input"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="match_parent" />-->
+<!--    </HorizontalScrollView>-->
 
     <HorizontalScrollView
         android:id="@+id/bottom_bar_scroll"

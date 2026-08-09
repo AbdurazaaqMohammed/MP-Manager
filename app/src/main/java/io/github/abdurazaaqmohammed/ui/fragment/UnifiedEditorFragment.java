@@ -131,10 +131,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private EditText searchInput, replaceInput;
     private View btnFind, btnReplaceToggle, btnSearchMenu, btnStopSearch;
     private MaterialButton btnReplaceAll;
-    private SymbolInputView symbolInput;
+    //private SymbolInputView symbolInput;
     private ProgressBar loadingProgress;
     private TextView textviewLineNo, methodName, textviewLeft;
-    private View symbolInputContainer, bottomBarScroll;
+    private View bottomBarScroll;
+    //private View symbolInputContainer;
 
     private String className = "";
     private String title = "";
@@ -243,8 +244,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         btnReplaceAll = view.findViewById(R.id.btn_replace_all);
         btnSearchMenu = view.findViewById(R.id.btn_search_menu);
         btnStopSearch = view.findViewById(R.id.btn_stop_search);
-        symbolInput = view.findViewById(R.id.symbol_input);
-        symbolInputContainer = view.findViewById(R.id.symbol_input_container);
+//        symbolInput = view.findViewById(R.id.symbol_input);
+//        symbolInputContainer = view.findViewById(R.id.symbol_input_container);
         loadingProgress = view.findViewById(R.id.loading_progress);
         linearHeader = view.findViewById(R.id.linear_header);
         textviewLineNo = view.findViewById(R.id.textview_lineNo);
@@ -389,10 +390,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             if (!isAdded()) return;
             updateEditorUI();
             loadEditorSettings(true);
-            if (isSmali && symbolInput != null) {
-                symbolInput.bindEditor(editor);
-                symbolInput.addSymbols(SYMBOLS, SYMBOL_INSERT_TEXT);
-            }
+//            if (isSmali && symbolInput != null) {
+//                symbolInput.bindEditor(editor);
+//                symbolInput.addSymbols(SYMBOLS, SYMBOL_INSERT_TEXT);
+//            }
             if (initialContentText != null) {
                 editor.setText(initialContentText);
                 postInitialize(false);
@@ -533,16 +534,16 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 Log.e("UnifiedEditor", "Error setting smali language", e);
                 editor.setEditorLanguage(new EmptyLanguage());
             }
-            if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.VISIBLE);
+            //if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.VISIBLE);
             if (linearHeader != null) linearHeader.setVisibility(View.VISIBLE);
             editor.setEditable(true);
         } else if (type == TYPE_JAVA) {
             editor.setEditorLanguage(new JavaLanguage());
-            if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.GONE);
+            //if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.GONE);
             if (linearHeader != null) linearHeader.setVisibility(View.GONE);
             editor.setEditable(false);
         } else {
-            if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.GONE);
+            //if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.GONE);
             if (linearHeader != null) linearHeader.setVisibility(View.GONE);
         }
         applyPreferences();

@@ -70,6 +70,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -170,10 +171,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     private void initializeLogic() {
-        if (getDialog() != null && getDialog().getWindow() != null) {
-            getDialog().getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            getDialog().getWindow().requestFeature(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-        }
+//        if (getDialog() != null && getDialog().getWindow() != null) {
+//            getDialog().getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+//            getDialog().getWindow().requestFeature(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+//        }
 
         ViewAnimationHelper.enableSwipeViewToggle(methodRecyclerView, stringsRecyclerView);
 
@@ -182,8 +183,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
         Menu menu = toolbar.getMenu();
         MenuItem searchItem = menu.findItem(R.id.search);
-        menu.findItem(R.id.close);
-        menu.findItem(R.id.strings_list);
+        int tint = getTheme() == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE;
+        DrawableCompat.setTint(menu.findItem(R.id.strings_list).getIcon(), tint);
+        DrawableCompat.setTint(menu.findItem(R.id.close).getIcon(), tint);
+        DrawableCompat.setTint(searchItem.getIcon(), tint);
         searchItem.setVisible(true);
 
         SearchView searchView = (SearchView) searchItem.getActionView();
@@ -284,14 +287,15 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
     public void restorePreviousState(Parcelable methodState, Parcelable stringsState, boolean wasStringsVisible) {
         // Restore visibility
+        MenuItem item = toolbar.getMenu().findItem(R.id.strings_list);
         if (wasStringsVisible) {
             methodRecyclerView.setVisibility(View.GONE);
             stringsRecyclerView.setVisibility(View.VISIBLE);
-            toolbar.getMenu().findItem(R.id.strings_list).setTitle("Show Methods");
+            item.setTitle("Show Methods");
         } else {
             methodRecyclerView.setVisibility(View.VISIBLE);
             stringsRecyclerView.setVisibility(View.GONE);
-            toolbar.getMenu().findItem(R.id.strings_list).setTitle("Show Strings");
+            item.setTitle("Show Strings");
         }
 
         // Restore scroll positions

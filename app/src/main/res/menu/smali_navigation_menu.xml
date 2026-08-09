@@ -2,7 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/search"
-        android:title="Search"
+        android:title="@android:string/search_go"
         android:visible="true"
         android:icon="@drawable/ic_search_mt"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
@@ -16,5 +16,5 @@
         app:showAsAction="always"
         android:icon="@drawable/ic_close_mt"
         android:id="@+id/close"
-        android:title="Close"/>
+        android:title="@android:string/cancel"/>
 </menu>

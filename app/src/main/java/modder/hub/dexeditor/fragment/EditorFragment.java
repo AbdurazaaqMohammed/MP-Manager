@@ -120,7 +120,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     private ProgressBar loadingProgress;
     private TextView textviewLineNo;
     private TextView methodName;
-    private SymbolInputView symbol_input;
+ //   private SymbolInputView symbol_input;
 
     private EditorPositionManager positionManager;
     private SharedPreferences editor_prefs;
@@ -215,7 +215,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         TextView textviewLeft = view.findViewById(R.id.textview_left);
         textviewLineNo = view.findViewById(R.id.textview_lineNo);
         methodName = view.findViewById(R.id.methodName);
-        symbol_input = view.findViewById(R.id.symbol_input);
+        //symbol_input = view.findViewById(R.id.symbol_input);
         LinearLayout linearLeft = view.findViewById(R.id.linear_left);
         LinearLayout linearRight = view.findViewById(R.id.linear_right);
 
@@ -303,8 +303,8 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 if (!isAdded()) return;
                 updateEditorUI();
                 loadEditorSettings(true);
-                symbol_input.bindEditor(smaliEditor);
-                symbol_input.addSymbols(SYMBOLS, SYMBOL_INSERT_TEXT);
+//                symbol_input.bindEditor(smaliEditor);
+//                symbol_input.addSymbols(SYMBOLS, SYMBOL_INSERT_TEXT);
 
                 if (initialContentText != null) {
                     smaliEditor.setText(initialContentText);
@@ -540,20 +540,20 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 smaliEditor.setEditorLanguage(new EmptyLanguage());
             }
 
-            symbol_input.setVisibility(View.VISIBLE);
-            if (symbol_input.getParent() instanceof View) {
-                ((View) symbol_input.getParent()).setVisibility(View.VISIBLE);
-            }
+//            symbol_input.setVisibility(View.VISIBLE);
+//            if (symbol_input.getParent() instanceof View) {
+//                ((View) symbol_input.getParent()).setVisibility(View.VISIBLE);
+//            }
             smaliEditor.setEditable(true);
             if (view != null) {
                 view.findViewById(R.id.linear_header).setVisibility(View.VISIBLE);
             }
         } else {
             smaliEditor.setEditorLanguage(new JavaLanguage());
-            symbol_input.setVisibility(View.GONE);
-            if (symbol_input.getParent() instanceof View) {
-                ((View) symbol_input.getParent()).setVisibility(View.GONE);
-            }
+//            symbol_input.setVisibility(View.GONE);
+//            if (symbol_input.getParent() instanceof View) {
+//                ((View) symbol_input.getParent()).setVisibility(View.GONE);
+//            }
             smaliEditor.setEditable(false);
             if (view != null) {
                 view.findViewById(R.id.linear_header).setVisibility(View.GONE);

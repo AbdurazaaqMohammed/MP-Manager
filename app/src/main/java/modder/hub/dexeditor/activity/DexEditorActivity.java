@@ -2570,7 +2570,7 @@ public class DexEditorActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     // detect compile error from spceific classes and navigate to the class for fix
-                                    new AlertDialog.Builder(DexEditorActivity.this)
+                                    new MaterialAlertDialogBuilder(DexEditorActivity.this)
                                             .setTitle("Compile Error")
                                             .setMessage("Class: " + faultyClass + "\n\n" + error)
                                             .setPositiveButton("Fix", new DialogInterface.OnClickListener() {
@@ -2583,7 +2583,7 @@ public class DexEditorActivity extends AppCompatActivity {
                                                     }
                                                 }
                                             })
-                                            .setNegativeButton("Close", null)
+                                            .setNegativeButton(android.R.string.cancel, null)
                                             .show();
                                 }
                             });
@@ -2867,7 +2867,12 @@ public class DexEditorActivity extends AppCompatActivity {
                     }
                 });
             }
-            holder.mainView.setBackgroundColor(isSelected ? Color.parseColor("#E1F5FE") : Color.WHITE);
+            if (isSelected) holder.mainView.setBackgroundColor(Color.parseColor("#E1F5FE"));
+            else {
+                TypedValue tv = new TypedValue();
+                getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, tv, true);
+                holder.mainView.setBackgroundColor(tv.data);
+            }
         }
 
         public void closeOtherTabs(int index) {

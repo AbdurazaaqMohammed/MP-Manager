@@ -14,8 +14,8 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/signBox"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp">
+        android:padding="20dp"
+        android:orientation="horizontal">
         <com.google.android.material.checkbox.MaterialCheckBox
             android:text="@string/auto_sign"
             android:textSize="20sp"
