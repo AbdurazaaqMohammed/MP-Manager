@@ -62,7 +62,7 @@ public class ApkInfoUtil {
         return -1;
     }
 
-    public static String getPermissions(PackageInfo pi) {
+    public static CharSequence getPermissions(PackageInfo pi) {
         if (pi == null || pi.requestedPermissions == null) return "";
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < pi.requestedPermissions.length; i++) {
@@ -71,7 +71,7 @@ public class ApkInfoUtil {
             if (sb.length() > 0) sb.append('\n');
             sb.append("• ").append(p);
         }
-        return sb.toString();
+        return sb;
     }
 
     public static long getTotalSize(File apk) {

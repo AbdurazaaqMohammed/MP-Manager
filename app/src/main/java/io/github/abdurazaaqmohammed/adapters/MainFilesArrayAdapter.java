@@ -2475,6 +2475,39 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         TextView apkCert = display.findViewById(R.id.apkCert);
         TextView apkInstalled = display.findViewById(R.id.apkInstalled);
         TextView apkPermissions = display.findViewById(R.id.apkPermissions);
+        LinearLayout permissionsHeader = display.findViewById(R.id.permissionsHeader);
+        ImageView permissionsChevron = display.findViewById(R.id.apkPermissionsChevron);
+        final boolean[] permissionsLoaded = {false};
+        final boolean[] permissionsLoading = {false};
+        permissionsHeader.setOnClickListener(v -> {
+            if (apkPermissions.getVisibility() == View.VISIBLE) {
+                apkPermissions.setVisibility(View.GONE);
+                permissionsChevron.animate().rotation(0f).start();
+                return;
+            }
+            apkPermissions.setVisibility(View.VISIBLE);
+            permissionsChevron.animate().rotation(180f).start();
+            if (permissionsLoaded[0] || permissionsLoading[0]) return;
+            permissionsLoading[0] = true;
+            apkPermissions.setText(R.string.loading);
+            new Thread(() -> {
+                CharSequence perms = "";
+                try {
+                    PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(filePath, PackageManager.GET_PERMISSIONS);
+                    if (pi != null && pi.applicationInfo != null) {
+                        pi.applicationInfo.sourceDir = filePath;
+                        pi.applicationInfo.publicSourceDir = filePath;
+                        perms = ApkInfoUtil.getPermissions(pi);
+                    }
+                } catch (Exception ignored) { }
+                CharSequence finalPerms = perms;
+                context.handler.post(() -> {
+                    permissionsLoaded[0] = true;
+                    permissionsLoading[0] = false;
+                    apkPermissions.setText(TextUtils.isEmpty(finalPerms) ? context.getString(R.string.permissions_none) : finalPerms);
+                });
+            }).start();
+        });
         apkIcon.setImageDrawable(cachedApkIcon);
         apkTitle.setText(R.string.loading);
         apkVersionName.setText(R.string.loading);
@@ -2792,7 +2825,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         new Thread(() -> {
             try {
                 PackageManager pm = context.getPackageManager();
-                PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES | PackageManager.GET_PERMISSIONS);
+                PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
                 final ApplicationInfo appInfo;
                 if (packageInfo == null || (appInfo = packageInfo.applicationInfo) == null) {
                     context.handler.post(() -> {
@@ -2874,8 +2907,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         if (ApkInfoUtil.isDowngrade(context, packageInfo)) installedText += " (" + context.getString(R.string.downgrade) + ")";
                         apkInstalled.setText(installedText);
                     }
-                    String perms = ApkInfoUtil.getPermissions(packageInfo);
-                    apkPermissions.setText(TextUtils.isEmpty(perms) ? context.getString(R.string.permissions_none) : perms);
                 });
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
