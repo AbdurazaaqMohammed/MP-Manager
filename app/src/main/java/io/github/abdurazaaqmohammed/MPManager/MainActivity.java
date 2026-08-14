@@ -14,7 +14,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -29,7 +28,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.text.Editable;
@@ -82,7 +80,6 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -101,7 +98,6 @@ import android.view.View;
 import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
-import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -159,7 +155,6 @@ import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
-@SuppressWarnings("SequencedCollectionMethodCanBeUsed")
 public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
     private File homeDir1;
@@ -196,6 +191,8 @@ public class MainActivity extends AppCompatActivity {
     private MiniPlayerDialog miniPlayerDialog;
     private MaterialAutoCompleteTextView profileSpinner;
     private ImageButton profileManageButton;
+    private boolean isBackPressedToExit;
+    private final Runnable resetExitPrompt = () -> isBackPressedToExit = false;
 
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
@@ -1081,6 +1078,14 @@ public class MainActivity extends AppCompatActivity {
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
                             if (f != null && f.canRead()) loadFolderInPane(f, lastPaneSelected == 1, false);
+                            else if (isBackPressedToExit) {
+                                handler.removeCallbacks(resetExitPrompt);
+                                finishAffinity();
+                            } else {
+                                isBackPressedToExit = true;
+                                Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
+                                handler.postDelayed(resetExitPrompt, 2000);
+                            }
                         }
                     }
                 } else ftpClient.getCurDirPath(new OnEZFtpCallBack<>() {

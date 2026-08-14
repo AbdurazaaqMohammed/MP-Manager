@@ -213,6 +213,7 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="press_again_msg">Press back again to cancel</string>
+    <string name="press_back_again_to_exit">Press back again to exit</string>
     <string name="error">Error</string>
     <string name="ip">IP: %1$s</string>
     <string name="copied">Copied</string>
