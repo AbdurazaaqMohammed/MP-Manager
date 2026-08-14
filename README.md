@@ -289,7 +289,6 @@ Choose between system, light, dark and black theme all with Material theme and D
 
 This app still has lots of work to do and probably many bugs to fix but you can try it
 
-* Fix when decode AXML with resources.arsc to get full resource references re encoding is breaking
 * Add patcher to support multiple patch formats like APK Editor and Lucky Patcher
 * Add root and Shizuku file management
-* Add APK optimize improvements
+* Add improvements to APK optimization
