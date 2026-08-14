@@ -6,7 +6,7 @@ A free dual pane, Material Design file manager for Android with focus on APKs an
   <img src="./images/Ss1.png" width="200" alt="MP Manager screenshot"> <img src="./images/Ss2.png" width="200" alt="MP Manager screenshot">
 </p>
 
-[![GitHub Release](https://img.shields.io/github/v/release/AbdurazaaqMohammed/APKExtractor?style=for-the-badge&logo=github&label=Download&color=purple)](https://github.com/AbdurazaaqMohammed/MP-Manager/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/AbdurazaaqMohammed/MP-Manager?style=for-the-badge&logo=github&label=Download&color=purple)](https://github.com/AbdurazaaqMohammed/MP-Manager/releases)
 
 [![Telegram Discussion](https://img.shields.io/badge/Telegram%20Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/MP_Manager_Discussion)
 ## Features
@@ -289,7 +289,6 @@ Choose between system, light, dark and black theme all with Material theme and D
 
 This app still has lots of work to do and probably many bugs to fix but you can try it
 
-* Fix when decode AXML with resources.arsc to get full resource references re encoding is breaking
 * Add patcher to support multiple patch formats like APK Editor and Lucky Patcher
 * Add root and Shizuku file management
-* Add APK optimize improvements
+* Add improvements to APK optimization
