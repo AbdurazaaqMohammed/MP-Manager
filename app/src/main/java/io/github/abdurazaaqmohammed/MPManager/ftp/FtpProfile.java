@@ -7,14 +7,20 @@ public class FtpProfile {
     private String username;
     private String password;
     private boolean isServerProfile;
+    private int securityType;
 
     public FtpProfile(String name, String ip, int port, String username, String password, boolean isServerProfile) {
+        this(name, ip, port, username, password, isServerProfile, 0);
+    }
+
+    public FtpProfile(String name, String ip, int port, String username, String password, boolean isServerProfile, int securityType) {
         this.name = name;
         this.ip = ip;
         this.port = port;
         this.username = username;
         this.password = password;
         this.isServerProfile = isServerProfile;
+        this.securityType = securityType;
     }
 
     // Getters and setters
@@ -29,4 +35,6 @@ public class FtpProfile {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     public boolean isServerProfile() { return isServerProfile; }
+    public int getSecurityType() { return securityType; }
+    public void setSecurityType(int securityType) { this.securityType = securityType; }
 }

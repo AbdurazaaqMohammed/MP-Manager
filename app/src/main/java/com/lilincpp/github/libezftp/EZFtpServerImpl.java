@@ -11,8 +11,10 @@ import org.apache.ftpserver.FtpServerFactory;
 import org.apache.ftpserver.ftplet.Authority;
 import org.apache.ftpserver.ftplet.FtpException;
 import org.apache.ftpserver.listener.ListenerFactory;
+import org.apache.ftpserver.ssl.SslConfigurationFactory;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +36,19 @@ final class EZFtpServerImpl implements IEZFtpServer {
      * @param port  ftp server listen port
      */
     EZFtpServerImpl(List<EZFtpUser> users, int port) {
+        this(users, port, null, null, false);
+    }
+
+    /**
+     * create a ftp server with optional FTPS support
+     *
+     * @param users            support user list(need login)
+     * @param port             ftp server listen port
+     * @param keystoreFile     JKS keystore file containing a key entry, or null to disable FTPS
+     * @param keystorePassword keystore and key password
+     * @param implicitSsl      whether to use implicit TLS (FTPS direct) instead of explicit
+     */
+    EZFtpServerImpl(List<EZFtpUser> users, int port, File keystoreFile, String keystorePassword, boolean implicitSsl) {
         //配置参数
         FtpServerFactory serverFactory = new FtpServerFactory();
         //设置访问用户名和密码还有共享路径
@@ -54,6 +69,14 @@ final class EZFtpServerImpl implements IEZFtpServer {
         //设置监听端口
         ListenerFactory factory = new ListenerFactory();
         factory.setPort(port);
+        if (keystoreFile != null && keystorePassword != null) {
+            SslConfigurationFactory sslFactory = new SslConfigurationFactory();
+            sslFactory.setKeystoreFile(keystoreFile);
+            sslFactory.setKeystorePassword(keystorePassword);
+            sslFactory.setKeyPassword(keystorePassword);
+            factory.setSslConfiguration(sslFactory.createSslConfiguration());
+            factory.setImplicitSsl(implicitSsl);
+        }
         serverFactory.addListener("default", factory.createListener());
         //创建FTP服务实例
         ftpServer = serverFactory.createServer();

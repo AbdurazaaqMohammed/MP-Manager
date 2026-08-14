@@ -18,6 +18,10 @@ import java.util.List;
  */
 public interface IEZFtpClient {
 
+    int SECURITY_NONE = 0;
+    int SECURITY_FTPS_EXPLICIT = 1;
+    int SECURITY_FTPS_IMPLICIT = 2;
+
     /**
      * Connect FTP Server
      *
@@ -44,6 +48,23 @@ public interface IEZFtpClient {
                  @NonNull int port,
                  @NonNull String userName,
                  @NonNull String password,
+                 @Nullable OnEZFtpCallBack<Void> callBack);
+
+    /**
+     * Connect FTP Server with the given security type
+     *
+     * @param serverIp     ftp server ip
+     * @param port         ftp server port
+     * @param userName     login username
+     * @param password     login password
+     * @param securityType one of {@link #SECURITY_NONE}, {@link #SECURITY_FTPS_EXPLICIT}, {@link #SECURITY_FTPS_IMPLICIT}
+     * @param callBack     the async callback
+     */
+    void connect(@NonNull String serverIp,
+                 @NonNull int port,
+                 @NonNull String userName,
+                 @NonNull String password,
+                 int securityType,
                  @Nullable OnEZFtpCallBack<Void> callBack);
 
     /**

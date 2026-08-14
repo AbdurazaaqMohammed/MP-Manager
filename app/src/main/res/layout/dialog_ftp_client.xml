@@ -74,6 +74,25 @@
             android:hint="Password" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/security_input_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:hintEnabled="true"
+        app:boxBackgroundMode="outline"
+        app:boxBackgroundColor="@android:color/transparent"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:hint="@string/ftp_security">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/securityInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none"
+            android:singleLine="true" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="match_parent"

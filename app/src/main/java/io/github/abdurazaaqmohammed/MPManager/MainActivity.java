@@ -65,6 +65,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
@@ -2028,9 +2029,13 @@ public class MainActivity extends AppCompatActivity {
         EditText portInput = view.findViewById(R.id.portInput);
         EditText userInput = view.findViewById(R.id.userInput);
         EditText passInput = view.findViewById(R.id.passInput);
+        MaterialAutoCompleteTextView securityInput = view.findViewById(R.id.securityInput);
+        String[] securityOptions = rss.getStringArray(R.array.ftp_security_options);
+        securityInput.setSimpleItems(securityOptions);
+        securityInput.setText(securityOptions[0], false);
         profileSpinner = header.findViewById(R.id.profile_spinner);
         profileManageButton = header.findViewById(R.id.manage_profiles);
-        new ProfileHelper(this, null, portInput, userInput, passInput, profileSpinner, profileManageButton).setupProfileSpinner(true);
+        new ProfileHelper(this, null, portInput, userInput, passInput, securityInput, profileSpinner, profileManageButton).setupProfileSpinner(true);
 
         boolean serverNotStarted = ftpServer == null;
         portInput.setEnabled(serverNotStarted);
@@ -2077,12 +2082,18 @@ public class MainActivity extends AppCompatActivity {
                         int port = Integer.parseInt(portInput.getText().toString());
                         String user = userInput.getText().toString();
                         String pass = passInput.getText().toString();
+                        int securityType = getSecurityTypeIndex(securityInput.getText().toString());
 
                         try {
-                            ftpServer = new EZFtpServer.Builder()
+                            EZFtpServer.Builder builder = new EZFtpServer.Builder()
                                     .setListenPort(port)
-                                    .addUser(new EZFtpUser(user, pass, Environment.getExternalStorageDirectory().getPath(), EZFtpUserPermission.WRITE))
-                                    .create();
+                                    .addUser(new EZFtpUser(user, pass, Environment.getExternalStorageDirectory().getPath(), EZFtpUserPermission.WRITE));
+                            if (securityType > 0) {
+                                boolean implicit = securityType == 2;
+                                File keystoreFile = FtpsCertificateUtil.ensureKeystore(new File(getCacheDir(), "ftps-keystore.jks"));
+                                builder.setFtps(keystoreFile, FtpsCertificateUtil.getPasswordString(), implicit);
+                            }
+                            ftpServer = builder.create();
                             ftpServer.start();
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                 startForegroundService(serviceIntent);
@@ -2127,6 +2138,10 @@ public class MainActivity extends AppCompatActivity {
         EditText portInput = view.findViewById(R.id.portInput);
         EditText userInput = view.findViewById(R.id.userInput);
         EditText passInput = view.findViewById(R.id.passInput);
+        MaterialAutoCompleteTextView securityInput = view.findViewById(R.id.securityInput);
+        String[] securityOptions = rss.getStringArray(R.array.ftp_security_options);
+        securityInput.setSimpleItems(securityOptions);
+        securityInput.setText(securityOptions[0], false);
         FrameLayout container = view.findViewById(R.id.container);
         View header = LayoutInflater.from(this).inflate(R.layout.dialog_ftp_client_header, container, false);
         container.addView(header, 0);
@@ -2134,7 +2149,7 @@ public class MainActivity extends AppCompatActivity {
         profileSpinner = header.findViewById(R.id.profile_spinner);
         profileManageButton = header.findViewById(R.id.manage_profiles);
 
-        new ProfileHelper(this, ipInput, portInput, userInput, passInput, profileSpinner, profileManageButton).setupProfileSpinner(false);
+        new ProfileHelper(this, ipInput, portInput, userInput, passInput, securityInput, profileSpinner, profileManageButton).setupProfileSpinner(false);
         dialogUtil.getDialogBuilder()
                 .setTitle("FTP Client")
                 .setView(view)
@@ -2144,9 +2159,10 @@ public class MainActivity extends AppCompatActivity {
                     int port = Integer.parseInt(portInput.getText().toString());
                     String user = userInput.getText().toString();
                     String pass = passInput.getText().toString();
+                    int securityType = getSecurityTypeIndex(securityInput.getText().toString());
 
                     ftpClient = new EZFtpClient();
-                    ftpClient.connect(ip, port, user, pass, new OnEZFtpCallBack<>() {
+                    ftpClient.connect(ip, port, user, pass, securityType, new OnEZFtpCallBack<>() {
                         @Override
                         public void onSuccess(Void response) {
                             runOnUiThread(() -> {
@@ -2166,6 +2182,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private IEZFtpClient ftpClient;
+
+    private int getSecurityTypeIndex(String text) {
+        String[] options = rss.getStringArray(R.array.ftp_security_options);
+        for (int i = 0; i < options.length; i++) {
+            if (options[i].equals(text)) {
+                return i;
+            }
+        }
+        return 0;
+    }
     
     public void fetchFtpDirAndLoad(String path, boolean pane1) {
         if (ftpClient == null || !ftpClient.isConnected()) return;

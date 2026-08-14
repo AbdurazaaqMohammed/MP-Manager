@@ -34,6 +34,11 @@ public final class EZFtpClient implements IEZFtpClient {
     }
 
     @Override
+    public void connect(@NonNull String serverIp, @NonNull int port, @NonNull String userName, @NonNull String password, int securityType, @Nullable OnEZFtpCallBack<Void> callBack) {
+        ftpClientIml.connect(serverIp, port, userName, password, securityType, callBack);
+    }
+
+    @Override
     public void disconnect() {
         ftpClientIml.disconnect();
     }

@@ -33,12 +33,19 @@ public class ProfileHelper {
     private MaterialAutoCompleteTextView profileSpinner;
     private ImageButton profileManageButton;
     private ProfileManager profileManager;
+    private MaterialAutoCompleteTextView securityInput;
+
     public ProfileHelper(MainActivity context, TextView ipInput, TextView portInput, TextView userInput, TextView passInput, MaterialAutoCompleteTextView profileSpinner, ImageButton profileManageButton) {
+        this(context, ipInput, portInput, userInput, passInput, null, profileSpinner, profileManageButton);
+    }
+
+    public ProfileHelper(MainActivity context, TextView ipInput, TextView portInput, TextView userInput, TextView passInput, MaterialAutoCompleteTextView securityInput, MaterialAutoCompleteTextView profileSpinner, ImageButton profileManageButton) {
         this.context = context;
         this.portInput = portInput;
         this.userInput = userInput;
         this.ipInput = ipInput;
         this.passInput = passInput;
+        this.securityInput = securityInput;
         this.profileSpinner = profileSpinner;
         this.profileManageButton = profileManageButton;
     }
@@ -104,6 +111,23 @@ public class ProfileHelper {
         portInput.setText(String.valueOf(profile.getPort()));
         userInput.setText(profile.getUsername());
         passInput.setText(profile.getPassword());
+        if(securityInput != null) {
+            securityInput.setText(getSecurityOptions()[profile.getSecurityType()], false);
+        }
+    }
+
+    private String[] getSecurityOptions() {
+        return context.getResources().getStringArray(R.array.ftp_security_options);
+    }
+
+    private int getSecurityTypeFromText(String text) {
+        String[] options = getSecurityOptions();
+        for (int i = 0; i < options.length; i++) {
+            if (options[i].equals(text)) {
+                return i;
+            }
+        }
+        return 0;
     }
 
     private void showProfileManagementDialog(boolean isServer) {
@@ -148,6 +172,9 @@ public class ProfileHelper {
         EditText portInput = view.findViewById(R.id.profile_port);
         EditText userInput = view.findViewById(R.id.profile_user);
         EditText passInput = view.findViewById(R.id.profile_pass);
+        MaterialAutoCompleteTextView profileSecurity = view.findViewById(R.id.profile_security);
+        String[] securityOptions = getSecurityOptions();
+        profileSecurity.setSimpleItems(securityOptions);
 
         if (isEdit) {
             nameInput.setText(profile.getName());
@@ -155,6 +182,9 @@ public class ProfileHelper {
             portInput.setText(String.valueOf(profile.getPort()));
             userInput.setText(profile.getUsername());
             passInput.setText(profile.getPassword());
+            int securityType = profile.getSecurityType();
+            if (securityType < 0 || securityType >= securityOptions.length) securityType = 0;
+            profileSecurity.setText(securityOptions[securityType], false);
         } else {
             // Get current entered values
             nameInput.setText("New Profile");
@@ -162,6 +192,11 @@ public class ProfileHelper {
             portInput.setText(this.portInput.getText());
             userInput.setText(this.userInput.getText());
             passInput.setText(this.passInput.getText());
+            if (this.securityInput != null) {
+                profileSecurity.setText(this.securityInput.getText(), false);
+            } else {
+                profileSecurity.setText(securityOptions[0], false);
+            }
         }
 
         builder.setTitle(dialogTitle)
@@ -172,8 +207,9 @@ public class ProfileHelper {
                     int port = Integer.parseInt(portInput.getText().toString());
                     String user = userInput.getText().toString().trim();
                     String pass = passInput.getText().toString();
+                    int securityType = getSecurityTypeFromText(profileSecurity.getText().toString());
 
-                    FtpProfile newProfile = new FtpProfile(name, ip, port, user, pass, isServer);
+                    FtpProfile newProfile = new FtpProfile(name, ip, port, user, pass, isServer, securityType);
 
                     if (isEdit) {
                         int i = profileManager.getProfiles().indexOf(profile);

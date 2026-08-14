@@ -403,6 +403,15 @@
     <string name="ftp_server_stopped">FTP Server stopped</string>
     <string name="connected_to_ftp">Connected to FTP</string>
     <string name="ftp_connect_failed">FTP Connect Failed: %1$s</string>
+    <string name="ftp_security">Security</string>
+    <string name="ftp_security_none">FTP (None)</string>
+    <string name="ftp_security_ftps_explicit">FTPS (Explicit TLS)</string>
+    <string name="ftp_security_ftps_implicit">FTPS (Implicit TLS)</string>
+    <string-array name="ftp_security_options">
+        <item>@string/ftp_security_none</item>
+        <item>@string/ftp_security_ftps_explicit</item>
+        <item>@string/ftp_security_ftps_implicit</item>
+    </string-array>
     <string name="screen_capture_permission_needed_for_color_picker">Screen capture permission needed for color picker</string>
     <string name="tg">Telegram Discussion</string>
     <string name="enter_name">Enter name</string>
