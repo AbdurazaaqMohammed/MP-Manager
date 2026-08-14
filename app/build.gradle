@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    compileSdk 37
+    compileSdk 36
 
     defaultConfig {
         applicationId "io.github.abdurazaaqmohammed.MPManager"
@@ -22,8 +22,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
         coreLibraryDesugaringEnabled true
     }
     namespace 'io.github.abdurazaaqmohammed.MPManager'
@@ -36,6 +36,8 @@ android {
     }
     packaging {
         resources.excludes.add("META-INF/DEPENDENCIES")
+        resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+        resources.excludes.add("META-INF/versions/9/OSGI-INF/LICENSES/**")
     }
 }
 
