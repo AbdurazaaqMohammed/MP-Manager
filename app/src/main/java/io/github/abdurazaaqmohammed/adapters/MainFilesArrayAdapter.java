@@ -1105,6 +1105,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     .setNegativeButton(android.R.string.cancel, null).show();
                                 } else if (fileName.endsWith(".zip")) {
                                     openZipFile(file, null);
+                                } else if (ArchiveUtil.isSupportedArchive(fileName)) {
+                                    dialogUtil.styleAlertDialog(
+                                            dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
+                                                dialog.dismiss();
+                                                if (which == 0) extractArchive(file);
+                                                else {
+                                                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+                                                    context.startActivity(new Intent(Intent.ACTION_VIEW)
+                                                            .setDataAndType(uri, context.getContentResolver().getType(uri))
+                                                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+                                                }
+                                            }).create());
                                 } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                                     String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
                                     dialogUtil.styleAlertDialog(
@@ -1267,6 +1279,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     }
                                     showCommandHelperDialog(cmdFilePaths);
                                     return;
+                                case "Extract":
+                                    if (isInZip || multi) return;
+                                    extractArchive(file);
+                                    return;
                                 default:
                                     switch (position1) {
                                         case 0:
@@ -1296,27 +1312,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             pm = new ProgressManager(context, true).show();
                                             new Thread(() -> {
                                                 try {
-                                                    if (multi) {
-                                                        for (int f : selectedPositions) {
-                                                            Object file1 = values[f];
-                                                            pm.setText(context.rss.getString(R.string.copying, file1));
-                                                            copy(file1);
-                                                            pm.setText(context.rss.getString(R.string.deleting, file1));
-                                                            if (file1 instanceof File) {
-                                                                ((File) file1).delete();
-                                                            } else if (file1 instanceof ZipEntryInfo) {
-                                                                deleteZipEntry((ZipEntryInfo) file1);
-                                                            }
-                                                        }
-                                                    } else {
-                                                        pm.setText(context.rss.getString(R.string.copying, item));
-                                                        copy(item);
-                                                        pm.setText(context.rss.getString(R.string.deleting, item));
-                                                        if (item instanceof File && ((File) item).delete())
-                                                            ;
-                                                        else if (item instanceof ZipEntryInfo)
-                                                            deleteZipEntry((ZipEntryInfo) item);
-                                                    }
+                                                    pm.setText(context.rss.getString(R.string.copying, item));
+                                                    move(item);
                                                     pm.dismiss();
                                                 } catch (Exception e) {
                                                     pm.dismiss();
@@ -1484,6 +1481,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             filenameEditText.setText(multi ? parentFileName + ".zip" : fileName.replace(FilenameUtils.getExtension(fileName), "zip"));
                                             settings = PreferenceManager.getDefaultSharedPreferences(context);
 
+                                            String[] archiveFormats = ArchiveUtil.getSupportedCreateExts();
+                                            AutoCompleteTextView archiveFormatInput = compressView.findViewById(R.id.compress_format);
+                                            archiveFormatInput.setText(archiveFormats[0]);
+                                            archiveFormatInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, archiveFormats));
+
                                             AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);
                                             compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
                                             List<String> compressionLevels = new ArrayList<>();
@@ -1496,28 +1498,50 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> {
                                                 pm.show();
                                                 new Thread(() -> {
-                                                    File outputZip = new File(parentFile2, (multi ? parentFileName : fileName) + ".zip");
+                                                    String name = ((TextInputEditText) compressView.findViewById(R.id.filename_compress_edittext)).getText().toString().trim();
+                                                    if (name.isEmpty()) name = multi ? parentFileName : fileName;
+                                                    String format = ((AutoCompleteTextView) compressView.findViewById(R.id.compress_format)).getText().toString().trim();
+                                                    if (!format.startsWith(".")) format = "." + format;
+                                                    if (!name.toLowerCase(Locale.ENGLISH).endsWith(format)) name += format;
+                                                    File outputZip = new File(parentFile2, name);
 
-                                                    ZipParameters zipParameters = new ZipParameters();
-                                                    CompressionLevel compressionLevel = CompressionLevel.valueOf(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
-                                                    zipParameters.setCompressionLevel(compressionLevel);
-                                                    if (compressionLevel == CompressionLevel.NO_COMPRESSION)
-                                                        zipParameters.setCompressionMethod(CompressionMethod.STORE);
-                                                    CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
+                                                    List<File> sources = new ArrayList<>();
+                                                    if (multi) {
+                                                        for (int i : selectedPositions) sources.add((File) values[i]);
+                                                    } else sources.add(file);
 
-                                                    try (ZipFile zf = new ZipFile(outputZip)) {
-                                                        if (!TextUtils.isEmpty(pw))
-                                                            zf.setPassword(pw.toString().toCharArray()); // why it not setting password check this
-                                                        if (multi) {
-                                                            List<File> selectedFiles = new ArrayList<>();
-                                                            for (int i : selectedPositions)
-                                                                selectedFiles.add((File) values[i]);
-                                                            zf.addFiles(selectedFiles, zipParameters);
-                                                        } else zf.addFile(file, zipParameters);
-                                                        pm.dismiss();
-                                                    } catch (Exception e) {
-                                                        pm.dismiss();
-                                                        new ErrorUtil(context).showError(e);
+                                                    if (format.equals(".zip")) {
+                                                        ZipParameters zipParameters = new ZipParameters();
+                                                        CompressionLevel compressionLevel = CompressionLevel.valueOf(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
+                                                        zipParameters.setCompressionLevel(compressionLevel);
+                                                        if (compressionLevel == CompressionLevel.NO_COMPRESSION)
+                                                            zipParameters.setCompressionMethod(CompressionMethod.STORE);
+                                                        CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
+
+                                                        try (ZipFile zf = new ZipFile(outputZip)) {
+                                                            if (!TextUtils.isEmpty(pw)) {
+                                                                zipParameters.setEncryptFiles(true);
+                                                                zipParameters.setEncryptionMethod(EncryptionMethod.AES);
+                                                                zf.setPassword(pw.toString().toCharArray());
+                                                            }
+                                                            for (File source : sources) {
+                                                                if (source.isDirectory())
+                                                                    zf.addFolder(source, zipParameters);
+                                                                else zf.addFile(source, zipParameters);
+                                                            }
+                                                            pm.dismiss();
+                                                        } catch (Exception e) {
+                                                            pm.dismiss();
+                                                            new ErrorUtil(context).showError(e);
+                                                        }
+                                                    } else {
+                                                        try {
+                                                            ArchiveUtil.create(outputZip, sources);
+                                                            pm.dismiss();
+                                                        } catch (Exception e) {
+                                                            pm.dismiss();
+                                                            new ErrorUtil(context).showError(e);
+                                                        }
                                                     }
                                                 }).start();
                                             });
@@ -1840,6 +1864,31 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         context.loadZipFolderInPane(zipFile, path != null ? path : "", pane1, true);
     }
 
+    private void extractArchive(File archive) {
+        File parent = archive.getParentFile();
+        String baseName = archive.getName();
+        String folderName = baseName;
+        if (baseName.endsWith(".tar.gz")) folderName = baseName.substring(0, baseName.length() - ".tar.gz".length());
+        else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
+        else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
+        else folderName = baseName.substring(0, baseName.lastIndexOf('.'));
+        File destDir = FileUtils.getUnusedFile(new File(parent, folderName));
+        destDir.mkdirs();
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.setText(context.rss.getString(R.string.extracting_to_folder, destDir.getName()));
+        pm.show();
+        new Thread(() -> {
+            try {
+                ArchiveUtil.extract(archive, destDir);
+                pm.dismiss();
+                context.handler.post(() -> context.loadFolderInPane(parent, pane1));
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
     private void handleZipEntryClick(ZipEntryInfo zipEntry) {
         File zipFile = zipEntry.getZipFile();
         String fullPath = zipEntry.getFullPath();
@@ -1953,8 +2002,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 boolean isAxml = FileUtils.isAxml(is);
                 if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
                     ResourceTableParser rtp = new ResourceTableParser(rssStream);
+                    List<ResEntry> resEntries = rtp.parse();
                     context.startActivityForResult(new Intent(context, TextEditorActivity.class)
-                            .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2, rtp.parse()).decodeAsString())
+                            .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2, resEntries).decodeAsString())
+                            .putExtra("resEntries", (Serializable) resEntries)
                             .putExtra("zf", zipFile.getPath())
                             .putExtra("zipEntryPath", fullPath)
                             .putExtra("axml", true)

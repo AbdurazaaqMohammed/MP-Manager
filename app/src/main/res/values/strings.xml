@@ -157,6 +157,9 @@
     <string name="target_android_version">Target Android Version</string>
     <string name="compression_level">Compression Level</string>
     <string name="pw_zip">Password (no encryption if empty)</string>
+    <string name="extract">Extract</string>
+    <string name="extracting_to_folder">Extracting to %1$s</string>
+    <string name="archive_format">Archive format</string>
     <string name="unknown">Unknown</string>
     <string name="back">Back</string>
     <string name="forward">Forward</string>
