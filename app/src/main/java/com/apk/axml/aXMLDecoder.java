@@ -126,12 +126,10 @@ public class aXMLDecoder {
 		return result;
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public String decodeAsString() throws XmlPullParserException, IOException {
 		return Utils.decodeAsString(decode());
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private static String getAttributeValue(AXmlResourceParser parser, List<ResEntry> entries, int index) {
 		final int type = parser.getAttributeValueType(index);
 		final int data = parser.getAttributeValueData(index);

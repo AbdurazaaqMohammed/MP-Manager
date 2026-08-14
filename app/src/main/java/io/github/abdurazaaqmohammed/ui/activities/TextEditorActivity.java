@@ -1,10 +1,8 @@
 package io.github.abdurazaaqmohammed.ui.activities;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -14,6 +12,8 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentManager;
 
+import com.apk.axml.ResourceTableParser;
+import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
 import com.apk.axml.serializableItems.ResEntry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -22,6 +22,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -236,6 +237,12 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             if (intent.hasExtra("resEntries")) {
                 //noinspection unchecked
                 resEntries = (List<ResEntry>) intent.getSerializableExtra("resEntries");
+            } else if (intent.hasExtra("rssPath")) {
+                try(InputStream is = FileUtils.getInputStream(intent.getStringExtra("rssPath")); InputStream is2 = FileUtils.getInputStream(intent.getStringExtra("path"))) {
+                    ResourceTableParser rtp = new ResourceTableParser(is);
+                    resEntries = rtp.parse();
+                    f.setText(new aXMLDecoder(is2, resEntries).decodeAsString());
+                } catch (Exception e) { new ErrorUtil(this).showError(e); }
             }
             currentFile = new File(intent.getStringExtra("path"));
             currentFileUri = Uri.fromFile(currentFile);
