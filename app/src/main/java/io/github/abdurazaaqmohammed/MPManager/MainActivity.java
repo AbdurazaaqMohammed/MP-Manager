@@ -429,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
         setTheme(theme = settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
         super.onCreate(savedInstanceState);
         DynamicColors.applyToActivitiesIfAvailable(getApplication());
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+        //WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
         setContentView(R.layout.activity_main);
         checkStoragePerm();

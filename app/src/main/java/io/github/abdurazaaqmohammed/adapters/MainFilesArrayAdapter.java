@@ -1094,10 +1094,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     View et = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
                                     context.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
                                     EditText tv = et.findViewById(R.id.m_et_edittext);
-                                    tv.setText(fileName);
+                                    String newName = fileName.replace(bak, "");
+                                    tv.setText(newName);
                                     tv.requestFocus();
                                     tv.post(() -> {
-                                        tv.setSelection(0, fileName.indexOf(bak));
+                                        tv.setSelection(0, newName.indexOf(FilenameUtils.getExtension(newName)) - 1);
                                         InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
                                         if (imm != null) imm.showSoftInput(tv, InputMethodManager.SHOW_IMPLICIT);
                                     });
@@ -1108,9 +1109,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         String bakPath = file.getPath();
                                         String origPath = bakPath.replace(bak, "");
                                         File orig = new File(origPath);
-                                        if(orig.exists()) orig.renameTo(new File(fileName + bak));
+                                        boolean origExists = orig.exists();
+                                        if(origExists) {
+                                            orig.renameTo(new File(origPath + "_tmp_" + bak));
+                                        }
                                         file.renameTo(new File(origPath));
-                                        orig.renameTo(new File(bakPath));
+                                        if(origExists) orig.renameTo(new File(bakPath));
                                     })
                                     .setNegativeButton(android.R.string.cancel, null).show();
                                 } else if (fileName.endsWith(".zip")) {

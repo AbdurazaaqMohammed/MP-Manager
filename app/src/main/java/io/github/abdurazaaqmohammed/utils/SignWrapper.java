@@ -113,8 +113,9 @@ public class SignWrapper {
 
         boolean useBiometrics = prefs.getBoolean("useBiometrics", false);
         String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", ""));
-
-        if (useBiometrics && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !TextUtils.isEmpty(storedPass)) {
+        if(keyPath.endsWith("debug.keystore")) {
+            callback.onAuthenticated(new SignWrapper(new File(keyPath), "android", v1, v2, v3, v4, signedBy));
+        } else if (useBiometrics && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !TextUtils.isEmpty(storedPass)) {
             Executor executor = ContextCompat.getMainExecutor(activity);
             BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
                 @Override
