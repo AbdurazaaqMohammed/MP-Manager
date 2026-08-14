@@ -15,6 +15,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentManager;
 
 import com.apk.axml.aXMLEncoder;
+import com.apk.axml.serializableItems.ResEntry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -25,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.List;
 
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -42,6 +44,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     private boolean saved;
     private boolean axml;
     private boolean manualFinish;
+    private List<ResEntry> resEntries;
 
     private UnifiedEditorFragment editorFragment;
 
@@ -230,6 +233,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             if (intent.hasExtra(Intent.EXTRA_TEXT)) {
                 f.setText(intent.getStringExtra(Intent.EXTRA_TEXT));
             }
+            if (intent.hasExtra("resEntries")) {
+                //noinspection unchecked
+                resEntries = (List<ResEntry>) intent.getSerializableExtra("resEntries");
+            }
             currentFile = new File(intent.getStringExtra("path"));
             currentFileUri = Uri.fromFile(currentFile);
         } else if (Intent.ACTION_VIEW.equals(action) || Intent.ACTION_EDIT.equals(action)
@@ -310,7 +317,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 ? getContentResolver().openOutputStream(currentFileUri, "wt")
                 : FileUtils.getOutputStream(currentFile))) {
             final String text = f.getEditor().getText().toString();
-            os.write(axml ? new aXMLEncoder().encodeString(text, this) : text.getBytes(Charset.forName("UTF-8")));
+            os.write(axml ? new aXMLEncoder().encodeString(text, this, resEntries) : text.getBytes(Charset.forName("UTF-8")));
             saved = true;
             f.markSaved();
             f.getEditor().getText().addContentListener(new ContentListener() {

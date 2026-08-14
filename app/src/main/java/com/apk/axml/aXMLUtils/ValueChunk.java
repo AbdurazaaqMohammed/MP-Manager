@@ -41,6 +41,7 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
     Pattern types = Pattern.compile(("^(?:" +
             "(@null)" +
             "|(@\\+?(?:\\w+:)?\\w+/\\w+|@(?:\\w+:)?[0-9a-zA-Z]+)" +
+            "|(\\?\\+?(?:\\w+:)?\\w+/\\w+|\\?(?:\\w+:)?[0-9a-zA-Z]+)" +
             "|(true|false)" +
             "|([-+]?\\d+)" +
             "|(0x[0-9a-zA-Z]+)" +
@@ -155,10 +156,14 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
                         data = getReferenceResolver().resolve(this, vp.val);
                         break;
                     case 3:
+                        type = 0x02;
+                        data = getReferenceResolver().resolve(this, vp.val);
+                        break;
+                    case 4:
                         type = 0x12;
                         data = "true".equalsIgnoreCase(vp.val) ? 1 : 0;
                         break;
-                    case 4:
+                    case 5:
                         type = 0x10;
                         try {
                             data = Integer.parseInt(vp.val);
@@ -168,27 +173,27 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
                             stringPool().addString(realString);
                         }
                         break;
-                    case 5:
+                    case 6:
                         type = 0x11;
                         data = Integer.parseInt(vp.val.substring(2),16);
                         break;
-                    case 6:
+                    case 7:
                         type = 0x04;
                         data = Float.floatToIntBits(Float.parseFloat(vp.val));
                         break;
-                    case 7:
+                    case 8:
                         type = 0x05;
                         data = evalcomplex(vp.val);
                         break;
-                    case 8:
+                    case 9:
                         type = 0x06;
                         data = evalcomplex(vp.val);
                         break;
-                    case 9:
+                    case 10:
                         type = 0x1c;
                         data = Color.parseColor(vp.val);
                         break;
-                    case 10:
+                    case 11:
                         type = 0x10;
                         data = "wrap_content".equalsIgnoreCase(vp.val) ? -2 : -1;
                         break;

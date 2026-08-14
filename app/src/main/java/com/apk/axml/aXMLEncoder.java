@@ -8,6 +8,7 @@ import com.apk.axml.aXMLUtils.StringPoolChunk;
 import com.apk.axml.aXMLUtils.TagChunk;
 import com.apk.axml.aXMLUtils.Utils;
 import com.apk.axml.aXMLUtils.XmlChunk;
+import com.apk.axml.serializableItems.ResEntry;
 import com.apk.axml.serializableItems.XMLEntry;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -32,23 +33,31 @@ public class aXMLEncoder {
     }
 
     public byte[] encodeString(List<XMLEntry> xmlEntries, Context context) throws XmlPullParserException, IOException {
+        return encodeString(xmlEntries, context, null);
+    }
+
+    public byte[] encodeString(List<XMLEntry> xmlEntries, Context context, List<ResEntry> resourceEntries) throws XmlPullParserException, IOException {
         XmlPullParserFactory f = XmlPullParserFactory.newInstance();
         f.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,true);
         XmlPullParser p = f.newPullParser();
         p.setInput(new StringReader(Utils.decodeAsString(xmlEntries)));
-        return encode(p, context);
+        return encode(p, context, resourceEntries);
     }
 
     public byte[] encodeString(String xml, Context context) throws XmlPullParserException, IOException {
+        return encodeString(xml, context, null);
+    }
+
+    public byte[] encodeString(String xml, Context context, List<ResEntry> resourceEntries) throws XmlPullParserException, IOException {
         XmlPullParserFactory f = XmlPullParserFactory.newInstance();
         f.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,true);
         XmlPullParser p = f.newPullParser();
         p.setInput(new StringReader(xml));
-        return encode(p, context);
+        return encode(p, context, resourceEntries);
     }
 
-    private static byte[] encode(XmlPullParser p, Context context) throws XmlPullParserException, IOException {
-        XmlChunk chunk = new XmlChunk(context);
+    private static byte[] encode(XmlPullParser p, Context context, List<ResEntry> resourceEntries) throws XmlPullParserException, IOException {
+        XmlChunk chunk = new XmlChunk(context, resourceEntries);
         TagChunk current = null;
         for (int i=p.getEventType(); i!=XmlPullParser.END_DOCUMENT; i=p.next()) {
             switch (i){

@@ -81,9 +81,9 @@ public class aXMLDecoder {
 				for (int i = 0; i < attrCount; i++) {
 					String prefix = parser.getAttributePrefix(i);
 					String name = parser.getAttributeName(i);
-					String fullName = (prefix != null && !prefix.isEmpty()) ? prefix + ":" + name : name;
-					String value = getAttributeValue(parser, resourceEntries, i);
-					result.add(new XMLEntry(indent + "    " + fullName,"=\"",value,"\""));
+				String fullName = (prefix != null && !prefix.isEmpty()) ? prefix + ":" + name : name;
+				String value = escapeAttr(getAttributeValue(parser, resourceEntries, i));
+				result.add(new XMLEntry(indent + "    " + fullName,"=\"",value,"\""));
 				}
 
 				int closeIndex = result.size() - 1;
@@ -144,7 +144,7 @@ public class aXMLDecoder {
 				if (entries != null) {
 					for (ResEntry e : entries) {
 						if (e.getResourceId() == data) {
-							return e.getValue() != null ? e.getValue() : e.getName() != null ? e.getName() : e.getResAttr();
+							return e.getName() != null ? e.getName() : e.getValue() != null ? e.getValue() : e.getResAttr();
 						}
 					}
 				}
@@ -154,7 +154,7 @@ public class aXMLDecoder {
 				if (entries != null) {
 					for (ResEntry e : entries) {
 						if (e.getResourceId() == data) {
-							return e.getValue() != null ? e.getValue() : e.getName() != null ? "?" + e.getName() : e.getResAttr();
+							return e.getName() != null ? "?" + e.getName().substring(1) : e.getValue() != null ? e.getValue() : String.format("?%08X", data);
 						}
 					}
 				}
@@ -222,6 +222,10 @@ public class aXMLDecoder {
 
 	private static String escapeText(String s) {
 		return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
+	}
+
+	private static String escapeAttr(String s) {
+		return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");
 	}
 
 	private static String trimTrailingZero(float f) {
