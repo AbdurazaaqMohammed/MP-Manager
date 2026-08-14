@@ -18,6 +18,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
@@ -43,6 +44,7 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.util.LruCache;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -76,7 +78,6 @@ import android.widget.Toast;
 
 import com.android.apksig.ApkVerifier;
 import com.apk.axml.APKParser;
-import com.apk.axml.ResourceTableParser;
 import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
 import com.apk.axml.serializableItems.ResEntry;
@@ -88,6 +89,7 @@ import com.github.angads25.filepicker.view.FilePickerDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
@@ -107,15 +109,14 @@ import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
+import net.lingala.zip4j.model.enums.EncryptionMethod;
 
 import org.apache.commons.io.FilenameUtils;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -130,6 +131,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.security.cert.X509Certificate;
 
 
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
@@ -144,10 +146,16 @@ import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
+import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
+import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
+import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.HashUtil;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
@@ -1060,6 +1068,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
                                 || fileName.endsWith(".gradle") || fileName.endsWith(".properties")) {
                                 context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getPath()));
+                            } else if(HashUtil.isChecksumFile(fileName)) {
+                                showHashVerifyDialog(file);
                             } else if(fileName.endsWith(".xml")) {
                                 try (InputStream is = FileUtils.getInputStream(file)) {
                                     if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(file)) {
@@ -1193,8 +1203,28 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                     boolean multi = !selectedPositions.isEmpty();
                     String direction = pane1 ? "->" : "<-";
-                    String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark", "Command Helper" };
+                    String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark", "Command Helper", context.getString(R.string.checksums) };
                     List<String> itemsList = new ArrayList<>(Arrays.asList(baseItems));
+
+                    if (multi && !isInZip) {
+                        boolean allApks = true;
+                        for (int bp : selectedPositions) {
+                            Object selected = values[bp];
+                            if (!(selected instanceof File) || !((File) selected).getName().toLowerCase(Locale.ENGLISH).endsWith(".apk")) {
+                                allApks = false;
+                                break;
+                            }
+                        }
+                        if (allApks) {
+                            itemsList.add(context.getString(R.string.batch_sign));
+                            itemsList.add(context.getString(R.string.batch_optimize));
+                            itemsList.add(context.getString(R.string.batch_install));
+                        }
+                    }
+
+                    if (!multi && !isInZip && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
+                        itemsList.add(context.getString(R.string.extract));
+                    }
 
                     RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                     Object compareFile1 = null;
@@ -1217,7 +1247,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                             if (isZip1 && isZip2) itemsList.add("Compare ZIP");
                             if (isArsc1 && isArsc2) itemsList.add("Compare ARSC");
-                            if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) itemsList.add("Compare Text");
+                            if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) {
+                                itemsList.add("Compare Text");
+                                if (compareFile1 instanceof File && compareFile2 instanceof File
+                                        && !((File) compareFile1).isDirectory() && !((File) compareFile2).isDirectory())
+                                    itemsList.add(context.getString(R.string.compare_hashes));
+                            }
+                            if (ext1.equals("apk") && ext2.equals("apk")
+                                    && compareFile1 instanceof File && compareFile2 instanceof File)
+                                itemsList.add(context.getString(R.string.compare_apks));
                         }
                     }
 
@@ -1266,6 +1304,41 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath()
                                     ).show();
                                     return;
+                                case "Compare hashes":
+                                    showCompareHashesDialog((File) finalCompareFile1, (File) finalCompareFile2);
+                                    return;
+                                case "Checksums":
+                                    if (isInZip) {
+                                        Toast.makeText(context, context.getString(R.string.checksum_not_supported_zip), Toast.LENGTH_SHORT).show();
+                                        return;
+                                    }
+                                    List<File> checksumFiles = new ArrayList<>();
+                                    if (multi) {
+                                        for (int cmdPos : selectedPositions) checksumFiles.add((File) values[cmdPos]);
+                                    } else {
+                                        checksumFiles.add(file);
+                                    }
+                                    showChecksumsDialog(checksumFiles);
+                                    return;
+                                case "Compare APKs":
+                                    showCompareApksDialog((File) finalCompareFile1, (File) finalCompareFile2);
+                                    return;
+                                case "Batch sign APKs": {
+                                    List<File> apks = new ArrayList<>();
+                                    for (int bp : selectedPositions) apks.add((File) values[bp]);
+                                    batchSignApks(apks);
+                                    return;
+                                }
+                                case "Batch optimize APKs": {
+                                    List<File> apks = new ArrayList<>();
+                                    for (int bp : selectedPositions) apks.add((File) values[bp]);
+                                    batchOptimizeApks(apks);
+                                    return;
+                                }
+                                case "Install APKs": {
+                                    for (int bp : selectedPositions) InstallUtil.installApk(context, (File) values[bp]);
+                                    return;
+                                }
                                 case "Command Helper":
                                     if (isInZip) {
                                         Toast.makeText(context, "Command Helper not supported for zip entries", Toast.LENGTH_SHORT).show();
@@ -1549,87 +1622,85 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             context.handler.post(compressDialog::show);
                                             break;
                                         case 5:
-                                            LinearLayout parentLayout = new LinearLayout(context);
-                                            parentLayout.setOrientation(LinearLayout.HORIZONTAL);
-                                            parentLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                                    LinearLayout.LayoutParams.MATCH_PARENT));
+                                            View propView = LayoutInflater.from(context).inflate(R.layout.dialog_properties, null);
+                                            TextView propTitle = propView.findViewById(R.id.propertyTitle);
+                                            TextView propSubtitle = propView.findViewById(R.id.propertySubtitle);
+                                            ImageView propIcon = propView.findViewById(R.id.propertyIcon);
+                                            LinearLayout propRows = propView.findViewById(R.id.propertyRows);
+                                            LinearLayout checksumSection = propView.findViewById(R.id.checksumSection);
+                                            LinearLayout checksumRows = propView.findViewById(R.id.checksumRows);
 
-                                            LinearLayout firstVerticalLayout = new LinearLayout(context);
-                                            firstVerticalLayout.setOrientation(LinearLayout.VERTICAL);
-                                            firstVerticalLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                                                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                                                    LinearLayout.LayoutParams.MATCH_PARENT));
+                                            String displayName = getFilesToDisplay(multi, finalPosition1).toString();
+                                            propTitle.setText(displayName);
 
-                                            String[] labels = {"Name", "Parent", "Type", "Size", "Modified"};
-                                            for (String label : labels) {
-                                                TextView textView = new TextView(context);
-                                                textView.setLayoutParams(new LinearLayout.LayoutParams(
-                                                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                                                        LinearLayout.LayoutParams.WRAP_CONTENT));
-                                                textView.setText(label);
-                                                textView.setTextSize(20);
-                                                textView.setPadding(10, 10, 10, 10);
-                                                firstVerticalLayout.addView(textView);
-                                            }
+                                            boolean isFolder = isInZip ? entry.isDirectory() : file.isDirectory();
+                                            String typeStr = multi ? context.getString(R.string.items, selectedPositions.size())
+                                                    : (isFolder ? context.getString(R.string.folder) : context.getString(R.string.file));
+                                            propSubtitle.setText(typeStr);
 
-                                            LinearLayout secondVerticalLayout = new LinearLayout(context);
-                                            secondVerticalLayout.setOrientation(LinearLayout.VERTICAL);
-                                            secondVerticalLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                                                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                                                    LinearLayout.LayoutParams.MATCH_PARENT));
-                                            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                                                    .setCustomTitle(uiHelper.getTitle("Properties")).setView(parentLayout)
-                                                    .create());
-
-                                            for (int i = 0; i < labels.length; i++) {
-                                                TextView textView = new TextView(context);
-                                                textView.setOnLongClickListener(v9 -> {
-                                                    ((ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE)).setText(textView.getText());
-                                                    Toast.makeText(context, ("Copied"), Toast.LENGTH_SHORT).show();
-                                                    return false;
-                                                });
-                                                switch (i) {
-                                                    case 0:
-                                                        textView.setText(getFilesToDisplay(multi, finalPosition1));
-                                                        uiHelper.scrollTextView(textView);
-                                                        break;
-                                                    case 1:
-                                                        if (!isInZip && file.getParentFile() != null) {
-                                                            textView.setText(file.getParentFile().getName());
-                                                            uiHelper.scrollTextView(textView);
-                                                        }
-                                                        break;
-                                                    case 2:
-                                                        if (isInZip) {
-                                                            textView.setText(entry.isDirectory() ? "Folder" : "File");
-                                                        } else {
-                                                            textView.setText(file.isDirectory() ? "Folder" : "File");
-                                                        }
-                                                        break;
-                                                    case 3:
-                                                        long size = isInZip ? entry.getSize() : file.length();
-                                                        textView.setText(
-                                                                Formatter.formatFileSize(context, size));
-                                                        break;
-                                                    case 4:
-                                                        if (!isInZip)
-                                                            textView.setText(new SimpleDateFormat("yy-MM-dd HH:mm")
-                                                                    .format(file.lastModified()));
-                                                        break;
-                                                    default:
-                                                        break;
+                                            String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
+                                            boolean hasIcon = false;
+                                            if (!isInZip && !multi && file.isFile() && FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
+                                                Bitmap bmp = BitmapFactory.decodeFile(file.getAbsolutePath());
+                                                if (bmp != null) {
+                                                    propIcon.setImageBitmap(Bitmap.createScaledBitmap(bmp, dp(48), dp(48), true));
+                                                    propIcon.setColorFilter(null);
+                                                    hasIcon = true;
                                                 }
-                                                textView.setLayoutParams(new LinearLayout.LayoutParams(
-                                                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                                                        LinearLayout.LayoutParams.WRAP_CONTENT));
-                                                textView.setTextSize(20);
-                                                textView.setPadding(10, 10, 10, 10);
-                                                secondVerticalLayout.addView(textView);
+                                            }
+                                            if (!hasIcon) {
+                                                propIcon.setImageResource(isFolder ? R.drawable.folder_24px : R.drawable.baseline_insert_drive_file_24);
+                                                propIcon.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+                                            }
+                                            GradientDrawable iconBg = new GradientDrawable();
+                                            iconBg.setShape(GradientDrawable.OVAL);
+                                            iconBg.setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, Color.GRAY));
+                                            propIcon.setBackground(iconBg);
+                                            int iconPad = dp(10);
+                                            propIcon.setPadding(iconPad, iconPad, iconPad, iconPad);
+
+                                            addPropertyRow(propRows, context.getString(R.string.name), displayName);
+                                            if (!isInZip && file.getParentFile() != null)
+                                                addPropertyRow(propRows, context.getString(R.string.parent), file.getParentFile().getName());
+                                            addPropertyRow(propRows, context.getString(R.string.type), typeStr);
+
+                                            long size = 0;
+                                            if (multi) {
+                                                for (int p : selectedPositions) {
+                                                    Object o = values[p];
+                                                    if (o instanceof File) size += ((File) o).length();
+                                                    else if (o instanceof ZipEntryInfo) size += ((ZipEntryInfo) o).getSize();
+                                                }
+                                            } else size = isInZip ? entry.getSize() : file.length();
+                                            TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), Formatter.formatFileSize(context, size));
+
+                                            if (!isInZip) {
+                                                addPropertyRow(propRows, context.getString(R.string.modified),
+                                                        new SimpleDateFormat("yyyy-MM-dd HH:mm").format(file.lastModified()));
+                                                if (!multi && file.isDirectory()) {
+                                                    TextView sizeText = sizeValue;
+                                                    new Thread(() -> {
+                                                        long folderSize = getFolderSize(file, null);
+                                                        context.handler.post(() -> sizeText.setText(FileSize.getHumanReadableFileSize(folderSize)));
+                                                    }).start();
+                                                }
                                             }
 
-                                            parentLayout.addView(firstVerticalLayout);
-                                            parentLayout.addView(secondVerticalLayout);
+                                            if (!isInZip && !multi && file.isFile()) {
+                                                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
+                                                    checksumRows.removeAllViews();
+                                                    startChecksumComputation(checksumRows, file);
+                                                });
+                                                startChecksumComputation(checksumRows, file);
+                                            } else {
+                                                checksumSection.setVisibility(View.GONE);
+                                            }
+
+                                            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                                                    .setTitle(context.getString(R.string.properties))
+                                                    .setView(propView)
+                                                    .setPositiveButton(android.R.string.ok, null)
+                                                    .create());
                                             break;
                                         case 6:
                                             Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
@@ -1690,6 +1761,297 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return length;
     }
 
+    private TextView addPropertyRow(LinearLayout container, String label, String value) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(7), 0, dp(7));
+
+        TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
+        labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
+
+        TextView valueView = new TextView(context);
+        valueView.setText(value == null ? "—" : value);
+        valueView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
+        valueView.setTextIsSelectable(true);
+        valueView.setOnLongClickListener(v -> {
+            CopyUtil.copyToClipboard(context, valueView.getText());
+            return true;
+        });
+        valueView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f));
+
+        row.addView(labelView);
+        row.addView(valueView);
+        container.addView(row);
+        return valueView;
+    }
+
+    private TextView addChecksumRow(LinearLayout container, String label) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(6), 0, dp(6));
+
+        TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
+        labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
+
+        TextView valueView = new TextView(context);
+        valueView.setText("—");
+        valueView.setTypeface(Typeface.MONOSPACE);
+        valueView.setTextSize(12);
+        valueView.setTextIsSelectable(true);
+        valueView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, Color.WHITE));
+        valueView.setOnLongClickListener(v -> {
+            CopyUtil.copyToClipboard(context, valueView.getText());
+            return true;
+        });
+        valueView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        ImageButton copyButton = new ImageButton(context);
+        copyButton.setImageResource(R.drawable.baseline_content_copy_24);
+        copyButton.setBackgroundColor(Color.TRANSPARENT);
+        copyButton.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        int pad = dp(8);
+        copyButton.setPadding(pad, pad, pad, pad);
+        copyButton.setContentDescription(context.getString(android.R.string.copy));
+        copyButton.setOnClickListener(v -> CopyUtil.copyToClipboard(context, valueView.getText()));
+        copyButton.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(40)));
+
+        row.addView(labelView);
+        row.addView(valueView);
+        row.addView(copyButton);
+        container.addView(row);
+        return valueView;
+    }
+
+    private void addChecksumFileHeader(LinearLayout container, String fileName) {
+        TextView header = new TextView(context);
+        header.setText(fileName);
+        header.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
+        header.setTypeface(null, Typeface.BOLD);
+        header.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        header.setPadding(0, dp(10), 0, dp(4));
+        container.addView(header);
+    }
+
+    private void startChecksumComputation(LinearLayout container, File file) {
+        Map<String, TextView> views = new HashMap<>();
+        for (String algo : HashUtil.ALGORITHMS) views.put(algo, addChecksumRow(container, algo));
+        new Thread(() -> {
+            try {
+                Map<String, String> hashes = HashUtil.hashAll(file);
+                context.handler.post(() -> {
+                    for (Map.Entry<String, String> e : hashes.entrySet()) {
+                        TextView tv = views.get(e.getKey());
+                        if (tv != null) tv.setText(e.getValue());
+                    }
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> {
+                    for (TextView tv : views.values()) tv.setText("—");
+                });
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void showChecksumsDialog(List<File> files) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(context.getString(R.string.computing_checksums));
+        new Thread(() -> {
+            try {
+                List<Map<String, String>> results = new ArrayList<>();
+                for (File f : files) {
+                    pm.setText(context.getString(R.string.hashing, f.getName()));
+                    results.add(HashUtil.hashAll(f));
+                }
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    View view = LayoutInflater.from(context).inflate(R.layout.dialog_checksums, null);
+                    LinearLayout container = view.findViewById(R.id.checksumContainer);
+                    if (files.size() == 1) {
+                        for (Map.Entry<String, String> e : results.get(0).entrySet()) {
+                            TextView valueView = addChecksumRow(container, e.getKey());
+                            valueView.setText(e.getValue());
+                        }
+                    } else {
+                        for (int i = 0; i < files.size(); i++) {
+                            addChecksumFileHeader(container, files.get(i).getName());
+                            for (Map.Entry<String, String> e : results.get(i).entrySet()) {
+                                TextView valueView = addChecksumRow(container, e.getKey());
+                                valueView.setText(e.getValue());
+                            }
+                        }
+                    }
+                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                            .setTitle(files.size() > 1 ? context.getString(R.string.checksums) : context.getString(R.string.checksums_of, files.get(0).getName()))
+                            .setView(view)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create());
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void addVerifyRow(LinearLayout container, HashUtil.CheckResult r) {
+        int color = r.valid ? Color.rgb(0x4C, 0xAF, 0x50) : Color.rgb(0xF4, 0x43, 0x36);
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.TOP);
+        row.setPadding(0, dp(6), 0, dp(6));
+
+        ImageView icon = new ImageView(context);
+        icon.setImageResource(r.valid ? R.drawable.baseline_check_circle_24 : R.drawable.baseline_remove_circle_24);
+        icon.setColorFilter(color);
+        icon.setLayoutParams(new LinearLayout.LayoutParams(dp(28), dp(28)));
+
+        LinearLayout info = new LinearLayout(context);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView nameView = new TextView(context);
+        nameView.setText(r.fileName);
+        nameView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
+        nameView.setTypeface(null, Typeface.BOLD);
+        info.addView(nameView);
+
+        if (r.valid) {
+            TextView statusView = new TextView(context);
+            statusView.setText(context.getString(R.string.verify_checksum_pass) + " · " + r.algorithm + ": " + r.actual);
+            statusView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+            statusView.setTextColor(color);
+            info.addView(statusView);
+        } else {
+            TextView statusView = new TextView(context);
+            statusView.setText(r.error == null ? context.getString(R.string.verify_checksum_fail) : r.error);
+            statusView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+            statusView.setTextColor(color);
+            info.addView(statusView);
+            TextView expectedView = new TextView(context);
+            expectedView.setText(context.getString(R.string.expected_hash, r.expected));
+            expectedView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+            expectedView.setTypeface(Typeface.MONOSPACE);
+            info.addView(expectedView);
+            if (r.actual != null) {
+                TextView actualView = new TextView(context);
+                actualView.setText(context.getString(R.string.actual_hash, r.actual));
+                actualView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+                actualView.setTypeface(Typeface.MONOSPACE);
+                info.addView(actualView);
+            }
+        }
+
+        row.addView(icon);
+        row.addView(info);
+        container.addView(row);
+    }
+
+    private void showHashVerifyDialog(File checksumFile) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(context.getString(R.string.verify_progress));
+        new Thread(() -> {
+            try {
+                List<HashUtil.CheckResult> results = HashUtil.verifyChecksumFile(checksumFile);
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    View view = LayoutInflater.from(context).inflate(R.layout.dialog_hash_verify, null);
+                    LinearLayout container = view.findViewById(R.id.verifyContainer);
+                    if (results.isEmpty()) {
+                        TextView empty = new TextView(context);
+                        empty.setText(context.getString(R.string.checksum_verify_empty));
+                        empty.setPadding(0, dp(8), 0, dp(8));
+                        container.addView(empty);
+                    } else {
+                        for (HashUtil.CheckResult r : results) addVerifyRow(container, r);
+                    }
+                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                            .setTitle(context.getString(R.string.verify_checksum_title, checksumFile.getName()))
+                            .setView(view)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create());
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void showCompareHashesDialog(File file1, File file2) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(context.getString(R.string.computing_checksums));
+        new Thread(() -> {
+            try {
+                Map<String, String> h1 = HashUtil.hashAll(file1);
+                Map<String, String> h2 = HashUtil.hashAll(file2);
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    View view = LayoutInflater.from(context).inflate(R.layout.dialog_hash_verify, null);
+                    LinearLayout container = view.findViewById(R.id.verifyContainer);
+                    for (String algo : HashUtil.ALGORITHMS) {
+                        String a = h1.get(algo);
+                        String b = h2.get(algo);
+                        boolean same = a != null && a.equals(b);
+                        int color = same ? Color.rgb(0x4C, 0xAF, 0x50) : Color.rgb(0xF4, 0x43, 0x36);
+                        LinearLayout row = new LinearLayout(context);
+                        row.setOrientation(LinearLayout.HORIZONTAL);
+                        row.setGravity(Gravity.TOP);
+                        row.setPadding(0, dp(6), 0, dp(6));
+
+                        ImageView icon = new ImageView(context);
+                        icon.setImageResource(same ? R.drawable.baseline_check_circle_24 : R.drawable.baseline_remove_circle_24);
+                        icon.setColorFilter(color);
+                        icon.setLayoutParams(new LinearLayout.LayoutParams(dp(28), dp(28)));
+
+                        LinearLayout info = new LinearLayout(context);
+                        info.setOrientation(LinearLayout.VERTICAL);
+                        info.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                        TextView algoView = new TextView(context);
+                        algoView.setText(algo + " · " + (same ? context.getString(R.string.hash_equal) : context.getString(R.string.hash_not_equal)));
+                        algoView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
+                        algoView.setTypeface(null, Typeface.BOLD);
+                        algoView.setTextColor(color);
+                        info.addView(algoView);
+
+                        TextView hash1View = new TextView(context);
+                        hash1View.setText(file1.getName() + "\n" + a);
+                        hash1View.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+                        hash1View.setTypeface(Typeface.MONOSPACE);
+                        info.addView(hash1View);
+
+                        TextView hash2View = new TextView(context);
+                        hash2View.setText(file2.getName() + "\n" + b);
+                        hash2View.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+                        hash2View.setTypeface(Typeface.MONOSPACE);
+                        info.addView(hash2View);
+
+                        row.addView(icon);
+                        row.addView(info);
+                        container.addView(row);
+                    }
+                    dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                            .setTitle(context.getString(R.string.compare_hashes))
+                            .setView(view)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create());
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
     private void copy(Object item) throws IOException {
         if (isMultiSelectMode && !selectedPositions.isEmpty()) {
             List<Object> itemsToCopy = new ArrayList<>();
@@ -1704,6 +2066,60 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         } else {
             copyToDestination(Collections.singletonList(item));
         }
+    }
+
+    private void move(Object item) throws IOException {
+        if (isMultiSelectMode && !selectedPositions.isEmpty()) {
+            List<Object> itemsToMove = new ArrayList<>();
+            for (int index : selectedPositions) {
+                itemsToMove.add(values[index]);
+            }
+            if (isInZip) {
+                copyFromZip(itemsToMove);
+                for (Object o : itemsToMove) deleteZipEntry((ZipEntryInfo) o);
+            } else {
+                moveToDestination(itemsToMove);
+            }
+        } else if (isInZip) {
+            copyToDestination(Collections.singletonList(item));
+            deleteZipEntry((ZipEntryInfo) item);
+        } else {
+            moveToDestination(Collections.singletonList(item));
+        }
+    }
+
+    private void moveToDestination(List<Object> items) throws IOException {
+        File destinationFolder = pane1 ? context.pane2Folder : context.pane1Folder;
+        RecyclerView.Adapter adapter = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+        if (adapter instanceof FtpFilesArrayAdapter) {
+            ((FtpFilesArrayAdapter) adapter).uploadFiles(items);
+            return;
+        }
+        MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) adapter;
+        boolean destIsZip = otherPaneAdapter != null && otherPaneAdapter.isInZip;
+        if (destIsZip) {
+            copyToZip(items, destinationFolder, otherPaneAdapter.currentZipPath);
+            for (Object item : items) {
+                if (item instanceof File) ((File) item).delete();
+                else if (item instanceof ZipEntryInfo) deleteZipEntry((ZipEntryInfo) item);
+            }
+            return;
+        }
+        for (Object item : items) {
+            if (item instanceof File f) {
+                File dest = FileUtils.getUnusedFile(destinationFolder, f.getName());
+                if (f.renameTo(dest)) continue;
+                if (f.isDirectory()) {
+                    dest.mkdir();
+                    FileUtils.copyFolder(f, dest);
+                } else
+                    FileUtils.copyFile(f, dest);
+                f.delete();
+            } else if (item instanceof ZipEntryInfo) {
+                extractZipEntry((ZipEntryInfo) item, destinationFolder);
+            }
+        }
+        context.handler.post(() -> context.loadFolderInPane(destinationFolder, !pane1));
     }
 
     private void copyToDestination(List<Object> items) throws IOException {
@@ -1893,7 +2309,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         File zipFile = zipEntry.getZipFile();
         String fullPath = zipEntry.getFullPath();
         if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
-        else try (ZipFile zf = new ZipFile(zipFile);
+        else new Thread(() -> {
+            try (ZipFile zf = new ZipFile(zipFile);
              InputStream is = zf.getInputStream(zf.getFileHeader(fullPath))) {
             final String name = zipEntry.getName();
             String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
@@ -1903,7 +2320,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             tempFile.createNewFile();
             if(name.endsWith(".dex")) {
                 List<String> dexFiles = new ArrayList<>();
-                new Thread(() -> {
                     try {
                         FileHeader fh = zf.getFileHeader("classes.dex");
                         int i = 2;
@@ -1989,27 +2405,27 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             });
                             dialog.show();
                         });
-
-//                        DexFileSelector dexSelector = new DexFileSelector(context, outputDir + File.separatorChar + name);
-//                        dexSelector.setOnFilesSelectedListener(selectedFilePaths -> context.startActivityForResult(new Intent(context, DexEditorActivity.class).putExtra("theme", context.theme).putStringArrayListExtra("SelectedDexFiles", (ArrayList<String>) selectedFilePaths), 757));
-//                        context.handler.post(dexSelector::showDialog);
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
-                }).start();
             }
             else if(name.endsWith(".xml")) {
                 boolean isAxml = FileUtils.isAxml(is);
                 if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
-                    ResourceTableParser rtp = new ResourceTableParser(rssStream);
-                    List<ResEntry> resEntries = rtp.parse();
+                    //ResourceTableParser rtp = new ResourceTableParser(rssStream);
+                    //List<ResEntry> resEntries = rtp.parse();
+                    File tmpRss = new File(context.getCacheDir(), System.currentTimeMillis() + name);
+                    FileUtils.copyFile(rssStream, tmpRss);
+                    FileUtils.copyFile(is2, tempFile);
+
                     context.startActivityForResult(new Intent(context, TextEditorActivity.class)
-                            .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2, resEntries).decodeAsString())
-                            .putExtra("resEntries", (Serializable) resEntries)
-                            .putExtra("zf", zipFile.getPath())
-                            .putExtra("zipEntryPath", fullPath)
-                            .putExtra("axml", true)
-                            .putExtra("path", tempFile.getPath()), 757);
+                        .putExtra("rssPath", tmpRss.getPath())
+                        //.putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2, resEntries).decodeAsString())
+                        //.putExtra("resEntries", (Serializable) resEntries)
+                        .putExtra("zf", zipFile.getPath())
+                        .putExtra("zipEntryPath", fullPath)
+                        .putExtra("axml", true)
+                        .putExtra("path", tempFile.getPath()), 757);
                 } else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", tempFile.getPath()));
             } else {
                 FileUtils.copyFile(is, tempFile);
@@ -2022,6 +2438,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
         }
+        }).start();
     }
 
     public void clearSelection() {
@@ -2048,6 +2465,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         TextView pkgName = display.findViewById(R.id.pkgName);
         TextView signaturesInApk = display.findViewById(R.id.signaturesInApk);
         TextView protectedDisplay = display.findViewById(R.id.protectedDisplay);
+        TextView fileSize = display.findViewById(R.id.fileSize);
+        TextView apkTargetSdk = display.findViewById(R.id.apkTargetSdk);
+        TextView apkMinSdk = display.findViewById(R.id.apkMinSdk);
+        TextView apkCert = display.findViewById(R.id.apkCert);
+        TextView apkInstalled = display.findViewById(R.id.apkInstalled);
+        TextView apkPermissions = display.findViewById(R.id.apkPermissions);
         apkIcon.setImageDrawable(cachedApkIcon);
         apkTitle.setText(R.string.loading);
         apkVersionName.setText(R.string.loading);
@@ -2059,7 +2482,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton("More", (dialog, which) -> {
-                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK"};
+                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate)};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
@@ -2110,70 +2533,30 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         .setView(listView)
                                         .show();
                             });
-                            dialogUtil.getDialogBuilder().setView(ll)
-                                    .setNegativeButton(context.rss.getString(R.string.cancel), null)
-                                    .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
-                                        SignWrapper[] wrapper = new SignWrapper[1];
-                                        Runnable doOpt = () -> {
-                                            ProgressManager pm = new ProgressManager(context, true).show();
-                                            APKLogger logger = pm.getLogger();
-                                            new Thread(() -> {
-                                                File tempFolder = new File(context.getCacheDir(), System.currentTimeMillis() + '_' + fileName);
-                                                try (ZipFile zf = new ZipFile(file); ZipFile opt = new ZipFile(FileUtils.getUnusedFile(filePath.replace(".apk", "_opt.apk")))) {
-                                                    zf.extractAll(tempFolder.getPath());
-                                                    ZipParameters zp = new ZipParameters();
-                                                    zp.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
-                                                    zp.setCompressionMethod(CompressionMethod.STORE);
-                                                    String amS = "AndroidManifest.xml";
-                                                    File am = new File(tempFolder, amS);
-                                                    logger.logMessage(context.rss.getString(R.string.adding, amS));
-                                                    opt.addFile(am, zp);
-                                                    am.delete();
-                                                    String rssS = "resources.arsc";
-                                                    File rss = new File(tempFolder, rssS);
-                                                    if (rss.exists()) {
-                                                        logger.logMessage(context.rss.getString(R.string.adding, rssS));
-                                                        opt.addFile(rss, zp);
-                                                        rss.delete();
-                                                    }
-                                                    ZipParameters zipParameters = new ZipParameters();
-                                                    zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
-                                                    zipParameters.setCompressionLevel(CompressionLevel.MAXIMUM);
-                                                    Set<String> filesToDelete;
-                                                    ZipParameters zpF = new ZipParameters();
-                                                    if (delFiles[0] && (filesToDelete = settings.getStringSet("filesToDelete", null)) != null)
-                                                        zpF.setExcludeFileFilter(file2 -> {
-                                                            String path = file2.getPath();
-                                                            for (String fd : filesToDelete) if (path.endsWith(fd) || path.matches(fd)) return true;
-                                                            return false;
-                                                        });
-                                                    List<File> lf = net.lingala.zip4j.util.FileUtils.getFilesInDirectoryRecursive(tempFolder, zpF);
-                                                    for (File f : lf) if (!f.isDirectory()) {
-                                                        String relativePath = f.getPath().replace(tempFolder.getPath() + File.separatorChar, "");
-                                                        if (relativePath.equals(amS) || relativePath.equals(rssS)) continue;
-                                                        logger.logMessage(context.rss.getString(R.string.adding, relativePath));
-                                                        ZipParameters params = new ZipParameters(zipParameters);
-                                                        if (relativePath.startsWith("res/") && !relativePath.endsWith(".xml")) {
-                                                            params.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
-                                                            params.setCompressionMethod(CompressionMethod.STORE);
+                                     dialogUtil.getDialogBuilder().setView(ll)
+                                            .setNegativeButton(context.rss.getString(R.string.cancel), null)
+                                            .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
+                                                SignWrapper[] wrapper = new SignWrapper[1];
+                                                Runnable doOpt = () -> {
+                                                    ProgressManager pm = new ProgressManager(context, true).show();
+                                                    APKLogger logger = pm.getLogger();
+                                                    new Thread(() -> {
+                                                        try {
+                                                            File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, logger);
+                                                            if (sign[0]) wrapper[0].signApk(opt);
+                                                            pm.dismiss();
+                                                            context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                                        } catch (Exception e) {
+                                                            pm.dismiss();
+                                                            new ErrorUtil(context).showError(e);
                                                         }
-                                                        params.setFileNameInZip(relativePath);
-                                                        opt.addFile(f, params);
-                                                    }
-                                                    if (sign[0]) wrapper[0].signApk(opt.getFile());
-                                                    pm.dismiss();
-                                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                                } catch (Exception e) {
-                                                    pm.dismiss();
-                                                    new ErrorUtil(context).showError(e);
-                                                }
-                                            }).start();
-                                        };
-                                        if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                                            wrapper[0] = sw;
-                                            doOpt.run();
-                                        }); else doOpt.run();
-                                    }).show();
+                                                    }).start();
+                                                };
+                                                if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                                    wrapper[0] = sw;
+                                                    doOpt.run();
+                                                }); else doOpt.run();
+                                            }).show();
                         } else if (which1 == 2) showDecompileOptionsDialog(file, fileName);
                         else if (which1 == 3) {
                             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
@@ -2354,7 +2737,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             doClone.run();
                                         }); else doClone.run();
                                     }).show();
-                        } /*else if (which1 == 6) {
+                        } else if (which1 == 6) showCertificateDialog(file);
+                         /*else if (which1 == 6) {
                             ProgressManager pm = new ProgressManager(context, true).show();
                             new Thread(() -> {
                                 try {
@@ -2404,7 +2788,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         new Thread(() -> {
             try {
                 PackageManager pm = context.getPackageManager();
-                PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES);
+                PackageInfo packageInfo = pm.getPackageArchiveInfo(filePath, PackageManager.GET_ACTIVITIES | PackageManager.GET_PERMISSIONS);
                 final ApplicationInfo appInfo;
                 if (packageInfo == null || (appInfo = packageInfo.applicationInfo) == null) {
                     context.handler.post(() -> {
@@ -2427,8 +2811,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 String pkg = packageInfo.packageName;
 
                 StringBuilder sigs = new StringBuilder();
+                final String[] certFp = {""};
                 try {
                     ApkVerifier.Result result = new ApkVerifier.Builder(file).build().verify();
+                    try {
+                        List<X509Certificate> certs = result.getSignerCertificates();
+                        if (certs != null && !certs.isEmpty()) certFp[0] = CertUtil.getSha256(certs.get(0));
+                    } catch (Exception ignored) {}
                     boolean verified = result.isVerified();
                     boolean v1 = result.isVerifiedUsingV1Scheme();
                     boolean v2 = result.isVerifiedUsingV2Scheme();
@@ -2469,6 +2858,20 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     uiHelper.scrollTextView(pkgName);
                     signaturesInApk.setText(signatureStr);
                     protectedDisplay.setText(finalProtectedStr);
+                    fileSize.setText(Formatter.formatFileSize(context, file.length()) + " · " + ApkInfoUtil.getEntryCount(file) + " entries");
+                    apkTargetSdk.setText(String.valueOf(packageInfo.applicationInfo.targetSdkVersion));
+                    int min = ApkInfoUtil.getMinSdk(packageInfo);
+                    apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(min));
+                    apkCert.setText(TextUtils.isEmpty(certFp[0]) ? context.getString(R.string.no_signature_found) : certFp[0]);
+                    String installedVer = ApkInfoUtil.getInstalledVersion(context, pkg);
+                    if (installedVer == null) apkInstalled.setText(context.getString(R.string.not_installed));
+                    else {
+                        String installedText = installedVer;
+                        if (ApkInfoUtil.isDowngrade(context, packageInfo)) installedText += " (" + context.getString(R.string.downgrade) + ")";
+                        apkInstalled.setText(installedText);
+                    }
+                    String perms = ApkInfoUtil.getPermissions(packageInfo);
+                    apkPermissions.setText(TextUtils.isEmpty(perms) ? context.getString(R.string.permissions_none) : perms);
                 });
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
@@ -2483,6 +2886,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             apkTitle.setOnLongClickListener(lcl);
             apkVersionName.setOnLongClickListener(lcl);
             verCode.setOnLongClickListener(lcl);
+            fileSize.setOnLongClickListener(lcl);
+            apkTargetSdk.setOnLongClickListener(lcl);
+            apkMinSdk.setOnLongClickListener(lcl);
+            apkCert.setOnLongClickListener(lcl);
+            apkInstalled.setOnLongClickListener(lcl);
+            apkPermissions.setOnLongClickListener(lcl);
         }).start();
     }
 
@@ -2492,6 +2901,125 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             if (pi != null && pi.applicationInfo != null) return pi.applicationInfo.packageName;
         } catch (Exception ignored) {}
         return "";
+    }
+
+    private void showCertificateDialog(File apkFile) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            try {
+                List<X509Certificate> certs = CertUtil.getCertificates(apkFile);
+                CharSequence text;
+                if (certs == null || certs.isEmpty()) text = context.getString(R.string.no_signature_found);
+                else {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < certs.size(); i++) {
+                        if (i > 0) sb.append("\n\n");
+                        sb.append(context.getString(R.string.cert, i + 1)).append('\n');
+                        sb.append(CertUtil.describe(certs.get(i)));
+                    }
+                    text = sb;
+                }
+                pm.dismiss();
+                context.handler.post(() -> dialogUtil.getDialogBuilder()
+                        .setTitle(R.string.view_certificate)
+                        .setMessage(text)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .setNeutralButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, text))
+                        .show());
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void showCompareApksDialog(File f1, File f2) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            try {
+                String report = ApkCompareUtil.compare(context, f1, f2);
+                pm.dismiss();
+                context.handler.post(() -> {
+                    TextView tv = new TextView(context);
+                    tv.setText(report);
+                    tv.setTextIsSelectable(true);
+                    tv.setTextSize(13);
+                    tv.setTypeface(Typeface.MONOSPACE);
+                    int pad = dp(16);
+                    tv.setPadding(pad, pad, pad, pad);
+                    ScrollView scroll = new ScrollView(context);
+                    scroll.addView(tv);
+                    dialogUtil.getDialogBuilder()
+                            .setTitle(R.string.compare_apks)
+                            .setView(scroll)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .setNeutralButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, report))
+                            .show();
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void batchSignApks(List<File> apks) {
+        SignWrapper.requireAuth(context, sw -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < apks.size(); i++) {
+                        File apk = apks.get(i);
+                        String msg = context.rss.getString(R.string.signing, apk.getName());
+                        pm.setText(msg);
+                        logger.logMessage(msg);
+                        sw.signApk(apk);
+                    }
+                    pm.dismiss();
+                    context.handler.post(() -> {
+                        Toast.makeText(context, context.rss.getString(R.string.signed, apks.size() + " APKs"), Toast.LENGTH_SHORT).show();
+                        context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
+                    });
+                } catch (Exception e) {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        });
+    }
+
+    private void batchOptimizeApks(List<File> apks) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean sign = settings.getBoolean("autosign", true);
+        boolean delFiles = settings.getBoolean("delFiles", true);
+        if (sign) SignWrapper.requireAuth(context, sw -> runBatchOptimize(apks, delFiles, sw, settings));
+        else runBatchOptimize(apks, delFiles, null, settings);
+    }
+
+    private void runBatchOptimize(List<File> apks, boolean delFiles, SignWrapper wrapper, SharedPreferences settings) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        APKLogger logger = pm.getLogger();
+        new Thread(() -> {
+            try {
+                for (int i = 0; i < apks.size(); i++) {
+                    File apk = apks.get(i);
+                    String msg = context.rss.getString(R.string.optimizing, apk.getName());
+                    pm.setText(msg);
+                    logger.logMessage(msg);
+                    File opt = ApkOptimizer.optimize(context, apk, delFiles, settings, logger);
+                    if (wrapper != null) wrapper.signApk(opt);
+                }
+                pm.dismiss();
+                context.handler.post(() -> {
+                    Toast.makeText(context, context.rss.getString(R.string.opt_done), Toast.LENGTH_SHORT).show();
+                    context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
     }
 
     private void showCommandHelperDialog(ArrayList<String> filePaths) {

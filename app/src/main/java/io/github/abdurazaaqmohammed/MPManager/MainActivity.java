@@ -445,17 +445,17 @@ public class MainActivity extends AppCompatActivity {
         boolean useDeviceRss = lang.equals(deviceLang);
         rss = useDeviceRss ? getResources() : LocaleHelper.setLocale(this, lang).getResources();
         
-        if (Build.VERSION.SDK_INT > 20) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            int transparent = Color.TRANSPARENT;
-            getWindow().setNavigationBarColor(transparent);
-            getWindow().setStatusBarColor(transparent);
-        }
-
-        if (!LegacyUtils.supportsWriteExternalStorage) {
-            getWindow().setStatusBarContrastEnforced(true);
-            getWindow().setNavigationBarContrastEnforced(true);
-        }
+//        if (Build.VERSION.SDK_INT > 20) {
+//            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+//            int transparent = Color.TRANSPARENT;
+//            getWindow().setNavigationBarColor(transparent);
+//            getWindow().setStatusBarColor(transparent);
+//        }
+//
+//        if (!LegacyUtils.supportsWriteExternalStorage) {
+//            getWindow().setStatusBarContrastEnforced(true);
+//            getWindow().setNavigationBarContrastEnforced(true);
+//        }
 
         new Thread(() -> {
             Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());

@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.adapters;
 
-import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,62 +37,50 @@ public class DialogAdapter extends ArrayAdapter<String> {
             ImageView iconView = new ImageView(context);
             int ic;
             int size = 72;
-            switch(position) {
-                case 0:
-                    ic = R.drawable.baseline_content_copy_24;
-                   break;
-                case 1:
-                    if(context.pane1Folder == context.pane2Folder) {
+            ic = switch (position) {
+                case 0 -> R.drawable.baseline_content_copy_24;
+                case 1 -> {
+                    if (context.pane1Folder == context.pane2Folder) {
 
                         iconView.setEnabled(false);
                         tv.setEnabled(false);
                     }
-                    ic = R.drawable.baseline_content_cut_24;
-                    break;
-                case 2:
-                    ic = R.drawable.baseline_drive_file_rename_outline_24;
-                    break;
-                case 3:
-                    ic = R.drawable.baseline_delete_24;
-                    break;
-                case 4:
-                    if(((MainFilesArrayAdapter) context.getCurrentPane().getAdapter()).isInZip) {
+                    yield R.drawable.baseline_content_cut_24;
+                }
+                case 2 -> R.drawable.baseline_drive_file_rename_outline_24;
+                case 3 -> R.drawable.baseline_delete_24;
+                case 4 -> {
+                    if (((MainFilesArrayAdapter) context.getCurrentPane().getAdapter()).isInZip) {
                         iconView.setEnabled(false);
                         tv.setEnabled(false);
                     }
-                    ic = R.drawable.baseline_compress_24;
-                    break;
-                case 5:
-                    ic = R.drawable.baseline_info_24;
-                    break;
-                case 6:
-                    ic = R.drawable.baseline_share_24;
-                    break;
-                case 7:
-                    ic = R.drawable.baseline_open_in_new_24;
-                    break;
-                case 8:
-                    if(((MainFilesArrayAdapter) context.getCurrentPane().getAdapter()).isInZip) {
+                    yield R.drawable.baseline_compress_24;
+                }
+                case 5 -> R.drawable.baseline_info_24;
+                case 6 -> R.drawable.baseline_share_24;
+                case 7 -> R.drawable.baseline_open_in_new_24;
+                case 8 -> {
+                    if (((MainFilesArrayAdapter) context.getCurrentPane().getAdapter()).isInZip) {
                         iconView.setEnabled(false);
                         tv.setEnabled(false);
                     }
-                    ic = android.R.drawable.ic_input_get;
-                    break;
-                case 9:
-                    ic = R.drawable.terminal_24px;
-                    break;
-                case 10:
-                case 11:
-                case 12:
-                    ic = R.drawable.baseline_swap_horiz_24;
-                    break;
-                default:
-                    ic = 0;
-                    break;
-            }
+                    yield android.R.drawable.ic_input_get;
+                }
+                case 9 -> R.drawable.terminal_24px;
+                case 10 -> R.drawable.tag_24px;
+                case 11, 12 -> R.drawable.apk_document_24px;
+                case 13, 14 -> R.drawable.baseline_swap_horiz_24;
+
+                default -> 0;
+            };
             iconView.setImageResource(ic);
             iconView.setPadding(0,0,10,0);
-            ColorUtil.changeImageColor(iconView.getDrawable(), Color.WHITE);
+            Drawable drawable = iconView.getDrawable();
+            if(drawable != null) {
+                TypedValue typedValue = new TypedValue();
+                context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+                ColorUtil.changeImageColor(drawable, typedValue.data);
+            }
             iconView.setLayoutParams(new ViewGroup.LayoutParams(size, size));
             linearLayout.setGravity(Gravity.CENTER_VERTICAL);
             linearLayout.addView(iconView);
