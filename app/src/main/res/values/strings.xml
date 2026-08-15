@@ -138,6 +138,7 @@
     <string name="confuse_zip_structure">Confuse Zip Structure</string>
     <string name="dex_protection_level">Dex Protection Level</string>
     <string name="copying">"Copying %1$s"</string>
+    <string name="enter_name_for_copy">Enter new name for copy</string>
     <string name="signing_">signing %1$s</string>
     <string name="signed">Signed %1$s</string>
     <string name="deleting">Deleting %1$s</string>

@@ -131,6 +131,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
 import java.security.cert.X509Certificate;
 
 
@@ -1366,12 +1367,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                             pm = new ProgressManager(context, true).show();
                                             new Thread(() -> {
                                                 try {
-                                                    if (multi) for (int f : selectedPositions) {
-                                                        Object file1 = values[f];
-                                                        pm.setText(context.rss.getString(R.string.copying, file1));
-                                                        copy(file1);
-                                                    }
-                                                    else {
+                                                    if (multi) {
+                                                        List<Object> itemsToCopy = new ArrayList<>();
+                                                        for (int f : selectedPositions) {
+                                                            Object file1 = values[f];
+                                                            pm.setText(context.rss.getString(R.string.copying, file1));
+                                                            itemsToCopy.add(file1);
+                                                        }
+                                                        copyMultiple(itemsToCopy);
+                                                    } else {
                                                         pm.setText(context.rss.getString(R.string.copying, item));
                                                         copy(item);
                                                     }
@@ -2058,17 +2062,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     private void copy(Object item) throws IOException {
         if (isMultiSelectMode && !selectedPositions.isEmpty()) {
-            List<Object> itemsToCopy = new ArrayList<>();
-            for (int index : selectedPositions) {
-                itemsToCopy.add(values[index]);
-            }
-            if (isInZip) {
-                copyFromZip(itemsToCopy);
-            } else {
-                copyToDestination(itemsToCopy);
-            }
+            copyMultiple(getSelectedFiles());
         } else {
-            copyToDestination(Collections.singletonList(item));
+            copyMultiple(Collections.singletonList(item));
+        }
+    }
+
+    private void copyMultiple(List<Object> items) throws IOException {
+        if (isInZip) {
+            copyFromZip(items);
+        } else {
+            copyToDestination(items);
         }
     }
 
@@ -2145,7 +2149,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
         for (Object item : items) {
             if (item instanceof File f) {
-                File dest = FileUtils.getUnusedFile(destinationFolder, f.getName());
+                File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : FileUtils.getUnusedFile(destinationFolder, f.getName());
+                if (dest == null || dest.equals(f)) continue;
                 if (f.isDirectory()) {
                     dest.mkdir();
                     FileUtils.copyFolder(f, dest);
@@ -2156,6 +2161,65 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             }
         }
         context.handler.post(() -> context.loadFolderInPane(destinationFolder, !pane1));
+    }
+
+    private boolean isSameDirectory(File file, File destinationFolder) {
+        File parent = file.getParentFile();
+        if (parent == null || destinationFolder == null) return false;
+        try {
+            return parent.getCanonicalPath().equals(destinationFolder.getCanonicalPath());
+        } catch (IOException e) {
+            return parent.getAbsolutePath().equals(destinationFolder.getAbsolutePath());
+        }
+    }
+
+    private String getDuplicateName(String fileName, File destinationFolder) {
+        String base = FilenameUtils.getBaseName(fileName);
+        String ext = FilenameUtils.getExtension(fileName);
+        int i = 1;
+        String candidate;
+        do {
+            candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
+            i++;
+        } while (new File(destinationFolder, candidate).exists());
+        return candidate;
+    }
+
+    private File promptForDuplicateName(File sourceFile, File destinationFolder) throws IOException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final File[] result = new File[1];
+        final String defaultName = getDuplicateName(sourceFile.getName(), destinationFolder);
+        context.handler.post(() -> {
+            View view = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
+            EditText input = view.findViewById(R.id.m_et_edittext);
+            input.setText(defaultName);
+            input.setSelection(0, defaultName.length());
+            input.requestFocus();
+            MaterialAlertDialogBuilder builder = dialogUtil.getDialogBuilder()
+                    .setTitle(context.rss.getString(R.string.enter_name_for_copy))
+                    .setView(view)
+                    .setPositiveButton(android.R.string.ok, (d, w) -> {
+                        String name = input.getText().toString().trim();
+                        result[0] = new File(destinationFolder, name.isEmpty() ? defaultName : name);
+                        latch.countDown();
+                    })
+                    .setNegativeButton(android.R.string.cancel, (d, w) -> latch.countDown());
+            AlertDialog dialog = builder.create();
+            dialogUtil.styleAlertDialog(dialog);
+            dialog.setOnShowListener(d -> {
+                input.requestFocus();
+                InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
+            });
+            dialog.show();
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
+        return result[0];
     }
 
     public void copyToZip(List items, File zipFile, String currentPath) throws IOException {
