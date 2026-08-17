@@ -12,6 +12,7 @@ import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 
 public class DialogAdapter extends ArrayAdapter<String> {

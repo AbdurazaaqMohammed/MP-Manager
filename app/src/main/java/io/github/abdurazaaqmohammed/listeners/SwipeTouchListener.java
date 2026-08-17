@@ -8,7 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.core.view.GestureDetectorCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
-import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 
 
 public class SwipeTouchListener implements View.OnTouchListener {

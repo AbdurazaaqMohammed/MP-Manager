@@ -74,7 +74,7 @@ import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
 import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
