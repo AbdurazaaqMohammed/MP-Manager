@@ -36,6 +36,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
 public class FileOperationsHelper {
@@ -100,9 +101,22 @@ public class FileOperationsHelper {
             }
             return;
         }
+
+        RootManager rm = RootManager.getInstance(context);
+        boolean useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+
         for (Object item : items) {
             if (item instanceof File f) {
                 File dest = FileUtils.getUnusedFile(destinationFolder, f.getName());
+                if (useRoot) {
+                    try {
+                        if (f.isDirectory()) rm.copyDir(f.getAbsolutePath(), dest.getAbsolutePath());
+                        else rm.copyFile(f.getAbsolutePath(), dest.getAbsolutePath());
+                        rm.delete(f.getAbsolutePath());
+                        continue;
+                    } catch (Exception e) {
+                    }
+                }
                 if (f.renameTo(dest)) continue;
                 if (f.isDirectory()) {
                     dest.mkdir();
@@ -134,10 +148,21 @@ public class FileOperationsHelper {
     }
 
     private void copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
+        RootManager rm = RootManager.getInstance(context);
+        boolean useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+
         for (Object item : items) {
             if (item instanceof File f) {
                 File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : FileUtils.getUnusedFile(destinationFolder, f.getName());
                 if (dest == null || dest.equals(f)) continue;
+                if (useRoot) {
+                    try {
+                        if (f.isDirectory()) rm.copyDir(f.getAbsolutePath(), dest.getAbsolutePath());
+                        else rm.copyFile(f.getAbsolutePath(), dest.getAbsolutePath());
+                        continue;
+                    } catch (Exception e) {
+                    }
+                }
                 if (f.isDirectory()) {
                     dest.mkdir();
                     FileUtils.copyFolder(f, dest);

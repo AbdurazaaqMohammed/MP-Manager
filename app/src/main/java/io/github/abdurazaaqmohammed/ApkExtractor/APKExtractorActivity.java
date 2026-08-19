@@ -42,6 +42,7 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
 import android.widget.ScrollView;
@@ -653,6 +654,33 @@ public class APKExtractorActivity extends AppCompatActivity {
             actionIds.add(105);
         }
 
+        RootManager rootManager = RootManager.getInstance(this);
+        if (rootManager.isRootExtractorEnabled() && rootManager.isRootAvailable()) {
+            displayList.add("Clear app data");
+            iconList.add(R.drawable.baseline_delete_24);
+            actionIds.add(200);
+
+            displayList.add("Force stop");
+            iconList.add(R.drawable.stop_circle_24px);
+            actionIds.add(201);
+
+            displayList.add("Enable app");
+            iconList.add(R.drawable.baseline_check_circle_24);
+            actionIds.add(202);
+
+            displayList.add("Disable app");
+            iconList.add(R.drawable.visibility_off_24px);
+            actionIds.add(203);
+
+            displayList.add("Silent uninstall (root)");
+            iconList.add(R.drawable.ic_delete);
+            actionIds.add(204);
+
+            displayList.add("Copy installed APK");
+            iconList.add(R.drawable.save_24px);
+            actionIds.add(205);
+        }
+
         View popupView = LayoutInflater.from(this).inflate(R.layout.popup_dropdown_menu, null);
         ListView listView = popupView.findViewById(R.id.dropdown_list);
 
@@ -793,10 +821,74 @@ public class APKExtractorActivity extends AppCompatActivity {
                             }
                         } catch (Exception e) { showError(e); }
                         break;
+                    case 200: // Clear app data (root)
+                        executeRootAction("Clear data", () -> {
+                            rootManager.clearAppData(packageName);
+                        }, packageName);
+                        break;
+                    case 201: // Force stop (root)
+                        executeRootAction("Force stop", () -> {
+                            rootManager.forceStopApp(packageName);
+                        }, packageName);
+                        break;
+                    case 202: // Enable app (root)
+                        executeRootAction("Enable app", () -> {
+                            rootManager.enableApp(packageName);
+                        }, packageName);
+                        break;
+                    case 203: // Disable app (root)
+                        executeRootAction("Disable app", () -> {
+                            rootManager.disableApp(packageName);
+                        }, packageName);
+                        break;
+                    case 204: // Silent uninstall (root)
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("Silent Uninstall")
+                                .setMessage("Uninstall " + ai.name + " silently via root?")
+                                .setPositiveButton("Uninstall", (d, w) -> executeRootAction("Uninstall", () -> {
+                                    rootManager.uninstallSilent(packageName);
+                                }, packageName))
+                                .setNegativeButton("Cancel", null)
+                                .show();
+                        break;
+                    case 205: // Copy installed APK from /data/app
+                        executeRootAction("Copy APK", () -> {
+                            String apkPath = rootManager.getAppApkPath(packageName);
+                            if (apkPath != null) {
+                                java.io.File dest = new java.io.File(getAppFolder(), ai.name + ".apk");
+                                rootManager.copyFromRoot(apkPath, dest);
+                                runOnUiThread(() ->
+                                    Toast.makeText(this, "Copied to: " + dest.getAbsolutePath(), Toast.LENGTH_LONG).show());
+                            } else {
+                                runOnUiThread(() ->
+                                    Toast.makeText(this, "Could not find APK path", Toast.LENGTH_SHORT).show());
+                            }
+                        }, packageName);
+                        break;
                 }
             }
         });
 
+    }
+
+    private void executeRootAction(String actionName, RootRunnable action, String packageName) {
+        RootManager rootManager = RootManager.getInstance(this);
+        if (!rootManager.isRootMode() || !rootManager.isRootAvailable()) {
+            Toast.makeText(this, "Root not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new Thread(() -> {
+            try {
+                action.run();
+                runOnUiThread(() -> Toast.makeText(this, actionName + " done", Toast.LENGTH_SHORT).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, actionName + " failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    interface RootRunnable {
+        void run() throws Exception;
     }
 
     private void performAction(int whichAction, AppRecyclerViewAdapter adapter) {

@@ -11,7 +11,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.color.MaterialColors;
 
@@ -28,6 +30,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 
 public class FilePropertiesDialog {
 
@@ -106,6 +109,85 @@ public class FilePropertiesDialog {
             }
         }
 
+        RootManager rm = RootManager.getInstance(context);
+        if (!isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+            TextView permsTitle = new TextView(context);
+            permsTitle.setText("Root Permissions");
+            permsTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
+            permsTitle.setPadding(0, dp(12), 0, dp(4));
+            propRows.addView(permsTitle);
+
+            android.widget.EditText permsInput = new android.widget.EditText(context);
+            android.widget.EditText ownerInput = new android.widget.EditText(context);
+            permsInput.setTextSize(14);
+            ownerInput.setTextSize(14);
+            permsInput.setHint("e.g. 755");
+            ownerInput.setHint("Owner:Group (e.g. root:root)");
+
+            new Thread(() -> {
+                String perms = rm.getPermissions(file.getAbsolutePath());
+                String owner = rm.getOwner(file.getAbsolutePath());
+                context.handler.post(() -> {
+                    if (perms != null) permsInput.setText(perms);
+                    if (owner != null) ownerInput.setText(owner);
+                });
+            }).start();
+
+            LinearLayout rootRow1 = new LinearLayout(context);
+            rootRow1.setOrientation(LinearLayout.HORIZONTAL);
+            rootRow1.setGravity(Gravity.CENTER_VERTICAL);
+            rootRow1.setPadding(0, dp(4), 0, dp(4));
+            TextView permsLabel = new TextView(context);
+            permsLabel.setText("Perms");
+            permsLabel.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
+            permsLabel.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+            permsLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
+            permsInput.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f));
+            rootRow1.addView(permsLabel);
+            rootRow1.addView(permsInput);
+            propRows.addView(rootRow1);
+
+            LinearLayout rootRow2 = new LinearLayout(context);
+            rootRow2.setOrientation(LinearLayout.HORIZONTAL);
+            rootRow2.setGravity(Gravity.CENTER_VERTICAL);
+            rootRow2.setPadding(0, dp(4), 0, dp(4));
+            TextView ownerLabel = new TextView(context);
+            ownerLabel.setText("Owner");
+            ownerLabel.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
+            ownerLabel.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+            ownerLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
+            ownerInput.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f));
+            rootRow2.addView(ownerLabel);
+            rootRow2.addView(ownerInput);
+            propRows.addView(rootRow2);
+
+            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                    .setTitle(context.getString(R.string.properties))
+                    .setView(wrapInScroll(propView))
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        String newPerms = permsInput.getText().toString().trim();
+                        String newOwner = ownerInput.getText().toString().trim();
+                        if (!newPerms.isEmpty() || !newOwner.isEmpty()) {
+                            new Thread(() -> {
+                                try {
+                                    if (!newPerms.isEmpty()) rm.chmod(file.getAbsolutePath(), newPerms);
+                                    if (!newOwner.isEmpty()) {
+                                        String[] parts = newOwner.split(":");
+                                        rm.chown(file.getAbsolutePath(), parts[0], parts.length > 1 ? parts[1] : null);
+                                    }
+                                    context.handler.post(() ->
+                                            Toast.makeText(context, "Permissions updated", Toast.LENGTH_SHORT).show());
+                                } catch (Exception e) {
+                                    context.handler.post(() ->
+                                            Toast.makeText(context, "Failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                                }
+                            }).start();
+                        }
+                    })
+                    .create());
+            return;
+        }
+
         if (!isInZip && !multi && file.isFile()) {
             propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
                 checksumRows.removeAllViews();
@@ -118,7 +200,7 @@ public class FilePropertiesDialog {
 
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.properties))
-                .setView(propView)
+                .setView(wrapInScroll(propView))
                 .setPositiveButton(android.R.string.ok, null)
                 .create());
     }
@@ -170,5 +252,11 @@ public class FilePropertiesDialog {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private View wrapInScroll(View content) {
+        ScrollView sv = new ScrollView(context);
+        sv.addView(content);
+        return sv;
     }
 }

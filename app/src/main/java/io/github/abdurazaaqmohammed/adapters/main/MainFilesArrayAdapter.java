@@ -1,11 +1,7 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
-import static android.content.Context.RECEIVER_NOT_EXPORTED;
-
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
@@ -34,10 +30,8 @@ import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
-import com.faith.apkinstaller.APKInstallHelper;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
-import com.reandroid.apk.APKLogger;
 import com.reandroid.apkeditor.Util;
 
 import net.lingala.zip4j.ZipFile;
@@ -50,6 +44,7 @@ import net.lingala.zip4j.model.enums.EncryptionMethod;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -361,7 +356,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 return;
                             }
                             case "Install APKs": {
-                                for (int bp : selectedPositions) InstallUtil.installApk(context, (File) values[bp]);
+                                for (int bp : selectedPositions) InstallUtil.installApkWithDialog(context, (File) values[bp]);
                                 return;
                             }
                             case "Command Helper":
@@ -544,24 +539,32 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 switch (which) {
                                     case 0:
                                         if (LegacyUtils.aboveSdk20) {
-                                            ProgressManager pm = new ProgressManager(context, true).show();
-                                            APKLogger logger = pm.getLogger();
                                             new Thread(() -> {
-                                                BroadcastReceiver receiver = null;
                                                 try (ZipFile zf = new ZipFile(file)) {
-                                                    int sessionId = new APKInstallHelper(context).installApk(zf, logger);
-                                                    receiver = new BroadcastReceiver() {
-                                                        @Override public void onReceive(Context context, Intent intent) {
-                                                            if ("DISMISS_DIALOG".equals(intent.getAction())) {
-                                                                pm.dismiss();
-                                                                context.unregisterReceiver(this);
+                                                    List<File> apkFiles = new ArrayList<>();
+                                                    File tmpDir = new File(context.getCacheDir(), "split_install_" + System.currentTimeMillis());
+                                                    tmpDir.mkdirs();
+                                                    for (FileHeader fh : zf.getFileHeaders()) {
+                                                        if (fh.getFileName().endsWith(".apk")) {
+                                                            File tmpApk = new File(tmpDir, fh.getFileName());
+                                                            try (InputStream is = zf.getInputStream(fh);
+                                                                 java.io.FileOutputStream fos = new FileOutputStream(tmpApk)) {
+                                                                byte[] buf = new byte[65536];
+                                                                int n;
+                                                                while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
                                                             }
+                                                            apkFiles.add(tmpApk);
                                                         }
-                                                    };
-                                                    if (Build.VERSION.SDK_INT >= 33) {
-                                                        context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"), RECEIVER_NOT_EXPORTED);
-                                                    } else context.registerReceiver(receiver, new IntentFilter("DISMISS_DIALOG"));
-                                                } catch (Exception e) {pm.dismiss(); new ErrorUtil(context).showError(e); if(receiver != null) context.unregisterReceiver(receiver);}
+                                                    }
+                                                    if (!apkFiles.isEmpty()) {
+                                                        File baseApk = apkFiles.get(0);
+                                                        InstallUtil.installSplitApksWithDialog(context, apkFiles, file.getName());
+                                                    } else {
+                                                        context.runOnUiThread(() -> Toast.makeText(context, "No APK files found in archive", Toast.LENGTH_SHORT).show());
+                                                    }
+                                                } catch (Exception e) {
+                                                    context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                                }
                                             }).start();
                                         } else {
                                             Toast.makeText(context, "Installing split APKs is not supported on this version of Android :(", Toast.LENGTH_SHORT).show();
@@ -654,8 +657,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         }
                     } else {
                         File ogFolder = file.getParentFile();
-                        if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                        else Toast.makeText(context, "Failed to rename " + fileName, Toast.LENGTH_SHORT).show();
+                        io.github.abdurazaaqmohammed.utils.RootManager rm = io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context);
+                        if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                            try {
+                                rm.rename(file.getAbsolutePath(), new File(ogFolder, s).getAbsolutePath());
+                                context.loadFolderInPane(ogFolder, pane1);
+                            } catch (Exception e) {
+                                if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
+                                else Toast.makeText(context, "Failed to rename " + fileName, Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
+                            else Toast.makeText(context, "Failed to rename " + fileName, Toast.LENGTH_SHORT).show();
+                        }
                     }
                 });
         AlertDialog ad = renameDialog.create();
@@ -697,6 +711,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 new Thread(() -> {
                     try {
                         if(isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
+                        io.github.abdurazaaqmohammed.utils.RootManager rm = io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context);
+                        boolean useRootForDelete = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
                         if (multi) {
                             if (!isInZip) {
                                 File selectedFile = null;
@@ -706,6 +722,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     if (finalSelectedFile1 != null)
                                         pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
 
+                                    if (useRootForDelete) {
+                                        try {
+                                            rm.delete(selectedFile.getAbsolutePath());
+                                            continue;
+                                        } catch (Exception ignored) {}
+                                    }
                                     if (selectedFile.isDirectory())
                                         Util.deleteDir(selectedFile);
                                     else
@@ -726,8 +748,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             pm.setProgress(0, total);
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
-                            if (file.isDirectory()) Util.deleteDir(file, pm, total);
-                            else file.delete();
+                            if (useRootForDelete) {
+                                try {
+                                    rm.delete(file.getAbsolutePath());
+                                } catch (Exception e) {
+                                    if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                    else file.delete();
+                                }
+                            } else {
+                                if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                else file.delete();
+                            }
                             context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
                         } else {
                             fileOps.deleteZipEntry(entry);

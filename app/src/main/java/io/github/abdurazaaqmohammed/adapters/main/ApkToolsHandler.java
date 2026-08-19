@@ -549,7 +549,7 @@ public class ApkToolsHandler {
                     } else if (which1 == 6) showCertificateDialog(file);
                     }).show();
                 })
-                .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApk(context, file))
+                .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
                 .setNegativeButton("View", (dialog, which) -> openZipFile(file))
                 .create();
         dialogUtil.styleAlertDialog(ad);

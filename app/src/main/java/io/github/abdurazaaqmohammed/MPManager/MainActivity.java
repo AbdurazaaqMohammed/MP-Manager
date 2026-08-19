@@ -87,6 +87,7 @@ import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -135,6 +136,7 @@ import android.view.ViewGroup;
 import android.widget.AutoCompleteTextView;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
+import android.widget.Toast;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
@@ -149,6 +151,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.github.paul035.LocaleHelper;
 import com.reandroid.apk.APKLogger;
@@ -1762,8 +1765,80 @@ public class MainActivity extends AppCompatActivity {
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+        // Root Access Settings
+        RootManager rootManager = RootManager.getInstance(this);
+        AutoCompleteTextView workingModeTv = settingsDialog.findViewById(R.id.workingModeTv);
+        MaterialSwitch rootStatusSwitch = settingsDialog.findViewById(R.id.rootStatusSwitch);
+        MaterialSwitch silentInstallToggle = settingsDialog.findViewById(R.id.silentInstallToggle);
+        MaterialSwitch rootFileOpsToggle = settingsDialog.findViewById(R.id.rootFileOpsToggle);
+        MaterialSwitch rootExtractorToggle = settingsDialog.findViewById(R.id.rootExtractorToggle);
+        com.google.android.material.button.MaterialButton rebootMenuBtn = settingsDialog.findViewById(R.id.rebootMenuBtn);
+
+        // Setup working mode dropdown
+        String[] workingModes = {"Non-root", "Root"};
+        ArrayAdapter<String> workingModeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, workingModes);
+        workingModeTv.setAdapter(workingModeAdapter);
+        workingModeTv.setText(rootManager.isRootMode() ? "Root" : "Non-root", false);
+        rootStatusSwitch.setChecked(rootManager.isRootAvailable());
+
+        workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
+            boolean isRoot = position == 1;
+            if (isRoot && !rootManager.isRootAvailable()) {
+                Toast.makeText(this, "Root not available on this device", Toast.LENGTH_LONG).show();
+                workingModeTv.setText("Non-root", false);
+                return;
+            }
+            rootManager.setWorkingMode(isRoot ? RootManager.WorkingMode.ROOT : RootManager.WorkingMode.NON_ROOT);
+            silentInstallToggle.setEnabled(isRoot);
+            rootFileOpsToggle.setEnabled(isRoot);
+            rootExtractorToggle.setEnabled(isRoot);
+            rebootMenuBtn.setVisibility(isRoot && rootManager.isRootAvailable() ? View.VISIBLE : View.GONE);
+        });
+
+        silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
+        silentInstallToggle.setEnabled(rootManager.isRootMode());
+        silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
+
+        rootFileOpsToggle.setChecked(settings.getBoolean("root_file_ops", false));
+        rootFileOpsToggle.setEnabled(rootManager.isRootMode());
+        rootFileOpsToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("root_file_ops", checked).apply());
+
+        rootExtractorToggle.setChecked(settings.getBoolean("root_extractor", false));
+        rootExtractorToggle.setEnabled(rootManager.isRootMode());
+        rootExtractorToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("root_extractor", checked).apply());
+
+        rebootMenuBtn.setOnClickListener(v -> showRebootDialog());
+
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
         new MaterialAlertDialogBuilder(this).setTitle("Settings").setView(settingsDialog).show();
+    }
+
+    private void showRebootDialog() {
+        RootManager rootManager = RootManager.getInstance(this);
+        if (!rootManager.isRootMode()) {
+            Toast.makeText(this, "Root mode is disabled", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] options = {"Reboot", "Reboot Recovery", "Reboot Bootloader", "Power Off", "Soft Reboot"};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Reboot Options")
+                .setItems(options, (dialog, which) -> {
+                    try {
+                        switch (which) {
+                            case 0: rootManager.reboot(null); break;
+                            case 1: rootManager.reboot("recovery"); break;
+                            case 2: rootManager.reboot("bootloader"); break;
+                            case 3: rootManager.reboot("-p"); break;
+                            case 4: rootManager.execute("stop; start"); break;
+                        }
+                        Toast.makeText(this, "Rebooting...", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Reboot failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void setupFilterBar() {
