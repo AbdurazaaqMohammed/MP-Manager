@@ -246,6 +246,20 @@ public class RootManager {
         return result.isSuccess() ? result.output.trim() : null;
     }
 
+    public File[] listRootFiles(String path) {
+        ShellResult result = execute("ls -1a '" + path + "'");
+        if (!result.isSuccess() || result.output == null) return null;
+
+        String[] names = result.output.split("\\r?\\n");
+        List<File> files = new ArrayList<>();
+        for (String name : names) {
+            String trimmed = name.trim();
+            if (trimmed.isEmpty() || trimmed.equals(".") || trimmed.equals("..")) continue;
+            files.add(new File(path, trimmed));
+        }
+        return files.toArray(new File[0]);
+    }
+
     public void chmod(String path, String mode) throws IOException {
         ShellResult result = execute("chmod " + mode + " \"" + path + "\"");
         if (!result.isSuccess()) throw new IOException("chmod failed: " + result.error);
@@ -336,28 +350,55 @@ public class RootManager {
     }
 
     public void installSplitSilent(List<String> apkPaths) throws IOException {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder copyCmd = new StringBuilder();
         for (int i = 0; i < apkPaths.size(); i++) {
             String tmpPath = "/data/local/tmp/_split_" + i + ".apk";
-            sb.append("cp '").append(apkPaths.get(i)).append("' ").append(tmpPath).append(" && ");
+            copyCmd.append("cp '").append(apkPaths.get(i)).append("' '").append(tmpPath).append("';");
         }
-        sb.append("pm install-create -r -g -S ");
+
         long totalSize = 0;
         for (String p : apkPaths) totalSize += new File(p).length();
-        sb.append(totalSize).append(" ");
+        String createCmd = "pm install-create -r -g -S " + totalSize;
+
+        ShellResult copyResult = executeWithInput(copyCmd.toString(), null);
+        if (!copyResult.isSuccess()) {
+            throw new IOException("Failed to copy split APKs: " + copyResult.error);
+        }
+
+        ShellResult createResult = execute(createCmd);
+        if (!createResult.isSuccess()) {
+            throw new IOException("Failed to create install session: " + createResult.error + " " + createResult.output);
+        }
+
+        String sessionLine = createResult.output;
+        int bracketStart = sessionLine.lastIndexOf('[');
+        int bracketEnd = sessionLine.lastIndexOf(']');
+        if (bracketStart < 0 || bracketEnd <= bracketStart) {
+            throw new IOException("Failed to parse session ID from: " + sessionLine);
+        }
+        String sessionId = sessionLine.substring(bracketStart + 1, bracketEnd).trim();
+
         for (int i = 0; i < apkPaths.size(); i++) {
             String tmpPath = "/data/local/tmp/_split_" + i + ".apk";
-            sb.append("-i ").append(tmpPath).append(" ");
+            long size = new File(apkPaths.get(i)).length();
+            String writeCmd = "pm install-write -S " + size + " " + sessionId + " split" + i + " '" + tmpPath + "'";
+            ShellResult writeResult = execute(writeCmd);
+            if (!writeResult.isSuccess()) {
+                throw new IOException("Failed to stage split APK " + i + ": " + writeResult.error + " " + writeResult.output);
+            }
         }
-        sb.append("&& pm install-commit && ");
-        for (int i = 0; i < apkPaths.size(); i++) {
-            sb.append("rm /data/local/tmp/_split_").append(i).append(".apk && ");
-        }
-        sb.append("rm /data/local/tmp/_install.apk");
 
-        ShellResult result = executeWithInput(sb.toString(), null);
-        if (!result.isSuccess() || (!result.output.contains("Success") && !result.output.contains("install-commit"))) {
-            throw new IOException("Split install failed: " + result.error + " " + result.output);
+        ShellResult commitResult = execute("pm install-commit " + sessionId);
+
+        StringBuilder cleanup = new StringBuilder();
+        for (int i = 0; i < apkPaths.size(); i++) {
+            cleanup.append("rm -f '/data/local/tmp/_split_").append(i).append(".apk';");
+        }
+        cleanup.append("rm -f '/data/local/tmp/_install.apk'");
+        executeWithInput(cleanup.toString(), null);
+
+        if (!commitResult.isSuccess() || (!commitResult.output.contains("Success") && !commitResult.output.contains("Session"))) {
+            throw new IOException("Split install failed: " + commitResult.error + " " + commitResult.output);
         }
     }
 
@@ -404,6 +445,38 @@ public class RootManager {
             return path;
         }
         return null;
+    }
+
+    public String getAppUid(String packageName) {
+        ShellResult result = execute("pm dump \"" + packageName + "\" | grep 'userId='");
+        if (result.isSuccess() && result.output != null) {
+            for (String line : result.output.split("\n")) {
+                String trimmed = line.trim();
+                if (trimmed.startsWith("userId=")) {
+                    return trimmed.substring(8).trim();
+                }
+            }
+        }
+        ShellResult statResult = execute("stat -c %u '/data/data/" + packageName + "'");
+        if (statResult.isSuccess() && statResult.output != null) {
+            return statResult.output.trim();
+        }
+        return null;
+    }
+
+    public List<String> getAppDataDirs(String packageName) {
+        List<String> dirs = new ArrayList<>();
+        String[] candidates = {
+                "/data/data/" + packageName,
+                "/sdcard/Android/data/" + packageName,
+        };
+        for (String path : candidates) {
+            ShellResult result = execute("test -d '" + path + "' && echo exists");
+            if (result.isSuccess() && "exists".equals(result.output.trim())) {
+                dirs.add(path);
+            }
+        }
+        return dirs;
     }
 
     public List<String> getInstalledPackages() throws IOException {
@@ -488,6 +561,124 @@ public class RootManager {
     public boolean isMountedRW(String mountPoint) {
         ShellResult result = execute("mount | grep ' " + mountPoint + " '");
         return result.isSuccess() && result.output.contains("rw");
+    }
+
+    public List<String> listUsers() throws IOException {
+        List<String> users = new ArrayList<>();
+        String[][] paths = {
+                {"/etc/passwd"},
+                {"/system/etc/passwd"},
+                {"/apex/com.android.runtime/etc/passwd"},
+                {"/system/bin/toybox", "cat /etc/passwd"}
+        };
+        for (String[] cmd : paths) {
+            try {
+                ShellResult r;
+                if (cmd.length == 2) {
+                    r = execute("cat '" + cmd[0] + "' 2>/dev/null");
+                } else {
+                    r = execute("cat '" + cmd[0] + "' 2>/dev/null");
+                }
+                if (r.isSuccess() && !r.output.trim().isEmpty()) {
+                    parsePasswd(r.output, users);
+                    if (!users.isEmpty()) return users;
+                }
+            } catch (Exception ignored) {}
+        }
+        users.add("root (0)");
+        users.add("daemon (1)");
+        users.add("system (1000)");
+        users.add("shell (2000)");
+        users.add("media_rw (1023)");
+        users.add("app (10000)");
+        users.add("nobody (65534)");
+        return users;
+    }
+
+    private void parsePasswd(String content, List<String> users) {
+        for (String line : content.split("\n")) {
+            String[] parts = line.split(":");
+            if (parts.length >= 3 && !parts[0].trim().isEmpty()) {
+                String name = parts[0].trim();
+                String uid = parts[2].trim();
+                if (uid.matches("\\d+")) {
+                    String entry = name + " (" + uid + ")";
+                    boolean exists = false;
+                    for (String u : users) {
+                        if (u.equals(entry)) { exists = true; break; }
+                    }
+                    if (!exists) users.add(entry);
+                }
+            }
+        }
+    }
+
+    public List<String> listGroups() throws IOException {
+        List<String> groups = new ArrayList<>();
+        String[] paths = {
+                "/etc/group",
+                "/system/etc/group",
+                "/apex/com.android.runtime/etc/group"
+        };
+        for (String path : paths) {
+            try {
+                ShellResult r = execute("cat '" + path + "' 2>/dev/null");
+                if (r.isSuccess() && !r.output.trim().isEmpty()) {
+                    parseGroup(r.output, groups);
+                    if (!groups.isEmpty()) return groups;
+                }
+            } catch (Exception ignored) {}
+        }
+        ShellResult idResult = execute("id 2>/dev/null");
+        if (idResult.isSuccess() && !idResult.output.trim().isEmpty()) {
+            String output = idResult.output;
+            int gidsStart = output.indexOf("groups=");
+            if (gidsStart > 0) {
+                String gidsStr = output.substring(gidsStart + 7);
+                for (String token : gidsStr.split("[,\\s]+")) {
+                    token = token.trim();
+                    if (token.isEmpty()) continue;
+                    String gid = token.contains("(") ? token.substring(0, token.indexOf("(")) : token;
+                    String name = token.contains("(") && token.contains(")")
+                            ? token.substring(token.indexOf("(") + 1, token.indexOf(")"))
+                            : "gid" + gid;
+                    if (gid.matches("\\d+")) {
+                        groups.add(name + " (" + gid + ")");
+                    }
+                }
+            }
+        }
+        if (groups.isEmpty()) {
+            groups.add("root (0)");
+            groups.add("daemon (1)");
+            groups.add("system (1000)");
+            groups.add("shell (2000)");
+            groups.add("media_rw (1023)");
+            groups.add("log (1007)");
+            groups.add("radio (1001)");
+            groups.add("bluetooth (1002)");
+            groups.add("sdcard_rw (1015)");
+            groups.add("nobody (65534)");
+        }
+        return groups;
+    }
+
+    private void parseGroup(String content, List<String> groups) {
+        for (String line : content.split("\n")) {
+            String[] parts = line.split(":");
+            if (parts.length >= 3 && !parts[0].trim().isEmpty()) {
+                String name = parts[0].trim();
+                String gid = parts[2].trim();
+                if (gid.matches("\\d+")) {
+                    String entry = name + " (" + gid + ")";
+                    boolean exists = false;
+                    for (String g : groups) {
+                        if (g.equals(entry)) { exists = true; break; }
+                    }
+                    if (!exists) groups.add(entry);
+                }
+            }
+        }
     }
 
     public static class ShellResult {

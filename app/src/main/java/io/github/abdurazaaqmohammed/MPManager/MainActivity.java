@@ -1210,8 +1210,14 @@ public class MainActivity extends AppCompatActivity {
         }
         File[] files = folder.listFiles(this::isNotHidden);
         if (files == null) {
-            Extensions.showMessage(this, "Could not open folder " + folder.getName());
-            return;
+            RootManager rm = RootManager.getInstance(this);
+            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                files = rm.listRootFiles(folder.getAbsolutePath());
+            }
+            if (files == null) {
+                Extensions.showMessage(this, "Could not open folder " + folder.getName());
+                return;
+            }
         }
         Arrays.sort(files);
         View buildButton = findViewById(R.id.build);
@@ -1326,7 +1332,8 @@ public class MainActivity extends AppCompatActivity {
         }
         setCurrentFolder(folder, files);
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-        pane.setAdapter(new MainFilesArrayAdapter(this, files, folder.getParentFile(), pane1, false, null));
+        File parent = folder.getParentFile() != null ? folder.getParentFile() : folder;
+        pane.setAdapter(new MainFilesArrayAdapter(this, files, parent, pane1, false, null));
         updateNavigationButtons();
     }
 

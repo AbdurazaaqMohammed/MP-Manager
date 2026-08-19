@@ -9,9 +9,10 @@ import android.graphics.Color;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -31,7 +32,7 @@ public class ApkInstallDialogHelper {
 
     public void installSingleApk(File apkFile) {
         String appName = getAppNameForApk(apkFile);
-        Dialog progressDialog = showInstallingDialog(appName);
+        ProgressManager pm = showProgress("Installing " + appName + "...");
 
         RootManager rm = RootManager.getInstance(activity);
         if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
@@ -40,26 +41,25 @@ public class ApkInstallDialogHelper {
                 try {
                     rm.installSilent(apkFile.getAbsolutePath());
                     activity.runOnUiThread(() -> {
-                        progressDialog.dismiss();
+                        dismissProgress(pm);
                         showInstallCompleteDialog(appName, apkFile);
                     });
                 } catch (Exception e) {
                     activity.runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        Toast.makeText(activity, "Root install failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        installWithIntent(apkFile);
+                        dismissProgress(pm);
+                        new ErrorUtil(activity).showError(e);
                     });
                 }
             });
             executor.shutdown();
         } else {
-            installWithIntent(apkFile);
+            installWithIntent(apkFile, pm);
         }
     }
 
     public void installSplitApks(List<File> apkFiles, String archiveName) {
         String appName = archiveName != null ? archiveName : "Split APK";
-        Dialog progressDialog = showInstallingDialog(appName);
+        ProgressManager pm = showProgress("Installing " + appName + "...");
 
         RootManager rm = RootManager.getInstance(activity);
         if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
@@ -70,25 +70,23 @@ public class ApkInstallDialogHelper {
                     for (File f : apkFiles) paths.add(f.getAbsolutePath());
                     rm.installSplitSilent(paths);
                     activity.runOnUiThread(() -> {
-                        progressDialog.dismiss();
+                        dismissProgress(pm);
                         showInstallCompleteDialog(appName, apkFiles.isEmpty() ? null : apkFiles.get(0));
                     });
                 } catch (Exception e) {
                     activity.runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        Toast.makeText(activity, "Root split install failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        installSplitWithPackageInstaller(apkFiles, appName);
+                        dismissProgress(pm);
+                        new ErrorUtil(activity).showError(e);
                     });
                 }
             });
             executor.shutdown();
         } else {
-            installSplitWithPackageInstaller(apkFiles, appName);
+            installSplitWithPackageInstaller(apkFiles, appName, pm);
         }
     }
 
-    private void installWithIntent(File apkFile) {
-        Dialog progressDialog = showInstallingDialog(getAppNameForApk(apkFile));
+    private void installWithIntent(File apkFile, ProgressManager pm) {
         try {
             android.content.pm.PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
             android.content.pm.PackageInstaller.SessionParams params =
@@ -115,17 +113,14 @@ public class ApkInstallDialogHelper {
             try (android.content.pm.PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
                 commitSession.commit(pendingIntent.getIntentSender());
             }
-            progressDialog.dismiss();
-            showInstallCompleteDialog(getAppNameForApk(apkFile), apkFile);
+            dismissProgress(pm);
         } catch (Exception e) {
-            progressDialog.dismiss();
-            Toast.makeText(activity, "Install failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            InstallUtil.installApk(activity, apkFile);
+            dismissProgress(pm);
+            new ErrorUtil(activity).showError(e);
         }
     }
 
-    private void installSplitWithPackageInstaller(List<File> apkFiles, String appName) {
-        Dialog progressDialog = showInstallingDialog(appName);
+    private void installSplitWithPackageInstaller(List<File> apkFiles, String appName, ProgressManager pm) {
         try {
             android.content.pm.PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
             android.content.pm.PackageInstaller.SessionParams params =
@@ -160,49 +155,25 @@ public class ApkInstallDialogHelper {
             try (android.content.pm.PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
                 commitSession.commit(pendingIntent.getIntentSender());
             }
-            progressDialog.dismiss();
-            showInstallCompleteDialog(appName, apkFiles.isEmpty() ? null : apkFiles.get(0));
+            dismissProgress(pm);
         } catch (Exception e) {
-            progressDialog.dismiss();
-            Toast.makeText(activity, "Split install failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            dismissProgress(pm);
+            new ErrorUtil(activity).showError(e);
         }
     }
 
-    private Dialog showInstallingDialog(String appName) {
-        LinearLayout layout = new LinearLayout(activity);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(Gravity.CENTER);
-        layout.setPadding(dp(32), dp(24), dp(32), dp(16));
+    private ProgressManager showProgress(String text) {
+        if (activity instanceof AppCompatActivity) {
+            ProgressManager pm = new ProgressManager((AppCompatActivity) activity, true);
+            pm.setText(text);
+            pm.show();
+            return pm;
+        }
+        return null;
+    }
 
-        TextView title = new TextView(activity);
-        title.setText("Installing " + appName + "...");
-        title.setTextSize(16);
-        title.setGravity(Gravity.CENTER);
-        layout.addView(title);
-
-        ProgressBar progressBar = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
-        progressBar.setIndeterminate(true);
-        LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        progressParams.topMargin = dp(16);
-        layout.addView(progressBar, progressParams);
-
-        TextView statusText = new TextView(activity);
-        statusText.setText("Please wait...");
-        statusText.setTextSize(13);
-        statusText.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        statusParams.topMargin = dp(8);
-        layout.addView(statusText, statusParams);
-
-        Dialog dialog = new MaterialAlertDialogBuilder(activity)
-                .setTitle("Install")
-                .setView(layout)
-                .setCancelable(false)
-                .create();
-        dialog.show();
-        return dialog;
+    private void dismissProgress(ProgressManager pm) {
+        if (pm != null) pm.dismiss();
     }
 
     private void showInstallCompleteDialog(String appName, File apkFile) {

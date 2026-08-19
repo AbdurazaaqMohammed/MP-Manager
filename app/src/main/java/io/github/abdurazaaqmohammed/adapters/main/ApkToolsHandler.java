@@ -71,8 +71,10 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 public class ApkToolsHandler {
@@ -287,6 +289,7 @@ public class ApkToolsHandler {
         pkgName.setText(R.string.loading);
         signaturesInApk.setText(R.string.loading);
         protectedDisplay.setText(R.string.loading);
+
 
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
@@ -553,6 +556,62 @@ public class ApkToolsHandler {
                 .setNegativeButton("View", (dialog, which) -> openZipFile(file))
                 .create();
         dialogUtil.styleAlertDialog(ad);
+        LinearLayout rootInfoSection = display.findViewById(R.id.rootInfoSection);
+        LinearLayout rootInfoHeader = display.findViewById(R.id.rootInfoHeader);
+        ImageView rootInfoChevron = display.findViewById(R.id.rootInfoChevron);
+        LinearLayout rootInfoContent = display.findViewById(R.id.rootInfoContent);
+        final boolean[] rootInfoLoaded = {false};
+
+        RootManager rm = RootManager.getInstance(context);
+        if (rm.isRootAvailable() && rm.isRootFileOpsEnabled()) {
+            rootInfoSection.setVisibility(View.VISIBLE);
+            rootInfoHeader.setOnClickListener(v -> {
+                if (rootInfoContent.getVisibility() == View.VISIBLE) {
+                    rootInfoContent.setVisibility(View.GONE);
+                    rootInfoChevron.animate().rotation(0f).start();
+                    return;
+                }
+                rootInfoContent.setVisibility(View.VISIBLE);
+                rootInfoChevron.animate().rotation(180f).start();
+                if (rootInfoLoaded[0]) return;
+                rootInfoLoaded[0] = true;
+                rootInfoContent.removeAllViews();
+                TextView loading = new TextView(context);
+                loading.setText(R.string.loading);
+                loading.setTextSize(12);
+                loading.setPadding(0, dp(4), 0, dp(4));
+                rootInfoContent.addView(loading);
+                new Thread(() -> {
+                    String[] pkg = {""};
+                    context.handler.post(() -> pkg[0] = pkgName.getText().toString());
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    String pkgNameStr = pkg[0];
+                    if (TextUtils.isEmpty(pkgNameStr)) return;
+                    String uid = rm.getAppUid(pkgNameStr);
+                    String apkPath = null;
+                    try { apkPath = rm.getAppApkPath(pkgNameStr); } catch (Exception ignored) {}
+                    List<String> dataDirs = rm.getAppDataDirs(pkgNameStr);
+                    String finalApkPath = apkPath;
+                    context.handler.post(() -> {
+                        rootInfoContent.removeAllViews();
+                        if (uid != null) addRootInfoRow(rootInfoContent, "UID", uid, null, ad);
+                        if (finalApkPath != null) addRootInfoRow(rootInfoContent, "APK Path", finalApkPath, finalApkPath, ad);
+                        for (String dir : dataDirs) {
+                            String label = dir.contains("/data/data/") || dir.contains("/data/user/") ? "Data Dir" : "External Data Dir";
+                            addRootInfoRow(rootInfoContent, label, dir, dir, ad);
+                        }
+                        if (rootInfoContent.getChildCount() == 0) {
+                            TextView empty = new TextView(context);
+                            empty.setText("No root info available");
+                            empty.setTextSize(12);
+                            empty.setPadding(0, dp(4), 0, dp(4));
+                            rootInfoContent.addView(empty);
+                        }
+                    });
+                }).start();
+            });
+        }
+
         display.findViewById(R.id.quickEdit).setOnClickListener(v7 -> {
             ad.dismiss();
             manifestEditor.showEditManifestDialog(file);
@@ -796,6 +855,46 @@ public class ApkToolsHandler {
                 new ErrorUtil(context).showError(e);
             }
         }).start();
+    }
+
+    private void addRootInfoRow(LinearLayout parent, String label, String value, String tapPath, AlertDialog ad) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, dp(4), 0, dp(4));
+
+        TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTextSize(11);
+        labelView.setTextColor(com.google.android.material.color.MaterialColors.getColor(labelView, com.google.android.material.R.attr.colorOnSurfaceVariant));
+        row.addView(labelView);
+
+        TextView valueView = new TextView(context);
+        valueView.setText(value);
+        valueView.setTextSize(12);
+        valueView.setTypeface(android.graphics.Typeface.MONOSPACE);
+        valueView.setMaxLines(2);
+        valueView.setEllipsize(TextUtils.TruncateAt.END);
+        row.addView(valueView);
+
+        if (tapPath != null) {
+            row.setClickable(true);
+            row.setFocusable(true);
+            row.setOnClickListener(v -> {
+                ad.dismiss();
+                java.io.File dir = new java.io.File(tapPath);
+                if (!dir.exists()) {
+                    Extensions.showMessage(context, "Path " + tapPath + "not accessible");
+                    return;
+                }
+                java.io.File target = dir.isFile() ? dir.getParentFile() : dir;
+                if (target != null) {
+                    context.loadFolderInPane(target, pane1);
+
+                }
+            });
+        }
+
+        parent.addView(row);
     }
 
     private int dp(int dp) {
