@@ -14,13 +14,20 @@ import android.widget.TextView;
 import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CRC32;
+
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -109,6 +116,50 @@ public class ChecksumDialogs {
         }).start();
     }
 
+    public void addCrc32Row(LinearLayout container, long crc32Value) {
+        if (crc32Value < 0) return;
+        TextView crcView = addChecksumRow(container, "CRC32");
+        crcView.setText(HashUtil.crc32Hex(crc32Value));
+    }
+
+    public void startZipEntryChecksumComputation(LinearLayout container, File zipFile, String entryPath) {
+        Map<String, TextView> views = new HashMap<>();
+        for (String algo : HashUtil.ALGORITHMS) views.put(algo, addChecksumRow(container, algo));
+        new Thread(() -> {
+            File tmpFile = null;
+            try {
+                tmpFile = File.createTempFile("zip_entry_", ".tmp", context.getCacheDir());
+                try (ZipFile zf = new ZipFile(zipFile)) {
+                    FileHeader fh = zf.getFileHeader(entryPath);
+                    if (fh == null) {
+                        for (TextView tv : views.values()) tv.setText("—");
+                        return;
+                    }
+                    try (InputStream is = zf.getInputStream(fh);
+                         FileOutputStream fos = new FileOutputStream(tmpFile)) {
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                    }
+                }
+                Map<String, String> hashes = HashUtil.hashAll(tmpFile);
+                context.handler.post(() -> {
+                    for (Map.Entry<String, String> e : hashes.entrySet()) {
+                        TextView tv = views.get(e.getKey());
+                        if (tv != null) tv.setText(e.getValue());
+                    }
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> {
+                    for (TextView tv : views.values()) tv.setText("—");
+                });
+                new ErrorUtil(context).showError(e);
+            } finally {
+                if (tmpFile != null) tmpFile.delete();
+            }
+        }).start();
+    }
+
     public void showChecksumsDialog(List<File> files) {
         ProgressManager pm = new ProgressManager(context, true).show();
         pm.setText(context.getString(R.string.computing_checksums));
@@ -148,6 +199,32 @@ public class ChecksumDialogs {
                 new ErrorUtil(context).showError(e);
             }
         }).start();
+    }
+
+    public void showZipEntryChecksumsDialog(ZipEntryInfo entry) {
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_checksums, null);
+        LinearLayout container = view.findViewById(R.id.checksumContainer);
+        addCrc32Row(container, entry.computeCrc32());
+        addChecksumFileHeader(container, "Full checksums (on-demand)");
+        com.google.android.material.button.MaterialButton calcBtn = new com.google.android.material.button.MaterialButton(
+                context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        calcBtn.setText(context.getString(R.string.compute));
+        calcBtn.setTextSize(12);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        btnParams.topMargin = dp(4);
+        container.addView(calcBtn, btnParams);
+        calcBtn.setOnClickListener(v -> {
+            container.removeAllViews();
+            addCrc32Row(container, entry.computeCrc32());
+            addChecksumFileHeader(container, "Full checksums");
+            startZipEntryChecksumComputation(container, entry.getZipFile(), entry.getFullPath());
+        });
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.checksums_of, entry.getName()))
+                .setView(view)
+                .setPositiveButton(android.R.string.ok, null)
+                .create());
     }
 
     private void addVerifyRow(LinearLayout container, HashUtil.CheckResult r) {

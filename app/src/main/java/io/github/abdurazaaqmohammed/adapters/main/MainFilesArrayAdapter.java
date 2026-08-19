@@ -329,7 +329,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 return;
                             case "Checksums":
                                 if (isInZip) {
-                                    Toast.makeText(context, context.getString(R.string.checksum_not_supported_zip), Toast.LENGTH_SHORT).show();
+                                    if (multi) {
+                                        Toast.makeText(context, "Checksums for multiple zip entries not supported", Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        ZipEntryInfo zipEntry = (ZipEntryInfo) item;
+                                        if (!zipEntry.isDirectory()) {
+                                            checksumDialogs.showZipEntryChecksumsDialog(zipEntry);
+                                        }
+                                    }
                                     return;
                                 }
                                 List<File> checksumFiles = new ArrayList<>();
@@ -557,7 +564,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                         }
                                                     }
                                                     if (!apkFiles.isEmpty()) {
-                                                        File baseApk = apkFiles.get(0);
                                                         InstallUtil.installSplitApksWithDialog(context, apkFiles, file.getName());
                                                     } else {
                                                         context.runOnUiThread(() -> Toast.makeText(context, "No APK files found in archive", Toast.LENGTH_SHORT).show());
