@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.MPManager.ftp;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,16 +27,12 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class ProfileHelper {
-    private MainActivity context;
+    private final MainActivity context;
     private final TextView portInput, userInput, passInput, ipInput;
-    private MaterialAutoCompleteTextView profileSpinner;
-    private ImageButton profileManageButton;
+    private final MaterialAutoCompleteTextView profileSpinner;
+    private final ImageButton profileManageButton;
     private ProfileManager profileManager;
-    private MaterialAutoCompleteTextView securityInput;
-
-    public ProfileHelper(MainActivity context, TextView ipInput, TextView portInput, TextView userInput, TextView passInput, MaterialAutoCompleteTextView profileSpinner, ImageButton profileManageButton) {
-        this(context, ipInput, portInput, userInput, passInput, null, profileSpinner, profileManageButton);
-    }
+    private final MaterialAutoCompleteTextView securityInput;
 
     public ProfileHelper(MainActivity context, TextView ipInput, TextView portInput, TextView userInput, TextView passInput, MaterialAutoCompleteTextView securityInput, MaterialAutoCompleteTextView profileSpinner, ImageButton profileManageButton) {
         this.context = context;
@@ -66,7 +61,7 @@ public class ProfileHelper {
             values[i] = profile.getName();
          }
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, R.layout.dropdownitem, values) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.dropdownitem, values) {
             @NonNull
             @Override
             public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
@@ -161,7 +156,7 @@ public class ProfileHelper {
 
     private void showProfileDialog(boolean allowDelete, FtpProfile profile, boolean isServer) {
         boolean isEdit = profile != null;
-        String dialogTitle = isEdit ? "Edit Profile" : "Create Profile";
+        String dialogTitle = context.rss.getString(isEdit ? R.string.edit_profile : R.string.add_profile);
 
         AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_profile_edit, null);
@@ -186,8 +181,7 @@ public class ProfileHelper {
             if (securityType < 0 || securityType >= securityOptions.length) securityType = 0;
             profileSecurity.setText(securityOptions[securityType], false);
         } else {
-            // Get current entered values
-            nameInput.setText("New Profile");
+            nameInput.setText(context.rss.getString(R.string.add_profile));
             if(!isServer) ipInput.setText(this.ipInput.getText());
             portInput.setText(this.portInput.getText());
             userInput.setText(this.userInput.getText());
@@ -201,7 +195,7 @@ public class ProfileHelper {
 
         builder.setTitle(dialogTitle)
                 .setView(view)
-                .setPositiveButton("Save", (dialog, which) -> {
+                .setPositiveButton(context.rss.getString(R.string.save), (dialog, which) -> {
                     String name = nameInput.getText().toString().trim();
                     String ip = ipInput.getText().toString().trim();
                     int port = Integer.parseInt(portInput.getText().toString());
@@ -223,7 +217,7 @@ public class ProfileHelper {
                 .setNegativeButton(android.R.string.cancel, null);
 
         if (isEdit) {
-            builder.setNeutralButton("Delete", allowDelete ? (dialog, which) ->  {
+            builder.setNeutralButton(context.rss.getString(R.string.delete), allowDelete ? (dialog, which) ->  {
                 int i = profileManager.getProfiles().indexOf(profile);
                 profileManager.deleteProfile(i);
                 SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);

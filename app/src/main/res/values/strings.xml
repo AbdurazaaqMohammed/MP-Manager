@@ -341,10 +341,17 @@
     <string name="non_root">Non-root</string>
     <string name="root">Root</string>
     <string name="yes">Yes</string>
-    <string name="button_label">Button Label (optional)</string>
-    <string name="none">None</string>
-    <string name="insert_text">Insert text</string>
-    <string name="regex_fr">Regex find and replace</string>
-    <string name="copy_selection">Copy selection</string>
-    <string name="cut_selection">Cut selection</string>
+    <string name="termux">Termux</string>
+    <string name="run_all_in_termux">Run All in Termux</string>
+    <string name="example_x">Example: %1$s</string>
+    <string name="placeholder_help">Placeholder Help</string>
+    <string name="command_template_placeholders">Command Template Placeholders</string>
+    <string name="full_file_path_safe">Full file path (shell-safe, quoted)</string>
+    <string name="full_file_path_raw">Full file path (raw)</string>
+    <string name="fn_with_extension">File name with extension</string>
+    <string name="fn_without_extension">File name without extension</string>
+    <string name="extension_only">File extension only</string>
+    <string name="root_uninstall">Root Uninstall</string>
+    <string name="uninstall_root">Uninstall %1$s with root?</string>
+    <string name="uninstall">Uninstall</string>
 </resources>

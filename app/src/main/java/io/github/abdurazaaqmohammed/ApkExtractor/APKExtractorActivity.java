@@ -41,8 +41,10 @@ import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
 import android.widget.ScrollView;
@@ -125,14 +127,11 @@ public class APKExtractorActivity extends AppCompatActivity {
     private boolean signApk;
     private List<AppInfo> userAppInfoList;
     private List<AppInfo> systemAppInfoList;
-    private String packageName;
     private boolean showLaunchActivities;
 
     public static File getAppFolder() {
-        final File appFolder = new File(new File(Environment.getExternalStorageDirectory(), "MP Manager"),
-                "Extracted APKs");
-        return appFolder.exists() || appFolder.mkdirs() ? appFolder
-                : new File(Environment.getExternalStorageDirectory(), "Download");
+        final File appFolder = new File(new File(Environment.getExternalStorageDirectory(), "MP Manager"), "Extracted APKs");
+        return appFolder.exists() || appFolder.mkdirs() ? appFolder : new File(Environment.getExternalStorageDirectory(), "Download");
     }
 
     @Override
@@ -298,7 +297,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                             loadAdditionalDetails(userAppInfoList, appAdapter[0]);
                             loadAdditionalDetails(systemAppInfoList, appAdapter[1]);
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e));
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }).start();
                 });
@@ -815,7 +814,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
                                 dialog.show();
                             }
-                        } catch (Exception e) { showError(e); }
+                        } catch (Exception e) { new ErrorUtil(APKExtractorActivity.this).showError(e); }
                         break;
                     case 200: // Clear app data (root)
                         new MaterialAlertDialogBuilder(this)
@@ -824,7 +823,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                                 .setPositiveButton("Clear", (d, w) -> executeRootAction("Clear data", () -> {
                                     rootManager.clearAppData(packageName);
                                 }, packageName))
-                                .setNegativeButton("Cancel", null)
+                                .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                     case 201: // Force stop (root)
@@ -834,7 +833,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                                 .setPositiveButton("Stop", (d, w) -> executeRootAction("Force stop", () -> {
                                     rootManager.forceStopApp(packageName);
                                 }, packageName))
-                                .setNegativeButton("Cancel", null)
+                                .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                     case 202: // Enable app (root)
@@ -849,17 +848,17 @@ public class APKExtractorActivity extends AppCompatActivity {
                                 .setPositiveButton("Disable", (d, w) -> executeRootAction("Disable app", () -> {
                                     rootManager.disableApp(packageName);
                                 }, packageName))
-                                .setNegativeButton("Cancel", null)
+                                .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
-                    case 204: // Silent uninstall (root)
+                    case 204: // uninstall (root)
                         new MaterialAlertDialogBuilder(this)
-                                .setTitle("Silent Uninstall")
-                                .setMessage("Uninstall " + ai.name + " silently via root?")
-                                .setPositiveButton("Uninstall", (d, w) -> executeRootAction("Uninstall", () -> {
+                                .setTitle(R.string.root_uninstall)
+                                .setMessage(rss.getString(R.string.uninstall_root, ai.name))
+                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> {
                                     rootManager.uninstallSilent(packageName);
                                 }, packageName))
-                                .setNegativeButton("Cancel", null)
+                                .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                 }
@@ -871,7 +870,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     private void executeRootAction(String actionName, RootRunnable action, String packageName) {
         RootManager rootManager = RootManager.getInstance(this);
         if (!rootManager.isRootMode() || !rootManager.isRootAvailable()) {
-            Toast.makeText(this, "Root not available", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Root not available");
             return;
         }
         new Thread(() -> {
@@ -918,11 +917,11 @@ public class APKExtractorActivity extends AppCompatActivity {
                         try (ArchiveFile zf = new ArchiveFile(new File(ai.filePath))) {
                             InputSource inputSource = zf.getEntrySource(thing);
                             String destName = nameToSaveFile + " v" + ai.versionName + ' ' + thing;
-                            pm.setText("Extracting " + destName);
+                            pm.setText(rss.getString(R.string.extracting, destName));
                             inputSource.write(FileUtils.getUnusedFile(appFolder, destName));
                             if (i == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e));
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
                 }).start();
@@ -951,7 +950,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                             }
                             if (j == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e));
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
                 }).start();
@@ -967,13 +966,13 @@ public class APKExtractorActivity extends AppCompatActivity {
                         String packageName = ai.packageName;
                         try (ArchiveFile zf = new ArchiveFile(new File(ai.filePath))) {
                             String destName = singleItem ? am : (saveWithPkgName ? packageName : ai.name) + " v" + ai.versionName + ' ' + am;
-                            pm.setText("Extracting " + destName);
+                            pm.setText(rss.getString(R.string.extracting, destName));
                             zf.getEntrySource(am).write(FileUtils.getUnusedFile(appFolder, destName));
                             if (i == itemsToProcessSize-1) {
                                 handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                             }
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e));
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
                 }).start();
@@ -986,10 +985,10 @@ public class APKExtractorActivity extends AppCompatActivity {
                         try {
                             final String pkgName = ai.packageName;
                             String name = (saveWithPkgName ? pkgName : ai.name) + " v" + ai.versionName + "_base.apk";
-                            pm.setText("Extracting " + name);
+                            pm.setText(rss.getString(R.string.extracting, name));
                             FileUtils.copyFile(new File(ai.filePath), FileUtils.getUnusedFile(appFolder, name));
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e));
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
                     handler.post(showFinishedDialog(path, pm));
@@ -1018,7 +1017,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                         } catch (Exception e) {
                             pm.dismiss();
                             logger.close();
-                            showError(e);
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
                     handler.post(showFinishedDialog(path, pm));
@@ -1031,7 +1030,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                     for (int integer : itemsToProcess) {
                         AppInfo ai = adapter.filteredAppInfoList.get(integer);
                         String name = (saveWithPkgName ? ai.packageName : ai.name) + " v" + ai.versionName + "_icon.png";
-                        pm.setText("Extracting " + name);
+                        pm.setText(rss.getString(R.string.extracting, name));
                         try (OutputStream os = FileUtils.getOutputStream(FileUtils.getUnusedFile(appFolder, name))) {
                             PackageInfo packageInfo = pmgr.getPackageInfo(ai.packageName, 0);
 
@@ -1039,7 +1038,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
                             bm.compress(Bitmap.CompressFormat.PNG, 100, os);
                         } catch (Exception e) {
-                            runOnUiThread(() -> showError(e));
+                            new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
                     handler.post(showFinishedDialog(path, pm));
@@ -1119,7 +1118,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                 }
                  handler.post(showFinishedDialog ? showFinishedDialog(finalOutput.getPath(), pm) : pm::dismiss);
             } catch (Exception e) {
-                showError(e);
+                new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
         }).start();
     }
@@ -1158,7 +1157,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                 }
             } catch (Exception e) {
                 pm.dismiss();
-                showError(e);
+                new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
             pm.dismiss();
 
@@ -1193,7 +1192,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                                     toShare[0] = MergeUtil.mergeBundle(bundle);
                                 } catch (Exception e) {
                                     pm.dismiss();
-                                    showError(e);
+                                    new ErrorUtil(APKExtractorActivity.this).showError(e);
                                 }
                             }).start();
                             logger.close();
@@ -1234,7 +1233,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                 startActivity(Intent.createChooser(intent, rss.getString(R.string.share_apk)));
             } catch (Exception e) {
                 pm.dismiss();
-                showError(e);
+                new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
         }).start();
     }
@@ -1270,38 +1269,6 @@ public class APKExtractorActivity extends AppCompatActivity {
                 .putString("lang", lang);
         e.apply();
         super.onPause();
-    }
-
-    private void copyText(CharSequence text) {
-        ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setText(text);
-        Toast.makeText(this, rss.getString(R.string.copied_log), Toast.LENGTH_SHORT).show();
-    }
-
-    public void showError(Exception e) {
-        final String mainErr = e.toString();
-        errorOccurred = !mainErr.equals(rss.getString(R.string.sign_failed));
-        StringBuilder stackTrace = new StringBuilder().append(mainErr).append('\n');
-        for (StackTraceElement line : e.getStackTrace())
-            stackTrace.append(line).append('\n');
-        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(this)
-                .setNegativeButton(rss.getString(R.string.cancel), null)
-                .setPositiveButton(rss.getString(R.string.create_issue),
-                        (dialog, which) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(
-                                "https://github.com/AbdurazaaqMohammed/APKExtractor/issues/new?title=Crash%20Report&body="
-                                        + stackTrace))))
-                .setNeutralButton(rss.getString(R.string.copy_log), (dialog, which) -> copyText(stackTrace));
-        runOnUiThread(() -> {
-            TextView title = new TextView(this);
-            title.setText(mainErr);
-            title.setTextSize(20);
-            TextView msg = new TextView(this);
-            msg.setText(stackTrace);
-            ScrollView sv = new ScrollView(this);
-            msg.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                    (int) (rss.getDisplayMetrics().heightPixels * 0.6)));
-            sv.addView(msg);
-            styleAlertDialog(b.setCustomTitle(title).setView(sv).create());
-        });
     }
 
     private AppRecyclerViewAdapter getCurrentAdapter() {

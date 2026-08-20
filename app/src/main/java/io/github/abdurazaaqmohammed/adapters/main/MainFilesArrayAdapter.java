@@ -795,7 +795,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     doDelete.run();
                                 }); else doDelete.run();
                             })
-                            .setNegativeButton("Cancel", null)
+                            .setNegativeButton(android.R.string.cancel, null)
                             .show();
                 } else {
                     if (sign[0]) SignWrapper.requireAuth(context, sw -> {

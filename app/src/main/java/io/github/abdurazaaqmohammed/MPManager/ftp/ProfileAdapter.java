@@ -42,9 +42,8 @@ public class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileV
             FtpProfile profile = profiles.get(position);
             holder.bind(profile, listener);
         } else {
-            // This is the "Add" button
             holder.itemView.setOnClickListener(v -> onAddClick.run());
-            holder.name.setText("Add New Profile");
+            holder.name.setText(R.string.add_new_profile);
             holder.details.setVisibility(View.GONE);
         }
     }

@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +16,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
@@ -147,7 +147,7 @@ public class CommandHelper {
             btnRow.addView(h.copyBtn);
 
             h.termuxBtn = new MaterialButton(context);
-            h.termuxBtn.setText("Termux");
+            h.termuxBtn.setText(context.rss.getString(R.string.termux));
             h.termuxBtn.setWidth(0);
             h.termuxBtn.setPadding(5, 0, 5, 0);
             h.termuxBtn.setLayoutParams(lp);
@@ -164,10 +164,10 @@ public class CommandHelper {
             LinearLayout multiBtnRow = new LinearLayout(context);
             multiBtnRow.setOrientation(LinearLayout.HORIZONTAL);
             MaterialButton copyAllBtn = new MaterialButton(context);
-            copyAllBtn.setText(R.string.copy_all);
+            copyAllBtn.setText(context.rss.getString(R.string.copy_all));
             multiBtnRow.addView(copyAllBtn);
             MaterialButton termuxAllBtn = new MaterialButton(context);
-            termuxAllBtn.setText("Run All in Termux");
+            termuxAllBtn.setText(context.rss.getString(R.string.run_all_in_termux));
             multiBtnRow.addView(termuxAllBtn);
             root.addView(multiBtnRow);
             copyAllBtn.setOnClickListener(v -> {

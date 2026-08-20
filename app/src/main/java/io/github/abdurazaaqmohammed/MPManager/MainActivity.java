@@ -1861,10 +1861,10 @@ public class MainActivity extends AppCompatActivity {
                                     Toast.makeText(this, "Reboot failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                                 }
                             })
-                            .setNegativeButton("Cancel", null)
+                            .setNegativeButton(android.R.string.cancel, null)
                             .show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

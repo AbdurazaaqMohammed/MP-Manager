@@ -160,14 +160,14 @@ public class CommandHelperSettingsDialog extends DialogFragment {
         cmdLayout.addView(cmdInput);
         layout.addView(cmdLayout);
         MaterialButton placeholderHelpBtn = new MaterialButton(getActivity());
-        placeholderHelpBtn.setText("Placeholder Help");
+        placeholderHelpBtn.setText(R.string.placeholder_help);
         placeholderHelpBtn.setIconResource(R.drawable.baseline_info_24);
         placeholderHelpBtn.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         layout.addView(placeholderHelpBtn);
         placeholderHelpBtn.setOnClickListener(v -> {
             Context ctx = getContext();
             MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(ctx);
-            dialogBuilder.setTitle("Command Template Placeholders");
+            dialogBuilder.setTitle(R.string.command_template_placeholders);
 
             LinearLayout container = new LinearLayout(ctx);
             container.setOrientation(LinearLayout.VERTICAL);
@@ -175,11 +175,11 @@ public class CommandHelperSettingsDialog extends DialogFragment {
             container.setPadding(pad, pad, pad, pad);
 
             String[][] items = new String[][]{
-                    {"%FPATH%", "%FPATH% - Full file path (shell-safe, quoted)"},
-                    {"%FILE%",  "%FILE% - Full file path (raw)"},
-                    {"%FNAME%", "%FNAME% - File name with extension"},
-                    {"%NAME%",  "%NAME% - File name without extension"},
-                    {"%EXT%",   "%EXT% - File extension only"},
+                    {"%FPATH%", "%FPATH% - "  + getString(R.string.full_file_path_safe)},
+                    {"%FILE%",  "%FILE% - " + getString(R.string.full_file_path_raw)},
+                    {"%FNAME%", "%FNAME% - " + getString(R.string.fn_with_extension)},
+                    {"%NAME%",  "%NAME% - " + getString(R.string.fn_without_extension)},
+                    {"%EXT%",   "%EXT% - " + getString(R.string.extension_only)},
             };
 
             for (String[] item : items) {
@@ -207,7 +207,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
             }
 
             TextView example = new TextView(ctx);
-            example.setText("Example: java -jar tool.jar -i %FPATH% -o %NAME%_modified.%EXT%");
+            example.setText(getString(R.string.example_x, "java -jar tool.jar -i %FPATH% -o %NAME%_modified.%EXT%"));
             example.setPadding(0, pad, 0, 0);
             container.addView(example);
 
@@ -221,11 +221,12 @@ public class CommandHelperSettingsDialog extends DialogFragment {
             String name = nameInput.getText().toString().trim();
             String cmd = cmdInput.getText().toString().trim();
             if (TextUtils.isEmpty(name)) {
-                Toast.makeText(getActivity(), "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(getActivity(), "Name cannot be empty");
+
                 return;
             }
             if (TextUtils.isEmpty(cmd)) {
-                Toast.makeText(getActivity(), "Command template cannot be empty", Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(getActivity(), "Command template cannot be empty");
                 return;
             }
             if (index < 0) profileManager.addProfile(new Profile(name, cmd));
