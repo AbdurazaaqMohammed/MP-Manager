@@ -777,10 +777,34 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                 }).start();
             };
-            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                wrapper[0] = sw;
-                doDelete.run();
-            }); else doDelete.run();
+            Runnable checkAndRun = () -> {
+                boolean inKeyDir = false;
+                if (!isInZip && file != null) {
+                    String path = file.getAbsolutePath();
+                    if (io.github.abdurazaaqmohammed.utils.RootManager.isPathInKeyDirectory(path)) {
+                        inKeyDir = true;
+                    }
+                }
+                if (inKeyDir) {
+                    new MaterialAlertDialogBuilder(context)
+                            .setTitle("Warning: Key Directory")
+                            .setMessage("You are about to delete files in a sensitive system directory. This may break apps or cause system instability.\n\nAre you absolutely sure?")
+                            .setPositiveButton("Delete Anyway", (d, w) -> {
+                                if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                    wrapper[0] = sw;
+                                    doDelete.run();
+                                }); else doDelete.run();
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                } else {
+                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                        wrapper[0] = sw;
+                        doDelete.run();
+                    }); else doDelete.run();
+                }
+            };
+            checkAndRun.run();
         }).setNegativeButton(android.R.string.cancel, (dialog1, which1) -> pm.dismiss());
         dialogUtil.styleAlertDialog(deleteDialog.create());
     }

@@ -1827,22 +1827,42 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        String[] options = {"Reboot", "Reboot Recovery", "Reboot Bootloader", "Power Off", "Soft Reboot"};
+        String[] options = {"Reboot", "Reboot Recovery", "Reboot Bootloader", "Power Off"};
+        String[] descriptions = {
+                "Restart the device normally",
+                "Boot into recovery mode",
+                "Boot into fastboot/bootloader mode",
+                "Shut down the device completely"
+        };
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Reboot Options")
                 .setItems(options, (dialog, which) -> {
-                    try {
-                        switch (which) {
-                            case 0: rootManager.reboot(null); break;
-                            case 1: rootManager.reboot("recovery"); break;
-                            case 2: rootManager.reboot("bootloader"); break;
-                            case 3: rootManager.reboot("-p"); break;
-                            case 4: rootManager.execute("stop; start"); break;
-                        }
-                        Toast.makeText(this, "Rebooting...", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Reboot failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    String message;
+                    switch (which) {
+                        case 0: message = "Reboot the device now?"; break;
+                        case 1: message = "Reboot into recovery mode?"; break;
+                        case 2: message = "Reboot into bootloader/fastboot?"; break;
+                        case 3: message = "Power off the device?"; break;
+                        default: return;
                     }
+                    new MaterialAlertDialogBuilder(this)
+                            .setTitle(options[which])
+                            .setMessage(message)
+                            .setPositiveButton("Confirm", (d2, w2) -> {
+                                try {
+                                    switch (which) {
+                                        case 0: rootManager.reboot(null); break;
+                                        case 1: rootManager.reboot("recovery"); break;
+                                        case 2: rootManager.reboot("bootloader"); break;
+                                        case 3: rootManager.reboot("-p"); break;
+                                    }
+                                    Toast.makeText(this, "Rebooting...", Toast.LENGTH_SHORT).show();
+                                } catch (Exception e) {
+                                    Toast.makeText(this, "Reboot failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                }
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();

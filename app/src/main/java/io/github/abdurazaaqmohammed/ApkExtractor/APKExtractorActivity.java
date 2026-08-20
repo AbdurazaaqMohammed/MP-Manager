@@ -675,10 +675,6 @@ public class APKExtractorActivity extends AppCompatActivity {
             displayList.add("Silent uninstall (root)");
             iconList.add(R.drawable.ic_delete);
             actionIds.add(204);
-
-            displayList.add("Copy installed APK");
-            iconList.add(R.drawable.save_24px);
-            actionIds.add(205);
         }
 
         View popupView = LayoutInflater.from(this).inflate(R.layout.popup_dropdown_menu, null);
@@ -822,14 +818,24 @@ public class APKExtractorActivity extends AppCompatActivity {
                         } catch (Exception e) { showError(e); }
                         break;
                     case 200: // Clear app data (root)
-                        executeRootAction("Clear data", () -> {
-                            rootManager.clearAppData(packageName);
-                        }, packageName);
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("Clear App Data")
+                                .setMessage("Clear all data for " + ai.name + "?\n\nThis will permanently delete all app data, settings, accounts, and databases.")
+                                .setPositiveButton("Clear", (d, w) -> executeRootAction("Clear data", () -> {
+                                    rootManager.clearAppData(packageName);
+                                }, packageName))
+                                .setNegativeButton("Cancel", null)
+                                .show();
                         break;
                     case 201: // Force stop (root)
-                        executeRootAction("Force stop", () -> {
-                            rootManager.forceStopApp(packageName);
-                        }, packageName);
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("Force Stop")
+                                .setMessage("Force stop " + ai.name + "?\n\nThis will immediately stop all of the app's running processes.")
+                                .setPositiveButton("Stop", (d, w) -> executeRootAction("Force stop", () -> {
+                                    rootManager.forceStopApp(packageName);
+                                }, packageName))
+                                .setNegativeButton("Cancel", null)
+                                .show();
                         break;
                     case 202: // Enable app (root)
                         executeRootAction("Enable app", () -> {
@@ -837,9 +843,14 @@ public class APKExtractorActivity extends AppCompatActivity {
                         }, packageName);
                         break;
                     case 203: // Disable app (root)
-                        executeRootAction("Disable app", () -> {
-                            rootManager.disableApp(packageName);
-                        }, packageName);
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("Disable App")
+                                .setMessage("Disable " + ai.name + "?\n\nThe app will be hidden and stopped from running. You can re-enable it later.")
+                                .setPositiveButton("Disable", (d, w) -> executeRootAction("Disable app", () -> {
+                                    rootManager.disableApp(packageName);
+                                }, packageName))
+                                .setNegativeButton("Cancel", null)
+                                .show();
                         break;
                     case 204: // Silent uninstall (root)
                         new MaterialAlertDialogBuilder(this)
@@ -850,20 +861,6 @@ public class APKExtractorActivity extends AppCompatActivity {
                                 }, packageName))
                                 .setNegativeButton("Cancel", null)
                                 .show();
-                        break;
-                    case 205: // Copy installed APK from /data/app
-                        executeRootAction("Copy APK", () -> {
-                            String apkPath = rootManager.getAppApkPath(packageName);
-                            if (apkPath != null) {
-                                java.io.File dest = new java.io.File(getAppFolder(), ai.name + ".apk");
-                                rootManager.copyFromRoot(apkPath, dest);
-                                runOnUiThread(() ->
-                                    Toast.makeText(this, "Copied to: " + dest.getAbsolutePath(), Toast.LENGTH_LONG).show());
-                            } else {
-                                runOnUiThread(() ->
-                                    Toast.makeText(this, "Could not find APK path", Toast.LENGTH_SHORT).show());
-                            }
-                        }, packageName);
                         break;
                 }
             }
