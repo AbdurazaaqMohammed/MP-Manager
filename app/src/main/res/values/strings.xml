@@ -1,115 +1,40 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">MP Manager</string>
-    <string name="merge">Select split APK to Merge/AntiSplit</string>
     <string name="success_saved">File saved successfully to %s</string>
     <string name="enable_logs" >Save logs</string>
-    <string name="ask">Ask where to save the file each time</string>
-    <string name="grant_storage">Storage permission needed to save to the same dir as the selected file</string>
-    <string name="no_filepath">"Can\'t write to the filepath "</string>
-    <string name="output">"Output directory: "</string>
-    <string name="show_dialog">Show dialog allowing selection of which splits to include</string>
-    <string name="nothing">Nothing selected</string>
-    <string name="change_text_color">Change text color</string>
-    <string name="change_background_color">Change background color</string>
     <string name="sign_apk">Sign the APK after merging</string>
-    <string name="automatically_select">Automatically select splits for your device specifications</string>
     <string name="sign_failed">Failed to sign APK, saving without signing</string>
     <string name="signing">Signing %1$s</string>
     <string name="saving">Saving…</string>
-    <string name="removed_table_entry">"Removed table-entry : "</string>
-    <string name="sanitizing_manifest">Sanitizing manifest…</string>
-    <string name="skipping">"Skipping "</string>
-    <string name="not_apk">: Not an APK file</string>
-    <string name="unselected">: Unselected</string>
     <string name="searching">Searching files…</string>
     <string name="cancel">Cancel</string>
     <string name="select">Select</string>
     <string name="label_parent_directory">Parent Directory</string>
     <string name="last_edit">Last edited: </string>
     <string name="error_dir_access">Directory cannot be accessed</string>
-    <string name="lang" translatable="false">Language</string>
-    <string name="update">Update available</string>
-    <string name="new_ver">New version of AntiSplit M is available</string>
-    <string name="dl">Download</string>
-    <string name="auto_update">Check for updates automatically</string>
-    <string name="check_update_now">Check for update now</string>
-    <string name="no_update_found">No update found</string>
     <string name="settings">Settings</string>
     <string name="close">Close</string>
-    <string name="mismatch">The following splits (%1$s) have mismatched version codes. They are only language codes, so the app can run without them, but these languages will not work in the app. Do you want to continue with merging anyway?</string>
     <string name="warning">Warning</string>
-    <string name="mismatch_base">" version code does not match that of base.apk"</string>
-    <string-array name="langs_display">
-        <item>English</item>
-        <item>Español</item>
-        <item>Français</item>
-        <item>Bahasa Indonesia</item>
-        <item>Italiano</item>
-        <item>русский язык</item>
-        <item>Türkçe</item>
-        <item>українська мова</item>
-        <item>Português</item>
-        <item>简体中文</item>
-    </string-array>
-    <string-array name="langs">
-        <item>en</item>
-        <item>es</item>
-        <item>fr</item>
-        <item>in</item>
-        <item>it</item>
-        <item>ru</item>
-        <item>tr</item>
-        <item>uk</item>
-        <item>pt-BR</item>
-        <item>zh-CN</item>
-    </string-array>
     <string name="label_parent_dir" translatable="false">…</string>
     <string name="create_issue">Create GitHub Issue</string>
     <string name="copy_log">Copy log</string>
-    <string name="pause">Pause button</string>
     <string name="copied_log">Copied log</string>
-    <string name="select_from_installed_apps">Select from Installed Apps</string>
     <string name="app_icon_list_label">App icon</string>
-    <string name="install">Install</string>
-    <string name="app_name_display" translatable="false">%s %s %s</string>
-    <string name="last_update">Last updated %s</string>
-    <string name="first_installed">First installed %s</string>
     <string name="show_icons">Show icons in app list</string>
     <string name="merge_splits">Merge/AntiSplit split apps by default</string>
-    <string name="changes_msg">Changes will be applied on next launch</string>
     <string name="show_last_updated">Show last updated date</string>
     <string name="show_first_install">Show first installed date</string>
     <string name="show_pkg">Show package name</string>
     <string name="show_app">Show app name</string>
     <string name="show_v_code">Show version code</string>
     <string name="show_v_name">Show version name</string>
-    <string name="extract_and_share">Extract and share</string>
-    <string name="antisplit_merge_and_share">AntiSplit/merge and share</string>
-    <string name="extract_apk_and_save">Extract APK and save</string>
-    <string name="extract_base_apk_and_save">Extract base.apk and save</string>
-    <string name="extract_split_apk_and_save">Extract split APK and save</string>
-    <string name="share_app_icon">Share app icon</string>
-    <string name="save_app_icon">Save app icon</string>
-    <string name="antisplit_merge_and_save">AntiSplit/merge and save</string>
-    <string name="more_information">More information</string>
     <string name="filter">Filter</string>
-    <string name="app_info">App Info</string>
-    <string name="uninstall">Uninstall</string>
-    <string name="launch">Launch</string>
     <string name="warn_sign">After merging, the original signature of an APK will be invalid and it must be signed in order to install it. This will break updating the app from official sources. Some apps verify the signature of the APK or take other measures to check if the app was modified, which may cause it to crash on startup.</string>
     <string name="user_apps">User apps</string>
     <string name="system_apps">System apps</string>
     <string name="share_apk">Share APK</string>
     <string name="display_nfo">Display information</string>
     <string name="display_functions">Display functions</string>
-    <string name="extract_icon">%sExtract icon</string>
-    <string name="extract_res">%sExtract resources.arsc</string>
-    <string name="extract_dex">%sExtract classes.dex files</string>
-    <string name="extract_manifest">%sExtract AndroidManifest.xml</string>
-    <string name="extract_base">%sExtract base.apk</string>
-    <string name="extract_libs">%sExtract libs</string>
-    <string name="choose_split">%sChoose split from Split APK to extract</string>
-    <string name="show">"Show "</string>
     <string name="confirm">Confirm</string>
     <string name="black_theme">Black theme</string>
     <string name="dark_theme">Dark theme</string>
@@ -172,10 +97,8 @@
     <string name="history">History</string>
     <string name="newFileOrFolder">New file or folder</string>
     <string name="search_activities">Search activities</string>
-    <string name="save_confirm">Do you want to save %1$s?</string>
     <string name="framework_version">Framework Version</string>
     <string name="protectd">Protected</string>
-    <string name="signature_options">Signature Options</string>
     <string name="file_modified">File %1$s has been modified, do you want to update the %2$s</string>
     <string name="clone">Clone APK</string>
     <string name="pkgName">Package name</string>
@@ -209,8 +132,6 @@
     <string name="remove_debug_info_param">Remove debug info .param</string>
     <string name="remove_debug_info_prologue">Remove debug info .prologue</string>
     <string name="remove_debug_info_local">Remove debug info .xxx local</string>
-    <string name="full_storage_access_required">Full Storage Access Required</string>
-    <string name="manage_all_files_msg">On Android 11+, this app needs special permission to manage all files.</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="press_again_msg">Press back again to cancel</string>
@@ -221,59 +142,29 @@
     <string name="ftp">ftp:/%1$s</string>
     <string name="usedpt">%1$d%%</string>
     <string name="used">Used: %1$s Free: %2$s</string>
-    <string name="save_password">Save Password</string>
     <string name="signed_by">Signed By</string>
 
-    <string name="current_activity">Current Activity</string>
-    <string name="current_class">Current Class</string>
-    <string name="btn_inspect">Inspect</string>
-    <string name="btn_close">Close</string>
-    <string name="element_bounds">Element Bounds</string>
-    <string name="element_text">Text: %s</string>
-    <string name="element_id">Id: %s</string>
-    <string name="element_class">Class: %s</string>
-    <string name="element_parent">Parent: %s</string>
-    <string name="settings_title">Layout Inspector Settings</string>
-    <string name="accessibility_service_title">Accessibility Service</string>
-    <string name="accessibility_service_desc">Enable the accessibility service to inspect UI elements across all apps</string>
-    <string name="btn_open_accessibility">Open Accessibility Settings</string>
-    <string name="overlay_permission_title">Overlay Permission</string>
-    <string name="overlay_permission_desc">Enable overlay permission to show floating window on top of other apps</string>
-    <string name="btn_open_overlay">Open Overlay Settings</string>
-    <string name="floating_window_title">Floating Inspector Window</string>
-    <string name="floating_window_desc">Show floating window to inspect UI elements on screen</string>
-    <string name="btn_start_floating">Start Floating Window</string>
-    <string name="btn_stop_floating">Stop Floating Window</string>
-    <string name="floating_status_stopped">Status: Stopped</string>
-    <string name="floating_status_running">Status: Running</string>
-    <string name="inspect_mode_hint">Tap any UI element on screen to inspect its properties</string>
-    <string name="element_bounds_format">[%d, %d][%d, %d]</string>
-    <string name="no_text">(no text)</string>
-    <string name="no_id">(no id)</string>
-    <string name="no_parent">(no parent)</string>
 
-
-   <!--
-   Layout Inspector
-   /*
-    *   Copyright (C) 2022 Ratul Hasan
-    *
-    *   This program is free software: you can redistribute it and/or modify
-    *   it under the terms of the GNU General Public License as published by
-    *   the Free Software Foundation, either version 3 of the License, or
-    *   (at your option) any later version.
-    *
-    *   This program is distributed in the hope that it will be useful,
-    *   but WITHOUT ANY WARRANTY; without even the implied warranty of
-    *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    *   GNU General Public License for more details.
-    *
-    *   You should have received a copy of the GNU General Public License
-    *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
-    */   -->
+    <!--
+    Layout Inspector
+    /*
+     *   Copyright (C) 2022 Ratul Hasan
+     *
+     *   This program is free software: you can redistribute it and/or modify
+     *   it under the terms of the GNU General Public License as published by
+     *   the Free Software Foundation, either version 3 of the License, or
+     *   (at your option) any later version.
+     *
+     *   This program is distributed in the hope that it will be useful,
+     *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+     *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     *   GNU General Public License for more details.
+     *
+     *   You should have received a copy of the GNU General Public License
+     *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+     */   -->
     <string name="github" translatable="false">GitHub</string>
     <string name="accessibility_service_description">We use accessibility service to monitor window state change events. All data is processed offline and no log is kept.</string>
-    <string name="check_for_update">Check for update</string>
     <string name="checking_for_update">Checking for update</string>
     <string name="update_available">Update Available</string>
     <string name="new_version_available">A new version %1$s is available. Do you want to download it?\n\nF-Droid users can wait for the update from F-Droid, which usually arrives within a few hours with the IzzyOnDroid repo, and a few days with F-Droid.org\'s repo.</string>
@@ -282,8 +173,6 @@
     <string name="update_check_failed">Failed to check for update</string>
     <string name="package_label">Package</string>
     <string name="class_label">Class</string>
-    <string name="use_accessibility_service">Use Accessibility Service</string>
-    <string name="use_accessibility_service_desc">Improve package monitoring significantly</string>
     <string name="enable">Enable</string>
     <string name="system_overlay_title">System Overlay</string>
     <string name="system_overlay_description">Please allow draw over other apps permission for \'%1$s\' to be able to use Layout Inspector</string>
@@ -295,8 +184,6 @@
     <string name="class_copied">Class copied</string>
     <string name="stop">Stop</string>
     <string name="inspect_mode">Inspect Mode</string>
-    <string name="inspect_mode_on">Inspect mode enabled. Tap on any view to inspect it.</string>
-    <string name="inspect_mode_off">Inspect mode disabled</string>
     <string name="view_info">⠿ View Info</string>
     <string name="view_id">View ID Name</string>
     <string name="view_id_int">View ID</string>
@@ -314,13 +201,6 @@
     <string name="view_long_clickable">Long Clickable</string>
     <string name="view_focused">Focused</string>
     <string name="view_selected">Selected</string>
-    <string name="view_pressed">Pressed</string>
-    <string name="view_alpha">Alpha</string>
-    <string name="view_rotation">Rotation</string>
-    <string name="view_scale_x">Scale X</string>
-    <string name="view_scale_y">Scale Y</string>
-    <string name="view_translation_x">Translation X</string>
-    <string name="view_translation_y">Translation Y</string>
     <string name="view_parent">Parent</string>
     <string name="view_children_count">Children Count</string>
     <string name="view_children">Children</string>
@@ -329,30 +209,14 @@
     <string name="inspect_stopped">Inspect mode stopped</string>
     <string name="view_package">Package</string>
     <string name="copied_to_clipboard">Copied %1$s</string>
-    <string name="inspecting">Inspecting...</string>
-    <string name="tap_to_inspect">Tap on any view to inspect it</string>
-    <string name="inspect_mode_active">Inspect mode active</string>
     <string name="notification_channel_name">Activity Info</string>
     <string name="notification_channel_description">Shows current activity info</string>
     <string name="auto_update_check">Auto update check</string>
     <string name="auto_update_desc">To ensure you have the latest features and bug fixes, this app can check at GitHub for new versions. There won\'t be any automated installs, behind your back.\n\nThese updates would not go through the additional screening performed at e.g. IzzyOnDroid or F-Droid.\n\nYou can still turn it on/off later.</string>
-    <string name="use_system_font">Use system font</string>
     <string name="restart_required">Restart Required</string>
     <string name="restart">Restart</string>
     <string name="later">Later</string>
-    <string name="group_miscellaneous">Miscellaneous</string>
-    <string name="service_mode">Service mode</string>
-    <string name="scan_speed">Activity scan speed</string>
-    <string name="history_size">Activity history size</string>
-    <string name="window_size">Popup window size</string>
-    <string name="enable_autostart">Enable Autostart</string>
-    <string name="enable_autostart_desc">Prevent the system from killing the service</string>
-    <string name="auto_update_desc_short">Check GitHub for updates on startup</string>
-    <string name="use_system_font_desc">Use device default font instead of custom font</string>
     <string name="activity_history">Activity History</string>
-    <string name="clear">Clear history</string>
-    <string name="copy_cls">Copy class name</string>
-    <string name="copy_pkg">Copy package name</string>
     <string name="child_el_tx">• %1$s%2$s</string>
     <string name="color_picker_active">Color picker running</string>
     <string name="color">Color\n</string>
@@ -367,14 +231,10 @@
     <string name="pref_capture_speed_title">Capture Speed</string>
     <string name="pref_show_grid_lines_title">Show Grid Lines</string>
     <string name="pref_show_grid_lines_summary">Display grid lines on magnifier</string>
-    <string name="start_color_picker">Start Color Picker</string>
     <string name="tips">1. Both text and icon on the magnifier are clickable.\n2. Swipe on magnifier for precise fine-tuning.\n3. If your phone lags when picking colors, reduce capture speed.\n4. If you are asked to select a single app or entire screen, select entire screen.</string>
     <string name="tips_label">Tips</string>
 
 
-    <string name="app_subtitle">Generate commands from file templates</string>
-    <string name="err">Error</string>
-    <string name="select_files">Select File(s)</string>
     <string name="auto_copy">Auto-copy command to clipboard</string>
     <string name="auto_copy_desc">Automatically copy generated command when profile is selected</string>
     <string name="profiles">Profiles</string>
@@ -383,20 +243,14 @@
     <string name="delete_profile">Delete Profile</string>
     <string name="delete_confirm">Are you sure you want to delete profile %1$s?</string>
     <string name="profile_name">Profile Name</string>
-    <string name="command_template">Command Template</string>
     <string name="command_template_hint">Command Template</string>
     <string name="copy_all">Copy All</string>
     <string name="no_profiles">No Profiles</string>
     <string name="no_profiles_msg">Create a profile first to generate commands.</string>
     <string name="use_same_profile">Use same profile for all files</string>
-    <string name="generate_mode">Generation Mode</string>
-    <string name="files">Files</string>
     <string name="manage_profiles">Manage Profiles</string>
     <string name="command_helper">Command Helper</string>
     <string name="multiple_files">Multiple files selected. Choose generation mode:</string>
-    <string name="individual_mode">Choose profile for each file individually</string>
-    <string name="single_mode">Use one profile for all files</string>
-    <string name="no_file">No file selected</string>
     <string name="loading">Loading…</string>
     <string name="enter_path">Enter path</string>
     <string name="path">Path</string>
@@ -439,22 +293,15 @@
     <string name="rename_1">Rename %1$s</string>
     <string name="checksums">Checksums</string>
     <string name="checksums_of">Checksums of %1$s</string>
-    <string name="verify_checksum">Verify integrity</string>
     <string name="verify_checksum_title">Verify %1$s</string>
     <string name="verify_checksum_pass">Valid</string>
     <string name="verify_checksum_fail">Mismatch</string>
-    <string name="verify_checksum_error">Error</string>
     <string name="compute">Compute</string>
     <string name="computing_checksums">Computing checksums…</string>
     <string name="hashing">Hashing %1$s…</string>
-    <string name="checksum_not_supported_zip">Checksums are not supported for files inside archives</string>
     <string name="compare_hashes">Compare hashes</string>
-    <string name="hashes_match">Hashes match</string>
-    <string name="hashes_differ">Hashes differ</string>
     <string name="hash_equal">Equal</string>
     <string name="hash_not_equal">Different</string>
-    <string name="properties_no_files">(none selected)</string>
-    <string name="folder_size">Folder size</string>
     <string name="checksum_verify_empty">No checksum entries found</string>
     <string name="name">Name</string>
     <string name="parent">Parent</string>
@@ -484,8 +331,6 @@
     <string name="batch_install">Install APKs</string>
     <string name="view_certificate">View certificate</string>
     <string name="unknown_sdk">\?</string>
-    <string name="same_signer">Same signer</string>
-    <string name="different_signer">Different signers</string>
     <string name="no_signature_found">No signature found</string>
     <string name="cert">Certificate %1$d</string>
     <string name="optimizing">Optimizing %1$s…</string>
