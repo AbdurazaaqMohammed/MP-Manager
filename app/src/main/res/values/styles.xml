@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Preference.SwitchPreferenceCompat" parent="@style/Preference.SwitchPreferenceCompat.Material"
-        tools:ignore="ResourceCycle">
-        <item name="widgetLayout">@layout/preference_switch</item>
-    </style>
+
     <style name="Theme.MyApp.Black" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="colorSurface">@android:color/black</item>

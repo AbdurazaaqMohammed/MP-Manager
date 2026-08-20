@@ -80,54 +80,6 @@
         <item>30</item>
     </string-array>
 
-    <string-array name="service_mode_entries">
-        <item>Popup + Notification</item>
-        <item>Notification only</item>
-    </string-array>
-
-    <string-array name="service_mode_values">
-        <item>0</item>
-        <item>1</item>
-    </string-array>
-
-    <string-array name="scan_speed_entries">
-        <item>Extreme</item>
-        <item>Fast</item>
-        <item>Medium</item>
-        <item>Slow</item>
-    </string-array>
-
-    <string-array name="scan_speed_values">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-    </string-array>
-
-    <string-array name="history_size_entries">
-        <item>Large</item>
-        <item>Medium</item>
-        <item>Small</item>
-    </string-array>
-
-    <string-array name="history_size_values">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-    </string-array>
-
-    <string-array name="window_size_entries">
-        <item>Large</item>
-        <item>Medium</item>
-        <item>Small</item>
-    </string-array>
-
-    <string-array name="window_size_values">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-    </string-array>
-
     <string-array name="pref_magnifier_size_entries">
         <item>Large</item>
         <item>Medium</item>

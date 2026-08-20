@@ -49,7 +49,7 @@
     <string name="extracting_to">Extracting %1$s to %2$s</string>
     <string name="android_ver_text">%1$s (SDK %2$d)</string>
     <string name="menu">menu\n</string>
-    <string name="search">search</string>
+    <string name="search">Search</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
     <string name="save">Save</string>
@@ -336,4 +336,15 @@
     <string name="optimizing">Optimizing %1$s…</string>
     <string name="opt_done">Optimization complete</string>
     <string name="permissions_none">None</string>
+    <string name="folders_x">Folders: %1$d</string>
+    <string name="files_x">Files: %1$d</string>
+    <string name="non_root">Non-root</string>
+    <string name="root">Root</string>
+    <string name="yes">Yes</string>
+    <string name="button_label">Button Label (optional)</string>
+    <string name="none">None</string>
+    <string name="insert_text">Insert text</string>
+    <string name="regex_fr">Regex find and replace</string>
+    <string name="copy_selection">Copy selection</string>
+    <string name="cut_selection">Cut selection</string>
 </resources>

@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.preference.PreferenceManager;
 import android.text.ClipboardManager;
 import android.text.TextUtils;
@@ -75,6 +74,7 @@ import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 
@@ -703,21 +703,21 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         File zipFile = isInZip ? entry.getZipFile() : null;
         if(isInZip && zipFile.getName().endsWith(".apk")) {
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
-            ll.<TextView>findViewById(R.id.modifiedText).setText("Are you sure you want to delete " + filesToDisplay + "?");
+            ll.<TextView>findViewById(R.id.modifiedText).setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
             CheckBox autosign = ll.findViewById(R.id.autosign);
             autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
             ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
-        } else deleteDialog.setMessage("Are you sure you want to delete " + filesToDisplay + "?");
-        deleteDialog.setTitle("Alert").setPositiveButton("Yes", (dialog3, which) -> {
+        } else deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+        deleteDialog.setTitle("Alert").setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
             Runnable doDelete = () -> {
                 pm.show();
                 new Thread(() -> {
                     try {
                         if(isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
-                        io.github.abdurazaaqmohammed.utils.RootManager rm = io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context);
+                        RootManager rm = RootManager.getInstance(context);
                         boolean useRootForDelete = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
                         if (multi) {
                             if (!isInZip) {
@@ -781,7 +781,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 boolean inKeyDir = false;
                 if (!isInZip && file != null) {
                     String path = file.getAbsolutePath();
-                    if (io.github.abdurazaaqmohammed.utils.RootManager.isPathInKeyDirectory(path)) {
+                    if (RootManager.isPathInKeyDirectory(path)) {
                         inKeyDir = true;
                     }
                 }

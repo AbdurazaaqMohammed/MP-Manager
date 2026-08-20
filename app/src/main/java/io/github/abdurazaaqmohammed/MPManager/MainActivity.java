@@ -1443,7 +1443,7 @@ public class MainActivity extends AppCompatActivity {
         else {
             File[] folders = curr.listFiles(File::isDirectory);
             int foldersCount = folders == null ? 0 : folders.length;
-            this.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder("Folders: ").append(foldersCount).append(" Files: ").append(files.length - foldersCount));
+            this.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder(rss.getString(R.string.folders_x, foldersCount)).append(' ').append(rss.getString(R.string.files_x, files.length - foldersCount)));
         }
     }
 
@@ -1782,17 +1782,17 @@ public class MainActivity extends AppCompatActivity {
         com.google.android.material.button.MaterialButton rebootMenuBtn = settingsDialog.findViewById(R.id.rebootMenuBtn);
 
         // Setup working mode dropdown
-        String[] workingModes = {"Non-root", "Root"};
+        String[] workingModes = {rss.getString(R.string.non_root), rss.getString(R.string.root)};
         ArrayAdapter<String> workingModeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, workingModes);
         workingModeTv.setAdapter(workingModeAdapter);
-        workingModeTv.setText(rootManager.isRootMode() ? "Root" : "Non-root", false);
+        workingModeTv.setText(workingModes[rootManager.isRootMode() ? 1 : 0], false);
         rootStatusSwitch.setChecked(rootManager.isRootAvailable());
 
         workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
             boolean isRoot = position == 1;
             if (isRoot && !rootManager.isRootAvailable()) {
                 Toast.makeText(this, "Root not available on this device", Toast.LENGTH_LONG).show();
-                workingModeTv.setText("Non-root", false);
+                workingModeTv.setText(workingModes[0], false);
                 return;
             }
             rootManager.setWorkingMode(isRoot ? RootManager.WorkingMode.ROOT : RootManager.WorkingMode.NON_ROOT);
