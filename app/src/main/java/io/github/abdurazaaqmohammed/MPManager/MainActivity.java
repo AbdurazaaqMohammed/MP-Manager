@@ -136,10 +136,10 @@ import android.view.ViewGroup;
 import android.widget.AutoCompleteTextView;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
-import android.widget.Toast;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -203,6 +203,11 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton profileManageButton;
     private boolean isBackPressedToExit;
     private final Runnable resetExitPrompt = () -> isBackPressedToExit = false;
+
+    @Override
+    public Resources getResources() {
+        return rss;
+    }
 
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
@@ -305,16 +310,16 @@ public class MainActivity extends AppCompatActivity {
                     File zipFile = pane1 ? pane1Folder : pane2Folder;
                     String zipFileName = zipFile.getName();
                     boolean isApk = zipFileName.endsWith(".apk");
-                    ll.<TextView>findViewById(R.id.modifiedText).setText(rss.getString(R.string.file_modified, modifiedFileName, (isApk ? "APK" : "ZIP")));
+                    ll.<TextView>findViewById(R.id.modifiedText).setText(rss.getString(R.string.file_modified_x, modifiedFileName, (isApk ? "APK" : "ZIP")));
                     CheckBox autosign = ll.findViewById(R.id.autosign);
                     boolean[] sign = new boolean[1];
                     autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                     autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                     ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
                     new MaterialAlertDialogBuilder(this)
-                        .setTitle("File modified")
+                        .setTitle(getString(R.string.file_modified))
                         .setView(ll)
-                        .setPositiveButton("Yes", (dialog, which) -> {
+                        .setPositiveButton(getString(R.string.yes), (dialog, which) -> {
                             dialog.dismiss();
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doWork = () -> {
@@ -347,7 +352,7 @@ public class MainActivity extends AppCompatActivity {
                                 wrapper[0] = sw;
                                 doWork.run();
                             }); else doWork.run();
-                        }).setNegativeButton(rss.getString(R.string.cancel), null).show();
+                        }).setNegativeButton(rss.getString(android.R.string.cancel), null).show();
                 }
             }
         }
@@ -485,19 +490,7 @@ public class MainActivity extends AppCompatActivity {
 
         lang = settings.getString("lang", supportedLang ? deviceLang : "en");
         boolean useDeviceRss = lang.equals(deviceLang);
-        rss = useDeviceRss ? getResources() : LocaleHelper.setLocale(this, lang).getResources();
-        
-//        if (Build.VERSION.SDK_INT > 20) {
-//            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-//            int transparent = Color.TRANSPARENT;
-//            getWindow().setNavigationBarColor(transparent);
-//            getWindow().setStatusBarColor(transparent);
-//        }
-//
-//        if (!LegacyUtils.supportsWriteExternalStorage) {
-//            getWindow().setStatusBarContrastEnforced(true);
-//            getWindow().setNavigationBarContrastEnforced(true);
-//        }
+        rss = /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, lang).getResources();
 
         new Thread(() -> {
             Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
@@ -866,7 +859,7 @@ public class MainActivity extends AppCompatActivity {
                 View textInputLayout = LayoutInflater.from(this).inflate(R.layout.enter_name, null);
                 EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
                 AlertDialog ad = dialogUtil.getDialogBuilder()
-                        .setTitle("Create")
+                        .setTitle(getString(R.string.create))
                         .setView(textInputLayout)
                         .setNegativeButton(rss.getString(R.string.folder), (dialog, which) -> {
                             boolean isPane1 = lastPaneSelected == 1;
@@ -1267,7 +1260,7 @@ public class MainActivity extends AppCompatActivity {
                 content.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
 
                 new MaterialAlertDialogBuilder(this)
-                        .setTitle("Build Options")
+                        .setTitle(getString(R.string.build_options))
                         .setView(content)
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
@@ -1443,7 +1436,7 @@ public class MainActivity extends AppCompatActivity {
         else {
             File[] folders = curr.listFiles(File::isDirectory);
             int foldersCount = folders == null ? 0 : folders.length;
-            this.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder(rss.getString(R.string.folders_x, foldersCount)).append(' ').append(rss.getString(R.string.files_x, files.length - foldersCount)));
+            this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, foldersCount, files.length - foldersCount));
         }
     }
 
@@ -1558,21 +1551,21 @@ public class MainActivity extends AppCompatActivity {
         searchHistoryDropdown.setOnClickListener(v -> searchQuery.showDropDown());
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
-                .setTitle("Search")
+                .setTitle(getString(android.R.string.search_go))
                 .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Search", null) // Prevent auto-dismiss
+                .setPositiveButton(getString(android.R.string.search_go), null) // Prevent auto-dismiss
                 .create();
 
         dialog.setOnShowListener(d -> {
             Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             positiveButton.setOnClickListener(v -> {
-                String query = searchQuery.getText().toString();
-                if (TextUtils.isEmpty(query)) {
+                CharSequence q = searchQuery.getText();
+                if (TextUtils.isEmpty(q)) {
                     Extensions.showMessage(this, "Enter a search query");
                     return;
                 }
-
+                String query = q.toString();
                 historyList.remove(query);
                 historyList.add(0, query);
                 if (historyList.size() > 20) {
@@ -1791,7 +1784,7 @@ public class MainActivity extends AppCompatActivity {
         workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
             boolean isRoot = position == 1;
             if (isRoot && !rootManager.isRootAvailable()) {
-                Toast.makeText(this, "Root not available on this device", Toast.LENGTH_LONG).show();
+                Extensions.showMessage(this, "Root not available on this device");
                 workingModeTv.setText(workingModes[0], false);
                 return;
             }
@@ -1817,38 +1810,33 @@ public class MainActivity extends AppCompatActivity {
         rebootMenuBtn.setOnClickListener(v -> showRebootDialog());
 
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
-        new MaterialAlertDialogBuilder(this).setTitle("Settings").setView(settingsDialog).show();
+        new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.settings)).setView(settingsDialog).show();
     }
 
     private void showRebootDialog() {
         RootManager rootManager = RootManager.getInstance(this);
         if (!rootManager.isRootMode()) {
-            Toast.makeText(this, "Root mode is disabled", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, R.string.root_mode_is_disabled);
             return;
         }
 
-        String[] options = {"Reboot", "Reboot Recovery", "Reboot Bootloader", "Power Off"};
-        String[] descriptions = {
-                "Restart the device normally",
-                "Boot into recovery mode",
-                "Boot into fastboot/bootloader mode",
-                "Shut down the device completely"
-        };
+        String[] options = {getString(R.string.reboot), getString(R.string.reboot_recovery), getString(R.string.reboot_bootloader), getString(R.string.power_off)};
+
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Reboot Options")
+                .setTitle(R.string.reboot_options)
                 .setItems(options, (dialog, which) -> {
                     String message;
                     switch (which) {
-                        case 0: message = "Reboot the device now?"; break;
-                        case 1: message = "Reboot into recovery mode?"; break;
-                        case 2: message = "Reboot into bootloader/fastboot?"; break;
-                        case 3: message = "Power off the device?"; break;
+                        case 0: message = getString(R.string.reboot_the_device_now); break;
+                        case 1: message = getString(R.string.reboot_into_recovery_mode); break;
+                        case 2: message = getString(R.string.reboot_into_bootloader_fastboot); break;
+                        case 3: message = getString(R.string.power_off_the_device); break;
                         default: return;
                     }
                     new MaterialAlertDialogBuilder(this)
                             .setTitle(options[which])
                             .setMessage(message)
-                            .setPositiveButton("Confirm", (d2, w2) -> {
+                            .setPositiveButton(getString(R.string.confirm), (d2, w2) -> {
                                 try {
                                     switch (which) {
                                         case 0: rootManager.reboot(null); break;
@@ -1856,9 +1844,9 @@ public class MainActivity extends AppCompatActivity {
                                         case 2: rootManager.reboot("bootloader"); break;
                                         case 3: rootManager.reboot("-p"); break;
                                     }
-                                    Toast.makeText(this, "Rebooting...", Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(this, "Rebooting...");
                                 } catch (Exception e) {
-                                    Toast.makeText(this, "Reboot failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                    Extensions.showMessage(this, "Reboot failed: " + e.getMessage());
                                 }
                             })
                             .setNegativeButton(android.R.string.cancel, null)
@@ -1981,9 +1969,9 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(cbOnlyThisFolder);
 
         dialogUtil.getDialogBuilder()
-                .setTitle("Sort")
+                .setTitle(getString(R.string.sort))
                 .setView(layout)
-                .setPositiveButton("Apply", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.apply), (dialog, which) -> {
                     int selectedSort = radioGroup.getCheckedRadioButtonId();
                     boolean selectedReverse = cbReverse.isChecked();
                     SharedPreferences.Editor editor = prefs.edit();
@@ -2011,9 +1999,9 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
-                .setTitle("Edit Hidden Files (Click to unhide)")
+                .setTitle(R.string.edit_hidden_files)
                 .setView(listView)
-                .setPositiveButton("Done", (d, w) -> reloadCurrentFolder())
+                .setPositiveButton(R.string.done, (d, w) -> reloadCurrentFolder())
                 .create();
 
         listView.setOnItemClickListener((parent, view, position, id) -> {
@@ -2023,7 +2011,7 @@ public class MainActivity extends AppCompatActivity {
             values.remove(path);
             prefs.edit().putStringSet("manually_hidden_files", values).apply();
             adapter.notifyDataSetChanged();
-            Extensions.showMessage(this, "Unhidden: " + path);
+            Extensions.showMessage(this, getString(R.string.unhidden, path));
         });
 
         dialog.show();
@@ -2194,30 +2182,26 @@ public class MainActivity extends AppCompatActivity {
         pl.setEnabled(serverNotStarted);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
-            Extensions.showMessage(this, "Please allow notifications to show FTP server running");
+            Toast.makeText(this, "Please allow notifications to show FTP server running", Toast.LENGTH_LONG);
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-            /*new MaterialAlertDialogBuilder(this)
-                .setTitle("Notifications")
-                .setMessage("Please allow notifications to show FTP server running")
-                .setPositiveButton("Allow", (dialog, which) -> requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS))
-                .setOnDismissListener(dialog -> requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS))
-                .show();*/
         }
 
         // This is very important to have notification so user remember that the FTP server is running and can stop it easily and should be shown always not just if dialog or app closed
         Intent serviceIntent = new Intent(this, FtpForegroundService.class);
         serviceIntent.putExtra("io.github.abdurazaaqmohammed.MPManager.ip", ipString);
 
+        String start = rss.getString(R.string.start);
+        String stop = rss.getString(R.string.stop);
         AlertDialog ad = dialogUtil.getDialogBuilder()
-                .setTitle("FTP Server")
+                .setTitle(rss.getString(R.string.ftp_server))
                 .setView(view)
                 .setOnDismissListener(null)
-                .setPositiveButton(serverNotStarted ? "Start" : "Stop", null)
+                .setPositiveButton(serverNotStarted ? start : stop, null)
                 .show();
                 ad.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
                     TextView tv = (TextView) v;
-                    boolean wasStarted = "Stop".equals(tv.getText().toString());
-                    tv.setText(wasStarted ? "Start" : "Stop");
+                    boolean wasStarted = stop.equals(tv.getText().toString());
+                    tv.setText(wasStarted ? start : stop);
                     portInput.setEnabled(wasStarted);
                     userInput.setEnabled(wasStarted);
                     passInput.setEnabled(wasStarted);
@@ -2300,9 +2284,9 @@ public class MainActivity extends AppCompatActivity {
 
         new ProfileHelper(this, ipInput, portInput, userInput, passInput, securityInput, profileSpinner, profileManageButton).setupProfileSpinner(false);
         dialogUtil.getDialogBuilder()
-                .setTitle("FTP Client")
+                .setTitle(rss.getString(R.string.ftp_client))
                 .setView(view)
-                .setPositiveButton("Connect", (dialog, which) -> {
+                .setPositiveButton(rss.getString(R.string.connect), (dialog, which) -> {
 
                     String ip = ipInput.getText().toString().trim();
                     int port = Integer.parseInt(portInput.getText().toString());

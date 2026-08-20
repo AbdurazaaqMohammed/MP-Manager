@@ -12,10 +12,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.lilincpp.github.libezftp.IEZFtpClient;
@@ -107,29 +106,31 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     private void showContextMenu(View anchor, FTPFileWrapper file) {
         PopupMenu popupMenu = new PopupMenu(context, anchor);
-        popupMenu.getMenu().add("Copy");
-        popupMenu.getMenu().add("Move");
-        popupMenu.getMenu().add("Rename");
-        popupMenu.getMenu().add("Delete");
-        popupMenu.getMenu().add("Properties");
+        String cp = context.rss.getString(android.R.string.copy);
+        String mv = context.rss.getString(R.string.move);
+        String rn = context.rss.getString(R.string.rename);
+        String dl = context.rss.getString(R.string.delete);
+        String props = context.rss.getString(R.string.properties);
+        popupMenu.getMenu().add(cp);
+        popupMenu.getMenu().add(mv);
+        popupMenu.getMenu().add(rn);
+        popupMenu.getMenu().add(dl);
+        popupMenu.getMenu().add(props);
 
         popupMenu.setOnMenuItemClickListener(item -> {
-            switch (item.getTitle().toString()) {
-                case "Copy":
-                    copyToLocal(file, false);
-                    break;
-                case "Move":
-                    copyToLocal(file, true);
-                    break;
-                case "Rename":
-                    showRenameDialog(file);
-                    break;
-                case "Delete":
-                    showDeleteDialog(file);
-                    break;
-                case "Properties":
-                    showPropertiesDialog(file);
-                    break;
+            CharSequence title = item.getTitle();
+            if (TextUtils.isEmpty(title)) return true;
+            String string = title.toString();
+            if (string.equals(cp)) {
+                copyToLocal(file, false);
+            } else if (string.equals(mv)) {
+                copyToLocal(file, true);
+            } else if (string.equals(rn)) {
+                showRenameDialog(file);
+            } else if (string.equals(dl)) {
+                showDeleteDialog(file);
+            } else if (string.equals(props)) {
+                showPropertiesDialog(file);
             }
             return true;
         });
@@ -140,24 +141,25 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         EditText input = new EditText(context);
         input.setText(file.getName());
         dialogUtil.getDialogBuilder()
-                .setTitle("Rename")
+                .setTitle(context.rss.getString(R.string.rename))
                 .setView(input)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {
                         String oldPath = file.getParent() + "/" + file.getName();
                         String newPath = file.getParent() + "/" + newName;
-                        ftpClient.rename(oldPath, newPath, new OnEZFtpCallBack<Void>() {
+                        ftpClient.rename(oldPath, newPath, new OnEZFtpCallBack<>() {
                             @Override
                             public void onSuccess(Void response) {
                                 context.runOnUiThread(() -> {
-                                    Toast.makeText(context, "Renamed successfully", Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(context, R.string.renamed_successfully);
                                     context.reloadCurrentFolder();
                                 });
                             }
+
                             @Override
                             public void onFail(int code, String msg) {
-                                context.runOnUiThread(() -> Toast.makeText(context, "Rename failed: " + msg, Toast.LENGTH_SHORT).show());
+                                Extensions.showMessage(context, context.rss.getString(R.string.rename_failed, msg));
                             }
                         });
                     }
@@ -168,20 +170,21 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     private void showDeleteDialog(FTPFileWrapper file) {
         dialogUtil.getDialogBuilder()
-                .setTitle("Delete " + file.getName() + "?")
-                .setPositiveButton("Yes", (dialog, which) -> {
+                .setTitle(context.rss.getString(R.string.delete_confirm, file.getName()))
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String path = file.getParent() + "/" + file.getName();
-                    OnEZFtpCallBack<Void> callback = new OnEZFtpCallBack<Void>() {
+                    OnEZFtpCallBack<Void> callback = new OnEZFtpCallBack<>() {
                         @Override
                         public void onSuccess(Void response) {
                             context.runOnUiThread(() -> {
-                                Toast.makeText(context, "Deleted successfully", Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(context, R.string.deleted_successfully);
                                 context.reloadCurrentFolder();
                             });
                         }
+
                         @Override
                         public void onFail(int code, String msg) {
-                            context.runOnUiThread(() -> Toast.makeText(context, "Delete failed: " + msg, Toast.LENGTH_SHORT).show());
+                            Extensions.showMessage(context, context.rss.getString(R.string.delete_failed, msg));
                         }
                     };
                     
@@ -191,7 +194,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                         ftpClient.deleteFile(path, callback);
                     }
                 })
-                .setNegativeButton("No", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
@@ -202,7 +205,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
                 "Type: " + (file.isDirectory() ? "Directory" : "File");
                 
         dialogUtil.getDialogBuilder()
-                .setTitle("Properties")
+                .setTitle(context.rss.getString(R.string.properties))
                 .setMessage(props)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
@@ -210,12 +213,12 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     private void copyToLocal(FTPFileWrapper file, boolean isMove) {
         if (file.isDirectory()) {
-            Toast.makeText(context, "Directory copy not fully supported yet", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(context, "Directory copy not fully supported yet");
             return;
         }
         File destFolder = pane1 ? context.pane2Folder : context.pane1Folder;
         String destPath = destFolder.getAbsolutePath() + "/" + file.getName();
-        Toast.makeText(context, (isMove ? "Moving " : "Copying ") + file.getName() + " to " + destFolder.getName(), Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(context, (isMove ? "Moving " : "Copying ") + file.getName() + " to " + destFolder.getName());
 
         ftpClient.downloadFile(file.getFtpFile(), destPath, new OnEZFtpDataTransferCallback() {
             @Override
@@ -226,23 +229,25 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
             @Override
             public void onErr(int code, String msg) {
-                context.runOnUiThread(() -> Toast.makeText(context, "Download failed: " + msg, Toast.LENGTH_SHORT).show());
+                Extensions.showMessage(context, context.rss.getString(R.string.download_failed, msg));
             }
 
             public void onErr(int code, Exception e) {
-                context.runOnUiThread(() -> Toast.makeText(context, "Download failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                Extensions.showMessage(context, context.rss.getString(R.string.download_failed, e.getMessage()));
             }
         });
 
         if (isMove) {
             String path = file.getParent() + "/" + file.getName();
-            ftpClient.deleteFile(path, new OnEZFtpCallBack<Void>() {
+            ftpClient.deleteFile(path, new OnEZFtpCallBack<>() {
                 @Override
                 public void onSuccess(Void response) {
-                    context.runOnUiThread(() -> context.reloadCurrentFolder());
+                    context.runOnUiThread(context::reloadCurrentFolder);
                 }
+
                 @Override
-                public void onFail(int code, String msg) { }
+                public void onFail(int code, String msg) {
+                }
             });
         }
     }
@@ -252,7 +257,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
             if (item instanceof File && !((File) item).isDirectory()) {
                 File localFile = (File) item;
 
-                context.handler.post(() -> Toast.makeText(context, "Uploading " + localFile.getName(), Toast.LENGTH_SHORT).show());
+                Extensions.showMessage(context, context.getString(R.string.uploading, localFile.getName()));
                 ftpClient.uploadFile(localFile.getAbsolutePath(), new OnEZFtpDataTransferCallback() {
                     @Override
                     public void onStateChanged(int state) { 

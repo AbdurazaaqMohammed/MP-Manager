@@ -23,7 +23,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.core.app.NotificationManagerCompat;
 import androidx.multidex.MultiDexApplication;
@@ -94,10 +94,10 @@ public class App extends MultiDexApplication {
 
     public static void showToast(Context context, String message) {
         try {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(context, message);
         } catch (Exception ignored) {
             try {
-                Toast.makeText(instance, message, Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(instance, message);
             } catch (Exception ignored2) {
                 // ignore
             }

@@ -53,8 +53,7 @@ import io.github.rosemoe.sora.lang.styling.Styles;
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.TextMateSymbolPairMatch;
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
-import org.eclipse.tm4e.core.grammar.IGrammar;
-import java.util.List;
+
 import java.util.Objects;
 
 import io.github.rosemoe.sora.text.CharPosition;
@@ -92,12 +91,11 @@ public class CustomAutoComplete extends EmptyLanguage {
 		}
 		mIndentationRules = rules;
 		
-		if (mLanguage instanceof TextMateLanguage) {
-			TextMateLanguage tm = (TextMateLanguage) mLanguage;
-			tm.setAutoCompleteEnabled(true);
+		if (mLanguage instanceof TextMateLanguage tm) {
+            tm.setAutoCompleteEnabled(true);
 			tm.setTabSize(editor.getTabWidth());
 			if (tm.getSymbolPairs() instanceof TextMateSymbolPairMatch) {
-				((TextMateSymbolPairMatch)tm.getSymbolPairs()).setEnabled(true);
+				tm.getSymbolPairs().setEnabled(true);
 			}
 		}
 		
@@ -126,9 +124,8 @@ public class CustomAutoComplete extends EmptyLanguage {
 			".sparse-switch", ".end sparse-switch"
 		};
 		
-		if(mLanguage instanceof TextMateLanguage) {
-			TextMateLanguage tm = (TextMateLanguage) mLanguage;
-			if(gotoItems == null){
+		if(mLanguage instanceof TextMateLanguage tm) {
+            if(gotoItems == null){
 				tm.setCompleterKeywords(ks);
 			}else {
 				// Merge ks and gotoItems

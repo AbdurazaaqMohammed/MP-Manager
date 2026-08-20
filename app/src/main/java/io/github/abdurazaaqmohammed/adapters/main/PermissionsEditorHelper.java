@@ -15,6 +15,7 @@ import android.widget.TextView;
 import com.google.android.material.color.MaterialColors;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class PermissionsEditorHelper {
 
@@ -37,7 +38,7 @@ public class PermissionsEditorHelper {
         root.setPadding(dp(8), dp(8), dp(8), 0);
 
         TextView sectionTitle = new TextView(context);
-        sectionTitle.setText("Permissions");
+        sectionTitle.setText(R.string.permissions);
         sectionTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
         sectionTitle.setTypeface(null, Typeface.BOLD);
         sectionTitle.setPadding(0, dp(4), 0, dp(8));
@@ -56,32 +57,32 @@ public class PermissionsEditorHelper {
         ownerRead = createPermCheckbox(permBits[0] & 4);
         ownerWrite = createPermCheckbox(permBits[0] & 2);
         ownerExec = createPermCheckbox(permBits[0] & 1);
-        root.addView(createPermRow("Owner", ownerRead, ownerWrite, ownerExec));
+        root.addView(createPermRow(context.getString(R.string.owner), ownerRead, ownerWrite, ownerExec));
 
         groupRead = createPermCheckbox(permBits[1] & 4);
         groupWrite = createPermCheckbox(permBits[1] & 2);
         groupExec = createPermCheckbox(permBits[1] & 1);
-        root.addView(createPermRow("Group", groupRead, groupWrite, groupExec));
+        root.addView(createPermRow(context.getString(R.string.group), groupRead, groupWrite, groupExec));
 
         otherRead = createPermCheckbox(permBits[2] & 4);
         otherWrite = createPermCheckbox(permBits[2] & 2);
         otherExec = createPermCheckbox(permBits[2] & 1);
-        root.addView(createPermRow("Other", otherRead, otherWrite, otherExec));
+        root.addView(createPermRow(context.getString(R.string.other), otherRead, otherWrite, otherExec));
 
         setUid = new CheckBox(context);
-        setUid.setText("Set UID");
+        setUid.setText(context.getString(R.string.set_uid));
         setUid.setTextSize(12);
         setUid.setChecked(permBits[3] == 4);
         setUid.setPadding(dp(4), 0, dp(16), 0);
 
         setGid = new CheckBox(context);
-        setGid.setText("Set GID");
+        setGid.setText(context.getString(R.string.set_gid));
         setGid.setTextSize(12);
         setGid.setChecked(permBits[3] == 2);
         setGid.setPadding(dp(4), 0, dp(16), 0);
 
         sticky = new CheckBox(context);
-        sticky.setText("Sticky");
+        sticky.setText(context.getString(R.string.sticky));
         sticky.setTextSize(12);
         sticky.setChecked(permBits[3] == 1);
         sticky.setPadding(dp(4), 0, dp(4), 0);
@@ -108,7 +109,7 @@ public class PermissionsEditorHelper {
         numericRow.setGravity(Gravity.CENTER_VERTICAL);
         numericRow.setPadding(0, dp(4), 0, dp(4));
         TextView numLabel = new TextView(context);
-        numLabel.setText("Numeric: ");
+        numLabel.setText(context.getString(R.string.numeric));
         numLabel.setTextSize(13);
         numericInput = new EditText(context);
         numericInput.setTextSize(14);

@@ -38,7 +38,6 @@
 package modder.hub.dexeditor.activity;
 
 import android.os.Bundle;
-import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -58,25 +57,20 @@ public class SettingsActivity extends AppCompatActivity {
 	protected void onCreate(Bundle _savedInstanceState) {
 		super.onCreate(_savedInstanceState);
 		setContentView(R.layout.settings);
-		initialize(_savedInstanceState);
+		initialize();
 		initializeLogic();
 	}
 	
-	private void initialize(Bundle _savedInstanceState) {
+	private void initialize() {
         Toolbar _toolbar = findViewById(R.id._toolbar);
 		setSupportActionBar(_toolbar);
 		Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 		getSupportActionBar().setHomeButtonEnabled(true);
-		_toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View _v) {
-				onBackPressed();
-			}
-		});
+		_toolbar.setNavigationOnClickListener(_v -> onBackPressed());
 	}
 	
 	private void initializeLogic() {
-		setTitle("Preferences");
+		setTitle(R.string.preferences);
 		getSupportFragmentManager().beginTransaction()
 		.replace(R.id.linear1, new SettingsFragment())
 		.commit();

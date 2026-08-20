@@ -1,6 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkBundle;
@@ -53,7 +53,7 @@ public class MergeUtil {
                     mergedModule.writeApk(outputFile);
                     pm.dismiss();
                     context.handler.post(() -> {
-                        Toast.makeText(context, "Saved to: " + outputFile.getName(), Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(context, "Saved to: " + outputFile.getName());
                         context.reloadCurrentFolder();
                     });
                 }

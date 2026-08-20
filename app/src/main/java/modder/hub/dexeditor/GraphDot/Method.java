@@ -90,7 +90,7 @@ public class Method {
                     if (jumpToLabelDict.containsKey(label)) {
                         jumpToLabelDict.get(label).add(instruction);
                     } else {
-                        jumpToLabelDict.put(label, new ArrayList<>(Arrays.asList(instruction)));
+                        jumpToLabelDict.put(label, new ArrayList<>(List.of(instruction)));
                     }
                 }
                 instructions.add(instruction);

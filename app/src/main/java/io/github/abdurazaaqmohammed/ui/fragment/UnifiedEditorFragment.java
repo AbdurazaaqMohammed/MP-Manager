@@ -1,8 +1,5 @@
 package io.github.abdurazaaqmohammed.ui.fragment;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -13,7 +10,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,20 +20,17 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.DecelerateInterpolator;
-import android.widget.AdapterView;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -63,7 +56,6 @@ import java.util.Objects;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.event.ContentChangeEvent;
 import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
@@ -79,7 +71,6 @@ import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.text.LineSeparator;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.EditorSearcher;
-import io.github.rosemoe.sora.widget.SymbolInputView;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
 import io.github.rosemoe.sora.widget.schemes.SchemeDarcula;
@@ -96,9 +87,7 @@ import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.CustomAutoComplete;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
-import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.utils.SmaliLabelDialog;
-import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 
@@ -303,9 +292,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     int id = menuItem.getItemId();
                     if (id == 5) {
                         Activity act = getActivity();
-                        if (act instanceof DexEditorActivity) ((DexEditorActivity) act).locateClass(className);
+                        if (act instanceof DexEditorActivity activity) activity.locateClass(className);
                     } else {
-                        UIHelper.copyToClipboard(requireContext(), Objects.requireNonNull(menuItem.getTitle()).toString());
+                        CopyUtil.copyToClipboard(requireActivity(), Objects.requireNonNull(menuItem.getTitle()).toString());
                     }
                     return true;
                 });
@@ -767,14 +756,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     break;
             }
         } catch (Exception e) {
-            if (getContext() != null) {
-                new ErrorUtil(getActivity()).showError(e);
-                Toast.makeText(getContext(), "Action failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            new ErrorUtil(getActivity()).showError(e);
         }
     }
 
-    // ===== Line/Action operations =====
     public void showEditMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
         String[] baseOptions = { "Copy line", "Cut line", "Delete line", "Empty line", "Replace line (with clipboard)",
@@ -985,9 +970,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void showSyntaxDialog() {
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Choose Syntax")
-                .setItems(SYNTAXES, (dialog, which) ->
-                        Toast.makeText(getContext(), "Syntax set to " + SYNTAXES[which], Toast.LENGTH_SHORT).show())
+                .setTitle(R.string.choose_syntax)
+                .setItems(SYNTAXES, (dialog, which) -> Extensions.showMessage(requireActivity(), getString(R.string.syntax_set_to, SYNTAXES[which])))
                 .show();
     }
 
@@ -995,9 +979,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         EditText input = new EditText(requireContext());
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Jump to Line")
+                .setTitle(R.string.jump_to_line)
                 .setView(input)
-                .setPositiveButton("Go", (dialog, which) -> {
+                .setPositiveButton(R.string.go, (dialog, which) -> {
                     CharSequence val = input.getText();
                     if (!TextUtils.isEmpty(val)) {
                         int line = Integer.parseInt(val.toString()) - 1;
@@ -1013,21 +997,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void showCharsetDialog(boolean reload) {
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(reload ? "Reload with Charset" : "Set Encoding")
+                .setTitle(getString(reload ? R.string.reload_with_charset : R.string.set_encoding))
                 .setItems(CHARSETS, (dialog, which) -> {
                     currentCharset = CHARSETS[which];
-                    Toast.makeText(getContext(), "Encoding set to " + currentCharset, Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(requireActivity(), getString(R.string.encoding_set_to, currentCharset));
                 })
                 .show();
     }
 
     private void showLinebreakDialog() {
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Set Linebreak Type")
+                .setTitle(R.string.set_linebreak_type)
                 .setItems(LINEBREAKS, (dialog, which) -> {
                     LineSeparator ls = which == 0 ? LineSeparator.LF : which == 1 ? LineSeparator.CRLF : LineSeparator.CR;
                     editor.setLineSeparator(ls);
-                    Toast.makeText(getContext(), "Linebreak type set to " + LINEBREAKS[which], Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(requireActivity(), getString(R.string.linebreak_type_set_to, LINEBREAKS[which]));
                 })
                 .show();
     }
@@ -1039,8 +1023,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         int words = text.isEmpty() ? 0 : text.trim().split("\\s+").length;
         int lines = editor.getLineCount();
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Statistics")
-                .setMessage("Bytes: " + bytes + "\nCharacters: " + chars + "\nWords: " + words + "\nLines: " + lines)
+                .setTitle(R.string.stats)
+                .setMessage(getString(R.string.statss, bytes, chars, words, lines))
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
@@ -1176,8 +1160,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             int lineNum = (int) Math.floor(Double.parseDouble(lineNumber));
             navigateTo(lineNum, null);
         } catch (Exception e) {
-            if (getContext() != null)
-                SketchwareUtil.showMessage(requireContext(), "Invalid line number: " + lineNumber);
+           Extensions.showMessage(requireActivity(), getString(R.string.invalid_line_number, lineNumber));
         }
     }
 
@@ -1215,7 +1198,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         @Override
         public void onClickTranslate(View view, String text) {
             if (!sharedPreferences.contains("selectedPackage")) {
-                SketchwareUtil.showMessage(requireContext(), "Select a translation app first");
+                Activity _context = requireActivity();
+                Extensions.showMessage(_context, R.string.sel_tl);
                 showAvailableTranslationDlg();
                 return;
             }
@@ -1263,12 +1247,12 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         intent.setType("text/plain");
         final List<ResolveInfo> resolveInfoList = packageManager.queryIntentActivities(intent, 0);
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Available system translations")
+                .setTitle(R.string.available_tl)
                 .setSingleChoiceItems(resolveInfoList.stream()
-                        .map(ri -> ri.activityInfo.applicationInfo.loadLabel(packageManager).toString() + " - " + ri.loadLabel(packageManager).toString())
+                        .map(ri -> ri.activityInfo.applicationInfo.loadLabel(packageManager) + " - " + ri.loadLabel(packageManager))
                         .toArray(String[]::new),
                         -1, (dialog, which) -> {})
-                .setPositiveButton("Save", (dialog, which) -> {
+                .setPositiveButton(R.string.save, (dialog, which) -> {
                     // handled via listview
                 })
                 .setNegativeButton(android.R.string.cancel, null)

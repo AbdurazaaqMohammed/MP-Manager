@@ -88,7 +88,7 @@ public class Util {
         if(dir.isFile()) {
             if(dir.delete()) count++;
             pm.setProgress(count, total);
-            pm.setText("Deleting " +  dir.getName());
+            pm.setText(R.string.deleting, dir.getName());
             return;
         }
         if(!dir.isDirectory()){

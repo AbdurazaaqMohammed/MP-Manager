@@ -41,11 +41,8 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.drawable.GradientDrawable;
 import android.view.WindowManager;
 import android.widget.TextView;
-
-import java.util.Objects;
 
 /*
 Author @developer-krushna

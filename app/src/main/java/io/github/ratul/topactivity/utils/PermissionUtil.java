@@ -86,7 +86,7 @@ public class PermissionUtil {
                     dialog.dismiss();
                     onSettings.run();
                 })
-                .setNeutralButton(R.string.cancel, (dialog, which) -> dialog.dismiss())
+                .setNeutralButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
                 .show();
     }
 

@@ -243,7 +243,7 @@ public class SettingsActivity extends AppCompatActivity {
                     dialog.dismiss();
                     onSettings.run();
                 })
-                .setNeutralButton(R.string.cancel, (dialog, which) -> dialog.dismiss())
+                .setNeutralButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
                 .show();
     }
 
@@ -257,7 +257,7 @@ public class SettingsActivity extends AppCompatActivity {
                     fragment.autoUpdate.setChecked(true);
                     appUpdateManager.checkForUpdate(true);
                 })
-                .setNeutralButton(R.string.cancel, (dialog, which) -> {
+                .setNeutralButton(android.R.string.cancel, (dialog, which) -> {
                     dialog.dismiss();
                     DatabaseUtil.setAutoUpdate(false);
                     fragment.autoUpdate.setChecked(false);

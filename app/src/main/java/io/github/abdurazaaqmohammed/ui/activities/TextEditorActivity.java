@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.ImageButton;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,7 +22,6 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -154,8 +153,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     public void onCloseRequested() {
         if (!saved && getFragment() != null && getFragment().getEditor() != null
                 && getFragment().getEditor().canUndo()) {
-            new MaterialAlertDialogBuilder(this).setTitle("Changes Made")
-                    .setPositiveButton("Save and Exit", (dialog, which) -> {
+            new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
+                    .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                         manualFinish = true;
                         saveFile();
                         currentFileUri = Uri.fromFile(currentFile);
@@ -165,12 +164,12 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                         setResult(757, resultIntent);
                         finish();
                     })
-                    .setNegativeButton("Don't Save", (dialog, which) -> {
+                    .setNegativeButton(R.string.dont_save, (dialog, which) -> {
                         manualFinish = true;
                         finish();
                     })
                     .setNeutralButton(android.R.string.cancel, null)
-                    .setMessage("Do you want to save " + (currentFile != null ? currentFile.getName() : "file") + "?")
+                    .setMessage(getString(R.string.confirm_save, currentFile != null ? currentFile.getName() : "file"))
                     .show();
         } else {
             finish();
@@ -202,8 +201,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     public void onBackPressed() {
         UnifiedEditorFragment f = getFragment();
         if (f != null && f.getEditor() != null && !saved && f.getEditor().canUndo()) {
-            new MaterialAlertDialogBuilder(this).setTitle("Changes Made")
-                    .setPositiveButton("Save and Exit", (dialog, which) -> {
+            new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
+                    .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                         manualFinish = true;
                         saveFile();
                         currentFileUri = Uri.fromFile(currentFile);
@@ -213,12 +212,12 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                         setResult(757, resultIntent);
                         finish();
                     })
-                    .setNegativeButton("Don't Save", (dialog, which) -> {
+                    .setNegativeButton(R.string.dont_save, (dialog, which) -> {
                         manualFinish = true;
                         finish();
                     })
                     .setNeutralButton(android.R.string.cancel, null)
-                    .setMessage("Do you want to save " + (currentFile != null ? currentFile.getName() : "file") + "?")
+                    .setMessage(getString(R.string.confirm_save, currentFile != null ? currentFile.getName() : "file"))
                     .show();
         } else super.onBackPressed();
     }
@@ -278,8 +277,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         boolean isFromFile = currentFile != null;
         File cachedFile = new File(getCacheDir(), (currentFile.getPath()).replace(File.separator, "."));
         if (isFromFile && cachedFile.exists() && cachedFile.length() != currentFile.length()) {
-            new MaterialAlertDialogBuilder(this).setMessage("Do you want to restore them?").setTitle("Unsaved changes found")
-                    .setPositiveButton("Yes", (dialog, which) -> {
+            new MaterialAlertDialogBuilder(this).setMessage(R.string.rest_chang).setTitle(R.string.unsaved_changes_found)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                         try {
                             FileUtils.copyFile(cachedFile, currentFile);
                             loadEditorText();
@@ -287,7 +286,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                             new ErrorUtil(this).showError(e);
                         }
                     })
-                    .setNegativeButton("No", (dialog, which) -> loadEditorText()).show();
+                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> loadEditorText()).show();
         } else loadEditorText();
     }
 
@@ -314,7 +313,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
 
     private void saveFile() {
         if (currentFileUri == null && currentFile == null) {
-            Toast.makeText(this, "No file to save", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "No file to save");
             return;
         }
         UnifiedEditorFragment f = getFragment();

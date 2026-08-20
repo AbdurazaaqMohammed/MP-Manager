@@ -32,6 +32,7 @@
 package modder.hub.dexeditor.fragment;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -62,7 +63,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.AccessFlags;
-import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -72,6 +72,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,13 +94,13 @@ import com.android.tools.smali.dexlib2.iface.value.*;
 import com.android.tools.smali.dexlib2.dexbacked.*;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.adapter.TreeAdapter;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.utils.Notify_MT;
-import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.utils.TreeHelper;
-import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.AlertProgress;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
@@ -174,42 +175,18 @@ public class SearchFragment extends Fragment {
                     activity.locateClass(node.getFullName());
                 }
                 @Override public void onCopyName(TreeNode node) {
-                    UIHelper.copyToClipboard(requireContext(), node.getName());
+                    CopyUtil.copyToClipboard(requireActivity(), node.getName());
                 }
             }, false);
             adapter.setSearchList(true, currentQuery);
             recyclerView.setAdapter(new ConcatAdapter(new HeaderViewAdapter(headerView), adapter));
         }
 
-        btnNewSearch.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                checkUnsavedAndShowWarning(new Runnable() {
-                    @Override public void run() {
-                        showSearchDialog(false);
-                    }
-                });
-            }
-        });
-        btnSearchInResults.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                showSearchDialog(true);
-            }
-        });
-        btnReplaceInResults.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                showReplaceDialog();
-            }
-        });
-        btnClearResults.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                clearResults();
-            }
-        });
-        treeOptionsButton.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                showTreeOptionsMenu(v);
-            }
-        });
+        btnNewSearch.setOnClickListener(v -> checkUnsavedAndShowWarning(() -> showSearchDialog(false)));
+        btnSearchInResults.setOnClickListener(v -> showSearchDialog(true));
+        btnReplaceInResults.setOnClickListener(v -> showReplaceDialog());
+        btnClearResults.setOnClickListener(v -> clearResults());
+        treeOptionsButton.setOnClickListener(this::showTreeOptionsMenu);
 
         updateUIState();
         return view;
@@ -278,18 +255,15 @@ public class SearchFragment extends Fragment {
 
         if (!modifiedTabs.isEmpty()) {
             new MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Info")
-                    .setMessage("You need to save all the codes before proceeding. Do you want to continue ?")
-                    .setPositiveButton("Save and Continue", new android.content.DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(android.content.DialogInterface dialog, int which) {
-                            boolean[] checked = new boolean[modifiedTabs.size()];
-                            Arrays.fill(checked, true);
-                            if (activity != null) {
-                                activity.saveMultipleTabs(modifiedTabs, checked, onProceed);
-                            } else {
-                                onProceed.run();
-                            }
+                    .setTitle(R.string.info)
+                    .setMessage(R.string.save_code)
+                    .setPositiveButton(R.string.save_and_continue, (dialog, which) -> {
+                        boolean[] checked = new boolean[modifiedTabs.size()];
+                        Arrays.fill(checked, true);
+                        if (activity != null) {
+                            activity.saveMultipleTabs(modifiedTabs, checked, onProceed);
+                        } else {
+                            onProceed.run();
                         }
                     })
                     .setNeutralButton(android.R.string.cancel, null)
@@ -339,28 +313,25 @@ public class SearchFragment extends Fragment {
         popup.getMenu().add(0, 3, 0, "Only expand packages");
         popup.getMenu().add(0, 4, 0, "Copy class names");
 
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(android.view.MenuItem item) {
-                switch (item.getItemId()) {
-                    case 1:
-                        TreeHelper.collapseAll(searchResults);
-                        adapter.refreshVisibleNodes();
-                        return true;
-                    case 2:
-                        TreeHelper.expandAll(searchResults);
-                        adapter.refreshVisibleNodes();
-                        return true;
-                    case 3:
-                        TreeHelper.onlyExpandPackages(searchResults);
-                        adapter.refreshVisibleNodes();
-                        return true;
-                    case 4:
-                        copyClassNames();
-                        return true;
-                }
-                return false;
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1:
+                    TreeHelper.collapseAll(searchResults);
+                    adapter.refreshVisibleNodes();
+                    return true;
+                case 2:
+                    TreeHelper.expandAll(searchResults);
+                    adapter.refreshVisibleNodes();
+                    return true;
+                case 3:
+                    TreeHelper.onlyExpandPackages(searchResults);
+                    adapter.refreshVisibleNodes();
+                    return true;
+                case 4:
+                    copyClassNames();
+                    return true;
             }
+            return false;
         });
         popup.show();
     }
@@ -370,7 +341,9 @@ public class SearchFragment extends Fragment {
         collectClassFullNames(searchResults, names);
         StringBuilder sb = new StringBuilder();
         for (String name : names) sb.append(name.replace('/', '.')).append("\n");
-        if (sb.length() > 0) UIHelper.copyToClipboard(requireContext(), sb.toString().trim());
+        if (sb.length() > 0) {
+            CopyUtil.copyToClipboard(requireActivity(), sb);
+        }
     }
 
     private void collectClassFullNames(List<TreeNode> nodes, List<String> out) {
@@ -419,7 +392,7 @@ public class SearchFragment extends Fragment {
         etExcludes.setGravity(android.view.Gravity.TOP);
 
         TextView tvExplanation = new TextView(requireContext());
-        tvExplanation.setText("Set a list of paths that need to be excluded from the search range, one per line, for example:\ncom/gms/\nandroidx/\nAttention! The exclusion list only takes effect when the search path is empty or \"/\"!");
+        tvExplanation.setText(R.string.search_ex_paths);
         tvExplanation.setTextSize(14);
         tvExplanation.setPadding(0, 20, 0, 0);
 
@@ -427,14 +400,9 @@ public class SearchFragment extends Fragment {
         layout.addView(tvExplanation);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
-        builder.setTitle("Exclude list");
+        builder.setTitle(R.string.exclude_list);
         builder.setView(layout);
-        builder.setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface dialog, int which) {
-                prefs.edit().putString("exclude_list", etExcludes.getText().toString()).apply();
-            }
-        });
+        builder.setPositiveButton(android.R.string.ok, (dialog, which) -> prefs.edit().putString("exclude_list", etExcludes.getText().toString()).apply());
         builder.setNegativeButton(android.R.string.cancel, null);
         builder.show();
     }
@@ -486,12 +454,7 @@ public class SearchFragment extends Fragment {
         cbHex.setChecked(lastIsHex);
         cbUseExcludeList.setChecked(lastUseExcludeList);
 
-        tvExcludeList.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showExcludeListDialog();
-            }
-        });
+        tvExcludeList.setOnClickListener(v -> showExcludeListDialog());
 
         String[] searchTypes = {"Smali", "Class name", "Field name", "Method name", "String", "Integer"};
         ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, searchTypes);
@@ -533,7 +496,7 @@ public class SearchFragment extends Fragment {
         });
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Search")
+                .setTitle(android.R.string.search_go)
                 .setView(dialogView)
                 .setPositiveButton(android.R.string.ok, null)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -541,27 +504,27 @@ public class SearchFragment extends Fragment {
 
         dialog.show();
 
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String query = etFind.getText().toString().trim(), type = spinnerSearchType.getSelectedItem().toString(), path = searchInResults ? "" : etPath.getText().toString();
-                boolean isHex = cbHex.isChecked(), useExcludeList = cbUseExcludeList.isChecked();
-                if (type.equals("Integer")) {
-                    try {
-                        String q = query;
-                        if (isHex) { if (q.startsWith("0x")) q = q.substring(2); Long.parseLong(q, 16); }
-                        else { if (q.startsWith("0x")) throw new NumberFormatException(); Long.parseLong(q); }
-                    } catch (Exception e) { SketchwareUtil.showMessage(requireActivity(), "Value format error"); return; }
-                }
-                lastSearchQuery = query; lastSearchType = type;
-                if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
-                lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
-                List<String> scopeClasses = null;
-                if (searchInResults) { scopeClasses = new ArrayList<>(); collectClassFullNames(searchResults, scopeClasses); }
-                searchResults.clear(); currentQuery = null; adapter.refreshVisibleNodes(); updateUIState();
-                new SearchTask(SearchFragment.this, query, path, type, lastSearchSubfolders, lastMatchCase, lastIsRegex, lastExactlyMatch, isHex, scopeClasses, useExcludeList).start();
-                dialog.dismiss();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String query = etFind.getText().toString().trim(), type = spinnerSearchType.getSelectedItem().toString(), path = searchInResults ? "" : etPath.getText().toString();
+            boolean isHex = cbHex.isChecked(), useExcludeList = cbUseExcludeList.isChecked();
+            if (type.equals("Integer")) {
+                try {
+                    String q = query;
+                    if (isHex) { if (q.startsWith("0x")) q = q.substring(2); Long.parseLong(q, 16); }
+                    else { if (q.startsWith("0x")) throw new NumberFormatException(); Long.parseLong(q); }
+                } catch (Exception e) {
+                    Activity _context = requireActivity();
+                    Extensions.showMessage(_context, "Value format error");
+                    return; }
             }
+            lastSearchQuery = query; lastSearchType = type;
+            if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
+            lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
+            List<String> scopeClasses = null;
+            if (searchInResults) { scopeClasses = new ArrayList<>(); collectClassFullNames(searchResults, scopeClasses); }
+            searchResults.clear(); currentQuery = null; adapter.refreshVisibleNodes(); updateUIState();
+            new SearchTask(SearchFragment.this, query, path, type, lastSearchSubfolders, lastMatchCase, lastIsRegex, lastExactlyMatch, isHex, scopeClasses, useExcludeList).start();
+            dialog.dismiss();
         });
     }
 
@@ -610,17 +573,14 @@ public class SearchFragment extends Fragment {
 
         // Setting up the replace dialog with options like regex and match case
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Replace")
+                .setTitle(R.string.replace)
                 .setView(dialogView)
-                .setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface dialog, int which) {
-                        String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
-                        lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked();
-                        List<String> scopeClasses = new ArrayList<>();
-                        collectClassFullNames(searchResults, scopeClasses);
-                        new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
-                    }
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
+                    lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked();
+                    List<String> scopeClasses = new ArrayList<>();
+                    collectClassFullNames(searchResults, scopeClasses);
+                    new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -699,14 +659,9 @@ public class SearchFragment extends Fragment {
             if (activity == null) return;
 
             progressDialog = new AlertProgress(activity);
-            progressDialog.setTitle("Processing...");
+            progressDialog.setTitle(activity.getString(R.string.processing));
             progressDialog.setCancelable(false);
-            progressDialog.setOnCancelListener(new AlertProgress.OnCancelListener() {
-                @Override
-                public void onCancel() {
-                    isStopped = true;
-                }
-            });
+            progressDialog.setOnCancelListener(() -> isStopped = true);
             progressDialog.show();
 
             // Collect open tabs content (must be on UI thread)
@@ -725,179 +680,160 @@ public class SearchFragment extends Fragment {
             int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
             ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if (DexEditorActivity.classTree == null) {
-                        mainHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressDialog.dismiss();
+            new Thread(() -> {
+                if (DexEditorActivity.classTree == null) {
+                    mainHandler.post(() -> progressDialog.dismiss());
+                    return;
+                }
+
+                List<String> classesToProcess = new ArrayList<>();
+                if (scopeClasses != null) {
+                    classesToProcess.addAll(scopeClasses);
+                } else {
+                    for (ClassDef classDef : DexEditorActivity.classTree.classDefList) {
+                        String fullName = classDef.getType();
+                        classesToProcess.add(fullName.substring(1, fullName.length() - 1));
+                    }
+                }
+
+                final int total = classesToProcess.size();
+                final int dexVersion = activity.dexVersion;
+
+                for (final String className : classesToProcess) {
+                    if (isStopped) break;
+                    executor.execute(() -> {
+                        if (isStopped) return;
+
+                        try {
+                            String originalText = null;
+                            if (openTabsContent.containsKey(className)) {
+                                originalText = openTabsContent.get(className);
+                            } else {
+                                ClassDef classDef = DexEditorActivity.classTree.classMap.get(className);
+                                if (classDef != null) {
+                                    originalText = generateSmali(classDef);
+                                }
                             }
-                        });
-                        return;
-                    }
 
-                    List<String> classesToProcess = new ArrayList<>();
-                    if (scopeClasses != null) {
-                        classesToProcess.addAll(scopeClasses);
-                    } else {
-                        for (ClassDef classDef : DexEditorActivity.classTree.classDefList) {
-                            String fullName = classDef.getType();
-                            classesToProcess.add(fullName.substring(1, fullName.length() - 1));
-                        }
-                    }
+                            if (originalText != null) {
+                                String modifiedText;
+                                int countInClass = 0;
 
-                    final int total = classesToProcess.size();
-                    final int dexVersion = activity.dexVersion;
+                                if (type.equals("String")) {
+                                    Matcher lm = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"").matcher(originalText);
+                                    StringBuffer sb = new StringBuffer();
 
-                    for (final String className : classesToProcess) {
-                        if (isStopped) break;
-                        executor.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (isStopped) return;
+                                    int flag = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                                    String q1 = isRegex ? findQuery : Pattern.quote(findQuery);
+                                    String q2 = exactlyMatch ? "^" + q1 + "$" : q1;
 
-                                try {
-                                    String originalText = null;
-                                    if (openTabsContent.containsKey(className)) {
-                                        originalText = openTabsContent.get(className);
-                                    } else {
-                                        ClassDef classDef = DexEditorActivity.classTree.classMap.get(className);
-                                        if (classDef != null) {
-                                            originalText = generateSmali(classDef);
-                                        }
-                                    }
+                                    Pattern innerFind = Pattern.compile(q2, flag);
 
-                                    if (originalText != null) {
-                                        String modifiedText;
-                                        int countInClass = 0;
-
-                                        if (type.equals("String")) {
-                                            Matcher lm = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"").matcher(originalText);
-                                            StringBuffer sb = new StringBuffer();
-
-                                            int flag = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
-                                            String q1 = isRegex ? findQuery : Pattern.quote(findQuery);
-                                            String q2 = exactlyMatch ? "^" + q1 + "$" : q1;
-
-                                            Pattern innerFind = Pattern.compile(q2, flag);
-
-                                            while (lm.find()) {
-                                                Matcher im = innerFind.matcher(lm.group(1));
-                                                StringBuffer inner = new StringBuffer();
-                                                while (im.find()) {
-                                                    countInClass++;
-                                                    try {
-                                                        im.appendReplacement(inner, isRegex ? replaceWith : Matcher.quoteReplacement(replaceWith));
-                                                    } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
-                                                        errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
-                                                        return;
-                                                    }
-                                                }
-                                                im.appendTail(inner);
-
-                                                String newLiteral = "\"" + inner + "\"";
-                                                lm.appendReplacement(sb, Matcher.quoteReplacement(newLiteral));
-                                            }
-                                            lm.appendTail(sb);
-                                            modifiedText = sb.toString();
-                                        } else {
-                                            if (isRegex) {
-                                                Matcher m = compiledPattern.matcher(originalText);
-                                                StringBuffer sb = new StringBuffer();
-                                                while (m.find()) {
-                                                    countInClass++;
-                                                    try {
-                                                        m.appendReplacement(sb, replaceWith);
-                                                    } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
-                                                        // invalid group reference (e.g. $9 when there's no group 9)
-                                                        errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
-                                                        return;
-                                                    }
-                                                }
-                                                m.appendTail(sb);
-                                                modifiedText = sb.toString();
-                                            } else {
-                                                String search = findQuery;
-                                                String replacement = replaceWith;
-                                                if (matchCase) {
-                                                    countInClass = countOccurrences(originalText, search);
-                                                    modifiedText = originalText.replace(search, replacement);
-                                                } else {
-                                                    Pattern p = Pattern.compile(Pattern.quote(search), Pattern.CASE_INSENSITIVE);
-                                                   Matcher m = p.matcher(originalText);
-                                                    StringBuffer sb = new StringBuffer();
-                                                    while (m.find()) {
-                                                        countInClass++;
-                                                        m.appendReplacement(sb, Matcher.quoteReplacement(replacement));
-                                                    }
-                                                    m.appendTail(sb);
-                                                    modifiedText = sb.toString();
-                                                }
-                                            }
-                                        }
-
-                                        if (countInClass > 0) {
+                                    while (lm.find()) {
+                                        Matcher im = innerFind.matcher(lm.group(1));
+                                        StringBuffer inner = new StringBuffer();
+                                        while (im.find()) {
+                                            countInClass++;
                                             try {
-                                                ClassDef newDef = Smali.assemble(modifiedText, new SmaliOptions(), dexVersion);
-                                                DexEditorActivity.classTree.saveClassDef(newDef);
-                                            } catch (Exception e) {
-                                                DexEditorActivity.classTree.saveSmali(className, modifiedText);
-                                                String errorMsg = e.getMessage();
-                                                errorClasses.add(className + " (Saved as raw): " + errorMsg);
-                                                synchronized (ReplaceTask.this) {
-                                                    if (firstErrorClass == null) {
-                                                        firstErrorClass = className;
-                                                        try {
-                                                            Matcher matcher = null;
-                                                            if (errorMsg != null) {
-                                                                matcher = Pattern.compile("\\[(\\d+),(\\d+)]").matcher(errorMsg);
-                                                            }
-                                                            if (matcher != null && matcher.find()) {
-                                                                firstErrorLine = Integer.parseInt(Objects.requireNonNull(matcher.group(1))) - 1;
-                                                                firstErrorColumn = Integer.parseInt(Objects.requireNonNull(matcher.group(2))) - 1;
-                                                            }
-                                                        } catch (Exception ignored) {
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            replacedCount.addAndGet(countInClass);
-                                            affectedClasses.incrementAndGet();
-                                            if (openTabsContent.containsKey(className)) {
-                                                replacedTabsContent.put(className, modifiedText);
+                                                im.appendReplacement(inner, isRegex ? replaceWith : Matcher.quoteReplacement(replaceWith));
+                                            } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
+                                                errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
+                                                return;
                                             }
                                         }
+                                        im.appendTail(inner);
+
+                                        String newLiteral = "\"" + inner + "\"";
+                                        lm.appendReplacement(sb, Matcher.quoteReplacement(newLiteral));
                                     }
-                                } catch (Exception ignored) {
+                                    lm.appendTail(sb);
+                                    modifiedText = sb.toString();
+                                } else {
+                                    if (isRegex) {
+                                        Matcher m = compiledPattern.matcher(originalText);
+                                        StringBuffer sb = new StringBuffer();
+                                        while (m.find()) {
+                                            countInClass++;
+                                            try {
+                                                m.appendReplacement(sb, replaceWith);
+                                            } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
+                                                // invalid group reference (e.g. $9 when there's no group 9)
+                                                errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
+                                                return;
+                                            }
+                                        }
+                                        m.appendTail(sb);
+                                        modifiedText = sb.toString();
+                                    } else {
+                                        String search = findQuery;
+                                        String replacement = replaceWith;
+                                        if (matchCase) {
+                                            countInClass = countOccurrences(originalText, search);
+                                            modifiedText = originalText.replace(search, replacement);
+                                        } else {
+                                            Pattern p = Pattern.compile(Pattern.quote(search), Pattern.CASE_INSENSITIVE);
+                                           Matcher m = p.matcher(originalText);
+                                            StringBuffer sb = new StringBuffer();
+                                            while (m.find()) {
+                                                countInClass++;
+                                                m.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+                                            }
+                                            m.appendTail(sb);
+                                            modifiedText = sb.toString();
+                                        }
+                                    }
                                 }
 
-                                final int processed = processedCount.incrementAndGet();
-                                mainHandler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        progressDialog.setMax(total);
-                                        progressDialog.setProgress(processed);
+                                if (countInClass > 0) {
+                                    try {
+                                        ClassDef newDef = Smali.assemble(modifiedText, new SmaliOptions(), dexVersion);
+                                        DexEditorActivity.classTree.saveClassDef(newDef);
+                                    } catch (Exception e) {
+                                        DexEditorActivity.classTree.saveSmali(className, modifiedText);
+                                        String errorMsg = e.getMessage();
+                                        errorClasses.add(className + " (Saved as raw): " + errorMsg);
+                                        synchronized (ReplaceTask.this) {
+                                            if (firstErrorClass == null) {
+                                                firstErrorClass = className;
+                                                try {
+                                                    Matcher matcher = null;
+                                                    if (errorMsg != null) {
+                                                        matcher = Pattern.compile("\\[(\\d+),(\\d+)]").matcher(errorMsg);
+                                                    }
+                                                    if (matcher != null && matcher.find()) {
+                                                        firstErrorLine = Integer.parseInt(Objects.requireNonNull(matcher.group(1))) - 1;
+                                                        firstErrorColumn = Integer.parseInt(Objects.requireNonNull(matcher.group(2))) - 1;
+                                                    }
+                                                } catch (Exception ignored) {
+                                                }
+                                            }
+                                        }
                                     }
-                                });
+                                    replacedCount.addAndGet(countInClass);
+                                    affectedClasses.incrementAndGet();
+                                    if (openTabsContent.containsKey(className)) {
+                                        replacedTabsContent.put(className, modifiedText);
+                                    }
+                                }
                             }
-                        });
-                    }
-
-                    executor.shutdown();
-                    try {
-                        executor.awaitTermination(1, TimeUnit.HOURS);
-                    } catch (InterruptedException ignored) {
-                    }
-
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onPostExecute(activity);
+                        } catch (Exception ignored) {
                         }
+
+                        final int processed = processedCount.incrementAndGet();
+                        mainHandler.post(() -> {
+                            progressDialog.setMax(total);
+                            progressDialog.setProgress(processed);
+                        });
                     });
                 }
+
+                executor.shutdown();
+                try {
+                    executor.awaitTermination(1, TimeUnit.HOURS);
+                } catch (InterruptedException ignored) {
+                }
+
+                mainHandler.post(() -> onPostExecute(activity));
             }).start();
         }
 
@@ -965,19 +901,16 @@ public class SearchFragment extends Fragment {
             }
 
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity)
-                    .setTitle("Replacement Errors")
+                    .setTitle(R.string.replacement_errors)
                     .setMessage(sb.toString())
-                    .setNegativeButton("Close", null);
+                    .setNegativeButton(android.R.string.cancel, null);
 
             if (firstErrorClass != null) {
-                builder.setPositiveButton("Fix First", new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface d, int w) {
-                        if (firstErrorLine != -1) {
-                            activity.openClassAtLine(firstErrorClass, firstErrorLine, firstErrorColumn, null);
-                        } else {
-                            activity.openClass(firstErrorClass);
-                        }
+                builder.setPositiveButton(R.string.fix_first, (d, w) -> {
+                    if (firstErrorLine != -1) {
+                        activity.openClassAtLine(firstErrorClass, firstErrorLine, firstErrorColumn, null);
+                    } else {
+                        activity.openClass(firstErrorClass);
                     }
                 });
             }
@@ -987,18 +920,23 @@ public class SearchFragment extends Fragment {
 
     /**
      * SearchTask: A multithreaded task that scans the DEX files for the given query.
-     *
      * ENHANCED FOR ULTRA SPEED (MT Manager Style):
      * 1. DEX Pool Filtering: Skips classes instantly if query isn't in the DEX string pool.
      * 2. Object Reuse: Uses ThreadLocal for BaksmaliOptions and String buffers.
      * 3. Efficient Matching: Case-insensitive search without new string allocations.
      */
     private static class SearchTask {
-        private static final ThreadLocal<BaksmaliOptions> OPTIONS_THREAD_LOCAL = new ThreadLocal<BaksmaliOptions>() {
-            @Override protected BaksmaliOptions initialValue() { return new BaksmaliOptions(); }
+        private static final ThreadLocal<BaksmaliOptions> OPTIONS_THREAD_LOCAL = new ThreadLocal<>() {
+            @Override
+            protected BaksmaliOptions initialValue() {
+                return new BaksmaliOptions();
+            }
         };
-        private static final ThreadLocal<StringBuilder> BUFFER_THREAD_LOCAL = new ThreadLocal<StringBuilder>() {
-            @Override protected StringBuilder initialValue() { return new StringBuilder(64 * 1024); }
+        private static final ThreadLocal<StringBuilder> BUFFER_THREAD_LOCAL = new ThreadLocal<>() {
+            @Override
+            protected StringBuilder initialValue() {
+                return new StringBuilder(64 * 1024);
+            }
         };
 
         private final WeakReference<SearchFragment> fragmentRef;
@@ -1088,23 +1026,15 @@ public class SearchFragment extends Fragment {
 
             // Prepare the progress dialog
             progressDialog = new AlertProgress(activity);
-            progressDialog.setTitle("Searching...");
+            progressDialog.setTitle(activity.getString(R.string.searching));
             progressDialog.setMessage("Found: 0");
             progressDialog.setCancelable(false);
-            progressDialog.setOnCancelListener(new AlertProgress.OnCancelListener() {
-                @Override
-                public void onCancel() {
-                    if (isFinalized.compareAndSet(false, true)) {
-                        isStopped = true;
-                        if (executor != null) executor.shutdownNow();
-                        // On cancel/back press, show what was found so far
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                finalizeResults(results);
-                            }
-                        }).start();
-                    }
+            progressDialog.setOnCancelListener(() -> {
+                if (isFinalized.compareAndSet(false, true)) {
+                    isStopped = true;
+                    if (executor != null) executor.shutdownNow();
+                    // On cancel/back press, show what was found so far
+                    new Thread(() -> finalizeResults(results)).start();
                 }
             });
             progressDialog.show();
@@ -1122,226 +1052,300 @@ public class SearchFragment extends Fragment {
                 }
             }
 
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if (DexEditorActivity.classTree == null) {
-                        mainHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                onPostExecute(new ArrayList<>());
-                            }
-                        });
-                        return;
-                    }
+            new Thread(() -> {
+                if (DexEditorActivity.classTree == null) {
+                    mainHandler.post(() -> onPostExecute(new ArrayList<>()));
+                    return;
+                }
 
-                    // Building the list of classes to search based on the scope
-                    List<ClassDef> classesToSearch = new ArrayList<>();
-                    if (scopeClasses != null) {
-                        for (String className : scopeClasses) {
-                            synchronized (DexEditorActivity.classTree) {
-                                ClassDef classDef = DexEditorActivity.classTree.classMap.get(className);
-                                if (classDef != null) classesToSearch.add(classDef);
-                            }
-                        }
-                    } else {
+                // Building the list of classes to search based on the scope
+                List<ClassDef> classesToSearch = new ArrayList<>();
+                if (scopeClasses != null) {
+                    for (String className : scopeClasses) {
                         synchronized (DexEditorActivity.classTree) {
-                            classesToSearch.addAll(DexEditorActivity.classTree.classMap.values());
+                            ClassDef classDef = DexEditorActivity.classTree.classMap.get(className);
+                            if (classDef != null) classesToSearch.add(classDef);
                         }
                     }
+                } else {
+                    synchronized (DexEditorActivity.classTree) {
+                        classesToSearch.addAll(DexEditorActivity.classTree.classMap.values());
+                    }
+                }
 
-                    int total = classesToSearch.size();
-                    String tempFilterPath = path.isEmpty() ? "" : path.substring(1);
-                    if (tempFilterPath.endsWith("/"))
-                        tempFilterPath = tempFilterPath.substring(0, tempFilterPath.length() - 1);
-                    final String filterPath = tempFilterPath;
+                int total = classesToSearch.size();
+                String tempFilterPath = path.isEmpty() ? "" : path.substring(1);
+                if (tempFilterPath.endsWith("/"))
+                    tempFilterPath = tempFilterPath.substring(0, tempFilterPath.length() - 1);
+                final String filterPath = tempFilterPath;
 
-                    int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
-                    executor = Executors.newFixedThreadPool(numThreads);
-                    final int finalTotal = total;
+                int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+                executor = Executors.newFixedThreadPool(numThreads);
+                final int finalTotal = total;
 
-                    for (final ClassDef classDef : classesToSearch) {
-                        if (isStopped) break;
-                        executor.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (isStopped || Thread.currentThread().isInterrupted()) return;
-                                if (type.equals("Integer") && !finalIsNumberValid) {
+                for (final ClassDef classDef : classesToSearch) {
+                    if (isStopped) break;
+                    executor.execute(() -> {
+                        if (isStopped || Thread.currentThread().isInterrupted()) return;
+                        if (type.equals("Integer") && !finalIsNumberValid) {
+                            updateProgress(processedCount.incrementAndGet(), finalTotal);
+                            return;
+                        }
+
+                        if (foundCount.get() >= 250000) {
+                            stopSearchWithLimit(activity);
+                            return;
+                        }
+
+                        if (foundCount.get() >= 1000 && !hasConfirmedLargeSearch) {
+                            synchronized (SearchTask.this) {
+                                if (!hasConfirmedLargeSearch) {
+                                    if (!warningShown) {
+                                        warningShown = true;
+                                        mainHandler.post(SearchTask.this::showWarningDialog);
+                                    }
+                                    while (warningShown && !isStopped) {
+                                        try {
+                                            SearchTask.this.wait();
+                                        } catch (InterruptedException e) {
+                                            isStopped = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (isStopped) return;
+
+                        String fullType = classDef.getType();
+                        String className = fullType.substring(1, fullType.length() - 1);
+
+                        if (!excludeList.isEmpty()) {
+                            for (String excludePath : excludeList) {
+                                if (className.startsWith(excludePath)) {
                                     updateProgress(processedCount.incrementAndGet(), finalTotal);
                                     return;
                                 }
+                            }
+                        }
 
-                                if (foundCount.get() >= 250000) {
+                        if (scopeClasses == null && !filterPath.isEmpty()) {
+                            boolean inPath = false;
+                            if (searchSubfolders) {
+                                if (className.startsWith(filterPath)) inPath = true;
+                            } else {
+                                String parentPath = className.contains("/") ? className.substring(0, className.lastIndexOf('/')) : "";
+                                if (parentPath.equals(filterPath)) inPath = true;
+                            }
+                            if (!inPath) {
+                                updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                return;
+                            }
+                        }
+
+                        // Class name is simple search
+                        // only search the class node
+                        // so its always faster
+                        if (type.equals("Class name")) {
+                            String clsNamePart = className.contains("/") ? className.substring(className.lastIndexOf('/') + 1) : className;
+                            boolean match = false;
+                            if (query.contains(".") || query.contains("/")) {
+                                if (checkMatch(className) || checkMatch(className.replace('/', '.')))
+                                    match = true;
+                            } else {
+                                if (checkMatch(clsNamePart)) match = true;
+                            }
+                            if (match) {
+                                if (foundCount.incrementAndGet() >= 250000) {
                                     stopSearchWithLimit(activity);
                                     return;
                                 }
+                                results.add(new TreeNode(clsNamePart, className, 0, false));
+                            }
+                            updateProgress(processedCount.incrementAndGet(), finalTotal);
+                            return;
+                        }
 
-                                if (foundCount.get() >= 1000 && !hasConfirmedLargeSearch) {
-                                    synchronized (SearchTask.this) {
-                                        if (!hasConfirmedLargeSearch) {
-                                            if (!warningShown) {
-                                                warningShown = true;
-                                                mainHandler.post(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        showWarningDialog();
-                                                    }
-                                                });
-                                            }
-                                            while (warningShown && !isStopped) {
-                                                try {
-                                                    SearchTask.this.wait();
-                                                } catch (InterruptedException e) {
-                                                    isStopped = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                if (isStopped) return;
+                        List<TreeNode> snippets = new ArrayList<>();
+                        boolean match = false;
+                        String smali = null;
 
-                                String fullType = classDef.getType();
-                                String className = fullType.substring(1, fullType.length() - 1);
+                        switch (type) {
+                            case "Smali":
+                                try {
+                                    String openContent = openEditorsContent.get(className);
 
-                                if (!excludeList.isEmpty()) {
-                                    for (String excludePath : excludeList) {
-                                        if (className.startsWith(excludePath)) {
-                                            updateProgress(processedCount.incrementAndGet(), finalTotal);
-                                            return;
-                                        }
-                                    }
-                                }
-
-                                if (scopeClasses == null && !filterPath.isEmpty()) {
-                                    boolean inPath = false;
-                                    if (searchSubfolders) {
-                                        if (className.startsWith(filterPath)) inPath = true;
+                                    if (openContent != null) {
+                                        smali = openContent;
                                     } else {
-                                        String parentPath = className.contains("/") ? className.substring(0, className.lastIndexOf('/')) : "";
-                                        if (parentPath.equals(filterPath)) inPath = true;
-                                    }
-                                    if (!inPath) {
-                                        updateProgress(processedCount.incrementAndGet(), finalTotal);
-                                        return;
-                                    }
-                                }
-
-                                // Class name is simple search
-                                // only search the class node
-                                // so its always faster
-                                if (type.equals("Class name")) {
-                                    String clsNamePart = className.contains("/") ? className.substring(className.lastIndexOf('/') + 1) : className;
-                                    boolean match = false;
-                                    if (query.contains(".") || query.contains("/")) {
-                                        if (checkMatch(className) || checkMatch(className.replace('/', '.')))
-                                            match = true;
-                                    } else {
-                                        if (checkMatch(clsNamePart)) match = true;
-                                    }
-                                    if (match) {
-                                        if (foundCount.incrementAndGet() >= 250000) {
-                                            stopSearchWithLimit(activity);
-                                            return;
-                                        }
-                                        results.add(new TreeNode(clsNamePart, className, 0, false));
-                                    }
-                                    updateProgress(processedCount.incrementAndGet(), finalTotal);
-                                    return;
-                                }
-
-                                List<TreeNode> snippets = new ArrayList<>();
-                                boolean match = false;
-                                String smali = null;
-
-                                switch (type) {
-                                    case "Smali":
-                                        try {
-                                            String openContent = openEditorsContent.get(className);
-
-                                            if (openContent != null) {
-                                                smali = openContent;
-                                            } else {
-                                                // POOL-BASED PRE-FILTERING (Ultra Fast Optimization)
-                                                // If query isn't in the DEX string pool and isn't a Smali keyword, skip the class.
-                                                // Look we're using pre-filtering method to detect the search result for smali whoich may affect serach speed when there is large classes or small classes
-                                                if (!isRegex && query.length() >= 3 && !isCommonSmaliWord(query)) {
-                                                    if (classDef instanceof DexBackedClassDef) {
-                                                        DexBackedDexFile dex = ((DexBackedClassDef) classDef).dexFile;
-                                                        if (!checkDexPool(dex, query, matchCase)) {
-                                                            updateProgress(processedCount.incrementAndGet(), finalTotal);
-                                                            return;
-                                                        }
-                                                    }
-                                                }
-                                                smali = generateSmali(classDef);
-                                            }
-
-                                            if (!isRegex && !query.contains("\n")) {
-                                                if (!checkMatch(smali)) {
+                                        // POOL-BASED PRE-FILTERING (Ultra Fast Optimization)
+                                        // If query isn't in the DEX string pool and isn't a Smali keyword, skip the class.
+                                        // Look we're using pre-filtering method to detect the search result for smali whoich may affect serach speed when there is large classes or small classes
+                                        if (!isRegex && query.length() >= 3 && !isCommonSmaliWord(query)) {
+                                            if (classDef instanceof DexBackedClassDef) {
+                                                DexBackedDexFile dex = ((DexBackedClassDef) classDef).dexFile;
+                                                if (!checkDexPool(dex, query, matchCase)) {
                                                     updateProgress(processedCount.incrementAndGet(), finalTotal);
                                                     return;
                                                 }
                                             }
+                                        }
+                                        smali = generateSmali(classDef);
+                                    }
 
-                                            if (isRegex || query.contains("\n")) {
-                                                    Pattern pattern = isRegex ? compiledPattern : Pattern.compile(Pattern.quote(query), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
-                                                    java.util.regex.Matcher matcher = pattern.matcher(smali);
-                                                    while (matcher.find()) {
-                                                        if (foundCount.incrementAndGet() >= 250000) {
-                                                            stopSearchWithLimit(activity);
-                                                            return;
-                                                        }
-                                                        int startPos = matcher.start();
-                                                        int lineStart = smali.lastIndexOf('\n', startPos) + 1;
-                                                        int lineEnd = smali.indexOf('\n', startPos);
-                                                        if (lineEnd == -1) lineEnd = smali.length();
-                                                        String lineText = smali.substring(lineStart, lineEnd);
-                                                        int lineIdx = countLinesBefore(smali, lineStart);
-                                                        TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
-                                                        snippet.setSnippet(true);
-                                                        snippet.setLineNumber(lineIdx);
-                                                        snippets.add(snippet);
-                                                        match = true;
+                                    if (!isRegex && !query.contains("\n")) {
+                                        if (!checkMatch(smali)) {
+                                            updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                            return;
+                                        }
+                                    }
+
+                                    if (isRegex || query.contains("\n")) {
+                                            Pattern pattern = isRegex ? compiledPattern : Pattern.compile(Pattern.quote(query), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+                                            Matcher matcher = pattern.matcher(smali);
+                                            while (matcher.find()) {
+                                                if (foundCount.incrementAndGet() >= 250000) {
+                                                    stopSearchWithLimit(activity);
+                                                    return;
+                                                }
+                                                int startPos = matcher.start();
+                                                int lineStart = smali.lastIndexOf('\n', startPos) + 1;
+                                                int lineEnd = smali.indexOf('\n', startPos);
+                                                if (lineEnd == -1) lineEnd = smali.length();
+                                                String lineText = smali.substring(lineStart, lineEnd);
+                                                int lineIdx = countLinesBefore(smali, lineStart);
+                                                TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                snippet.setSnippet(true);
+                                                snippet.setLineNumber(lineIdx);
+                                                snippets.add(snippet);
+                                                match = true;
+                                            }
+                                        } else {
+                                            int start = 0, lineIdx = 0, end;
+                                            while ((end = smali.indexOf('\n', start)) != -1) {
+                                                if (checkMatchInRange(smali, start, end)) {
+                                                    if (foundCount.incrementAndGet() >= 250000) {
+                                                        stopSearchWithLimit(activity);
+                                                        return;
                                                     }
-                                                } else {
-                                                    int start = 0, lineIdx = 0, end;
-                                                    while ((end = smali.indexOf('\n', start)) != -1) {
-                                                        if (checkMatchInRange(smali, start, end)) {
-                                                            if (foundCount.incrementAndGet() >= 250000) {
-                                                                stopSearchWithLimit(activity);
-                                                                return;
-                                                            }
-                                                            String lineText = smali.substring(start, end);
-                                                            TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                    String lineText = smali.substring(start, end);
+                                                    TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                    snippet.setSnippet(true);
+                                                    snippet.setLineNumber(lineIdx);
+                                                    snippets.add(snippet);
+                                                    match = true;
+                                                }
+                                                start = end + 1;
+                                                lineIdx++;
+                                            }
+                                            if (start < smali.length() && checkMatchInRange(smali, start, smali.length())) {
+                                                if (foundCount.incrementAndGet() >= 250000) {
+                                                    stopSearchWithLimit(activity);
+                                                    return;
+                                                }
+                                                String lineText = smali.substring(start);
+                                                TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                snippet.setSnippet(true);
+                                                snippet.setLineNumber(lineIdx);
+                                                snippets.add(snippet);
+                                                match = true;
+                                        }
+                                    }
+                                } catch (Exception ignored) {}
+                                break;
+                            case "Field name":
+                                for (Field field : classDef.getFields()) {
+                                    if (checkMatch(field.getName())) {
+                                        if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                        if (smali == null) smali = generateSmaliSafe(classDef);
+                                        String snippetText = ".field " + AccessFlags.formatAccessFlagsForField(field.getAccessFlags()) + " " + field.getName() + ":" + field.getType();
+                                        int lineIdx = findLineOfText(smali, field.getName());
+                                        TreeNode snippet = new TreeNode(snippetText, className, 0, false);
+                                        snippet.setSnippet(true);
+                                        snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                        preHighlightSnippet(snippet, highlightQuery);
+                                        snippets.add(snippet);
+                                        match = true;
+                                    }
+                                }
+                                break;
+                            case "Method name":
+                                for (Method method : classDef.getMethods()) {
+                                    if (checkMatch(method.getName())) {
+                                        if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                        if (smali == null) smali = generateSmaliSafe(classDef);
+                                        StringBuilder desc = new StringBuilder("(");
+                                        for (MethodParameter param : method.getParameters()) desc.append(param.getType());
+                                        desc.append(")").append(method.getReturnType());
+                                        String snippetText = ".method " + AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()) + " " + method.getName() + desc;
+                                        int lineIdx = findLineOfText(smali, ".method " + AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()) + " " + method.getName());
+                                        TreeNode snippet = new TreeNode(snippetText, className, 0, false);
+                                        snippet.setSnippet(true);
+                                        snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                        preHighlightSnippet(snippet, highlightQuery);
+                                        snippets.add(snippet);
+                                        match = true;
+                                    }
+                                }
+                                break;
+                            case "String":
+                                String openContentStr = openEditorsContent.get(className);
+                                boolean hasPendingStr = DexEditorActivity.classTree.getPendingSmaliMap().containsKey(className);
+                                if (openContentStr != null || hasPendingStr) {
+                                    try {
+                                        smali = openContentStr != null ? openContentStr : DexEditorActivity.classTree.getSmaliByType(classDef);
+                                        int start = 0, end;
+                                        while ((end = smali.indexOf('\n', start)) != -1) {
+                                            String lineText = smali.substring(start, end);
+                                            if (lineText.contains("\"") && checkMatch(lineText)) {
+                                                if (foundCount.incrementAndGet() >= 250000) {
+                                                    stopSearchWithLimit(activity);
+                                                    return;
+                                                }
+                                                TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                snippet.setSnippet(true);
+                                                snippet.setLineNumber(countLinesBefore(smali, start));
+                                                preHighlightSnippet(snippet, highlightQuery);
+                                                snippets.add(snippet);
+                                                match = true;
+                                            }
+                                            start = end + 1;
+                                        }
+                                    } catch (Exception ignored) {
+                                    }
+                                } else {
+                                    for (Method method : classDef.getMethods()) {
+                                        MethodImplementation impl = method.getImplementation();
+                                        if (impl != null) {
+                                            for (Instruction inst : impl.getInstructions()) {
+                                                if (inst instanceof ReferenceInstruction) {
+                                                    Reference ref = ((ReferenceInstruction) inst).getReference();
+                                                    if (ref instanceof StringReference) {
+                                                        String str = ((StringReference) ref).getString();
+                                                        if (checkMatch(str)) {
+                                                            if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                                            if (smali == null) smali = generateSmaliSafe(classDef);
+                                                            String snippetText = inst.getOpcode().name + " ..., \"" + str + "\"";
+                                                            int lineIdx = findLineOfText(smali, "\"" + str + "\"");
+                                                            TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                             snippet.setSnippet(true);
-                                                            snippet.setLineNumber(lineIdx);
+                                                            snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                                            preHighlightSnippet(snippet, highlightQuery);
                                                             snippets.add(snippet);
                                                             match = true;
                                                         }
-                                                        start = end + 1;
-                                                        lineIdx++;
                                                     }
-                                                    if (start < smali.length() && checkMatchInRange(smali, start, smali.length())) {
-                                                        if (foundCount.incrementAndGet() >= 250000) {
-                                                            stopSearchWithLimit(activity);
-                                                            return;
-                                                        }
-                                                        String lineText = smali.substring(start);
-                                                        TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
-                                                        snippet.setSnippet(true);
-                                                        snippet.setLineNumber(lineIdx);
-                                                        snippets.add(snippet);
-                                                        match = true;
                                                 }
                                             }
-                                        } catch (Exception ignored) {}
-                                        break;
-                                    case "Field name":
-                                        for (Field field : classDef.getFields()) {
-                                            if (checkMatch(field.getName())) {
+                                        }
+                                    }
+                                    for (Field field : classDef.getFields()) {
+                                        EncodedValue initialValue = field.getInitialValue();
+                                        if (initialValue instanceof StringEncodedValue) {
+                                            String str = ((StringEncodedValue) initialValue).getValue();
+                                            if (checkMatch(str)) {
                                                 if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
                                                 if (smali == null) smali = generateSmaliSafe(classDef);
-                                                String snippetText = ".field " + AccessFlags.formatAccessFlagsForField(field.getAccessFlags()) + " " + field.getName() + ":" + field.getType();
+                                                String snippetText = ".field ... " + field.getName() + " = \"" + str + "\"";
                                                 int lineIdx = findLineOfText(smali, field.getName());
                                                 TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                 snippet.setSnippet(true);
@@ -1351,176 +1355,86 @@ public class SearchFragment extends Fragment {
                                                 match = true;
                                             }
                                         }
-                                        break;
-                                    case "Method name":
-                                        for (Method method : classDef.getMethods()) {
-                                            if (checkMatch(method.getName())) {
-                                                if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
-                                                if (smali == null) smali = generateSmaliSafe(classDef);
-                                                StringBuilder desc = new StringBuilder("(");
-                                                for (MethodParameter param : method.getParameters()) desc.append(param.getType());
-                                                desc.append(")").append(method.getReturnType());
-                                                String snippetText = ".method " + AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()) + " " + method.getName() + desc;
-                                                int lineIdx = findLineOfText(smali, ".method " + AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()) + " " + method.getName());
-                                                TreeNode snippet = new TreeNode(snippetText, className, 0, false);
+                                    }
+                                    if (searchInAnnotations(classDef.getAnnotations(), className, snippets, smali, classDef)) match = true;
+                                }
+                                break;
+                            case "Integer":
+                                boolean hasMatched = false;
+                                for (Method method : classDef.getMethods()) {
+                                    MethodImplementation impl = method.getImplementation();
+                                    if (impl != null) {
+                                        for (Instruction inst : impl.getInstructions()) {
+                                            if (inst instanceof NarrowLiteralInstruction) {
+                                                if (((NarrowLiteralInstruction) inst).getNarrowLiteral() == (int) finalTargetValue) { hasMatched = true; break; }
+                                            } else if (inst instanceof WideLiteralInstruction) {
+                                                if (((WideLiteralInstruction) inst).getWideLiteral() == finalTargetValue) { hasMatched = true; break; }
+                                            }
+                                        }
+                                    }
+                                    if (hasMatched) break;
+                                }
+                                if (!hasMatched) {
+                                    for (Field field : classDef.getFields()) {
+                                        EncodedValue initialValue = field.getInitialValue();
+                                        if (initialValue instanceof IntEncodedValue) {
+                                            if (((IntEncodedValue) initialValue).getValue() == (int) finalTargetValue) { hasMatched = true; break; }
+                                        } else if (initialValue instanceof LongEncodedValue) {
+                                            if (((LongEncodedValue) initialValue).getValue() == finalTargetValue) { hasMatched = true; break; }
+                                        }
+                                    }
+                                }
+
+                                if (hasMatched) {
+                                    try {
+                                        smali = generateSmali(classDef);
+                                        String[] lines = smali.split("\n");
+                                        String pattern = highlightQuery;
+                                        for (int i = 0; i < lines.length; i++) {
+                                            String line = lines[i];
+                                            if (line.toLowerCase().contains(pattern)) {
+                                                int idx = line.toLowerCase().indexOf(pattern);
+                                                char next = (idx + pattern.length() < line.length()) ? line.charAt(idx + pattern.length()) : ' ';
+                                                if (Character.isLetterOrDigit(next))
+                                                    continue;
+                                                if (foundCount.incrementAndGet() >= 250000) {
+                                                    stopSearchWithLimit(activity);
+                                                    return;
+                                                }
+                                                TreeNode snippet = new TreeNode(line.trim(), className, 0, false);
                                                 snippet.setSnippet(true);
-                                                snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                                snippet.setLineNumber(i);
                                                 preHighlightSnippet(snippet, highlightQuery);
                                                 snippets.add(snippet);
                                                 match = true;
                                             }
                                         }
-                                        break;
-                                    case "String":
-                                        String openContentStr = openEditorsContent.get(className);
-                                        boolean hasPendingStr = DexEditorActivity.classTree.getPendingSmaliMap().containsKey(className);
-                                        if (openContentStr != null || hasPendingStr) {
-                                            try {
-                                                smali = openContentStr != null ? openContentStr : DexEditorActivity.classTree.getSmaliByType(classDef);
-                                                int start = 0, end;
-                                                while ((end = smali.indexOf('\n', start)) != -1) {
-                                                    String lineText = smali.substring(start, end);
-                                                    if (lineText.contains("\"") && checkMatch(lineText)) {
-                                                        if (foundCount.incrementAndGet() >= 250000) {
-                                                            stopSearchWithLimit(activity);
-                                                            return;
-                                                        }
-                                                        TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
-                                                        snippet.setSnippet(true);
-                                                        snippet.setLineNumber(countLinesBefore(smali, start));
-                                                        preHighlightSnippet(snippet, highlightQuery);
-                                                        snippets.add(snippet);
-                                                        match = true;
-                                                    }
-                                                    start = end + 1;
-                                                }
-                                            } catch (Exception ignored) {
-                                            }
-                                        } else {
-                                            for (Method method : classDef.getMethods()) {
-                                                MethodImplementation impl = method.getImplementation();
-                                                if (impl != null) {
-                                                    for (Instruction inst : impl.getInstructions()) {
-                                                        if (inst instanceof ReferenceInstruction) {
-                                                            Reference ref = ((ReferenceInstruction) inst).getReference();
-                                                            if (ref instanceof StringReference) {
-                                                                String str = ((StringReference) ref).getString();
-                                                                if (checkMatch(str)) {
-                                                                    if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
-                                                                    if (smali == null) smali = generateSmaliSafe(classDef);
-                                                                    String snippetText = inst.getOpcode().name + " ..., \"" + str + "\"";
-                                                                    int lineIdx = findLineOfText(smali, "\"" + str + "\"");
-                                                                    TreeNode snippet = new TreeNode(snippetText, className, 0, false);
-                                                                    snippet.setSnippet(true);
-                                                                    snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
-                                                                    preHighlightSnippet(snippet, highlightQuery);
-                                                                    snippets.add(snippet);
-                                                                    match = true;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            for (Field field : classDef.getFields()) {
-                                                EncodedValue initialValue = field.getInitialValue();
-                                                if (initialValue instanceof StringEncodedValue) {
-                                                    String str = ((StringEncodedValue) initialValue).getValue();
-                                                    if (checkMatch(str)) {
-                                                        if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
-                                                        if (smali == null) smali = generateSmaliSafe(classDef);
-                                                        String snippetText = ".field ... " + field.getName() + " = \"" + str + "\"";
-                                                        int lineIdx = findLineOfText(smali, field.getName());
-                                                        TreeNode snippet = new TreeNode(snippetText, className, 0, false);
-                                                        snippet.setSnippet(true);
-                                                        snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
-                                                        preHighlightSnippet(snippet, highlightQuery);
-                                                        snippets.add(snippet);
-                                                        match = true;
-                                                    }
-                                                }
-                                            }
-                                            if (searchInAnnotations(classDef.getAnnotations(), className, snippets, smali, classDef)) match = true;
-                                        }
-                                        break;
-                                    case "Integer":
-                                        boolean hasMatched = false;
-                                        for (Method method : classDef.getMethods()) {
-                                            MethodImplementation impl = method.getImplementation();
-                                            if (impl != null) {
-                                                for (Instruction inst : impl.getInstructions()) {
-                                                    if (inst instanceof NarrowLiteralInstruction) {
-                                                        if (((NarrowLiteralInstruction) inst).getNarrowLiteral() == (int) finalTargetValue) { hasMatched = true; break; }
-                                                    } else if (inst instanceof WideLiteralInstruction) {
-                                                        if (((WideLiteralInstruction) inst).getWideLiteral() == finalTargetValue) { hasMatched = true; break; }
-                                                    }
-                                                }
-                                            }
-                                            if (hasMatched) break;
-                                        }
-                                        if (!hasMatched) {
-                                            for (Field field : classDef.getFields()) {
-                                                EncodedValue initialValue = field.getInitialValue();
-                                                if (initialValue instanceof IntEncodedValue) {
-                                                    if (((IntEncodedValue) initialValue).getValue() == (int) finalTargetValue) { hasMatched = true; break; }
-                                                } else if (initialValue instanceof LongEncodedValue) {
-                                                    if (((LongEncodedValue) initialValue).getValue() == finalTargetValue) { hasMatched = true; break; }
-                                                }
-                                            }
-                                        }
-
-                                        if (hasMatched) {
-                                            try {
-                                                smali = generateSmali(classDef);
-                                                String[] lines = smali.split("\n");
-                                                String pattern = highlightQuery;
-                                                for (int i = 0; i < lines.length; i++) {
-                                                    String line = lines[i];
-                                                    if (line.toLowerCase().contains(pattern)) {
-                                                        int idx = line.toLowerCase().indexOf(pattern);
-                                                        char next = (idx + pattern.length() < line.length()) ? line.charAt(idx + pattern.length()) : ' ';
-                                                        if (Character.isLetterOrDigit(next))
-                                                            continue;
-                                                        if (foundCount.incrementAndGet() >= 250000) {
-                                                            stopSearchWithLimit(activity);
-                                                            return;
-                                                        }
-                                                        TreeNode snippet = new TreeNode(line.trim(), className, 0, false);
-                                                        snippet.setSnippet(true);
-                                                        snippet.setLineNumber(i);
-                                                        preHighlightSnippet(snippet, highlightQuery);
-                                                        snippets.add(snippet);
-                                                        match = true;
-                                                    }
-                                                }
-                                            } catch (Exception ignored) {
-                                            }
-                                        }
-                                        break;
-                                }
-
-                                if (match) {
-                                    TreeNode classNode = new TreeNode(className.substring(className.lastIndexOf('/') + 1), className, 0, false);
-                                    if (!snippets.isEmpty()) {
-                                        classNode.setChildren(snippets);
-                                        classNode.setExpanded(true);
+                                    } catch (Exception ignored) {
                                     }
-                                    results.add(classNode);
                                 }
-                                updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                break;
+                        }
+
+                        if (match) {
+                            TreeNode classNode = new TreeNode(className.substring(className.lastIndexOf('/') + 1), className, 0, false);
+                            if (!snippets.isEmpty()) {
+                                classNode.setChildren(snippets);
+                                classNode.setExpanded(true);
                             }
-                        });
-                    }
+                            results.add(classNode);
+                        }
+                        updateProgress(processedCount.incrementAndGet(), finalTotal);
+                    });
+                }
 
-                    executor.shutdown();
-                    try {
-                        executor.awaitTermination(1, TimeUnit.HOURS);
-                    } catch (InterruptedException ignored) {
-                    }
+                executor.shutdown();
+                try {
+                    executor.awaitTermination(1, TimeUnit.HOURS);
+                } catch (InterruptedException ignored) {
+                }
 
-                    if (isFinalized.compareAndSet(false, true)) {
-                        finalizeResults(results);
-                    }
+                if (isFinalized.compareAndSet(false, true)) {
+                    finalizeResults(results);
                 }
             }).start();
         }
@@ -1537,7 +1451,7 @@ public class SearchFragment extends Fragment {
                     snapshot = new ArrayList<>(results);
                 }
                 
-                Collections.sort(snapshot, (n1, n2) -> n1.getFullName().compareTo(n2.getFullName()));
+                Collections.sort(snapshot, Comparator.comparing(TreeNode::getFullName));
 
                 tree = buildTreeStructure(snapshot);
                 Collections.sort(tree, (n1, n2) -> {
@@ -1546,25 +1460,17 @@ public class SearchFragment extends Fragment {
                 });
             }
 
-            mainHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    onPostExecute(tree);
-                }
-            });
+            mainHandler.post(() -> onPostExecute(tree));
         }
 
         private void stopSearchWithLimit(final DexEditorActivity activity) {
             if (!isStopped) {
                 isStopped = true;
                 if (executor != null) executor.shutdownNow();
-                mainHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (progressDialog != null && progressDialog.isShowing())
-                            progressDialog.dismiss();
-                        SketchwareUtil.showMessage(activity, "The number of serach results exceeds the limit, the search has been stopped");
-                    }
+                mainHandler.post(() -> {
+                    if (progressDialog != null && progressDialog.isShowing())
+                        progressDialog.dismiss();
+                    Extensions.showMessage(activity, R.string.search_exceed);
                 });
             }
         }
@@ -1573,14 +1479,11 @@ public class SearchFragment extends Fragment {
             long now = System.currentTimeMillis();
             if (now - lastProgressUpdateTime > 100 || processed == total || isStopped) {
                 lastProgressUpdateTime = now;
-                mainHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (progressDialog != null && progressDialog.isShowing()) {
-                            progressDialog.setMax(total);
-                            progressDialog.setProgress(processed);
-                            progressDialog.setMessage("Found: " + foundCount.get());
-                        }
+                mainHandler.post(() -> {
+                    if (progressDialog != null && progressDialog.isShowing()) {
+                        progressDialog.setMax(total);
+                        progressDialog.setProgress(processed);
+                        progressDialog.setMessage("Found: " + foundCount.get());
                     }
                 });
             }
@@ -1786,26 +1689,20 @@ public class SearchFragment extends Fragment {
             SearchFragment fragment = fragmentRef.get();
             if (fragment == null) return;
             new MaterialAlertDialogBuilder(fragment.requireContext())
-                    .setTitle("Warning")
-                    .setMessage("1000+ results found so far. Are you sure you wish to continue?")
-                    .setPositiveButton("CONTINUE", new android.content.DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(android.content.DialogInterface dialog, int which) {
-                            synchronized (SearchTask.this) {
-                                hasConfirmedLargeSearch = true;
-                                warningShown = false;
-                                SearchTask.this.notifyAll();
-                            }
+                    .setTitle(R.string.warning)
+                    .setMessage(R.string.kres)
+                    .setPositiveButton(R.string.cont, (dialog, which) -> {
+                        synchronized (SearchTask.this) {
+                            hasConfirmedLargeSearch = true;
+                            warningShown = false;
+                            SearchTask.this.notifyAll();
                         }
                     })
-                    .setNegativeButton("STOP", new android.content.DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(android.content.DialogInterface dialog, int which) {
-                            isStopped = true;
-                            synchronized (SearchTask.this) {
-                                warningShown = false;
-                                SearchTask.this.notifyAll();
-                            }
+                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> {
+                        isStopped = true;
+                        synchronized (SearchTask.this) {
+                            warningShown = false;
+                            SearchTask.this.notifyAll();
                         }
                     })
                     .setCancelable(false)

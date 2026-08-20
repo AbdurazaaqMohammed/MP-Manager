@@ -62,6 +62,10 @@ public class ProgressManager {
         return this;
     }
 
+    public void setText(int id, String append) {
+        setText(activity.getString(id, append));
+    }
+
     public ProgressManager setText(String text) {
         this.currentText = text;
         handler.post(() -> {

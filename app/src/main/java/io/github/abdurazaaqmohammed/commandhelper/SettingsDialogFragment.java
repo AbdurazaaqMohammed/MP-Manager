@@ -14,7 +14,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
@@ -144,18 +144,18 @@ public class SettingsDialogFragment extends DialogFragment {
             String name = nameInput.getText().toString().trim();
             String cmd = cmdInput.getText().toString().trim();
             if (TextUtils.isEmpty(name)) {
-                Toast.makeText(getActivity(), "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(getActivity(), "Name cannot be empty");
                 return;
             }
             if (TextUtils.isEmpty(cmd)) {
-                Toast.makeText(getActivity(), "Command template cannot be empty", Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(getActivity(), "Command template cannot be empty");
                 return;
             }
             if (index < 0) profileManager.addProfile(new Profile(name, cmd));
             else profileManager.updateProfile(index, new Profile(name, cmd));
             refreshList();
         });
-        builder.setNegativeButton(R.string.cancel, null);
+        builder.setNegativeButton(android.R.string.cancel, null);
         builder.show();
     }
 
@@ -167,7 +167,7 @@ public class SettingsDialogFragment extends DialogFragment {
                     profileManager.deleteProfile(index);
                     refreshList();
                 })
-                .setNegativeButton(R.string.cancel, null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

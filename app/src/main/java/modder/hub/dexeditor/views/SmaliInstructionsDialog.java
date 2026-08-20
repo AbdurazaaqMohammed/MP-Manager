@@ -78,7 +78,7 @@ public class SmaliInstructionsDialog {
 		View view = LayoutInflater.from(context).inflate(R.layout.dialog_instructions, null);
 		Toolbar toolbar = view.findViewById(R.id.toolbar);
 		toolbar.inflateMenu(R.menu.menu_search);
-		toolbar.setTitle("Smali Instructions");
+		toolbar.setTitle(R.string.smali_instructions);
 
 		MenuItem searchItem = toolbar.getMenu().findItem(R.id.search);
 		SearchView searchView = (SearchView) searchItem.getActionView();
@@ -155,13 +155,7 @@ public class SmaliInstructionsDialog {
 		return items;
 	}
 
-	private static class InstructionItem {
-		final String header;
-		final List<String> content;
-		InstructionItem(String header, List<String> content) {
-			this.header = header;
-			this.content = content;
-		}
+	private record InstructionItem(String header, List<String> content) {
 	}
 
 	private static class InstructionsAdapter extends RecyclerView.Adapter<InstructionsAdapter.ViewHolder> {

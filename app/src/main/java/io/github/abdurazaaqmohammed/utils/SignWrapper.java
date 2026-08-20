@@ -2,12 +2,13 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.sun.security.pkcs12.PKCS12KeyStore;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.Toast;
+
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricManager;
@@ -18,7 +19,6 @@ import androidx.preference.PreferenceManager;
 import com.android.apksig.ApkSigner;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.bouncycastle.jcajce.PKCS12Key;
 import org.bouncycastle.jcajce.provider.keystore.pkcs12.PKCS12KeyStoreSpi;
 
 import java.io.File;
@@ -26,12 +26,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
-import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.concurrent.Executor;
-
-import javax.crypto.SecretKeyFactory;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 
@@ -102,7 +99,7 @@ public class SignWrapper {
         try {
             keyPath = prefs.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", activity).getPath());
         } catch (IOException e) {
-            Toast.makeText(activity, "Failed to load default key: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(activity, "Failed to load default key: " + e.getMessage());
             return;
         }
         boolean v1 = prefs.getBoolean("v1", true);
@@ -121,7 +118,7 @@ public class SignWrapper {
                 @Override
                 public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                     super.onAuthenticationError(errorCode, errString);
-                    Toast.makeText(activity, "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(activity, "Authentication error: " + errString);
                 }
 
                 @Override
@@ -133,12 +130,12 @@ public class SignWrapper {
                 @Override
                 public void onAuthenticationFailed() {
                     super.onAuthenticationFailed();
-                    Toast.makeText(activity, "Authentication failed", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(activity, "Authentication failed");
                 }
             });
             BiometricPrompt.PromptInfo.Builder auth = new BiometricPrompt.PromptInfo.Builder()
-                    .setTitle("Authenticate Signature")
-                    .setSubtitle("Authenticate to use sign key");
+                    .setTitle(activity.rss.getString(R.string.auth_sign))
+                    .setSubtitle(activity.rss.getString(R.string.auth_sign_msg));
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 auth.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
             } else auth.setDeviceCredentialAllowed(true);
@@ -146,22 +143,22 @@ public class SignWrapper {
         } else {
             EditText pwInput = new EditText(activity);
             pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-            pwInput.setHint("Enter password");
+            pwInput.setHint(activity.rss.getString(R.string.enter_password));
             LinearLayout layout = new LinearLayout(activity);
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setPadding(48, 24, 48, 24);
             layout.addView(pwInput);
             new MaterialAlertDialogBuilder(activity)
-                    .setTitle("Enter password")
+                    .setTitle(activity.rss.getString(R.string.enter_password))
                     .setView(layout)
                     .setPositiveButton(android.R.string.ok, (d, w) -> {
                         String password = pwInput.getText() != null ? pwInput.getText().toString() : "";
                         if (TextUtils.isEmpty(password)) {
-                            Toast.makeText(activity, "No password entered", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(activity, R.string.no_password_entered);
                             return;
                         }
                         if (!verifyKeystorePassword(new File(keyPath), password)) {
-                            Toast.makeText(activity, "Invalid password", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(activity, R.string.invalid_password);
                             return;
                         }
                         callback.onAuthenticated(new SignWrapper(new File(keyPath), password, v1, v2, v3, v4, signedBy));

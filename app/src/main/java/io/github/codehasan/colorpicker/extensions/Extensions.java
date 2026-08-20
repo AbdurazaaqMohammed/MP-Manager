@@ -34,7 +34,7 @@ public final class Extensions {
     }
 
     public static void showMessage(Activity activity, @StringRes int message) {
-        showMessage(activity, activity.getString(message));
+        showMessage(activity, activity instanceof MainActivity m ? m.rss.getString(message) : activity.getString(message));
     }
 
     public static void showMessage(Activity activity, CharSequence message) {

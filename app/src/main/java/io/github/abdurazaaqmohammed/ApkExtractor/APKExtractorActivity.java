@@ -31,7 +31,6 @@ import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
 
 import android.provider.Settings;
-import android.text.ClipboardManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -49,7 +48,6 @@ import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
@@ -154,12 +152,11 @@ public class APKExtractorActivity extends AppCompatActivity {
             if(pm != null) pm.dismiss();
             if (!errorOccurred)
                 styleAlertDialog(new MaterialAlertDialogBuilder(this)
-                        .setTitle("Info")
+                        .setTitle(R.string.info)
                         .setMessage(rss.getString(R.string.success_saved, outputPath))
-                        .setNegativeButton("Locate", (dialog, which) -> {
+                        .setNegativeButton(R.string.locate, (dialog, which) -> {
                             File file = new File(outputPath);
-                            this.setResult(RESULT_OK, new Intent().putExtra("dirToLoad",
-                                    file.isDirectory() ? outputPath : file.getParent()));
+                            this.setResult(RESULT_OK, new Intent().putExtra("dirToLoad", file.isDirectory() ? outputPath : file.getParent()));
                             finish();
                         })
                         .setPositiveButton(android.R.string.ok, null)
@@ -186,7 +183,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
         ActionBar ab = getSupportActionBar();
         if (ab != null) {
-            ab.setTitle("Extract APKs");
+            ab.setTitle(R.string.extract_apks);
         }
 
         signApk = settings.getBoolean("signApk", true);
@@ -314,7 +311,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                     styleAlertDialog(new MaterialAlertDialogBuilder(this)
                             .setTitle(rss.getString(R.string.warning))
                             .setMessage(rss.getString(R.string.warn_sign))
-                            .setNegativeButton(rss.getString(R.string.cancel), (dialog, which) -> {
+                            .setNegativeButton(rss.getString(android.R.string.cancel), (dialog, which) -> {
                                 signToggle.setChecked(signApk = false);
                                 dialog.dismiss();
                             })
@@ -477,10 +474,10 @@ public class APKExtractorActivity extends AppCompatActivity {
         findViewById(R.id.confirmButton).setOnClickListener(v -> {
             v.setVisibility(View.INVISIBLE);
             String[] display = {
-                    "Extract APKs", "Share APKs",
-                    "Extract resources.arsc files", "Extract classes.dex files",
-                    "Extract AndroidManifest.xml files", "Extract base.apk files",
-                    "Extract libs", "Extract app icon"
+                    rss.getString(R.string.extract_apks), rss.getString(R.string.share_apks),
+                    getString(R.string.extract_rss), getString(R.string.extract_classes_dex),
+                    getString(R.string.extract_am), getString(R.string.extract_base),
+                    getString(R.string.extract_libs), getString(R.string.extract_ic)
             };
             int[] icons = {
                     R.drawable.save_24px, R.drawable.baseline_share_24,
@@ -495,7 +492,7 @@ public class APKExtractorActivity extends AppCompatActivity {
 
             AlertDialog alertDialog = new MaterialAlertDialogBuilder(this)
                     .setView(dialogView)
-                    .setNegativeButton(rss.getString(R.string.cancel), (d, w) -> getCurrentAdapter().clearSelection())
+                    .setNegativeButton(rss.getString(android.R.string.cancel), (d, w) -> getCurrentAdapter().clearSelection())
                     .create();
             styleAlertDialog(alertDialog);
 
@@ -709,7 +706,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                     case 100: // Launch
                         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                         if (launchIntent == null)
-                            Toast.makeText(this, "Cannot launch this app", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(this, "Cannot launch this app");
                         else startActivity(launchIntent);
                         break;
                     case 101: // App Info
@@ -759,7 +756,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                         PackageManager pm = getPackageManager();
                         try {
                             ActivityInfo[] activities = pm.getPackageInfo(ai.packageName, PackageManager.GET_ACTIVITIES).activities;
-                            if(activities == null) Toast.makeText(this, "No launchable activities found", Toast.LENGTH_SHORT).show();
+                            if(activities == null) Extensions.showMessage(this, "No launchable activities found");
 
                             else {
                                 String[] labels = new String[activities.length];
@@ -818,36 +815,28 @@ public class APKExtractorActivity extends AppCompatActivity {
                         break;
                     case 200: // Clear app data (root)
                         new MaterialAlertDialogBuilder(this)
-                                .setTitle("Clear App Data")
-                                .setMessage("Clear all data for " + ai.name + "?\n\nThis will permanently delete all app data, settings, accounts, and databases.")
-                                .setPositiveButton("Clear", (d, w) -> executeRootAction("Clear data", () -> {
-                                    rootManager.clearAppData(packageName);
-                                }, packageName))
+                                .setTitle(R.string.clear_app_data)
+                                .setMessage(getString(R.string.clear_all_data_for, ai.name))
+                                .setPositiveButton(R.string.clear_app_data, (d, w) -> executeRootAction("Clear data", () -> rootManager.clearAppData(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                     case 201: // Force stop (root)
                         new MaterialAlertDialogBuilder(this)
-                                .setTitle("Force Stop")
-                                .setMessage("Force stop " + ai.name + "?\n\nThis will immediately stop all of the app's running processes.")
-                                .setPositiveButton("Stop", (d, w) -> executeRootAction("Force stop", () -> {
-                                    rootManager.forceStopApp(packageName);
-                                }, packageName))
+                                .setTitle(R.string.force_stop)
+                                .setMessage(getString(R.string.force_stop_x, ai.name))
+                                .setPositiveButton(R.string.force_stop, (d, w) -> executeRootAction("Force stop", () -> rootManager.forceStopApp(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                     case 202: // Enable app (root)
-                        executeRootAction("Enable app", () -> {
-                            rootManager.enableApp(packageName);
-                        }, packageName);
+                        executeRootAction("Enable app", () -> rootManager.enableApp(packageName), packageName);
                         break;
                     case 203: // Disable app (root)
                         new MaterialAlertDialogBuilder(this)
-                                .setTitle("Disable App")
-                                .setMessage("Disable " + ai.name + "?\n\nThe app will be hidden and stopped from running. You can re-enable it later.")
-                                .setPositiveButton("Disable", (d, w) -> executeRootAction("Disable app", () -> {
-                                    rootManager.disableApp(packageName);
-                                }, packageName))
+                                .setTitle(R.string.disable_app)
+                                .setMessage(getString(R.string.disable_x, ai.name))
+                                .setPositiveButton(R.string.disable, (d, w) -> executeRootAction("Disable app", () -> rootManager.disableApp(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -855,9 +844,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.root_uninstall)
                                 .setMessage(rss.getString(R.string.uninstall_root, ai.name))
-                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> {
-                                    rootManager.uninstallSilent(packageName);
-                                }, packageName))
+                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> rootManager.uninstallSilent(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -876,9 +863,10 @@ public class APKExtractorActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 action.run();
-                runOnUiThread(() -> Toast.makeText(this, actionName + " done", Toast.LENGTH_SHORT).show());
+                //runOnUiThread(() -> Toast.makeText(this, actionName + " done", Toast.LENGTH_SHORT).show());
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, actionName + " failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                new ErrorUtil(this).showError(e);
+                //runOnUiThread(() -> Toast.makeText(this, actionName + " failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
     }

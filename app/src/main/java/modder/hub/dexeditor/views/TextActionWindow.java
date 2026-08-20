@@ -36,43 +36,17 @@
 
 package modder.hub.dexeditor.views;
 
-import android.content.Context;
-import android.graphics.Color;
-import android.Manifest;
-import android.animation.*;
-import android.app.*;
-import android.app.Activity;
-import android.content.*;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.content.res.*;
-import android.graphics.*;
-import android.graphics.drawable.*;
-import android.media.*;
 import android.net.*;
 import android.os.*;
 import android.text.*;
-import android.text.style.*;
 import android.util.*;
 import android.view.*;
-import android.view.View.*;
-import android.view.animation.*;
-import android.webkit.*;
 import android.widget.*;
 import android.content.res.*;
 import android.graphics.*;
 import android.content.*;
 import android.graphics.drawable.*;
-import android.content.SharedPreferences;
-import android.os.Build;
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.TooltipCompat;
 import io.github.rosemoe.sora.event.*;
@@ -81,11 +55,10 @@ import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.EditorTouchEventHandler;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
-import io.github.rosemoe.sora.text.CharPosition;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -101,20 +74,20 @@ Code fixed/enhancement/some hidden ideas/comments by ChatGPT
 
 public class TextActionWindow extends EditorTextActionWindow implements View.OnLongClickListener {
 	private static final long DISPLAY_DELAY = 200;
-	private ItemClickCallBack actionCallback;
+	private final ItemClickCallBack actionCallback;
 	private ImageButton copyButton;
 	private ImageButton cutButton;
-	private CodeEditor codeEditor;
-	private boolean isEnabled;
+	private final CodeEditor codeEditor;
+	private final boolean isEnabled;
 	private String extractedTextWithLAndSemiColon;
 	private ImageButton gotoButton;
-	private EditorTouchEventHandler touchEventHandler;
+	private final EditorTouchEventHandler touchEventHandler;
 	private int lastEventCause;
 	private int lastCursorPosition;
 	private long lastScrollTime;
 	private ImageButton longSelectButton;
 	private ImageButton pasteButton;
-	private View rootView;
+	private final View rootView;
 	private ImageButton selectAllButton;
 	private String selectedText;
 	private ImageButton translateButton;
@@ -124,8 +97,8 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	private ImageButton customizeButton;
 	private ImageButton deleteButton;
 	
-	private Map<String, ImageButton> buttonMap = new HashMap<>();
-	private ArrayList<String> menuItems = new ArrayList<>();
+	private final Map<String, ImageButton> buttonMap = new HashMap<>();
+	private final ArrayList<String> menuItems = new ArrayList<>();
 	private static final Set<String> VALID_TLDS = new HashSet<>();
 	
 	static {
@@ -340,15 +313,8 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		this.deleteButton = buttonMap.get("delete_btn");
 		this.customizeButton = buttonMap.get("customize_btn");
 	}
-	
-	private static class ButtonConfig {
-		final int iconRes;
-		final int tooltipRes;
-		
-		ButtonConfig(int iconRes, int tooltipRes) {
-			this.iconRes = iconRes;
-			this.tooltipRes = tooltipRes;
-		}
+
+	private record ButtonConfig(int iconRes, int tooltipRes) {
 	}
 	
 	// Updated setTooltipText with null check

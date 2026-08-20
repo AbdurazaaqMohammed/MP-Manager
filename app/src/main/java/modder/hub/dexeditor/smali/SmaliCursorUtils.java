@@ -161,8 +161,7 @@ public class SmaliCursorUtils {
     }
 
     private static String getLine(CharSequence text, int index) {
-        if (text instanceof Content) {
-            Content content = (Content) text;
+        if (text instanceof Content content) {
             if (index < 0 || index >= content.getLineCount()) return null;
             return content.getLineString(index);
         } else {

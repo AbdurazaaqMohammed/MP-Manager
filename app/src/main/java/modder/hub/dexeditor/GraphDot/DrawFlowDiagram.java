@@ -37,11 +37,7 @@
 
 package modder.hub.dexeditor.GraphDot;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
-import android.content.*;
-import android.app.FragmentManager;
 
 /*
 Author @developer-krushna
@@ -150,16 +146,16 @@ public class DrawFlowDiagram {
 				}
 				dotStr.append(getDotStrForEdge(method.getInstructions().get(index - 1).getLineNum(), ins.getLineNum(), edgeColor));
 				for (Instruction child : ins.getChildrenAbove()) {
-					if (ins.getType() == InstructionType.CON_JUMP) {
+					if (ins.getType().equals(InstructionType.CON_JUMP)) {
 						dotStr.append(getDotStrForEdge(ins.getLineNum(), child.getLineNum(), "green"));
-					} else if (ins.getType() == InstructionType.GOTO) {
+					} else if (ins.getType().equals(InstructionType.GOTO)) {
 						dotStr.append(getDotStrForEdge(ins.getLineNum(), child.getLineNum(), "orange"));
 					}
 				}
 				for (Instruction parent : ins.getParentAbove()) {
-					if (parent.getType() == InstructionType.CON_JUMP) {
+					if (parent.getType().equals(InstructionType.CON_JUMP)) {
 						dotStr.append(getDotStrForEdge(parent.getLineNum(), ins.getLineNum(), "green"));
-					} else if (parent.getType() == InstructionType.GOTO) {
+					} else if (parent.getType().equals(InstructionType.GOTO)) {
 						dotStr.append(getDotStrForEdge(parent.getLineNum(), ins.getLineNum(), "orange"));
 					}
 				}

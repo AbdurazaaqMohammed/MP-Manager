@@ -48,7 +48,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
-import modder.hub.dexeditor.utils.SketchwareUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /* 
 Author @developer-krushna
@@ -94,7 +94,8 @@ public class AlertProgress {
                         dismiss();
                     } else {
                         lastBackPressTime = currentTime;
-                        SketchwareUtil.showMessage(activity, activity.getString(R.string.press_again_msg));
+                        String _s = activity.getString(R.string.press_again_msg);
+                        Extensions.showMessage(activity, _s);
                     }
                     return true;
                 }

@@ -12,7 +12,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -45,7 +45,6 @@ import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class RenameUtil {
 
@@ -94,7 +93,7 @@ public class RenameUtil {
             view.findViewById(quickButtonIds[i]).setOnClickListener(v -> insertAtCursor(patternInput, token));
         }
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setTitle("Rename " + items.size() + " items")
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setTitle(context.rss.getString(R.string.rename_numitems, items.size()))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.preview, null)
@@ -112,7 +111,7 @@ public class RenameUtil {
     private static void showRenamePreview(MainActivity context, List<Object> items, String pattern, String find, String replace, boolean regex, boolean caseSensitive, boolean pane1, String currentZipPath) {
         String validationError = validateFind(find, regex);
         if (validationError != null) {
-            Toast.makeText(context, validationError, Toast.LENGTH_LONG).show();
+            Extensions.showMessage(context, validationError);
             return;
         }
         List<RenamePlan> plans = buildRenamePlan(items, pattern, find, replace, regex, caseSensitive);
@@ -126,24 +125,24 @@ public class RenameUtil {
         container.addView(listView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle(("Rename preview"))
+                .setTitle(context.getString(R.string.rename_preview))
                 .setView(container)
-                .setNegativeButton("Close", null)
-                .setPositiveButton("Rename", (d, w) -> executeRename(context, plans, pane1, currentZipPath)).show();
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(context.getString(R.string.rename), (d, w) -> executeRename(context, plans, pane1, currentZipPath)).show();
     }
 
     private static void executeRename(MainActivity context, List<RenamePlan> plans, boolean pane1, String currentZipPath) {
         resolveConflicts(plans);
         for (RenamePlan p : plans) {
             if (p.error != null) {
-                Extensions.showMessage(context, "Some names are invalid, please fix them");
+                Extensions.showMessage(context, R.string.invalid_names);
                 return;
             }
         }
         boolean any = false;
         for (RenamePlan p : plans) if (!p.noop) any = true;
         if (!any) {
-            Extensions.showMessage(context, "No files need renaming");
+            Extensions.showMessage(context, R.string.no_files_need_renaming);
             return;
         }
         if (plans.get(0).item instanceof ZipEntryInfo) executeRenameZip(context, plans, currentZipPath, pane1);
@@ -200,7 +199,7 @@ public class RenameUtil {
     private static void executeRenameFiles(MainActivity context, List<RenamePlan> plans, boolean pane1) {
         File parent = ((File) plans.get(0).item).getParentFile();
         if (parent == null) {
-            Toast.makeText(context, "Failed to rename", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(context, "Failed to rename");
             return;
         }
         ProgressManager pm = new ProgressManager(context, true).show();
@@ -224,18 +223,18 @@ public class RenameUtil {
             }
             try {
                 for (Map.Entry<File, File> e : oldToTemp.entrySet()) {
-                    pm.setText("Renaming...");
+                    pm.setText(context.getString(R.string.renaming));
                     if (!e.getKey().renameTo(e.getValue())) {
                         for (Map.Entry<File, File> r : tempToOld.entrySet()) r.getKey().renameTo(r.getValue());
-                        throw new IOException("Failed to rename \"" + e.getKey().getName() + "\"");
+                        throw new IOException(context.getString(R.string.rename_failed, e.getKey().getName()));
                     }
                 }
                 for (Map.Entry<File, File> e : tempToFinal.entrySet()) {
-                    pm.setText("Renaming...");
+                    pm.setText(context.getString(R.string.renaming));
                     if (!e.getKey().renameTo(e.getValue())) {
                         for (Map.Entry<File, File> r : finalToTemp.entrySet()) r.getKey().renameTo(r.getValue());
                         for (Map.Entry<File, File> r : tempToOld.entrySet()) r.getKey().renameTo(r.getValue());
-                        throw new IOException("Failed to rename \"" + e.getKey().getName() + "\"");
+                        throw new IOException(context.getString(R.string.rename_failed, e.getKey().getName()));
                     }
                 }
                 pm.dismiss();
@@ -284,7 +283,7 @@ public class RenameUtil {
                     }
                 }
                 if (!oldToTemp.isEmpty()) {
-                    pm.setText("Renaming...");
+                    pm.setText(context.getString(R.string.renaming));
                     zf.renameFiles(oldToTemp);
                     zf.renameFiles(tempToFinal);
                 }
@@ -405,13 +404,13 @@ public class RenameUtil {
             RenamePlan p = plans.get(position);
             oldView.setText(p.originalName);
             if (p.error != null) {
-                newView.setText("Error: " + p.error);
+                newView.setText(ctx.getString(R.string.error_x, p.error));
                 newView.setTextColor(0xFFE53935);
             } else if (p.noop) {
-                newView.setText(p.newName + "  (unchanged)");
+                newView.setText(ctx.getString(R.string.x_unchanged, p.newName));
                 newView.setTextColor(defaultColor);
             } else {
-                newView.setText("→ " + p.newName);
+                newView.setText(ctx.getString(R.string.newName, p.newName));
                 newView.setTextColor(defaultColor);
             }
             return convertView;

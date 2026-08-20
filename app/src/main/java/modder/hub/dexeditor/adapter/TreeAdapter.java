@@ -32,6 +32,7 @@
 package modder.hub.dexeditor.adapter;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -60,10 +61,10 @@ import java.util.List;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.utils.TreeHelper;
-import modder.hub.dexeditor.utils.UIHelper;
 
 // Author ; @developer-krushna
 // Code fixed and some commments and improvements are done by AI
@@ -223,70 +224,58 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.class_holder, parent, false);
         final ViewHolder holder = new ViewHolder(view);
         
-        holder.arrow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                int pos = holder.getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION) toggleNode(visibleNodes.get(pos), pos);
-            }
+        holder.arrow.setOnClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) toggleNode(visibleNodes.get(pos), pos);
         });
 
-        holder.itemContent.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                int pos = holder.getBindingAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION) return;
-                TreeNode node = visibleNodes.get(pos);
-                if (node.isDirectory() && !isHistory) {
-                    toggleNode(node, pos);
-                } else if (node.isSnippet()) {
-                    if (isSearchList) {
+        holder.itemContent.setOnClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return;
+            TreeNode node = visibleNodes.get(pos);
+            if (node.isDirectory() && !isHistory) {
+                toggleNode(node, pos);
+            } else if (node.isSnippet()) {
+                if (isSearchList) {
+                    boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+                    if (isDeleted) {
+                        showDeletedPrompt(node, pos);
+                        return;
+                    }
+                }
+                if (listener != null) listener.onNodeClick(node);
+            } else {
+                if (!isSelectionMode) {
+                    if (isHistory && !node.isDirectory()) {
                         boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
                         if (isDeleted) {
                             showDeletedPrompt(node, pos);
                             return;
                         }
                     }
-                    if (listener != null) listener.onNodeClick(node);
-                } else {
-                    if (!isSelectionMode) {
-                        if (isHistory && !node.isDirectory()) {
-                            boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
-                            if (isDeleted) {
-                                showDeletedPrompt(node, pos);
-                                return;
-                            }
-                        }
 
-                        if (isSearchList) {
-                            // Toggle expansion for classes in search results instead of opening editor
-                            toggleNode(node, pos);
-                        } else if (listener != null) {
-                            listener.onNodeClick(node);
-                        }
-                    } else {
-                        toggleChecked(node);
+                    if (isSearchList) {
+                        // Toggle expansion for classes in search results instead of opening editor
+                        toggleNode(node, pos);
+                    } else if (listener != null) {
+                        listener.onNodeClick(node);
                     }
+                } else {
+                    toggleChecked(node);
                 }
             }
         });
 
-        holder.checkBox.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                int pos = holder.getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION) toggleChecked(visibleNodes.get(pos));
-            }
+        holder.checkBox.setOnClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) toggleChecked(visibleNodes.get(pos));
         });
 
-        holder.itemContent.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                int pos = holder.getBindingAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION) return true;
-                handleLongClick(v, visibleNodes.get(pos), pos);
-                return true;
-            }
+        holder.itemContent.setOnLongClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return true;
+            handleLongClick(v, visibleNodes.get(pos), pos);
+            return true;
         });
 
         return holder;
@@ -628,38 +617,32 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             popup.getMenu().add("Locate");
         }
         popup.getMenu().add("Remove from search result");
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(android.view.MenuItem item) {
-                switch (Objects.requireNonNull(item.getTitle()).toString()) {
-                    case "Copy":
-                       showCopySubMenu(view, node);
-                        break;
-                    case "Locate":
-                        if (listener != null) listener.onLocate(node);
-                        break;
-                    case "Remove from search result":
-                        if (listener != null) listener.onNodeDeleted(node);
-                        break;
-                }
-                return true;
+        popup.setOnMenuItemClickListener(item -> {
+            switch (Objects.requireNonNull(item.getTitle()).toString()) {
+                case "Copy":
+                   showCopySubMenu(view, node);
+                    break;
+                case "Locate":
+                    if (listener != null) listener.onLocate(node);
+                    break;
+                case "Remove from search result":
+                    if (listener != null) listener.onNodeDeleted(node);
+                    break;
             }
+            return true;
         });
         popup.show();
     }
 
     private void showDeletedPrompt(TreeNode node, int position) {
         new MaterialAlertDialogBuilder(context)
-                .setTitle("Class deleted")
-                .setMessage("This class has been deleted. Do you want to remove it from " + (isHistory ? "history" : "search results") + "?")
-                .setPositiveButton("Remove", new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface dialog, int which) {
-                        visibleNodes.remove(position);
-                        rootNodes.remove(node);
-                        notifyItemRemoved(position);
-                        if (listener != null) listener.onNodeDeleted(node);
-                    }
+                .setTitle(R.string.class_deleted)
+                .setMessage(context.getString(R.string.class_del, context.getString(isHistory ? R.string.history : R.string.search_results)))
+                .setPositiveButton(context.getString(R.string.remove), (dialog, which) -> {
+                    visibleNodes.remove(position);
+                    rootNodes.remove(node);
+                    notifyItemRemoved(position);
+                    if (listener != null) listener.onNodeDeleted(node);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -791,19 +774,16 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             popup.getMenu().add(0, 2, 0, "Compare the difference");
         }
 
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(android.view.MenuItem item) {
-                int id = item.getItemId();
-                if (id == 0) {
-                    showCopySubMenu(view, node);
-                } else if (id == 1) {
-                    if (listener != null) listener.onLocate(node);
-                } else if (id == 2) {
-                    if (listener != null) listener.onCompare(node);
-                }
-                return true;
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == 0) {
+                showCopySubMenu(view, node);
+            } else if (id == 1) {
+                if (listener != null) listener.onLocate(node);
+            } else if (id == 2) {
+                if (listener != null) listener.onCompare(node);
             }
+            return true;
         });
         popup.show();
     }
@@ -818,22 +798,19 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         }
         popup.getMenu().add(0, 2, 0, "Delete");
 
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(android.view.MenuItem item) {
-                int id = item.getItemId();
-                if (id == 0) {
-                    showCopySubMenu(view, node);
-                } else if (id == 1) {
-                    if (listener != null) listener.onLocate(node);
-                } else if (id == 2) {
-                    visibleNodes.remove(position);
-                    rootNodes.remove(node);
-                    notifyItemRemoved(position);
-                    if (listener != null) listener.onNodeDeleted(node);
-                }
-                return true;
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == 0) {
+                showCopySubMenu(view, node);
+            } else if (id == 1) {
+                if (listener != null) listener.onLocate(node);
+            } else if (id == 2) {
+                visibleNodes.remove(position);
+                rootNodes.remove(node);
+                notifyItemRemoved(position);
+                if (listener != null) listener.onNodeDeleted(node);
             }
+            return true;
         });
         popup.show();
     }
@@ -847,12 +824,10 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         sub.getMenu().add(full);
         sub.getMenu().add("L" + full + ";");
 
-        sub.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(android.view.MenuItem item) {
-                UIHelper.copyToClipboard(context, Objects.requireNonNull(item.getTitle()).toString());
-                return true;
-            }
+        sub.setOnMenuItemClickListener(item -> {
+            String text = Objects.requireNonNull(item.getTitle()).toString();
+            CopyUtil.copyToClipboard((Activity) context, text);
+            return true;
         });
         sub.show();
     }
@@ -871,50 +846,45 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         popup.getMenu().add("Rename");
         popup.getMenu().add("Batch operations");
 
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(android.view.MenuItem item) {
-                String title = Objects.requireNonNull(item.getTitle()).toString();
-                switch (title) {
-                    case "Search":
-                        if (listener != null) listener.onSearch(node);
-                        break;
-                    case "Copy":
-                        showCopySubMenu(view, node);
-                        break;
-                    case "Delete":
-                        showDeleteDialog(node, position);
-                        break;
-                    case "Batch operations":
-                        isSelectionMode = true;
-                        TreeHelper.setCheckedRecursive(node, true);
-                        notifyDataSetChanged();
-                        if (listener != null) {
-                            listener.onSelectionChanged(getSelectedNodes().size());
-                        }
-                        break;
-                    default:
-                        Toast.makeText(context, title + " not implemented yet", Toast.LENGTH_SHORT).show();
-                        break;
-                }
-                return true;
+        popup.setOnMenuItemClickListener(item -> {
+            String title = Objects.requireNonNull(item.getTitle()).toString();
+            switch (title) {
+                case "Search":
+                    if (listener != null) listener.onSearch(node);
+                    break;
+                case "Copy":
+                    showCopySubMenu(view, node);
+                    break;
+                case "Delete":
+                    showDeleteDialog(node, position);
+                    break;
+                case "Batch operations":
+                    isSelectionMode = true;
+                    TreeHelper.setCheckedRecursive(node, true);
+                    notifyDataSetChanged();
+                    if (listener != null) {
+                        listener.onSelectionChanged(getSelectedNodes().size());
+                    }
+                    break;
+                default:
+                    Toast.makeText(context, title + " not implemented yet", Toast.LENGTH_SHORT).show();
+                    break;
             }
+            return true;
         });
         popup.show();
     }
 
-    // Show delete dialog
     private void showDeleteDialog(TreeNode node, int position) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-        builder.setTitle("Delete");
-        builder.setMessage("Are you sure you want to delete " + (node.isDirectory() ? "folder" : "class") + ": " + node.getName() + "?");
-        builder.setPositiveButton("Delete", new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface dialog, int which) {
-                if (listener != null) {
-                    listener.onNodeDeleted(node);
-                    removeItem(node, position);
-                }
+        builder.setTitle(R.string.delete);
+
+
+        builder.setMessage(context.getString(R.string.confirm_delete_f, context.getString(node.isDirectory() ? R.string.folder : R.string.class_label) + ": " + node.getName()));
+        builder.setPositiveButton(R.string.delete, (dialog, which) -> {
+            if (listener != null) {
+                listener.onNodeDeleted(node);
+                removeItem(node, position);
             }
         });
         builder.setNegativeButton(android.R.string.cancel, null);

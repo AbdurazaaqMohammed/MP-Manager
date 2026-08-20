@@ -5,6 +5,8 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
@@ -27,7 +29,7 @@ public class EditorSettingsActivity extends AppCompatActivity {
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Editor Settings");
+            getSupportActionBar().setTitle(R.string.editor_settings);
         }
     }
 
@@ -96,13 +98,12 @@ public class EditorSettingsActivity extends AppCompatActivity {
 
                         @Override
                         public void onDelete(int position) {
-                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(getContext())
-                                    .setTitle("Delete Button")
-                                    .setMessage("Are you sure you want to delete this button?")
-                                    .setPositiveButton("Delete", (dialog, which) -> {
+                            new MaterialAlertDialogBuilder(getContext())
+                                    .setTitle(R.string.delete_button)
+                                    .setMessage(getString(R.string.confirm_delete_f, "this button"))
+                                    .setPositiveButton(R.string.delete, (dialog, which) -> {
                                         finalArray.remove(position);
-                                        prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString())
-                                                .apply();
+                                        prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString()).apply();
                                         showBottomBarManagementDialog(); // Refresh
                                     })
                                     .setNegativeButton(android.R.string.cancel, null)
@@ -111,14 +112,14 @@ public class EditorSettingsActivity extends AppCompatActivity {
                     });
             listView.setAdapter(adapter);
 
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(getContext())
-                    .setTitle("Manage Bottom Bar")
+            new MaterialAlertDialogBuilder(getContext())
+                    .setTitle(R.string.manage_bottom_bar)
                     .setView(listView)
-                    .setPositiveButton("Add New", (dialog, which) -> showAddEditButtonDialog(finalArray, -1, null, () -> {
+                    .setPositiveButton(R.string.add, (dialog, which) -> showAddEditButtonDialog(finalArray, -1, null, () -> {
                         prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString()).apply();
                         showBottomBarManagementDialog(); // Refresh
                     }))
-                    .setNegativeButton("Close", null)
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show();
         }
 

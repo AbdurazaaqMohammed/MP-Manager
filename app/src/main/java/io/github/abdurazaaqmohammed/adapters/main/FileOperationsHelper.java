@@ -417,7 +417,7 @@ public class FileOperationsHelper {
                                             selectedItems[i1] = true;
                                             dialog.getListView().setItemChecked(i1, true);
                                         }
-                                        invertButton.setText("Invert Selection");
+                                        invertButton.setText(R.string.invert_selection);
                                     } else {
                                         // Subsequent clicks: invert selection
                                         for (int i1 = 0; i1 < selectedItems.length; i1++) {

@@ -1,7 +1,8 @@
 package modder.hub.dexeditor.utils;
 
-import io.github.rosemoe.sora.text.Content;
-import io.github.rosemoe.sora.text.Cursor;
+import android.app.Activity;
+
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.rosemoe.sora.widget.CodeEditor;
 
 /**
@@ -13,13 +14,15 @@ public class EditorHelper {
     public static void copyLine(CodeEditor editor) {
         int line = editor.getCursor().getLeftLine();
         String text = editor.getText().getLineString(line);
-        UIHelper.copyToClipboard(editor.getContext(), text);
+        Activity context = editor.getContext();
+        CopyUtil.copyToClipboard(context, text);
     }
 
     public static void cutLine(CodeEditor editor) {
         int line = editor.getCursor().getLeftLine();
         String text = editor.getText().getLineString(line);
-        UIHelper.copyToClipboard(editor.getContext(), text);
+        Activity context = editor.getContext();
+        CopyUtil.copyToClipboard(context, text);
         editor.getText().delete(line, 0, line, editor.getText().getColumnCount(line));
         if (line < editor.getText().getLineCount() - 1) {
             editor.getText().delete(line, editor.getText().getColumnCount(line), line + 1, 0);

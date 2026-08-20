@@ -49,7 +49,7 @@ public class CommandHelper {
                     .setTitle(R.string.no_profiles)
                     .setMessage(R.string.no_profiles_msg)
                     .setPositiveButton(R.string.settings, (d, w) -> new CommandHelperSettingsDialog().show(context.getSupportFragmentManager(), "CommandHelperSettings"))
-                    .setNegativeButton(R.string.cancel, null)
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show();
             return;
         }
@@ -70,7 +70,7 @@ public class CommandHelper {
         layout.addView(sameProfileCb);
         builder.setView(layout);
         builder.setPositiveButton(android.R.string.copy, (d, w) -> buildAndShowCommandDialog(profiles, filePaths, sameProfileCb.isChecked(), chPm));
-        builder.setNegativeButton(R.string.cancel, null);
+        builder.setNegativeButton(android.R.string.cancel, null);
         builder.show();
     }
 
@@ -281,9 +281,9 @@ public class CommandHelper {
         } catch (PackageManager.NameNotFoundException e) {
             new MaterialAlertDialogBuilder(context)
                     .setTitle(R.string.command_helper)
-                    .setMessage("Warning: Termux was not found on the device")
+                    .setMessage(R.string.termux_no)
                     .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton("Download Termux Now", (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-app/releases")))).show();
+                    .setPositiveButton(R.string.get_termux, (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-app/releases")))).show();
             return;
         }
         Intent intent = new Intent();
@@ -296,7 +296,7 @@ public class CommandHelper {
         try {
             context.startService(intent);
         } catch (SecurityException e) {
-            new MaterialAlertDialogBuilder(context).setMessage("Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)").setTitle("Permissions").setPositiveButton(android.R.string.ok, (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
+            new MaterialAlertDialogBuilder(context).setMessage(R.string.termux_perm).setTitle(context.rss.getString(R.string.permissions)).setPositiveButton(android.R.string.ok, (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
         } catch (IllegalStateException ise) {
             // This can happen if Termux is force stopped even if you granted draw over other apps permission
             context.startActivity(new Intent().setClassName("com.termux", "com.termux.app.TermuxActivity"));

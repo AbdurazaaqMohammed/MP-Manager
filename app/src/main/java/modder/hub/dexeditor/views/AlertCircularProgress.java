@@ -45,7 +45,8 @@ import android.widget.TextView;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 import android.view.KeyEvent;
-import modder.hub.dexeditor.utils.SketchwareUtil;
+
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 // Author - @developer-krushna
 public class AlertCircularProgress {
@@ -91,7 +92,7 @@ public class AlertCircularProgress {
                         dismiss();
                     } else {
                         lastBackPressTime = currentTime;
-                        SketchwareUtil.showMessage(activity, activity.getString(R.string.press_again_msg));
+                        Extensions.showMessage(activity, activity.getString(R.string.press_again_msg));
                     }
                     return true;
                 }

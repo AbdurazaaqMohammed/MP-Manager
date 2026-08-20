@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.ui.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.webkit.WebView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -83,7 +83,7 @@ public class CompareTextActivity extends AppCompatActivity {
             webView.loadDataWithBaseURL(null, html.toString(), "text/html", "UTF-8", null);
 
         } catch (Exception e) {
-            Toast.makeText(this, "Error comparing text: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Extensions.showMessage(this, "Error comparing text: " + e.getMessage());
             new ErrorUtil(this).showError(e);
         }
     }

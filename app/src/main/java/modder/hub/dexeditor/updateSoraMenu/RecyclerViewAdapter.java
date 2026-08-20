@@ -38,7 +38,6 @@ package modder.hub.dexeditor.updateSoraMenu;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -46,12 +45,10 @@ import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
@@ -68,10 +65,10 @@ Thanks to GeeksForGeeks.com
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.MyViewHolder> implements ItemMoveCallback.ItemTouchHelperContract {
 	
-	private ArrayList<HashMap<String, Object>> data;
+	private final ArrayList<HashMap<String, Object>> data;
 	private final StartDragListener mStartDragListener;
-	private Context context;
-	private SharedPreferences prefs;
+	private final Context context;
+	private final SharedPreferences prefs;
 	
 	private final Map<String, Integer> buttonIcons = new HashMap<String, Integer>() {{
 			put("panel_btn_select_all", R.drawable.ic_selectall_mt);

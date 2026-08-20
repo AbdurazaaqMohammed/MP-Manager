@@ -40,6 +40,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.AlertCircularProgress;
 
 import android.content.Intent;
@@ -48,7 +50,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
-import android.graphics.drawable.StateListDrawable;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -61,7 +62,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -96,9 +96,7 @@ import modder.hub.dexeditor.smali.SmaliFieldAccessParser;
 import modder.hub.dexeditor.smali.SmaliMethodBody;
 import modder.hub.dexeditor.smali.SmaliMethodInvokeParser;
 import modder.hub.dexeditor.utils.Notify_MT;
-import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.smali.SmaliHelper;
-import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.utils.ViewAnimationHelper;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
@@ -178,7 +176,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
         ViewAnimationHelper.enableSwipeViewToggle(methodRecyclerView, stringsRecyclerView);
 
-        toolbar.setTitle("Navigation");
+        toolbar.setTitle(R.string.navigation);
         toolbar.inflateMenu(R.menu.smali_navigation_menu);
 
         Menu menu = toolbar.getMenu();
@@ -229,30 +227,28 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             restoreRecyclerViewState();
         }
 
-        toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                if (item.getItemId() == R.id.close) {
-                    saveCurrentState(); // Save state before dismissing
-                    dismiss();
-                    return true;
-                }
-                if (item.getItemId() == R.id.strings_list) {
-                    if (!stringListInfo.isEmpty()) {
-                        if (stringsRecyclerView.getVisibility() == View.VISIBLE) {
-                            ViewAnimationHelper.hideViewAndShowViewWithAnimation(stringsRecyclerView, methodRecyclerView);
-                            item.setTitle("Show Strings");
-                        } else {
-                            ViewAnimationHelper.hideViewAndShowViewWithAnimation(methodRecyclerView, stringsRecyclerView);
-                            item.setTitle("Show Methods");
-                        }
-                    } else {
-                        SketchwareUtil.showMessage(getActivity(), "No strings found");
-                    }
-                    return true;
-                }
-                return false;
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.close) {
+                saveCurrentState(); // Save state before dismissing
+                dismiss();
+                return true;
             }
+            if (item.getItemId() == R.id.strings_list) {
+                if (!stringListInfo.isEmpty()) {
+                    if (stringsRecyclerView.getVisibility() == View.VISIBLE) {
+                        ViewAnimationHelper.hideViewAndShowViewWithAnimation(stringsRecyclerView, methodRecyclerView);
+                        item.setTitle(R.string.show_strings);
+                    } else {
+                        ViewAnimationHelper.hideViewAndShowViewWithAnimation(methodRecyclerView, stringsRecyclerView);
+                        item.setTitle(R.string.show_methods);
+                    }
+                } else {
+                    Activity _context = getActivity();
+                    Extensions.showMessage(_context, "No strings found");
+                }
+                return true;
+            }
+            return false;
         });
     }
 
@@ -291,11 +287,11 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         if (wasStringsVisible) {
             methodRecyclerView.setVisibility(View.GONE);
             stringsRecyclerView.setVisibility(View.VISIBLE);
-            item.setTitle("Show Methods");
+            item.setTitle(R.string.show_methods);
         } else {
             methodRecyclerView.setVisibility(View.VISIBLE);
             stringsRecyclerView.setVisibility(View.GONE);
-            item.setTitle("Show Strings");
+            item.setTitle(R.string.show_strings);
         }
 
         // Restore scroll positions
@@ -383,8 +379,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
     // Update the editor line number in the parent activity or current fragment
     public void updateEditorLineNumber(String lineNumber) {
-        if (getActivity() instanceof DexEditorActivity) {
-            DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (getActivity() instanceof DexEditorActivity activity) {
             UnifiedEditorFragment editorFragment = activity.getCurrentFragment();
             if (editorFragment != null) {
                 editorFragment._updateEditorLineNumber(lineNumber);
@@ -399,8 +394,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         final Activity activity = getActivity();
         if (activity == null || activity.isFinishing()) return;
 
-        if (activity instanceof DexEditorActivity) {
-            DexEditorActivity dexActivity = (DexEditorActivity) activity;
+        if (activity instanceof DexEditorActivity dexActivity) {
             String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
             String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
             String subtitle = "(" + _getTextAfter(methodName, "(");
@@ -418,12 +412,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         }
         
         dismiss(); // Close dialog fragment
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (activity.isFinishing() || activity.isDestroyed()) return;
-                new MethodFlowChartTask(activity, methodName).start(); // Start the flowchart generation task
-            }
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+            new MethodFlowChartTask(activity, methodName).start(); // Start the flowchart generation task
         }, 200L);
     }
 
@@ -444,8 +435,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         final Activity activity = getActivity();
         if (activity == null || activity.isFinishing()) return;
 
-        if (activity instanceof DexEditorActivity) {
-            DexEditorActivity dexActivity = (DexEditorActivity) activity;
+        if (activity instanceof DexEditorActivity dexActivity) {
             String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
             String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
 
@@ -468,12 +458,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
             return;
         }
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Notify_MT.Notify(activity, activity.getString(R.string.error), e.getMessage(), activity.getString(R.string.close));
-            }
-        });
+        activity.runOnUiThread(() -> Notify_MT.Notify(activity, activity.getString(R.string.error), e.getMessage(), activity.getString(R.string.close)));
     }
 
     public interface DialogLineNumberListener {
@@ -493,17 +478,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
         void execute() {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    final Map<String, List<HashMap<String, Object>>> results = doInBackground();
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onPostExecute(results);
-                        }
-                    });
-                }
+            new Thread(() -> {
+                final Map<String, List<HashMap<String, Object>>> results = doInBackground();
+                mainHandler.post(() -> onPostExecute(results));
             }).start();
         }
 
@@ -786,131 +763,126 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 }
             }
 
-            holder.backgroundLayout.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View _view) {
-                    // Get the method or field name from the clicked position
-                    final String methodOrFieldName = Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString();
+            holder.backgroundLayout.setOnLongClickListener(_view -> {
+                // Get the method or field name from the clicked position
+                final String methodOrFieldName1 = Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString();
 
-                    // Create a popup menu attached to the clicked view
-                    PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
-                    Menu menu = popupMenu.getMenu();
+                // Create a popup menu attached to the clicked view
+                PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
+                Menu menu = popupMenu.getMenu();
 
-                    // Check if this is a class signature (starts with L and ends with ;)
-                    if (methodOrFieldName.startsWith("L") && methodOrFieldName.endsWith(";")) {
-                        menu.add(1, 1, 1, "Copy class signature");
-                        menu.add(2, 2, 2, "Copy subclass signature");
-                    }
-
-                    // Check if this is a field (contains :)
-                    if (methodOrFieldName.contains(":")) {
-                        menu.add(3, 3, 3, "Copy field signature");
-                        menu.add(9, 9, 9, "Copy field get code");  // Generate smali get instruction
-                        menu.add(10, 10, 10, "Copy field put code"); // Generate smali put instruction
-                    }
-
-                    // Check if this is a method (contains ( but not :)
-                    if (methodOrFieldName.contains("(") && !methodOrFieldName.contains(":")) {
-                        menu.add(4, 4, 4, "Copy method signature");
-                        menu.add(5, 5, 5, "Copy method code");      // Get full method body
-                        menu.add(6, 6, 6, "Copy method invoke code"); // Generate invoke instruction
-                        menu.add(7, 7, 7, "View flowchart");       // Show method flowchart
-                        menu.add(8, 8, 8, "Smali to Java").setEnabled(Build.VERSION.SDK_INT > 23);        // Convert smali to Java
-                        menu.add(11, 11, 11, "AI Explanation").setEnabled(Build.VERSION.SDK_INT > 20);
-                    }
-                    // Set click listener for popup menu items
-                    popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                        @SuppressLint("NewApi")
-                        @Override
-                        public boolean onMenuItemClick(MenuItem menuItem) {
-                            switch (menuItem.getItemId()) {
-                                case 1:  // Copy class signature
-                                    UIHelper.copyToClipboard(requireContext(), methodOrFieldName);
-                                    return true;
-
-                                case 2:  // Copy subclass signature
-                                    UIHelper.copyToClipboard(requireContext(), Objects.requireNonNull(methodOrFieldInfo.get(position).get("SuperClass")).toString());
-                                    return true;
-
-                                case 3:  // Copy field signature
-                                    String fieldSignature = fullClassName + smaliCallSyntax + methodOrFieldName;
-                                    // Clean up the signature by removing extra parts after space
-                                    int spaceIndex = fieldSignature.indexOf(" ");
-                                    if (spaceIndex != -1) {
-                                        fieldSignature = fieldSignature.substring(0, spaceIndex);
-                                    }
-                                    UIHelper.copyToClipboard(requireContext(), fieldSignature);
-                                    return true;
-
-                                case 4:  // Copy method signature
-                                    UIHelper.copyToClipboard(requireContext(), fullClassName + smaliCallSyntax + methodOrFieldName);
-                                    return true;
-
-                                case 5:  // Copy method code
-                                    // Parse and copy the full method body from smali file
-                                    SmaliMethodBody smaliMethodBody = new SmaliMethodBody(
-                                            smaliFilePath,
-                                            new String[]{Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString()},
-                                            false
-                                    );
-                                    UIHelper.copyToClipboard(requireContext(), smaliMethodBody.parseClassInSmali());
-                                    return true;
-
-                                case 6:  // Copy method invoke code
-                                    // Generate and copy smali invoke instruction
-                                    SmaliMethodInvokeParser parser = new SmaliMethodInvokeParser(fullClassName);
-                                    UIHelper.copyToClipboard(requireContext(), parser.generateInvokeCode(
-                                            Objects.requireNonNull(item.get("FullMethodOrField")).toString(),
-                                            "v0"  // Using register v0
-                                    ));
-                                    return true;
-
-                                case 7:  // View flowchart
-                                    methodFlowChart(Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString());
-                                    return true;
-
-                                case 8:  // Smali to Java
-                                    smali2Java(Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString());
-                                    return true;
-
-                                case 9:  // Copy field get code
-                                    // Generate and copy smali get instruction for field
-                                    SmaliFieldAccessParser parser2 = new SmaliFieldAccessParser(fullClassName);
-                                    UIHelper.copyToClipboard(requireContext(), parser2.generateGetCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
-                                    return true;
-
-                                case 10:  // Copy field put code
-                                    // Generate and copy smali put instruction for field
-                                    SmaliFieldAccessParser parser3 = new SmaliFieldAccessParser(fullClassName);
-                                    UIHelper.copyToClipboard(requireContext(), parser3.generatePutCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
-                                    return true;
-
-                                case 11:  // AI Explanation
-                                    SmaliMethodBody smaliMethodBody2 = new SmaliMethodBody(smaliFilePath, new String[]{methodOrFieldInfo.get(position).get("MethodOrFieldName").toString()}, false);
-                                    Intent intent = new Intent(requireContext().getApplicationContext(), AIOverViewActivity.class);
-                                    intent.putExtra("smali", smaliMethodBody2.parseClassInSmali());
-                                    startActivity(intent);
-                                    return true;
-
-                                default:
-                                    return false;
-                            }
-                        }
-                    });
-
-                    // Show the popup menu
-                    popupMenu.show();
-                    return true;  // Consume the long click event
+                // Check if this is a class signature (starts with L and ends with ;)
+                if (methodOrFieldName1.startsWith("L") && methodOrFieldName1.endsWith(";")) {
+                    menu.add(1, 1, 1, "Copy class signature");
+                    menu.add(2, 2, 2, "Copy subclass signature");
                 }
+
+                // Check if this is a field (contains :)
+                if (methodOrFieldName1.contains(":")) {
+                    menu.add(3, 3, 3, "Copy field signature");
+                    menu.add(9, 9, 9, "Copy field get code");  // Generate smali get instruction
+                    menu.add(10, 10, 10, "Copy field put code"); // Generate smali put instruction
+                }
+
+                // Check if this is a method (contains ( but not :)
+                if (methodOrFieldName1.contains("(") && !methodOrFieldName1.contains(":")) {
+                    menu.add(4, 4, 4, "Copy method signature");
+                    menu.add(5, 5, 5, "Copy method code");      // Get full method body
+                    menu.add(6, 6, 6, "Copy method invoke code"); // Generate invoke instruction
+                    menu.add(7, 7, 7, "View flowchart");       // Show method flowchart
+                    menu.add(8, 8, 8, "Smali to Java").setEnabled(Build.VERSION.SDK_INT > 23);        // Convert smali to Java
+                    menu.add(11, 11, 11, "AI Explanation").setEnabled(Build.VERSION.SDK_INT > 20);
+                }
+                // Set click listener for popup menu items
+                popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                    @SuppressLint("NewApi")
+                    @Override
+                    public boolean onMenuItemClick(MenuItem menuItem) {
+                        switch (menuItem.getItemId()) {
+                            case 1:  // Copy class signature
+                                CopyUtil.copyToClipboard(requireActivity(), methodOrFieldName1);
+                                return true;
+
+                            case 2:  // Copy subclass signature
+                                CopyUtil.copyToClipboard(requireActivity(), Objects.requireNonNull(methodOrFieldInfo.get(position).get("SuperClass")).toString());
+                                return true;
+
+                            case 3:  // Copy field signature
+                                String fieldSignature = fullClassName + smaliCallSyntax + methodOrFieldName1;
+                                // Clean up the signature by removing extra parts after space
+                                int spaceIndex = fieldSignature.indexOf(" ");
+                                if (spaceIndex != -1) {
+                                    fieldSignature = fieldSignature.substring(0, spaceIndex);
+                                }
+                                CopyUtil.copyToClipboard(requireActivity(), fieldSignature);
+                                return true;
+
+                            case 4:  // Copy method signature
+                                CopyUtil.copyToClipboard(requireActivity(), fullClassName + smaliCallSyntax + methodOrFieldName1);
+                                return true;
+
+                            case 5:  // Copy method code
+                                // Parse and copy the full method body from smali file
+                                SmaliMethodBody smaliMethodBody = new SmaliMethodBody(
+                                        smaliFilePath,
+                                        new String[]{Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString()},
+                                        false
+                                );
+                                CopyUtil.copyToClipboard(requireActivity(), smaliMethodBody.parseClassInSmali());
+                                return true;
+
+                            case 6:  // Copy method invoke code
+                                // Generate and copy smali invoke instruction
+                                SmaliMethodInvokeParser parser = new SmaliMethodInvokeParser(fullClassName);
+                                // Using register v0
+                                CopyUtil.copyToClipboard(requireActivity(), parser.generateInvokeCode(
+                                                                    Objects.requireNonNull(item.get("FullMethodOrField")).toString(),
+                                                                    "v0"  // Using register v0
+                                                            ));
+                                return true;
+
+                            case 7:  // View flowchart
+                                methodFlowChart(Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString());
+                                return true;
+
+                            case 8:  // Smali to Java
+                                smali2Java(Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString());
+                                return true;
+
+                            case 9:  // Copy field get code
+                                // Generate and copy smali get instruction for field
+                                SmaliFieldAccessParser parser2 = new SmaliFieldAccessParser(fullClassName);
+                                CopyUtil.copyToClipboard(requireActivity(), parser2.generateGetCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
+                                return true;
+
+                            case 10:  // Copy field put code
+                                // Generate and copy smali put instruction for field
+                                SmaliFieldAccessParser parser3 = new SmaliFieldAccessParser(fullClassName);
+                                CopyUtil.copyToClipboard(requireActivity(), parser3.generatePutCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
+                                return true;
+
+                            case 11:  // AI Explanation
+                                SmaliMethodBody smaliMethodBody2 = new SmaliMethodBody(smaliFilePath, new String[]{methodOrFieldInfo.get(position).get("MethodOrFieldName").toString()}, false);
+                                Intent intent = new Intent(requireContext().getApplicationContext(), AIOverViewActivity.class);
+                                intent.putExtra("smali", smaliMethodBody2.parseClassInSmali());
+                                startActivity(intent);
+                                return true;
+
+                            default:
+                                return false;
+                        }
+                    }
+                });
+
+                // Show the popup menu
+                popupMenu.show();
+                return true;  // Consume the long click event
             });
 
-            holder.backgroundLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View _view) {
-                    lineNumber = Objects.requireNonNull(methodOrFieldInfo.get(position).get("StartLineNumber")).toString();
-                    updateEditorLineNumber(lineNumber);
-                    dismiss();
-                }
+            holder.backgroundLayout.setOnClickListener(_view -> {
+                lineNumber = Objects.requireNonNull(methodOrFieldInfo.get(position).get("StartLineNumber")).toString();
+                updateEditorLineNumber(lineNumber);
+                dismiss();
             });
 
         }
@@ -920,7 +892,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             return data.size();
         }
 
-        public class ViewHolder extends RecyclerView.ViewHolder {
+        public static class ViewHolder extends RecyclerView.ViewHolder {
             LinearLayout backgroundLayout;
             LinearLayout indexNameContainer;
             TextView indexNameTextView;
@@ -951,13 +923,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
         @Override
         public void run() {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    pd = new AlertCircularProgress(activity);
-                    pd.setMessage("Generating flowchart...");
-                    pd.show();
-                }
+            activity.runOnUiThread(() -> {
+                pd = new AlertCircularProgress(activity);
+                pd.setMessage(getString(R.string.generating_flowchart));
+                pd.show();
             });
 
             try {
@@ -966,30 +935,24 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 DrawFlowDiagram drawFlowDiagram = new DrawFlowDiagram(smaliFilePath, methodList.toArray(new String[0]));
                 drawFlowDiagram.run();
 
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (pd != null) pd.dismiss();
-                        
-                        for (Method method : drawFlowDiagram.getClassInSmali().getMethodDict().values()) {
-                            final String dotDiagram = drawFlowDiagram.drawMethodFlowDiagram(method);
+                activity.runOnUiThread(() -> {
+                    if (pd != null) pd.dismiss();
 
-                            if (activity instanceof DexEditorActivity) {
-                                String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
-                                String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
-                                String subtitle = "(" + _getTextAfter(methodName, "(");
-                                ((DexEditorActivity) activity).addTab(cleanedClassName, title, subtitle, dotDiagram, 2);
-                            }
+                    for (Method method : drawFlowDiagram.getClassInSmali().getMethodDict().values()) {
+                        final String dotDiagram = drawFlowDiagram.drawMethodFlowDiagram(method);
+
+                        if (activity instanceof DexEditorActivity) {
+                            String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
+                            String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
+                            String subtitle = "(" + _getTextAfter(methodName, "(");
+                            ((DexEditorActivity) activity).addTab(cleanedClassName, title, subtitle, dotDiagram, 2);
                         }
                     }
                 });
             } catch (final Exception e) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (pd != null) pd.dismiss();
-                        showExceptionDlg(activity, e);
-                    }
+                activity.runOnUiThread(() -> {
+                    if (pd != null) pd.dismiss();
+                    showExceptionDlg(activity, e);
                 });
             }
         }
@@ -1009,13 +972,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         @SuppressLint("StaticFieldLeak")
         @Override
         public void run() {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    pd = new AlertCircularProgress(activity);
-                    pd.setMessage("Decompiling...");
-                    pd.show();
-                }
+            activity.runOnUiThread(() -> {
+                pd = new AlertCircularProgress(activity);
+                pd.setMessage(getString(R.string.decompiling));
+                pd.show();
             });
 
             new AsyncTask<Void, Void, String>() {
@@ -1026,12 +986,9 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         SmaliMethodBody smaliMethodBody = new SmaliMethodBody(smaliFilePath, new String[]{methodName}, true);
                         return Smali2Java.translate(smaliMethodBody.parseClassInSmali(), dexVersion);
                     } catch (final Exception e) {
-                        activity.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (pd != null) pd.dismiss();
-                                showExceptionDlg(activity, e);
-                            }
+                        activity.runOnUiThread(() -> {
+                            if (pd != null) pd.dismiss();
+                            showExceptionDlg(activity, e);
                         });
                         return null;
                     }
@@ -1039,23 +996,16 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 @Override
                 protected void onPostExecute(String javaCode) {
-                    activity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (pd != null) pd.dismiss();
-                        }
+                    activity.runOnUiThread(() -> {
+                        if (pd != null) pd.dismiss();
                     });
                     
                     if (javaCode != null) {
-                        activity.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (activity instanceof DexEditorActivity) {
-                                    DexEditorActivity dexActivity = (DexEditorActivity) activity;
-                                    String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
-                                    String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
-                                    dexActivity.addTab(cleanedClassName, title, javaCode, 1);
-                                }
+                        activity.runOnUiThread(() -> {
+                            if (activity instanceof DexEditorActivity dexActivity) {
+                                String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
+                                String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
+                                dexActivity.addTab(cleanedClassName, title, javaCode, 1);
                             }
                         });
                     }
@@ -1103,33 +1053,24 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 }
             }
 
-            holder.backgroundLayout.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View _view) {
-                    PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
-                    Menu menu = popupMenu.getMenu();
-                    menu.add(1, 1, 1, "Copy");
-                    popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                        @Override
-                        public boolean onMenuItemClick(MenuItem item) {
-                            if (item.getItemId() == 1) {
-                                UIHelper.copyToClipboard(requireContext(), stringName);
-                                return true;
-                            }
-                            return false;
-                        }
-                    });
-                    popupMenu.show();
-                    return true;
-                }
+            holder.backgroundLayout.setOnLongClickListener(_view -> {
+                PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
+                Menu menu = popupMenu.getMenu();
+                menu.add(1, 1, 1, "Copy");
+                popupMenu.setOnMenuItemClickListener(item1 -> {
+                    if (item1.getItemId() == 1) {
+                        CopyUtil.copyToClipboard(requireActivity(), stringName);
+                        return true;
+                    }
+                    return false;
+                });
+                popupMenu.show();
+                return true;
             });
 
-            holder.backgroundLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View _view) {
-                    updateEditorLineNumber(startLineNumber);
-                    dismiss();
-                }
+            holder.backgroundLayout.setOnClickListener(_view -> {
+                updateEditorLineNumber(startLineNumber);
+                dismiss();
             });
         }
 
@@ -1138,7 +1079,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             return data.size();
         }
 
-        public class ViewHolder extends RecyclerView.ViewHolder {
+        public static class ViewHolder extends RecyclerView.ViewHolder {
             TextView stringTextView;
             LinearLayout backgroundLayout;
             LinearLayout indexNameContainer;

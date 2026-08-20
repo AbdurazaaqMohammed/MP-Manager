@@ -346,7 +346,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
 
     private void showProgress() {
         progress = new ProgressDialog(requireContext());
-        progress.setMessage("Generating...");
+        progress.setMessage(getString(R.string.generating));
         progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progress.setCancelable(false);
         progress.show();

@@ -23,7 +23,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-import android.text.TextUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,6 +31,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -302,7 +302,7 @@ public class FileUtil {
 
         if (path != null) {
             try {
-                return URLDecoder.decode(path, "UTF-8");
+                return URLDecoder.decode(path, StandardCharsets.UTF_8);
             } catch(Exception e) {
                 return null;
             }

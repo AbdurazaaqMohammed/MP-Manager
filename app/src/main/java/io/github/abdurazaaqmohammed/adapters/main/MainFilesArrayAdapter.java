@@ -21,7 +21,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -250,8 +250,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
-                if(a instanceof MainFilesArrayAdapter) {
-                    MainFilesArrayAdapter otherPaneAdapter = (MainFilesArrayAdapter) a;
+                if(a instanceof MainFilesArrayAdapter otherPaneAdapter) {
                     if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
                         compareFile1 = values[selectedPositions.iterator().next()];
                         compareFile2 = otherPaneAdapter.values[otherPaneAdapter.selectedPositions.iterator().next()];
@@ -330,7 +329,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             case "Checksums":
                                 if (isInZip) {
                                     if (multi) {
-                                        Toast.makeText(context, "Checksums for multiple zip entries not supported", Toast.LENGTH_SHORT).show();
+                                        Extensions.showMessage(context, "Checksums for multiple zip entries not supported");
                                     } else {
                                         ZipEntryInfo zipEntry = (ZipEntryInfo) item;
                                         if (!zipEntry.isDirectory()) {
@@ -368,7 +367,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             }
                             case "Command Helper":
                                 if (isInZip) {
-                                    Toast.makeText(context, "Command Helper not supported for zip entries", Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(context, "Command Helper not supported for zip entries");
                                     return;
                                 }
                                 ArrayList<String> cmdFilePaths = new ArrayList<>();
@@ -434,7 +433,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         showCompressDialog(file, fileName, multi);
                                         break;
                                     case 5:
-                                        propertiesDialog.show(multi, finalPosition1, values, selectedPositions, isInZip, file, entry, fileName, getFilesToDisplay(multi, finalPosition1).toString());
+                                        propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, getFilesToDisplay(multi, finalPosition1).toString());
                                         break;
                                     case 6:
                                         Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
@@ -509,9 +508,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     if (imm != null) imm.showSoftInput(tv, InputMethodManager.SHOW_IMPLICIT);
                 });
                 new MaterialAlertDialogBuilder(context)
-                .setTitle("Restore backup")
+                .setTitle(R.string.restore_backup)
                 .setView(et)
-                .setPositiveButton("Restore", (dialog, which) -> {
+                .setPositiveButton(R.string.restore, (dialog, which) -> {
                     String bakPath = file.getPath();
                     String origPath = bakPath.replace(bak, "");
                     File orig = new File(origPath);
@@ -555,7 +554,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                         if (fh.getFileName().endsWith(".apk")) {
                                                             File tmpApk = new File(tmpDir, fh.getFileName());
                                                             try (InputStream is = zf.getInputStream(fh);
-                                                                 java.io.FileOutputStream fos = new FileOutputStream(tmpApk)) {
+                                                                 FileOutputStream fos = new FileOutputStream(tmpApk)) {
                                                                 byte[] buf = new byte[65536];
                                                                 int n;
                                                                 while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
@@ -566,17 +565,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                                     if (!apkFiles.isEmpty()) {
                                                         InstallUtil.installSplitApksWithDialog(context, apkFiles, file.getName());
                                                     } else {
-                                                        context.runOnUiThread(() -> Toast.makeText(context, "No APK files found in archive", Toast.LENGTH_SHORT).show());
+                                                        Extensions.showMessage(context, R.string.no_apk_files_found);
                                                     }
                                                 } catch (Exception e) {
                                                     context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
                                                 }
                                             }).start();
                                         } else {
-                                            Toast.makeText(context, "Installing split APKs is not supported on this version of Android :(", Toast.LENGTH_SHORT).show();
+                                            Extensions.showMessage(context, "Installing split APKs is not supported on this version of Android :(");
 
                                             // We should check if apk minsdk <20 here
-                                            Toast.makeText(context, "You could try merging the APK then installing it", Toast.LENGTH_SHORT).show();
+                                            Extensions.showMessage(context, "You could try merging the APK then installing it");
                                         }
                                         break;
                                     case 1:
@@ -670,11 +669,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 context.loadFolderInPane(ogFolder, pane1);
                             } catch (Exception e) {
                                 if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                                else Toast.makeText(context, "Failed to rename " + fileName, Toast.LENGTH_SHORT).show();
+                                else Extensions.showMessage(context, "Failed to rename " + fileName);
                             }
                         } else {
                             if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                            else Toast.makeText(context, "Failed to rename " + fileName, Toast.LENGTH_SHORT).show();
+                            else Extensions.showMessage(context, "Failed to rename " + fileName);
                         }
                     }
                 });
@@ -710,7 +709,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
         } else deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
-        deleteDialog.setTitle("Alert").setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
+        deleteDialog.setTitle(context.rss.getString(R.string.warning)).setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
             Runnable doDelete = () -> {
                 pm.show();
@@ -787,8 +786,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 }
                 if (inKeyDir) {
                     new MaterialAlertDialogBuilder(context)
-                            .setTitle("Warning: Key Directory")
-                            .setMessage("You are about to delete files in a sensitive system directory. This may break apps or cause system instability.\n\nAre you absolutely sure?")
+                            .setTitle(R.string.warning_dangerous_directory)
+                            .setMessage(R.string.warn_delete_s)
                             .setPositiveButton("Delete Anyway", (d, w) -> {
                                 if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                                     wrapper[0] = sw;

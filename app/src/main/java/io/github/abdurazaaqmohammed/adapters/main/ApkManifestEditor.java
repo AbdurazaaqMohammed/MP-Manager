@@ -16,7 +16,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -270,7 +270,7 @@ public class ApkManifestEditor {
         properties.offset = new File(DialogConfigs.DEFAULT_DIR);
         properties.extensions = new String[]{"png", "webp", "jpg", "jpeg"};
         FilePickerDialog fpd = new FilePickerDialog(context, properties);
-        fpd.setTitle("Select Icon");
+        fpd.setTitle(context.rss.getString(R.string.select_icon));
         ProgressManager pm = new ProgressManager(context, true);
 
         fpd.setDialogSelectionListener(files -> new Thread(() -> {
@@ -282,7 +282,7 @@ public class ApkManifestEditor {
                         iconPath != null ? iconPath : "res/mipmap-xxhdpi-v4/ic_launcher.png",
                         is);
                 pm.dismiss();
-                context.handler.post(() -> Toast.makeText(context, "Icon changed", Toast.LENGTH_LONG).show());
+                Extensions.showMessage(context, R.string.icon_changed);
             } catch (Exception e) {
                 pm.dismiss();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
@@ -318,7 +318,7 @@ public class ApkManifestEditor {
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
                 if (entries == null) {
-                    context.handler.post(() -> Toast.makeText(context, "Could not decode AndroidManifest.xml", Toast.LENGTH_SHORT).show());
+                    Extensions.showMessage(context, R.string.could_not_decode_am);
                     return;
                 }
                 context.handler.post(() -> showManifestTreeDialog(apkFile, entries));

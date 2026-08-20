@@ -44,9 +44,9 @@ Special thanks to @Timscriptov for enhancing and fixing some parts of the codes
 */
 
 public class ArgumentParser {
-    private String[] args;
-    private Map<String, String> argumentMap = new HashMap<>();
-    private Map<String, String> argumentHelp = new HashMap<>();
+    private final String[] args;
+    private final Map<String, String> argumentMap = new HashMap<>();
+    private final Map<String, String> argumentHelp = new HashMap<>();
 
     public ArgumentParser(String[] args) {
         this.args = args;

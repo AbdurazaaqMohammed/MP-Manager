@@ -18,7 +18,7 @@
     <Button
         style="?android:attr/buttonStyle"
         android:background="?android:selectableItemBackground"
-        android:text="@string/cancel"
+        android:text="@android:string/cancel"
         android:id="@+id/cancel"
         android:textStyle="bold"
         android:layout_width="wrap_content"

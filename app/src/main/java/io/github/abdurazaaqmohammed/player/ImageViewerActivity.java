@@ -289,9 +289,9 @@ public class ImageViewerActivity extends AppCompatActivity {
         }
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Image Properties")
-                .setMessage(sb.toString().trim())
-                .setPositiveButton("Close", null)
+                .setTitle(R.string.image_properties)
+                .setMessage(sb)
+                .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
 

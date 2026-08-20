@@ -1,11 +1,12 @@
 package io.github.abdurazaaqmohammed.ui.dialogs;
 
-import android.app.AlertDialog;
-import android.content.Context;
+import android.app.Activity;
 import android.content.Intent;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.Toast;
+
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -23,7 +24,7 @@ import java.util.zip.ZipFile;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 
 public class CompareZipDialog {
-    private final Context context;
+    private final Activity context;
     private final File zip1;
     private final File zip2;
 
@@ -44,7 +45,7 @@ public class CompareZipDialog {
         }
     }
 
-    public CompareZipDialog(Context context, File zip1, File zip2) {
+    public CompareZipDialog(Activity context, File zip1, File zip2) {
         this.context = context;
         this.zip1 = zip1;
         this.zip2 = zip2;
@@ -124,9 +125,9 @@ public class CompareZipDialog {
         });
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle("ZIP Differences")
+                .setTitle(R.string.zip_differences)
                 .setView(listView)
-                .setPositiveButton("Close", null)
+                .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
 
@@ -140,7 +141,7 @@ public class CompareZipDialog {
 
             new CompareZipDialog(context, tmp1, tmp2).show();
         } catch (Exception e) {
-            Toast.makeText(context, "Error extracting inner zip: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(context, "Error extracting inner zip: " + e.getMessage());
         }
     }
 
@@ -154,7 +155,7 @@ public class CompareZipDialog {
 
             new CompareArscDialog(context, tmp1.getAbsolutePath(), tmp2.getAbsolutePath()).show();
         } catch (Exception e) {
-            Toast.makeText(context, "Error extracting inner arsc: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(context, "Error extracting inner arsc: " + e.getMessage());
         }
     }
 

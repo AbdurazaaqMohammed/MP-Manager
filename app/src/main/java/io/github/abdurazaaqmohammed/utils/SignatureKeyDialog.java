@@ -11,7 +11,7 @@ import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricManager;
@@ -142,7 +142,7 @@ public class SignatureKeyDialog {
                                 .putStringSet(PREF_SIGNATURE_PATHS, new HashSet<>(finalSignaturePaths))
                                 .putString("keyPath", path).apply();
 
-                Toast.makeText(activity, "Signature file set", Toast.LENGTH_SHORT).show();
+                Extensions.showMessage(activity, R.string.signature_file_set);
             });
             fpd.show();
         });
@@ -150,7 +150,7 @@ public class SignatureKeyDialog {
         ScrollView scrollView = new ScrollView(activity);
         scrollView.addView(view);
         new MaterialAlertDialogBuilder(activity)
-                .setTitle("Signature Key")
+                .setTitle(R.string.signature_key)
                 .setView(scrollView)
                 .setPositiveButton(android.R.string.ok, (d, which) -> {
                     String selectedPath = actv.getText() != null ? actv.getText().toString() : null;
@@ -162,18 +162,18 @@ public class SignatureKeyDialog {
                     if (TextUtils.isEmpty(selectedPath)) selectedPath = pickedPath[0];
 
                     if (TextUtils.isEmpty(selectedPath)) {
-                        Toast.makeText(activity, "No signature selected", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(activity, R.string.no_signature_selected);
                         return;
                     }
                     if (!new File(selectedPath).exists()) {
-                        Toast.makeText(activity, "Invalid file path", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(activity, R.string.invalid_file_path);
                         return;
                     }
 
                     if (biometricChecked) {
                         if (!TextUtils.isEmpty(password)) {
                             if (!verifyKeystorePassword(new File(selectedPath), password)) {
-                                Toast.makeText(activity, "Invalid password", Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(activity, "Invalid password");
                                 return;
                             }
                             prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(password)).apply();
@@ -182,7 +182,7 @@ public class SignatureKeyDialog {
                         } else if (wasUsingBiometrics) {
                             useBiometrics = true;
                         } else {
-                            Toast.makeText(activity, "Enter password first to enable biometrics", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(activity, "Enter password first to enable biometrics");
                             return;
                         }
                     } else {
@@ -190,7 +190,7 @@ public class SignatureKeyDialog {
                             prefs.edit().putBoolean("useBiometrics", false).remove("keyPass").apply();
                         }
                         if (TextUtils.isEmpty(password)) {
-                            Toast.makeText(activity, "No password entered", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(activity, "No password entered");
                             return;
                         }
                         useBiometrics = false;
@@ -212,14 +212,14 @@ public class SignatureKeyDialog {
                                 public void onAuthenticationError(int errorCode,
                                                                   @NonNull CharSequence errString) {
                                     super.onAuthenticationError(errorCode, errString);
-                                    Toast.makeText(activity, "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(activity, "Authentication error: " + errString);
                                 }
 
                                 @Override
                                 public void onAuthenticationSucceeded(
                                         @NonNull BiometricPrompt.AuthenticationResult result) {
                                     super.onAuthenticationSucceeded(result);
-                                    Toast.makeText(activity, "Authentication succeeded!", Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(activity, "Authentication succeeded!");
                                     new Thread(() -> {
                                         try {
                                             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", "android"));
@@ -249,7 +249,7 @@ public class SignatureKeyDialog {
                                             } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
                                             pm.dismiss();
                                             activity.runOnUiThread(() -> {
-                                                Toast.makeText(activity, activity.getString(R.string.signed, sigFileName), Toast.LENGTH_SHORT).show();
+                                                Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
                                                 activity.reloadCurrentFolder();
                                             });
                                         } catch (Exception e) {
@@ -261,12 +261,12 @@ public class SignatureKeyDialog {
                                 @Override
                                 public void onAuthenticationFailed() {
                                     super.onAuthenticationFailed();
-                                    Toast.makeText(activity, "Authentication failed", Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(activity, "Authentication failed");
                                 }
                             });
                             BiometricPrompt.PromptInfo.Builder auth = new BiometricPrompt.PromptInfo.Builder()
-                                    .setTitle("Authenticate Signature")
-                                    .setSubtitle("Authenticate to use sign key");
+                                    .setTitle(activity.rss.getString(R.string.auth_sign))
+                                    .setSubtitle(activity.rss.getString(R.string.auth_sign_msg));
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 auth.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
                             } else auth.setDeviceCredentialAllowed(true);
@@ -299,7 +299,7 @@ public class SignatureKeyDialog {
                                 } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
                                 pm.dismiss();
                                 activity.runOnUiThread(() -> {
-                                    Toast.makeText(activity, activity.getString(R.string.signed, sigFileName), Toast.LENGTH_SHORT).show();
+                                    Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
                                     activity.reloadCurrentFolder();
                                 });
                             } catch (Exception e) {
@@ -324,7 +324,7 @@ public class SignatureKeyDialog {
                             else if (pk8.lastModified() < jks.lastModified()) path = jksPath;
                             else path = keyPath;
                             prefs.edit().putString("keyPath", path).apply();
-                            Toast.makeText(activity, "Keys generated: " + path, Toast.LENGTH_LONG).show();
+                            Extensions.showMessage(activity, "Keys generated: " + path);
                         }
 
                         @Override

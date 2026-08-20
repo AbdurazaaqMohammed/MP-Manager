@@ -60,6 +60,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 import modder.hub.dexeditor.fragment.SettingsFragment;
 import modder.hub.dexeditor.views.AlertCircularProgress;
@@ -147,17 +148,14 @@ public class AIOverViewActivity extends AppCompatActivity {
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Edit Prompt")
                 .setView(container)
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        String customPrompt = input.getText().toString().trim();
-                        if (customPrompt.isEmpty()) {
-                            customPrompt = DefaultMsg + smaliCode;
-                        } else {
-                            customPrompt = customPrompt + "\n" + smaliCode;
-                        }
-                        startAnalysis(customPrompt);
+                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                    String customPrompt = input.getText().toString().trim();
+                    if (customPrompt.isEmpty()) {
+                        customPrompt = DefaultMsg + smaliCode;
+                    } else {
+                        customPrompt = customPrompt + "\n" + smaliCode;
                     }
+                    startAnalysis(customPrompt);
                 })
                 .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
                     @Override
@@ -260,7 +258,7 @@ public class AIOverViewActivity extends AppCompatActivity {
             super.onBackPressed();
         } else {
             lastBackPressTime = currentTime;
-            modder.hub.dexeditor.utils.SketchwareUtil.showMessage(this, "Press back again to exit");
+            Extensions.showMessage(this, "Press back again to exit");
         }
     }
 

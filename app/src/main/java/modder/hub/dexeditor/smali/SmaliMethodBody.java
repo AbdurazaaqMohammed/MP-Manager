@@ -38,18 +38,15 @@ package modder.hub.dexeditor.smali;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 /*
 Author @developer-krushna
 */
 public class SmaliMethodBody {
     
-    private String smaliFilePath;
-    private String[] methodsToDraw;
+    private final String smaliFilePath;
+    private final String[] methodsToDraw;
     private boolean isExtractClassDetails = false;
     
     public SmaliMethodBody(String smaliFilePath, String[] methodsToDraw, boolean isExtractClassDetails) {
@@ -119,7 +116,7 @@ public class SmaliMethodBody {
     
     private boolean containsMethod(String[] methodsToDraw, String methodName) {
         // Check if the given array contains the target method name
-        if (methodsToDraw == null || methodsToDraw.length == 0) {
+        if (methodsToDraw == null) {
             return false;
         }
         for (String method : methodsToDraw) {

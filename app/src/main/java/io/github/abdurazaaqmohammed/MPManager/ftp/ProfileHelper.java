@@ -127,7 +127,7 @@ public class ProfileHelper {
 
     private void showProfileManagementDialog(boolean isServer) {
         AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
-        builder.setTitle("Manage Profiles");
+        builder.setTitle(context.rss.getString(R.string.manage_profiles));
 
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_profile_management, null);
         RecyclerView recyclerView = view.findViewById(R.id.profile_list);
@@ -137,7 +137,7 @@ public class ProfileHelper {
                 .filter(p -> p.isServerProfile() == isServer)
                 .toList();
 
-        builder.setView(view).setPositiveButton("Close", null);
+        builder.setView(view).setPositiveButton(android.R.string.ok, null);
         AlertDialog ad = builder.show();
         ProfileAdapter adapter = new ProfileAdapter(profiles, profile -> {
             ad.dismiss();

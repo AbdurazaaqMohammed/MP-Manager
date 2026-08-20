@@ -32,6 +32,7 @@
 package modder.hub.dexeditor.fragment;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.os.Bundle;
 import android.util.Base64;
 import android.view.LayoutInflater;
@@ -50,8 +51,8 @@ import androidx.fragment.app.Fragment;
 import java.nio.charset.StandardCharsets;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import modder.hub.dexeditor.activity.DexEditorActivity;
-import modder.hub.dexeditor.utils.UIHelper;
 
 /*
 Author @developer-krushna
@@ -105,8 +106,7 @@ public class GraphFragment extends Fragment {
 
         View menuBtn = view.findViewById(R.id.linear_left);
 
-        if (getActivity() instanceof DexEditorActivity) {
-            DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (getActivity() instanceof DexEditorActivity activity) {
             activity.setToolbarTitle(className.replace("/", "."));
             activity.setToolbarSubtitle(subtitle);
         }
@@ -128,7 +128,8 @@ public class GraphFragment extends Fragment {
                         ((DexEditorActivity) GraphFragment.this.getActivity()).locateClass(className);
                     }
                 } else {
-                    UIHelper.copyToClipboard(GraphFragment.this.requireContext(), menuItem.getTitle().toString());
+                    Activity context = GraphFragment.this.requireContext();
+                    CopyUtil.copyToClipboard(context, menuItem.getTitle().toString());
                 }
                 return true;
             }

@@ -4,7 +4,7 @@ package io.github.abdurazaaqmohammed.utils;
 import android.app.Activity;
 import android.os.Handler;
 import android.text.TextUtils;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -59,7 +59,7 @@ public class RunUtil {
 
                 if (success && handler != null && !TextUtils.isEmpty(msg))
                     handler.post(() -> {
-                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(context, msg);
                         if(reloadFolder) context.reloadCurrentFolder();
                     });
             } catch (Exception e) {

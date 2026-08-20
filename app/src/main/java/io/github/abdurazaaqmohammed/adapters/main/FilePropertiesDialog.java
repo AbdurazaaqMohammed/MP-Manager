@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -15,7 +16,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.color.MaterialColors;
 
@@ -50,7 +53,7 @@ public class FilePropertiesDialog {
         this.permissionsEditor = new PermissionsEditorHelper(context);
     }
 
-    public void show(boolean multi, int position, Object[] values, Set<Integer> selectedPositions,
+    public void show(boolean multi, Object[] values, Set<Integer> selectedPositions,
                      boolean isInZip, File file, ZipEntryInfo entry, String fileName, String displayName) {
         View propView = LayoutInflater.from(context).inflate(R.layout.dialog_properties, null);
         TextView propTitle = propView.findViewById(R.id.propertyTitle);
@@ -114,7 +117,7 @@ public class FilePropertiesDialog {
                     context.handler.post(() -> sizeText.setText(FileSize.getHumanReadableFileSize(folderSize)));
                 }).start();
             }
-        } else if (!multi && entry != null && !entry.isDirectory()) {
+        } else if (!multi && !entry.isDirectory()) {
             long modTime = entry.getLastModified();
             if (modTime > 0) {
                 addPropertyRow(propRows, context.getString(R.string.modified),
@@ -125,7 +128,7 @@ public class FilePropertiesDialog {
         RootManager rm = RootManager.getInstance(context);
         if (!isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
             TextView permsTitle = new TextView(context);
-            permsTitle.setText("Root Permissions");
+            permsTitle.setText(R.string.root_permissions);
             permsTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
             permsTitle.setPadding(0, dp(12), 0, dp(4));
             propRows.addView(permsTitle);
@@ -155,11 +158,10 @@ public class FilePropertiesDialog {
                             new Thread(() -> {
                                 try {
                                     rm.chmod(file.getAbsolutePath(), permsStr);
-                                    context.handler.post(() ->
-                                            Toast.makeText(context, "Permissions updated", Toast.LENGTH_SHORT).show());
+                                    Extensions.showMessage(context, R.string.permissions_updated);
                                 } catch (Exception e) {
                                     context.handler.post(() ->
-                                            new io.github.abdurazaaqmohammed.utils.ErrorUtil(context).showError(e));
+                                            new ErrorUtil(context).showError(e));
                                 }
                             }).start();
                         }
@@ -174,7 +176,7 @@ public class FilePropertiesDialog {
                 checksumDialogs.startChecksumComputation(checksumRows, file);
             });
             checksumDialogs.startChecksumComputation(checksumRows, file);
-        } else if (isInZip && !multi && entry != null && !entry.isDirectory()) {
+        } else if (isInZip && !multi && !entry.isDirectory()) {
             checksumDialogs.addCrc32Row(checksumRows, entry.computeCrc32());
             propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
                 checksumRows.removeAllViews();
@@ -217,36 +219,31 @@ public class FilePropertiesDialog {
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
 
-        new DatePickerDialog(context, (datePicker, y, m, d) -> {
-            new TimePickerDialog(context, (timePicker, h, min) -> {
-                Calendar result = Calendar.getInstance();
-                result.set(y, m, d, h, min, 0);
-                long newTime = result.getTimeInMillis();
-                RootManager rm = RootManager.getInstance(context);
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                    new Thread(() -> {
-                        try {
-                            String touchTime = String.format(Locale.US, "%04d%02d%02d%02d%02d.%02d",
-                                    y, m + 1, d, h, min, 0);
-                            rm.execute("touch -t " + touchTime + " '" + file.getAbsolutePath() + "'");
-                            context.handler.post(() -> {
-                                modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
-                                Toast.makeText(context, "Last modified updated", Toast.LENGTH_SHORT).show();
-                            });
-                        } catch (Exception e) {
-                            context.handler.post(() ->
-                                    Toast.makeText(context, "Failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
-                        }
-                    }).start();
+        new DatePickerDialog(context, (datePicker, y, m, d) -> new TimePickerDialog(context, (timePicker, h, min) -> {
+            Calendar result = Calendar.getInstance();
+            result.set(y, m, d, h, min, 0);
+            long newTime = result.getTimeInMillis();
+            RootManager rm = RootManager.getInstance(context);
+            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                new Thread(() -> {
+                    try {
+                        String touchTime = String.format(Locale.US, "%04d%02d%02d%02d%02d.%02d",
+                                y, m + 1, d, h, min, 0);
+                        rm.execute("touch -t " + touchTime + " '" + file.getAbsolutePath() + "'");
+                        context.handler.post(() -> {
+                            modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
+                            Extensions.showMessage(context, "Last modified updated");
+                        });
+                    } catch (Exception e) { new ErrorUtil(context).showError(e); }
+                }).start();
+            } else {
+                if (file.setLastModified(newTime)) {
+                    modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
                 } else {
-                    if (file.setLastModified(newTime)) {
-                        modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
-                    } else {
-                        Toast.makeText(context, "Failed to update last modified", Toast.LENGTH_SHORT).show();
-                    }
+                    Extensions.showMessage(context, "Failed to update last modified");
                 }
-            }, hour, minute, true).show();
-        }, year, month, day).show();
+            }
+        }, hour, minute, true).show(), year, month, day).show();
     }
 
     private TextView addPropertyRow(LinearLayout container, String label, String value) {
@@ -283,18 +280,21 @@ public class FilePropertiesDialog {
 
     private int[] parsePermsForEditor(String perms) {
         int[] result = new int[4];
-        if (perms == null || perms.isEmpty()) return result;
+        if (TextUtils.isEmpty(perms)) return result;
         try {
             String clean = perms.trim();
+            int i = Integer.parseInt(String.valueOf(clean.charAt(0)));
+            int i1 = Integer.parseInt(String.valueOf(clean.charAt(1)));
+            int i2 = Integer.parseInt(String.valueOf(clean.charAt(2)));
             if (clean.length() == 3) {
-                result[1] = Integer.parseInt(String.valueOf(clean.charAt(0)));
-                result[2] = Integer.parseInt(String.valueOf(clean.charAt(1)));
-                result[3] = Integer.parseInt(String.valueOf(clean.charAt(2)));
+                result[1] = i;
+                result[2] = i1;
+                result[3] = i2;
                 result[0] = 0;
             } else if (clean.length() == 4) {
-                result[0] = Integer.parseInt(String.valueOf(clean.charAt(0)));
-                result[1] = Integer.parseInt(String.valueOf(clean.charAt(1)));
-                result[2] = Integer.parseInt(String.valueOf(clean.charAt(2)));
+                result[0] = i;
+                result[1] = i1;
+                result[2] = i2;
                 result[3] = Integer.parseInt(String.valueOf(clean.charAt(3)));
             }
         } catch (NumberFormatException e) {

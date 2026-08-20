@@ -10,7 +10,9 @@ import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -201,15 +203,15 @@ public class ApkInstallDialogHelper {
         String packageName = getPackageNameForApk(apkFile);
 
         Dialog dialog = new MaterialAlertDialogBuilder(activity)
-                .setTitle("Installation Complete")
+                .setTitle(R.string.installation_complete)
                 .setView(layout)
-                .setPositiveButton("Launch App", (d, w) -> {
+                .setPositiveButton(R.string.launch, (d, w) -> {
                     if (packageName != null) {
                         Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(packageName);
                         if (launchIntent != null) {
                             activity.startActivity(launchIntent);
                         } else {
-                            Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(activity, "Cannot launch app");
                         }
                     }
                 })

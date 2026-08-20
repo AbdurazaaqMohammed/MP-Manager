@@ -1,14 +1,11 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
-import android.media.MediaPlayer;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
@@ -59,7 +57,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     private SharedPreferences prefs;
     private GestureDetector gestureDetector;
     private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
-    private final Runnable autoHideRunnable = () -> hideControls();
+    private final Runnable autoHideRunnable = this::hideControls;
 
     public static void open(Activity activity) {
         Intent intent = new Intent(activity, MediaPlayerActivity.class);
@@ -133,8 +131,8 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         btnQueue = findViewById(R.id.btnQueue);
         btnLock = findViewById(R.id.btnLock);
         btnSettings = findViewById(R.id.btnSettings);
-        btnSetA = (Button) findViewById(R.id.btnSetA);
-        btnSetB = (Button) findViewById(R.id.btnSetB);
+        btnSetA = findViewById(R.id.btnSetA);
+        btnSetB = findViewById(R.id.btnSetB);
         btnClearAB = findViewById(R.id.btnClearAB);
 
         seekBar = findViewById(R.id.seekBar);
@@ -245,7 +243,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     private void setupGestureControls() {
         gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
-            public boolean onDoubleTap(MotionEvent e) {
+            public boolean onDoubleTap(@NonNull MotionEvent e) {
                 if (controlsLocked) return false;
                 float screenWidth = getWindow().getDecorView().getWidth();
                 if (e.getX() < screenWidth / 3f) {
@@ -260,7 +258,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
             }
 
             @Override
-            public boolean onSingleTapConfirmed(MotionEvent e) {
+            public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
                 if (playerManager.isPlayingVideo()) {
                     if (controlsLocked) return true;
                     if (controlsVisible) hideControls();
@@ -270,7 +268,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
             }
 
             @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2, float vX, float vY) {
+            public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2, float vX, float vY) {
                 if (controlsLocked) return false;
                 float dx = e2.getX() - e1.getX();
                 if (Math.abs(dx) > Math.abs(vY * 3) && Math.abs(dx) > 100) {
@@ -352,8 +350,8 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         }
     }
 
-    @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
-    @Override public void surfaceDestroyed(SurfaceHolder holder) {
+    @Override public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {}
+    @Override public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
         playerManager.setSurface(null);
     }
 
@@ -394,7 +392,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
                     break;
                 case ERROR:
                     errorMessage.setVisibility(View.VISIBLE);
-                    errorMessage.setText("Playback error");
+                    errorMessage.setText(R.string.playback_error);
                     showControls();
                     break;
                 case ENDED:
@@ -453,18 +451,14 @@ public class MediaPlayerActivity extends AppCompatActivity implements
             trackArtist.setText(item.artist != null ? item.artist : "Unknown Artist");
             trackAlbum.setText(item.album != null ? item.album : "");
 
-            if (item.path != null) {
-                MediaMetadataRetriever mmr = new MediaMetadataRetriever();
-                try {
-                    mmr.setDataSource(this, item.uri);
-                    byte[] art = mmr.getEmbeddedPicture();
-                    if (art != null) artworkView.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
-                    else artworkView.setImageResource(android.R.drawable.ic_menu_gallery);
-                    mmr.release();
-                } catch (Exception e) {
-                    try { mmr.release(); } catch (Exception ignored2) {}
-                    artworkView.setImageResource(android.R.drawable.ic_menu_gallery);
-                }
+            if (item.path != null) try (MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {
+                mmr.setDataSource(this, item.uri);
+                byte[] art = mmr.getEmbeddedPicture();
+                if (art != null) artworkView.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
+                else artworkView.setImageResource(android.R.drawable.ic_menu_gallery);
+                mmr.release();
+            } catch (Exception e) {
+                artworkView.setImageResource(android.R.drawable.ic_menu_gallery);
             }
         }
 
@@ -509,7 +503,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         runOnUiThread(() -> {
             if (percent < 100) {
                 bufferingIndicator.setVisibility(View.VISIBLE);
-                bufferingIndicator.setText("Buffering: " + percent + "%");
+                bufferingIndicator.setText(getString(R.string.buffering, percent));
             } else {
                 bufferingIndicator.setVisibility(View.GONE);
             }
@@ -536,11 +530,11 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     }
 
     private void showPlayerSettings() {
-        String[] items = {"Keep screen on: " + (playerManager.isKeepScreenOn() ? "ON" : "OFF"),
-                "Skip duration: " + (playerManager.getSkipDuration() / 1000) + "s",
-                "Close player"};
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("Player Settings")
+        String[] items = {getString(R.string.keep_screen_on, (playerManager.isKeepScreenOn() ? "ON" : "OFF")),
+                getString(R.string.skip_duration_X, (playerManager.getSkipDuration() / 1000)),
+                getString(R.string.close_player)};
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.player_settings)
                 .setItems(items, (d, which) -> {
                     switch (which) {
                         case 0:
@@ -550,8 +544,8 @@ public class MediaPlayerActivity extends AppCompatActivity implements
                         case 1:
                             int[] durations = {5000, 10000, 15000, 30000};
                             String[] labels = {"5s", "10s", "15s", "30s"};
-                            new android.app.AlertDialog.Builder(this)
-                                    .setTitle("Skip Duration")
+                            new AlertDialog.Builder(this)
+                                    .setTitle(R.string.skip_duration)
                                     .setSingleChoiceItems(labels, -1, (d2, w) -> {
                                         if (w >= 0 && w < durations.length) {
                                             playerManager.setSkipDuration(durations[w]);

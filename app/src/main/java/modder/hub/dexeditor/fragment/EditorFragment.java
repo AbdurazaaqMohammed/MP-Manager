@@ -72,6 +72,8 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Objects;
 
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.event.ContentChangeEvent;
 import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
@@ -85,7 +87,6 @@ import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolve
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
-import io.github.rosemoe.sora.widget.SymbolInputView;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import modder.hub.dexeditor.activity.DexEditorActivity;
@@ -93,11 +94,9 @@ import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.CustomAutoComplete;
 import modder.hub.dexeditor.utils.SmaliLabelDialog;
 import modder.hub.dexeditor.utils.Notify_MT;
-import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.smali.SmaliCursorUtils;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.smali.SmaliHelper;
-import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.TextActionWindow;
 
 
@@ -270,7 +269,8 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                                 ((DexEditorActivity) activity).locateClass(className);
                             }
                         } else {
-                            UIHelper.copyToClipboard(requireContext(), Objects.requireNonNull(menuItem.getTitle()).toString());
+                            Activity context = requireContext();
+                            CopyUtil.copyToClipboard(context, Objects.requireNonNull(menuItem.getTitle()).toString());
                         }
                         return true;
                     }
@@ -379,8 +379,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             public void run() {
                 try {
                     Activity activity = getActivity();
-                    if (activity instanceof DexEditorActivity) {
-                        final DexEditorActivity dexActivity = (DexEditorActivity) activity;
+                    if (activity instanceof DexEditorActivity dexActivity) {
                         final String smaliCode = DexEditorActivity.classTree.getSmaliByType(Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
 
                         runOnUiThread(new Runnable() {
@@ -637,7 +636,8 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             int lineNum = (int) Math.floor(Double.parseDouble(lineNumber));
             navigateTo(lineNum, null);
         } catch (Exception e) {
-            SketchwareUtil.showMessage(requireContext(), "Invalid line number: " + lineNumber);
+            Activity _context = requireContext();
+            Extensions.showMessage(_context, "Invalid line number: " + lineNumber);
         }
     }
 
@@ -715,7 +715,8 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         @Override
         public void onClickTranslate(View view, final String text) {
             if (!sharedPreferences.contains("selectedPackage")) {
-                SketchwareUtil.showMessage(requireContext(), "Select a translation app first");
+                Activity _context = requireContext();
+                Extensions.showMessage(_context, "Select a translation app first");
                 showAvailableTranslationDlg();
                 return;
             }

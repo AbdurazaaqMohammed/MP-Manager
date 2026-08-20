@@ -8,7 +8,6 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -24,12 +23,13 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkVerifier;
 import com.github.angads25.filepicker.model.DialogConfigs;
@@ -74,7 +74,6 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 public class ApkToolsHandler {
@@ -174,10 +173,9 @@ public class ApkToolsHandler {
         vrd.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("vrd", isChecked).apply());
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-        builder.setTitle("Decompile Options")
+        builder.setTitle(R.string.decompile_options)
                 .setView(dialogView)
-                .setPositiveButton("Decompile", (d, which) -> {
-
+                .setPositiveButton(R.string.decompile, (d, which) -> {
                     ProgressManager pm = new ProgressManager(context, true).show();
                     APKLogger logger = pm.getLogger();
 
@@ -218,7 +216,7 @@ public class ApkToolsHandler {
                             logger.close();
                             pm.dismiss();
                             context.handler.post(() -> {
-                                Toast.makeText(context, "Decompiled to " + outputFile.getName(), Toast.LENGTH_SHORT).show();
+                                Extensions.showMessage(context, context.getString(R.string.decompiled_to, outputFile.getName()));
                                 context.reloadCurrentFolder();
                             });
                         } catch (Exception e) {
@@ -316,26 +314,30 @@ public class ApkToolsHandler {
                                         : filesToDelete.toArray(new String[0]);
                                 List<String> filesFiDel = new ArrayList<>(Arrays.asList(filesFiDelete));
                                 ListView listView = new ListView(context);
-                                ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, R.layout.item_bottom_bar_config, filesFiDel) {
+                                ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.item_bottom_bar_config, filesFiDel) {
                                     @NonNull
                                     @Override
                                     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                                        if (convertView == null) convertView = LayoutInflater.from(context).inflate(R.layout.item_bottom_bar_config, parent, false);
+                                        if (convertView == null)
+                                            convertView = LayoutInflater.from(context).inflate(R.layout.item_bottom_bar_config, parent, false);
                                         TextView textLabel = convertView.findViewById(R.id.text_label);
                                         ImageButton btnEdit = convertView.findViewById(R.id.btn_edit);
                                         ImageButton btnDelete = convertView.findViewById(R.id.btn_delete);
                                         textLabel.setText(filesFiDel.get(position));
                                         btnEdit.setVisibility(View.GONE);
-                                        btnDelete.setOnClickListener(v -> { filesFiDel.remove(position); notifyDataSetChanged(); });
+                                        btnDelete.setOnClickListener(v -> {
+                                            filesFiDel.remove(position);
+                                            notifyDataSetChanged();
+                                        });
                                         return convertView;
                                     }
                                 };
                                 listView.setAdapter(adapter);
                                 dialogUtil.getDialogBuilder()
-                                        .setNegativeButton(context.rss.getString(R.string.cancel), null)
+                                        .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
                                         .setNeutralButton(context.rss.getString(R.string.add), (dialog9, which6) -> {
                                             EditText et = new EditText(context);
-                                            dialogUtil.getDialogBuilder().setView(et).setNegativeButton(context.rss.getString(R.string.cancel), null)
+                                            dialogUtil.getDialogBuilder().setView(et).setNegativeButton(context.rss.getString(android.R.string.cancel), null)
                                                     .setPositiveButton(context.rss.getString(io.github.rosemoe.sora.R.string.sora_editor_next), (dialog8, which5) -> {
                                                         filesFiDel.add(et.getText().toString());
                                                         adapter.notifyDataSetChanged();
@@ -346,7 +348,7 @@ public class ApkToolsHandler {
                                         .show();
                             });
                                      dialogUtil.getDialogBuilder().setView(ll)
-                                            .setNegativeButton(context.rss.getString(R.string.cancel), null)
+                                            .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
                                             .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
                                                 SignWrapper[] wrapper = new SignWrapper[1];
                                                 Runnable doOpt = () -> {
@@ -429,7 +431,7 @@ public class ApkToolsHandler {
                                             options.newCommandExecutor(logger).runCommand();
                                             logger.close();
                                             pm.dismiss();
-                                            context.handler.post(() -> Toast.makeText(context, "Refactored", Toast.LENGTH_SHORT).show());
+                                            Extensions.showMessage(context, context.getString(R.string.refactored, fileName));
                                         } catch (Exception e) {
                                             pm.dismiss();
                                             context.handler.post(() -> new ErrorUtil(context).showError(e));
@@ -502,7 +504,7 @@ public class ApkToolsHandler {
                                             options.newCommandExecutor(logger).runCommand();
                                             logger.close();
                                             pm.dismiss();
-                                            context.handler.post(() -> { dialog2.dismiss(); Toast.makeText(context, context.rss.getString(R.string.protectd), Toast.LENGTH_SHORT).show(); });
+                                            context.handler.post(() -> { dialog2.dismiss(); Extensions.showMessage(context, context.rss.getString(R.string.protectd)); });
                                         } catch (Exception e) {
                                             pm.dismiss();
                                             context.handler.post(dialog2::dismiss);
@@ -517,13 +519,13 @@ public class ApkToolsHandler {
                         String pkgNameFromApk = getPackageNameFromApk(filePath);
                         pkgNameView.setText(ApkCloner.changeEndCharacter(pkgNameFromApk));
                         final boolean[] sign = new boolean[1];
-                        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                        SharedPreferences settings = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
                         CheckBox autosign = ll.findViewById(R.id.autosign);
                         autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                         ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
                         dialogUtil.getDialogBuilder().setView(ll)
-                                .setNegativeButton(context.rss.getString(R.string.cancel), null)
+                                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
                                 .setPositiveButton(context.rss.getString(R.string.clone), (dialog6, which2) -> {
                                     SignWrapper[] wrapper = new SignWrapper[1];
                                     Runnable doClone = () -> {
@@ -597,12 +599,13 @@ public class ApkToolsHandler {
                         if (uid != null) addRootInfoRow(rootInfoContent, "UID", uid, null, ad);
                         if (finalApkPath != null) addRootInfoRow(rootInfoContent, "APK Path", finalApkPath, finalApkPath, ad);
                         for (String dir : dataDirs) {
+                            @SuppressLint("SdCardPath")
                             String label = dir.contains("/data/data/") || dir.contains("/data/user/") ? "Data Dir" : "External Data Dir";
                             addRootInfoRow(rootInfoContent, label, dir, dir, ad);
                         }
                         if (rootInfoContent.getChildCount() == 0) {
                             TextView empty = new TextView(context);
-                            empty.setText("No root info available");
+                            empty.setText(R.string.no_root_info_available);
                             empty.setTextSize(12);
                             empty.setPadding(0, dp(4), 0, dp(4));
                             rootInfoContent.addView(empty);
@@ -627,7 +630,7 @@ public class ApkToolsHandler {
                     context.handler.post(() -> {
                         ad.dismiss();
                         Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
-                        context.startActivity(Intent.createChooser(new Intent(android.content.Intent.ACTION_VIEW)
+                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW)
                                 .setDataAndType(uri, context.getContentResolver().getType(uri))
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
                     });
@@ -691,7 +694,7 @@ public class ApkToolsHandler {
                     uiHelper.scrollTextView(pkgName);
                     signaturesInApk.setText(signatureStr);
                     protectedDisplay.setText(finalProtectedStr);
-                    fileSize.setText(Formatter.formatFileSize(context, file.length()) + " · " + ApkInfoUtil.getEntryCount(file) + " entries");
+                    fileSize.setText(context.getString(R.string.fs_entries, Formatter.formatFileSize(context, file.length()), ApkInfoUtil.getEntryCount(file)));
                     apkTargetSdk.setText(String.valueOf(packageInfo.applicationInfo.targetSdkVersion));
                     int min = ApkInfoUtil.getMinSdk(packageInfo);
                     apkMinSdk.setText(min < 0 ? context.getString(R.string.unknown_sdk) : String.valueOf(min));
@@ -813,7 +816,7 @@ public class ApkToolsHandler {
                     }
                     pm.dismiss();
                     context.handler.post(() -> {
-                        Toast.makeText(context, context.rss.getString(R.string.signed, apks.size() + " APKs"), Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(context, context.rss.getString(R.string.signed, apks.size() + " APKs"));
                         context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
                     });
                 } catch (Exception e) {
@@ -847,7 +850,7 @@ public class ApkToolsHandler {
                 }
                 pm.dismiss();
                 context.handler.post(() -> {
-                    Toast.makeText(context, context.rss.getString(R.string.opt_done), Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(context, context.rss.getString(R.string.opt_done));
                     context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
                 });
             } catch (Exception e) {

@@ -144,15 +144,10 @@ public class SwipeTouchListener implements View.OnTouchListener {
                                         .start())
                                 .start();
 
-                        if (arrayAdapter instanceof MainFilesArrayAdapter) {
-                            ((MainFilesArrayAdapter) arrayAdapter).handleSwipe(position);
-                        }
+                        if (arrayAdapter instanceof MainFilesArrayAdapter ma)
+                            ma.handleSwipe(position);
                     } else {
-                        v.animate()
-                                .translationX(0)
-                                .setDuration(180)
-                                .setInterpolator(new DecelerateInterpolator(1.5f))
-                                .start();
+                        v.animate().translationX(0).setDuration(180).setInterpolator(new DecelerateInterpolator(1.5f)).start();
                     }
                     isSwiping = false;
                     return true;
