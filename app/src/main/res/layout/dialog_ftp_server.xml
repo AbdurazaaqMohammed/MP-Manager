@@ -30,10 +30,12 @@
                 android:layout_marginEnd="10dp"
                 app:tint="?attr/colorOnSurface"
                 android:id="@+id/copy"
+                android:contentDescription="@android:string/copy"
                 android:src="@drawable/ic_copy_mt" />
             <ImageView
                 android:layout_width="wrap_content"
                 android:id="@+id/share"
+                android:contentDescription="@android:string/share"
                 app:tint="?attr/colorOnSurface"
                 android:background="?attr/selectableItemBackground"
                 android:layout_height="wrap_content"

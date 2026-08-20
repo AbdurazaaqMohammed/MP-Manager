@@ -18,7 +18,7 @@
             android:id="@+id/indexName_container"
             android:layout_width="25dp"
             android:layout_height="25dp"
-            android:layout_marginLeft="13dp">
+            android:layout_marginStart="13dp">
             <TextView
                 android:textSize="14sp"
                 android:textColor="?attr/colorOnSurface"
@@ -38,7 +38,7 @@
             android:id="@+id/linear3"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
+            android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
             android:layout_weight="1.0">
@@ -47,7 +47,7 @@
 
                 android:ellipsize="end"
                 android:id="@+id/method_name"
-                android:paddingRight="10dp"
+                android:paddingEnd="10dp"
                 android:focusable="false"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -58,7 +58,7 @@
 
                 android:ellipsize="end"
                 android:id="@+id/return_type"
-                android:paddingRight="10dp"
+                android:paddingEnd="10dp"
                 android:focusable="false"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

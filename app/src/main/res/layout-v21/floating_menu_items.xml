@@ -20,7 +20,7 @@
 			android:id="@+id/imageView"
 			android:layout_width="30dp"
 			android:layout_height="30dp"
-			android:layout_marginLeft="10dp"
+			android:layout_marginStart="10dp"
 			android:src="@drawable/ic_setting_mt"
 			android:scaleType="fitCenter"
 			android:focusable="false"
@@ -35,7 +35,7 @@
 
 			android:focusable="false"
 			android:textAppearance="@style/TextAppearance.Compat.Notification.Title"
-			android:layout_toRightOf="@id/imageView"
+
 			android:layout_toEndOf="@id/imageView"
 			android:layout_centerVertical="true" />
 		<com.google.android.material.checkbox.MaterialCheckBox
@@ -46,7 +46,7 @@
 			android:textSize="12sp"
 
 			android:focusable="false"
-			android:layout_alignParentRight="true"
+
 			android:layout_alignParentEnd="true"
 			android:layout_centerVertical="true" />
 	</RelativeLayout>

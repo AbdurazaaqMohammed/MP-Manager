@@ -238,6 +238,7 @@
     <string name="add_profile">Add Profile</string>
     <string name="edit_profile">Edit Profile</string>
     <string name="delete_profile">Delete Profile</string>
+    <string name="select_profile">Select Profile</string>
     <string name="delete_confirm">Are you sure you want to delete profile %1$s?</string>
     <string name="profile_name">Profile Name</string>
     <string name="command_template_hint">Command Template</string>

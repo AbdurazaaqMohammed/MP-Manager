@@ -43,7 +43,7 @@ public class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileV
             holder.bind(profile, listener);
         } else {
             holder.itemView.setOnClickListener(v -> onAddClick.run());
-            holder.name.setText(R.string.add_new_profile);
+            holder.name.setText(R.string.add_profile);
             holder.details.setVisibility(View.GONE);
         }
     }
