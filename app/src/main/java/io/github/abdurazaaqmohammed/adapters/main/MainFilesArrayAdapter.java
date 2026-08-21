@@ -297,7 +297,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                 gridView.setOnItemClickListener((parent1, view, position1, id) -> {
                     dialog.dismiss();
-                    ProgressManager pm;
                     try {
                         String selectedAction = items[position1];
                         switch (selectedAction) {
@@ -385,43 +384,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             default:
                                 switch (position1) {
                                     case 0:
-                                        pm = new ProgressManager(context, true).show();
-                                        new Thread(() -> {
-                                            try {
-                                                if (multi) {
-                                                    List<Object> itemsToCopy = new ArrayList<>();
-                                                    for (int f : selectedPositions) {
-                                                        Object file1 = values[f];
-                                                        pm.setText(context.rss.getString(R.string.copying, file1));
-                                                        itemsToCopy.add(file1);
-                                                    }
-                                                    fileOps.copyMultiple(itemsToCopy);
-                                                } else {
-                                                    pm.setText(context.rss.getString(R.string.copying, item));
-                                                    fileOps.copy(item);
-                                                }
-                                                pm.dismiss();
-                                            } catch (Exception e) {
-                                                pm.dismiss();
-                                                new ErrorUtil(context).showError(e);
-                                            }
-                                        }).start();
+                                        if (multi) {
+                                            List<Object> itemsToCopy = new ArrayList<>();
+                                            for (int f : selectedPositions) itemsToCopy.add(values[f]);
+                                            fileOps.copyItemsAsync(itemsToCopy);
+                                        } else fileOps.copyAsync(item);
                                         break;
                                     case 1:
                                         if (context.pane1Folder == context.pane2Folder) {
                                             break;
                                         }
-                                        pm = new ProgressManager(context, true).show();
-                                        new Thread(() -> {
-                                            try {
-                                                pm.setText(context.rss.getString(R.string.copying, item));
-                                                fileOps.move(item);
-                                                pm.dismiss();
-                                            } catch (Exception e) {
-                                                pm.dismiss();
-                                                new ErrorUtil(context).showError(e);
-                                            }
-                                        }).start();
+                                        fileOps.moveAsync(item);
                                         break;
                                     case 2:
                                         showRenameDialog(finalPosition1, file, entry, fileName, multi);

@@ -78,6 +78,12 @@
     <string name="sign_set">Sign Settings</string>
     <string name="target_android_version">Target Android Version</string>
     <string name="compression_level">Compression Level</string>
+    <string name="update_mode">Update mode</string>
+    <string name="replace_all">Replace All</string>
+    <string name="update_and_replace">Update and replace</string>
+    <string name="skip_all">Skip all</string>
+    <string name="confirm_add_to_zip_f">Are you sure you want to add %1$s to %2$s?</string>
+    <string name="plus_n_more">and %1$d more</string>
     <string name="pw_zip">Password (no encryption if empty)</string>
     <string name="extract">Extract</string>
     <string name="extracting_to_folder">Extracting to %1$s</string>

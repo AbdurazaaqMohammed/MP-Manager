@@ -94,6 +94,7 @@ public class ApkInstallDialogHelper {
         }
     }
 
+    @SuppressLint("RequestInstallPackagesPolicy")
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void installWithIntent(File apkFile, ProgressManager pm) {
         try {
