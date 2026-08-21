@@ -35,13 +35,13 @@
         android:id="@+id/searchSubfolders"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Search subfolders"/>
+        android:text="@string/search_subfolders"/>
 
     <TextView
         android:id="@+id/advancedSearchToggle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Advanced Search ▼"
+        android:text="@string/advanced_search"
         android:textStyle="bold"
         android:paddingTop="12dp"
         android:paddingBottom="8dp"
@@ -60,25 +60,25 @@
             android:id="@+id/matchCase"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Match case"/>
+            android:text="@string/match_case"/>
 
         <CheckBox
             android:id="@+id/useRegex"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Use Regex"/>
+            android:text="@string/regex"/>
 
         <EditText
             android:id="@+id/textInsideFile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Text inside file..."
+            android:hint="@string/text_in_file"
             android:inputType="text"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="File Size (bytes)"
+            android:text="@string/sizebytes"
             android:paddingTop="8dp"/>
 
         <LinearLayout
@@ -91,7 +91,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Min Size"
+                android:hint="@string/min_size_hint"
                 android:inputType="number"/>
 
             <EditText
@@ -99,7 +99,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Max Size"
+                android:hint="@string/max_size_hint"
                 android:inputType="number"/>
         </LinearLayout>
     </LinearLayout>

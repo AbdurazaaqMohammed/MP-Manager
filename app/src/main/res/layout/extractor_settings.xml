@@ -153,7 +153,7 @@
                     android:id="@+id/showExtractIconToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract app icon" />
+                    android:text="@string/extract_ic" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -161,7 +161,7 @@
                     android:id="@+id/showExtractResToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract resources.arsc files" />
+                    android:text="@string/extract_rss" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -169,7 +169,7 @@
                     android:id="@+id/showExtractDexToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract classes.dex files" />
+                    android:text="@string/extract_classes_dex" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -177,7 +177,7 @@
                     android:id="@+id/showExtractManifestToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract AndroidManifest.xml files" />
+                    android:text="@string/extract_am" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -185,7 +185,7 @@
                     android:id="@+id/showExtractBaseToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract base.apk files" />
+                    android:text="@string/extract_base" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -193,7 +193,7 @@
                     android:id="@+id/showExtractSplitToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract split APK files" />
+                    android:text="@string/extract_split_apks" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -201,7 +201,7 @@
                     android:id="@+id/showExtractLibsToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Extract libs" />
+                    android:text="@string/extract_libs" />
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
@@ -209,7 +209,7 @@
                     android:id="@+id/showLaunchActivitiesToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Show Launch Activities" />
+                    android:text="@string/show_launch_activities" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -230,7 +230,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:text="Advanced Options"
+                    android:text="@string/advanced_options"
                     android:textColor="?attr/colorPrimary"
                     android:textSize="16sp"
                     android:textStyle="bold" />

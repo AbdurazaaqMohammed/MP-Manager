@@ -46,10 +46,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
@@ -218,15 +216,12 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         LinearLayout linearLeft = view.findViewById(R.id.linear_left);
         LinearLayout linearRight = view.findViewById(R.id.linear_right);
 
-        View.OnLongClickListener selectMethodListener = new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                if (type == 0 && currentMethodInfo != null && currentMethodInfo.startLine != -1 && currentMethodInfo.endLine != -1) {
-                    smaliEditor.setSelectionRegion(currentMethodInfo.startLine, 0, currentMethodInfo.endLine, smaliEditor.getText().getColumnCount(currentMethodInfo.endLine));
-                    return true;
-                }
-                return false;
+        View.OnLongClickListener selectMethodListener = v -> {
+            if (type == 0 && currentMethodInfo != null && currentMethodInfo.startLine != -1 && currentMethodInfo.endLine != -1) {
+                smaliEditor.setSelectionRegion(currentMethodInfo.startLine, 0, currentMethodInfo.endLine, smaliEditor.getText().getColumnCount(currentMethodInfo.endLine));
+                return true;
             }
+            return false;
         };
         textviewLineNo.setOnLongClickListener(selectMethodListener);
         linearRight.setOnLongClickListener(selectMethodListener);
@@ -239,54 +234,39 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
 
         textviewLeft.setText(title);
 
-        linearLeft.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (getActivity() instanceof DexEditorActivity) {
-                    ((DexEditorActivity) getActivity()).toggleDrawer();
-                }
+        linearLeft.setOnClickListener(v -> {
+            if (getActivity() instanceof DexEditorActivity) {
+                ((DexEditorActivity) getActivity()).toggleDrawer();
             }
         });
 
-        linearLeft.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                PopupMenu popupMenu = new PopupMenu(requireContext(), v);
-                Menu menu = popupMenu.getMenu();
-                menu.add(1, 1, 1, title);
-                menu.add(2, 2, 2, className.replace('/', '.'));
-                menu.add(3, 3, 3, className);
-                menu.add(4, 4, 4, "L" + className + ";");
-                menu.add(5,5, 5, "Locate");
+        linearLeft.setOnLongClickListener(v -> {
+            PopupMenu popupMenu = new PopupMenu(requireContext(), v);
+            Menu menu = popupMenu.getMenu();
+            menu.add(1, 1, 1, title);
+            menu.add(2, 2, 2, className.replace('/', '.'));
+            menu.add(3, 3, 3, className);
+            menu.add(4, 4, 4, "L" + className + ";");
+            menu.add(5,5, 5, "Locate");
 
-                popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem menuItem) {
-                        int id = menuItem.getItemId();
-                        if (id == 5) { // Locate
-                            Activity activity = getActivity();
-                            if (activity instanceof DexEditorActivity) {
-                                ((DexEditorActivity) activity).locateClass(className);
-                            }
-                        } else {
-                            Activity context = requireContext();
-                            CopyUtil.copyToClipboard(context, Objects.requireNonNull(menuItem.getTitle()).toString());
-                        }
-                        return true;
+            popupMenu.setOnMenuItemClickListener(menuItem -> {
+                int id = menuItem.getItemId();
+                if (id == 5) { // Locate
+                    Activity activity = getActivity();
+                    if (activity instanceof DexEditorActivity) {
+                        ((DexEditorActivity) activity).locateClass(className);
                     }
-                });
-
-                popupMenu.show();
+                } else {
+                    CopyUtil.copyToClipboard(requireActivity(), Objects.requireNonNull(menuItem.getTitle()).toString());
+                }
                 return true;
-            }
+            });
+
+            popupMenu.show();
+            return true;
         });
 
-        linearRight.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runOnUiThread(new MethodFieldListRunnable());
-            }
-        });
+        linearRight.setOnClickListener(v -> runOnUiThread(new MethodFieldListRunnable()));
     }
 
     @SuppressLint("DefaultLocale")
@@ -297,76 +277,67 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         smaliEditor.setLineNumberEnabled(SettingsFragment.showLineNumbers(requireContext()));
 
         // Postpone heavy language initialization to allow transition animation to start smoothly
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                if (!isAdded()) return;
-                updateEditorUI();
-                loadEditorSettings(true);
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (!isAdded()) return;
+            updateEditorUI();
+            loadEditorSettings(true);
 //                symbol_input.bindEditor(smaliEditor);
 //                symbol_input.addSymbols(SYMBOLS, SYMBOL_INSERT_TEXT);
 
-                if (initialContentText != null) {
-                    smaliEditor.setText(initialContentText);
-                    postInitialize(false);
-                } else {
-                    loadSmaliInBackground();
-                }
+            if (initialContentText != null) {
+                smaliEditor.setText(initialContentText);
+                postInitialize(false);
+            } else {
+                loadSmaliInBackground();
             }
         });
 
-        smaliEditor.subscribeEvent(ContentChangeEvent.class, new io.github.rosemoe.sora.event.EventReceiver<ContentChangeEvent>() {
-            @Override
-            public void onReceive(@NonNull ContentChangeEvent event, @NonNull io.github.rosemoe.sora.event.Unsubscribe unsubscribe) {
-                if (isInitializing) return;
-                Activity act = getActivity();
-                if (act instanceof DexEditorActivity) {
-                    ((DexEditorActivity) act).onContentModified(className);
-                    ((DexEditorActivity) act).handleUndoRedo();
-                }
-                if (!isReload && !isClosing) {
-                    int position = smaliEditor.getCursor().getLeftLine();
-                    positionManager.savePosition(className, position, smaliEditor.getCursor().getLeftColumn());
-                }
-                isReload = false;
+        smaliEditor.subscribeEvent(ContentChangeEvent.class, (event, unsubscribe) -> {
+            if (isInitializing) return;
+            Activity act = getActivity();
+            if (act instanceof DexEditorActivity) {
+                ((DexEditorActivity) act).onContentModified(className);
+                ((DexEditorActivity) act).handleUndoRedo();
             }
+            if (!isReload && !isClosing) {
+                int position = smaliEditor.getCursor().getLeftLine();
+                positionManager.savePosition(className, position, smaliEditor.getCursor().getLeftColumn());
+            }
+            isReload = false;
         });
 
-        smaliEditor.subscribeEvent(SelectionChangeEvent.class, new io.github.rosemoe.sora.event.EventReceiver<SelectionChangeEvent>() {
-            @Override
-            public void onReceive(@NonNull SelectionChangeEvent event, @NonNull io.github.rosemoe.sora.event.Unsubscribe unsubscribe) {
-                Cursor cursor = smaliEditor.getCursor();
-                Content text = smaliEditor.getText();
-                int line = cursor.getLeftLine() + 1;
-                int column = cursor.getLeftColumn() + 1;
+        smaliEditor.subscribeEvent(SelectionChangeEvent.class, (event, unsubscribe) -> {
+            Cursor cursor = smaliEditor.getCursor();
+            Content text = smaliEditor.getText();
+            int line = cursor.getLeftLine() + 1;
+            int column = cursor.getLeftColumn() + 1;
 
-                if (!isReload && !isInitializing && !isClosing) {
-                    positionManager.savePosition(className, cursor.getLeftLine(), cursor.getLeftColumn());
-                }
-
-                currentMethodInfo = (type == 0) ? SmaliCursorUtils.getMethodInfo(text, cursor.getLeftLine()) : null;
-
-                StringBuilder positionText = new StringBuilder();
-                positionText.append(String.format("%d:%d", line, column));
-
-                if (currentMethodInfo != null && currentMethodInfo.startLine != -1 && currentMethodInfo.endLine != -1) {
-                    positionText.append(" [").append(currentMethodInfo.startLine + 1).append("-").append(currentMethodInfo.endLine + 1).append("]");
-                }
-
-                if (cursor.isSelected()) {
-                    String selectedText = text.subSequence(cursor.getLeft(), cursor.getRight()).toString();
-                    positionText.append(" (").append(selectedText.length()).append(")");
-                }
-                textviewLineNo.setText(positionText.toString());
-
-                String currentElement;
-                if (currentMethodInfo != null && currentMethodInfo.name != null) {
-                    currentElement = currentMethodInfo.getDisplayName() + "()";
-                } else {
-                    currentElement = SmaliCursorUtils.getCurrentMethodOrFieldName(text, cursor.getLeftLine());
-                }
-                methodName.setText(currentElement != null ? currentElement : "...");
+            if (!isReload && !isInitializing && !isClosing) {
+                positionManager.savePosition(className, cursor.getLeftLine(), cursor.getLeftColumn());
             }
+
+            currentMethodInfo = (type == 0) ? SmaliCursorUtils.getMethodInfo(text, cursor.getLeftLine()) : null;
+
+            StringBuilder positionText = new StringBuilder();
+            positionText.append(String.format("%d:%d", line, column));
+
+            if (currentMethodInfo != null && currentMethodInfo.startLine != -1 && currentMethodInfo.endLine != -1) {
+                positionText.append(" [").append(currentMethodInfo.startLine + 1).append("-").append(currentMethodInfo.endLine + 1).append("]");
+            }
+
+            if (cursor.isSelected()) {
+                String selectedText = text.subSequence(cursor.getLeft(), cursor.getRight()).toString();
+                positionText.append(" (").append(selectedText.length()).append(")");
+            }
+            textviewLineNo.setText(positionText.toString());
+
+            String currentElement;
+            if (currentMethodInfo != null && currentMethodInfo.name != null) {
+                currentElement = currentMethodInfo.getDisplayName() + "()";
+            } else {
+                currentElement = SmaliCursorUtils.getCurrentMethodOrFieldName(text, cursor.getLeftLine());
+            }
+            methodName.setText(currentElement != null ? currentElement : "...");
         });
     }
 
@@ -374,55 +345,43 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     private void loadSmaliInBackground() {
         if (loadingProgress != null) loadingProgress.setVisibility(View.VISIBLE);
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Activity activity = getActivity();
-                    if (activity instanceof DexEditorActivity dexActivity) {
-                        final String smaliCode = DexEditorActivity.classTree.getSmaliByType(Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
+        new Thread(() -> {
+            try {
+                Activity activity = getActivity();
+                if (activity instanceof DexEditorActivity dexActivity) {
+                    final String smaliCode = DexEditorActivity.classTree.getSmaliByType(Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
 
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
-                                
-                                initialContentText = smaliCode;
-                                smaliEditor.setText(smaliCode);
+                    runOnUiThread(() -> {
+                        if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
 
-                                final DexEditorActivity.EditorTab tab = dexActivity.getTabForClassName(className);
-                                if (tab != null) {
-                                    tab.content = smaliCode;
-                                }
-                                boolean hasPending = tab != null && tab.pendingLine != -1;
+                        initialContentText = smaliCode;
+                        smaliEditor.setText(smaliCode);
 
-                                postInitialize(hasPending);
+                        final DexEditorActivity.EditorTab tab = dexActivity.getTabForClassName(className);
+                        if (tab != null) {
+                            tab.content = smaliCode;
+                        }
+                        boolean hasPending = tab != null && tab.pendingLine != -1;
 
-                                // Handle pending navigation
-                                if (hasPending) {
-                                    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            smaliEditor.requestFocus();
-                                            navigateTo(tab.pendingLine, tab.pendingColumn, tab.pendingQuery);
-                                            tab.pendingLine = -1;
-                                            tab.pendingColumn = -1;
-                                            tab.pendingQuery = null;
-                                        }
-                                    }, 200); // Increased delay for first-time layout
-                                }
-                            }
-                        });
-                    }
-                } catch (final Exception e) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
-                            Notify_MT.Notify(getContext(), getString(R.string.error), e.toString(), getString(R.string.close));
+                        postInitialize(hasPending);
+
+                        // Handle pending navigation
+                        if (hasPending) {
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                smaliEditor.requestFocus();
+                                navigateTo(tab.pendingLine, tab.pendingColumn, tab.pendingQuery);
+                                tab.pendingLine = -1;
+                                tab.pendingColumn = -1;
+                                tab.pendingQuery = null;
+                            }, 200); // Increased delay for first-time layout
                         }
                     });
                 }
+            } catch (final Exception e) {
+                runOnUiThread(() -> {
+                    if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
+                    Notify_MT.Notify(getContext(), getString(R.string.error), e.toString(), getString(R.string.close));
+                });
             }
         }).start();
     }
@@ -441,30 +400,22 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         }
 
         // Reset initializing flag after text is set and events are dispatched
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                isInitializing = false;
-            }
-        });
+        new Handler(Looper.getMainLooper()).post(() -> isInitializing = false);
 
         if (!skipRestorePosition) {
-            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        EditorPositionManager.Position pos = positionManager.getPosition(className);
-                        if (pos != null) {
-                            int line = pos.lineno;
-                            int column = pos.column;
-                            if (line >= 0 && line < smaliEditor.getText().getLineCount()) {
-                                smaliEditor.jumpToLine(line);
-                                // Set cursor column if possible
-                                smaliEditor.getCursor().set(line, column);
-                            }
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                try {
+                    EditorPositionManager.Position pos = positionManager.getPosition(className);
+                    if (pos != null) {
+                        int line = pos.lineno;
+                        int column = pos.column;
+                        if (line >= 0 && line < smaliEditor.getText().getLineCount()) {
+                            smaliEditor.jumpToLine(line);
+                            // Set cursor column if possible
+                            smaliEditor.getCursor().set(line, column);
                         }
-                    } catch (Exception ignored) {}
-                }
+                    }
+                } catch (Exception ignored) {}
             }, 100);
         }
     }
@@ -588,16 +539,13 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     private void reloadText() {
         String smaliCode = smaliEditor.getText().toString();
         smaliEditor.setText(smaliCode);
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    EditorPositionManager.Position pos = positionManager.getPosition(className);
-                    if (pos != null) {
-                        smaliEditor.jumpToLine(pos.lineno);
-                    }
-                } catch (Exception ignored) {}
-            }
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                EditorPositionManager.Position pos = positionManager.getPosition(className);
+                if (pos != null) {
+                    smaliEditor.jumpToLine(pos.lineno);
+                }
+            } catch (Exception ignored) {}
         }, 200);
     }
 
@@ -636,8 +584,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             int lineNum = (int) Math.floor(Double.parseDouble(lineNumber));
             navigateTo(lineNum, null);
         } catch (Exception e) {
-            Activity _context = requireContext();
-            Extensions.showMessage(_context, "Invalid line number: " + lineNumber);
+            Extensions.showMessage(requireActivity(), "Invalid line number: " + lineNumber);
         }
     }
 
@@ -650,12 +597,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
 
         // If text is not loaded yet or line count is low, retry after a short delay
         if (smaliEditor.getText().getLineCount() <= lineNum) {
-            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    navigateTo(lineNum, column, query);
-                }
-            }, 100);
+            new Handler(Looper.getMainLooper()).postDelayed(() -> navigateTo(lineNum, column, query), 100);
             return;
         }
 
@@ -715,7 +657,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         @Override
         public void onClickTranslate(View view, final String text) {
             if (!sharedPreferences.contains("selectedPackage")) {
-                Activity _context = requireContext();
+                Activity _context = requireActivity();
                 Extensions.showMessage(_context, "Select a translation app first");
                 showAvailableTranslationDlg();
                 return;
@@ -751,18 +693,15 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             labelList = SmaliCursorUtils.extractAllLabelLines(smaliEditor.getText(), editorLineNumber);
         }
         final SmaliLabelDialog dialog = new SmaliLabelDialog(requireContext(), labelList, query, editorLineNumber);
-        dialog.setOnLabelClickListener(new SmaliLabelDialog.OnLabelClickListener() {
-            @Override
-            public void onLabelClick(String selectedLabel) {
-                int lineNumber = Integer.parseInt(selectedLabel.substring(1, selectedLabel.indexOf(']'))) - 1;
-                String lineContent = smaliEditor.getText().getLineString(lineNumber);
-                int columnPos = lineContent.indexOf(query);
-                if (columnPos >= 0) {
-                    smaliEditor.setSelection(lineNumber, columnPos);
-                    smaliEditor.ensurePositionVisible(lineNumber, columnPos);
-                }
-                dialog.dismiss();
+        dialog.setOnLabelClickListener(selectedLabel -> {
+            int lineNumber = Integer.parseInt(selectedLabel.substring(1, selectedLabel.indexOf(']'))) - 1;
+            String lineContent = smaliEditor.getText().getLineString(lineNumber);
+            int columnPos = lineContent.indexOf(query);
+            if (columnPos >= 0) {
+                smaliEditor.setSelection(lineNumber, columnPos);
+                smaliEditor.ensurePositionVisible(lineNumber, columnPos);
             }
+            dialog.dismiss();
         });
         dialog.show();
     }
@@ -790,37 +729,26 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 selectedIndex = i;
             }
         }
-        builder.setSingleChoiceItems(appNames, selectedIndex, new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface dialog, int which) {
-                selectedPackage[0] = resolveInfoList.get(which).activityInfo.packageName;
+        builder.setSingleChoiceItems(appNames, selectedIndex, (dialog, which) -> selectedPackage[0] = resolveInfoList.get(which).activityInfo.packageName);
+        builder.setPositiveButton("Save", (dialog, which) -> {
+            if (selectedPackage[0].isEmpty()) {
+                Toast.makeText(requireContext(), "No app selected", Toast.LENGTH_SHORT).show();
+                return;
             }
-        });
-        builder.setPositiveButton("Save", new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface dialog, int which) {
-                if (selectedPackage[0].isEmpty()) {
-                    Toast.makeText(requireContext(), "No app selected", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                preferencesEditor.putString("selectedPackage", selectedPackage[0]);
-                preferencesEditor.apply();
-            }
+            preferencesEditor.putString("selectedPackage", selectedPackage[0]);
+            preferencesEditor.apply();
         });
         AlertDialog dialog = builder.create();
         dialog.show();
-        dialog.getListView().setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String pkgName = resolveInfoList.get(i).activityInfo.packageName;
-                if(pkgName.isEmpty()) {
-                    return true;
-                }
-                Intent intent = new Intent("android.settings.APPLICATION_DETAILS_SETTINGS");
-                intent.setData(Uri.parse("package:" + pkgName));
-                startActivity(intent);
+        dialog.getListView().setOnItemLongClickListener((adapterView, view, i, l) -> {
+            String pkgName = resolveInfoList.get(i).activityInfo.packageName;
+            if(pkgName.isEmpty()) {
                 return true;
             }
+            Intent intent1 = new Intent("android.settings.APPLICATION_DETAILS_SETTINGS");
+            intent1.setData(Uri.parse("package:" + pkgName));
+            startActivity(intent1);
+            return true;
         });
 
     }
@@ -835,12 +763,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         public void run() {
             try {
                 // Always save to ensure real-time data in navigation
-                saveSmaliCodeToFile(smaliEditor.getText().toString(), tempSmaliPath, new FileSaveCallback() {
-                    @Override
-                    public void onFileSaved(String filePath) {
-                        showSmaliNavigation(filePath, title, smaliEditor.getCursor().getLeftLine());
-                    }
-                });
+                saveSmaliCodeToFile(smaliEditor.getText().toString(), tempSmaliPath, (FileSaveCallback) filePath -> showSmaliNavigation(filePath, title, smaliEditor.getCursor().getLeftLine()));
             } catch (Exception e) {
                 Notify_MT.Notify(requireContext(), requireActivity().getString(R.string.error), e.toString(), requireActivity().getString(R.string.close));
             }
@@ -884,17 +807,9 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         }
 
         void execute() {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    final TextLocation location = doInBackground();
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onPostExecute(location);
-                        }
-                    });
-                }
+            new Thread(() -> {
+                final TextLocation location = doInBackground();
+                mainHandler.post(() -> onPostExecute(location));
             }).start();
         }
 
@@ -915,14 +830,11 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             if (fragment != null && fragment.isAdded() && location != null) {
                 int lineNumber = location.lineNumber - 1;
                 fragment.smaliEditor.jumpToLine(lineNumber); // fisrt jump to line number
-                mainHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            fragment.smaliEditor.setSelectionRegion(lineNumber, location.startColumn, lineNumber, location.endColumn); // then select the text according to the line & colum(start, end)
-                            dismissEditorWindow(fragment.smaliEditor); // dismiss the selection window
-                        } catch (Exception ignored) {}
-                    }
+                mainHandler.postDelayed(() -> {
+                    try {
+                        fragment.smaliEditor.setSelectionRegion(lineNumber, location.startColumn, lineNumber, location.endColumn); // then select the text according to the line & colum(start, end)
+                        dismissEditorWindow(fragment.smaliEditor); // dismiss the selection window
+                    } catch (Exception ignored) {}
                 }, 100);
             }
         }
@@ -931,13 +843,10 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     // dismiss the editor selection window
     public static void dismissEditorWindow(final CodeEditor smaliEditor){
         if (smaliEditor == null) return;
-        smaliEditor.postDelayedInLifecycle(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    smaliEditor.hideEditorWindows();
-                } catch (Exception ignored) {
-                }
+        smaliEditor.postDelayedInLifecycle(() -> {
+            try {
+                smaliEditor.hideEditorWindows();
+            } catch (Exception ignored) {
             }
         }, 50);
     }

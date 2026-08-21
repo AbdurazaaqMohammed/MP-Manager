@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:inputType="text"
             android:text="192.168.1.1"
-            android:hint="IP Address" />
+            android:hint="@string/ip_address_hint" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:inputType="number"
             android:text="2121"
-            android:hint="Port" />
+            android:hint="@string/port" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:inputType="text"
             android:text="admin"
-            android:hint="Username" />
+            android:hint="@string/username" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -71,7 +71,7 @@
             android:layout_height="wrap_content"
             android:inputType="textPassword"
             android:text="admin"
-            android:hint="Password" />
+            android:hint="@string/enter_password" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout

@@ -100,8 +100,6 @@
                         android:ellipsize="end"
                         android:focusable="false"
                         android:gravity="center_vertical"
-                        android:text="TextView"
-
                         android:textSize="14sp"
                         android:textStyle="normal" />
 

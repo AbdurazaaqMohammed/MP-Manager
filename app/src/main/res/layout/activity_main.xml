@@ -57,7 +57,6 @@
                         android:layout_height="wrap_content"
                         android:textSize="12sp"
                         android:textColor="?attr/colorOnSurface"
-                        android:text="Folders: 0"
                         android:layout_marginEnd="8dp"/>
                 </LinearLayout>
 
@@ -98,7 +97,7 @@
                 android:layout_above="@id/bottomBar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="Build APK"
+                android:contentDescription="@string/compile"
                 android:src="@drawable/gavel_24px"
                 android:layout_margin="24dp"
                 app:elevation="8dp" />

@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-        android:hint="Select Profile">
+        android:hint="@string/select_profile">
 
         <com.google.android.material.textfield.MaterialAutoCompleteTextView
             android:id="@+id/profile_spinner"

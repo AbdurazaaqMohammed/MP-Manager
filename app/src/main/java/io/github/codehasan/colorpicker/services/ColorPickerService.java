@@ -43,6 +43,8 @@ import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.Toast;
+
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.core.app.NotificationCompat;
@@ -52,7 +54,6 @@ import androidx.window.layout.WindowMetricsCalculator;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.ServiceState;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.codehasan.colorpicker.views.MagnifierView;
 import io.github.codehasan.colorpicker.views.TargetView;
 

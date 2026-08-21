@@ -672,7 +672,7 @@ public class ApkToolsHandler {
                         }
                     }
                 } catch (Exception e) {
-                    sigs.append(context.rss.getString(R.string.unknown));
+                    sigs.append(context.rss.getString(android.R.string.unknownName));
                 }
                 String signatureStr = sigs.toString();
 
@@ -681,7 +681,7 @@ public class ApkToolsHandler {
                     String aProtected = Util.isProtected(am);
                     protectedStr = TextUtils.isEmpty(aProtected) ? "Not found" : aProtected;
                 } catch (Exception e) {
-                    protectedStr = context.rss.getString(R.string.unknown);
+                    protectedStr = context.rss.getString(android.R.string.unknownName);
                 }
 
                 String finalProtectedStr = protectedStr;

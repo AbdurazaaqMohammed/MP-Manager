@@ -16,17 +16,18 @@
  */
 package io.github.ratul.topactivity.manager;
 
+import android.app.Activity;
 import android.content.Context;
 
 import io.github.ratul.topactivity.utils.DatabaseUtil;
 
 public class ServiceManager {
 
-    private final Context context;
+    private final Activity context;
     private final PopupManager popupManager;
     private final NotificationUiManager notificationUiManager;
 
-    public ServiceManager(Context context) {
+    public ServiceManager(Activity context) {
         this.context = context;
         this.popupManager = new PopupManager(context);
         this.notificationUiManager = new NotificationUiManager(context);

@@ -100,7 +100,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="18sp"
-            android:text="Open player as activity" />
+            android:text="@string/open_player_as_act" />
 
         <View
             android:layout_width="match_parent"
@@ -152,7 +152,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Root Access"
+                    android:text="@string/root_access"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -162,7 +162,7 @@
                     style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Working Mode">
+                    android:hint="@string/working_mode">
 
                     <AutoCompleteTextView
                         android:id="@+id/workingModeTv"
@@ -177,7 +177,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
-                    android:text="Root available"
+                    android:text="@string/root_available"
                     android:enabled="false"
                     android:layout_marginTop="4dp" />
 
@@ -186,7 +186,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
-                    android:text="Silent APK install"
+                    android:text="@string/root_install"
                     android:enabled="false"
                     android:layout_marginTop="4dp" />
 
@@ -195,7 +195,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
-                    android:text="Root file operations"
+                    android:text="@string/root_file_operations"
                     android:enabled="false"
                     android:layout_marginTop="4dp" />
 
@@ -204,7 +204,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
-                    android:text="Root APK Extractor features"
+                    android:text="@string/root_extractor_features"
                     android:enabled="false"
                     android:layout_marginTop="4dp" />
 
@@ -212,7 +212,7 @@
                     android:id="@+id/rebootMenuBtn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Reboot Options"
+                    android:text="@string/reboot_options"
                     android:visibility="gone"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_marginTop="8dp" />

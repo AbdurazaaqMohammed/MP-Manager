@@ -51,6 +51,6 @@
         android:layout_height="36dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_cancel"
-        android:contentDescription="Remove" />
+        android:contentDescription="@string/remove" />
 
 </LinearLayout>

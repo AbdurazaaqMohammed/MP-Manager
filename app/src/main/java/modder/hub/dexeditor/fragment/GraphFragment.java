@@ -128,7 +128,7 @@ public class GraphFragment extends Fragment {
                         ((DexEditorActivity) GraphFragment.this.getActivity()).locateClass(className);
                     }
                 } else {
-                    Activity context = GraphFragment.this.requireContext();
+                    Activity context = GraphFragment.this.requireActivity();
                     CopyUtil.copyToClipboard(context, menuItem.getTitle().toString());
                 }
                 return true;

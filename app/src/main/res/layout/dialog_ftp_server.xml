@@ -35,7 +35,7 @@
             <ImageView
                 android:layout_width="wrap_content"
                 android:id="@+id/share"
-                android:contentDescription="@android:string/share"
+                android:contentDescription="@string/share"
                 app:tint="?attr/colorOnSurface"
                 android:background="?attr/selectableItemBackground"
                 android:layout_height="wrap_content"
@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:inputType="number"
             android:text="2121"
-            android:hint="Port" />
+            android:hint="@string/port" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -73,7 +73,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text"
-            android:hint="Username" />
+            android:hint="@string/username" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -89,7 +89,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPassword"
-            android:hint="Password" />
+            android:hint="@string/enter_password" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout

@@ -1519,7 +1519,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showSearchDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_search, null);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_search_files, null);
         AutoCompleteTextView searchQuery = dialogView.findViewById(R.id.searchQuery);
         ImageView searchHistoryDropdown = dialogView.findViewById(R.id.searchHistoryDropdown);
         CheckBox searchSubfolders = dialogView.findViewById(R.id.searchSubfolders);

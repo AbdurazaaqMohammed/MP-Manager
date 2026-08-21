@@ -36,7 +36,7 @@
                 android:id="@+id/loadDex"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Number of dex files to load at once"
+                android:hint="@string/dex_load_count"
                 android:inputType="number" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -51,7 +51,7 @@
                 android:id="@+id/decodeTypes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Decode Types"
+                android:hint="@string/decode_types"
                 android:inputType="none" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -66,7 +66,7 @@
                 android:id="@+id/dexLibrary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="DEX Library"
+                android:hint="@string/dex_li"
                 android:inputType="none" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -76,49 +76,49 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Don't decode DEX" />
+            android:text="@string/dont_decode_dex" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/noDexDebug"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Remove debug information" />
+            android:text="@string/remove_debug_information" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/dexMarkers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Dump DEX Markers" />
+            android:text="@string/dump_dex_markers" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/flagForce"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Force delete output path" />
+            android:text="@string/force_delete_output_path" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/keepResPath"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Keep original res paths" />
+            android:text="@string/keep_rss" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/splitJson"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Split JSON (use for large files)" />
+            android:text="@string/split_json_large_files" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/vrd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Validate res directory" />
+            android:text="@string/valid_rss_dir" />
 
     </LinearLayout>
 

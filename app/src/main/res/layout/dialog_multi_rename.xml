@@ -16,14 +16,14 @@
             style="@style/TextAppearance.Material3.TitleMedium"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Rename pattern" />
+            android:text="@string/rename_pattern" />
 
         <TextView
             style="@style/TextAppearance.Material3.BodySmall"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="{P} name without extension  \u00b7  {S} extension  \u00b7  {N} number  \u00b7  {zN} zero-padded number" />
+            android:text="@string/rename_pattern_help" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/rename_pattern_layout"
@@ -31,7 +31,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Pattern"
+            android:hint="@string/pattern"
             app:endIconMode="clear_text">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -127,7 +127,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Find &amp; Replace" />
+            android:text="@string/find_and_replace" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/find_layout"
@@ -135,7 +135,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Find"
+            android:hint="@string/find"
             app:endIconMode="clear_text">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -152,7 +152,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Replace with"
+            android:hint="@string/replace_with"
             app:endIconMode="clear_text">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -168,12 +168,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Use regular expressions" />
+            android:text="@string/regex" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/case_sensitive_checkbox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Case sensitive" />
+            android:text="@string/match_case" />
     </LinearLayout>
 </ScrollView>

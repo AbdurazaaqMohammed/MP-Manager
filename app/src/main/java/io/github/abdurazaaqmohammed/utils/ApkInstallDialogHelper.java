@@ -62,6 +62,7 @@ public class ApkInstallDialogHelper {
     public void installSplitApks(List<File> apkFiles, String archiveName) {
         String appName = archiveName != null ? archiveName : "Split APK";
         ProgressManager pm = showProgress("Installing " + appName + "...");
+        File firstApk = apkFiles.isEmpty() ? null : apkFiles.get(0);
 
         RootManager rm = RootManager.getInstance(activity);
         if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
@@ -73,7 +74,7 @@ public class ApkInstallDialogHelper {
                     rm.installSplitSilent(paths);
                     activity.runOnUiThread(() -> {
                         dismissProgress(pm);
-                        showInstallCompleteDialog(appName, apkFiles.isEmpty() ? null : apkFiles.get(0));
+                        showInstallCompleteDialog(appName, firstApk);
                     });
                 } catch (Exception e) {
                     activity.runOnUiThread(() -> {
@@ -84,7 +85,7 @@ public class ApkInstallDialogHelper {
             });
             executor.shutdown();
         } else {
-            installSplitWithPackageInstaller(apkFiles, appName, pm);
+            installSplitWithPackageInstaller(apkFiles, appName, pm, firstApk);
         }
     }
 
@@ -122,7 +123,7 @@ public class ApkInstallDialogHelper {
         }
     }
 
-    private void installSplitWithPackageInstaller(List<File> apkFiles, String appName, ProgressManager pm) {
+    private void installSplitWithPackageInstaller(List<File> apkFiles, String appName, ProgressManager pm, File firstApk) {
         try {
             android.content.pm.PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
             android.content.pm.PackageInstaller.SessionParams params =
@@ -158,6 +159,7 @@ public class ApkInstallDialogHelper {
                 commitSession.commit(pendingIntent.getIntentSender());
             }
             dismissProgress(pm);
+            showInstallCompleteDialog(appName, firstApk);
         } catch (Exception e) {
             dismissProgress(pm);
             new ErrorUtil(activity).showError(e);

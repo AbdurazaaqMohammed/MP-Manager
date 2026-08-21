@@ -32,7 +32,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Function"
+                android:text="@string/function"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
@@ -48,7 +48,7 @@
         android:id="@+id/btn_new_search"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="Start a new search"
+        android:text="@string/start_new_search"
         android:clickable="true"
         android:focusable="true"
         android:padding="12dp"
@@ -63,7 +63,7 @@
         android:id="@+id/btn_search_in_results"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="Search in current results"
+        android:text="@string/search_curr"
         android:clickable="true"
         android:focusable="true"
         android:padding="12dp"
@@ -78,7 +78,7 @@
         android:id="@+id/btn_replace_in_results"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="Replace in current results"
+        android:text="@string/rep_curr"
         android:clickable="true"
         android:focusable="true"
         android:padding="12dp"
@@ -93,7 +93,7 @@
         android:id="@+id/btn_clear_results"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="Clear search results"
+        android:text="@string/clear_search_results"
         android:clickable="true"
         android:focusable="true"
         android:padding="12dp"
@@ -133,7 +133,6 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:maxLines="3"
-                android:text="search results (0) - "
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 

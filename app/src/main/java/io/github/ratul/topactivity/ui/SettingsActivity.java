@@ -40,7 +40,6 @@ import io.github.ratul.topactivity.App;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.ratul.topactivity.extensions.ActivityExtensions;
 import io.github.ratul.topactivity.extensions.GenericExtensions;
-import io.github.ratul.topactivity.manager.AppUpdateManager;
 import io.github.ratul.topactivity.manager.ServiceManager;
 import io.github.ratul.topactivity.repository.DataRepository;
 import io.github.ratul.topactivity.services.PackageMonitoringService;
@@ -52,7 +51,6 @@ import java.util.List;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    public AppUpdateManager appUpdateManager;
     public CoordinatorLayout baseView;
     public FloatingActionButton fabStart;
     public SettingsFragment fragment;
@@ -88,7 +86,6 @@ public class SettingsActivity extends AppCompatActivity {
         setupToolbar();
         setupFab();
         setupPreferences();
-        //setupAutoUpdate()
 
         if (handleQsTileIntent(getIntent())) moveTaskToBack(true);
     }
@@ -115,7 +112,6 @@ public class SettingsActivity extends AppCompatActivity {
         baseView = findViewById(R.id.main);
         fragment = (SettingsFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.preferences_container);
-        appUpdateManager = new AppUpdateManager(this);
 
         ViewCompat.setOnApplyWindowInsetsListener(baseView, (v, insets) -> {
             androidx.core.graphics.Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -149,14 +145,8 @@ public class SettingsActivity extends AppCompatActivity {
         });
         fragment.checkUpdate.setOnPreferenceClickListener(preference -> {
             ActivityExtensions.showMessage(this, R.string.checking_for_update);
-            appUpdateManager.checkForUpdate(false);
             return true;
         });
-    }
-
-    private void setupAutoUpdate() {
-        if (DatabaseUtil.isFirstRun()) showAutoUpdatePolicyDialog();
-        if (DatabaseUtil.autoUpdate()) appUpdateManager.checkForUpdate(true);
     }
 
     private void onFabStartClicked() {
@@ -244,25 +234,6 @@ public class SettingsActivity extends AppCompatActivity {
                     onSettings.run();
                 })
                 .setNeutralButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
-                .show();
-    }
-
-    private void showAutoUpdatePolicyDialog() {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.auto_update_check)
-                .setMessage(R.string.auto_update_desc)
-                .setPositiveButton(R.string.enable, (dialog, which) -> {
-                    dialog.dismiss();
-                    DatabaseUtil.setAutoUpdate(true);
-                    fragment.autoUpdate.setChecked(true);
-                    appUpdateManager.checkForUpdate(true);
-                })
-                .setNeutralButton(android.R.string.cancel, (dialog, which) -> {
-                    dialog.dismiss();
-                    DatabaseUtil.setAutoUpdate(false);
-                    fragment.autoUpdate.setChecked(false);
-                })
-                .setOnDismissListener(dialog -> DatabaseUtil.setIsFirstRun(false))
                 .show();
     }
 

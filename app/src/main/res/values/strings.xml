@@ -82,7 +82,6 @@
     <string name="extract">Extract</string>
     <string name="extracting_to_folder">Extracting to %1$s</string>
     <string name="archive_format">Archive format</string>
-    <string name="unknown">Unknown</string>
     <string name="back">Back</string>
     <string name="forward">Forward</string>
     <string name="sync">Sync selected pane to unselected pane</string>
@@ -140,97 +139,6 @@
     <string name="usedpt">%1$d%%</string>
     <string name="used">Used: %1$s Free: %2$s</string>
     <string name="signed_by">Signed By</string>
-
-
-    <!--
-    Layout Inspector
-    /*
-     *   Copyright (C) 2022 Ratul Hasan
-     *
-     *   This program is free software: you can redistribute it and/or modify
-     *   it under the terms of the GNU General Public License as published by
-     *   the Free Software Foundation, either version 3 of the License, or
-     *   (at your option) any later version.
-     *
-     *   This program is distributed in the hope that it will be useful,
-     *   but WITHOUT ANY WARRANTY; without even the implied warranty of
-     *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     *   GNU General Public License for more details.
-     *
-     *   You should have received a copy of the GNU General Public License
-     *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
-     */   -->
-    <string name="github" translatable="false">GitHub</string>
-    <string name="accessibility_service_description">We use accessibility service to monitor window state change events. All data is processed offline and no log is kept.</string>
-    <string name="checking_for_update">Checking for update</string>
-    <string name="update_available">Update Available</string>
-    <string name="new_version_available">A new version %1$s is available. Do you want to download it?\n\nF-Droid users can wait for the update from F-Droid, which usually arrives within a few hours with the IzzyOnDroid repo, and a few days with F-Droid.org\'s repo.</string>
-    <string name="download">Download</string>
-    <string name="already_using_latest">Already on the latest version</string>
-    <string name="update_check_failed">Failed to check for update</string>
-    <string name="package_label">Package</string>
-    <string name="class_label">Class</string>
-    <string name="enable">Enable</string>
-    <string name="system_overlay_title">System Overlay</string>
-    <string name="system_overlay_description">Please allow draw over other apps permission for \'%1$s\' to be able to use Layout Inspector</string>
-    <string name="accessibility_permission_title">Accessibility</string>
-    <string name="accessibility_permission_description">Please enable Accessibility Service for \'%1$s\' to be able to use Layout Inspector</string>
-    <string name="usage_access_title">Usage Access</string>
-    <string name="usage_access_description">Please allow Usage Access permission for \'%1$s\' to be able to use Layout Inspector</string>
-    <string name="package_copied">Package copied</string>
-    <string name="class_copied">Class copied</string>
-    <string name="stop">Stop</string>
-    <string name="inspect_mode">Inspect Mode</string>
-    <string name="view_info">⠿ View Info</string>
-    <string name="view_id">View ID Name</string>
-    <string name="view_id_int">View ID</string>
-    <string name="view_id_hex">View ID Hex</string>
-    <string name="view_class">Class</string>
-    <string name="view_text">Text</string>
-    <string name="view_content_desc">Content Description</string>
-    <string name="view_bounds">Bounds</string>
-    <string name="view_location">Location on Screen</string>
-    <string name="view_size">Size</string>
-    <string name="view_visibility">Visibility</string>
-    <string name="view_enabled">Enabled</string>
-    <string name="view_focusable">Focusable</string>
-    <string name="view_clickable">Clickable</string>
-    <string name="view_long_clickable">Long Clickable</string>
-    <string name="view_focused">Focused</string>
-    <string name="view_selected">Selected</string>
-    <string name="view_parent">Parent</string>
-    <string name="view_children_count">Children Count</string>
-    <string name="view_children">Children</string>
-    <string name="no_children">No children</string>
-    <string name="tap_view_to_inspect">Tap any view to inspect</string>
-    <string name="inspect_stopped">Inspect mode stopped</string>
-    <string name="view_package">Package</string>
-    <string name="copied_to_clipboard">Copied %1$s</string>
-    <string name="notification_channel_name">Activity Info</string>
-    <string name="notification_channel_description">Shows current activity info</string>
-    <string name="auto_update_check">Auto update check</string>
-    <string name="auto_update_desc">To ensure you have the latest features and bug fixes, this app can check at GitHub for new versions. There won\'t be any automated installs, behind your back.\n\nThese updates would not go through the additional screening performed at e.g. IzzyOnDroid or F-Droid.\n\nYou can still turn it on/off later.</string>
-    <string name="restart_required">Restart Required</string>
-    <string name="restart">Restart</string>
-    <string name="later">Later</string>
-    <string name="activity_history">Activity History</string>
-    <string name="child_el_tx">• %1$s%2$s</string>
-    <string name="color_picker_active">Color picker running</string>
-    <string name="color">Color\n</string>
-    <string name="coordinates">Coordinates</string>
-    <string name="running">Running</string>
-    <string name="stopped">Stopped</string>
-
-
-    <string name="color_picker">Color Picker</string>
-    <string name="pref_magnifier_size_title">Magnifier Size</string>
-    <string name="pref_capture_range_title">Capture Range</string>
-    <string name="pref_capture_speed_title">Capture Speed</string>
-    <string name="pref_show_grid_lines_title">Show Grid Lines</string>
-    <string name="pref_show_grid_lines_summary">Display grid lines on magnifier</string>
-    <string name="tips">1. Both text and icon on the magnifier are clickable.\n2. Swipe on magnifier for precise fine-tuning.\n3. If your phone lags when picking colors, reduce capture speed.\n4. If you are asked to select a single app or entire screen, select entire screen.</string>
-    <string name="tips_label">Tips</string>
-
 
     <string name="auto_copy">Auto-copy command to clipboard</string>
     <string name="auto_copy_desc">Automatically copy generated command when profile is selected</string>
@@ -484,7 +392,7 @@
     <string name="show_methods">Show Methods</string>
     <string name="installation_complete">Installation Complete</string>
     <string name="launch">Launch</string>
-    <string name="type_to_filter">Type to filter...</string>
+    <string name="type_to_filter">Type to filter…</string>
     <string name="filter_strings">Filter strings</string>
     <string name="clear">Clear</string>
     <string name="smali_instructions">Smali Instructions</string>
@@ -509,14 +417,192 @@
     <string name="compile_save_prompt">Do you want to compile and save the dex files?</string>
     <string name="edit_string">Edit string</string>
     <string name="unsaved_changes">Unsaved changes</string>
-    <string name="applying_changes">Applying changes...</string>
+    <string name="applying_changes">Applying changes…</string>
     <string name="ui_update_failed">UI update failed: %1$s</string>
     <string name="go_back">Go Back</string>
     <string name="failed_to_process_dex_files">Failed to process DEX files:\n\n%1$s</string>
-    <string name="deleting_classes">Deleting classes...</string>
-    <string name="decompiling">Decompiling...</string>
+    <string name="deleting_classes">Deleting classes…</string>
+    <string name="decompiling">Decompiling…</string>
     <string name="kres">1000+ results found so far. Are you sure you wish to continue?</string>
     <string name="cont">Continue</string>
-    <string name="generating_flowchart">Generating flowchart...</string>
-    <string name="generating">Generating...</string>
+    <string name="generating_flowchart">Generating flowchart…</string>
+    <string name="generating">Generating…</string>
+
+    <!--
+Layout Inspector
+/*
+ *   Copyright (C) 2022 Ratul Hasan
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */   -->
+    <string name="github" translatable="false">GitHub</string>
+    <string name="accessibility_service_description">We use accessibility service to monitor window state change events. All data is processed offline and no log is kept.</string>
+    <string name="checking_for_update">Checking for update</string>
+    <string name="package_label">Package</string>
+    <string name="class_label">Class</string>
+    <string name="system_overlay_title">System Overlay</string>
+    <string name="system_overlay_description">Please allow draw over other apps permission for %1$s to be able to use Layout Inspector</string>
+    <string name="accessibility_permission_title">Accessibility</string>
+    <string name="accessibility_permission_description">Please enable Accessibility Service for %1$s to be able to use Layout Inspector</string>
+    <string name="usage_access_title">Usage Access</string>
+    <string name="usage_access_description">Please allow Usage Access permission for %1$s to be able to use Layout Inspector</string>
+    <string name="package_copied">Package copied</string>
+    <string name="class_copied">Class copied</string>
+    <string name="stop">Stop</string>
+    <string name="inspect_mode">Inspect Mode</string>
+    <string name="view_info">⠿ View Info</string>
+    <string name="view_id">View ID Name</string>
+    <string name="view_id_int">View ID</string>
+    <string name="view_id_hex">View ID Hex</string>
+    <string name="view_class">Class</string>
+    <string name="view_text">Text</string>
+    <string name="view_content_desc">Content Description</string>
+    <string name="view_bounds">Bounds</string>
+    <string name="view_location">Location on Screen</string>
+    <string name="view_size">Size</string>
+    <string name="view_visibility">Visibility</string>
+    <string name="view_enabled">Enabled</string>
+    <string name="view_focusable">Focusable</string>
+    <string name="view_clickable">Clickable</string>
+    <string name="view_long_clickable">Long Clickable</string>
+    <string name="view_focused">Focused</string>
+    <string name="view_selected">Selected</string>
+    <string name="view_parent">Parent</string>
+    <string name="view_children_count">Children Count</string>
+    <string name="view_children">Children</string>
+    <string name="no_children">No children</string>
+    <string name="tap_view_to_inspect">Tap any view to inspect</string>
+    <string name="inspect_stopped">Inspect mode stopped</string>
+    <string name="view_package">Package</string>
+    <string name="copied_to_clipboard">Copied %1$s</string>
+    <string name="notification_channel_name">Activity Info</string>
+    <string name="notification_channel_description">Shows current activity info</string>
+    <string name="restart_required">Restart Required</string>
+    <string name="restart">Restart</string>
+    <string name="activity_history">Activity History</string>
+    <string name="child_el_tx">• %1$s%2$s</string>
+    <string name="color_picker_active">Color picker running</string>
+    <string name="color">Color\n</string>
+    <string name="coordinates">Coordinates</string>
+    <string name="running">Running</string>
+    <string name="stopped">Stopped</string>
+    <string name="color_picker">Color Picker</string>
+    <string name="pref_magnifier_size_title">Magnifier Size</string>
+    <string name="pref_capture_range_title">Capture Range</string>
+    <string name="pref_capture_speed_title">Capture Speed</string>
+    <string name="pref_show_grid_lines_title">Show Grid Lines</string>
+    <string name="pref_show_grid_lines_summary">Display grid lines on magnifier</string>
+    <string name="tips">1. Both text and icon on the magnifier are clickable.\n2. Swipe on magnifier for precise fine-tuning.\n3. If your phone lags when picking colors, reduce capture speed.\n4. If you are asked to select a single app or entire screen, select entire screen.</string>
+    <string name="tips_label">Tips</string>
+
+
+    <string name="ellipsis">…</string>
+    <string name="flowchart">Flow Chart</string>
+    <string name="graphview">Graph View</string>
+    <string name="buffering_label">Buffering…</string>
+    <string name="artwork">Artwork</string>
+    <string name="lock_controls">Lock controls</string>
+    <string name="repeat">Repeat</string>
+    <string name="previous">Previous</string>
+    <string name="rewind">Rewind</string>
+    <string name="play_pause">Play/Pause</string>
+    <string name="fast_forward">Fast Forward</string>
+    <string name="next">Next</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="speed">Speed</string>
+    <string name="mute">mute</string>
+    <string name="queue">queue</string>
+    <string name="set_point_a">Set Point A</string>
+    <string name="set_point_b">Set Point B</string>
+    <string name="clear_ab_repeat">Clear AB Repeat</string>
+    <string name="root_info">Root Info</string>
+    <string name="medium_text">Medium Text</string>
+    <string name="opened_classes">Opened classes</string>
+    <string name="options">Options</string>
+    <string name="set_extract_native_libs">Set extractNativeLibs</string>
+    <string name="dex_library_to_use">Dex library to use</string>
+    <string name="flags">Flags</string>
+    <string name="validate_rss_dir_name">Validate resources dir name (e.g. if a drawable resource file path is \'res/abc.png\' then it will be moved to \'res/drawable/abc.png)\'</string>
+    <string name="ignore_built_cached_dex">Ignore built cached .dex files and rebuild smali files</string>
+    <string name="encode_dex_profile_json">Encode decoded dex profile json files to binary assets/dexopt files</string>
+    <string name="rss_root_dir">Resource files root dir name</string>
+    <string name="decode_types">Decode Types</string>
+    <string name="dex_load_count">Number of dex files to load at once</string>
+    <string name="dex_li">DEX Library</string>
+    <string name="dont_decode_dex">Don\'t decode DEX</string>
+    <string name="remove_debug_information">Remove debug information</string>
+    <string name="dump_dex_markers">Dump DEX Markers</string>
+    <string name="keep_rss">Keep original res paths</string>
+    <string name="split_json_large_files">Split JSON (use for large files)</string>
+    <string name="valid_rss_dir">Validate res directory</string>
+    <string name="ip_address_hint">IP Address</string>
+    <string name="port">Port</string>
+    <string name="choose_action">Choose Action</string>
+    <string name="username">Username</string>
+    <string name="rename_pattern">Rename pattern</string>
+    <string name="rename_pattern_help">{P} name without extension  \u00b7  {S} extension  \u00b7  {N} number  \u00b7  {zN} zero-padded number</string>
+    <string name="pattern">Pattern</string>
+    <string name="find_and_replace">Find and replace</string>
+    <string name="regex">Use regex</string>
+    <string name="full_player">Open full player</string>
+    <string name="search_subfolders">Search subfolders</string>
+    <string name="advanced_search">Advanced search</string>
+    <string name="text_in_file">Text inside file</string>
+    <string name="sizebytes">File Size (bytes)</string>
+    <string name="min_size_hint">Minimum file size</string>
+    <string name="max_size_hint">Maximum file size</string>
+    <string name="text_to_find">Text to find</string>
+    <string name="search_type">Search type</string>
+    <string name="exactly_match">Exactly match</string>
+    <string name="hex">Hex</string>
+    <string name="open_player_as_act">Open player as activity</string>
+    <string name="root_access">Root Access</string>
+    <string name="working_mode">Working Mode</string>
+    <string name="root_available">Root available</string>
+    <string name="root_install">Root install</string>
+    <string name="root_file_operations">Root file operations</string>
+    <string name="root_extractor_features">Root features in APK Extractor</string>
+    <string name="use_biometrics">Use device biometrics instead of password</string>
+    <string name="choose_signature_key">Choose signature key</string>
+    <string name="select_signature_file">Select signature file</string>
+    <string name="pick_file">Pick file</string>
+    <string name="extract_split_apks">Extract split APK files</string>
+    <string name="show_launch_activities">Show Launch Activities</string>
+    <string name="advanced_options">Advanced Options</string>
+    <string name="menu_items">Menu items</string>
+    <string name="option_icon_cd">Option Icon</string>
+    <string name="storage">Storage</string>
+    <string name="more_options">More options</string>
+    <string name="destination_path">Destination Path</string>
+    <string name="alias_key_name_hint">Alias / Key name</string>
+    <string name="store_pass">Store Password (For jks)</string>
+    <string name="key_pass">Key Password (For jks)</string>
+    <string name="key_size">Key Size (Leave Default)</string>
+    <string name="validity_years">Validity (Years Only)</string>
+    <string name="fn_ln">First and Last Name</string>
+    <string name="org_unit">Organizational Unit</string>
+    <string name="org">Organization</string>
+    <string name="city_loc">City or Locality</string>
+    <string name="state_prov">State or Province</string>
+    <string name="country_cod">Country Code (XX)</string>
+    <string name="file_icon">File icon</string>
+    <string name="file_info_cd">Date, time last modified and file size</string>
+    <string name="reload">Reload</string>
+    <string name="apply_changes">Apply changes</string>
+    <string name="function">Function</string>
+    <string name="start_new_search">Start a new search</string>
+    <string name="search_curr">Search in current results</string>
+    <string name="rep_curr">Replace in current results</string>
+    <string name="clear_search_results">Clear search results</string>
 </resources>

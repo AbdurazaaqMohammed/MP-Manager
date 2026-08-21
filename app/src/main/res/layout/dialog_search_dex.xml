@@ -12,7 +12,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Text to find"
+            android:text="@string/text_to_find"
             android:textSize="14sp" />
 
         <RelativeLayout
@@ -35,7 +35,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/pathTitle"
-                android:text="Path"
+                android:text="@string/path"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -58,7 +58,7 @@
                     android:id="@+id/tv_exclude_list"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Exclude list"
+                    android:text="@string/exclude_list"
                     android:textColor="#2196F3"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -81,7 +81,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Search type"
+                android:text="@string/search_type"
                 android:textSize="14sp" />
 
             <Spinner
@@ -102,7 +102,7 @@
             android:minHeight="0dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
-            android:text="Search subfolders" />
+            android:text="@string/search_subfolders" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cb_match_case"
@@ -111,7 +111,7 @@
             android:minHeight="0dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
-            android:text="Match case" />
+            android:text="@string/match_case" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cb_regex"
@@ -120,7 +120,7 @@
             android:minHeight="0dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
-            android:text="Regex" />
+            android:text="@string/regex" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cb_exactly_match"
@@ -129,7 +129,7 @@
             android:minHeight="0dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
-            android:text="Exactly match" />
+            android:text="@string/exactly_match" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cb_hex"
@@ -138,7 +138,7 @@
             android:minHeight="0dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
-            android:text="Hex"
+            android:text="@string/hex"
             android:visibility="gone" />
 
     </LinearLayout>

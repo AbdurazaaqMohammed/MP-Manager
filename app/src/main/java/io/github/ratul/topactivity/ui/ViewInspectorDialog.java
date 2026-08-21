@@ -479,7 +479,7 @@ public class ViewInspectorDialog extends Dialog {
         ));
 
         TextView valueView = new TextView(context);
-        valueView.setText(value.isEmpty() ? context.getString(R.string.unknown) : value);
+        valueView.setText(value.isEmpty() ? context.getString(android.R.string.unknownName) : value);
         valueView.setTextSize(14f);
         valueView.setLayoutParams(new LinearLayout.LayoutParams(
                 0,

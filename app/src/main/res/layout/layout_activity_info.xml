@@ -20,7 +20,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:padding="8dp"
-            android:text="@string/unknown"
+            android:text="@android:string/unknownName"
             android:textColor="#FFFFFF"
             android:textSize="13sp" />
 

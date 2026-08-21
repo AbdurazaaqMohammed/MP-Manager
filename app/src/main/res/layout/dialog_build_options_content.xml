@@ -13,14 +13,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Options"
+            android:text="@string/options"
             android:textStyle="bold"
             android:textSize="16sp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Set extractNativeLibs" />
+            android:text="@string/set_extract_native_libs" />
 
         <RadioGroup
             android:id="@+id/rg_extract_native_libs"
@@ -32,7 +32,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Dex library to use" />
+            android:text="@string/dex_library_to_use" />
 
         <RadioGroup
             android:id="@+id/rg_dex_lib"
@@ -44,31 +44,31 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Flags" />
+            android:text="@string/flags" />
 
         <CheckBox
             android:id="@+id/cb_vrd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Validate resources dir name (eg. if a drawable resource file path is 'res/abc.png' then it will be moved to 'res/drawable/abc.png)'" />
+            android:text="@string/validate_rss_dir_name" />
 
         <CheckBox
             android:id="@+id/cb_no_cache"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Ignore built cached .dex files and rebuild smali files" />
+            android:text="@string/ignore_built_cached_dex" />
 
         <CheckBox
             android:id="@+id/cb_dex_profile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Encode decoded dex profile json files to binary assets/dexopt files" />
+            android:text="@string/encode_dex_profile_json" />
 
         <!-- res-dir -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Resource files root dir name"
+            android:hint="@string/rss_root_dir"
             android:layout_marginTop="8dp">
 
             <com.google.android.material.textfield.TextInputEditText

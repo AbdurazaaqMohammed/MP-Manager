@@ -33,7 +33,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="Buffering..."
+            android:text="@string/buffering_label"
             android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
             android:visibility="gone" />
@@ -63,7 +63,7 @@
             android:layout_height="240dp"
             android:scaleType="centerCrop"
             android:src="@android:drawable/ic_menu_gallery"
-            android:contentDescription="Artwork" />
+            android:contentDescription="@string/artwork" />
 
         <TextView
             android:id="@+id/trackTitle"
@@ -73,7 +73,7 @@
             android:gravity="center"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:text="Unknown" />
+            android:text="@android:string/unknownName" />
 
         <TextView
             android:id="@+id/trackArtist"
@@ -81,7 +81,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textSize="16sp"
-            android:text="Unknown Artist" />
+            android:text="@android:string/unknownName" />
 
         <TextView
             android:id="@+id/trackAlbum"
@@ -89,7 +89,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textSize="14sp"
-            android:text="Unknown Album" />
+            android:text="@android:string/unknownName" />
 
     </LinearLayout>
 
@@ -109,7 +109,7 @@
             android:layout_gravity="end"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/lock_24px"
-            android:contentDescription="Lock controls" />
+            android:contentDescription="@string/lock_controls" />
 
         <ImageButton
             android:id="@+id/btnSettings"
@@ -118,7 +118,7 @@
             android:layout_gravity="end"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/baseline_settings_24"
-            android:contentDescription="Settings" />
+            android:contentDescription="@string/settings" />
 
     </androidx.appcompat.widget.Toolbar>
 
@@ -142,7 +142,6 @@
                 android:id="@+id/currentTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0:00"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
@@ -158,7 +157,6 @@
                 android:id="@+id/totalTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0:00"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
@@ -177,7 +175,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/repeat_24px"
-                android:contentDescription="Repeat" />
+                android:contentDescription="@string/repeat" />
 
             <ImageButton
                 android:id="@+id/btnPrevious"
@@ -185,7 +183,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/skip_previous_24px"
-                android:contentDescription="Previous" />
+                android:contentDescription="@string/previous" />
 
             <ImageButton
                 android:id="@+id/btnRewind"
@@ -193,7 +191,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/fast_rewind_24px"
-                android:contentDescription="Rewind" />
+                android:contentDescription="@string/rewind" />
 
             <ImageButton
                 android:id="@+id/btnPlayPause"
@@ -201,7 +199,7 @@
                 android:layout_height="64dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_start"
-                android:contentDescription="Play/Pause" />
+                android:contentDescription="@string/play_pause" />
 
             <ImageButton
                 android:id="@+id/btnFastForward"
@@ -209,7 +207,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/fast_forward_24px"
-                android:contentDescription="Fast Forward" />
+                android:contentDescription="@string/fast_forward" />
 
             <ImageButton
                 android:id="@+id/btnNext"
@@ -217,7 +215,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/skip_next_24px"
-                android:contentDescription="Next" />
+                android:contentDescription="@string/next" />
 
             <ImageButton
                 android:id="@+id/btnShuffle"
@@ -225,7 +223,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/shuffle_24px"
-                android:contentDescription="Shuffle" />
+                android:contentDescription="@string/shuffle" />
 
         </LinearLayout>
 
@@ -239,7 +237,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Speed"
+                android:text="@string/speed"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
@@ -256,7 +254,6 @@
                 android:id="@+id/speedLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="1.0x"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp" />
 
@@ -275,7 +272,7 @@
                 android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/volume_off_24px"
-                android:contentDescription="Mute" />
+                android:contentDescription="@string/mute" />
 
             <SeekBar
                 android:id="@+id/volumeSeekBar"
@@ -292,7 +289,7 @@
                 android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/queue_music_24px"
-                android:contentDescription="Queue" />
+                android:contentDescription="@string/queue" />
 
         </LinearLayout>
 
@@ -312,7 +309,7 @@
                 android:layout_height="36dp"
                 android:text="A"
                 android:textColor="?attr/colorOnSurface"
-                android:contentDescription="Set point A" />
+                android:contentDescription="@string/set_point_a" />
 
             <SeekBar
                 android:id="@+id/abSeekBar"
@@ -329,7 +326,7 @@
                 android:layout_height="36dp"
                 android:text="B"
                 android:textColor="?attr/colorOnSurface"
-                android:contentDescription="Set point B" />
+                android:contentDescription="@string/set_point_b" />
 
             <ImageButton
                 android:id="@+id/btnClearAB"
@@ -337,7 +334,7 @@
                 android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_cancel"
-                android:contentDescription="Clear AB repeat" />
+                android:contentDescription="@string/clear_ab_repeat" />
 
         </LinearLayout>
 

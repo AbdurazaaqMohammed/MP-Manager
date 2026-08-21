@@ -43,13 +43,13 @@
             android:id="@+id/et_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter password"
+            android:hint="@string/enter_password"
             android:inputType="textPassword" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/cb_biometric"
-        android:text="Use device biometrics instead of password"
+        android:text="@string/use_biometrics"
         android:visibility="gone"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content" />
@@ -57,7 +57,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Choose signature key"
+        android:text="@string/choose_signature_key"
         android:paddingBottom="8dp"/>
 
     <LinearLayout
@@ -80,14 +80,14 @@
                 android:inputType="text"
                 android:singleLine="false"
                 android:layout_height="wrap_content"
-                android:hint="Select signature file"/>
+                android:hint="@string/select_signature_file"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_pick_file"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pick file"
+            android:text="@string/pick_file"
             android:layout_marginStart="12dp"/>
     </LinearLayout>
 

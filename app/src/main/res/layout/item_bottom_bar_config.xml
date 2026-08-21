@@ -30,12 +30,12 @@
         android:layout_height="48dp"
         android:src="@drawable/edit_24px"
         android:background="?attr/selectableItemBackground"
-        android:contentDescription="Edit" />
+        android:contentDescription="@string/edit" />
     <ImageButton
         android:id="@+id/btn_delete"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:src="@drawable/baseline_delete_24"
         android:background="?attr/selectableItemBackground"
-        android:contentDescription="Delete" />
+        android:contentDescription="@string/delete" />
 </LinearLayout>

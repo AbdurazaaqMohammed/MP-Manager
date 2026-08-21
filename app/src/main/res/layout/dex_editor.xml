@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <io.github.abdurazaaqmohammed.ui.MyDrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -119,7 +118,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
             android:layout_gravity="end|bottom"
-            android:contentDescription="Delete fab"
+            android:contentDescription="@string/delete"
             app:srcCompat="@drawable/ic_delete" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
@@ -135,8 +134,7 @@
             android:id="@+id/drawer_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-
-            app:title="Opened classes" />
+            app:title="@string/opened_classes" />
 
         <modder.hub.dexeditor.views.FastScrollerRecyclerView
             android:id="@+id/tabs_recycler_view"

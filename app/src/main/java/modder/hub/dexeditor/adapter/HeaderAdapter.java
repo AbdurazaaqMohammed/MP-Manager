@@ -70,12 +70,7 @@ public class HeaderAdapter extends RecyclerView.Adapter<HeaderAdapter.ViewHolder
         holder.title.setText(title);
         if (menuClickListener != null) {
             holder.menu.setVisibility(View.VISIBLE);
-            holder.menu.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    menuClickListener.onMenuClick(v);
-                }
-            });
+            holder.menu.setOnClickListener(v -> menuClickListener.onMenuClick(v));
         } else {
             holder.menu.setVisibility(View.GONE);
         }

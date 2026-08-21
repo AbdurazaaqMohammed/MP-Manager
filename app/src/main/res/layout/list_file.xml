@@ -10,7 +10,7 @@
         android:id="@+id/fileIcon"
         android:layout_width="30dp"
         android:layout_height="30dp"
-        android:contentDescription="File Icon"
+        android:contentDescription="@string/file_icon"
         android:layout_gravity="center_vertical"/>
 
     <LinearLayout
@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:contentDescription="File name"/>
+            android:contentDescription="@string/filename"/>
 
         <TextView
             android:id="@+id/fileDate"
@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:textColor="@android:color/darker_gray"
             android:textSize="10sp"
-            android:contentDescription="Date, time last modified and file size"/>
+            android:contentDescription="@string/file_info_cd"/>
     </LinearLayout>
 
 </LinearLayout>

@@ -17,7 +17,7 @@
             android:layout_height="48dp"
             android:scaleType="centerCrop"
             android:src="@android:drawable/ic_menu_gallery"
-            android:contentDescription="Artwork" />
+            android:contentDescription="@string/artwork" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -33,7 +33,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:singleLine="true"
-                android:text="Unknown" />
+                android:text="@android:string/unknownName" />
 
             <TextView
                 android:id="@+id/trackArtist"
@@ -41,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
                 android:singleLine="true"
-                android:text="Unknown Artist" />
+                android:text="@android:string/unknownName" />
 
         </LinearLayout>
 
@@ -51,7 +51,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/ic_start"
-            android:contentDescription="Play/Pause" />
+            android:contentDescription="@string/play_pause" />
 
         <ImageButton
             android:id="@+id/btnNext"
@@ -59,7 +59,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/skip_next_24px"
-            android:contentDescription="Next" />
+            android:contentDescription="@string/next" />
 
         <ImageButton
             android:id="@+id/btnExpand"
@@ -67,7 +67,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/fullscreen_24px"
-            android:contentDescription="Full player" />
+            android:contentDescription="@string/full_player" />
 
     </LinearLayout>
 
@@ -82,7 +82,6 @@
             android:id="@+id/currentTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0:00"
             android:textSize="11sp" />
 
         <SeekBar
@@ -97,7 +96,6 @@
             android:id="@+id/totalTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0:00"
             android:textSize="11sp" />
 
     </LinearLayout>

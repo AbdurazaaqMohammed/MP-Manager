@@ -80,7 +80,7 @@
             android:layout_centerVertical="true"
             android:padding="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="More Options"
+            android:contentDescription="@string/more_options"
             android:src="@drawable/baseline_more_vert_24"
             app:tint="?attr/colorOnSurfaceVariant" />
 

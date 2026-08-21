@@ -16,6 +16,7 @@
  */
 package io.github.ratul.topactivity.manager;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Handler;
@@ -41,7 +42,7 @@ import io.github.ratul.topactivity.utils.WindowManagerUtil;
 
 public class PopupManager {
 
-    private final Context context;
+    private final Activity context;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final InspectOverlayManager inspectOverlayManager;
 
@@ -51,7 +52,7 @@ public class PopupManager {
     private ImageView inspectBtn;
     private final DataRepository.StateListener stateListener = this::onStateChanged;
 
-    public PopupManager(Context context) {
+    public PopupManager(Activity context) {
         this.context = context;
         this.inspectOverlayManager = new InspectOverlayManager(context);
         this.windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
@@ -127,7 +128,7 @@ public class PopupManager {
         view.setOnTouchListener(new DragTouchManager(windowManager, layoutParams));
 
         ServiceState serviceState = DataRepository.getInstance().getAppState();
-        String defaultAppName = context.getString(R.string.unknown);
+        String defaultAppName = context.getString(android.R.string.unknownName);
         className.setText(serviceState.getCls());
         packageName.setText(serviceState.getPkg());
         appName.setText(getAppName(serviceState.getPkg()) != null
@@ -157,7 +158,7 @@ public class PopupManager {
         TextView packageName = baseView.findViewById(R.id.package_name);
         TextView className = baseView.findViewById(R.id.class_name);
 
-        String defaultAppName = context.getString(R.string.unknown);
+        String defaultAppName = context.getString(android.R.string.unknownName);
         boolean isPackageChanged = !state.getPkg().equals(GenericExtensions.value(packageName));
         boolean isClassChanged = !state.getCls().equals(GenericExtensions.value(className));
 

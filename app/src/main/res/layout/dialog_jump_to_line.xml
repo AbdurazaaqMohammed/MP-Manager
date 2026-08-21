@@ -10,7 +10,7 @@
         android:id="@+id/editText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Line number"
+        android:hint="@string/enter_line_to_jump_to"
         android:inputType="number"
         android:textColorHint="?attr/colorOnSurface"
         android:backgroundTint="#42A5F5" />

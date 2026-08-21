@@ -16,6 +16,7 @@
  */
 package io.github.ratul.topactivity;
 
+import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ClipData;
@@ -23,6 +24,8 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.widget.Toast;
+
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.core.app.NotificationManagerCompat;
@@ -94,13 +97,9 @@ public class App extends MultiDexApplication {
 
     public static void showToast(Context context, String message) {
         try {
-            Extensions.showMessage(context, message);
+            Extensions.showMessage((Activity) context, message);
         } catch (Exception ignored) {
-            try {
-                Extensions.showMessage(instance, message);
-            } catch (Exception ignored2) {
-                // ignore
-            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
         }
     }
 }
