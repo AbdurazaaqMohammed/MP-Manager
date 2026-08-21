@@ -13,7 +13,6 @@
     <FrameLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/signBox"
         android:padding="20dp"
         android:orientation="horizontal">
         <com.google.android.material.checkbox.MaterialCheckBox

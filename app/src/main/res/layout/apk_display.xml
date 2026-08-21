@@ -59,14 +59,12 @@
             android:layout_marginBottom="4dp" />
 
         <LinearLayout
-            android:id="@+id/rowPackage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/pkgNameTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/p_package"
@@ -85,14 +83,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowVersionCode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/verCodeTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -109,14 +105,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowFileSize"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/fileSizeTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -133,14 +127,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowTargetSdk"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/apkTargetSdkTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -157,14 +149,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowMinSdk"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/apkMinSdkTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -181,14 +171,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowSignatures"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/signaturesInApkTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -205,14 +193,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowCert"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/apkCertTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/cert_sha256"
@@ -230,14 +216,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowInstalled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/apkInstalledTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -254,14 +238,12 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowProtected"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingVertical="6dp">
 
             <TextView
-                android:id="@+id/protectedTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -278,7 +260,6 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowPermissions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
@@ -295,7 +276,6 @@
                 android:paddingVertical="12dp">
 
                 <TextView
-                    android:id="@+id/apkPermissionsTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"

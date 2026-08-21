@@ -108,14 +108,12 @@
             android:background="?android:attr/listDivider" />
 
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/zip_c_dropdown_menu"
             style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/compression_level">
 
             <AutoCompleteTextView
-                android:id="@+id/zip_c_tv"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="none"
@@ -158,7 +156,6 @@
                     android:layout_marginBottom="8dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/workingModeDropdown"
                     style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -228,7 +225,6 @@
         <FrameLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/signBox"
             android:orientation="horizontal"
             android:layout_marginTop="8dp">
             <com.google.android.material.checkbox.MaterialCheckBox

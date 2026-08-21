@@ -20,7 +20,6 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:id="@+id/aboutIcon"
                 android:layout_width="72dp"
                 android:layout_height="72dp"
                 android:contentDescription="@string/app_name"
@@ -34,7 +33,6 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/aboutAppName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/app_name"
@@ -52,7 +50,6 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/aboutDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"

@@ -38,7 +38,6 @@
 				app:srcCompat="@drawable/ic_select_rest" />
 
 			<LinearLayout
-				android:id="@+id/fab_default"
 				android:layout_width="56dp"
 				android:layout_height="56dp"
 				android:layout_margin="16dp"

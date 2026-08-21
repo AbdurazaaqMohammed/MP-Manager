@@ -24,7 +24,6 @@
                 android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/funcTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
@@ -59,7 +58,6 @@
                 android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/displayInfoTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
@@ -139,7 +137,6 @@
                 android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/displayFuncTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"

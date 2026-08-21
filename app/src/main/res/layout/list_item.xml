@@ -41,7 +41,6 @@
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="?attr/colorPrimary">
             <ImageView
-                android:id="@+id/badge_icon"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:padding="4dp"
