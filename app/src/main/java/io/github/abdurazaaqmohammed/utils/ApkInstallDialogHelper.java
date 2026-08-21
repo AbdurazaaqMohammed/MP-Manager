@@ -1,22 +1,23 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.Dialog;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.view.Gravity;
-import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.os.Build;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
@@ -26,6 +27,9 @@ import java.util.concurrent.Executors;
 
 public class ApkInstallDialogHelper {
 
+    public static final String ACTION_INSTALL_RESULT = "io.github.abdurazaaqmohammed.APK_INSTALL_RESULT";
+    public static final String EXTRA_INSTALL_SUCCESS = "extra_install_success";
+
     private final Activity activity;
 
     public ApkInstallDialogHelper(Activity activity) {
@@ -33,11 +37,11 @@ public class ApkInstallDialogHelper {
     }
 
     public void installSingleApk(File apkFile) {
-        String appName = getAppNameForApk(apkFile);
-        ProgressManager pm = showProgress("Installing " + appName + "...");
 
         RootManager rm = RootManager.getInstance(activity);
         if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
+            CharSequence appName = getAppNameForApk(apkFile);
+            ProgressManager pm = showProgress("Installing " + appName + "...");
             ExecutorService executor = Executors.newSingleThreadExecutor();
             executor.execute(() -> {
                 try {
@@ -55,7 +59,8 @@ public class ApkInstallDialogHelper {
             });
             executor.shutdown();
         } else {
-            installWithIntent(apkFile, pm);
+            InstallUtil.installApk(activity, apkFile);
+            //installWithIntent(apkFile, pm);
         }
     }
 
@@ -89,16 +94,17 @@ public class ApkInstallDialogHelper {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void installWithIntent(File apkFile, ProgressManager pm) {
         try {
-            android.content.pm.PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
-            android.content.pm.PackageInstaller.SessionParams params =
-                    new android.content.pm.PackageInstaller.SessionParams(
-                            android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
+            PackageInstaller.SessionParams params =
+                    new PackageInstaller.SessionParams(
+                            PackageInstaller.SessionParams.MODE_FULL_INSTALL);
             params.setSize(apkFile.length());
 
             int sessionId = pi.createSession(params);
-            try (android.content.pm.PackageInstaller.Session session = pi.openSession(sessionId);
+            try (PackageInstaller.Session session = pi.openSession(sessionId);
                  java.io.OutputStream out = session.openWrite("apk", 0, apkFile.length());
                  java.io.InputStream in = new java.io.FileInputStream(apkFile)) {
                 byte[] buffer = new byte[65536];
@@ -109,11 +115,11 @@ public class ApkInstallDialogHelper {
                 session.fsync(out);
             }
 
-            android.content.Intent callbackIntent = new android.content.Intent(activity, com.faith.apkinstaller.APKInstallService.class);
-            android.app.PendingIntent pendingIntent = android.app.PendingIntent.getService(
-                    activity, 0, callbackIntent, android.app.PendingIntent.FLAG_MUTABLE);
+            Intent callbackIntent = new Intent(activity, com.faith.apkinstaller.APKInstallService.class);
+            PendingIntent pendingIntent = PendingIntent.getService(
+                    activity, 0, callbackIntent, PendingIntent.FLAG_MUTABLE);
 
-            try (android.content.pm.PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
+            try (PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
                 commitSession.commit(pendingIntent.getIntentSender());
             }
             dismissProgress(pm);
@@ -123,19 +129,20 @@ public class ApkInstallDialogHelper {
         }
     }
 
+    @SuppressLint("RequestInstallPackagesPolicy")
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void installSplitWithPackageInstaller(List<File> apkFiles, String appName, ProgressManager pm, File firstApk) {
+        BroadcastReceiver resultReceiver = null;
         try {
-            android.content.pm.PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
-            android.content.pm.PackageInstaller.SessionParams params =
-                    new android.content.pm.PackageInstaller.SessionParams(
-                            android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
+            PackageInstaller.SessionParams params =new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
 
             long totalSize = 0;
             for (File f : apkFiles) totalSize += f.length();
             params.setSize(totalSize);
 
             int sessionId = pi.createSession(params);
-            try (android.content.pm.PackageInstaller.Session session = pi.openSession(sessionId)) {
+            try (PackageInstaller.Session session = pi.openSession(sessionId)) {
                 int idx = 0;
                 for (File apkFile : apkFiles) {
                     try (java.io.OutputStream out = session.openWrite("split_" + idx, 0, apkFile.length());
@@ -151,16 +158,31 @@ public class ApkInstallDialogHelper {
                 }
             }
 
-            android.content.Intent callbackIntent = new android.content.Intent(activity, com.faith.apkinstaller.APKInstallService.class);
-            android.app.PendingIntent pendingIntent = android.app.PendingIntent.getService(
-                    activity, 0, callbackIntent, android.app.PendingIntent.FLAG_MUTABLE);
+            Intent callbackIntent = new Intent(activity, com.faith.apkinstaller.APKInstallService.class);
+            PendingIntent pendingIntent = PendingIntent.getService(activity, 0, callbackIntent, PendingIntent.FLAG_MUTABLE);
 
-            try (android.content.pm.PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
+            resultReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    try { activity.unregisterReceiver(this); } catch (Exception ignored) {}
+                    dismissProgress(pm);
+                    if (intent.getBooleanExtra(EXTRA_INSTALL_SUCCESS, false)) {
+                        showInstallCompleteDialog(appName, firstApk);
+                    } else {
+                        Extensions.showMessage(activity, activity.getString(R.string.installation_failed));
+                    }
+                }
+            };
+            IntentFilter filter = new IntentFilter(ACTION_INSTALL_RESULT);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                activity.registerReceiver(resultReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            else activity.registerReceiver(resultReceiver, filter);
+
+            try (PackageInstaller.Session commitSession = pi.openSession(sessionId)) {
                 commitSession.commit(pendingIntent.getIntentSender());
             }
-            dismissProgress(pm);
-            showInstallCompleteDialog(appName, firstApk);
         } catch (Exception e) {
+            if (resultReceiver != null) { try { activity.unregisterReceiver(resultReceiver); } catch (Exception ignored) {} }
             dismissProgress(pm);
             new ErrorUtil(activity).showError(e);
         }
@@ -180,56 +202,35 @@ public class ApkInstallDialogHelper {
         if (pm != null) pm.dismiss();
     }
 
-    private void showInstallCompleteDialog(String appName, File apkFile) {
-        LinearLayout layout = new LinearLayout(activity);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(Gravity.CENTER);
-        layout.setPadding(dp(16), dp(16), dp(16), dp(8));
-
-        TextView icon = new TextView(activity);
-        icon.setText("\u2714");
-        icon.setTextSize(48);
-        icon.setGravity(Gravity.CENTER);
-        icon.setTextColor(MaterialColors.getColor(activity, com.google.android.material.R.attr.colorPrimary, Color.GREEN));
-        layout.addView(icon);
-
-        TextView message = new TextView(activity);
-        message.setText(appName + " installed successfully!");
-        message.setTextSize(15);
-        message.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams msgParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        msgParams.topMargin = dp(8);
-        layout.addView(message, msgParams);
-
+    private void showInstallCompleteDialog(CharSequence appName, File apkFile) {
         String packageName = getPackageNameForApk(apkFile);
 
-        Dialog dialog = new MaterialAlertDialogBuilder(activity)
-                .setTitle(R.string.installation_complete)
-                .setView(layout)
-                .setPositiveButton(R.string.launch, (d, w) -> {
-                    if (packageName != null) {
-                        Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(packageName);
-                        if (launchIntent != null) {
-                            activity.startActivity(launchIntent);
-                        } else {
-                            Extensions.showMessage(activity, "Cannot launch app");
-                        }
+        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(activity)
+            .setTitle(R.string.installation_complete)
+            .setMessage(activity.getString(R.string.installed_successfully, appName))
+            .setPositiveButton(R.string.launch, (d, w) -> {
+                if (packageName != null) {
+                    Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(packageName);
+                    if (launchIntent != null) {
+                        activity.startActivity(launchIntent);
+                    } else {
+                        Extensions.showMessage(activity, "Cannot launch app");
                     }
-                })
-                .setNegativeButton("Done", null)
-                .create();
-        dialog.show();
+                }
+            })
+            .setNegativeButton(android.R.string.ok, null);
+        activity.runOnUiThread(b::show);
     }
 
-    private String getAppNameForApk(File apkFile) {
+    private CharSequence getAppNameForApk(File apkFile) {
         if (apkFile == null) return "APK";
         try {
             PackageManager pm = activity.getPackageManager();
             PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), 0);
             if (info != null) {
-                CharSequence label = info.applicationInfo.loadLabel(pm);
-                if (label != null) return label.toString();
+                if (info.applicationInfo != null) {
+                    return info.applicationInfo.loadLabel(pm);
+                }
             }
         } catch (Exception ignored) {}
         return apkFile.getName();

@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.os.IBinder;
 
+import io.github.abdurazaaqmohammed.utils.ApkInstallDialogHelper;
+
 public class APKInstallService extends Service {
 
     @Override
@@ -24,16 +26,23 @@ public class APKInstallService extends Service {
                 break;
 
             case PackageInstaller.STATUS_SUCCESS:
-                sendBroadcast(new Intent("DISMISS_DIALOG"));
+                sendResult(true);
                 break;
 
             default:
-                //Log.d("AppLog", "Installation failed");
+                sendResult(false);
                 break;
         }
 
         stopSelf();
         return START_NOT_STICKY;
+    }
+
+    private void sendResult(boolean success) {
+        Intent result = new Intent(ApkInstallDialogHelper.ACTION_INSTALL_RESULT);
+        result.setPackage(getPackageName());
+        result.putExtra(ApkInstallDialogHelper.EXTRA_INSTALL_SUCCESS, success);
+        sendBroadcast(result);
     }
 
     @Override

@@ -204,11 +204,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean isBackPressedToExit;
     private final Runnable resetExitPrompt = () -> isBackPressedToExit = false;
 
-    @Override
-    public Resources getResources() {
-        return rss;
-    }
-
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
             bookmarks = new ArrayList<>();

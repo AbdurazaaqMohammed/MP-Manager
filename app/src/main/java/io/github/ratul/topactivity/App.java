@@ -41,14 +41,8 @@ public class App extends MultiDexApplication {
 
     public static final String REPO = "codehasan/Current-Activity";
     public static final String REPO_URL = "https://github.com/" + REPO;
-    public static final String API_URL = "https://api.github.com/repos/" + REPO;
 
-    private NotificationManagerCompat notificationManager;
     private ClipboardManager clipboardManager;
-
-    public NotificationManagerCompat getNotificationManager() {
-        return notificationManager;
-    }
 
     public ClipboardManager getClipboardManager() {
         return clipboardManager;
@@ -69,7 +63,6 @@ public class App extends MultiDexApplication {
         super.onCreate();
         instance = this;
         clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        notificationManager = NotificationManagerCompat.from(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -78,19 +71,17 @@ public class App extends MultiDexApplication {
                     NotificationManager.IMPORTANCE_LOW
             );
             channel.setDescription(getString(R.string.notification_channel_description));
-            notificationManager.createNotificationChannel(channel);
+            NotificationManagerCompat.from(this).createNotificationChannel(channel);
         }
     }
 
     public static void copyString(Context context, String str, String msg) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            ClipData clip = ClipData.newPlainText(context.getString(R.string.app_name), str);
-            instance.clipboardManager.setPrimaryClip(clip);
+            instance.clipboardManager.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.app_name), str));
         } else {
-            Intent copyActivity = new Intent(context, ClipboardActivity.class)
+            context.startActivity(new Intent(context, ClipboardActivity.class)
                     .putExtra(Intent.EXTRA_TEXT, str)
-                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(copyActivity);
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }
         showToast(context, msg);
     }

@@ -391,6 +391,7 @@
     <string name="show_strings">Show Strings</string>
     <string name="show_methods">Show Methods</string>
     <string name="installation_complete">Installation Complete</string>
+    <string name="installation_failed">Installation failed</string>
     <string name="launch">Launch</string>
     <string name="type_to_filter">Type to filter…</string>
     <string name="filter_strings">Filter strings</string>
@@ -605,4 +606,5 @@ Layout Inspector
     <string name="search_curr">Search in current results</string>
     <string name="rep_curr">Replace in current results</string>
     <string name="clear_search_results">Clear search results</string>
+    <string name="installed_successfully">%1$s installed successfully</string>
 </resources>
