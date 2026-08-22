@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rowRoot"
+    android:layout_width="match_parent"
+    android:layout_height="28dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp">
+
+    <TextView
+        android:id="@+id/offsetCell"
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="13sp" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="6dp"
+        android:background="?android:attr/listDivider" />
+
+    <TextView
+        android:id="@+id/cell0"
+        style="@style/HexCell" />
+
+    <TextView
+        android:id="@+id/cell1"
+        style="@style/HexCell" />
+
+    <TextView
+        android:id="@+id/cell2"
+        style="@style/HexCell" />
+
+    <TextView
+        android:id="@+id/cell3"
+        style="@style/HexCell" />
+
+    <TextView
+        android:id="@+id/cell4"
+        style="@style/HexCell"
+        android:layout_marginStart="12dp" />
+
+    <TextView
+        android:id="@+id/cell5"
+        style="@style/HexCell" />
+
+    <TextView
+        android:id="@+id/cell6"
+        style="@style/HexCell" />
+
+    <TextView
+        android:id="@+id/cell7"
+        style="@style/HexCell" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="10dp"
+        android:background="?android:attr/listDivider" />
+
+    <TextView
+        android:id="@+id/asciiCell"
+        android:layout_width="64dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="6dp"
+        android:fontFamily="monospace"
+        android:textSize="13sp" />
+</LinearLayout>

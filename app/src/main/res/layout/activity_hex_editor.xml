@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/colorSurface"
+        android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/hexToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorSurface"
+        app:title="Hex Editor"
+        app:titleTextColor="?attr/colorOnSurface" />
+
+    <include
+        android:id="@+id/hexHeader"
+        layout="@layout/item_hex_row" />
+
+    <modder.hub.dexeditor.views.FastScrollerRecyclerView
+        android:id="@+id/hexRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="always" />
+
+    <LinearLayout
+        android:id="@+id/hexKeypad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal">
+
+            <Button style="@style/HexKey" android:text="0" />
+            <Button style="@style/HexKey" android:text="1" />
+            <Button style="@style/HexKey" android:text="2" />
+            <Button style="@style/HexKey" android:text="3" />
+            <Button style="@style/HexKey" android:text="4" />
+            <Button style="@style/HexKey" android:text="5" />
+            <Button style="@style/HexKey" android:text="6" />
+            <Button style="@style/HexKey" android:text="7" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal">
+
+            <Button style="@style/HexKey" android:text="8" />
+            <Button style="@style/HexKey" android:text="9" />
+            <Button style="@style/HexKey" android:text="A" />
+            <Button style="@style/HexKey" android:text="B" />
+            <Button style="@style/HexKey" android:text="C" />
+            <Button style="@style/HexKey" android:text="D" />
+            <Button style="@style/HexKey" android:text="E" />
+            <Button style="@style/HexKey" android:text="F" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="?attr/colorSurface"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <ImageButton
+            android:id="@+id/btnToggleKeypad"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Toggle hex keypad"
+            android:src="@drawable/hex_keyboard_24px"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="14sp" />
+    </LinearLayout>
+    </LinearLayout>
+
+    <include
+        android:id="@+id/searchPanel"
+        layout="@layout/view_hex_search"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:visibility="gone" />
+
+    <include
+        android:id="@+id/inspectorPanel"
+        layout="@layout/view_hex_inspector"
+        android:layout_width="280dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:visibility="gone" />
+</FrameLayout>

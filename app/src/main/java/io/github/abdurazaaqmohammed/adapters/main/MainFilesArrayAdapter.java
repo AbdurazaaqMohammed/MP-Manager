@@ -63,6 +63,7 @@ import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
+import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
@@ -533,7 +534,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                     case 2 -> // Image viewer
                         context.openImageViewer(file.getAbsolutePath());
-                    case 3 -> Extensions.showMessage(context, R.string.hex_editor_coming_soon); // Hex editor placeholder
+                    case 3 -> { // Hex editor
+                        if (!file.isFile()) {
+                            Extensions.showMessage(context, R.string.cannot_open_item);
+                            return;
+                        }
+                        context.startActivity(new Intent(context, HexEditorActivity.class).putExtra("path", file.getAbsolutePath()));
+                    }
                     case 4 -> // Media player
                         context.playMediaFile(file.getAbsolutePath());
                     case 5 -> { // APK info

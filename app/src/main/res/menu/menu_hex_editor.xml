@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_undo"
+        android:icon="@drawable/hex_undo_24px"
+        app:iconTint="?attr/colorOnSurface"
+        android:title="@string/undo"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_redo"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/hex_redo_24px"
+        android:title="@string/redo"
+        app:showAsAction="ifRoom" />
+    <item
+        app:showAsAction="always"
+        android:icon="@drawable/ic_more_mt"
+        app:iconTint="?attr/colorOnSurface"
+        android:title="@string/more">
+    <menu>
+    <item
+        android:id="@+id/action_save"
+        android:icon="@drawable/save_24px"
+        app:iconTint="?attr/colorOnSurface"
+        android:title="@string/save"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_search"
+        android:title="@string/search"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/ic_inspect"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_inspector"
+        android:title="@string/inspector"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/ic_magnifier"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_paste_from"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/ic_paste_mt"
+        android:title="@string/paste_from"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_goto"
+        android:title="@string/goto_offset"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/skip_next_24px"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_revert"
+        android:icon="@drawable/undo_24px"
+        app:iconTint="?attr/colorOnSurface"
+        android:title="@string/revert_changes"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_exit"
+        android:title="@string/close"
+        app:iconTint="?attr/colorOnSurface"
+        android:icon="@drawable/ic_exit"
+        app:showAsAction="never" />
+        </menu>
+    </item>
+</menu>

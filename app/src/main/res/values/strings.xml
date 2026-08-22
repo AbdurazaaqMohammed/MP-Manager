@@ -210,6 +210,10 @@
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
     <string name="reported_mime">Reported MIME</string>
     <string name="real_mime">Real MIME</string>
+    <string name="saved">Saved</string>
+    <string name="goto_offset">Go to offset</string>
+    <string name="revert_changes">Revert changes</string>
+    <string name="search">Search</string>
     <string name="select_for_batch">Select for batch</string>
     <string name="resolution">Resolution</string>
     <string name="properties">Properties</string>
@@ -626,4 +630,6 @@ Layout Inspector
     <string name="rep_curr">Replace in current results</string>
     <string name="clear_search_results">Clear search results</string>
     <string name="installed_successfully">%1$s installed successfully</string>
+    <string name="paste_from">Paste from</string>
+    <string name="inspector">Inspector</string>
 </resources>

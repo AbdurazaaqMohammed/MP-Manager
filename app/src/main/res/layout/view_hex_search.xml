@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/search"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnCloseSearch"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/close"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            app:tint="?attr/colorOnSurfaceVariant"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </LinearLayout>
+
+    <EditText
+        android:id="@+id/searchValue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Value to find"
+        android:inputType="text"
+        android:maxLines="1" />
+
+    <AutoCompleteTextView
+        android:id="@+id/searchType"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Data type"
+        android:inputType="none"
+        android:textSize="14sp" />
+
+    <CheckBox
+        android:id="@+id/searchBigEndian"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Big endian"
+        android:textColor="?attr/colorOnSurface" />
+
+    <LinearLayout
+        android:id="@+id/replaceHeaderRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/replaceExpandArrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="▸"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="18sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/replace"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/replaceArea"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/replaceValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Replace with"
+            android:inputType="text"
+            android:maxLines="1" />
+
+        <AutoCompleteTextView
+            android:id="@+id/replaceType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Replace data type"
+            android:inputType="none"
+            android:textSize="14sp" />
+
+        <CheckBox
+            android:id="@+id/replaceBigEndian"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Big endian"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnSearchNext"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:text="@string/search" />
+
+        <Button
+            android:id="@+id/btnSearchPrev"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:text="PREV" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnDoReplace"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/replace" />
+</LinearLayout>
