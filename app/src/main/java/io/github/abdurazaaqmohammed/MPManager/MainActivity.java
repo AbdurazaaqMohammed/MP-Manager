@@ -115,6 +115,7 @@ import android.widget.LinearLayout;
 import android.widget.CheckBox;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayoutMediator;
 import android.widget.ListView;
@@ -528,6 +529,7 @@ public class MainActivity extends AppCompatActivity {
                 FileUtils.copyFile(is35, new File(frameworks, "android_35.apk"));
                 FileUtils.copyFile(is36, new File(frameworks, "android_36.apk"));
             } catch (Exception ignored) { }
+            setupPullToRefresh();
         }).start();
 
         handler = new Handler(Looper.getMainLooper());
@@ -1421,6 +1423,26 @@ public class MainActivity extends AppCompatActivity {
     public void reloadCurrentFolder() {
         boolean isPane1 = lastPaneSelected == 1;
         loadFolderInPane(isPane1 ? pane1Folder : pane2Folder, isPane1);
+    }
+
+    private void setupPullToRefresh() {
+        ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane1)).setOnRefreshListener(() -> refreshPane(true));
+        ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setOnRefreshListener(() -> refreshPane(false));
+    }
+
+    private void refreshPane(boolean pane1) {
+        try {
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            RecyclerView.Adapter<?> adapter = pane.getAdapter();
+            if (adapter instanceof MainFilesArrayAdapter filesAdapter) {
+                if (filesAdapter.isInZip) loadZipFolderInPane(pane1 ? pane1Folder : pane2Folder, filesAdapter.currentZipPath, pane1, false);
+                else loadFolderInPane(pane1 ? pane1Folder : pane2Folder, pane1, false);
+            } else if (adapter instanceof FtpFilesArrayAdapter ftpAdapter && ftpAdapter.getItemCount() > 0)
+                fetchFtpDirAndLoad(((FTPFileWrapper) ftpAdapter.getItem(0)).getParent(), pane1);
+        } catch (Exception e) {
+            new ErrorUtil(this).showError(e);
+        }
+        ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
     }
 
     public void setCurrentFolder(File curr, File[] files) {
