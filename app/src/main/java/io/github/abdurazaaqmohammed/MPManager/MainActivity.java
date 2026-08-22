@@ -1778,6 +1778,10 @@ public class MainActivity extends AppCompatActivity {
         playerModeSwitch.setChecked(settings.getBoolean("player_open_activity", false));
         playerModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("player_open_activity", isChecked).apply());
 
+        CompoundButton fixMimeTypeToggle = settingsDialog.findViewById(R.id.fixMimeTypeToggle);
+        fixMimeTypeToggle.setChecked(settings.getBoolean("fix_mime_type", false));
+        fixMimeTypeToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("fix_mime_type", isChecked).apply());
+
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());

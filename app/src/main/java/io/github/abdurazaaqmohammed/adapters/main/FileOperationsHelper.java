@@ -492,7 +492,7 @@ public class FileOperationsHelper {
         }
     }
 
-    public void openZipFile(File zipFile, String path) {
+    private void openZipFile(File zipFile, String path) {
         context.loadZipFolderInPane(zipFile, path != null ? path : "", !adapter.pane1, false);
     }
 

@@ -107,6 +107,18 @@
             android:layout_height="1dp"
             android:background="?android:attr/listDivider" />
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/fixMimeTypeToggle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:text="@string/fix_mime_type" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
             android:layout_width="match_parent"

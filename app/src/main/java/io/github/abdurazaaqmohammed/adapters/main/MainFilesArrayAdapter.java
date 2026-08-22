@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.text.ClipboardManager;
 import android.text.TextUtils;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,6 +67,7 @@ import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -72,6 +75,7 @@ import io.github.abdurazaaqmohammed.utils.HashUtil;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
+import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -410,11 +414,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         break;
                                     case 6:
                                         Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
-                                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(context.getContentResolver().getType(uri)).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
+                                        String shareMime = MimeUtil.getMimeTypeForAction(context, file);
+                                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
                                         break;
                                     case 7:
-                                        Uri u = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
-                                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW).setDataAndType(u, context.getContentResolver().getType(u)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
+                                        showOpenWithDialog(file, fileName);
                                         break;
                                     case 8:
                                         if (!isInZip) context.addBookmark(file);
@@ -438,6 +442,130 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     pane1 ? 1 : 2)));
         }).start();
 
+    }
+
+    private void showOpenWithDialog(File file, String fileName) {
+        String[] actions = {
+                context.getString(R.string.text_editor),
+                context.getString(R.string.archive_viewer),
+                context.getString(R.string.image_viewer),
+                context.getString(R.string.hex_editor),
+                context.getString(R.string.media_player),
+                context.getString(R.string.apk_info)
+        };
+        int[] icons = {
+                R.drawable.baseline_text_snippet_24,
+                R.drawable.baseline_folder_zip_24,
+                R.drawable.image_24px,
+                R.drawable.terminal_24px,
+                R.drawable.video_24px,
+                R.drawable.apk_document_24px
+        };
+
+        GridView gridView = new GridView(context);
+        gridView.setNumColumns(3);
+        gridView.setBackgroundColor(Color.TRANSPARENT);
+        gridView.setPadding(16, 16, 16, 16);
+        gridView.setVerticalSpacing(24);
+        gridView.setAdapter(new ArrayAdapter<>(context, 0, actions) {
+            @NonNull
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                LinearLayout item = new LinearLayout(context);
+                item.setOrientation(LinearLayout.VERTICAL);
+                item.setGravity(Gravity.CENTER);
+
+                ImageView iconView = new ImageView(context);
+                iconView.setImageResource(icons[position]);
+                int iconSize = (int) (40 * context.getResources().getDisplayMetrics().density + 0.5f);
+                iconView.setLayoutParams(new ViewGroup.LayoutParams(iconSize, iconSize));
+                TypedValue typedValue = new TypedValue();
+                context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+                ColorUtil.changeImageColor(iconView.getDrawable(), typedValue.data);
+
+                TextView labelView = new TextView(context);
+                labelView.setText(actions[position]);
+                labelView.setTextSize(12);
+                labelView.setGravity(Gravity.CENTER);
+
+                item.addView(iconView);
+                item.addView(labelView);
+                return item;
+            }
+        });
+
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName)
+                .setView(wrapOpenWithContent(gridView))
+                .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> {
+                    try {
+                        Uri u = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+                        String mime = MimeUtil.getMimeTypeForAction(context, file);
+                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW)
+                                .setDataAndType(u, mime != null ? mime : "application/octet-stream")
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                })
+                .create();
+
+        gridView.setOnItemClickListener((parent1, view1, position1, id1) -> {
+            dialog.dismiss();
+            try {
+                switch (position1) {
+                    case 0 -> { // Text editor
+                        if (!file.isFile()) {
+                            Extensions.showMessage(context, R.string.cannot_open_item);
+                            return;
+                        }
+                        context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getAbsolutePath()));
+                    }
+                    case 1 -> { // Archive viewer
+                        String lowerName = fileName.toLowerCase(Locale.ROOT);
+                        boolean zipBased = lowerName.endsWith(".zip") || lowerName.endsWith(".apk")
+                                || lowerName.endsWith(".jar") || lowerName.endsWith(".apks") || lowerName.endsWith(".xapk");
+                        if (!file.isFile() || !zipBased) {
+                            Extensions.showMessage(context, R.string.not_supported_archive);
+                            return;
+                        }
+                        context.loadZipFolderInPane(file, "", pane1, true);
+                    }
+                    case 2 -> // Image viewer
+                        context.openImageViewer(file.getAbsolutePath());
+                    case 3 -> Extensions.showMessage(context, R.string.hex_editor_coming_soon); // Hex editor placeholder
+                    case 4 -> // Media player
+                        context.playMediaFile(file.getAbsolutePath());
+                    case 5 -> { // APK info
+                        String lowerExt = fileName.toLowerCase(Locale.ROOT);
+                        if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
+                            Extensions.showMessage(context, R.string.not_an_apk);
+                            return;
+                        }
+                        apkTools.showApkInfoDialog(file, fileName);
+                    }
+                }
+            } catch (Exception e) {
+                new ErrorUtil(context).showError(e);
+            }
+        });
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    /** Grid + "fix mime type" toggle for the open-with dialog, sharing the same preference as the main settings. */
+    private View wrapOpenWithContent(GridView gridView) {
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        CheckBox fixMimeCb = new CheckBox(context);
+        fixMimeCb.setText(R.string.fix_mime_type);
+        fixMimeCb.setChecked(settings.getBoolean("fix_mime_type", false));
+        fixMimeCb.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("fix_mime_type", isChecked).apply());
+
+        content.addView(fixMimeCb);
+        content.addView(gridView);
+        return content;
     }
 
     private void handleFileClick(File file, String fileName) {
@@ -496,7 +624,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
             } else if (fileName.endsWith(".zip")) {
-                fileOps.openZipFile(file, null);
+                context.loadZipFolderInPane(file, "", pane1, true);
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
                 dialogUtil.styleAlertDialog(
                         dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
@@ -552,7 +680,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         }
                                         break;
                                     case 1:
-                                        fileOps.openZipFile(file, null);
+                                        context.loadZipFolderInPane(file, "", pane1, true);
                                         break;
                                     case 2:
                                         SignatureKeyDialog.show(context, file, true);

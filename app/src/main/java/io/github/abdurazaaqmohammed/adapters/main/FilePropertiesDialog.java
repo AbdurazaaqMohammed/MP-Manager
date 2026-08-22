@@ -37,6 +37,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 
 public class FilePropertiesDialog {
@@ -110,6 +111,14 @@ public class FilePropertiesDialog {
             TextView modifiedView = addPropertyRow(propRows, context.getString(R.string.modified),
                     new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(file.lastModified()));
             modifiedView.setOnClickListener(v -> showEditLastModifiedDialog(file, modifiedView));
+            if (!multi && file.isFile()) {
+                addPropertyRow(propRows, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
+                TextView realMimeView = addPropertyRow(propRows, context.getString(R.string.real_mime), "…");
+                new Thread(() -> {
+                    String realMime = MimeUtil.getRealMimeType(file);
+                    context.handler.post(() -> realMimeView.setText(realMime != null ? realMime : "—"));
+                }).start();
+            }
             if (!multi && file.isDirectory()) {
                 TextView sizeText = sizeValue;
                 new Thread(() -> {
