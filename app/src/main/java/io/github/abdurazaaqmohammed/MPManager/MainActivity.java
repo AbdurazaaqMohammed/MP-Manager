@@ -1449,7 +1449,7 @@ public class MainActivity extends AppCompatActivity {
         TextView currentFolderPath = findViewById(R.id.currentFolderPath);
         currentFolderPath.setText(curr.getPath());
         uiHelper.scrollTextView(currentFolderPath);
-        if (files == null) this.<TextView>findViewById(R.id.folderCount).setText("Folders: 0 Files: 0");
+        if (files == null) this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, 0, 0));
         else {
             File[] folders = curr.listFiles(File::isDirectory);
             int foldersCount = folders == null ? 0 : folders.length;

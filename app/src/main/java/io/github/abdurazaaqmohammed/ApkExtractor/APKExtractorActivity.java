@@ -29,6 +29,7 @@ import android.os.Looper;
 import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.preference.PreferenceManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.provider.Settings;
 import android.text.Editable;
@@ -126,6 +127,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     private List<AppInfo> userAppInfoList;
     private List<AppInfo> systemAppInfoList;
     private boolean showLaunchActivities;
+    private boolean loadingApps;
 
     public static File getAppFolder() {
         final File appFolder = new File(new File(Environment.getExternalStorageDirectory(), "MP Manager"), "Extracted APKs");
@@ -210,96 +212,14 @@ public class APKExtractorActivity extends AppCompatActivity {
         if (Objects.equals(lang, Locale.getDefault().getLanguage()))
             rss = getResources();
 
-        findViewById(R.id.progressBar).setVisibility(View.VISIBLE);
         userAppInfoList = Collections.synchronizedList(new ArrayList<>());
         systemAppInfoList = Collections.synchronizedList(new ArrayList<>());
         setupAppLists();
+        loadApps();
         if (!LegacyUtils.supportsWriteExternalStorage) {
             getWindow().setStatusBarContrastEnforced(true);
             getWindow().setNavigationBarContrastEnforced(true);
         }
-
-            new Thread(() -> {
-                PackageManager pm = getPackageManager();
-                List<PackageInfo> apps = pm.getInstalledPackages(0);
-
-                ExecutorService executor = Executors
-                        .newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-                for (PackageInfo app : apps) {
-                    if (app.applicationInfo == null) continue;
-                    executor.execute(() -> {
-                        try {
-                            AppInfo appInfo = new AppInfo(
-                                    app.applicationInfo.sourceDir,
-                                    app.applicationInfo.loadLabel(pm).toString(),
-                                    null,
-                                    app.packageName,
-                                    app.applicationInfo.enabled,
-                                    LegacyUtils.aboveSdk20 && app.applicationInfo.splitSourceDirs != null,
-                                    new Date(app.firstInstallTime).toString(),
-                                    new Date(app.lastUpdateTime).toString(),
-                                    app.versionCode,
-                                    app.versionName != null ? app.versionName : "");
-                            appInfo.firstInstall = app.firstInstallTime;
-                            appInfo.lastUpdate = app.lastUpdateTime;
-                            appInfo.appInfo = app.applicationInfo;
-                            boolean isSystem = (app.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-                            if (isSystem)
-                                systemAppInfoList.add(appInfo);
-                            else
-                                userAppInfoList.add(appInfo);
-
-                            handler.post(() -> {
-                                if (isSystem)
-                                    appAdapter[1].addItem(appInfo);
-                                else
-                                    appAdapter[0].addItem(appInfo);
-                            });
-                        } catch (Exception ignored) {
-                        }
-                    });
-                }
-                executor.shutdown();
-                try {
-                    executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                handler.post(() -> {
-                    findViewById(R.id.progressBar).setVisibility(View.GONE);
-
-                    Comparator<AppInfo> comparator;
-                    if (sortMode == 0)
-                        comparator = CompareUtils::compareAppInfoByName;
-                    else
-                        comparator = (p1, p2) -> {
-                            long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
-                            long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
-                            return Long.compare(field2, field1);
-                        };
-
-                    Collections.sort(appAdapter[0].appInfoList, comparator);
-                    Collections.sort(appAdapter[1].appInfoList, comparator);
-
-                    appAdapter[0].setComparator(comparator);
-                    appAdapter[1].setComparator(comparator);
-
-                    EditText searchBar = findViewById(R.id.search_bar);
-                    appAdapter[0].getFilter().filter(searchBar.getText());
-                    appAdapter[1].getFilter().filter(searchBar.getText());
-
-                    new Thread(() -> {
-                        try {
-                            loadAdditionalDetails(userAppInfoList, appAdapter[0]);
-                            loadAdditionalDetails(systemAppInfoList, appAdapter[1]);
-                        } catch (Exception e) {
-                            new ErrorUtil(APKExtractorActivity.this).showError(e);
-                        }
-                    }).start();
-                });
-            }).start();
-
 
         findViewById(R.id.settingsButton).setOnClickListener(v -> {
             ScrollView settingsMenu = (ScrollView) LayoutInflater.from(this).inflate(R.layout.extractor_settings, null);
@@ -461,6 +381,106 @@ public class APKExtractorActivity extends AppCompatActivity {
         getCurrentAdapter().notifyDataSetChanged();
     }
 
+    private void loadApps() {
+        if (loadingApps) return;
+        loadingApps = true;
+        findViewById(R.id.progressBar).setVisibility(View.VISIBLE);
+        new Thread(() -> {
+            PackageManager pm = getPackageManager();
+            List<PackageInfo> apps = pm.getInstalledPackages(0);
+
+            ExecutorService executor = Executors
+                    .newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            for (PackageInfo app : apps) {
+                if (app.applicationInfo == null) continue;
+                executor.execute(() -> {
+                    try {
+                        AppInfo appInfo = new AppInfo(
+                                app.applicationInfo.sourceDir,
+                                app.applicationInfo.loadLabel(pm).toString(),
+                                null,
+                                app.packageName,
+                                app.applicationInfo.enabled,
+                                LegacyUtils.aboveSdk20 && app.applicationInfo.splitSourceDirs != null,
+                                new Date(app.firstInstallTime).toString(),
+                                new Date(app.lastUpdateTime).toString(),
+                                app.versionCode,
+                                app.versionName != null ? app.versionName : "");
+                        appInfo.firstInstall = app.firstInstallTime;
+                        appInfo.lastUpdate = app.lastUpdateTime;
+                        appInfo.appInfo = app.applicationInfo;
+                        boolean isSystem = (app.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                        if (isSystem)
+                            systemAppInfoList.add(appInfo);
+                        else
+                            userAppInfoList.add(appInfo);
+
+                        handler.post(() -> {
+                            if (isSystem)
+                                appAdapter[1].addItem(appInfo);
+                            else
+                                appAdapter[0].addItem(appInfo);
+                        });
+                    } catch (Exception ignored) {
+                    }
+                });
+            }
+            executor.shutdown();
+            try {
+                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            handler.post(() -> {
+                findViewById(R.id.progressBar).setVisibility(View.GONE);
+
+                Comparator<AppInfo> comparator;
+                if (sortMode == 0)
+                    comparator = CompareUtils::compareAppInfoByName;
+                else
+                    comparator = (p1, p2) -> {
+                        long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
+                        long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
+                        return Long.compare(field2, field1);
+                    };
+
+                Collections.sort(appAdapter[0].appInfoList, comparator);
+                Collections.sort(appAdapter[1].appInfoList, comparator);
+
+                appAdapter[0].setComparator(comparator);
+                appAdapter[1].setComparator(comparator);
+
+                EditText searchBar = findViewById(R.id.search_bar);
+                appAdapter[0].getFilter().filter(searchBar.getText());
+                appAdapter[1].getFilter().filter(searchBar.getText());
+
+                loadingApps = false;
+                ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshUser)).setRefreshing(false);
+                ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshSystem)).setRefreshing(false);
+
+                new Thread(() -> {
+                    try {
+                        loadAdditionalDetails(userAppInfoList, appAdapter[0]);
+                        loadAdditionalDetails(systemAppInfoList, appAdapter[1]);
+                    } catch (Exception e) {
+                        new ErrorUtil(APKExtractorActivity.this).showError(e);
+                    }
+                }).start();
+            });
+        }).start();
+    }
+
+    /** Clears both lists and reloads the installed apps. */
+    private void refreshApps() {
+        userAppInfoList.clear();
+        systemAppInfoList.clear();
+        appAdapter[0].reset();
+        appAdapter[1].reset();
+        findViewById(R.id.confirmButton).setVisibility(View.INVISIBLE);
+        loadApps();
+    }
+
     private void setupAppLists() {
         FastScrollerRecyclerView userAppListView = findViewById(R.id.user_app_list_view);
         FastScrollerRecyclerView systemAppListView = findViewById(R.id.system_app_list_view);
@@ -470,6 +490,9 @@ public class APKExtractorActivity extends AppCompatActivity {
 
         userAppListView.setAdapter(appAdapter[0]);
         systemAppListView.setAdapter(appAdapter[1]);
+
+        ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshUser)).setOnRefreshListener(this::refreshApps);
+        ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshSystem)).setOnRefreshListener(this::refreshApps);
 
         findViewById(R.id.confirmButton).setOnClickListener(v -> {
             v.setVisibility(View.INVISIBLE);
@@ -507,12 +530,12 @@ public class APKExtractorActivity extends AppCompatActivity {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 if (tab.getPosition() == 0) {
-                    userAppListView.setVisibility(View.VISIBLE);
-                    systemAppListView.setVisibility(View.GONE);
+                    findViewById(R.id.swipeRefreshUser).setVisibility(View.VISIBLE);
+                    findViewById(R.id.swipeRefreshSystem).setVisibility(View.GONE);
                     system = false;
                 } else {
-                    systemAppListView.setVisibility(View.VISIBLE);
-                    userAppListView.setVisibility(View.GONE);
+                    findViewById(R.id.swipeRefreshSystem).setVisibility(View.VISIBLE);
+                    findViewById(R.id.swipeRefreshUser).setVisibility(View.GONE);
                     system = true;
                 }
             }

@@ -78,6 +78,12 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         notifyItemInserted(filteredAppInfoList.size() - 1);
     }
 
+    public void reset() {
+        selectedItems.clear();
+        filteredAppInfoList.clear();
+        notifyDataSetChanged();
+    }
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AppInfo appInfo = filteredAppInfoList.get(position);

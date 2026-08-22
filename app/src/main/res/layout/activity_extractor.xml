@@ -115,16 +115,28 @@
                 android:layout_gravity="center"
                 android:visibility="gone" />
 
-            <modder.hub.dexeditor.views.FastScrollerRecyclerView
-                android:id="@+id/user_app_list_view"
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipeRefreshUser"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent">
 
-            <modder.hub.dexeditor.views.FastScrollerRecyclerView
-                android:id="@+id/system_app_list_view"
+                <modder.hub.dexeditor.views.FastScrollerRecyclerView
+                    android:id="@+id/user_app_list_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipeRefreshSystem"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:visibility="gone" />
+                android:visibility="gone">
+
+                <modder.hub.dexeditor.views.FastScrollerRecyclerView
+                    android:id="@+id/system_app_list_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
         </FrameLayout>
 
     </LinearLayout>
