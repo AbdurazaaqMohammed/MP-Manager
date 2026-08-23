@@ -21,6 +21,7 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.reandroid.apkeditor.Util;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
@@ -393,42 +394,66 @@ public class FileOperationsHelper {
         zipParameters.setCompressionLevel(compressionLevel);
         if (compressionLevel == CompressionLevel.NO_COMPRESSION)
             zipParameters.setCompressionMethod(CompressionMethod.STORE);
+
+        String targetDir = TextUtils.isEmpty(currentPath) ? ""
+                : currentPath.replace('\\', '/').replaceAll("/+$", "") + "/";
+
+        File tempFileDir = null;
         try (ZipFile sourceZip = new ZipFile(zipFile)) {
             Map<String, Long> existingEntries = new LinkedHashMap<>();
             for (FileHeader fh : sourceZip.getFileHeaders()) existingEntries.put(fh.getFileName(), fh.getLastModifiedTime());
 
             Set<String> toRemove = new LinkedHashSet<>();
-            List<File> filesToAdd = new ArrayList<>();
+            // {file, entryName}; a null entryName marks a directory added under targetDir keeping its own name
+            List<Object[]> namedAdds = new ArrayList<>();
+            List<File> plainFilesToAdd = new ArrayList<>();
 
             if (items.get(0) instanceof File) {
                 for (Object itemObj : items) {
                     File f = (File) itemObj;
-                    if (shouldAdd(f.getName(), f.lastModified(), existingEntries, updateMode, toRemove))
-                        filesToAdd.add(f);
+                    String entryName = targetDir.isEmpty() ? f.getName() : targetDir + f.getName();
+                    if (!shouldAdd(entryName, f.lastModified(), existingEntries, updateMode, toRemove)) continue;
+                    if (f.isDirectory()) namedAdds.add(new Object[] {f, null});
+                    else if (targetDir.isEmpty()) plainFilesToAdd.add(f);
+                    else namedAdds.add(new Object[] {f, entryName});
                 }
             } else {
-                File tempFileDir = new File(context.getCacheDir(), UUID.randomUUID().toString());
-                tempFileDir.mkdir();
+                tempFileDir = new File(context.getCacheDir(), UUID.randomUUID().toString());
+                tempFileDir.mkdirs();
+                int counter = 0;
                 for (Object itemObj : items) {
                     ZipEntryInfo zipEntry = (ZipEntryInfo) itemObj;
                     try (ZipFile sourceZipFile = new ZipFile(zipEntry.getZipFile())) {
                         FileHeader fh = sourceZipFile.getFileHeader(zipEntry.getFullPath());
                         if (fh != null && !fh.isDirectory()) {
-                            String fileName = fh.getFileName();
-                            String newPath = TextUtils.isEmpty(currentPath) ? fileName : currentPath + File.separator + fileName;
-                            String child = newPath.replace(File.separator, "U+1F602");
-                            if (shouldAdd(child, fh.getLastModifiedTime(), existingEntries, updateMode, toRemove)) {
-                                try (InputStream is = sourceZipFile.getInputStream(fh)) {
-                                    FileUtils.copyFile(is, new File(tempFileDir, child));
-                                    filesToAdd.add(new File(child));
-                                }
+                            String entryName = targetDir + zipEntry.getName();
+                            if (!shouldAdd(entryName, fh.getLastModifiedTime(), existingEntries, updateMode, toRemove)) continue;
+                            File tempFile = new File(tempFileDir, "entry_" + counter++);
+                            try (InputStream is = sourceZipFile.getInputStream(fh)) {
+                                FileUtils.copyFile(is, tempFile);
                             }
+                            namedAdds.add(new Object[] {tempFile, entryName});
                         }
                     }
                 }
             }
             if (!toRemove.isEmpty()) sourceZip.removeFiles(new ArrayList<>(toRemove));
-            if (!filesToAdd.isEmpty()) sourceZip.addFiles(filesToAdd, zipParameters);
+
+            if (!plainFilesToAdd.isEmpty()) sourceZip.addFiles(plainFilesToAdd, zipParameters);
+            for (Object[] add : namedAdds) {
+                File f = (File) add[0];
+                ZipParameters params = new ZipParameters(zipParameters);
+                if (add[1] == null) {
+                    if (!targetDir.isEmpty())
+                        params.setRootFolderNameInZip(targetDir.substring(0, targetDir.length() - 1));
+                    sourceZip.addFolder(f, params);
+                } else {
+                    params.setFileNameInZip((String) add[1]);
+                    sourceZip.addFile(f, params);
+                }
+            }
+        } finally {
+            if (tempFileDir != null) Util.deleteDir(tempFileDir);
         }
     }
 
@@ -485,10 +510,18 @@ public class FileOperationsHelper {
     public void extractZipEntry(ZipEntryInfo zipEntry, File destinationFolder) throws IOException {
         String destinationPath = destinationFolder.getPath();
         String zipEntryPath = zipEntry.getFullPath();
+        if (zipEntryPath == null) return;
         try (ZipFile zf = new ZipFile(zipEntry.getZipFile())) {
+            // zip4j preserves the entry's internal path when extracting, so a file inside
+            // "docs/" would land in destination/docs/. Pass an explicit name to avoid that.
             if(zipEntry.isDirectory()) {
-              for(FileHeader fh : zf.getFileHeaders()) if(fh.getFileName().startsWith(zipEntryPath)) zf.extractFile(fh, destinationPath);
-            } else zf.extractFile(zf.getFileHeader(zipEntryPath), destinationPath);
+                String prefix = zipEntryPath.endsWith("/") ? zipEntryPath : zipEntryPath + "/";
+                for(FileHeader fh : zf.getFileHeaders()) {
+                    String name = fh.getFileName().replace('\\', '/');
+                    if(!name.startsWith(prefix) || fh.isDirectory()) continue;
+                    zf.extractFile(fh, destinationPath, zipEntry.getName() + "/" + name.substring(prefix.length()));
+                }
+            } else zf.extractFile(zf.getFileHeader(zipEntryPath), destinationPath, zipEntry.getName());
         }
     }
 
@@ -500,10 +533,17 @@ public class FileOperationsHelper {
         File f = entryToDelete[0].getZipFile();
         List<String> toDelete = new ArrayList<>();
         try(ZipFile zf = new ZipFile(f)) {
-            //zf.removeFiles(toDelete); // This is not deleting folders properly
             for(FileHeader fh : zf.getFileHeaders()) {
-                String name = fh.getFileName();
-                for (ZipEntryInfo info : entryToDelete) if(name.startsWith(info.getName())) toDelete.add(name);
+                String name = fh.getFileName().replace('\\', '/');
+                for (ZipEntryInfo info : entryToDelete) {
+                    String target = info.getFullPath();
+                    if (target == null) continue;
+                    if (info.isDirectory() && !target.endsWith("/")) target += "/";
+                    if (name.equals(target) || (info.isDirectory() && name.startsWith(target))) {
+                        toDelete.add(name);
+                        break;
+                    }
+                }
             }
             zf.removeFiles(toDelete);
         }

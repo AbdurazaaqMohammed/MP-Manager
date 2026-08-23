@@ -927,7 +927,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         View compressView = LayoutInflater.from(context).inflate(R.layout.compress_dialog, null);
 
         TextInputEditText filenameEditText = compressView.findViewById(R.id.filename_compress_edittext);
-        filenameEditText.setText(multi ? parentFileName + ".zip" : fileName.replace(FilenameUtils.getExtension(fileName), "zip"));
+        filenameEditText.setText((multi ? parentFileName : FilenameUtils.removeExtension(fileName)) + ".zip");
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
 
         String[] archiveFormats = ArchiveUtil.getSupportedCreateExts();
@@ -948,7 +948,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             pm.show();
             new Thread(() -> {
                 String name = ((TextInputEditText) compressView.findViewById(R.id.filename_compress_edittext)).getText().toString().trim();
-                if (name.isEmpty()) name = multi ? parentFileName : fileName;
+                if (name.isEmpty()) name = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
                 String format = ((AutoCompleteTextView) compressView.findViewById(R.id.compress_format)).getText().toString().trim();
                 if (!format.startsWith(".")) format = "." + format;
                 if (!name.toLowerCase(Locale.ENGLISH).endsWith(format)) name += format;
