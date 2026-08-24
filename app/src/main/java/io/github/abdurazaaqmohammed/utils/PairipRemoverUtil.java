@@ -29,15 +29,14 @@ public class PairipRemoverUtil {
 
     public static File removePairip(Context context, File input) throws Exception {
         AntikEnv.assets = context.getAssets();
+        AntikEnv.cacheDir = context.getCacheDir();
 
         ApkModule module;
         File tempDir = null;
         boolean bundle = !input.getName().toLowerCase(Locale.US).endsWith(".apk");
 
         if (bundle) {
-            tempDir = File.createTempFile("pairip_merge", "");
-            //noinspection ResultOfMethodCallIgnored
-            tempDir.delete();
+            tempDir = new File(context.getCacheDir(), "pairip_merge_" + System.currentTimeMillis());
             //noinspection ResultOfMethodCallIgnored
             tempDir.mkdirs();
             extractApks(input, tempDir);

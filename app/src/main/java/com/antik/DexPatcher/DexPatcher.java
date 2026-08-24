@@ -49,7 +49,7 @@ public class DexPatcher {
                     baos.write(buf, 0, len);
                 }
                 byte[] l_bs = baos.toByteArray();
-                File t_l_dx = File.createTempFile("log", ".dex");
+                File t_l_dx = AntikEnv.tempFile("log");
                 writeAll(t_l_dx, l_bs);
                 DexFile l_df = DexFileFactory.loadDexFile(t_l_dx, Opcodes.getDefault());
                 t_l_dx.delete();
@@ -89,7 +89,7 @@ public class DexPatcher {
                 }
                 d_bs = baos.toByteArray();
             }
-            File t_dx = File.createTempFile("temp", ".dex");
+            File t_dx = AntikEnv.tempFile("temp");
             writeAll(t_dx, d_bs);
             DexFile d_f = DexFileFactory.loadDexFile(t_dx, Opcodes.getDefault());
             t_dx.delete();
@@ -134,7 +134,7 @@ public class DexPatcher {
                 }
                 d_bs = baos.toByteArray();
             }
-            File t_dx = File.createTempFile("temp", ".dex");
+            File t_dx = AntikEnv.tempFile("temp");
             writeAll(t_dx, d_bs);
             DexFile d_f = DexFileFactory.loadDexFile(t_dx, Opcodes.getDefault());
             t_dx.delete();

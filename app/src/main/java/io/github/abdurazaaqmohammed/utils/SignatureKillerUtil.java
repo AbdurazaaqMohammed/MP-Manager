@@ -7,33 +7,42 @@ import android.util.Base64;
 
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
 
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionMethod;
+
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
-import java.util.zip.CRC32;
-import java.util.zip.Deflater;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
 
+/**
+ * Integrates ApkSignatureKillerEx: injects a config-driven {@code bin.mt.signature.KillerApplication}
+ * (PackageManager CREATOR hook + native open/openat hook) into an APK so runtime signature
+ * checks see the ORIGINAL signature/apk even after the app is re-signed.
+ * The output zip is written with zip4j so installers accept it reliably.
+ */
 public class SignatureKillerUtil {
 
     public static final String KILLER_CLASS = "bin.mt.signature.KillerApplication";
     private static final String INJECTED_ASSET_DIR = "assets/SignatureKiller";
     private static final String[] ABIS = {"arm64-v8a", "armeabi-v7a", "x86_64", "x86"};
 
+    /**
+     * Builds a modified copy of the given APK with the signature killer injected.
+     * The returned file is unsigned - caller is responsible for signing.
+     */
     public static File apply(Context context, File inputApk) throws Exception {
         PackageInfo info = context.getPackageManager().getPackageArchiveInfo(inputApk.getPath(), 0);
         if (info == null || TextUtils.isEmpty(info.packageName))
@@ -67,27 +76,24 @@ public class SignatureKillerUtil {
             throw new IOException(e);
         }
 
-        File outFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(), FilenameUtils.getBaseName(inputApk.getName()) + "_killed.apk"));
+        File outFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
+                FilenameUtils.getBaseName(inputApk.getName()) + "_killed.apk"));
 
-        try (ZipFile zin = new ZipFile(inputApk);
-             ZipOutputStream zout = new ZipOutputStream(new FileOutputStream(outFile))) {
+        try (ZipFile zin = new ZipFile(inputApk)) {
             byte[] manifestBytes = null;
             String originalAppClass = null;
             int maxDexIndex = 0;
-            List<String> sourceNames = new ArrayList<>();
-            Enumeration<? extends ZipEntry> entries = zin.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
-                String name = entry.getName();
-                if (entry.isDirectory()) continue;
-                sourceNames.add(name);
+            for (FileHeader header : zin.getFileHeaders()) {
+                String name = header.getFileName();
+                if (header.isDirectory()) continue;
                 if (name.equals("AndroidManifest.xml")) {
                     AndroidManifestBlock block;
-                    try (InputStream is = zin.getInputStream(entry)) {
+                    try (InputStream is = zin.getInputStream(header)) {
                         block = AndroidManifestBlock.load(is);
                     }
                     originalAppClass = block.getApplicationClassName();
                     block.setApplicationClassName(KILLER_CLASS);
+                    block.setExtractNativeLibs(true);
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     block.refreshFull();
                     block.writeBytes(bos);
@@ -100,38 +106,8 @@ public class SignatureKillerUtil {
             }
             if (manifestBytes == null) throw new IOException("No AndroidManifest.xml found");
 
-            for (String name : sourceNames) {
-                if (isOldSignature(name)) continue;
-                ZipEntry entry = zin.getEntry(name);
-                if (name.startsWith(INJECTED_ASSET_DIR + "/")) continue;
-                byte[] payload;
-                if (name.equals("AndroidManifest.xml")) {
-                    payload = manifestBytes;
-                } else {
-                    try (InputStream is = zin.getInputStream(entry)) {
-                        payload = readAll(is);
-                    }
-                }
-                putEntry(zout, name, payload, false);
-            }
-
-            // 1. killer dex
             byte[] killerDex = readAll(context.getAssets().open("signature_killer/killer.dex"));
-            String killerDexName = "classes" + (maxDexIndex + 1) + ".dex";
-            putEntry(zout, killerDexName, killerDex, false);
 
-            // 2. native hook libs (stored/uncompressed so they load fast; extractNativeLibs applies)
-            for (String abi : ABIS) {
-                InputStream is = openOrNull(context, "signature_killer/lib/" + abi + "/libSignatureKiller.so");
-                if (is == null) continue;
-                byte[] so = readAll(is);
-                putEntry(zout, "lib/" + abi + "/libSignatureKiller.so", so, true);
-            }
-
-            // 3. untouched original APK (keeps its original v1/v2/v3 signing blocks)
-            putEntryFromStream(zout, INJECTED_ASSET_DIR + "/origin.apk", inputApk);
-
-            // 4. runtime configuration
             Properties cfg = new Properties();
             cfg.setProperty("package", packageName);
             cfg.setProperty("signature", signatureB64);
@@ -139,7 +115,44 @@ public class SignatureKillerUtil {
                 cfg.setProperty("appClass", originalAppClass);
             ByteArrayOutputStream cbos = new ByteArrayOutputStream();
             cfg.store(cbos, "Generated by MP Manager");
-            putEntry(zout, INJECTED_ASSET_DIR + "/config.properties", cbos.toByteArray(), false);
+
+            ZipFile zout = new ZipFile(outFile);
+            try {
+                for (FileHeader header : zin.getFileHeaders()) {
+                    String name = header.getFileName();
+                    if (header.isDirectory()) continue;
+                    if (isOldSignature(name)) continue;
+                    if (name.startsWith(INJECTED_ASSET_DIR + "/")) continue;
+                    if (name.startsWith("lib/") && name.endsWith("/libSignatureKiller.so")) continue;
+                    if (name.equals("AndroidManifest.xml")) {
+                        addStream(zout, new ByteArrayInputStream(manifestBytes), name, methodFor(header));
+                        continue;
+                    }
+                    try (InputStream is = zin.getInputStream(header)) {
+                        addStream(zout, is, name, methodFor(header));
+                    }
+                }
+
+                // 2. killer dex
+                ZipParameters deflate = newParams(CompressionMethod.DEFLATE);
+                addStream(zout, new ByteArrayInputStream(killerDex), "classes" + (maxDexIndex + 1) + ".dex", deflate);
+
+                // 3. native hook libs (stored/uncompressed so they load fast)
+                ZipParameters stored = newParams(CompressionMethod.STORE);
+                for (String abi : ABIS) {
+                    InputStream is = openOrNull(context, "signature_killer/lib/" + abi + "/libSignatureKiller.so");
+                    if (is == null) continue;
+                    addStream(zout, is, "lib/" + abi + "/libSignatureKiller.so", stored);
+                }
+
+                // 4. untouched original APK (keeps its original v1/v2/v3 signing blocks)
+                addStream(zout, new FileInputStream(inputApk), INJECTED_ASSET_DIR + "/origin.apk", deflate);
+
+                // 5. runtime configuration
+                addStream(zout, new ByteArrayInputStream(cbos.toByteArray()), INJECTED_ASSET_DIR + "/config.properties", deflate);
+            } finally {
+                zout.close();
+            }
         } catch (Exception e) {
             //noinspection ResultOfMethodCallIgnored
             outFile.delete();
@@ -148,39 +161,30 @@ public class SignatureKillerUtil {
         return outFile;
     }
 
+    private static ZipParameters newParams(CompressionMethod method) {
+        ZipParameters params = new ZipParameters();
+        params.setCompressionMethod(method);
+        params.setEncryptFiles(false);
+        return params;
+    }
+
+    private static ZipParameters methodFor(FileHeader header) {
+        CompressionMethod method = header.getCompressionMethod();
+        if (method != CompressionMethod.STORE && method != CompressionMethod.DEFLATE)
+            method = CompressionMethod.DEFLATE;
+        return newParams(method);
+    }
+
+    private static void addStream(ZipFile zout, InputStream is, String name, ZipParameters params) throws IOException {
+        params.setFileNameInZip(name);
+        zout.addStream(is, params);
+    }
+
     private static boolean isOldSignature(String name) {
         String upper = name.toUpperCase(Locale.US);
         return upper.startsWith("META-INF/") &&
                 (upper.endsWith(".RSA") || upper.endsWith(".DSA") || upper.endsWith(".EC")
                         || upper.endsWith(".SF") || upper.endsWith("MANIFEST.MF"));
-    }
-
-    private static void putEntry(ZipOutputStream zout, String name, byte[] data, boolean stored) throws IOException {
-        ZipEntry entry = new ZipEntry(name);
-        if (stored) {
-            entry.setMethod(ZipEntry.STORED);
-            entry.setSize(data.length);
-            CRC32 crc = new CRC32();
-            crc.update(data);
-            entry.setCrc(crc.getValue());
-        } else {
-            entry.setMethod(ZipEntry.DEFLATED);
-        }
-        zout.putNextEntry(entry);
-        zout.write(data);
-        zout.closeEntry();
-    }
-
-    private static void putEntryFromStream(ZipOutputStream zout, String name, File source) throws IOException {
-        ZipEntry entry = new ZipEntry(name);
-        entry.setMethod(ZipEntry.DEFLATED);
-        zout.putNextEntry(entry);
-        try (InputStream is = new java.io.FileInputStream(source)) {
-            byte[] buf = new byte[1024 * 256];
-            int len;
-            while ((len = is.read(buf)) != -1) zout.write(buf, 0, len);
-        }
-        zout.closeEntry();
     }
 
     private static InputStream openOrNull(Context context, String path) {
