@@ -721,18 +721,33 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     String text = obj.optString(data1Key);
                     content.insert(cursor.getLeftLine(), cursor.getLeftColumn(), text);
                     break;
-                case "Regex find and replace":
+                case "Regex find and replace": {
                     String findRegex = obj.optString(data1Key);
                     String replaceStr = obj.optString(data2Key);
+                    if (TextUtils.isEmpty(findRegex)) break;
                     String allText = content.toString();
-                    String newText = allText.replaceAll(findRegex, replaceStr);
-                    if (!allText.equals(newText)) {
-                        content.beginBatchEdit();
-                        content.replace(0, 0, content.getLineCount() - 1,
-                                content.getColumnCount(content.getLineCount() - 1), newText);
-                        content.endBatchEdit();
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile(findRegex).matcher(allText);
+                    int cursorOffset = Math.min(cursor.getLeft(), allText.length());
+                    boolean found = false;
+                    while (m.find()) {
+                        if (m.end() > cursorOffset) { found = true; break; }
                     }
+                    if (!found) {
+                        Extensions.showMessage(requireActivity(), "No matches found");
+                        break;
+                    }
+                    StringBuffer sb = new StringBuffer();
+                    m.appendReplacement(sb, replaceStr == null ? "" : replaceStr);
+                    String replacement = sb.substring(m.start()); // strip the untouched prefix
+                    io.github.rosemoe.sora.text.CharPosition s =
+                            content.getIndexer().getCharPosition(m.start());
+                    io.github.rosemoe.sora.text.CharPosition e =
+                            content.getIndexer().getCharPosition(m.end());
+                    content.beginBatchEdit();
+                    content.replace(s.line, s.column, e.line, e.column, replacement);
+                    content.endBatchEdit();
                     break;
+                }
                 case "Copy selection": copySelection(); break;
                 case "Cut selection": cutSelection(); break;
                 case "Paste selection": pasteSelection(); break;
