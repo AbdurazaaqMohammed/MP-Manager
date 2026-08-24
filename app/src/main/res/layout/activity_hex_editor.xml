@@ -42,14 +42,14 @@
             android:layout_height="44dp"
             android:orientation="horizontal">
 
-            <Button style="@style/HexKey" android:text="0" />
-            <Button style="@style/HexKey" android:text="1" />
-            <Button style="@style/HexKey" android:text="2" />
-            <Button style="@style/HexKey" android:text="3" />
-            <Button style="@style/HexKey" android:text="4" />
-            <Button style="@style/HexKey" android:text="5" />
-            <Button style="@style/HexKey" android:text="6" />
-            <Button style="@style/HexKey" android:text="7" />
+            <TextView style="@style/HexKey" android:text="0" />
+            <TextView style="@style/HexKey" android:text="1" />
+            <TextView style="@style/HexKey" android:text="2" />
+            <TextView style="@style/HexKey" android:text="3" />
+            <TextView style="@style/HexKey" android:text="4" />
+            <TextView style="@style/HexKey" android:text="5" />
+            <TextView style="@style/HexKey" android:text="6" />
+            <TextView style="@style/HexKey" android:text="7" />
         </LinearLayout>
 
         <LinearLayout
@@ -57,14 +57,14 @@
             android:layout_height="44dp"
             android:orientation="horizontal">
 
-            <Button style="@style/HexKey" android:text="8" />
-            <Button style="@style/HexKey" android:text="9" />
-            <Button style="@style/HexKey" android:text="A" />
-            <Button style="@style/HexKey" android:text="B" />
-            <Button style="@style/HexKey" android:text="C" />
-            <Button style="@style/HexKey" android:text="D" />
-            <Button style="@style/HexKey" android:text="E" />
-            <Button style="@style/HexKey" android:text="F" />
+            <TextView style="@style/HexKey" android:text="8" />
+            <TextView style="@style/HexKey" android:text="9" />
+            <TextView style="@style/HexKey" android:text="A" />
+            <TextView style="@style/HexKey" android:text="B" />
+            <TextView style="@style/HexKey" android:text="C" />
+            <TextView style="@style/HexKey" android:text="D" />
+            <TextView style="@style/HexKey" android:text="E" />
+            <TextView style="@style/HexKey" android:text="F" />
         </LinearLayout>
     </LinearLayout>
 
