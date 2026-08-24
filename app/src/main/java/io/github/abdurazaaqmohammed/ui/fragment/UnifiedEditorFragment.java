@@ -762,6 +762,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void showEditMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
+        forceShowIcons(popupMenu);
         String[] baseOptions = { "Copy line", "Cut line", "Delete line", "Empty line", "Replace line (with clipboard)",
                 "Duplicate line", "Convert to uppercase", "Convert to lowercase", "Convert to sentence case",
                 "Convert to camelcase", "Increase indent", "Decrease indent" };
@@ -872,6 +873,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     // ===== File operations menu =====
     public void showFileMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
+        forceShowIcons(popupMenu);
         java.util.List<String> optionsList = new java.util.ArrayList<>();
         java.util.List<Integer> iconsList = new java.util.ArrayList<>();
         optionsList.add("File"); iconsList.add(R.drawable.baseline_insert_drive_file_24);
@@ -947,6 +949,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void showSubFileMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
+        forceShowIcons(popupMenu);
         String[] options = { "Reload file", "Reload with charset", "Set encoding", "Set linebreak type", "Statistics" };
         int[] icons = {
                 R.drawable.baseline_refresh_24, R.drawable.baseline_refresh_24,
@@ -1398,6 +1401,19 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         int lineNumber, startColumn, endColumn;
         TextLocation(int lineNumber, int startColumn, int endColumn) {
             this.lineNumber = lineNumber; this.startColumn = startColumn; this.endColumn = endColumn;
+        }
+    }
+
+    private void forceShowIcons(PopupMenu popupMenu) {
+        try {
+            java.lang.reflect.Field field = popupMenu.getClass().getDeclaredField("mPopup");
+            field.setAccessible(true);
+            Object menuPopupHelper = field.get(popupMenu);
+            java.lang.reflect.Method setForceIcons = menuPopupHelper.getClass().getDeclaredMethod("setForceShowIcon",
+                    boolean.class);
+            setForceIcons.invoke(menuPopupHelper, true);
+        } catch (Exception e) {
+            new ErrorUtil(getActivity()).showError(e);
         }
     }
 }
