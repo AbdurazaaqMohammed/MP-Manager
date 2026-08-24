@@ -553,6 +553,7 @@ Layout Inspector
     <string name="root_info">Root Info</string>
     <string name="medium_text">Medium Text</string>
     <string name="opened_classes">Opened classes</string>
+    <string name="opened_files">Open files</string>
     <string name="options">Options</string>
     <string name="set_extract_native_libs">Set extractNativeLibs</string>
     <string name="dex_library_to_use">Dex library to use</string>

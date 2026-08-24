@@ -103,6 +103,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="@android:string/search_go"
+                android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:singleLine="true" />
 
