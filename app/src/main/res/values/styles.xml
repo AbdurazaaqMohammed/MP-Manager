@@ -60,14 +60,18 @@
         <item name="android:background">?attr/selectableItemBackground</item>
     </style>
 
+    <!-- Literal colors on purpose: theme attrs (?attr/colorSurfaceVariant etc.) rendered
+         invisibly for some users, so the keys get a fixed medium-gray fill + white text
+         which contrasts against both light and dark surfaces -->
     <style name="HexKey">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
         <item name="android:layout_weight">1</item>
         <item name="android:layout_marginStart">4dp</item>
         <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
-        <item name="android:textColor">?attr/colorPrimary</item>
         <item name="android:textSize">18sp</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>

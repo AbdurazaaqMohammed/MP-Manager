@@ -27,7 +27,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/close"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:src="@drawable/close_24px"
             app:tint="?attr/colorOnSurfaceVariant"
             xmlns:app="http://schemas.android.com/apk/res-auto" />
     </LinearLayout>

@@ -11,9 +11,11 @@ import android.text.TextUtils;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.util.Base64;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -52,11 +54,7 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
-/**
- * Simple hex editor: paged 8-bytes-per-row hex/ASCII viewer backed by a RandomAccessFile,
- * with an overlay of unsaved byte modifications, a 0-F keypad for editing the selected
- * byte nibble-by-nibble, undo/redo, goto-offset and save-to-file.
- */
+
 public class HexEditorActivity extends AppCompatActivity {
 
     private File file;
@@ -64,9 +62,7 @@ public class HexEditorActivity extends AppCompatActivity {
     private long size;
     private boolean readOnly;
 
-    /** Unsaved modifications: position -> new unsigned byte value. */
     private final TreeMap<Integer, Integer> mods = new TreeMap<>();
-    /** Undo entries: {position, originalValue, newValue}. */
     private final ArrayDeque<int[]> undoStack = new ArrayDeque<>();
     private final ArrayDeque<int[]> redoStack = new ArrayDeque<>();
 
@@ -75,6 +71,15 @@ public class HexEditorActivity extends AppCompatActivity {
     private HexRowAdapter adapter;
     private TextView statusText;
     private LinearLayoutManager layoutManager;
+
+    private View lastTouchedCell;
+    private GestureDetector tapDetector;
+
+    private final View.OnTouchListener cellTouchListener = (v, ev) -> {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) lastTouchedCell = v;
+        if (tapDetector != null) tapDetector.onTouchEvent(ev);
+        return false;
+    };
 
     // Search panel state
     private View searchPanel, inspectorPanel;
@@ -87,7 +92,6 @@ public class HexEditorActivity extends AppCompatActivity {
     private TextView[] inspectorValues;
     private TextView inspectorRawHex;
 
-    /** Search data types; index matters for encoding. */
     private static final List<String> DATA_TYPES = Arrays.asList(
             "Hex Text", "ASCII String", "Unicode String", "UTF-8 String", "GBK String",
             "Signed Byte", "Unsigned Byte", "Signed Short", "Unsigned Short",
@@ -129,10 +133,14 @@ public class HexEditorActivity extends AppCompatActivity {
             finish();
             return;
         }
-        readOnly = !file.canWrite();
-
         try {
-            raf = new RandomAccessFile(file, "r");
+            try {
+                raf = new RandomAccessFile(file, "rw");
+                readOnly = false;
+            } catch (Exception e) {
+                raf = new RandomAccessFile(file, "r");
+                readOnly = true;
+            }
             size = raf.length();
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
@@ -145,6 +153,20 @@ public class HexEditorActivity extends AppCompatActivity {
         toolbar.setNavigationIcon(R.drawable.chevron_left_24px);
         toolbar.setNavigationOnClickListener(v -> confirmDiscardAndFinish());
         setSupportActionBar(toolbar);
+
+        tapDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                View v = lastTouchedCell;
+                if (v != null && v.getTag() instanceof Integer) setCursor((Integer) v.getTag(), false);
+                return false;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                // Deliberately not consumed: the selectable TextView starts text selection natively
+            }
+        });
 
         setupHeader();
 
@@ -170,7 +192,6 @@ public class HexEditorActivity extends AppCompatActivity {
         updateStatus();
     }
 
-    /** Left sidebar: value + data type + big endian + expandable replace section, with next/prev/replace actions. */
     private void setupSearch() {
         searchValue = searchPanel.findViewById(R.id.searchValue);
         searchType = searchPanel.findViewById(R.id.searchType);
@@ -215,7 +236,6 @@ public class HexEditorActivity extends AppCompatActivity {
         dropdown.setOnClickListener(v -> dropdown.showDropDown());
     }
 
-    /** Populates the static column-header row (0-7 over the hex columns, 01234567 over the ASCII column). */
     private void setupHeader() {
         View header = findViewById(R.id.hexHeader);
         int[] cellIds = {R.id.cell0, R.id.cell1, R.id.cell2, R.id.cell3, R.id.cell4, R.id.cell5, R.id.cell6, R.id.cell7};
@@ -236,7 +256,7 @@ public class HexEditorActivity extends AppCompatActivity {
             LinearLayout keyRow = (LinearLayout) keypad.getChildAt(row);
             for (int i = 0; i < keyRow.getChildCount(); i++) {
                 View key = keyRow.getChildAt(i);
-                if (!(key instanceof TextView tv)) continue;
+                if (!(key instanceof TextView)) continue;
                 int d = Character.digit(digits[digitIndex++], 16);
                 key.setEnabled(!readOnly);
                 key.setOnClickListener(v -> inputNibble(d));
@@ -244,7 +264,6 @@ public class HexEditorActivity extends AppCompatActivity {
         }
     }
 
-    /** Reads one byte honouring unsaved modifications. Returns -1 past EOF. */
     private int readByte(int pos) {
         Integer modded = mods.get(pos);
         if (modded != null) return modded;
@@ -263,9 +282,10 @@ public class HexEditorActivity extends AppCompatActivity {
         if (readOnly || cursorPos >= size) return;
         int oldVal = readByte(cursorPos);
         if (oldVal == -1) return;
-        int newVal = nibbleHigh ? ((digit << 4) | (oldVal & 0x0F)) : ((oldVal & 0xF0) | digit);
+        boolean wasHigh = nibbleHigh;
+        int newVal = wasHigh ? ((digit << 4) | (oldVal & 0x0F)) : ((oldVal & 0xF0) | digit);
 
-        if (nibbleHigh) {
+        if (wasHigh) {
             undoStack.push(new int[]{cursorPos, oldVal, newVal});
             redoStack.clear();
         } else {
@@ -276,7 +296,8 @@ public class HexEditorActivity extends AppCompatActivity {
         mods.put(cursorPos, newVal);
         nibbleHigh = !nibbleHigh;
         refreshRows(cursorPos, cursorPos);
-        if (!nibbleHigh && cursorPos + 1 < size) setCursor(cursorPos + 1, false);
+        // Advance to the next byte only after the low (2nd) character was entered so both characters of the current byte can be edited
+        if (!wasHigh && cursorPos + 1 < size) setCursor(cursorPos + 1, false);
         updateStatus();
     }
 
@@ -323,7 +344,6 @@ public class HexEditorActivity extends AppCompatActivity {
         updateInspector();
     }
 
-    /** Right sidebar inspector: decodes bytes at the cursor in all numeric/text interpretations. */
     private void setupInspector() {
         inspectorRawHex = inspectorPanel.findViewById(R.id.inspectorRawHex);
         LinearLayout rows = inspectorPanel.findViewById(R.id.inspectorRows);
@@ -382,7 +402,6 @@ public class HexEditorActivity extends AppCompatActivity {
         inspectorValues[index].setText(value != null ? value : "—");
     }
 
-    /** Assembles len bytes starting at off into an unsigned long honouring endianness. */
     private static long unsigned(int[] b, int off, int len, boolean bigEndian) {
         long v = 0;
         for (int i = 0; i < len; i++) {
@@ -393,9 +412,6 @@ public class HexEditorActivity extends AppCompatActivity {
         return v;
     }
 
-    // ------------------------------------------------------------------ search / replace
-
-    /** Encodes the given text as the byte pattern for the selected data type. */
     private byte[] buildPattern(int type, String text, boolean bigEndian) throws Exception {
         if (text == null || TextUtils.isEmpty(text.trim())) throw new IllegalArgumentException("Empty search value");
         switch (type) {
@@ -423,7 +439,6 @@ public class HexEditorActivity extends AppCompatActivity {
             out[off + i] = (byte) ((val >> (8 * (bigEndian ? len - 1 - i : i))) & 0xFF);
     }
 
-    /** Parses and range-checks a numeric literal for the given signed/unsigned/floating type. */
     private long parseNumberForType(int type, String text) throws NumberFormatException {
         String t = text.trim();
         switch (type) {
@@ -441,7 +456,6 @@ public class HexEditorActivity extends AppCompatActivity {
         }
     }
 
-    /** Builds the pattern from the sidebar inputs; shows a toast and returns false when invalid. */
     private boolean ensureSearchPattern() {
         lastPattern = null;
         try {
@@ -463,7 +477,6 @@ public class HexEditorActivity extends AppCompatActivity {
         scan(cursorPos - 1, false);
     }
 
-    /** Scans forward/backward on a background thread, honouring unsaved modifications. */
     private void scan(long start, boolean forward) {
         final byte[] pattern = lastPattern;
         final long startPos = start < 0 ? (forward ? 0 : Math.max(0, size - pattern.length)) : start;
@@ -498,7 +511,6 @@ public class HexEditorActivity extends AppCompatActivity {
         return true;
     }
 
-    /** Writes the replace-field value over the current match (or at the cursor when no match yet). */
     private void replaceCurrentMatch() {
         if (!ensureSearchPattern()) return;
         long target = lastMatchPos >= 0 ? lastMatchPos : cursorPos;
@@ -518,7 +530,6 @@ public class HexEditorActivity extends AppCompatActivity {
         findNext();
     }
 
-    /** Applies bytes through the modification overlay, recording one undo entry per byte. */
     private void writeBytesAt(long pos, byte[] data, Runnable extraUndoAction) {
         List<int[]> entries = new ArrayList<>();
         for (int i = 0; i < data.length; i++) {
@@ -623,7 +634,6 @@ public class HexEditorActivity extends AppCompatActivity {
         }
     }
 
-    /** Builds a byte array from an uppercase hex string. */
     private static byte[] toBytes(String upperHex) {
         byte[] out = new byte[upperHex.length() / 2];
         for (int i = 0; i < out.length; i++)
@@ -757,7 +767,6 @@ public class HexEditorActivity extends AppCompatActivity {
         return MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.LTGRAY);
     }
 
-    /** Rows of 8 bytes: offset + hex cells + ASCII preview. */
     private class HexRowAdapter extends RecyclerView.Adapter<HexRowAdapter.ViewHolder> {
 
         HexRowAdapter() {
@@ -797,8 +806,8 @@ public class HexEditorActivity extends AppCompatActivity {
                 } else {
                     cell.setBackground(null);
                 }
-                final int pos = rowStart + i;
-                cell.setOnClickListener(v -> setCursor(pos, false));
+                cell.setTag(rowStart + i);
+                cell.setOnTouchListener(cellTouchListener);
             }
 
             StringBuilder asciiBuilder = new StringBuilder();
@@ -835,6 +844,8 @@ public class HexEditorActivity extends AppCompatActivity {
                 cells[5] = itemView.findViewById(R.id.cell5);
                 cells[6] = itemView.findViewById(R.id.cell6);
                 cells[7] = itemView.findViewById(R.id.cell7);
+                // Selectable text lets the user pick individual nibbles (1 of the 2 chars) to copy them
+                for (TextView cell : cells) cell.setTextIsSelectable(true);
             }
         }
     }
