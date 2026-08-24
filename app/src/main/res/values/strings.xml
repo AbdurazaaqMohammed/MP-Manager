@@ -632,4 +632,5 @@ Layout Inspector
     <string name="installed_successfully">%1$s installed successfully</string>
     <string name="paste_from">Paste from</string>
     <string name="inspector">Inspector</string>
+    <string name="method">Method</string>
 </resources>

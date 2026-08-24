@@ -16,7 +16,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -73,7 +75,9 @@ import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.utils.SignatureKillerUtil;
 import mt.modder.hub.apkCloner.util.ApkCloner;
 
 public class ApkToolsHandler {
@@ -292,7 +296,7 @@ public class ApkToolsHandler {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton("More", (dialog, which) -> {
-                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate)};
+                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate), "Kill signature verification"};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
@@ -439,7 +443,8 @@ public class ApkToolsHandler {
                                         }
                                     }).start();
                                 }).create());
-                    } else if (which1 == 4) {
+                    }
+                    else if (which1 == 4) {
                         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                         boolean skipManifest = settings.getBoolean("skipManifest", false);
                         boolean confuseZip = settings.getBoolean("confuseZip", false);
@@ -513,7 +518,8 @@ public class ApkToolsHandler {
                                         }
                                     }).start();
                                 }).create());
-                    } else if (which1 == 5) {
+                    }
+                    else if (which1 == 5) {
                         View ll = LayoutInflater.from(context).inflate(R.layout.dialog_clone, null);
                         TextView pkgNameView = ll.findViewById(R.id.package_name_input);
                         String pkgNameFromApk = getPackageNameFromApk(filePath);
@@ -552,6 +558,7 @@ public class ApkToolsHandler {
                                     }); else doClone.run();
                                 }).show();
                     } else if (which1 == 6) showCertificateDialog(file);
+                    else if (which1 == 7) killSignatureVerification(file, fileName);
                     }).show();
                 })
                 .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
@@ -731,6 +738,71 @@ public class ApkToolsHandler {
 
     private void openZipFile(File file) {
         context.loadZipFolderInPane(file, "", pane1, true);
+    }
+
+    private void killSignatureVerification(File file, String fileName) {
+        View layout = LayoutInflater.from(context).inflate(R.layout.dialog_kill_signature, null);
+
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = new boolean[1];
+        CompoundButton autosign = layout.findViewById(R.id.autosign);
+        autosign.setText(R.string.auto_sign);
+        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+
+        String[] killMethods = {"MT", "RePairip"};
+        final int[] selectedMethod = {0};
+        AutoCompleteTextView methodDropdown = layout.findViewById(R.id.method_dropdown);
+        methodDropdown.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, killMethods));
+        methodDropdown.setText(killMethods[0], false);
+        methodDropdown.setOnItemClickListener((parent, view, position, id) -> selectedMethod[0] = position);
+
+        layout.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Kill signature verification")
+                .setMessage("Note: This feature is for security testing purposes only and is strictly forbidden to use it for any illegal activity")
+                .setView(layout)
+                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                .setPositiveButton("Kill", (dialog2, which3) -> {
+                    SignWrapper[] wrapper = new SignWrapper[1];
+                    final Runnable doKill;
+                    if (selectedMethod[0] == 1) {
+                        doKill = () -> {
+                            ProgressManager pm = new ProgressManager(context, true).show();
+                            new Thread(() -> {
+                                try {
+                                    File result = PairipRemoverUtil.removePairip(context, file);
+                                    if (sign[0]) wrapper[0].signApk(result);
+                                    pm.dismiss();
+                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                } catch (Exception e) {
+                                    pm.dismiss();
+                                    new ErrorUtil(context).showError(e);
+                                }
+                            }).start();
+                        };
+                    } else {
+                        doKill = () -> {
+                            ProgressManager pm = new ProgressManager(context, true).show();
+                            new Thread(() -> {
+                                try {
+                                    File result = SignatureKillerUtil.apply(context, file);
+                                    if (sign[0]) wrapper[0].signApk(result);
+                                    pm.dismiss();
+                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                } catch (Exception e) {
+                                    pm.dismiss();
+                                    new ErrorUtil(context).showError(e);
+                                }
+                            }).start();
+                        };
+                    }
+                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                        wrapper[0] = sw;
+                        doKill.run();
+                    }); else doKill.run();
+                }).show());
     }
 
     private String getPackageNameFromApk(String filePath) {

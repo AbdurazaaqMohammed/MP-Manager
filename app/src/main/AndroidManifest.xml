@@ -51,6 +51,7 @@
        <activity
            android:name="io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity"
            android:windowSoftInputMode="adjustResize|stateHidden"
+           android:launchMode="singleTop"
            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
