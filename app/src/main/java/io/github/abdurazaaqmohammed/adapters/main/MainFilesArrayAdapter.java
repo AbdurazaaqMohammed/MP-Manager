@@ -203,15 +203,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 originalClickListener = v -> context.loadFolderInPane(entry.getZipFile().getParentFile(), pane1);
             } else {
                 originalClickListener = isMultiSelectMode ? v -> {
-                    context.lastPaneSelected = pane1 ? 1 : 2;
+                    context.setSelectedPane(pane1 ? 1 : 2);
                     handleMultiSelect(finalPosition);
                 } : !isInZip && file.isFile() ?
                     v -> {
-                        context.lastPaneSelected = pane1 ? 1 : 2;
+                        context.setSelectedPane(pane1 ? 1 : 2);
                         context.setCurrentFolder(file.getParentFile(), getOldValues());
                         handleFileClick(file, fileName);
                     } : (View.OnClickListener) v -> {
-                    context.lastPaneSelected = pane1 ? 1 : 2;
+                    context.setSelectedPane(pane1 ? 1 : 2);
                     if (isInZip)
                         fileOps.handleZipEntryClick(entry);
                     else
@@ -221,7 +221,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
             int finalPosition1 = finalPosition;
             View.OnLongClickListener originalLongClickListener = v -> {
-                context.lastPaneSelected = pane1 ? 1 : 2;
+                context.setSelectedPane(pane1 ? 1 : 2);
                 if (isInZip) {
                     context.setCurrentFolder(currentZipPath, Arrays.asList(values));
                 } else

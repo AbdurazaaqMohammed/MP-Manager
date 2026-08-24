@@ -14,6 +14,8 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -93,8 +95,11 @@ import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.codehasan.colorpicker.services.ColorPickerService;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
+import io.github.ratul.topactivity.manager.CopyTextOverlayManager;
+import io.github.ratul.topactivity.App;
 import io.github.ratul.topactivity.manager.ServiceManager;
 import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.services.PackageMonitoringService;
 import io.github.ratul.topactivity.utils.PermissionUtil;
 
@@ -130,6 +135,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.util.DisplayMetrics;
 
 import android.content.res.Resources;
 import android.view.LayoutInflater;
@@ -408,6 +414,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
+    private CopyTextOverlayManager copyTextOverlayManager;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -430,6 +437,22 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Extensions.showMessage(this, rss.getString(R.string.screen_capture_permission_needed_for_color_picker));
         }});
+    private final ActivityResultLauncher<Intent> screenCaptureLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+            MediaProjectionManager mpm = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+            MediaProjection mp = mpm.getMediaProjection(result.getResultCode(), result.getData());
+            DisplayMetrics dm = new DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getMetrics(dm);
+            io.github.ratul.topactivity.manager.ScreenCaptureManager.get().setMediaProjection(
+                    mp, dm.widthPixels, dm.heightPixels, dm.densityDpi);
+            App.showToast(this, getString(R.string.screen_capture_ready));
+        } else {
+            App.showToast(this, getString(R.string.screen_capture_denied));
+        }});
+    private void requestScreenCapture() {
+        MediaProjectionManager mpm = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+        screenCaptureLauncher.launch(mpm.createScreenCaptureIntent());
+    }
     private void setupSystemBars() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
@@ -634,8 +657,8 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout container = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
-        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Settings"};
-        int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
+        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Copy Text", "Settings"};
+        int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.ic_text_select_start_mt, R.drawable.baseline_settings_24};
         sidebar.setAdapter(new ArrayAdapter<>(this, R.layout.item_dropdown_option, options) {
             @NonNull
             @Override
@@ -715,8 +738,27 @@ public class MainActivity extends AppCompatActivity {
                     new ServiceManager(this).show();
                     DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                     break;
-                case 5:
+                case 6:
                     showSettingsDialog();
+                    break;
+                case 5:
+                    if(Build.VERSION.SDK_INT < 20) return;
+                    if (copyTextOverlayManager != null && copyTextOverlayManager.isShowing()) {
+                        copyTextOverlayManager.hide();
+                        return;
+                    }
+                    if (!requestMissingPermissions(this)) return;
+                    if (AccessibilityMonitoringService.getInstance() == null) {
+                        PermissionUtil.requestAccessibilityPermission(MainActivity.this);
+                        App.showToast(MainActivity.this,
+                                getString(R.string.accessibility_permission_description, getString(R.string.app_name)));
+                        return;
+                    }
+                    if (copyTextOverlayManager == null) {
+                        copyTextOverlayManager = new CopyTextOverlayManager(App.getInstance());
+                    }
+                    copyTextOverlayManager.setRequestScreenCapture(this::requestScreenCapture);
+                    copyTextOverlayManager.show();
                     break;
             }
             drawerLayout.closeDrawer(GravityCompat.START);
@@ -778,16 +820,7 @@ public class MainActivity extends AppCompatActivity {
 
         pane1.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 1) {
-                lastPaneSelected = 1;
-                RecyclerView.Adapter a = pane1.getAdapter();
-                if (!(a instanceof MainFilesArrayAdapter)) return false;
-                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane1.getAdapter();
-                if (adapter != null) {
-                    if (adapter.isInZip) {
-                        setCurrentFolder(adapter.currentZipPath, Arrays.asList(adapter.values));
-                    } else
-                        setCurrentFolder(pane1Folder, pane1Folder.listFiles());
-                }
+                setCurrentPane(1);
             }
             return false;
         });
@@ -796,16 +829,7 @@ public class MainActivity extends AppCompatActivity {
 
         pane2.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 2) {
-                lastPaneSelected = 2;
-                RecyclerView.Adapter a = pane2.getAdapter();
-                if (!(a instanceof MainFilesArrayAdapter)) return false;
-                MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) pane2.getAdapter();
-                if (adapter != null) {
-                    if (adapter.isInZip) {
-                        setCurrentFolder(adapter.currentZipPath, Arrays.asList(adapter.values));
-                    } else
-                        setCurrentFolder(pane2Folder, pane2Folder.listFiles());
-                }
+                setCurrentPane(2);
             }
             return false;
         });
@@ -1108,11 +1132,11 @@ public class MainActivity extends AppCompatActivity {
                             int i = 0;
                             for(char c : chars) if (c == File.separatorChar) i++;
                             boolean inOneLevelInZip = i < 2;
-                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, false);
+                            loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, true);
                         } else {
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
-                            if (f != null && f.canRead()) loadFolderInPane(f, lastPaneSelected == 1, false);
+                            if (f != null && f.canRead()) loadFolderInPane(f, lastPaneSelected == 1);
                             else if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
@@ -1471,6 +1495,13 @@ public class MainActivity extends AppCompatActivity {
                 setCurrentFolder(curr, curr.listFiles());
             }
         }
+        updateNavigationButtons();
+    }
+
+    public void setSelectedPane(int pane) {
+        if (lastPaneSelected == pane) return;
+        lastPaneSelected = pane;
+        updateNavigationButtons();
     }
 
     public void setCurrentFolder(String path, List<?> files) {
@@ -1531,6 +1562,9 @@ public class MainActivity extends AppCompatActivity {
         if (isServiceBound) {
             getApplicationContext().unbindService(serviceConnection);
             isServiceBound = false;
+        }
+        if (copyTextOverlayManager != null && copyTextOverlayManager.isShowing()) {
+            copyTextOverlayManager.hide();
         }
         super.onDestroy();
     }
