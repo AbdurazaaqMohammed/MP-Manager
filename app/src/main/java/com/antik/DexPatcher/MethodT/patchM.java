@@ -34,7 +34,6 @@ public class patchM {
             return new ImmutableMethod(m.getDefiningClass(), n, m.getParameters(), rt, m.getAccessFlags(), m.getAnnotations(), m.getHiddenApiRestrictions(), new ImmutableMethodImplementation(1, ins, null, null));
         } else if (!"<init>".equals(n) && m.getImplementation() != null && "V".equals(m.getReturnType())) {
             System.out.println("[INFO] Bypassing void method " + n);
-
             List<Instruction> ins = Collections.singletonList(new ImmutableInstruction10x(Opcode.RETURN_VOID));
             return new ImmutableMethod(m.getDefiningClass(), n, m.getParameters(), m.getReturnType(), m.getAccessFlags(), m.getAnnotations(), m.getHiddenApiRestrictions(), new ImmutableMethodImplementation(m.getParameterTypes().size()+1, ins, null, null));
         }

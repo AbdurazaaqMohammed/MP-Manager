@@ -458,7 +458,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 R.drawable.baseline_text_snippet_24,
                 R.drawable.baseline_folder_zip_24,
                 R.drawable.image_24px,
-                R.drawable.terminal_24px,
+                R.drawable.ic_hash_mt,
                 R.drawable.video_24px,
                 R.drawable.apk_document_24px
         };
