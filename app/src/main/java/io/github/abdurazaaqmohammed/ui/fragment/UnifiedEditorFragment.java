@@ -136,6 +136,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private boolean axml = false;
 
     private boolean matchCase = false, regex = false, wholeWord = false, replaceMode = false;
+    private String lastSearchQuery;
+    private Integer lastSearchType;
+    private boolean lastIgnoreCase;
     private final List<int[]> navigationHistory = new ArrayList<>();
     private int historyPointer = -1;
     private boolean isNavigating = false;
@@ -312,6 +315,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void setupSearchListeners() {
         btnFind.setOnClickListener(v -> performSearch());
+        searchInput.setOnEditorActionListener((v, actionId, event) -> {
+            performSearch();
+            return true;
+        });
         btnReplaceToggle.setOnClickListener(v -> {
             if (!replaceMode) {
                 replaceMode = true;
@@ -634,13 +641,50 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void performSearch() {
         CharSequence query = searchInput.getText();
-        if (!TextUtils.isEmpty(query)) try {
+        if (TextUtils.isEmpty(query)) return;
+        try {
             EditorSearcher searcher = editor.getSearcher();
-            searcher.search(query.toString(), new EditorSearcher.SearchOptions(!matchCase, regex));
-            searcher.gotoNext();
+            int type = regex ? EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
+                    : wholeWord ? EditorSearcher.SearchOptions.TYPE_WHOLE_WORD
+                    : EditorSearcher.SearchOptions.TYPE_NORMAL;
+            startSearch(query.toString(), type, !matchCase);
         } catch (Exception e) {
             if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
         }
+    }
+
+    private void startSearch(String query, int type, boolean ignoreCase) {
+        try {
+            EditorSearcher searcher = editor.getSearcher();
+            searcher.setCyclicJumping(true); // Find wraps around instead of dying at the last match
+            lastSearchQuery = query;
+            lastSearchType = type;
+            lastIgnoreCase = ignoreCase;
+            searcher.search(query, new EditorSearcher.SearchOptions(type, ignoreCase));
+            jumpWhenReady(searcher, 0);
+        } catch (Exception e) {
+            if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
+        }
+    }
+
+    private void goToNextMatch() {
+        if (lastSearchType == null || TextUtils.isEmpty(lastSearchQuery)) {
+            searchPanel.setVisibility(View.VISIBLE);
+            return;
+        }
+        EditorSearcher searcher = editor.getSearcher();
+        if (searcher.hasQuery() && searcher.gotoNext()) return;
+        startSearch(lastSearchQuery, lastSearchType, lastIgnoreCase);
+    }
+
+    private void jumpWhenReady(EditorSearcher searcher, int attempt) {
+        if (!isAdded() || editor.getSearcher() != searcher) return;
+        if (searcher.gotoNext()) return;
+        if (attempt >= 12) {
+            Extensions.showMessage(requireActivity(), "No matches found");
+            return;
+        }
+        editor.postDelayed(() -> jumpWhenReady(searcher, attempt + 1), 80);
     }
 
     private void performReplace() {
@@ -708,7 +752,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         String action = obj.optString(actionKey);
         if (TextUtils.isEmpty(action)) return;
         if (action.equalsIgnoreCase("Search")) {
-            searchPanel.setVisibility(View.VISIBLE);
+            goToNextMatch();
             return;
         }
         Cursor cursor = editor.getCursor();
