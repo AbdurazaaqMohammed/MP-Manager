@@ -38,8 +38,15 @@ public final class Extensions {
     }
 
     public static void showMessage(Activity activity, CharSequence message) {
-        View v = (activity instanceof MainActivity) ? activity.findViewById(R.id.bottomBar) : activity.getWindow().getDecorView().getRootView();
-        Snackbar.make(v, message, Snackbar.LENGTH_SHORT).show();
+        Snackbar snackbar;
+        if (activity instanceof MainActivity) {
+            View bottomBar = activity.findViewById(R.id.bottomBar);
+            snackbar = Snackbar.make(bottomBar, message, Snackbar.LENGTH_SHORT);
+            snackbar.setAnchorView(bottomBar);
+        } else {
+            snackbar = Snackbar.make(activity.getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_SHORT);
+        }
+        snackbar.show();
     }
 
     public static int dp2px(android.content.Context context, float dp) {
