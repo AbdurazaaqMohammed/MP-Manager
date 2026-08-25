@@ -29,6 +29,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -36,6 +37,8 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.text.Editable;
+import android.text.InputFilter;
+import android.text.InputType;
 import android.text.TextUtils;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -49,6 +52,7 @@ import java.lang.reflect.Method;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.textfield.TextInputLayout;
 import com.lilincpp.github.libezftp.EZFtpServer;
 import com.lilincpp.github.libezftp.user.EZFtpUser;
 import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
@@ -100,7 +104,11 @@ import io.github.ratul.topactivity.utils.PermissionUtil;
 
 import android.text.TextWatcher;
 import android.text.format.Formatter;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewParent;
+import android.view.animation.DecelerateInterpolator;
 import android.view.GestureDetector;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
@@ -121,6 +129,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -145,7 +154,10 @@ import android.widget.Toast;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
@@ -205,6 +217,62 @@ public class MainActivity extends AppCompatActivity {
     private boolean isBackPressedToExit;
     private final Runnable resetExitPrompt = () -> isBackPressedToExit = false;
 
+    private GestureDetectorCompat bottomBarGestureDetector;
+    private View.OnTouchListener bottomBarTouchListener;
+    private boolean multiSelectUIActive;
+    private final ImageButton[] multiSelectButtons = new ImageButton[5];
+    private TabLayout bookmarksTabs;
+    private ViewPager2 bookmarksPager;
+    private ListView bookmarksList, historyList;
+    private final List<String> bookmarkGroups = new ArrayList<>();
+    private View.OnTouchListener bookmarksSwipeDownCloseListener;
+    private final Map<String, String> bookmarkLabels = new HashMap<>();
+    private BookmarkListController mainBookmarkController;
+    private final Map<String, BookmarkListController> groupControllers = new LinkedHashMap<>();
+    private BookmarkListController batchController;
+    private final Set<Integer> batchSelected = new HashSet<>();
+    private boolean bookmarkDragging;
+
+    private class BookmarkListController implements BookmarksAdapter.Callbacks {
+        final String key; // "bookmarks" or a group name
+        final ListView listView;
+        final ArrayList<File> items;
+        final BookmarksAdapter adapter;
+
+        BookmarkListController(String key, ListView listView, ArrayList<File> items) {
+            this.key = key;
+            this.listView = listView;
+            this.items = items;
+            this.adapter = new BookmarksAdapter(MainActivity.this, items, this);
+        }
+
+        @Override
+        public String labelOf(File file) {
+            String label = bookmarkLabels.get(file.getPath());
+            return label != null ? label : file.getName();
+        }
+
+        @Override
+        public void onDragHandleTouched(View handle, int position, MotionEvent initialEvent) {
+            startBookmarkDrag(this, handle, position, initialEvent);
+        }
+
+        @Override
+        public boolean isBatchMode() {
+            return batchController == this;
+        }
+
+        @Override
+        public boolean isBatchSelected(int position) {
+            return batchSelected.contains(position);
+        }
+
+        @Override
+        public boolean isDragging() {
+            return bookmarkDragging;
+        }
+    }
+
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
             bookmarks = new ArrayList<>();
@@ -221,8 +289,53 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void addBookmark(File toBookmark) {
-        bookmarks.add(toBookmark);
-        bookmarksAdapter.notifyDataSetChanged();
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("ask_bookmark_tab", false)) {
+            showBookmarkTargetDialog(toBookmark);
+            return;
+        }
+        addBookmarkToTab(getLastBookmarkTabIndex(), toBookmark);
+    }
+
+    private int getLastBookmarkTabIndex() {
+        int last = PreferenceManager.getDefaultSharedPreferences(this).getInt("bookmarks_last_tab", 0);
+        if (last == 1) last = 0;
+        return Math.min(last, 1 + bookmarkGroups.size());
+    }
+
+    private void addBookmarkToTab(int tabIndex, File file) {
+        if (tabIndex >= 2 && tabIndex - 2 < bookmarkGroups.size()) {
+            String group = bookmarkGroups.get(tabIndex - 2);
+            List<File> items = loadGroupBookmarks(group);
+            items.add(file);
+            saveGroupBookmarks(group, items);
+            refreshGroupList(group);
+        } else {
+            bookmarks.add(file);
+            bookmarksAdapter.notifyDataSetChanged();
+        }
+        Extensions.showMessage(this, rss.getString(R.string.added_to_bookmarks, file));
+    }
+
+    private void showBookmarkTargetDialog(File file) {
+        List<String> targets = new ArrayList<>();
+        targets.add(rss.getString(R.string.bookmarks));
+        targets.addAll(bookmarkGroups);
+        int[] selected = {0};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(rss.getString(R.string.bookmarks))
+                .setSingleChoiceItems(targets.toArray(new String[0]), 0, (d, w) -> selected[0] = w)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> addBookmarkToTab(selected[0], file))
+                .show();
+    }
+
+    private void refreshGroupList(String group) {
+        BookmarkListController controller = groupControllers.get(group);
+        if (controller != null) {
+            controller.items.clear();
+            controller.items.addAll(loadGroupBookmarks(group));
+            controller.adapter.notifyDataSetChanged();
+        }
     }
 
     public void openImageViewer(String filePath) {
@@ -434,6 +547,540 @@ public class MainActivity extends AppCompatActivity {
         return out;
     }
 
+    private void rebuildBookmarksPager() {
+        groupControllers.clear();
+        List<ListView> pages = new ArrayList<>();
+        List<String> titles = new ArrayList<>();
+        pages.add(bookmarksList);
+        titles.add(rss.getString(R.string.bookmarks));
+        pages.add(historyList);
+        titles.add(rss.getString(R.string.history));
+        for (String group : bookmarkGroups) {
+            pages.add(createGroupListView(group));
+            titles.add(group);
+        }
+
+        bookmarksPager.setAdapter(new RecyclerView.Adapter<>() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                return new RecyclerView.ViewHolder(pages.get(viewType)) {
+                };
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            }
+
+            @Override
+            public int getItemCount() {
+                return pages.size();
+            }
+
+            @Override
+            public int getItemViewType(int position) {
+                return position;
+            }
+        });
+        bookmarksPager.setOffscreenPageLimit(pages.size());
+        reduceDragSensitivity(bookmarksPager);
+
+        bookmarksTabs.removeAllTabs();
+        new TabLayoutMediator(bookmarksTabs, bookmarksPager,
+                (tab, position) -> tab.setText(titles.get(position))).attach();
+
+        int lastTab = PreferenceManager.getDefaultSharedPreferences(this).getInt("bookmarks_last_tab", 0);
+        if (bookmarksTabs.getTabAt(lastTab) != null) bookmarksTabs.getTabAt(lastTab).select();
+    }
+
+    private ListView createGroupListView(String group) {
+        ListView listView = new ListView(this);
+        listView.setDivider(null);
+        listView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        listView.setOnTouchListener(getBookmarksSwipeDownCloseListener());
+        BookmarkListController controller = new BookmarkListController(group, listView, loadGroupBookmarks(group));
+        groupControllers.put(group, controller);
+        listView.setAdapter(controller.adapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            if (handleBookmarkListClick(controller, position)) return;
+            File bookmarked = controller.items.get(position);
+            loadFolderInPane(bookmarked.isFile() ? bookmarked.getParentFile() : bookmarked, lastPaneSelected == 1);
+            closeBookmarksDrawer();
+        });
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            showBookmarkItemMenu(controller, position);
+            return true;
+        });
+        return listView;
+    }
+
+    private void showBookmarksBarMenu(View anchor) {
+        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(this, anchor);
+        String ag = rss.getString(R.string.add_group);
+        String ah = rss.getString(R.string.adjust_height);
+        popup.getMenu().add(ag);
+        popup.getMenu().add(ah);
+        popup.setOnMenuItemClickListener(item -> {
+            CharSequence title = item.getTitle();
+            if(TextUtils.isEmpty(title));
+            else if (ag.contentEquals(title)) showAddGroupDialog();
+            else showAdjustHeightDialog();
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showAddGroupDialog() {
+        EditText input = new EditText(this);
+        input.setHint(rss.getString(R.string.group_name));
+        new MaterialAlertDialogBuilder(this)
+            .setTitle(rss.getString(R.string.add_group))
+            .setView(input)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                String name = input.getText().toString().trim();
+                if (name.isEmpty()) {
+                    Extensions.showMessage(this, R.string.group_name_e);
+                    return;
+                }
+                if (bookmarkGroups.contains(name)) {
+                    Extensions.showMessage(this, R.string.group_already_exists  );
+                    return;
+                }
+                bookmarkGroups.add(name);
+                saveBookmarkGroups();
+                rebuildBookmarksPager();
+                bookmarksPager.post(() -> {
+                    int tab = bookmarkGroups.size() + 1;
+                    if (bookmarksTabs.getTabAt(tab) != null) bookmarksTabs.getTabAt(tab).select();
+                });
+            }).show();
+    }
+
+    private void showAdjustHeightDialog() {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        int currentPct = settings.getInt("bookmarks_bar_pct", 35);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_adjust_height, null);
+        TextInputEditText input = view.findViewById(R.id.heightInput);
+        SeekBar seekBar = view.findViewById(R.id.heightSeekBar);
+        input.setText(String.valueOf(currentPct));
+        seekBar.setProgress(currentPct - 15);
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int pct = progress + 15;
+                input.setText(String.valueOf(pct));
+                input.setSelection(input.length());
+                applyBookmarksBarHeight(pct); // live preview while scrolling
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+
+        input.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                try {
+                    int pct = Integer.parseInt(s.toString());
+                    if (pct >= 15 && pct <= 90) {
+                        seekBar.setProgress(pct - 15);
+                        applyBookmarksBarHeight(pct);
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        androidx.appcompat.app.AlertDialog heightDialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("Adjust height")
+                .setView(view)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, which) -> {
+                    try {
+                        int pct = Math.max(15, Math.min(90, Integer.parseInt(input.getText().toString().trim())));
+                        settings.edit().putInt("bookmarks_bar_pct", pct).apply();
+                        applyBookmarksBarHeight(pct);
+                    } catch (NumberFormatException ignored) {
+                    }
+                }).create();
+        // Cancel restores the saved height after any live preview
+        heightDialog.setOnDismissListener(d -> applyBookmarksBarHeight(settings.getInt("bookmarks_bar_pct", 35)));
+        heightDialog.show();
+    }
+
+    private boolean handleBookmarkListClick(BookmarkListController controller, int position) {
+        if (batchController == controller) {
+            if (batchSelected.contains(position)) batchSelected.remove(position);
+            else batchSelected.add(position);
+            controller.adapter.notifyDataSetChanged();
+            return true;
+        }
+        return false;
+    }
+
+    private void showBookmarkItemMenu(BookmarkListController controller, int position) {
+        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(this, controller.listView);
+        String edit = rss.getString(R.string.edit_bookmark);
+        String move = rss.getString(R.string.move);
+        String delete = rss.getString(R.string.delete);
+        String batch = rss.getString(R.string.batch_operations);
+        popup.getMenu().add(edit);
+        popup.getMenu().add(move);
+        popup.getMenu().add(delete);
+        popup.getMenu().add(batch);
+        popup.setOnMenuItemClickListener(item -> {
+            CharSequence title = item.getTitle();
+            if (delete.contentEquals(title)) confirmDeleteBookmark(controller, position);
+            else if (move.contentEquals(title)) showMoveBookmarkDialog(controller, position);
+            else if (batch.contentEquals(title)) enterBookmarkBatchMode(controller);
+            else showEditBookmarkDialog(controller, position);
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showEditBookmarkDialog(BookmarkListController controller, int position) {
+        File file = controller.items.get(position);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_bookmark, null);
+        TextInputEditText nameInput = view.findViewById(R.id.bookmarkNameInput);
+        TextInputEditText pathInput = view.findViewById(R.id.bookmarkPathInput);
+        nameInput.setText(controller.labelOf(file));
+        pathInput.setText(file.getPath());
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(rss.getString(R.string.edit_bookmark))
+                .setView(view)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String newName = nameInput.getText().toString().trim();
+                    File newFile = new File(pathInput.getText().toString().trim());
+                    File finalFile = newFile.getPath().equals(file.getPath()) ? file : newFile;
+                    if (finalFile != file) {
+                        bookmarkLabels.remove(file.getPath());
+                        controller.items.set(position, finalFile);
+                    }
+                    if (!newName.isEmpty() && !newName.equals(finalFile.getName()))
+                        bookmarkLabels.put(finalFile.getPath(), newName);
+                    else
+                        bookmarkLabels.remove(finalFile.getPath());
+                    saveBookmarkLabels();
+                    persistBookmarkOrder(controller);
+                    controller.adapter.notifyDataSetChanged();
+                }).show();
+    }
+
+    private void showMoveBookmarkDialog(BookmarkListController controller, int position) {
+        List<String> targets = bookmarkTargetTabs(controller);
+        if (targets.isEmpty()) {
+            Extensions.showMessage(this, "No other groups");
+            return;
+        }
+        List<Integer> indices = bookmarkTargetIndices(controller);
+        int[] selected = {0};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(rss.getString(R.string.move))
+                .setSingleChoiceItems(targets.toArray(new String[0]), 0, (d, w) -> selected[0] = w)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    File file = controller.items.remove(position);
+                    addBookmarkToTab(indices.get(selected[0]), file);
+                    persistBookmarkOrder(controller);
+                    controller.adapter.notifyDataSetChanged();
+                }).show();
+    }
+
+    private List<String> bookmarkTargetTabs(BookmarkListController source) {
+        List<String> targets = new ArrayList<>();
+        if (!source.key.equals("bookmarks")) targets.add(rss.getString(R.string.bookmarks));
+        for (String group : bookmarkGroups)
+            if (!group.equals(source.key)) targets.add(group);
+        return targets;
+    }
+
+    private List<Integer> bookmarkTargetIndices(BookmarkListController source) {
+        List<Integer> indices = new ArrayList<>();
+        if (!source.key.equals("bookmarks")) indices.add(0);
+        for (int i = 0; i < bookmarkGroups.size(); i++)
+            if (!bookmarkGroups.get(i).equals(source.key)) indices.add(2 + i);
+        return indices;
+    }
+
+    private void confirmDeleteBookmark(BookmarkListController controller, int position) {
+        new MaterialAlertDialogBuilder(this)
+                .setMessage(rss.getString(R.string.confirm_delete_bookmark, controller.items.get(position)))
+                .setTitle(R.string.warning)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(rss.getString(R.string.delete), (dialog, which) -> {
+                    File removed = controller.items.remove(position);
+                    bookmarkLabels.remove(removed.getPath());
+                    saveBookmarkLabels();
+                    persistBookmarkOrder(controller);
+                    controller.adapter.notifyDataSetChanged();
+                }).show();
+    }
+
+    private void enterBookmarkBatchMode(BookmarkListController controller) {
+        batchController = controller;
+        batchSelected.clear();
+        controller.adapter.notifyDataSetChanged();
+        findViewById(R.id.bookmarksBatchBar).setVisibility(View.VISIBLE);
+    }
+
+    private void exitBookmarkBatchMode() {
+        bookmarkDragging = false; // end any active drag session
+        BookmarkListController controller = batchController;
+        batchController = null;
+        batchSelected.clear();
+        if (controller != null) controller.adapter.notifyDataSetChanged();
+        findViewById(R.id.bookmarksBatchBar).setVisibility(View.GONE);
+    }
+
+    private void batchDeleteSelected() {
+        BookmarkListController source = batchController;
+        if (source == null || batchSelected.isEmpty()) return;
+        List<Integer> positions = new ArrayList<>(batchSelected);
+        positions.sort(Collections.reverseOrder());
+        for (int position : positions) {
+            File removed = source.items.remove((int) position);
+            bookmarkLabels.remove(removed.getPath());
+        }
+        saveBookmarkLabels();
+        persistBookmarkOrder(source);
+        source.adapter.notifyDataSetChanged();
+        exitBookmarkBatchMode();
+    }
+
+    private void batchCopyOrMove(boolean copy) {
+        BookmarkListController source = batchController;
+        if (source == null || batchSelected.isEmpty()) return;
+        List<String> targets = bookmarkTargetTabs(source);
+        List<Integer> indices = bookmarkTargetIndices(source);
+        if (targets.isEmpty()) {
+            Extensions.showMessage(this, "No other groups");
+            return;
+        }
+        List<Integer> positions = new ArrayList<>(batchSelected);
+        Collections.sort(positions);
+        int[] selected = {0};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(copy ? rss.getString(android.R.string.copy) : rss.getString(R.string.move))
+                .setSingleChoiceItems(targets.toArray(new String[0]), 0, (d, w) -> selected[0] = w)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    int targetIndex = indices.get(selected[0]);
+                    for (int position : positions) {
+                        File file = source.items.get(position);
+                        addBookmarkToTab(targetIndex, file); // labels are path-keyed, so they follow automatically
+                    }
+                    if (!copy) {
+                        for (int p = positions.size() - 1; p >= 0; p--) source.items.remove((int) positions.get(p));
+                        persistBookmarkOrder(source);
+                    }
+                    source.adapter.notifyDataSetChanged();
+                    exitBookmarkBatchMode();
+                }).show();
+    }
+
+    private void startBookmarkDrag(BookmarkListController controller, View handle, int position, MotionEvent downEvent) {
+        ListView listView = controller.listView;
+        View row = (View) handle.getParent();
+        float density = getResources().getDisplayMetrics().density;
+        int rowH = row.getHeight() > 0 ? row.getHeight() : (int) (48 * density + 0.5f);
+        int[] dragPos = {position};
+        int[] startSlot = {position};
+        int[] lastFirst = {listView.getFirstVisiblePosition()};
+        float[] lastRawY = {downEvent.getRawY()};
+        int[] lastTop = {row.getTop()};
+        float[] dragOffset = {0f};
+        bookmarkDragging = true;
+        listView.requestDisallowInterceptTouchEvent(true);
+        handle.getParent().requestDisallowInterceptTouchEvent(true);
+        ViewParent pagerParent = listView.getParent();
+        if (pagerParent != null) pagerParent.requestDisallowInterceptTouchEvent(true);
+
+        handle.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_MOVE: {
+                    float dy = event.getRawY() - lastRawY[0];
+                    lastRawY[0] = event.getRawY();
+                    // compensate list scrolling so the held row stays glued to the finger
+                    int topDelta = row.getTop() - lastTop[0];
+                    lastTop[0] = row.getTop();
+                    dragOffset[0] += dy - topDelta;
+                    row.setTranslationY(dragOffset[0]); // the held row ONLY follows the finger
+
+                    // which slot is the held row's center over?
+                    int first = listView.getFirstVisiblePosition();
+                    startSlot[0] += first - lastFirst[0];
+                    lastFirst[0] = first;
+                    int childIndex = dragPos[0] - first;
+                    if (childIndex < 0 || childIndex >= listView.getChildCount()) return true;
+                    float visualCenter = row.getTop() + dragOffset[0] + rowH / 2f;
+                    int targetChild = (int) Math.floor(visualCenter / rowH);
+                    int maxChild = Math.min(listView.getChildCount() - 1,
+                            controller.items.size() - 1 - first);
+                    targetChild = Math.max(0, Math.min(maxChild, targetChild));
+
+                    // silent data swaps toward the target slot
+                    while (targetChild > childIndex && dragPos[0] + 1 < controller.items.size()) {
+                        controller.items.add(dragPos[0] + 1, controller.items.remove(dragPos[0]));
+                        dragPos[0]++;
+                        childIndex++;
+                    }
+                    while (targetChild < childIndex && dragPos[0] > 0) {
+                        controller.items.add(dragPos[0] - 1, controller.items.remove(dragPos[0]));
+                        dragPos[0]--;
+                        childIndex--;
+                    }
+
+                    // displacement invariant: every slot between the anchor and the current slot is
+                    // offset exactly one row in the drag direction - overlaps are impossible
+                    for (int i = 0; i < listView.getChildCount(); i++) {
+                        View child = listView.getChildAt(i);
+                        if (child == row) continue;
+                        float t;
+                        if (childIndex > startSlot[0] && i >= startSlot[0] && i < childIndex) t = -rowH;
+                        else if (childIndex < startSlot[0] && i > childIndex && i <= startSlot[0]) t = rowH;
+                        else t = 0;
+                        if (child.getTranslationY() != t)
+                            child.animate().translationY(t).setDuration(120)
+                                    .setInterpolator(new DecelerateInterpolator()).start();
+                    }
+
+                    // auto-scroll near the edges
+                    int[] location = new int[2];
+                    listView.getLocationOnScreen(location);
+                    float fingerY = event.getRawY() - location[1];
+                    if (fingerY < rowH) listView.smoothScrollBy(-rowH / 2, 120);
+                    else if (fingerY > listView.getHeight() - rowH) listView.smoothScrollBy(rowH / 2, 120);
+                    return true;
+                }
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL: {
+                    bookmarkDragging = false;
+                    for (int i = 0; i < listView.getChildCount(); i++) {
+                        listView.getChildAt(i).setTranslationY(0);
+                    }
+                    persistBookmarkOrder(controller);
+                    controller.adapter.notifyDataSetChanged(); // normalize rows + restore standard handle listeners
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+    private void persistBookmarkOrder(BookmarkListController controller) {
+        if (controller.key.equals("bookmarks")) {
+            PreferenceManager.getDefaultSharedPreferences(this)
+                    .edit().putString("bookmarks", controller.items.toString()).apply();
+        } else {
+            saveGroupBookmarks(controller.key, controller.items);
+        }
+    }
+
+    private void loadBookmarkLabels() {
+        bookmarkLabels.clear();
+        String json = PreferenceManager.getDefaultSharedPreferences(this).getString("bookmark_labels", "{}");
+        try {
+            Map<String, String> map = new com.google.gson.Gson().fromJson(json,
+                    new com.google.gson.reflect.TypeToken<Map<String, String>>() {}.getType());
+            if (map != null) bookmarkLabels.putAll(map);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void saveBookmarkLabels() {
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putString("bookmark_labels", new com.google.gson.Gson().toJson(bookmarkLabels)).apply();
+    }
+
+    private void applyBookmarksBarHeight(int percent) {
+        View drawer = findViewById(R.id.bookmarks_drawer);
+        int height = (int) (getResources().getDisplayMetrics().heightPixels * (percent / 100.0));
+        drawer.getLayoutParams().height = height;
+        drawer.requestLayout();
+    }
+
+    private void loadBookmarkGroups() {
+        bookmarkGroups.clear();
+        String json = PreferenceManager.getDefaultSharedPreferences(this).getString("bookmark_groups", "[]");
+        try {
+            List<String> groups = new com.google.gson.Gson().fromJson(json,
+                    new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
+            bookmarkGroups.addAll(groups);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void saveBookmarkGroups() {
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putString("bookmark_groups", new com.google.gson.Gson().toJson(bookmarkGroups)).apply();
+    }
+
+    private ArrayList<File> loadGroupBookmarks(String group) {
+        ArrayList<File> out = new ArrayList<>();
+        String json = PreferenceManager.getDefaultSharedPreferences(this)
+                .getString("bookmarks_group_" + group, "[]");
+        try {
+            List<String> paths = new com.google.gson.Gson().fromJson(json,
+                    new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
+            for (String path : paths) out.add(new File(path));
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    private void saveGroupBookmarks(String group, List<File> files) {
+        List<String> paths = new ArrayList<>();
+        for (File f : files) paths.add(f.getPath());
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putString("bookmarks_group_" + group, new com.google.gson.Gson().toJson(paths)).apply();
+    }
+
+    private View.OnTouchListener getBookmarksSwipeDownCloseListener() {
+        if (bookmarksSwipeDownCloseListener != null) return bookmarksSwipeDownCloseListener;
+        bookmarksSwipeDownCloseListener = (v, event) -> {
+            if (!(v instanceof ListView listView)) return false;
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    v.setTag(listView.getFirstVisiblePosition() == 0
+                            && (listView.getChildCount() == 0 || listView.getChildAt(0).getTop() >= 0)
+                            ? event.getRawY() : null);
+                    break;
+                case MotionEvent.ACTION_MOVE: {
+                    Object start = v.getTag();
+                    if (start instanceof Float && event.getRawY() - (Float) start
+                            > 80 * getResources().getDisplayMetrics().density) {
+                        v.setTag(null);
+                        closeBookmarksDrawer();
+                    }
+                    break;
+                }
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    v.setTag(null);
+                    break;
+            }
+            return false;
+        };
+        return bookmarksSwipeDownCloseListener;
+    }
+
+
     private void reduceDragSensitivity(ViewPager2 viewPager) {
         try {
             java.lang.reflect.Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
@@ -630,32 +1277,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        ListView bookmarksList = new ListView(this);
+        ListView bookmarksList = this.bookmarksList = new ListView(this);
         bookmarksList.setDivider(null);
         bookmarksList.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        ArrayList<File> bookmarks1 = getBookmarks();
-        bookmarksList.setAdapter(bookmarksAdapter = new BookmarksAdapter(this, bookmarks1));
+        bookmarksList.setOnTouchListener(getBookmarksSwipeDownCloseListener());
+        mainBookmarkController = new BookmarkListController("bookmarks", bookmarksList, getBookmarks());
+        bookmarksAdapter = mainBookmarkController.adapter;
+        bookmarksList.setAdapter(bookmarksAdapter);
         bookmarksList.setOnItemClickListener((parent, view, position, id) -> {
-            File bookmarked = bookmarks1.get(position);
+            if (handleBookmarkListClick(mainBookmarkController, position)) return;
+            File bookmarked = mainBookmarkController.items.get(position);
             loadFolderInPane(bookmarked.isFile() ? bookmarked.getParentFile() : bookmarked, lastPaneSelected == 1);
             closeBookmarksDrawer();
         });
         bookmarksList.setOnItemLongClickListener((parent, view, position, id) -> {
-            new MaterialAlertDialogBuilder(MainActivity.this)
-                    .setMessage(rss.getString(R.string.confirm_delete_bookmark, bookmarks.get(position)))
-                    .setTitle(R.string.warning)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(rss.getString(R.string.delete), (dialog, which) -> {
-                        bookmarks.remove(position);
-                        settings.edit().putString("bookmarks", bookmarks.toString()).apply();
-                        bookmarksAdapter.notifyDataSetChanged();
-                    }).show();
+            showBookmarkItemMenu(mainBookmarkController, position);
             return true;
         });
 
-        ListView historyList = new ListView(this);
+        ListView historyList = this.historyList = new ListView(this);
         historyList.setDivider(null);
         historyList.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        historyList.setOnTouchListener(getBookmarksSwipeDownCloseListener());
         historyList.setAdapter(historyAdapter = new HistoryAdapter(this, lastPaneSelected == 1 ? pane1History : pane2History));
         historyList.setOnItemClickListener((parent, view, position, id) -> {
             NavigationHistoryEntry entry = historyAdapter.getItem(position);
@@ -664,34 +1307,35 @@ public class MainActivity extends AppCompatActivity {
             closeBookmarksDrawer();
         });
 
-        ViewPager2 bookmarksPager = findViewById(R.id.bookmarksPager);
-        bookmarksPager.setAdapter(new RecyclerView.Adapter<>() {
-            @NonNull
+        loadBookmarkGroups();
+        loadBookmarkLabels();
+        bookmarksTabs = findViewById(R.id.bookmarksTabs);
+        bookmarksPager = findViewById(R.id.bookmarksPager);
+        rebuildBookmarksPager();
+        bookmarksTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
-            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                return new RecyclerView.ViewHolder(viewType == 0 ? bookmarksList : historyList) {
-                };
+            public void onTabSelected(TabLayout.Tab tab) {
+                PreferenceManager.getDefaultSharedPreferences(MainActivity.this)
+                        .edit().putInt("bookmarks_last_tab", tab.getPosition()).apply();
+                if (batchController != null) exitBookmarkBatchMode();
             }
 
             @Override
-            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            public void onTabUnselected(TabLayout.Tab tab) {
             }
 
             @Override
-            public int getItemCount() {
-                return 2;
-            }
-
-            @Override
-            public int getItemViewType(int position) {
-                return position;
+            public void onTabReselected(TabLayout.Tab tab) {
             }
         });
-        bookmarksPager.setOffscreenPageLimit(2);
-        reduceDragSensitivity(bookmarksPager);
 
-        TabLayout bookmarksTabs = findViewById(R.id.bookmarksTabs);
-        new TabLayoutMediator(bookmarksTabs, bookmarksPager, (tab, position) -> tab.setText(position == 0 ? rss.getString(R.string.bookmarks) : rss.getString(R.string.history))).attach();
+        findViewById(R.id.bookmarksMenuButton).setOnClickListener(v -> showBookmarksBarMenu(v));
+        findViewById(R.id.bookmarksCloseButton).setOnClickListener(v -> closeBookmarksDrawer());
+        findViewById(R.id.batchCopy).setOnClickListener(v -> batchCopyOrMove(true));
+        findViewById(R.id.batchMove).setOnClickListener(v -> batchCopyOrMove(false));
+        findViewById(R.id.batchDelete).setOnClickListener(v -> batchDeleteSelected());
+        findViewById(R.id.batchCancel).setOnClickListener(v -> exitBookmarkBatchMode());
+        applyBookmarksBarHeight(settings.getInt("bookmarks_bar_pct", 35));
 
         View.OnClickListener toggleSidebarDrawer = v -> {
             if (drawerLayout.isDrawerOpen(GravityCompat.START))
@@ -789,7 +1433,7 @@ public class MainActivity extends AppCompatActivity {
             }
             drawerLayout.closeDrawer(GravityCompat.START);
         });
-        GestureDetectorCompat bottomBarGestureDetector = new GestureDetectorCompat(this,
+        bottomBarGestureDetector = new GestureDetectorCompat(this,
                 new GestureDetector.SimpleOnGestureListener() {
                     @Override
                     public boolean onDown(@NonNull MotionEvent e) {
@@ -808,7 +1452,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-        View.OnTouchListener bottomBarTouchListener = (v, event) -> {
+        bottomBarTouchListener = (v, event) -> {
             bottomBarGestureDetector.onTouchEvent(event);
             return v.getId() == R.id.bottomBar;
         };
@@ -1838,6 +2482,10 @@ public class MainActivity extends AppCompatActivity {
         CompoundButton fixMimeTypeToggle = settingsDialog.findViewById(R.id.fixMimeTypeToggle);
         fixMimeTypeToggle.setChecked(settings.getBoolean("fix_mime_type", false));
         fixMimeTypeToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("fix_mime_type", isChecked).apply());
+
+        CompoundButton askBookmarkTabToggle = settingsDialog.findViewById(R.id.askBookmarkTabToggle);
+        askBookmarkTabToggle.setChecked(settings.getBoolean("ask_bookmark_tab", false));
+        askBookmarkTabToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ask_bookmark_tab", isChecked).apply());
 
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));

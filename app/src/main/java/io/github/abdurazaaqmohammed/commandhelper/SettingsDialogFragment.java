@@ -67,12 +67,11 @@ public class SettingsDialogFragment extends DialogFragment {
         root.addView(profilesTitle);
 
         loadProfiles();
-        listAdapter = new ArrayAdapter<String>(getActivity(), com.google.android.material.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
+        listAdapter = new ArrayAdapter<>(getActivity(), com.google.android.material.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
             @Override
             public View getView(int pos, View convertView, ViewGroup parent) {
                 View view = super.getView(pos, convertView, parent);
-                if (view instanceof TextView) {
-                    TextView tv = (TextView) view;
+                if (view instanceof TextView tv) {
                     tv.setText(profiles.get(pos).name);
                     tv.setPadding(dp(16), dp(12), dp(16), dp(12));
                 }

@@ -27,30 +27,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
-/**
- * Integrates ApkSignatureKillerEx: injects a config-driven {@code bin.mt.signature.KillerApplication}
- * (PackageManager CREATOR hook + native open/openat hook) into an APK so runtime signature
- * checks see the ORIGINAL signature/apk even after the app is re-signed.
- * The output zip is written with zip4j so installers accept it reliably.
- */
 public class SignatureKillerUtil {
 
     public static final String KILLER_CLASS = "bin.mt.signature.KillerApplication";
     private static final String INJECTED_ASSET_DIR = "assets/SignatureKiller";
     private static final String[] ABIS = {"arm64-v8a", "armeabi-v7a", "x86_64", "x86"};
 
-    /**
-     * Builds a modified copy of the given APK with the signature killer injected.
-     * The returned file is unsigned - caller is responsible for signing.
-     */
+
     public static File apply(Context context, File inputApk) throws Exception {
         PackageInfo info = context.getPackageManager().getPackageArchiveInfo(inputApk.getPath(), 0);
         if (info == null || TextUtils.isEmpty(info.packageName))
             throw new IOException("Could not determine package name of " + inputApk.getName());
         final String packageName = info.packageName;
 
-        // Original signature - extracted WITHOUT verification so it also works on
-        // merged/antisplit APKs whose v1/v2/v3 blocks are present but invalid.
         List<X509Certificate> certificates = null;
         IOException unverifiedFailure = null;
         try {
@@ -60,7 +49,7 @@ public class SignatureKillerUtil {
         }
         if (certificates == null || certificates.isEmpty()) {
             try {
-                certificates = CertUtil.getCertificates(inputApk); // apksig fallback (fully valid APKs)
+                certificates = CertUtil.getCertificates(inputApk);
             } catch (Exception e) {
                 if (unverifiedFailure != null) e.addSuppressed(unverifiedFailure);
                 throw new IOException("Could not extract the original signature from " + inputApk.getName(), e);

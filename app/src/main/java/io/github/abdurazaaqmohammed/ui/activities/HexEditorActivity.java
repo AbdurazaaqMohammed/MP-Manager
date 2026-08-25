@@ -552,8 +552,6 @@ public class HexEditorActivity extends AppCompatActivity {
         updateStatus();
     }
 
-    // ------------------------------------------------------------------ paste from
-
     private void showPasteFromDialog() {
         if (readOnly) {
             Extensions.showMessage(this, "File is read-only");

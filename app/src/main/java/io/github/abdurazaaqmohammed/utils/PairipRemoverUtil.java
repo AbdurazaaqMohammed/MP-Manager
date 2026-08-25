@@ -19,12 +19,6 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-/**
- * Integrates RePairip (com.antik): removes Pairip (Google Play integrity/加固) protection from
- * APKs and split bundles (.apks/.xapk) by patching the manifest (drops split requirements,
- * LicenseActivity/LicenseContentProvider, CHECK_LICENSE) and neutralizing
- * StartupLauncher/SignatureCheck/LicenseClient classes in the dex.
- */
 public class PairipRemoverUtil {
 
     public static File removePairip(Context context, File input) throws Exception {
@@ -50,8 +44,7 @@ public class PairipRemoverUtil {
         manifestP.patch(module);
         DexPatcher.patch(module);
 
-        File outFile = FileUtils.getUnusedFile(new File(input.getParentFile(),
-                FilenameUtils.getBaseName(input.getName()) + "_pairip.apk"));
+        File outFile = FileUtils.getUnusedFile(new File(input.getParentFile(), FilenameUtils.getBaseName(input.getName()) + "_pairip.apk"));
         module.writeApk(outFile, (path, method, length) -> {});
 
         if (tempDir != null) deleteRecursive(tempDir);

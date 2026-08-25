@@ -636,4 +636,12 @@ Layout Inspector
     <string name="method">Method</string>
     <string name="multi_select">Multi select</string>
     <string name="select_same_type">Select same type files</string>
+    <string name="add_group">Add Group</string>
+    <string name="adjust_height">Adjust height</string>
+    <string name="group_name">Group name</string>
+    <string name="group_name_e">Group name cannot be empty</string>
+    <string name="group_already_exists">Group already exists</string>
+    <string name="edit_bookmark">Edit</string>
+    <string name="batch_operations">Batch operations</string>
+    <string name="ask_bookmark_tab">Ask which tab to save bookmarks in</string>
 </resources>

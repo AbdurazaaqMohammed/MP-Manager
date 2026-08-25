@@ -108,7 +108,6 @@ public class MimeUtil {
         return guessFromExtension(ext);
     }
 
-    /** Mime type to use when sharing/opening, honouring the fix_mime_type preference. */
     public static String getMimeTypeForAction(Context context, File file) {
         String reported = getReportedMimeType(context, file);
         if (!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("fix_mime_type", false))

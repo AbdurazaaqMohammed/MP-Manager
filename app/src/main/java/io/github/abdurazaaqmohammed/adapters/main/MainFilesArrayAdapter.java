@@ -559,7 +559,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         dialogUtil.styleAlertDialog(dialog);
     }
 
-    /** Grid + "fix mime type" toggle for the open-with dialog, sharing the same preference as the main settings. */
     private View wrapOpenWithContent(GridView gridView) {
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);

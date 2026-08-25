@@ -118,10 +118,6 @@ public class CertUtil {
         }
     }
 
-    /**
-     * v2/v3 signer value = length-prefixed sequence of length-prefixed signers; each signer starts
-     * with length-prefixed signed-data containing digests then certificates sequences.
-     */
     private static byte[] firstCertificateFromSignerSequence(byte[] value) {
         if (value.length < 8) return null;
         int signersSeqLen = getInt32(value, 0);

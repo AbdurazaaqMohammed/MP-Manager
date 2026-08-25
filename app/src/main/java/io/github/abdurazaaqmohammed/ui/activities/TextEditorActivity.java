@@ -114,8 +114,6 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         persistSession();
     }
 
-    // ------------------------------------------------------------------ session persistence
-
     private File sessionFile() {
         return new File(getCacheDir(), "text_editor_session.json");
     }
@@ -504,8 +502,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             }
         }
         boolean isFromFile = tab.file != null;
-        try (InputStream is = isFromFile ? FileUtils.getInputStream(tab.file)
-                : getContentResolver().openInputStream(tab.fileUri);
+        try (InputStream is = isFromFile ? FileUtils.getInputStream(tab.file) : getContentResolver().openInputStream(tab.fileUri);
              InputStreamReader isr = new InputStreamReader(is, Charset.forName("UTF-8"));
              BufferedReader reader = new BufferedReader(isr)) {
 

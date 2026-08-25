@@ -190,29 +190,96 @@
             app:behavior_hideable="true"
             app:behavior_peekHeight="0dp">
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/bookmarksTabs"
+            <LinearLayout
+                android:id="@+id/bookmarksBatchBar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:tabGravity="fill"
-                app:tabMode="fixed">
+                android:background="?attr/colorSurfaceVariant"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone">
 
-                <com.google.android.material.tabs.TabItem
+                <Button
+                    android:id="@+id/batchCopy"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@android:string/copy" />
+
+                <Button
+                    android:id="@+id/batchMove"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/move" />
+
+                <Button
+                    android:id="@+id/batchDelete"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/delete" />
+
+                <Button
+                    android:id="@+id/batchCancel"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/bookmarks" />
+                    android:text="@android:string/cancel" />
+            </LinearLayout>
 
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="wrap_content"
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/bookmarksTabs"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/history" />
-            </com.google.android.material.tabs.TabLayout>
+                    app:tabGravity="fill"
+                    app:tabMode="fixed">
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/bookmarks" />
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/history" />
+                </com.google.android.material.tabs.TabLayout>
+
+                <ImageButton
+                    android:id="@+id/bookmarksMenuButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/more"
+                    android:src="@drawable/baseline_more_vert_24"
+                    app:tint="?attr/colorOnSurface" />
+            </FrameLayout>
 
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/bookmarksPager"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/bookmarksCloseButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:text="@string/close"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
         </LinearLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
