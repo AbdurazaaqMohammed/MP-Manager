@@ -1022,6 +1022,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             rangeStartPosition = position;
             selectedPositions.add(position);
             updateFolderCountOnMainScreen(position);
+            context.setMultiSelectModeUI(true);
         }
         notifyDataSetChanged();
     }
@@ -1032,6 +1033,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             if (selectedPositions.isEmpty()) {
                 isMultiSelectMode = false;
                 rangeStartPosition = null;
+                context.setMultiSelectModeUI(false);
                 if (isInZip) {
                     List<Object> zipEntryInfos = Arrays.asList(values);
                     context.setCurrentFolder(currentZipPath, zipEntryInfos);
@@ -1058,6 +1060,48 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         selectedPositions.clear();
         isMultiSelectMode = false;
         rangeStartPosition = null;
+        context.setMultiSelectModeUI(false);
+        notifyDataSetChanged();
+    }
+
+    public void exitMultiSelectMode() {
+        clearSelection();
+        if (isInZip) {
+            context.setCurrentFolder(currentZipPath, Arrays.asList(values));
+        } else {
+            context.setCurrentFolder(pane1 ? context.pane1Folder : context.pane2Folder, (File[]) values);
+        }
+    }
+
+    public void invertSelection() {
+        isMultiSelectMode = true;
+        for (int i = (isInZip ? 0 : 1); i < values.length; i++) {
+            if (selectedPositions.contains(i)) selectedPositions.remove(i);
+            else selectedPositions.add(i);
+        }
+        notifyDataSetChanged();
+    }
+
+    public void selectSameType() {
+        if (selectedPositions.isEmpty() || values.length == 0) return;
+        Object ref = values[selectedPositions.iterator().next()];
+        boolean refIsFolder = isInZip ? ((ZipEntryInfo) ref).isDirectory() : ((File) ref).isDirectory();
+        String refName = ref instanceof File ? ((File) ref).getName() : ((ZipEntryInfo) ref).getName();
+        String refExt = org.apache.commons.io.FilenameUtils.getExtension(refName).toLowerCase(Locale.ROOT);
+
+        isMultiSelectMode = true;
+        selectedPositions.clear();
+        for (int i = (isInZip ? 0 : 1); i < values.length; i++) {
+            Object o = values[i];
+            boolean isFolder = isInZip ? ((ZipEntryInfo) o).isDirectory() : ((File) o).isDirectory();
+            if (refIsFolder) {
+                if (isFolder) selectedPositions.add(i);
+            } else if (!isFolder) {
+                String n = o instanceof File ? ((File) o).getName() : ((ZipEntryInfo) o).getName();
+                if (org.apache.commons.io.FilenameUtils.getExtension(n).toLowerCase(Locale.ROOT).equals(refExt))
+                    selectedPositions.add(i);
+            }
+        }
         notifyDataSetChanged();
     }
 

@@ -367,6 +367,73 @@ public class MainActivity extends AppCompatActivity {
         isBookmarksDrawerOpen = false;
     }
 
+    public void setMultiSelectModeUI(boolean enabled) {
+        if (multiSelectUIActive == enabled) return;
+        multiSelectUIActive = enabled;
+        LinearLayout bottomBar = findViewById(R.id.bottomBar);
+        int[] defaultIds = {R.id.backButton, R.id.forwardButton, R.id.addButton, R.id.syncPaneButton, R.id.upButton};
+        if (enabled) {
+            if (multiSelectButtons[0] == null) buildMultiSelectButtons();
+            for (int id : defaultIds) findViewById(id).setVisibility(View.GONE);
+            for (ImageButton button : multiSelectButtons) {
+                bottomBar.addView(button);
+                button.setOnTouchListener(bottomBarTouchListener);
+            }
+        } else {
+            for (ImageButton button : multiSelectButtons) bottomBar.removeView(button);
+            for (int id : defaultIds) findViewById(id).setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void buildMultiSelectButtons() {
+        int[] icons = {R.drawable.baseline_select_all_24, R.drawable.tab_inactive_24px, R.drawable.close_24px, R.drawable.flip_24px, R.drawable.baseline_info_24};
+        View.OnClickListener[] listeners = {
+                v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectAll(); },
+                v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.invertSelection(); },
+                v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.exitMultiSelectMode(); },
+                v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectSameType(); },
+                v -> new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.multi_select)
+                        .setMessage("You can swipe two files in the list to select all files between them")
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+        };
+        CharSequence[] cds = {rss.getString(android.R.string.selectAll), rss.getString(R.string.invert_selection), rss.getString(R.string.exit), rss.getString(R.string.select_same_type), rss.getString(R.string.multi_select)};
+        TypedValue tv = new TypedValue();
+        Resources.Theme t = getTheme();
+        t.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, tv, true);
+        int color = tv.data;
+        t.resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+        int bg = tv.resourceId;
+        View.OnLongClickListener ocl = v -> {
+            Extensions.showMessage(MainActivity.this, v.getContentDescription());
+            return false;
+        };
+        int ay = (int) (8 * rss.getDisplayMetrics().density + 0.5f);
+        for (int i = 0; i < multiSelectButtons.length; i++) {
+            ImageButton button = new ImageButton(this);
+            button.setImageResource(icons[i]);
+            button.setBackgroundResource(bg);
+            DrawableCompat.setTint(button.getDrawable(), color);
+            button.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            button.setPadding(ay, ay, ay, ay);
+            button.setOnClickListener(listeners[i]);
+            button.setContentDescription(cds[i]);
+            button.setOnLongClickListener(ocl);
+            multiSelectButtons[i] = button;
+        }
+    }
+
+    private List<MainFilesArrayAdapter> activeMultiSelectAdapters() {
+        List<MainFilesArrayAdapter> out = new ArrayList<>();
+        for (int id : new int[]{R.id.listViewPane1, R.id.listViewPane2}) {
+            RecyclerView pane = findViewById(id);
+            if (pane.getAdapter() instanceof MainFilesArrayAdapter adapter && adapter.isMultiSelectMode())
+                out.add(adapter);
+        }
+        return out;
+    }
+
     private void reduceDragSensitivity(ViewPager2 viewPager) {
         try {
             java.lang.reflect.Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
@@ -497,7 +564,7 @@ public class MainActivity extends AppCompatActivity {
         requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
 
         new Thread(() -> {
-            File frameworks = new File("/storage/emulated/0/MP Manager/frameworks/");
+            File frameworks = new File("/sdcard/MP Manager/frameworks/");
             if(!doesNotHaveStoragePerm(this) && !frameworks.exists()) try(
                     InputStream is23 = rss.openRawResource(R.raw.android_23);
                     InputStream is24 = rss.openRawResource(R.raw.android_24);

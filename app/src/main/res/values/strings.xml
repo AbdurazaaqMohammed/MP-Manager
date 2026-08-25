@@ -634,4 +634,6 @@ Layout Inspector
     <string name="paste_from">Paste from</string>
     <string name="inspector">Inspector</string>
     <string name="method">Method</string>
+    <string name="multi_select">Multi select</string>
+    <string name="select_same_type">Select same type files</string>
 </resources>
