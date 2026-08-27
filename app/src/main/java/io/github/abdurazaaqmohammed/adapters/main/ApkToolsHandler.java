@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -75,6 +76,7 @@ import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.ToastInjectorUtil;
 import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.SignatureKillerUtil;
@@ -296,7 +298,7 @@ public class ApkToolsHandler {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton("More", (dialog, which) -> {
-                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate), "Kill signature verification"};
+                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate), "Kill signature verification", "Add Toast", "Remove all toasts"};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
@@ -559,6 +561,8 @@ public class ApkToolsHandler {
                                 }).show();
                     } else if (which1 == 6) showCertificateDialog(file);
                     else if (which1 == 7) killSignatureVerification(file, fileName);
+                    else if (which1 == 8) showAddToastDialog(file, filePath);
+                    else if (which1 == 9) showRemoveAllToastsDialog(file);
                     }).show();
                 })
                 .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
@@ -802,7 +806,150 @@ public class ApkToolsHandler {
                         wrapper[0] = sw;
                         doKill.run();
                     }); else doKill.run();
-                }).show());
+                    }).show());
+    }
+
+    private void showAddToastDialog(File file, String filePath) {
+        List<ActivityInfo> activities = ToastInjectorUtil.getActivities(context, filePath);
+        if (activities.isEmpty()) {
+            Extensions.showMessage(context, "No activities found in this APK");
+            return;
+        }
+        PackageInfo packageInfo = context.getPackageManager().getPackageArchiveInfo(filePath, 0);
+        String packageName = packageInfo != null ? packageInfo.packageName : "";
+        String mainActivity = ToastInjectorUtil.findMainLauncherActivity(context, filePath, packageName);
+
+        CharSequence[] displayItems = new CharSequence[activities.size()];
+        boolean[] checked = new boolean[activities.size()];
+        final java.util.Set<Integer> selectedIndices = new HashSet<>();
+        for (int i = 0; i < activities.size(); i++) {
+            String name = activities.get(i).name;
+            boolean isMain = name.equals(mainActivity);
+            displayItems[i] = isMain ? name + " (Main)" : name;
+            checked[i] = isMain;
+            if (isMain) selectedIndices.add(i);
+        }
+
+        dialogUtil.getDialogBuilder()
+                .setTitle("Add Toast")
+                .setMultiChoiceItems(displayItems, checked, (dialog, which, isChecked) -> {
+                    if (isChecked) selectedIndices.add(which);
+                    else selectedIndices.remove(which);
+                })
+                .setPositiveButton("Next", (dialog, which) -> {
+                    if (selectedIndices.isEmpty()) return;
+                    List<String> selectedActivities = new ArrayList<>();
+                    for (int idx : selectedIndices) selectedActivities.add(activities.get(idx).name);
+                    showToastMessageDialog(file, selectedActivities);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showToastMessageDialog(File file, List<String> selectedActivities) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = new boolean[1];
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        layout.setPadding(pad, pad, pad, 0);
+
+        EditText messageInput = new EditText(context);
+        messageInput.setHint("Toast message");
+        messageInput.setText("Hello from MP Manager");
+        layout.addView(messageInput);
+
+        MaterialButton signSettings = new MaterialButton(context);
+        signSettings.setText(R.string.sign_set);
+        signSettings.setOnClickListener(uiHelper.showSignSettingsDialog());
+
+        CheckBox autosign = new CheckBox(context);
+        autosign.setText(R.string.auto_sign);
+        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+        layout.addView(autosign);
+        layout.addView(signSettings);
+
+        dialogUtil.getDialogBuilder()
+                .setTitle("Toast message")
+                .setView(layout)
+                .setPositiveButton("Add", (dialog, which) -> runAddToast(file, selectedActivities, messageInput.getText().toString(), sign[0]))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void runAddToast(File file, List<String> selectedActivities, String message, boolean sign) {
+        SignWrapper[] wrapper = new SignWrapper[1];
+        Runnable doAdd = () -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    File result = ToastInjectorUtil.addToastToActivities(context, file, selectedActivities, message, logger);
+                    if (sign) wrapper[0].signApk(result);
+                    pm.dismiss();
+                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                } catch (Exception e) {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        };
+        if (sign) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doAdd.run();
+        }); else doAdd.run();
+    }
+
+    private void showRemoveAllToastsDialog(File file) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean[] sign = new boolean[1];
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        layout.setPadding(pad, pad, pad, 0);
+
+        CheckBox autosign = new CheckBox(context);
+        autosign.setText(R.string.auto_sign);
+        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+        layout.addView(autosign);
+
+        MaterialButton signSettings = new MaterialButton(context);
+        signSettings.setText(R.string.sign_set);
+        signSettings.setOnClickListener(uiHelper.showSignSettingsDialog());
+        layout.addView(signSettings);
+
+        dialogUtil.getDialogBuilder()
+                .setTitle("Remove all toasts")
+                .setMessage("This will decompile the APK, remove all Toast.makeText/show calls from smali code, then recompile. Continue?")
+                .setView(layout)
+                .setPositiveButton("Remove", (dialog, which) -> runRemoveAllToasts(file, sign[0]))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void runRemoveAllToasts(File file, boolean sign) {
+        SignWrapper[] wrapper = new SignWrapper[1];
+        Runnable doRemove = () -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    File result = ToastInjectorUtil.removeAllToasts(context, file, logger);
+                    if (sign) wrapper[0].signApk(result);
+                    pm.dismiss();
+                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                } catch (Exception e) {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        };
+        if (sign) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doRemove.run();
+        }); else doRemove.run();
     }
 
     private String getPackageNameFromApk(String filePath) {
