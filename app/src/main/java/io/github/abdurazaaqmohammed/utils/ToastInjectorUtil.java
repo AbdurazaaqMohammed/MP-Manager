@@ -9,11 +9,28 @@ import android.util.Xml;
 
 import com.android.tools.smali.baksmali.Baksmali;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
+import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
+import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodParameter;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
+import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10x;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction11n;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction11x;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21c;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction35c;
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference;
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.android.tools.smali.smali.Smali;
 import com.android.tools.smali.smali.SmaliOptions;
 import com.reandroid.apk.APKLogger;
@@ -28,59 +45,240 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 public class ToastInjectorUtil {
 
     private static final String TOAST_METHOD_NAME = "showMPManagerToast";
+    private static final String ON_CREATE_SIG = "(Landroid/os/Bundle;)V";
+    private static final ImmutableMethodReference TOAST_MAKE_TEXT = new ImmutableMethodReference(
+            "Landroid/widget/Toast;", "makeText",
+            java.util.Arrays.asList("Landroid/content/Context;", "Ljava/lang/CharSequence;", "I"),
+            "Landroid/widget/Toast;");
+    private static final ImmutableMethodReference TOAST_SHOW = new ImmutableMethodReference(
+            "Landroid/widget/Toast;", "show", java.util.Collections.emptyList(), "V");
 
     public static File addToastToActivities(Context context, File inputApk,
                                             List<String> activityClassNames, String toastMessage,
                                             APKLogger logger) throws Exception {
+        Set<String> targetEntries = findDexEntriesForClasses(inputApk, activityClassNames, logger);
+        if (targetEntries.isEmpty()) {
+            throw new IOException("Could not locate the selected activities in any dex file");
+        }
+        Map<String, byte[]> patchedDexBytes = new LinkedHashMap<>();
+        for (String entryName : targetEntries) {
+            if (logger != null) logger.logMessage("Patching " + entryName + " ...");
+            byte[] patched = patchDexEntryForToast(inputApk, entryName, activityClassNames, toastMessage, logger);
+            if (patched != null) patchedDexBytes.put(entryName, patched);
+        }
+        if (patchedDexBytes.isEmpty()) {
+            throw new IOException("Could not patch any dex file");
+        }
         File workDir = createTempDir(context, "add_toast");
         try {
-            Set<String> targetEntries = findDexEntriesForClasses(context, inputApk, activityClassNames, logger);
-            if (targetEntries.isEmpty()) {
-                throw new IOException("Could not locate the selected activities in any dex file");
-            }
-            Map<String, File> dexEntryToSmaliDir = disassembleApk(context, inputApk, workDir, targetEntries, logger);
-            for (String className : activityClassNames) {
-                File smaliFile = findSmaliFile(workDir, className);
-                if (smaliFile == null) {
-                    if (logger != null) logger.logMessage("Smali not found: " + className);
-                    continue;
+            Map<String, File> assembledDexFiles = new LinkedHashMap<>();
+            for (Map.Entry<String, byte[]> entry : patchedDexBytes.entrySet()) {
+                File outputDex = new File(workDir, entry.getKey());
+                try (FileOutputStream fos = new FileOutputStream(outputDex)) {
+                    fos.write(entry.getValue());
                 }
-                injectToastIntoActivity(smaliFile, className, toastMessage);
-                if (logger != null) logger.logMessage("Injected toast into " + className);
+                assembledDexFiles.put(entry.getKey(), outputDex);
             }
-            Map<String, File> assembledDexFiles = assembleDexFiles(workDir, dexEntryToSmaliDir, targetEntries, context, inputApk, logger);
             return buildOutputApk(inputApk, assembledDexFiles, "_toast", logger);
         } finally {
             deleteDirectory(workDir);
         }
     }
 
+    private static byte[] patchDexEntryForToast(File inputApk, String entryName,
+                                                List<String> classNames, String toastMessage,
+                                                APKLogger logger) throws Exception {
+        byte[] dexBytes = readZipEntry(inputApk, entryName);
+        Opcodes opcodes = Opcodes.getDefault();
+        DexBackedDexFile dexFile = new DexBackedDexFile(opcodes, dexBytes);
+
+        Set<String> classDescriptors = new LinkedHashSet<>();
+        for (String className : classNames) classDescriptors.add("L" + className.replace('.', '/') + ";");
+
+        List<ClassDef> newClasses = new ArrayList<>();
+        boolean modified = false;
+        for (ClassDef classDef : dexFile.getClasses()) {
+            if (classDescriptors.contains(classDef.getType())) {
+                classDef = patchActivityClass(classDef, toastMessage);
+                modified = true;
+                if (logger != null) logger.logMessage("Injected toast into " + classDef.getType());
+            }
+            newClasses.add(classDef);
+        }
+        if (!modified) return null;
+
+        MemoryDataStore store = new MemoryDataStore();
+        DexPool dexPool = new DexPool(opcodes);
+        for (ClassDef c : newClasses) dexPool.internClass(c);
+        dexPool.writeTo(store);
+        return Arrays.copyOf(store.getData(), store.getSize());
+    }
+
+    private static ClassDef patchActivityClass(ClassDef classDef, String toastMessage) {
+        String classDescriptor = classDef.getType();
+        List<Method> directMethods = new ArrayList<>();
+        List<Method> virtualMethods = new ArrayList<>();
+        boolean found = false;
+
+        for (Method m : classDef.getDirectMethods()) {
+            if (isOnCreate(m)) {
+                // Rare: private onCreate. Keep wrapper + renamed both direct.
+                directMethods.add(buildRenamedOnCreate(m));
+                directMethods.add(buildWrapperOnCreate(m, classDescriptor));
+                found = true;
+            } else {
+                directMethods.add(m);
+            }
+        }
+        for (Method m : classDef.getVirtualMethods()) {
+            if (isOnCreate(m)) {
+                // Normal case: renamed goes to direct (private), wrapper stays virtual.
+                directMethods.add(buildRenamedOnCreate(m));
+                virtualMethods.add(buildWrapperOnCreate(m, classDescriptor));
+                found = true;
+            } else {
+                virtualMethods.add(m);
+            }
+        }
+
+        if (!found) return classDef;
+
+        directMethods.add(buildToastMethod(classDescriptor, toastMessage));
+
+        return new ImmutableClassDef(
+                classDescriptor,
+                classDef.getAccessFlags(),
+                classDef.getSuperclass(),
+                classDef.getInterfaces(),
+                classDef.getSourceFile(),
+                classDef.getAnnotations(),
+                classDef.getStaticFields(),
+                classDef.getInstanceFields(),
+                directMethods,
+                virtualMethods
+        );
+    }
+
+    private static boolean isOnCreate(Method m) {
+        return "onCreate".equals(m.getName()) && ON_CREATE_SIG.equals(getMethodDescriptor(m));
+    }
+
+    private static String getMethodDescriptor(Method m) {
+        StringBuilder sb = new StringBuilder();
+        sb.append('(');
+        for (MethodParameter param : m.getParameters()) sb.append(param.getType());
+        sb.append(')');
+        sb.append(m.getReturnType());
+        return sb.toString();
+    }
+
+    private static Method buildWrapperOnCreate(Method original, String classDescriptor) {
+        int regCount = 2;
+        int p0 = 0;
+        int p1 = 1;
+
+        ImmutableMethodReference helperRef = new ImmutableMethodReference(
+                classDescriptor, TOAST_METHOD_NAME, Collections.emptyList(), "V");
+        ImmutableMethodReference renamedRef = new ImmutableMethodReference(
+                classDescriptor, "onCreate$mpmanager",
+                Collections.singletonList("Landroid/os/Bundle;"), "V");
+
+        List<Instruction> instructions = new ArrayList<>();
+        instructions.add(new ImmutableInstruction35c(Opcode.INVOKE_DIRECT, 1, p0, 0, 0, 0, 0, helperRef));
+        instructions.add(new ImmutableInstruction35c(Opcode.INVOKE_DIRECT, 2, p0, p1, 0, 0, 0, renamedRef));
+        instructions.add(new ImmutableInstruction10x(Opcode.RETURN_VOID));
+
+        ImmutableMethodImplementation impl = new ImmutableMethodImplementation(regCount, instructions, null, null);
+        return new ImmutableMethod(
+                classDescriptor,
+                "onCreate",
+                original.getParameters(),
+                original.getReturnType(),
+                original.getAccessFlags(),
+                original.getAnnotations(),
+                original.getHiddenApiRestrictions(),
+                impl
+        );
+    }
+
+    private static Method buildRenamedOnCreate(Method original) {
+        return new ImmutableMethod(
+                original.getDefiningClass(),
+                "onCreate$mpmanager",
+                original.getParameters(),
+                original.getReturnType(),
+                AccessFlags.PRIVATE.getValue(),
+                original.getAnnotations(),
+                original.getHiddenApiRestrictions(),
+                ImmutableMethodImplementation.of(original.getImplementation())
+        );
+    }
+
+    private static Method buildToastMethod(String classDescriptor, String toastMessage) {
+        // instance method with no params: p0 = this at register 2, locals v0=0, v1=1
+        int regCount = 3;
+        int p0 = 2, v0 = 0, v1 = 1;
+        List<Instruction> instructions = new ArrayList<>();
+        instructions.add(new ImmutableInstruction21c(Opcode.CONST_STRING, v0, new ImmutableStringReference(toastMessage)));
+        instructions.add(new ImmutableInstruction11n(Opcode.CONST_4, v1, 1));
+        instructions.add(new ImmutableInstruction35c(Opcode.INVOKE_STATIC, 3, p0, v0, v1, 0, 0, TOAST_MAKE_TEXT));
+        instructions.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, v0));
+        instructions.add(new ImmutableInstruction35c(Opcode.INVOKE_VIRTUAL, 1, v0, 0, 0, 0, 0, TOAST_SHOW));
+        instructions.add(new ImmutableInstruction10x(Opcode.RETURN_VOID));
+
+        ImmutableMethodImplementation impl = new ImmutableMethodImplementation(regCount, instructions, null, null);
+        return new ImmutableMethod(
+                classDescriptor,
+                TOAST_METHOD_NAME,
+                Collections.emptyList(),
+                "V",
+                AccessFlags.PRIVATE.getValue(),
+                Collections.emptySet(),
+                Collections.emptySet(),
+                impl
+        );
+    }
+
+    private static byte[] readZipEntry(File zipFile, String entryName) throws IOException {
+        try (ZipFile zin = new ZipFile(zipFile)) {
+            FileHeader header = zin.getFileHeader(entryName);
+            try (InputStream is = zin.getInputStream(header)) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int len;
+                while ((len = is.read(buf)) != -1) baos.write(buf, 0, len);
+                return baos.toByteArray();
+            }
+        }
+    }
+
     public static File removeAllToasts(Context context, File inputApk, APKLogger logger) throws Exception {
         File workDir = createTempDir(context, "remove_toast");
         try {
-            Map<String, File> dexEntryToSmaliDir = disassembleApk(context, inputApk, workDir, null, logger);
+            Map<String, File> dexEntryToSmaliDir = disassembleApk(inputApk, workDir, null, logger);
             Set<String> modifiedEntries = removeAllToastCalls(workDir, logger);
-            Map<String, File> assembledDexFiles = assembleDexFiles(workDir, dexEntryToSmaliDir, modifiedEntries, context, inputApk, logger);
+            Map<String, File> assembledDexFiles = assembleDexFiles(workDir, dexEntryToSmaliDir, modifiedEntries, logger);
             return buildOutputApk(inputApk, assembledDexFiles, "_no_toast", logger);
         } finally {
             deleteDirectory(workDir);
@@ -107,11 +305,11 @@ public class ToastInjectorUtil {
         return dir;
     }
 
-    private static Set<String> findDexEntriesForClasses(Context context, File inputApk,
+    private static Set<String> findDexEntriesForClasses(File inputApk,
                                                         List<String> classNames, APKLogger logger) throws IOException {
         Set<String> result = new LinkedHashSet<>();
         if (classNames == null || classNames.isEmpty()) return result;
-        Opcodes opcodes = Opcodes.forApi(getApiLevel(context, inputApk.getPath()));
+        Opcodes opcodes =  Opcodes.getDefault();
         MultiDexContainer<? extends DexBackedDexFile> container = DexFileFactory.loadDexContainer(inputApk, opcodes);
         Set<String> classDescriptors = new LinkedHashSet<>();
         for (String className : classNames) {
@@ -131,10 +329,9 @@ public class ToastInjectorUtil {
         return result;
     }
 
-    private static Map<String, File> disassembleApk(Context context, File inputApk, File workDir,
-                                                      Set<String> entriesToDisassemble, APKLogger logger) throws Exception {
+    private static Map<String, File> disassembleApk(File inputApk, File workDir, Set<String> entriesToDisassemble, APKLogger logger) throws Exception {
         Map<String, File> result = new LinkedHashMap<>();
-        Opcodes opcodes = Opcodes.forApi(getApiLevel(context, inputApk.getPath()));
+        Opcodes opcodes =Opcodes.getDefault();
         MultiDexContainer<? extends DexBackedDexFile> container = DexFileFactory.loadDexContainer(inputApk, opcodes);
         List<String> entryNames = container.getDexEntryNames();
         int jobs = Runtime.getRuntime().availableProcessors();
@@ -147,7 +344,6 @@ public class ToastInjectorUtil {
             disassembleCount++;
             if (logger != null) logger.logMessage("Disassembling " + entryName + " ...");
             BaksmaliOptions options = new BaksmaliOptions();
-            //options.apiLevel = opcodes.api;
             options.parameterRegisters = true;
             options.localsDirective = true;
             if (!Baksmali.disassembleDexFile(dexEntry.getDexFile(), smaliDir, jobs, options)) {
@@ -161,9 +357,8 @@ public class ToastInjectorUtil {
 
     private static Map<String, File> assembleDexFiles(File workDir, Map<String, File> dexEntryToSmaliDir,
                                                         Set<String> entriesToAssemble,
-                                                        Context context, File inputApk, APKLogger logger) throws Exception {
+                                                      APKLogger logger) throws Exception {
         Map<String, File> result = new LinkedHashMap<>();
-        int apiLevel = getApiLevel(context, inputApk.getPath());
         int jobs = Runtime.getRuntime().availableProcessors();
         for (Map.Entry<String, File> entry : dexEntryToSmaliDir.entrySet()) {
             String entryName = entry.getKey();
@@ -172,7 +367,6 @@ public class ToastInjectorUtil {
             File outputDex = new File(workDir, entryName);
             if (logger != null) logger.logMessage("Assembling " + entryName + " ...");
             SmaliOptions options = new SmaliOptions();
-            //options.apiLevel = apiLevel;
             options.outputDexFile = outputDex.getPath();
             options.jobs = jobs;
             if (!Smali.assemble(options, smaliDir.getPath())) {
@@ -223,129 +417,21 @@ public class ToastInjectorUtil {
         return new File(workDir, "smali_" + base);
     }
 
-    private static String dexEntryForSmaliDir(File workDir, File smaliDir) {
+    private static String dexEntryForSmaliDir(File smaliDir) {
         String name = smaliDir.getName();
         if ("smali".equals(name)) return "classes.dex";
         if (name.startsWith("smali_")) return name.substring("smali_".length()) + ".dex";
         return smaliDir.getName() + ".dex";
     }
 
-    private static File findSmaliFile(File workDir, String className) {
-        String relative = className.replace('.', '/') + ".smali";
-        File[] dirs = workDir.listFiles(File::isDirectory);
-        if (dirs != null) {
-            for (File dir : dirs) {
-                if (dir.getName().startsWith("smali")) {
-                    File candidate = new File(dir, relative);
-                    if (candidate.isFile()) return candidate;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static void injectToastIntoActivity(File smaliFile, String className, String toastMessage) throws IOException {
-        String classDescriptor = "L" + className.replace('.', '/') + ";";
-        String escapedMessage = escapeSmaliString(toastMessage);
-        String[] newMethodLines = new String[] {
-                ".method private " + TOAST_METHOD_NAME + "()V",
-                "    .locals 2",
-                "",
-                "    const-string v0, \"" + escapedMessage + "\"",
-                "",
-                "    const/4 v1, 0x1",
-                "",
-                "    invoke-static {p0, v0, v1}, Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;",
-                "",
-                "    move-result-object v0",
-                "",
-                "    invoke-virtual {v0}, Landroid/widget/Toast;->show()V",
-                "",
-                "    return-void",
-                ".end method"
-        };
-
-        List<String> lines = readLines(smaliFile);
-        int methodStart = -1;
-        int methodEnd = -1;
-        int superCallLine = -1;
-
-        for (int i = 0; i < lines.size(); i++) {
-            String trimmed = lines.get(i).trim();
-            if (methodStart == -1 && trimmed.startsWith(".method ") && trimmed.contains("onCreate(Landroid/os/Bundle;)V")) {
-                methodStart = i;
-            } else if (methodStart != -1 && methodEnd == -1) {
-                if (superCallLine == -1 && trimmed.matches("invoke-super \\{p0, p1\\}, .*->onCreate\\(Landroid/os/Bundle;\\)V")) {
-                    superCallLine = i;
-                }
-                if (trimmed.equals(".end method")) {
-                    methodEnd = i;
-                    break;
-                }
-            }
-        }
-
-        int insertAfterLine = -1;
-        if (superCallLine != -1) {
-            insertAfterLine = superCallLine;
-        } else if (methodStart != -1 && methodEnd != -1) {
-            for (int i = methodStart + 1; i < methodEnd; i++) {
-                String trimmed = lines.get(i).trim();
-                if (!trimmed.isEmpty() && !trimmed.startsWith(".") && !trimmed.startsWith("#")) {
-                    insertAfterLine = i - 1;
-                    break;
-                }
-            }
-            if (insertAfterLine == -1) insertAfterLine = methodEnd - 1;
-        }
-
-        if (insertAfterLine != -1) {
-            lines.add(insertAfterLine + 1, "    invoke-direct {p0}, " + classDescriptor + "->" + TOAST_METHOD_NAME + "()V");
-        }
-
-        int endClassLine = -1;
-        for (int i = lines.size() - 1; i >= 0; i--) {
-            if (lines.get(i).trim().equals(".end class")) {
-                endClassLine = i;
-                break;
-            }
-        }
-        if (endClassLine != -1) {
-            for (int i = 0; i < newMethodLines.length; i++) {
-                lines.add(endClassLine + i, newMethodLines[i]);
-            }
-        } else {
-            lines.addAll(Arrays.asList(newMethodLines));
-        }
-
-        writeLines(smaliFile, lines);
-    }
-
     private static Set<String> removeAllToastCalls(File workDir, APKLogger logger) throws IOException {
         List<File> smaliFiles = findAllSmaliFiles(workDir);
         Set<String> modifiedEntries = new LinkedHashSet<>();
 
-        Pattern fullBlock = Pattern.compile(
-                "(?m)^\\s*const-string\\s+v\\d+,\\s*\"[^\"]*\"\\R" +
-                        "^\\s*const/4\\s+v\\d+,\\s*(?:0x0|0x1)\\R" +
-                        "^\\s*invoke-static\\s+\\{[^}]*\\},\\s*Landroid/widget/Toast;->makeText\\(Landroid/content/Context;(?:Ljava/lang/CharSequence;|I)I\\)Landroid/widget/Toast;\\R" +
-                        "(?:^\\s*move-result-object\\s+(?:v|p)\\d+\\R)?" +
-                        "^\\s*invoke-virtual\\s+\\{(?:v|p)\\d+\\},\\s*Landroid/widget/Toast;->show\\(\\)V\\R?"
-        );
-
-        Pattern makeTextWithResult = Pattern.compile(
-                "(?m)^\\s*invoke-static\\s+\\{[^}]*\\},\\s*Landroid/widget/Toast;->makeText\\([^\\n]*\\)Landroid/widget/Toast;\\s*\\R" +
-                        "(?:^\\s*move-result-object\\s+(?:v|p)\\d+\\s*\\R)?"
-        );
-
-        Pattern showCall = Pattern.compile("(?m)^\\s*invoke-virtual\\s+\\{(?:v|p)\\d+\\},\\s*Landroid/widget/Toast;->show\\(\\)V\\s*\\R?");
-
         for (File file : smaliFiles) {
             String content = readFile(file);
             String original = content;
-            content = fullBlock.matcher(content).replaceAll("");
-            content = makeTextWithResult.matcher(content).replaceAll("");
-            content = showCall.matcher(content).replaceAll("");
+            content = removeToastBlocks(content);
             if (!content.equals(original)) {
                 writeFile(file, content);
                 String entryName = getDexEntryForSmaliFile(workDir, file);
@@ -357,13 +443,58 @@ public class ToastInjectorUtil {
         return modifiedEntries;
     }
 
+    /**
+     * Removes complete Toast.makeText -> move-result-object -> Toast.show() blocks,
+     * tolerating .line / .param / blank / comment lines between them, so no orphaned
+     * move-result-object is left behind.
+     */
+    private static String removeToastBlocks(String content) {
+        String[] lines = content.split("\\n", -1);
+        boolean[] remove = new boolean[lines.length];
+        int i = 0;
+        while (i < lines.length) {
+            String trimmed = lines[i].trim();
+            if (trimmed.startsWith("invoke-") && trimmed.contains("Landroid/widget/Toast;->makeText")) {
+                int j = i + 1;
+                while (j < lines.length && isNonInstruction(lines[j])) j++;
+                int moveResultLine = -1;
+                if (j < lines.length && lines[j].trim().startsWith("move-result-object")) {
+                    moveResultLine = j;
+                    j++;
+                    while (j < lines.length && isNonInstruction(lines[j])) j++;
+                }
+                if (j < lines.length && lines[j].trim().startsWith("invoke-")
+                        && lines[j].trim().contains("Landroid/widget/Toast;->show")) {
+                    remove[i] = true;
+                    if (moveResultLine != -1) remove[moveResultLine] = true;
+                    remove[j] = true;
+                    i = j + 1;
+                    continue;
+                }
+            } else if (trimmed.startsWith("invoke-") && trimmed.contains("Landroid/widget/Toast;->show")) {
+                remove[i] = true;
+            }
+            i++;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int k = 0; k < lines.length; k++) {
+            if (!remove[k]) sb.append(lines[k]).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private static boolean isNonInstruction(String line) {
+        String t = line.trim();
+        return t.isEmpty() || t.startsWith(".") || t.startsWith("#");
+    }
+
     private static String getDexEntryForSmaliFile(File workDir, File smaliFile) {
         File dir = smaliFile.getParentFile();
         while (dir != null && !workDir.equals(dir.getParentFile())) {
             dir = dir.getParentFile();
         }
         if (dir != null) {
-            return dexEntryForSmaliDir(workDir, dir);
+            return dexEntryForSmaliDir(dir);
         }
         return null;
     }
@@ -448,31 +579,6 @@ public class ToastInjectorUtil {
         }
     }
 
-    private static int getApiLevel(Context context, String apkPath) {
-        try {
-            PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(apkPath, 0);
-            if (pi != null && pi.applicationInfo != null) {
-                return Math.min(pi.applicationInfo.targetSdkVersion, 35);
-            }
-        } catch (Exception ignored) {}
-        return 28;
-    }
-
-    private static List<String> readLines(File file) throws IOException {
-        List<String> lines = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) lines.add(line);
-        }
-        return lines;
-    }
-
-    private static void writeLines(File file, List<String> lines) throws IOException {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-            for (String line : lines) writer.println(line);
-        }
-    }
-
     private static String readFile(File file) throws IOException {
         StringBuilder sb = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -487,21 +593,6 @@ public class ToastInjectorUtil {
         try (FileWriter writer = new FileWriter(file)) {
             writer.write(content);
         }
-    }
-
-    private static String escapeSmaliString(String input) {
-        StringBuilder sb = new StringBuilder();
-        for (char c : input.toCharArray()) {
-            switch (c) {
-                case '\\': sb.append("\\\\"); break;
-                case '"': sb.append("\\\""); break;
-                case '\n': sb.append("\\n"); break;
-                case '\r': sb.append("\\r"); break;
-                case '\t': sb.append("\\t"); break;
-                default: sb.append(c); break;
-            }
-        }
-        return sb.toString();
     }
 
     private static CompressionMethod methodFor(FileHeader header) {
