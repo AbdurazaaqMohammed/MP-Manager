@@ -3,6 +3,8 @@ package io.github.abdurazaaqmohammed.MPManager;
 import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
 import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPermissions;
 
+import android.animation.Animator;
+import android.animation.ObjectAnimator;
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
@@ -27,6 +29,7 @@ import android.os.Looper;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.graphics.drawable.DrawableCompat;
@@ -37,8 +40,6 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.text.Editable;
-import android.text.InputFilter;
-import android.text.InputType;
 import android.text.TextUtils;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -52,7 +53,6 @@ import java.lang.reflect.Method;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.tabs.TabLayout;
-import com.google.android.material.textfield.TextInputLayout;
 import com.lilincpp.github.libezftp.EZFtpServer;
 import com.lilincpp.github.libezftp.user.EZFtpUser;
 import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
@@ -89,6 +89,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -105,7 +106,6 @@ import io.github.ratul.topactivity.utils.PermissionUtil;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewParent;
 import android.view.animation.DecelerateInterpolator;
@@ -139,6 +139,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.RotateDrawable;
 
 import android.content.res.Resources;
 import android.view.LayoutInflater;
@@ -220,7 +221,9 @@ public class MainActivity extends AppCompatActivity {
     private GestureDetectorCompat bottomBarGestureDetector;
     private View.OnTouchListener bottomBarTouchListener;
     private boolean multiSelectUIActive;
-    private final ImageButton[] multiSelectButtons = new ImageButton[5];
+    private final ImageButton[] multiSelectButtons = new ImageButton[4];
+    private RotateDrawable addButtonRotateDrawable;
+    private Animator addButtonRotationAnimator;
     private TabLayout bookmarksTabs;
     private ViewPager2 bookmarksPager;
     private ListView bookmarksList, historyList;
@@ -484,26 +487,63 @@ public class MainActivity extends AppCompatActivity {
         if (multiSelectUIActive == enabled) return;
         multiSelectUIActive = enabled;
         LinearLayout bottomBar = findViewById(R.id.bottomBar);
-        int[] defaultIds = {R.id.backButton, R.id.forwardButton, R.id.addButton, R.id.syncPaneButton, R.id.upButton};
+        int[] defaultIds = {R.id.backButton, R.id.forwardButton, R.id.syncPaneButton, R.id.upButton};
+        ImageView addButton = findViewById(R.id.addButton);
         if (enabled) {
             if (multiSelectButtons[0] == null) buildMultiSelectButtons();
             for (int id : defaultIds) findViewById(id).setVisibility(View.GONE);
+            addButton.setVisibility(View.VISIBLE);
+            addButton.setContentDescription(rss.getString(R.string.exit));
+            if (LegacyUtils.aboveSdk20) animateAddButtonRotation(10000);
+            else addButton.animate().rotation(45f).setDuration(500).setInterpolator(new DecelerateInterpolator()).start();
+            int addIndex = bottomBar.indexOfChild(addButton);
+            bottomBar.addView(multiSelectButtons[0], addIndex);
+            bottomBar.addView(multiSelectButtons[1], addIndex + 1);
+            addIndex = bottomBar.indexOfChild(addButton);
+            bottomBar.addView(multiSelectButtons[2], addIndex + 1);
+            bottomBar.addView(multiSelectButtons[3], addIndex + 2);
             for (ImageButton button : multiSelectButtons) {
-                bottomBar.addView(button);
                 button.setOnTouchListener(bottomBarTouchListener);
             }
         } else {
             for (ImageButton button : multiSelectButtons) bottomBar.removeView(button);
             for (int id : defaultIds) findViewById(id).setVisibility(View.VISIBLE);
+            addButton.setVisibility(View.VISIBLE);
+            addButton.setContentDescription(rss.getString(R.string.newFileOrFolder));
+            if(LegacyUtils.aboveSdk20) animateAddButtonRotation(0);
+            else addButton.animate().rotation(0f).setDuration(500).setInterpolator(new DecelerateInterpolator()).start();
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private RotateDrawable getAddButtonRotateDrawable() {
+        if (addButtonRotateDrawable == null) {
+            ImageView addButton = findViewById(R.id.addButton);
+            addButtonRotateDrawable = new RotateDrawable();
+            addButtonRotateDrawable.setDrawable(addButton.getDrawable());
+            addButtonRotateDrawable.setFromDegrees(0f);
+            addButtonRotateDrawable.setToDegrees(45f);
+            addButtonRotateDrawable.setLevel(0);
+            addButton.setImageDrawable(addButtonRotateDrawable);
+        }
+        return addButtonRotateDrawable;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void animateAddButtonRotation(int targetLevel) {
+        if (addButtonRotationAnimator != null) addButtonRotationAnimator.cancel();
+        RotateDrawable rd = getAddButtonRotateDrawable();
+        addButtonRotationAnimator = ObjectAnimator.ofInt(rd, "level", rd.getLevel(), targetLevel);
+        addButtonRotationAnimator.setDuration(500);
+        addButtonRotationAnimator.setInterpolator(new DecelerateInterpolator());
+        addButtonRotationAnimator.start();
+    }
+
     private void buildMultiSelectButtons() {
-        int[] icons = {R.drawable.baseline_select_all_24, R.drawable.tab_inactive_24px, R.drawable.close_24px, R.drawable.flip_24px, R.drawable.baseline_info_24};
+        int[] icons = {R.drawable.baseline_select_all_24, R.drawable.tab_inactive_24px, R.drawable.flip_24px, R.drawable.baseline_info_24};
         View.OnClickListener[] listeners = {
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectAll(); },
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.invertSelection(); },
-                v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.exitMultiSelectMode(); },
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectSameType(); },
                 v -> new MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.multi_select)
@@ -511,7 +551,7 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton(android.R.string.ok, null)
                         .show()
         };
-        CharSequence[] cds = {rss.getString(android.R.string.selectAll), rss.getString(R.string.invert_selection), rss.getString(R.string.exit), rss.getString(R.string.select_same_type), rss.getString(R.string.multi_select)};
+        CharSequence[] cds = {rss.getString(android.R.string.selectAll), rss.getString(R.string.invert_selection), rss.getString(R.string.select_same_type), rss.getString(R.string.multi_select)};
         TypedValue tv = new TypedValue();
         Resources.Theme t = getTheme();
         t.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, tv, true);
@@ -535,6 +575,17 @@ public class MainActivity extends AppCompatActivity {
             button.setOnLongClickListener(ocl);
             multiSelectButtons[i] = button;
         }
+    }
+
+    private MainFilesArrayAdapter getMainFilesAdapter(int pane) {
+        RecyclerView paneView = findViewById(pane == 1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        RecyclerView.Adapter a = paneView.getAdapter();
+        return a instanceof MainFilesArrayAdapter ? (MainFilesArrayAdapter) a : null;
+    }
+
+    public void onPaneTouched(int pane) {
+        MainFilesArrayAdapter a = getMainFilesAdapter(pane);
+        setMultiSelectModeUI(a != null && a.isMultiSelectMode());
     }
 
     private List<MainFilesArrayAdapter> activeMultiSelectAdapters() {
@@ -1489,8 +1540,9 @@ public class MainActivity extends AppCompatActivity {
         pane2.setLayoutManager(new LinearLayoutManager(this));
 
         pane1.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 1) {
-                setCurrentPane(1);
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (lastPaneSelected != 1) setCurrentPane(1);
+                onPaneTouched(1);
             }
             return false;
         });
@@ -1498,8 +1550,9 @@ public class MainActivity extends AppCompatActivity {
 
 
         pane2.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN && lastPaneSelected != 2) {
-                setCurrentPane(2);
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (lastPaneSelected != 2) setCurrentPane(2);
+                onPaneTouched(2);
             }
             return false;
         });
@@ -1547,6 +1600,10 @@ public class MainActivity extends AppCompatActivity {
             View addButton = findViewById(R.id.addButton);
             addButton.setOnLongClickListener(this::showMsgOnLongPress);
             addButton.setOnClickListener(v -> {
+                if (multiSelectUIActive) {
+                    for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.exitMultiSelectMode();
+                    return;
+                }
                 View textInputLayout = LayoutInflater.from(this).inflate(R.layout.enter_name, null);
                 EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
                 AlertDialog ad = dialogUtil.getDialogBuilder()

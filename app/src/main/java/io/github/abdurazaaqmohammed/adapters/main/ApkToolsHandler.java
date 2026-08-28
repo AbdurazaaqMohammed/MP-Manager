@@ -822,7 +822,7 @@ public class ApkToolsHandler {
         CharSequence[] displayItems = new CharSequence[activities.size()];
         boolean[] checked = new boolean[activities.size()];
         final java.util.Set<Integer> selectedIndices = new HashSet<>();
-        for (int i = 0; i < activities.size(); i++) {
+        if(!TextUtils.isEmpty(mainActivity)) for (int i = 0; i < activities.size(); i++) {
             String name = activities.get(i).name;
             boolean isMain = name.equals(mainActivity);
             displayItems[i] = isMain ? name + " (Main)" : name;
@@ -863,7 +863,7 @@ public class ApkToolsHandler {
         signSettings.setText(R.string.sign_set);
         signSettings.setOnClickListener(uiHelper.showSignSettingsDialog());
 
-        CheckBox autosign = new CheckBox(context);
+        CompoundButton autosign = new MaterialCheckBox(context);
         autosign.setText(R.string.auto_sign);
         autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
@@ -873,7 +873,7 @@ public class ApkToolsHandler {
         dialogUtil.getDialogBuilder()
                 .setTitle("Toast message")
                 .setView(layout)
-                .setPositiveButton("Add", (dialog, which) -> runAddToast(file, selectedActivities, messageInput.getText().toString(), sign[0]))
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> runAddToast(file, selectedActivities, messageInput.getText().toString(), sign[0]))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }

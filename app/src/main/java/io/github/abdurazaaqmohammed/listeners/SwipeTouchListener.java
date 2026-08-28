@@ -86,6 +86,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
         switch (event.getActionMasked()) {
 
             case MotionEvent.ACTION_DOWN:
+                context.onPaneTouched(pane);
                 initialX = event.getRawX();
                 initialY = event.getRawY();
                 isSwiping = false;
