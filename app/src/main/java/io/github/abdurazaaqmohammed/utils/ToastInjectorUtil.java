@@ -443,11 +443,6 @@ public class ToastInjectorUtil {
         return modifiedEntries;
     }
 
-    /**
-     * Removes complete Toast.makeText -> move-result-object -> Toast.show() blocks,
-     * tolerating .line / .param / blank / comment lines between them, so no orphaned
-     * move-result-object is left behind.
-     */
     private static String removeToastBlocks(String content) {
         String[] lines = content.split("\\n", -1);
         boolean[] remove = new boolean[lines.length];

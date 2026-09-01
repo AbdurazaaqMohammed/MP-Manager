@@ -19,13 +19,12 @@ import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
-import com.github.angads25.filepicker.model.DialogConfigs;
-import com.github.angads25.filepicker.model.DialogProperties;
-import com.github.angads25.filepicker.view.FilePickerDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.archive.ArchiveFile;
 import com.reandroid.archive.InputSource;
+
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 
 import net.lingala.zip4j.ZipFile;
 
@@ -66,6 +65,13 @@ public class SignatureKeyDialog {
 
         signaturePaths.addAll(getSavedPaths(prefs, PREF_SIGNATURE_PATHS));
 
+        String debugKeyPath = null;
+        try {
+            debugKeyPath = FileUtils.getDebugKeystore(activity).getPath();
+        } catch (Exception ignored) {
+        }
+        if (debugKeyPath != null && !signaturePaths.contains(debugKeyPath)) signaturePaths.add(debugKeyPath);
+
         signaturePaths = new ArrayList<>(dedupe(signaturePaths));
         Collections.sort(signaturePaths);
         LayoutInflater inflater = LayoutInflater.from(activity);
@@ -95,11 +101,7 @@ public class SignatureKeyDialog {
         cbBiometric.setVisibility(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? View.VISIBLE : View.GONE);
         cbBiometric.setChecked(prefs.getBoolean("useBiometrics", false));
 
-        ArrayAdapter<String> ddAdapter = new ArrayAdapter<>(
-                activity,
-                android.R.layout.simple_dropdown_item_1line,
-                getKeystoreFiles(keysDir)
-        );
+        ArrayAdapter<String> ddAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_dropdown_item_1line, signaturePaths);
 
         String savedKeyPath = prefs.getString("keyPath", null);
         if (!TextUtils.isEmpty(savedKeyPath) && signaturePaths.contains(savedKeyPath)) {
@@ -108,13 +110,13 @@ public class SignatureKeyDialog {
         actv.setAdapter(ddAdapter);
 
         final String[] pickedPath = new String[1];
-        pickedPath[0] = !TextUtils.isEmpty(savedKeyPath) ? savedKeyPath : null;
+        pickedPath[0] = !TextUtils.isEmpty(savedKeyPath) ? savedKeyPath : debugKeyPath;
 
         List<String> finalSignaturePaths = signaturePaths;
         btnPick.setOnClickListener(v -> {
-            DialogProperties properties = new DialogProperties();
-            properties.selection_mode = DialogConfigs.SINGLE_MODE;
-            properties.selection_type = DialogConfigs.FILE_SELECT;
+            FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
+            properties.selection_mode = FilePickerDialog.SINGLE_MODE;
+            properties.selection_type = FilePickerDialog.FILE_SELECT;
             properties.root = new File(keysDir.getPath());
             properties.error_dir = new File(keysDir.getPath());
             properties.offset = new File(keysDir.getPath());

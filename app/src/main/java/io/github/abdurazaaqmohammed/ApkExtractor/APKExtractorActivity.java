@@ -471,7 +471,6 @@ public class APKExtractorActivity extends AppCompatActivity {
         }).start();
     }
 
-    /** Clears both lists and reloads the installed apps. */
     private void refreshApps() {
         userAppInfoList.clear();
         systemAppInfoList.clear();
