@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.security.KeyStore;
 import java.util.Locale;
 
 public class FileUtils {
@@ -65,6 +66,27 @@ public class FileUtils {
             copyFile(is, destinationFile);
         }
         return destinationFile;
+    }
+    
+    public static File getDebugKeystore(Context context) throws IOException {
+        File destinationFile = new File(context.getFilesDir(), "debug.keystore");
+        if (!destinationFile.exists() || !isDebugKeystoreValid(destinationFile)) {
+            try (InputStream is = context.getAssets().open("debug.keystore")) {
+                copyFile(is, destinationFile);
+            }
+        }
+        return destinationFile;
+    }
+
+    public static boolean isDebugKeystoreValid(File file) {
+        if (file == null || !file.isFile()) return false;
+        try (InputStream is = new FileInputStream(file)) {
+            KeyStore ks = KeyStore.getInstance("JKS");
+            ks.load(is, "android".toCharArray());
+            return ks.size() > 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static File getUnusedFile(File file) {

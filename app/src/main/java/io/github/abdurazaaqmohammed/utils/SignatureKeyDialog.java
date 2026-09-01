@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Environment;
@@ -14,6 +15,7 @@ import android.widget.TextView;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -118,10 +120,10 @@ public class SignatureKeyDialog {
             properties.selection_mode = FilePickerDialog.SINGLE_MODE;
             properties.selection_type = FilePickerDialog.FILE_SELECT;
             properties.root = new File(keysDir.getPath());
-            properties.error_dir = new File(keysDir.getPath());
             properties.offset = new File(keysDir.getPath());
+            properties.preferenceKey = "signature";
 
-            properties.extensions = new String[]{"jks", "keystore", "p12", "pfx"};
+            properties.extensions = new String[]{"jks", "keystore", "p12", "pfx", "pk8", "pem"};
 
             FilePickerDialog fpd = new FilePickerDialog(activity, properties);
             fpd.setDialogSelectionListener(files -> {
@@ -145,13 +147,16 @@ public class SignatureKeyDialog {
                                 .putString("keyPath", path).apply();
 
                 Extensions.showMessage(activity, R.string.signature_file_set);
+                boolean usePass = !path.endsWith(".pk8") && !path.endsWith(".pem");
+                cbBiometric.setEnabled(usePass);
+                passwordEt.setEnabled(usePass);
             });
             fpd.show();
         });
 
         ScrollView scrollView = new ScrollView(activity);
         scrollView.addView(view);
-        new MaterialAlertDialogBuilder(activity)
+        AlertDialog ad = new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.signature_key)
                 .setView(scrollView)
                 .setPositiveButton(android.R.string.ok, (d, which) -> {
@@ -171,14 +176,16 @@ public class SignatureKeyDialog {
                         Extensions.showMessage(activity, R.string.invalid_file_path);
                         return;
                     }
+                    String resolvedPassword = !TextUtils.isEmpty(password) || !selectedPath.endsWith("debug.keystore")
+                        ? password : "android";
 
-                    if (biometricChecked) {
-                        if (!TextUtils.isEmpty(password)) {
-                            if (!verifyKeystorePassword(new File(selectedPath), password)) {
+                    if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem") && biometricChecked) {
+                        if (!TextUtils.isEmpty(resolvedPassword)) {
+                            if (!verifyKeystorePassword(new File(selectedPath), resolvedPassword)) {
                                 Extensions.showMessage(activity, "Invalid password");
                                 return;
                             }
-                            prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(password)).apply();
+                            prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(resolvedPassword)).apply();
                             prefs.edit().putBoolean("useBiometrics", true).apply();
                             useBiometrics = true;
                         } else if (wasUsingBiometrics) {
@@ -191,7 +198,7 @@ public class SignatureKeyDialog {
                         if (wasUsingBiometrics) {
                             prefs.edit().putBoolean("useBiometrics", false).remove("keyPass").apply();
                         }
-                        if (TextUtils.isEmpty(password)) {
+                        if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem") && TextUtils.isEmpty(resolvedPassword)) {
                             Extensions.showMessage(activity, "No password entered");
                             return;
                         }
@@ -225,7 +232,7 @@ public class SignatureKeyDialog {
                                     new Thread(() -> {
                                         try {
                                             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", "android"));
-                                            SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", activity).getPath())),
+                                            SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath())),
                                                     storedPass, v1, v2, v3, v4, signedByS);
                                             File cacheDir = new File(activity.getCacheDir(), UUID.randomUUID().toString());
                                             String sigFileName = file.getName();
@@ -275,8 +282,8 @@ public class SignatureKeyDialog {
                             biometricPrompt.authenticate(auth.build());
                         } else new Thread(() -> {
                             try {
-                                SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", activity).getPath())),
-                                        password, v1, v2, v3, v4, signedByS);
+                                SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath())),
+                                        resolvedPassword, v1, v2, v3, v4, signedByS);
                                 File cacheDir = new File(activity.getCacheDir(), UUID.randomUUID().toString());
                                 String sigFileName = file.getName();
                                 File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
@@ -311,32 +318,35 @@ public class SignatureKeyDialog {
                         }).start();
                     }
                 })
-                .setNegativeButton(android.R.string.cancel, null).setNeutralButton("New Key", (dialog, which) -> {
-                    KeyStoreMakerDialog ksmd = KeyStoreMakerDialog.newInstance();
-                    ksmd.setOnKeyGeneratedListener(new KeyStoreMakerDialog.OnKeyGeneratedListener() {
-                        @Override
-                        public void onKeyGenerated(KeyStoreMakerDialog.KeyParam keyParam) {
-                            String keyPath = keyParam.keyPath;
-                            String jksPath = keyParam.jksPath;
-                            File pk8 = new File(keyPath);
-                            File jks = new File(jksPath);
-                            String path;
-                            if(!pk8.exists()) path = jksPath;
-                            else if(!jks.exists()) path = keyPath;
-                            else if (pk8.lastModified() < jks.lastModified()) path = jksPath;
-                            else path = keyPath;
-                            prefs.edit().putString("keyPath", path).apply();
-                            Extensions.showMessage(activity, "Keys generated: " + path);
-                        }
-
-                        @Override
-                        public void onError(String error) {
-                            new ErrorUtil(activity).showError(new Throwable(error));
-                        }
-                    });
-                    ksmd.show(activity.getSupportFragmentManager(), "KeyStoreMakerDialog");
-                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.new_key, null) // Note: Need to set it after otherwise the dialog auto close
                 .show();
+        ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v -> {
+            KeyStoreMakerDialog ksmd = KeyStoreMakerDialog.newInstance();
+            ksmd.setOnKeyGeneratedListener(new KeyStoreMakerDialog.OnKeyGeneratedListener() {
+                @Override
+                public void onKeyGenerated(KeyStoreMakerDialog.KeyParam keyParam) {
+                    String keyPath = keyParam.keyPath;
+                    String jksPath = keyParam.jksPath;
+                    File pk8 = new File(keyPath);
+                    File jks = new File(jksPath);
+                    String path;
+                    if(!pk8.exists()) path = jksPath;
+                    else if(!jks.exists()) path = keyPath;
+                    else if (pk8.lastModified() < jks.lastModified()) path = jksPath;
+                    else path = keyPath;
+                    actv.setText(path);
+                    prefs.edit().putString("keyPath", path).apply();
+                    Extensions.showMessage(activity, "Keys generated: " + path);
+                }
+
+                @Override
+                public void onError(String error) {
+                    new ErrorUtil(activity).showError(new Throwable(error));
+                }
+            });
+            ksmd.show(activity.getSupportFragmentManager(), "KeyStoreMakerDialog");
+        });
     }
 
     private static List<String> getKeystoreFiles(File dir) {
