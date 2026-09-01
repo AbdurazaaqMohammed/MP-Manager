@@ -15,9 +15,11 @@ package io.github.codehasan.colorpicker.extensions;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.util.TypedValue;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.StringRes;
 import androidx.core.content.ContextCompat;
@@ -38,15 +40,17 @@ public final class Extensions {
     }
 
     public static void showMessage(Activity activity, CharSequence message) {
-        Snackbar snackbar;
-        if (activity instanceof MainActivity) {
+        if (activity instanceof MainActivity && activity.hasWindowFocus()) {
             View bottomBar = activity.findViewById(R.id.bottomBar);
-            snackbar = Snackbar.make(bottomBar, message, Snackbar.LENGTH_SHORT);
-            snackbar.setAnchorView(bottomBar);
+            Snackbar.make(bottomBar, message, Snackbar.LENGTH_SHORT).setAnchorView(bottomBar).show();
         } else {
-            snackbar = Snackbar.make(activity.getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_SHORT);
+            Snackbar.make(activity.findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT).show();
+            // When dialog is open visibility is still reduced and can get cut off need to check all usages of this and change it or something
         }
-        snackbar.show();
+    }
+
+    public static void showMessage(Dialog d, CharSequence message) {
+        Snackbar.make(d.findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT).show();
     }
 
     public static int dp2px(android.content.Context context, float dp) {
