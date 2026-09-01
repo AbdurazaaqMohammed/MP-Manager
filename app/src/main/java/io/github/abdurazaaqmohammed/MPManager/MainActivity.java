@@ -1526,12 +1526,10 @@ public class MainActivity extends AppCompatActivity {
         String homeDir2Path = settings.getString("home2", null);
         homeDir2 = TextUtils.isEmpty(homeDir2Path) ? Environment.getExternalStorageDirectory() : new File(homeDir2Path);
         try {
-            signatureKeyPath = settings.getString("keyPath", FileUtils.copyFileFromAssetsAndGetFile("debug.keystore", this).getPath());
+            signatureKeyPath = settings.getString("keyPath", FileUtils.getDebugKeystore(this).getPath());
         } catch (IOException e) {
             new ErrorUtil(this).showError(e);
         }
-
-
 
         RecyclerView pane1 = findViewById(R.id.listViewPane1);
         RecyclerView pane2 = findViewById(R.id.listViewPane2);
@@ -2742,21 +2740,21 @@ public class MainActivity extends AppCompatActivity {
         radioGroup.check(sortBy);
         layout.addView(radioGroup);
 
-        CheckBox cbReverse = new CheckBox(this);
-        cbReverse.setText(rss.getString(R.string.reverse_order));
-        cbReverse.setChecked(reverse);
-        layout.addView(cbReverse);
-
         CheckBox cbOnlyThisFolder = new CheckBox(this);
         cbOnlyThisFolder.setText(rss.getString(R.string.only_for_this_folder));
         layout.addView(cbOnlyThisFolder);
+
+        io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle directionToggle =
+                new io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle(this);
+        directionToggle.setDescending(reverse);
+        layout.addView(directionToggle);
 
         dialogUtil.getDialogBuilder()
                 .setTitle(getString(R.string.sort))
                 .setView(layout)
                 .setPositiveButton(getString(R.string.apply), (dialog, which) -> {
                     int selectedSort = radioGroup.getCheckedRadioButtonId();
-                    boolean selectedReverse = cbReverse.isChecked();
+                    boolean selectedReverse = directionToggle.isDescending();
                     SharedPreferences.Editor editor = prefs.edit();
                     if (cbOnlyThisFolder.isChecked()) {
                         editor.putInt("sort_by_" + currentPath, selectedSort);
