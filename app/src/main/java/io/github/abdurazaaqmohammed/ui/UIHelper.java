@@ -72,7 +72,6 @@ public class UIHelper {
                 new AboutLibrary("aXML", "APK Explorer & Editor", "https://github.com/apk-editor/aXML", "GPL-3.0", "GPL-3.0+.txt"),
                 new AboutLibrary("Commons Collections", "Apache Software Foundation", "https://github.com/apache/commons-collections", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Material Design Icons", "Google", "https://github.com/google/material-design-icons", "Apache-2.0", "Apache-2.0.txt"),
-                new AboutLibrary("android-filepicker", "Angad Singh", "https://github.com/singhangadin/android-filepicker", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("java-diff-utils", "java-diff-utils", "https://github.com/java-diff-utils/java-diff-utils", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Guava", "Google", "https://github.com/google/guava", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("jadx", "skylot", "https://github.com/skylot/jadx", "Apache-2.0", "Apache-2.0.txt"),
@@ -88,7 +87,7 @@ public class UIHelper {
                 new AboutLibrary("Apache MINA FTP Server", "Apache Software Foundation", "https://github.com/apache/mina-ftpserver", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("ANTLR", "The ANTLR Project", "https://github.com/antlr/antlr4", "BSD-3-Clause", "BSD-3-Clause.txt"),
                 new AboutLibrary("joni", "JRuby", "https://github.com/jruby/joni", "MIT", "MIT.txt"),
-                new AboutLibrary("ftp4j", "Carlo Pelliccia (Sauron Software)", "http://www.sauronsoftware.it/projects/ftp4j/", "LGPL", "LGPL-2.1.txt"),
+                new AboutLibrary("ftp4j", "Carlo Pelliccia (Sauron Software)", "http://www.sauronsoftware.it/projects/ftp4j", "LGPL", "LGPL-2.1.txt"),
                 new AboutLibrary("Volley", "Google", "https://github.com/google/volley", "Apache-2.0", "Apache-2.0.txt")
         );
 
