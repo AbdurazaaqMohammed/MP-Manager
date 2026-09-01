@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Environment;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -35,10 +36,8 @@ import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkVerifier;
-import com.github.angads25.filepicker.model.DialogConfigs;
-import com.github.angads25.filepicker.model.DialogProperties;
-import com.github.angads25.filepicker.view.FilePickerDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -65,6 +64,7 @@ import java.util.Set;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
@@ -78,6 +78,7 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ToastInjectorUtil;
 import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
+import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.SignatureKillerUtil;
 import mt.modder.hub.apkCloner.util.ApkCloner;
@@ -306,11 +307,43 @@ public class ApkToolsHandler {
                             View ll = LayoutInflater.from(context).inflate(R.layout.dialog_opt, null);
                             final boolean[] sign = new boolean[1];
                             final boolean[] delFiles = new boolean[1];
+                            final boolean[] deepOpt = new boolean[1];
                             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                             CheckBox autosign = ll.findViewById(R.id.autosign);
                             autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                             ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                            CheckBox deepOptimize = ll.findViewById(R.id.deep_optimize);
+                            deepOptimize.setChecked(deepOpt[0] = settings.getBoolean("deep_optimize", false));
+                            deepOptimize.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_optimize", deepOpt[0] = isChecked).apply());
+                            MaterialCheckBox phaseB = ll.findViewById(R.id.deep_optimize_phase_b);
+                            phaseB.setChecked(settings.getBoolean("deep_opt_phase_b", false));
+                            phaseB.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_phase_b", isChecked).apply());
+                            MaterialCheckBox preserveDebug = ll.findViewById(R.id.deep_optimize_preserve_debug);
+                            preserveDebug.setChecked(settings.getBoolean("deep_opt_preserve_debug", true));
+                            preserveDebug.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_preserve_debug", isChecked).apply());
+                            MaterialCheckBox removeClasses = ll.findViewById(R.id.deep_optimize_remove_classes);
+                            removeClasses.setChecked(settings.getBoolean("deep_opt_remove_classes", true));
+                            removeClasses.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_classes", isChecked).apply());
+                            MaterialCheckBox removeMethods = ll.findViewById(R.id.deep_optimize_remove_methods);
+                            removeMethods.setChecked(settings.getBoolean("deep_opt_remove_methods", true));
+                            removeMethods.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_methods", isChecked).apply());
+                            MaterialCheckBox removeFields = ll.findViewById(R.id.deep_optimize_remove_fields);
+                            removeFields.setChecked(settings.getBoolean("deep_opt_remove_fields", true));
+                            removeFields.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_fields", isChecked).apply());
+                            TextInputEditText passesInput = ll.findViewById(R.id.deep_optimize_passes);
+                            passesInput.setText(String.valueOf(settings.getInt("deep_opt_max_passes", 25)));
+                            passesInput.addTextChangedListener(new TextWatcher() {
+                                @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                                @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                                @Override public void afterTextChanged(android.text.Editable s) {
+                                    try {
+                                        int value = Integer.parseInt(s.toString());
+                                        if (value >= 0) settings.edit().putInt("deep_opt_max_passes", value).apply();
+                                    } catch (NumberFormatException ignored) {
+                                    }
+                                }
+                            });
                             CheckBox deleteFiles = ll.findViewById(R.id.files_to_delete);
                             deleteFiles.setChecked(delFiles[0] = settings.getBoolean("delFiles", true));
                             deleteFiles.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("delFiles", delFiles[0] = isChecked).apply());
@@ -363,6 +396,10 @@ public class ApkToolsHandler {
                                                     new Thread(() -> {
                                                         try {
                                                             File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, logger);
+                                                            if (deepOpt[0]) {
+                                                                logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
+                                                                opt = ApkDeepOptimizer.optimize(context, opt, settings.getStringSet("filesToDelete", null), settings, logger);
+                                                            }
                                                             if (sign[0]) wrapper[0].signApk(opt);
                                                             pm.dismiss();
                                                             context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
@@ -372,10 +409,20 @@ public class ApkToolsHandler {
                                                         }
                                                     }).start();
                                                 };
-                                                if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                                                    wrapper[0] = sw;
-                                                    doOpt.run();
-                                                }); else doOpt.run();
+                                                Runnable startOpt = () -> {
+                                                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                                        wrapper[0] = sw;
+                                                        doOpt.run();
+                                                    }); else doOpt.run();
+                                                };
+                                                if (deepOpt[0]) {
+                                                    new MaterialAlertDialogBuilder(context)
+                                                            .setTitle(context.rss.getString(R.string.deep_optimize))
+                                                            .setMessage(context.rss.getString(R.string.deep_optimize_warning))
+                                                            .setPositiveButton(context.rss.getString(R.string.opt), (dialog8, which5) -> startOpt.run())
+                                                            .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                                                            .show();
+                                                } else startOpt.run();
                                             }).show();
                     } else if (which1 == 2) showDecompileOptionsDialog(file, fileName);
                     else if (which1 == 3) {
@@ -394,12 +441,12 @@ public class ApkToolsHandler {
                         String publiXmlText = context.rss.getString(R.string.public_xml);
                         publicXmlInputView.setText(publiXmlText);
                         publicXmlInputView.setOnClickListener(v5 -> {
-                            DialogProperties properties = new DialogProperties();
-                            properties.selection_mode = DialogConfigs.SINGLE_MODE;
-                            properties.selection_type = DialogConfigs.FILE_SELECT;
-                            properties.root = new File(DialogConfigs.DEFAULT_DIR);
-                            properties.error_dir = new File(DialogConfigs.DEFAULT_DIR);
-                            properties.offset = new File(DialogConfigs.DEFAULT_DIR);
+                            FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
+                            properties.selection_mode = FilePickerDialog.SINGLE_MODE;
+                            properties.selection_type = FilePickerDialog.FILE_SELECT;
+                            properties.root = new File(Environment.getExternalStorageDirectory().getPath());
+                            properties.offset = new File(Environment.getExternalStorageDirectory().getPath());
+                            properties.preferenceKey = "public_xml";
                             properties.extensions = new String[]{"xml"};
                             FilePickerDialog fpd = new FilePickerDialog(context, properties);
                             fpd.setTitle(publiXmlText);
@@ -722,7 +769,7 @@ public class ApkToolsHandler {
                 new ErrorUtil(context).showError(e);
             }
             View.OnLongClickListener lcl = v -> {
-                if(v instanceof TextView tv) CopyUtil.copyToClipboard(context, tv.getText());
+                if(v instanceof TextView tv) CopyUtil.copyToClipboard(ad, tv.getText());
                 return false;
             };
             signaturesInApk.setOnLongClickListener(lcl);
@@ -1057,6 +1104,8 @@ public class ApkToolsHandler {
     private void runBatchOptimize(List<File> apks, boolean delFiles, SignWrapper wrapper, SharedPreferences settings) {
         ProgressManager pm = new ProgressManager(context, true).show();
         APKLogger logger = pm.getLogger();
+        boolean deepOpt = settings.getBoolean("deep_optimize", false);
+        Set<String> filesToDelete = settings.getStringSet("filesToDelete", null);
         new Thread(() -> {
             try {
                 for (int i = 0; i < apks.size(); i++) {
@@ -1065,6 +1114,10 @@ public class ApkToolsHandler {
                     pm.setText(msg);
                     logger.logMessage(msg);
                     File opt = ApkOptimizer.optimize(context, apk, delFiles, settings, logger);
+                    if (deepOpt) {
+                        logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
+                        opt = ApkDeepOptimizer.optimize(context, opt, filesToDelete, settings, logger);
+                    }
                     if (wrapper != null) wrapper.signApk(opt);
                 }
                 pm.dismiss();

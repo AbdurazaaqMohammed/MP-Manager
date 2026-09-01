@@ -644,6 +644,15 @@ Layout Inspector
     <string name="edit_bookmark">Edit</string>
     <string name="batch_operations">Batch operations</string>
     <string name="ask_bookmark_tab">Ask which tab to save bookmarks in</string>
+    <string name="deep_optimize">Remove unused resources &amp; code (deep)</string>
+    <string name="deep_optimize_phase_b">Optimize resource IDs</string>
+    <string name="deep_optimize_preserve_debug">Keep debug info (line numbers)</string>
+    <string name="deep_optimize_remove_classes">Remove unused classes</string>
+    <string name="deep_optimize_remove_methods">Remove unused methods</string>
+    <string name="deep_optimize_remove_fields">Remove unused fields</string>
+    <string name="deep_optimize_max_passes">Max empty-method passes</string>
+    <string name="deep_optimize_warning">Warning: deep optimization may break the APK.</string>
+    <string name="deep_optimize_running">Deep removing unused resources &amp; code…</string>
     <string name="sort_by">Sort by</string>
     <string name="sort_name">Name</string>
     <string name="sort_date">Date</string>

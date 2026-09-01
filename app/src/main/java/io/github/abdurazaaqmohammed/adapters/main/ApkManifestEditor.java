@@ -27,9 +27,9 @@ import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
 import com.apk.axml.serializableItems.ResEntry;
 import com.apk.axml.serializableItems.XMLEntry;
-import com.github.angads25.filepicker.model.DialogConfigs;
-import com.github.angads25.filepicker.model.DialogProperties;
-import com.github.angads25.filepicker.view.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+
+import android.os.Environment;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
 import net.lingala.zip4j.ZipFile;
@@ -262,12 +262,12 @@ public class ApkManifestEditor {
     }
 
     public void editLauncherIcon(File apkFile) {
-        DialogProperties properties = new DialogProperties();
-        properties.selection_mode = DialogConfigs.SINGLE_MODE;
-        properties.selection_type = DialogConfigs.FILE_SELECT;
-        properties.root = new File(DialogConfigs.DEFAULT_DIR);
-        properties.error_dir = new File(DialogConfigs.DEFAULT_DIR);
-        properties.offset = new File(DialogConfigs.DEFAULT_DIR);
+        FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
+        properties.selection_mode = FilePickerDialog.SINGLE_MODE;
+        properties.selection_type = FilePickerDialog.FILE_SELECT;
+        properties.root = new File(Environment.getExternalStorageDirectory().getPath());
+        properties.offset = new File(Environment.getExternalStorageDirectory().getPath());
+        properties.preferenceKey = "icon";
         properties.extensions = new String[]{"png", "webp", "jpg", "jpeg"};
         FilePickerDialog fpd = new FilePickerDialog(context, properties);
         fpd.setTitle(context.rss.getString(R.string.select_icon));
