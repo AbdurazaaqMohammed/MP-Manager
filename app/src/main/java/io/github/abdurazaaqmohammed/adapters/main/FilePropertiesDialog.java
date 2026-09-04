@@ -39,6 +39,7 @@ import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 
 public class FilePropertiesDialog {
 
@@ -180,11 +181,41 @@ public class FilePropertiesDialog {
         }
 
         if (!isInZip && !multi && file.isFile()) {
-            propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
-                checksumRows.removeAllViews();
+            if (RootStaging.needsStaging(context, file)) {
+                // Root-only file: hash a staged copy (HashUtil needs FileInputStream).
+                Runnable runStagedChecksum = () -> {
+                    TextView hint = new TextView(context);
+                    hint.setText("Checksums via root-staged copy…");
+                    checksumRows.addView(hint);
+                    new Thread(() -> {
+                        try {
+                            File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                            context.handler.post(() -> {
+                                checksumRows.removeAllViews();
+                                checksumDialogs.startChecksumComputation(checksumRows, staged);
+                            });
+                        } catch (Exception e) {
+                            context.handler.post(() -> {
+                                checksumRows.removeAllViews();
+                                TextView err = new TextView(context);
+                                err.setText("Checksum unavailable: " + e.getMessage());
+                                checksumRows.addView(err);
+                            });
+                        }
+                    }).start();
+                };
+                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
+                    checksumRows.removeAllViews();
+                    runStagedChecksum.run();
+                });
+                runStagedChecksum.run();
+            } else {
+                propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
+                    checksumRows.removeAllViews();
+                    checksumDialogs.startChecksumComputation(checksumRows, file);
+                });
                 checksumDialogs.startChecksumComputation(checksumRows, file);
-            });
-            checksumDialogs.startChecksumComputation(checksumRows, file);
+            }
         } else if (isInZip && !multi && !entry.isDirectory()) {
             checksumDialogs.addCrc32Row(checksumRows, entry.computeCrc32());
             propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
@@ -204,8 +235,26 @@ public class FilePropertiesDialog {
 
     private long getFolderSize(File file, TextView toUpdate) {
         File[] files = file.listFiles();
-        if (files == null)
+        if (files == null) {
+            // Root-only dir: fall back to du via su (read-only).
+            try {
+                RootManager rm = RootManager.getInstance(context);
+                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                    RootManager.ShellResult r = rm.execute(
+                            "du -sb " + RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null");
+                    if (r.isSuccess() && r.output != null) {
+                        String first = r.output.trim().split("\\s+")[0];
+                        long size = Long.parseLong(first);
+                        if (toUpdate != null) {
+                            context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(size)));
+                        }
+                        return size;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
             return 0;
+        }
         long length = 0;
         for (File f : files) {
             if (f.isFile()) {
@@ -238,7 +287,9 @@ public class FilePropertiesDialog {
                     try {
                         String touchTime = String.format(Locale.US, "%04d%02d%02d%02d%02d.%02d",
                                 y, m + 1, d, h, min, 0);
-                        rm.execute("touch -t " + touchTime + " '" + file.getAbsolutePath() + "'");
+                        // Escaped arg (no string-concat quoting) to avoid shell injection.
+                        rm.execute("touch -t " + touchTime + " "
+                                + RootManager.escapeShellArg(file.getAbsolutePath()));
                         context.handler.post(() -> {
                             modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
                             Extensions.showMessage(context, "Last modified updated");

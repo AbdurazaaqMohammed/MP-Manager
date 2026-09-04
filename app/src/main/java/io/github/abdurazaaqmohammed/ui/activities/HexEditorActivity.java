@@ -51,6 +51,7 @@ import java.util.TreeMap;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
@@ -61,6 +62,8 @@ public class HexEditorActivity extends AppCompatActivity {
     private RandomAccessFile raf;
     private long size;
     private boolean readOnly;
+    /** Absolute root-original path when editing a staged copy. Null for normal files. */
+    private String rootOriginalPath;
 
     private final TreeMap<Integer, Integer> mods = new TreeMap<>();
     private final ArrayDeque<int[]> undoStack = new ArrayDeque<>();
@@ -128,6 +131,11 @@ public class HexEditorActivity extends AppCompatActivity {
 
         String path = getIntent().getStringExtra("path");
         file = path != null ? new File(path) : null;
+        String rop = getIntent().getStringExtra("rootOriginalPath");
+        if (rop != null && !rop.isEmpty() && file != null
+                && !rop.equals(file.getAbsolutePath())) {
+            rootOriginalPath = rop;
+        }
         if (file == null || !file.isFile()) {
             Extensions.showMessage(this, "File not found");
             finish();
@@ -149,7 +157,9 @@ public class HexEditorActivity extends AppCompatActivity {
         }
 
         MaterialToolbar toolbar = findViewById(R.id.hexToolbar);
-        toolbar.setSubtitle(file.getName());
+        toolbar.setSubtitle(rootOriginalPath != null
+                ? new File(rootOriginalPath).getName() + " (root)"
+                : file.getName());
         toolbar.setNavigationIcon(R.drawable.chevron_left_24px);
         toolbar.setNavigationOnClickListener(v -> confirmDiscardAndFinish());
         setSupportActionBar(toolbar);
@@ -649,6 +659,20 @@ public class HexEditorActivity extends AppCompatActivity {
             Extensions.showMessage(this, "File is read-only");
             return;
         }
+        if (rootOriginalPath != null && RootStaging.needsWriteConfirm(rootOriginalPath)) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("Write to system path?")
+                    .setMessage("Save back to\n" + rootOriginalPath + "\n\nModifying system files can break apps or boot. Continue?")
+                    .setPositiveButton(android.R.string.ok, (d, w) -> saveChangesRoot())
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+        saveChangesRoot();
+    }
+
+    /** Write mods to the (staged) file, then root write-back when staged. */
+    private void saveChangesRoot() {
         try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
             for (java.util.Map.Entry<Integer, Integer> entry : mods.entrySet()) {
                 w.seek(entry.getKey());
@@ -657,6 +681,18 @@ public class HexEditorActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
+            return;
+        }
+        if (rootOriginalPath != null) {
+            Extensions.showMessage(this, "Writing back as root…");
+            new Thread(() -> {
+                try {
+                    RootStaging.writeBack(this, file, rootOriginalPath);
+                    runOnUiThread(() -> Extensions.showMessage(this, "Saved (root write-back OK)"));
+                } catch (Exception e) {
+                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                }
+            }).start();
         }
     }
 

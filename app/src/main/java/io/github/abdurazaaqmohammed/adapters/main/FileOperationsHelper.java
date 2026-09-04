@@ -176,7 +176,10 @@ public class FileOperationsHelper {
 
         for (Object item : items) {
             if (item instanceof File f) {
-                File dest = FileUtils.getUnusedFile(destinationFolder, f.getName());
+                // Root-aware dest naming: File.exists() lies (false) inside
+                // root-only dirs, so check via su to avoid silently
+                // overwriting an existing root file.
+                File dest = getUnusedDest(rm, destinationFolder, f.getName(), useRoot);
                 if (useRoot) {
                     try {
                         if (f.isDirectory()) rm.copyDir(f.getAbsolutePath(), dest.getAbsolutePath());
@@ -188,10 +191,21 @@ public class FileOperationsHelper {
                 }
                 if (f.renameTo(dest)) continue;
                 if (f.isDirectory()) {
-                    dest.mkdir();
+                    if (useRoot) {
+                        try {
+                            rm.mkdir(dest.getAbsolutePath());
+                        } catch (Exception ignored) {
+                            //noinspection ResultOfMethodCallIgnored
+                            dest.mkdir();
+                        }
+                    } else {
+                        //noinspection ResultOfMethodCallIgnored
+                        dest.mkdir();
+                    }
                     FileUtils.copyFolder(f, dest);
                 } else
                     FileUtils.copyFile(f, dest);
+                //noinspection ResultOfMethodCallIgnored
                 f.delete();
             } else if (item instanceof ZipEntryInfo) {
                 extractZipEntry((ZipEntryInfo) item, destinationFolder);
@@ -199,6 +213,28 @@ public class FileOperationsHelper {
         }
         context.handler.post(() -> context.loadFolderInPane(destinationFolder, !adapter.pane1));
         return true;
+    }
+
+    /**
+     * Dest naming that works for root-only folders: {@code File.exists()}
+     * always returns false there (no app-uid permission), so consult root
+     * {@code test -e} when root ops are on to avoid overwriting.
+     */
+    private File getUnusedDest(RootManager rm, File destDir, String name, boolean useRoot) {
+        File first = FileUtils.getUnusedFile(destDir, name);
+        if (!useRoot) return first;
+        try {
+            if (!rm.exists(first.getAbsolutePath())) return first;
+            String base = org.apache.commons.io.FilenameUtils.getBaseName(name);
+            String ext = org.apache.commons.io.FilenameUtils.getExtension(name);
+            for (int i = 1; i < 1000; i++) {
+                String candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
+                File c = new File(destDir, candidate);
+                if (!rm.exists(c.getAbsolutePath())) return c;
+            }
+        } catch (Exception ignored) {
+        }
+        return first;
     }
 
     private boolean copyToDestination(List<Object> items) throws IOException {
@@ -223,10 +259,13 @@ public class FileOperationsHelper {
 
         for (Object item : items) {
             if (item instanceof File f) {
-                File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : FileUtils.getUnusedFile(destinationFolder, f.getName());
+                File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : getUnusedDest(rm, destinationFolder, f.getName(), useRoot);
                 if (dest == null || dest.equals(f)) continue;
                 if (useRoot) {
                     try {
+                        // RootFile (from root listing) carries the true
+                        // isDirectory; plain File.canRead()==false paths also
+                        // work here because su reads them directly.
                         if (f.isDirectory()) rm.copyDir(f.getAbsolutePath(), dest.getAbsolutePath());
                         else rm.copyFile(f.getAbsolutePath(), dest.getAbsolutePath());
                         continue;
@@ -234,7 +273,17 @@ public class FileOperationsHelper {
                     }
                 }
                 if (f.isDirectory()) {
-                    dest.mkdir();
+                    if (useRoot) {
+                        try {
+                            rm.mkdir(dest.getAbsolutePath());
+                        } catch (Exception ignored) {
+                            //noinspection ResultOfMethodCallIgnored
+                            dest.mkdir();
+                        }
+                    } else {
+                        //noinspection ResultOfMethodCallIgnored
+                        dest.mkdir();
+                    }
                     FileUtils.copyFolder(f, dest);
                 } else
                     FileUtils.copyFile(f, dest);
@@ -259,12 +308,20 @@ public class FileOperationsHelper {
     private String getDuplicateName(String fileName, File destinationFolder) {
         String base = org.apache.commons.io.FilenameUtils.getBaseName(fileName);
         String ext = org.apache.commons.io.FilenameUtils.getExtension(fileName);
+        RootManager rm = null;
+        boolean useRoot = false;
+        try {
+            rm = RootManager.getInstance(context);
+            useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        } catch (Exception ignored) {
+        }
         int i = 1;
         String candidate;
         do {
             candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
             i++;
-        } while (new File(destinationFolder, candidate).exists());
+        } while (new File(destinationFolder, candidate).exists()
+                || (useRoot && rm != null && rm.exists(new File(destinationFolder, candidate).getAbsolutePath())));
         return candidate;
     }
 
@@ -565,7 +622,23 @@ public class FileOperationsHelper {
         pm.show();
         new Thread(() -> {
             try {
-                ArchiveUtil.extract(archive, destDir);
+                // Root-only archives are unreadable to zip4j/tar readers:
+                // stage a copy into cache first (binary-safe).
+                File readable = archive;
+                File staged = null;
+                if (io.github.abdurazaaqmohammed.utils.RootStaging.needsStaging(context, archive)) {
+                    staged = io.github.abdurazaaqmohammed.utils.RootStaging.stageForRead(
+                            context, archive.getAbsolutePath());
+                    readable = staged;
+                }
+                try {
+                    ArchiveUtil.extract(readable, destDir);
+                } finally {
+                    if (staged != null) {
+                        //noinspection ResultOfMethodCallIgnored
+                        staged.delete();
+                    }
+                }
                 pm.dismiss();
                 context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
             } catch (Exception e) {

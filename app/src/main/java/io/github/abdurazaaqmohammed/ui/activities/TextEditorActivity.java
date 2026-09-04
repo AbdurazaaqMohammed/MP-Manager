@@ -40,6 +40,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
@@ -49,6 +50,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         String title;
         Uri fileUri;
         File file;
+        /** Absolute path of the root-original file when editing a staged copy. Null for normal files. */
+        String rootOriginalPath;
         boolean axml;
         List<ResEntry> resEntries;
         String pendingDecoded;
@@ -413,6 +416,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         }
 
         EditorTab existing = findExistingTab(file, uri);
+        String earlyRootOriginal = intent.getStringExtra("rootOriginalPath");
+        if (existing == null && earlyRootOriginal != null && !earlyRootOriginal.isEmpty()) {
+            existing = findExistingRootTab(earlyRootOriginal);
+        }
         if (existing != null) {
             int idx = tabs.indexOf(existing);
             selectTab(idx);
@@ -431,7 +438,14 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         tab.fileUri = uri;
         tab.axml = isAxml;
         tab.resEntries = entries;
-        tab.title = resolveTitle(file, uri);
+        String rootOriginal = intent.getStringExtra("rootOriginalPath");
+        if (rootOriginal != null && !rootOriginal.isEmpty() && file != null
+                && !rootOriginal.equals(file.getAbsolutePath())) {
+            tab.rootOriginalPath = rootOriginal;
+        }
+        tab.title = tab.rootOriginalPath != null
+                ? new File(tab.rootOriginalPath).getName() + " (root)"
+                : resolveTitle(file, uri);
         // Decoded axml / shared text is applied asynchronously via loadTabContent, exactly
         // like regular files — setting editor text synchronously during onCreate gets wiped
         // by the fragment's deferred initialization. If no text arrived with the intent
@@ -459,6 +473,15 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         for (EditorTab tab : tabs) {
             if (file != null && file.equals(tab.file)) return tab;
             if (file == null && uri != null && uri.equals(tab.fileUri) && tab.file == null) return tab;
+        }
+        return null;
+    }
+
+    /** Match an already-open root-staged tab so re-opening doesn't duplicate tabs. */
+    private EditorTab findExistingRootTab(String rootOriginalPath) {
+        if (rootOriginalPath == null || rootOriginalPath.isEmpty()) return null;
+        for (EditorTab tab : tabs) {
+            if (rootOriginalPath.equals(tab.rootOriginalPath)) return tab;
         }
         return null;
     }
@@ -559,6 +582,22 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             Extensions.showMessage(this, "No file to save");
             return;
         }
+        // Root-staged tab: confirm before touching key system paths, then
+        // write the staged copy locally and push bytes back via su.
+        if (tab.file != null && tab.rootOriginalPath != null) {
+            if (RootStaging.needsWriteConfirm(tab.rootOriginalPath)) {
+                String target = tab.rootOriginalPath;
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Write to system path?")
+                        .setMessage("Save back to\n" + target + "\n\nModifying system files can break apps or boot. Continue?")
+                        .setPositiveButton(android.R.string.ok, (d, w) -> saveTabTextRoot(tab, text))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                return;
+            }
+            saveTabTextRoot(tab, text);
+            return;
+        }
         try (OutputStream os = (tab.file == null
                 ? getContentResolver().openOutputStream(tab.fileUri, "wt")
                 : FileUtils.getOutputStream(tab.file))) {
@@ -569,6 +608,28 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             tab.modified = true;
             new ErrorUtil(this).showError(e);
         }
+    }
+
+    /** Save a root-staged tab: local staged write, then root write-back. */
+    private void saveTabTextRoot(EditorTab tab, String text) {
+        try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
+            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(Charset.forName("UTF-8")));
+        } catch (Exception e) {
+            tab.modified = true;
+            new ErrorUtil(this).showError(e);
+            return;
+        }
+        tab.content = text;
+        tab.modified = false;
+        Extensions.showMessage(this, "Writing back as root…");
+        new Thread(() -> {
+            try {
+                RootStaging.writeBack(this, tab.file, tab.rootOriginalPath);
+                runOnUiThread(() -> Extensions.showMessage(this, "Saved (root write-back OK)"));
+            } catch (Exception e) {
+                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+            }
+        }).start();
     }
 
     private void removeTab(int position) {

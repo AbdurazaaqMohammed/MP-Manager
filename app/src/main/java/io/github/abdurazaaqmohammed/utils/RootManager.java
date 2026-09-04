@@ -784,6 +784,300 @@ public class RootManager {
         }
     }
 
+    // ========== Root-aware stat / listing with metadata ==========
+    // These helpers are the safe bridge between "su can see it" and
+    // "java.io.File cannot". Reads never modify the device; every path
+    // going to a shell is passed through escapeShellArg, and every write
+    // or delete goes through isPathBlocked.
+
+    /** Max file size (bytes) that may be staged through root for viewing/editing. */
+    public static final long MAX_STAGE_BYTES = 100L * 1024L * 1024L;
+
+    /** Directories that are only readable with root on stock Android. */
+    private static final String[] ROOT_ONLY_PREFIXES = {
+            "/data/data", "/data/user", "/data/user_de",
+            "/data/system", "/data/misc", "/data/vendor",
+            "/data/property", "/data/adb", "/data/app-private",
+            "/root"
+    };
+
+    /** Metadata for one path, obtained via root stat. */
+    public static class RootEntry {
+        public final String path;
+        public final boolean exists;
+        public final boolean isDirectory;
+        public final boolean isFile;
+        public final long length;
+        public final long lastModified;
+        public final String mode;
+
+        public RootEntry(String path, boolean exists, boolean isDirectory,
+                         boolean isFile, long length, long lastModified, String mode) {
+            this.path = path;
+            this.exists = exists;
+            this.isDirectory = isDirectory;
+            this.isFile = isFile;
+            this.length = length;
+            this.lastModified = lastModified;
+            this.mode = mode;
+        }
+    }
+
+    /** Heuristic: is this path inside a directory that normally needs root? */
+    public static boolean isRootOnlyPath(String path) {
+        if (path == null) return false;
+        String normalized = path.endsWith("/") && path.length() > 1
+                ? path.substring(0, path.length() - 1) : path;
+        for (String prefix : ROOT_ONLY_PREFIXES) {
+            if (normalized.equals(prefix) || normalized.startsWith(prefix + "/")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * True when the app uid cannot access {@code path} directly but root can.
+     * Used to decide "stage via su" vs "plain java.io.File".
+     */
+    public boolean needsRootFor(String path) {
+        if (path == null || path.isEmpty()) return false;
+        try {
+            File f = new File(path);
+            if (f.exists() && f.canRead()) return false;
+        } catch (Exception ignored) {
+        }
+        if (!isRootFileOpsEnabled() || !isRootAvailable()) return false;
+        try {
+            return exists(path);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Stat one path via root. Never throws; returns exists=false when unknown. */
+    public RootEntry statEntry(String path) {
+        if (path == null || path.isEmpty() || !isRootMode()) {
+            return new RootEntry(path, false, false, false, 0L, 0L, null);
+        }
+        try {
+            ShellResult r = execute("stat -c '%n\037%F\037%s\037%Y\037%a' "
+                    + escapeShellArg(path) + " 2>/dev/null");
+            if (r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
+                String line = r.output.split("\\r?\\n")[0];
+                String[] parts = line.split("\037", -1);
+                if (parts.length >= 5) {
+                    String type = parts[1].trim();
+                    long size;
+                    long mtime;
+                    try {
+                        size = Long.parseLong(parts[2].trim());
+                    } catch (NumberFormatException e) {
+                        size = 0L;
+                    }
+                    try {
+                        mtime = Long.parseLong(parts[3].trim()) * 1000L;
+                    } catch (NumberFormatException e) {
+                        mtime = 0L;
+                    }
+                    boolean dir = "directory".equalsIgnoreCase(type);
+                    boolean reg = "regular file".equalsIgnoreCase(type)
+                            || "regular empty file".equalsIgnoreCase(type);
+                    return new RootEntry(path, true, dir, reg || (!dir && !"directory".equalsIgnoreCase(type)
+                            && !"unknown".equalsIgnoreCase(type) && isFile(path)),
+                            size, mtime, parts[4].trim());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        // Fallback: separate tests (slower but portable).
+        try {
+            boolean ex = exists(path);
+            if (!ex) return new RootEntry(path, false, false, false, 0L, 0L, null);
+            boolean dir = isDirectory(path);
+            boolean file = !dir && isFile(path);
+            long size = dir ? 0L : getFileSize(path);
+            return new RootEntry(path, true, dir, file, Math.max(0L, size), 0L, getPermissions(path));
+        } catch (Exception ignored) {
+            return new RootEntry(path, false, false, false, 0L, 0L, null);
+        }
+    }
+
+    /**
+     * List a directory via root, returning {@link RootFile} items that carry
+     * stat metadata (isDirectory/length/lastModified work without app-uid
+     * permission). One su invocation for the whole directory.
+     * Returns null when the listing itself failed.
+     */
+    public File[] listRootFilesWithStat(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty()) return null;
+        // Single shell loop: stat every child, \037-separated fields so that
+        // spaces/tabs/pipes in names survive. A trailing is-dir flag from
+        // `test -d` (which follows symlinks) classifies symlinks correctly.
+        // Newline-in-name is not supported (vanishingly rare on Android) and
+        // such entries are skipped.
+        String script = "d=" + escapeShellArg(dirPath) + "; "
+                + "for f in \"$d\"/* \"$d\"/.*; do "
+                + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
+                + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
+                + "if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$f\" 2>/dev/null); then :; "
+                + "else s=$(printf '%s\037unknown\0370\0370\037' \"$f\"); fi; "
+                + "if [ -d \"$f\" ]; then printf '%s\0371\\n' \"$s\"; "
+                + "else printf '%s\0370\\n' \"$s\"; fi; "
+                + "done";
+        ShellResult result = execute(script, 30);
+        if (!result.isSuccess() || result.output == null) return null;
+        List<File> files = new ArrayList<>();
+        for (String line : result.output.split("\\r?\\n")) {
+            if (line.trim().isEmpty()) continue;
+            String[] parts = line.split("\037", -1);
+            if (parts.length < 6) continue;
+            String full = parts[0];
+            String name = full;
+            int slash = full.lastIndexOf('/');
+            if (slash >= 0 && slash + 1 < full.length()) name = full.substring(slash + 1);
+            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+            long size;
+            long mtime;
+            try {
+                size = Long.parseLong(parts[2].trim());
+            } catch (NumberFormatException e) {
+                size = 0L;
+            }
+            try {
+                mtime = Long.parseLong(parts[3].trim()) * 1000L;
+            } catch (NumberFormatException e) {
+                mtime = 0L;
+            }
+            String mode = parts[4].trim();
+            // Authoritative dir flag (follows symlinks); anything else is
+            // treated as a file so taps attempt a clean staged open.
+            boolean dir = "1".equals(parts[5].trim());
+            files.add(new RootFile(dirPath, name,
+                    true, dir, !dir,
+                    dir ? 0L : Math.max(0L, size), mtime,
+                    mode.isEmpty() ? null : mode));
+        }
+        return files.toArray(new File[0]);
+    }
+
+    /**
+     * Binary-safe root read: streams {@code su -c "cat src"} stdout into
+     * {@code out} without ever converting bytes to String (safe for APKs,
+     * images, dex, etc.). Enforces {@code maxBytes} so a huge /data file
+     * cannot OOM or fill the cache. Read-only: never modifies the device.
+     *
+     * @return number of bytes copied
+     */
+    public long streamFromRoot(String srcPath, java.io.OutputStream out, long maxBytes) throws IOException {
+        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (srcPath == null || !srcPath.startsWith("/")) {
+            throw new IOException("Refusing to read non-absolute path");
+        }
+        long size = getFileSize(srcPath);
+        if (size > maxBytes) {
+            throw new IOException("File too large for preview (" + size + " bytes, limit " + maxBytes + "). Copy it instead.");
+        }
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(new String[]{"su", "-c", "cat " + escapeShellArg(srcPath)});
+            java.io.InputStream stdout = process.getInputStream();
+            byte[] buf = new byte[65536];
+            long total = 0;
+            int n;
+            while ((n = stdout.read(buf)) != -1) {
+                total += n;
+                if (total > maxBytes) {
+                    process.destroyForcibly();
+                    throw new IOException("File too large for preview (limit " + maxBytes + " bytes). Copy it instead.");
+                }
+                out.write(buf, 0, n);
+            }
+            out.flush();
+            boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                throw new IOException("Read timed out: " + srcPath);
+            }
+            if (process.exitValue() != 0) {
+                BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                StringBuilder err = new StringBuilder();
+                String line;
+                while ((line = stderr.readLine()) != null) {
+                    if (err.length() > 0) err.append("\n");
+                    err.append(line);
+                }
+                throw new IOException("Root read failed: " + err.toString());
+            }
+            return total;
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Root read failed: " + e.getMessage());
+        } finally {
+            if (process != null) process.destroy();
+        }
+    }
+
+    /**
+     * Binary-safe root write-back: streams a local staged file into
+     * {@code su -c "cat > dst"}. Using {@code cat >} (truncate) preserves the
+     * existing inode owner/permissions when overwriting, which is safer than
+     * {@code cp} (which could orphan perms). Refuses blocked/critical paths.
+     */
+    public void streamToRoot(File localSrc, String dstPath) throws IOException {
+        if (!isRootMode()) throw new IOException("Root mode is disabled");
+        if (dstPath == null || !dstPath.startsWith("/")) {
+            throw new IOException("Refusing to write non-absolute path");
+        }
+        if (isPathBlocked(dstPath)) {
+            throw new IOException("Blocked: refusing to write critical path: " + dstPath);
+        }
+        if (localSrc == null || !localSrc.isFile() || !localSrc.canRead()) {
+            throw new IOException("Staged file unreadable");
+        }
+        if (localSrc.length() > MAX_STAGE_BYTES) {
+            throw new IOException("File too large to write back (" + localSrc.length() + " bytes)");
+        }
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(new String[]{"su", "-c", "cat > " + escapeShellArg(dstPath)});
+            DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
+            java.io.FileInputStream fis = new java.io.FileInputStream(localSrc);
+            byte[] buf = new byte[65536];
+            int n;
+            try {
+                while ((n = fis.read(buf)) != -1) stdin.write(buf, 0, n);
+            } finally {
+                try {
+                    fis.close();
+                } catch (IOException ignored) {
+                }
+            }
+            stdin.flush();
+            stdin.close();
+            boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                throw new IOException("Write timed out: " + dstPath);
+            }
+            if (process.exitValue() != 0) {
+                BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                StringBuilder err = new StringBuilder();
+                String line;
+                while ((line = stderr.readLine()) != null) {
+                    if (err.length() > 0) err.append("\n");
+                    err.append(line);
+                }
+                throw new IOException("Root write failed: " + err.toString());
+            }
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Root write failed: " + e.getMessage());
+        } finally {
+            if (process != null) process.destroy();
+        }
+    }
+
     // ========== Utility ==========
 
     public String getMountInfo() throws IOException {

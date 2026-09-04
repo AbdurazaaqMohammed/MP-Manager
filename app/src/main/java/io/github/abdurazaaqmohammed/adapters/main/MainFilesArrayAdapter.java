@@ -80,6 +80,7 @@ import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 
@@ -99,6 +100,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final FileOperationsHelper fileOps;
     private final ApkToolsHandler apkTools;
     private final CommandHelper commandHelper;
+
+    public void setMultiSelectMode(boolean multiSelectMode) {
+        context.setMultiSelectModeUI(isMultiSelectMode = multiSelectMode);
+    }
 
     private boolean isMultiSelectMode = false;
 
@@ -499,15 +504,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName)
                 .setView(wrapOpenWithContent(gridView))
                 .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> {
-                    try {
-                        Uri u = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
-                        String mime = MimeUtil.getMimeTypeForAction(context, file);
+                    withReadableCopy(file, readable -> {
+                        Uri u = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                        String mime = MimeUtil.getMimeTypeForAction(context, readable);
                         context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW)
                                 .setDataAndType(u, mime != null ? mime : "application/octet-stream")
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
-                    } catch (Exception e) {
-                        new ErrorUtil(context).showError(e);
-                    }
+                    });
                 })
                 .create();
 
@@ -520,7 +523,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             Extensions.showMessage(context, R.string.cannot_open_item);
                             return;
                         }
-                        context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getAbsolutePath()));
+                        openTextEditorRootAware(file);
                     }
                     case 1 -> { // Archive viewer
                         String lowerName = fileName.toLowerCase(Locale.ROOT);
@@ -530,26 +533,26 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             Extensions.showMessage(context, R.string.not_supported_archive);
                             return;
                         }
-                        context.loadZipFolderInPane(file, "", pane1, true);
+                        withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
                     }
                     case 2 -> // Image viewer
-                        context.openImageViewer(file.getAbsolutePath());
+                        withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath()));
                     case 3 -> { // Hex editor
                         if (!file.isFile()) {
                             Extensions.showMessage(context, R.string.cannot_open_item);
                             return;
                         }
-                        context.startActivity(new Intent(context, HexEditorActivity.class).putExtra("path", file.getAbsolutePath()));
+                        openHexEditorRootAware(file);
                     }
                     case 4 -> // Media player
-                        context.playMediaFile(file.getAbsolutePath());
+                        withReadableCopy(file, readable -> context.playMediaFile(readable.getAbsolutePath()));
                     case 5 -> { // APK info
                         String lowerExt = fileName.toLowerCase(Locale.ROOT);
                         if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
                             Extensions.showMessage(context, R.string.not_an_apk);
                             return;
                         }
-                        apkTools.showApkInfoDialog(file, fileName);
+                        withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
                     }
                 }
             } catch (Exception e) {
@@ -579,27 +582,30 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (fileName.endsWith(".txt") || fileName.endsWith(".json")
             || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
             || fileName.endsWith(".gradle") || fileName.endsWith(".properties")) {
-            context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getPath()));
+            openTextEditorRootAware(file);
         } else if(HashUtil.isChecksumFile(fileName)) {
-            checksumDialogs.showHashVerifyDialog(file);
+            withReadableCopy(file, readable -> checksumDialogs.showHashVerifyDialog(readable));
         } else if(fileName.endsWith(".xml")) {
-            try (InputStream is = FileUtils.getInputStream(file)) {
-                if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(file)) {
-                    context.startActivity(new Intent(context, TextEditorActivity.class)
-                            .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
-                            .putExtra("axml", true)
-                            .putExtra("path", file.getPath()));
+            withReadableCopy(file, readable -> {
+                try (InputStream is = FileUtils.getInputStream(readable)) {
+                    if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                        context.startActivity(rootAwareEditorIntent(readable, file)
+                                .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
+                                .putExtra("axml", true)
+                                .putExtra("path", readable.getPath()));
+                    }
+                    else context.startActivity(rootAwareEditorIntent(readable, file)
+                            .putExtra("path", readable.getPath()));
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
                 }
-                else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", file.getPath()));
-            } catch (Exception e) {
-                new ErrorUtil(context).showError(e);
-            }
+            });
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
-            context.openImageViewer(file.getPath());
+            withReadableCopy(file, readable -> context.openImageViewer(readable.getPath()));
         } else if (FileUtils.matchExt(ext, FileUtils.AUDIO_EXTS) || FileUtils.matchExt(ext, FileUtils.VIDEO_EXTS)) {
-            context.playMediaFile(file.getPath());
+            withReadableCopy(file, readable -> context.playMediaFile(readable.getPath()));
         } else if ((ext.equals(".apk"))) {
-            apkTools.showApkInfoDialog(file, fileName);
+            withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
         } else {
             String bak = ".bak";
             if(ext.equals(bak)) {
@@ -620,93 +626,199 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setPositiveButton(R.string.restore, (dialog, which) -> {
                     String bakPath = file.getPath();
                     String origPath = bakPath.replace(bak, "");
-                    File orig = new File(origPath);
-                    boolean origExists = orig.exists();
-                    if(origExists) {
-                        orig.renameTo(new File(origPath + "_tmp_" + bak));
-                    }
-                    file.renameTo(new File(origPath));
-                    if(origExists) orig.renameTo(new File(bakPath));
+                    restoreBakRootAware(file, new File(origPath), fileName);
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
             } else if (fileName.endsWith(".zip")) {
-                context.loadZipFolderInPane(file, "", pane1, true);
+                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
                 dialogUtil.styleAlertDialog(
                         dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
                             dialog.dismiss();
-                            if (which == 0) fileOps.extractArchive(file);
-                            else {
-                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+                            if (which == 0) withReadableCopy(file, readable -> fileOps.extractArchive(readable));
+                            else withReadableCopy(file, readable -> {
+                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
                                 context.startActivity(new Intent(Intent.ACTION_VIEW)
                                         .setDataAndType(uri, context.getContentResolver().getType(uri))
                                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
-                            }
+                            });
                         }).create());
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
-                String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
-                dialogUtil.styleAlertDialog(
-                        dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
-                            dialog.dismiss();
-                            try {
-                                switch (which) {
-                                    case 0:
-                                        if (LegacyUtils.aboveSdk20) {
-                                            new Thread(() -> {
-                                                try (ZipFile zf = new ZipFile(file)) {
-                                                    List<File> apkFiles = new ArrayList<>();
-                                                    File tmpDir = new File(context.getCacheDir(), "split_install_" + System.currentTimeMillis());
-                                                    tmpDir.mkdirs();
-                                                    for (FileHeader fh : zf.getFileHeaders()) {
-                                                        if (fh.getFileName().endsWith(".apk")) {
-                                                            File tmpApk = new File(tmpDir, fh.getFileName());
-                                                            try (InputStream is = zf.getInputStream(fh);
-                                                                 FileOutputStream fos = new FileOutputStream(tmpApk)) {
-                                                                byte[] buf = new byte[65536];
-                                                                int n;
-                                                                while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
-                                                            }
-                                                            apkFiles.add(tmpApk);
-                                                        }
-                                                    }
-                                                    if (!apkFiles.isEmpty()) {
-                                                        InstallUtil.installSplitApksWithDialog(context, apkFiles, file.getName());
-                                                    } else {
-                                                        Extensions.showMessage(context, R.string.no_apk_files_found);
-                                                    }
-                                                } catch (Exception e) {
-                                                    context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
-                                                }
-                                            }).start();
-                                        } else {
-                                            Extensions.showMessage(context, "Installing split APKs is not supported on this version of Android :(");
-
-                                            // We should check if apk minsdk <20 here
-                                            Extensions.showMessage(context, "You could try merging the APK then installing it");
-                                        }
-                                        break;
-                                    case 1:
-                                        context.loadZipFolderInPane(file, "", pane1, true);
-                                        break;
-                                    case 2:
-                                        SignatureKeyDialog.show(context, file, true);
-                                        break;
-                                    case 3:
-                                        MergeUtil.mergeSplitApk(file, context);
-                                        break;
-                                }
-                            } catch (Exception e) {
-                                new ErrorUtil(context).showError(e);
-                            }
-                        }).create());
+                withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
             } else {
-                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider",
-                        file);
-                context.startActivity(new Intent(Intent.ACTION_VIEW)
-                        .setDataAndType(uri, context.getContentResolver().getType(uri))
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+                withReadableCopy(file, readable -> {
+                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider",
+                            readable);
+                    context.startActivity(new Intent(Intent.ACTION_VIEW)
+                            .setDataAndType(uri, context.getContentResolver().getType(uri))
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+                });
             }
         }
+    }
+
+    /** Callback for {@link #withReadableCopy(File, ReadableCallback)}. */
+    private interface ReadableCallback {
+        void onReady(File readable) throws Exception;
+    }
+
+    /**
+     * Run {@code cb} with a readable file: the original when the app uid can
+     * read it, otherwise a root-staged cache copy (binary-safe). Staging runs
+     * off the UI thread with a clear error when root is off/unavailable.
+     */
+    private void withReadableCopy(File file, ReadableCallback cb) {
+        try {
+            if (file != null && file.exists() && file.canRead()) {
+                cb.onReady(file);
+                return;
+            }
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+            return;
+        }
+        RootManager rm = RootManager.getInstance(context);
+        if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
+            Extensions.showMessage(context, "Cannot open: permission denied. Enable Root file ops for system paths.");
+            return;
+        }
+        Extensions.showMessage(context, "Reading via root…");
+        new Thread(() -> {
+            try {
+                File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
+                context.handler.post(() -> {
+                    try {
+                        cb.onReady(staged);
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
+    /** Text editor intent that remembers the root original for save-back. */
+    private Intent rootAwareEditorIntent(File readable, File original) {
+        Intent i = new Intent(context, TextEditorActivity.class);
+        if (readable != null && original != null
+                && !readable.getAbsolutePath().equals(original.getAbsolutePath())) {
+            i.putExtra("rootOriginalPath", original.getAbsolutePath());
+            Extensions.showMessage(context, "Opened via root — Save writes back as root");
+        }
+        return i;
+    }
+
+    private void openTextEditorRootAware(File file) {
+        withReadableCopy(file, readable ->
+                context.startActivity(rootAwareEditorIntent(readable, file)
+                        .putExtra("path", readable.getAbsolutePath())));
+    }
+
+    private void openHexEditorRootAware(File file) {
+        withReadableCopy(file, readable -> {
+            Intent i = new Intent(context, HexEditorActivity.class)
+                    .putExtra("path", readable.getAbsolutePath());
+            if (!readable.getAbsolutePath().equals(file.getAbsolutePath())) {
+                i.putExtra("rootOriginalPath", file.getAbsolutePath());
+                Extensions.showMessage(context, "Opened via root — Save writes back as root");
+            }
+            context.startActivity(i);
+        });
+    }
+
+    /** .bak restore that works on root-only paths via su rename. */
+    private void restoreBakRootAware(File bakFile, File origFile, String fileName) {
+        String bakPath = bakFile.getPath();
+        String origPath = origFile.getPath();
+        RootManager rm = RootManager.getInstance(context);
+        boolean useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable()
+                && (RootStaging.needsStaging(context, bakPath) || RootStaging.needsStaging(context, origPath));
+        if (useRoot) {
+            new Thread(() -> {
+                try {
+                    boolean origExists = rm.exists(origPath) || origFile.exists();
+                    if (origExists) rm.rename(origPath, origPath + "_tmp_.bak");
+                    rm.rename(bakPath, origPath);
+                    if (origExists) rm.rename(origPath + "_tmp_.bak", bakPath);
+                    context.handler.post(() -> context.loadFolderInPane(
+                            bakFile.getParentFile() != null ? bakFile.getParentFile() : new File("/"), pane1));
+                } catch (Exception e) {
+                    context.handler.post(() -> new ErrorUtil(context).showError(e));
+                }
+            }).start();
+            return;
+        }
+        boolean origExists = origFile.exists();
+        if (origExists) {
+            //noinspection ResultOfMethodCallIgnored
+            origFile.renameTo(new File(origPath + "_tmp_" + ".bak"));
+        }
+        //noinspection ResultOfMethodCallIgnored
+        bakFile.renameTo(new File(origPath));
+        if (origExists) {
+            //noinspection ResultOfMethodCallIgnored
+            origFile.renameTo(new File(bakPath));
+        }
+    }
+
+    /** Split-APK menu, always operating on a readable (possibly staged) copy. */
+    private void showSplitApkMenu(File readable, String displayName) {
+        String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
+        dialogUtil.styleAlertDialog(
+                dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
+                    dialog.dismiss();
+                    try {
+                        switch (which) {
+                            case 0:
+                                if (LegacyUtils.aboveSdk20) {
+                                    new Thread(() -> {
+                                        try (ZipFile zf = new ZipFile(readable)) {
+                                            List<File> apkFiles = new ArrayList<>();
+                                            File tmpDir = new File(context.getCacheDir(), "split_install_" + System.currentTimeMillis());
+                                            //noinspection ResultOfMethodCallIgnored
+                                            tmpDir.mkdirs();
+                                            for (FileHeader fh : zf.getFileHeaders()) {
+                                                if (fh.getFileName().endsWith(".apk")) {
+                                                    File tmpApk = new File(tmpDir, new File(fh.getFileName()).getName());
+                                                    try (InputStream is = zf.getInputStream(fh);
+                                                         FileOutputStream fos = new FileOutputStream(tmpApk)) {
+                                                        byte[] buf = new byte[65536];
+                                                        int n;
+                                                        while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                                                    }
+                                                    apkFiles.add(tmpApk);
+                                                }
+                                            }
+                                            if (!apkFiles.isEmpty()) {
+                                                InstallUtil.installSplitApksWithDialog(context, apkFiles, displayName);
+                                            } else {
+                                                context.runOnUiThread(() -> Extensions.showMessage(context, R.string.no_apk_files_found));
+                                            }
+                                        } catch (Exception e) {
+                                            context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                                        }
+                                    }).start();
+                                } else {
+                                    Extensions.showMessage(context, "Installing split APKs is not supported on this version of Android :(");
+                                    Extensions.showMessage(context, "You could try merging the APK then installing it");
+                                }
+                                break;
+                            case 1:
+                                context.loadZipFolderInPane(readable, "", pane1, true);
+                                break;
+                            case 2:
+                                SignatureKeyDialog.show(context, readable, true);
+                                break;
+                            case 3:
+                                MergeUtil.mergeSplitApk(readable, context);
+                                break;
+                        }
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                }).create());
     }
 
     private CharSequence getFilesToDisplay(boolean multi, int position) {
@@ -958,6 +1070,63 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     for (int i : selectedPositions) sources.add((File) values[i]);
                 } else sources.add(file);
 
+                // Root-aware compress: stage unreadable sources into cache so
+                // zip4j/ArchiveUtil (plain File APIs) can read them, and when
+                // the target dir itself is root-only, build in cache then
+                // move into place via su.
+                RootManager rmCompress = RootManager.getInstance(context);
+                boolean compressRoot = rmCompress.isRootFileOpsEnabled() && rmCompress.isRootAvailable();
+                File compressStageTmp = null;
+                List<File> readableSources = sources;
+                File effectiveOutput = outputZip;
+                boolean outputToRoot = false;
+                if (compressRoot) {
+                    boolean anyNeedStage = false;
+                    for (File s : sources) {
+                        if (RootStaging.needsStaging(context, s)) { anyNeedStage = true; break; }
+                    }
+                    if (anyNeedStage) {
+                        try {
+                            compressStageTmp = new File(context.getCacheDir(),
+                                    "compress_stage_" + System.currentTimeMillis());
+                            //noinspection ResultOfMethodCallIgnored
+                            compressStageTmp.mkdirs();
+                            readableSources = new ArrayList<>();
+                            for (File s : sources) {
+                                if (RootStaging.needsStaging(context, s)) {
+                                    File stagedChild = new File(compressStageTmp, s.getName());
+                                    if (s.isDirectory()) rmCompress.copyDir(s.getAbsolutePath(), stagedChild.getAbsolutePath());
+                                    else rmCompress.copyFile(s.getAbsolutePath(), stagedChild.getAbsolutePath());
+                                    // Ensure app-uid readability of root-created copies.
+                                    rmCompress.execute("chmod -R a+rX "
+                                            + RootManager.escapeShellArg(stagedChild.getAbsolutePath()));
+                                    readableSources.add(stagedChild);
+                                } else readableSources.add(s);
+                            }
+                        } catch (Exception e) {
+                            pm.dismiss();
+                            new ErrorUtil(context).showError(e);
+                            return;
+                        }
+                    }
+                    File outParent = outputZip.getParentFile();
+                    if (outParent != null && !outParent.canWrite()
+                            && rmCompress.exists(outParent.getAbsolutePath())) {
+                        outputToRoot = true;
+                        if (compressStageTmp == null) {
+                            compressStageTmp = new File(context.getCacheDir(),
+                                    "compress_stage_" + System.currentTimeMillis());
+                            //noinspection ResultOfMethodCallIgnored
+                            compressStageTmp.mkdirs();
+                        }
+                        effectiveOutput = new File(compressStageTmp, outputZip.getName());
+                    }
+                }
+                final List<File> finalSources = readableSources;
+                final File finalOutput = effectiveOutput;
+                final boolean finalToRoot = outputToRoot;
+                final File finalStageTmp = compressStageTmp;
+
                 if (format.equals(".zip")) {
                     ZipParameters zipParameters = new ZipParameters();
                     CompressionLevel compressionLevel = CompressionLevel.valueOf(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
@@ -966,29 +1135,44 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         zipParameters.setCompressionMethod(CompressionMethod.STORE);
                     CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
 
-                    try (ZipFile zf = new ZipFile(outputZip)) {
+                    try (ZipFile zf = new ZipFile(finalOutput)) {
                         if (!TextUtils.isEmpty(pw)) {
                             zipParameters.setEncryptFiles(true);
                             zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                             zf.setPassword(pw.toString().toCharArray());
                         }
-                        for (File source : sources) {
+                        for (File source : finalSources) {
                             if (source.isDirectory())
                                 zf.addFolder(source, zipParameters);
                             else zf.addFile(source, zipParameters);
                         }
+                        if (finalToRoot) rmCompress.copyFile(finalOutput.getAbsolutePath(), outputZip.getAbsolutePath());
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
+                    } finally {
+                        if (finalStageTmp != null && !finalToRoot) Util.deleteDir(finalStageTmp);
+                        else if (finalStageTmp != null && finalToRoot && !finalOutput.equals(outputZip)) {
+                            // Keep only the delivered archive; drop staged sources.
+                            for (File s : finalSources) {
+                                if (s.getParentFile() != null && s.getParentFile().equals(finalStageTmp)
+                                        && !s.equals(finalOutput)) Util.deleteDir(s);
+                            }
+                            //noinspection ResultOfMethodCallIgnored
+                            finalOutput.delete();
+                        }
                     }
                 } else {
                     try {
-                        ArchiveUtil.create(outputZip, sources);
+                        ArchiveUtil.create(finalOutput, finalSources);
+                        if (finalToRoot) rmCompress.copyFile(finalOutput.getAbsolutePath(), outputZip.getAbsolutePath());
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
+                    } finally {
+                        if (finalStageTmp != null) Util.deleteDir(finalStageTmp);
                     }
                 }
             }).start();

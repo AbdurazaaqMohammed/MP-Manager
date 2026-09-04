@@ -1601,6 +1601,9 @@ public class MainActivity extends AppCompatActivity {
                 if (multiSelectUIActive) {
                     for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.exitMultiSelectMode();
                     return;
+                } else if(getCurrentPane().getAdapter() instanceof MainFilesArrayAdapter adapter && adapter.isInZip) {
+                    adapter.setMultiSelectMode(true);
+                    return;
                 }
                 View textInputLayout = LayoutInflater.from(this).inflate(R.layout.enter_name, null);
                 EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
@@ -1612,6 +1615,7 @@ public class MainActivity extends AppCompatActivity {
                             File ogFolder = isPane1 ? pane1Folder : pane2Folder;
                             String inputStr = input.getText().toString();
                             if (new File(ogFolder, inputStr).mkdir()) loadFolderInPane(ogFolder, isPane1);
+                            else if (mkdirViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
                             else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_folder, inputStr));
                         })
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
@@ -1621,20 +1625,26 @@ public class MainActivity extends AppCompatActivity {
                             String inputStr = input.getText().toString();
                             try {
                                 if (new File(ogFolder, inputStr).createNewFile()) loadFolderInPane(ogFolder, isPane1);
+                                else if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
                                 else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
                             } catch (IOException e) {
-                                Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
+                                if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
+                                else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
                             }
                         }).show();
                 ad.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
+                    CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
+                    if (TextUtils.isEmpty(text)) {
+                        Extensions.showMessage(MainActivity.this, rss.getString(R.string.nothing_found_to_paste)); return;
+                    }
                     int selectionStart = input.getSelectionStart();
                     int selectionEnd = input.getSelectionEnd();
                     if (selectionStart != selectionEnd) {
                         input.getText().delete(selectionStart, selectionEnd);
+                        input.getText().insert(selectionStart, text);
+                    } else if(selectionEnd == -1) {
+                        input.setText(text);
                     }
-                    CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
-                    if (TextUtils.isEmpty(text)) Extensions.showMessage(MainActivity.this, rss.getString(R.string.nothing_found_to_paste));
-                    else input.getText().insert(selectionStart, text);
                 });
             });
 
@@ -1861,7 +1871,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
-                            if (f != null && f.canRead()) loadFolderInPane(f, lastPaneSelected == 1);
+                            if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
                             else if (isBackPressedToExit) {
                                 handler.removeCallbacks(resetExitPrompt);
                                 finishAffinity();
@@ -1951,7 +1961,17 @@ public class MainActivity extends AppCompatActivity {
         if (files == null) {
             RootManager rm = RootManager.getInstance(this);
             if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                files = rm.listRootFiles(folder.getAbsolutePath());
+                // Root listing WITH stat metadata: returned RootFile items carry
+                // isDirectory/length/lastModified from su, so icons, sizes and
+                // copy/open decisions below work even though the app uid itself
+                // cannot stat paths like /data/data/....
+                files = rm.listRootFilesWithStat(folder.getAbsolutePath());
+                if (files != null) {
+                    File[] filtered = java.util.Arrays.stream(files)
+                            .filter(this::isNotHidden)
+                            .toArray(File[]::new);
+                    files = filtered;
+                }
             }
             if (files == null) {
                 Extensions.showMessage(this, "Could not open folder " + folder.getName());
@@ -2160,6 +2180,49 @@ public class MainActivity extends AppCompatActivity {
         loadFolderInPane(folder, pane1, true);
     }
 
+    /**
+     * True when {@code folder} is listable via root even though the app uid
+     * cannot read it (e.g. parent of a /data/data/... dir on back-nav).
+     * Read-only check, never modifies the device.
+     */
+    private boolean canListViaRoot(File folder) {
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            return rm.isRootFileOpsEnabled() && rm.isRootAvailable()
+                    && folder != null && rm.exists(folder.getAbsolutePath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Root fallback for creating a folder when direct mkdir fails. */
+    private boolean mkdirViaRoot(File parent, String name) {
+        try {
+            if (name == null || name.isEmpty() || name.contains("/") || name.contains("\0")) return false;
+            RootManager rm = RootManager.getInstance(this);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) return false;
+            rm.mkdir(new File(parent, name).getAbsolutePath());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Root fallback for creating an empty file when direct create fails. */
+    private boolean touchViaRoot(File parent, String name) {
+        try {
+            if (name == null || name.isEmpty() || name.contains("/") || name.contains("\0")) return false;
+            RootManager rm = RootManager.getInstance(this);
+            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) return false;
+            String target = new File(parent, name).getAbsolutePath();
+            if (rm.exists(target)) return false;
+            rm.touch(target);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private boolean showMsgOnLongPress(View v) {
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
@@ -2200,8 +2263,16 @@ public class MainActivity extends AppCompatActivity {
         uiHelper.scrollTextView(currentFolderPath);
         if (files == null) this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, 0, 0));
         else {
-            File[] folders = curr.listFiles(File::isDirectory);
-            int foldersCount = folders == null ? 0 : folders.length;
+            // Count from the already-listed array (root listings carry
+            // isDirectory via RootFile). Re-listing with curr.listFiles()
+            // returns null on root-only dirs and would show 0 folders.
+            int foldersCount = 0;
+            for (File f : files) {
+                try {
+                    if (f != null && f.isDirectory()) foldersCount++;
+                } catch (Exception ignored) {
+                }
+            }
             this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, foldersCount, files.length - foldersCount));
         }
     }
@@ -2422,8 +2493,24 @@ public class MainActivity extends AppCompatActivity {
     private void searchRecursive(File dir, List<File> results, String query, boolean subfolders, boolean mCase,
             boolean regex, Pattern pattern, String textInside, long minSize, long maxSize) {
         File[] files = dir.listFiles();
-        if (files == null)
-            return;
+        if (files == null) {
+            // Root-only dir: name/size search via su listing with stat.
+            // Content search (textInside) is skipped here to avoid staging
+            // every file; open files individually instead.
+            try {
+                RootManager rm = RootManager.getInstance(this);
+                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()
+                        && !TextUtils.isEmpty(textInside)) {
+                    return;
+                }
+                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                    files = rm.listRootFilesWithStat(dir.getAbsolutePath());
+                }
+            } catch (Exception ignored) {
+            }
+            if (files == null)
+                return;
+        }
         for (File f : files) {
             boolean matchName;
             String name = f.getName();
