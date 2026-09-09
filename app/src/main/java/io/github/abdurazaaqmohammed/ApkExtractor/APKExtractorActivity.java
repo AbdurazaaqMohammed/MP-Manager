@@ -134,6 +134,17 @@ public class APKExtractorActivity extends AppCompatActivity {
         return appFolder.exists() || appFolder.mkdirs() ? appFolder : new File(Environment.getExternalStorageDirectory(), "Download");
     }
 
+    public static File getAppFolder(android.content.Context context) {
+        try {
+            String base = io.github.abdurazaaqmohammed.utils.UiPrefs.appPathDir(context,
+                    new File(Environment.getExternalStorageDirectory(), "MP Manager").getAbsolutePath());
+            File dir = new File(base, "Extracted APKs");
+            if (dir.exists() || dir.mkdirs()) return dir;
+        } catch (Exception ignored) {
+        }
+        return getAppFolder();
+    }
+
     @Override
     public void onBackPressed() {
         AppRecyclerViewAdapter adapter = getCurrentAdapter();
@@ -898,7 +909,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     }
 
     private void performAction(int whichAction, AppRecyclerViewAdapter adapter) {
-        File appFolder = getAppFolder();
+        File appFolder = getAppFolder(this);
         final List<Integer> itemsToProcess = new ArrayList<>(adapter.selectedItems);
         adapter.clearSelection();
         //findViewById(R.id.confirmButton).setVisibility(View.INVISIBLE);
@@ -1088,7 +1099,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         fileName.append(".apk");
         if (LegacyUtils.aboveSdk20 && ai.isSplit && !antisplit) fileName.append('s');
         String fileNameString = fileName.toString();
-        File output = new File(getAppFolder(), fileNameString);
+        File output = new File(getAppFolder(this), fileNameString);
 
         ProgressManager pm = new ProgressManager(this, true).show();
 

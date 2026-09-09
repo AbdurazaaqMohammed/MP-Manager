@@ -116,7 +116,8 @@ public class RootManager {
 
     public enum WorkingMode {
         NON_ROOT("non_root", "Non-root"),
-        ROOT("root", "Root");
+        ROOT("root", "Root"),
+        SHIZUKU("shizuku", "Shizuku");
 
         public final String key;
         public final String label;
@@ -131,6 +132,7 @@ public class RootManager {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String mode = prefs.getString("working_mode", WorkingMode.NON_ROOT.key);
         if (WorkingMode.ROOT.key.equals(mode)) return WorkingMode.ROOT;
+        if (WorkingMode.SHIZUKU.key.equals(mode)) return WorkingMode.SHIZUKU;
         return WorkingMode.NON_ROOT;
     }
 
@@ -145,10 +147,31 @@ public class RootManager {
         return getWorkingMode() == WorkingMode.ROOT;
     }
 
+    public boolean isShizukuMode() {
+        return getWorkingMode() == WorkingMode.SHIZUKU;
+    }
+
+    public String suBinary() {
+        try {
+            String custom = PreferenceManager.getDefaultSharedPreferences(context)
+                    .getString("su_command", "");
+            if (custom != null) {
+                custom = custom.trim();
+                if (!custom.isEmpty() && custom.matches("^[A-Za-z0-9_./-]+$")) return custom;
+            }
+        } catch (Exception ignored) {
+        }
+        return "su";
+    }
+
     public boolean isRootAvailable() {
         if (rootAvailable != null) return rootAvailable;
         rootAvailable = checkRoot();
         return rootAvailable;
+    }
+
+    public void refreshRootCache() {
+        rootAvailable = null;
     }
 
     public boolean isSilentInstallEnabled() {
@@ -168,7 +191,7 @@ public class RootManager {
 
     private boolean checkRoot() {
         try {
-            Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
+            Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "id"});
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line = reader.readLine();
             boolean hasRoot = line != null && line.contains("uid=0");
@@ -246,7 +269,7 @@ public class RootManager {
         }
         synchronized (lock) {
             try {
-                Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", command});
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
                 BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
@@ -281,7 +304,7 @@ public class RootManager {
         }
         synchronized (lock) {
             try {
-                Process process = Runtime.getRuntime().exec(new String[]{"su"});
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
                 stdin.writeBytes(command + "\n");
                 if (input != null) {
@@ -473,7 +496,7 @@ public class RootManager {
         }
         synchronized (lock) {
             try {
-                Process process = Runtime.getRuntime().exec(new String[]{"su"});
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
                 stdin.writeBytes("cat > " + escapeShellArg(path) + " << 'ENDOFFILE'\n");
                 stdin.writeBytes(content);
@@ -510,7 +533,7 @@ public class RootManager {
         }
         synchronized (lock) {
             try {
-                Process process = Runtime.getRuntime().exec(new String[]{"su"});
+                Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
                 stdin.writeBytes("cat >> " + escapeShellArg(path) + " << 'ENDOFFILE'\n");
                 stdin.writeBytes(content);
@@ -978,7 +1001,7 @@ public class RootManager {
         }
         Process process = null;
         try {
-            process = Runtime.getRuntime().exec(new String[]{"su", "-c", "cat " + escapeShellArg(srcPath)});
+            process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "cat " + escapeShellArg(srcPath)});
             java.io.InputStream stdout = process.getInputStream();
             byte[] buf = new byte[65536];
             long total = 0;
@@ -1039,7 +1062,7 @@ public class RootManager {
         }
         Process process = null;
         try {
-            process = Runtime.getRuntime().exec(new String[]{"su", "-c", "cat > " + escapeShellArg(dstPath)});
+            process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "cat > " + escapeShellArg(dstPath)});
             DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
             java.io.FileInputStream fis = new java.io.FileInputStream(localSrc);
             byte[] buf = new byte[65536];

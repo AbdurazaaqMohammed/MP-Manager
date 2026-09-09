@@ -16,6 +16,9 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.provider.MediaStore;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -86,6 +89,11 @@ import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
 import io.github.abdurazaaqmohammed.player.PlayerManager;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
+import rikka.shizuku.Shizuku;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -1642,7 +1650,7 @@ public class MainActivity extends AppCompatActivity {
                     if (selectionStart != selectionEnd) {
                         input.getText().delete(selectionStart, selectionEnd);
                         input.getText().insert(selectionStart, text);
-                    } else if(selectionEnd == -1) {
+                    } else if(selectionEnd == -1) { // Empty
                         input.setText(text);
                     }
                 });
@@ -1832,7 +1840,23 @@ public class MainActivity extends AppCompatActivity {
             }
             loadFolderInPane(homeDir1, true);
             loadFolderInPane(homeDir2, false);
+            loadFolderInPane(resolveStartupFolder(false, homeDir2), false);
         });
+    }
+
+    private File resolveStartupFolder(boolean pane1, File home) {
+        try {
+            if ("last".equals(UiPrefs.startupMode(this, pane1))) {
+                String saved = PreferenceManager.getDefaultSharedPreferences(this)
+                        .getString(pane1 ? "last_path_1" : "last_path_2", null);
+                if (!TextUtils.isEmpty(saved)) {
+                    File f = new File(saved);
+                    if (f.isDirectory() || AccessManager.exists(this, saved)) return f;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return home;
     }
 
     private void setupNavigationButtons() {
@@ -1851,11 +1875,12 @@ public class MainActivity extends AppCompatActivity {
         else if (isBookmarksDrawerOpen) closeBookmarksDrawer();
         else {
             ViewGroup topBar = findViewById(R.id.topBar);
-            EditText filterBar = (EditText) topBar.getChildAt(2);
-            if (filterBar.getVisibility() == View.VISIBLE) {
+            com.google.android.material.textfield.TextInputLayout filterBox = (com.google.android.material.textfield.TextInputLayout) topBar.getChildAt(2);
+            EditText filterBar = filterBox.getEditText();
+            if (filterBox.getVisibility() == View.VISIBLE) {
                 topBar.getChildAt(1).setVisibility(View.VISIBLE);
-                filterBar.setVisibility(View.GONE);
-                filterBar.setText("");
+                filterBox.setVisibility(View.GONE);
+                if (filterBar != null) filterBar.setText("");
             } else {
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if(a instanceof MainFilesArrayAdapter adapter) {
@@ -1959,13 +1984,8 @@ public class MainActivity extends AppCompatActivity {
         }
         File[] files = folder.listFiles(this::isNotHidden);
         if (files == null) {
-            RootManager rm = RootManager.getInstance(this);
-            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                // Root listing WITH stat metadata: returned RootFile items carry
-                // isDirectory/length/lastModified from su, so icons, sizes and
-                // copy/open decisions below work even though the app uid itself
-                // cannot stat paths like /data/data/....
-                files = rm.listRootFilesWithStat(folder.getAbsolutePath());
+            if (AccessManager.fileOpsOn(this)) {
+                files = AccessManager.listWithStat(this, folder.getAbsolutePath());
                 if (files != null) {
                     File[] filtered = java.util.Arrays.stream(files)
                             .filter(this::isNotHidden)
@@ -1977,6 +1997,11 @@ public class MainActivity extends AppCompatActivity {
                 Extensions.showMessage(this, "Could not open folder " + folder.getName());
                 return;
             }
+        }
+        try {
+            PreferenceManager.getDefaultSharedPreferences(this).edit()
+                    .putString(pane1 ? "last_path_1" : "last_path_2", folder.getAbsolutePath()).apply();
+        } catch (Exception ignored) {
         }
         Arrays.sort(files);
         View buildButton = findViewById(R.id.build);
@@ -2180,16 +2205,9 @@ public class MainActivity extends AppCompatActivity {
         loadFolderInPane(folder, pane1, true);
     }
 
-    /**
-     * True when {@code folder} is listable via root even though the app uid
-     * cannot read it (e.g. parent of a /data/data/... dir on back-nav).
-     * Read-only check, never modifies the device.
-     */
     private boolean canListViaRoot(File folder) {
         try {
-            RootManager rm = RootManager.getInstance(this);
-            return rm.isRootFileOpsEnabled() && rm.isRootAvailable()
-                    && folder != null && rm.exists(folder.getAbsolutePath());
+            return AccessManager.fileOpsOn(this) && folder != null && AccessManager.exists(this, folder.getAbsolutePath());
         } catch (Exception e) {
             return false;
         }
@@ -2199,9 +2217,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean mkdirViaRoot(File parent, String name) {
         try {
             if (name == null || name.isEmpty() || name.contains("/") || name.contains("\0")) return false;
-            RootManager rm = RootManager.getInstance(this);
-            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) return false;
-            rm.mkdir(new File(parent, name).getAbsolutePath());
+            if (!AccessManager.fileOpsOn(this)) return false;
+            AccessManager.mkdir(this, new File(parent, name).getAbsolutePath(), true);
             return true;
         } catch (Exception e) {
             return false;
@@ -2212,11 +2229,10 @@ public class MainActivity extends AppCompatActivity {
     private boolean touchViaRoot(File parent, String name) {
         try {
             if (name == null || name.isEmpty() || name.contains("/") || name.contains("\0")) return false;
-            RootManager rm = RootManager.getInstance(this);
-            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) return false;
+            if (!AccessManager.fileOpsOn(this)) return false;
             String target = new File(parent, name).getAbsolutePath();
-            if (rm.exists(target)) return false;
-            rm.touch(target);
+            if (AccessManager.exists(this, target)) return false;
+            AccessManager.touch(this, target, true);
             return true;
         } catch (Exception e) {
             return false;
@@ -2258,23 +2274,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setCurrentFolder(File curr, File[] files) {
-        TextView currentFolderPath = findViewById(R.id.currentFolderPath);
-        currentFolderPath.setText(curr.getPath());
-        uiHelper.scrollTextView(currentFolderPath);
-        if (files == null) this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, 0, 0));
-        else {
+        int foldersCount = 0;
+        int totalCount;
+        if (files != null) {
             // Count from the already-listed array (root listings carry
             // isDirectory via RootFile). Re-listing with curr.listFiles()
             // returns null on root-only dirs and would show 0 folders.
-            int foldersCount = 0;
             for (File f : files) {
                 try {
                     if (f != null && f.isDirectory()) foldersCount++;
                 } catch (Exception ignored) {
                 }
             }
-            this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, foldersCount, files.length - foldersCount));
-        }
+            totalCount = files.length - foldersCount;
+        } else totalCount = 0;
+        TextView currentFolderPath = findViewById(R.id.currentFolderPath);
+        int finalFoldersCount = foldersCount;
+        handler.post(() -> {
+            currentFolderPath.setText(curr.getPath());
+            uiHelper.scrollTextView(currentFolderPath);
+            this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, finalFoldersCount, totalCount));
+        });
     }
 
     public void setCurrentPane(int pane) {
@@ -2494,17 +2514,13 @@ public class MainActivity extends AppCompatActivity {
             boolean regex, Pattern pattern, String textInside, long minSize, long maxSize) {
         File[] files = dir.listFiles();
         if (files == null) {
-            // Root-only dir: name/size search via su listing with stat.
-            // Content search (textInside) is skipped here to avoid staging
-            // every file; open files individually instead.
             try {
-                RootManager rm = RootManager.getInstance(this);
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()
+                if (AccessManager.fileOpsOn(this)
                         && !TextUtils.isEmpty(textInside)) {
                     return;
                 }
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                    files = rm.listRootFilesWithStat(dir.getAbsolutePath());
+                if (AccessManager.fileOpsOn(this)) {
+                    files = AccessManager.listWithStat(this, dir.getAbsolutePath());
                 }
             } catch (Exception ignored) {
             }
@@ -2633,21 +2649,68 @@ public class MainActivity extends AppCompatActivity {
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-        // Root Access Settings
-        RootManager rootManager = RootManager.getInstance(this);
-        AutoCompleteTextView workingModeTv = settingsDialog.findViewById(R.id.workingModeTv);
-        MaterialSwitch rootStatusSwitch = settingsDialog.findViewById(R.id.rootStatusSwitch);
-        MaterialSwitch silentInstallToggle = settingsDialog.findViewById(R.id.silentInstallToggle);
-        MaterialSwitch rootFileOpsToggle = settingsDialog.findViewById(R.id.rootFileOpsToggle);
-        MaterialSwitch rootExtractorToggle = settingsDialog.findViewById(R.id.rootExtractorToggle);
-        com.google.android.material.button.MaterialButton rebootMenuBtn = settingsDialog.findViewById(R.id.rebootMenuBtn);
+        setupAppearanceSettings(settingsDialog, settings);
+        setupFolderSettings(settingsDialog, settings);
+        setupFileOpsSettings(settingsDialog, settings);
+        setupAccessSettings(settingsDialog, settings);
+        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
+        androidx.appcompat.app.AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.settings)).setView(settingsDialog).create();
+        settingsAlert.setOnDismissListener(d -> {
+            saveSuCommand(settingsDialog);
+            saveDateFormat(settingsDialog);
+            refreshFileLists();
+        });
+        settingsAlert.show();
+    }
 
-        // Setup working mode dropdown
-        String[] workingModes = {rss.getString(R.string.non_root), rss.getString(R.string.root)};
-        ArrayAdapter<String> workingModeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, workingModes);
-        workingModeTv.setAdapter(workingModeAdapter);
-        workingModeTv.setText(workingModes[rootManager.isRootMode() ? 1 : 0], false);
-        rootStatusSwitch.setChecked(rootManager.isRootAvailable());
+    private void setupAppearanceSettings(ScrollView root, SharedPreferences settings) {
+        TextView sizeLabel = root.findViewById(R.id.fileSizeLabel);
+        SeekBar sizeSeek = root.findViewById(R.id.fileSizeSeek);
+        TextView linesLabel = root.findViewById(R.id.fileLinesLabel);
+        SeekBar linesSeek = root.findViewById(R.id.fileLinesSeek);
+        AutoCompleteTextView dateTv = root.findViewById(R.id.dateFormatTv);
+        LinearLayout previewHolder = root.findViewById(R.id.fileSizePreview);
+        View previewRow = LayoutInflater.from(this).inflate(R.layout.list_file, previewHolder, false);
+        TextView pvName = previewRow.findViewById(R.id.fileName);
+        TextView pvDate = previewRow.findViewById(R.id.fileDate);
+        ImageView pvIcon = previewRow.findViewById(R.id.fileIcon);
+        pvName.setText(getString(R.string.preview_sample_name));
+        pvIcon.setImageResource(R.drawable.baseline_insert_drive_file_24);
+        previewHolder.addView(previewRow);
+
+        int scale = UiPrefs.getScale(this);
+        sizeSeek.setProgress(scale - 60);
+        int lines = UiPrefs.getMaxLines(this);
+        linesSeek.setProgress(lines - 1);
+
+        Runnable updatePreview = () -> {
+            int sc = 60 + sizeSeek.getProgress();
+            int ln = 1 + linesSeek.getProgress();
+            sizeLabel.setText(getString(R.string.file_list_size, sc));
+            linesLabel.setText(getString(R.string.filename_max_lines, ln));
+            pvName.setTextSize(UiPrefs.nameSize(sc));
+            pvName.setMaxLines(ln);
+            pvName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            pvDate.setTextSize(UiPrefs.dateSize(sc));
+            String pattern = dateTv.getText() != null ? dateTv.getText().toString() : "";
+            String dateText;
+            try {
+                dateText = new java.text.SimpleDateFormat(
+                        pattern.isEmpty() ? UiPrefs.DATE_PRESETS[0] : pattern,
+                        java.util.Locale.getDefault()).format(new java.util.Date());
+            } catch (Exception e) {
+                dateText = UiPrefs.formatDate(this, System.currentTimeMillis());
+            }
+            pvDate.setText(dateText + " 1.2 MB");
+            int px = UiPrefs.iconDp(this, sc);
+            ViewGroup.LayoutParams lp = pvIcon.getLayoutParams();
+            if (lp != null) {
+                lp.width = px;
+                lp.height = px;
+                pvIcon.setLayoutParams(lp);
+            }
+        };
 
         workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
             boolean isRoot = position == 1;
@@ -2655,30 +2718,314 @@ public class MainActivity extends AppCompatActivity {
                 Extensions.showMessage(this, "Root not available on this device");
                 workingModeTv.setText(workingModes[0], false);
                 return;
+            @Override
             }
-            rootManager.setWorkingMode(isRoot ? RootManager.WorkingMode.ROOT : RootManager.WorkingMode.NON_ROOT);
-            silentInstallToggle.setEnabled(isRoot);
-            rootFileOpsToggle.setEnabled(isRoot);
-            rootExtractorToggle.setEnabled(isRoot);
-            rebootMenuBtn.setVisibility(isRoot && rootManager.isRootAvailable() ? View.VISIBLE : View.GONE);
+        });
+        linesSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                updatePreview.run();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar s) {
+                settings.edit().putInt("filename_max_lines", 1 + s.getProgress()).apply();
+                refreshFileLists();
+            }
         });
 
+        ArrayAdapter<String> dateAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, UiPrefs.DATE_PRESETS);
+        dateTv.setAdapter(dateAdapter);
+        dateTv.setText(UiPrefs.getDatePattern(this), false);
+        dateTv.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int a, int b, int c) {
+                updatePreview.run();
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+            }
+        });
+        updatePreview.run();
+    }
+
+    private void saveDateFormat(ScrollView root) {
+        try {
+            AutoCompleteTextView dateTv = root.findViewById(R.id.dateFormatTv);
+            String pattern = dateTv.getText() != null ? dateTv.getText().toString().trim() : "";
+            if (pattern.isEmpty()) return;
+            new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault());
+            PreferenceManager.getDefaultSharedPreferences(this).edit()
+                    .putString("date_format", pattern).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void setupFolderSettings(ScrollView root, SharedPreferences settings) {
+        AutoCompleteTextView startup1 = root.findViewById(R.id.startupTv1);
+        AutoCompleteTextView startup2 = root.findViewById(R.id.startupTv2);
+        String[] labels = {getString(R.string.opt_home_folder), getString(R.string.opt_last_opened)};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, labels);
+        startup1.setAdapter(adapter);
+        startup2.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, labels));
+        startup1.setText("last".equals(UiPrefs.startupMode(this, true)) ? labels[1] : labels[0], false);
+        startup2.setText("last".equals(UiPrefs.startupMode(this, false)) ? labels[1] : labels[0], false);
+        startup1.setOnItemClickListener((p, v, pos, id) ->
+                settings.edit().putString("startup_1", pos == 1 ? "last" : "home").apply());
+        startup2.setOnItemClickListener((p, v, pos, id) ->
+                settings.edit().putString("startup_2", pos == 1 ? "last" : "home").apply());
+
+        TextView homeTv1 = root.findViewById(R.id.homePathTv1);
+        TextView homeTv2 = root.findViewById(R.id.homePathTv2);
+        homeTv1.setText(homeDir1 != null ? homeDir1.getPath() : "");
+        homeTv2.setText(homeDir2 != null ? homeDir2.getPath() : "");
+        root.findViewById(R.id.pickHomeBtn1).setOnClickListener(v ->
+                pickDirInto(homeTv1, chosen -> {
+                    settings.edit().putString("home1", chosen).apply();
+                    homeDir1 = new java.io.File(chosen);
+                }));
+        root.findViewById(R.id.pickHomeBtn2).setOnClickListener(v ->
+                pickDirInto(homeTv2, chosen -> {
+                    settings.edit().putString("home2", chosen).apply();
+                    homeDir2 = new java.io.File(chosen);
+                }));
+
+        TextView appPathTv = root.findViewById(R.id.appPathTv);
+        appPathTv.setText(UiPrefs.appPathDir(this,
+                new java.io.File(android.os.Environment.getExternalStorageDirectory(), "MP Manager").getPath()));
+        root.findViewById(R.id.pickAppPathBtn).setOnClickListener(v ->
+                pickDirInto(appPathTv, chosen ->
+                        settings.edit().putString("app_path_dir", chosen).apply()));
+    }
+
+    private interface DirPicked {
+        void onPicked(String path);
+    }
+
+    private void pickDirInto(TextView label, DirPicked cb) {
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        props.root = android.os.Environment.getExternalStorageDirectory();
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle(getString(R.string.pick_folder));
+        picker.setDialogSelectionListener(files -> {
+            if (files != null && files.length > 0 && files[0] != null) {
+                label.setText(files[0]);
+                cb.onPicked(files[0]);
+            }
+        });
+        picker.show();
+    }
+
+    private void setupFileOpsSettings(ScrollView root, SharedPreferences settings) {
+        CompoundButton backupSwitch = root.findViewById(R.id.backupSwitch);
+        backupSwitch.setChecked(settings.getBoolean("gen_backup", true));
+        backupSwitch.setOnCheckedChangeListener((v, checked) ->
+                settings.edit().putBoolean("gen_backup", checked).apply());
+
+        CompoundButton preserveSwitch = root.findViewById(R.id.preserveSwitch);
+        preserveSwitch.setChecked(settings.getBoolean("preserve_mtime", true));
+        preserveSwitch.setOnCheckedChangeListener((v, checked) ->
+                settings.edit().putBoolean("preserve_mtime", checked).apply());
+
+        root.findViewById(R.id.customizeMenuBtn).setOnClickListener(v ->
+                FileMenuCustomizer.show(this));
+
+        AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
+        List<String> levels = new ArrayList<>();
+        for (net.lingala.zip4j.model.enums.CompressionLevel cl
+                : net.lingala.zip4j.model.enums.CompressionLevel.values()) {
+            levels.add(cl.name());
+        }
+        compressTv.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, levels));
+        compressTv.setText(settings.getString("compressLevel",
+                net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION.name()), false);
+        compressTv.setOnItemClickListener((p, v, pos, id) ->
+                settings.edit().putString("compressLevel", levels.get(pos)).apply());
+    }
+
+    private void setupAccessSettings(ScrollView root, SharedPreferences settings) {
+        RootManager rootManager = RootManager.getInstance(this);
+        AutoCompleteTextView workingModeTv = root.findViewById(R.id.workingModeTv);
+        MaterialSwitch rootStatusSwitch = root.findViewById(R.id.rootStatusSwitch);
+        MaterialSwitch shizukuStatusSwitch = root.findViewById(R.id.shizukuStatusSwitch);
+        com.google.android.material.button.MaterialButton grantShizukuBtn = root.findViewById(R.id.grantShizukuBtn);
+        MaterialSwitch silentInstallToggle = root.findViewById(R.id.silentInstallToggle);
+        MaterialSwitch rootFileOpsToggle = root.findViewById(R.id.rootFileOpsToggle);
+        MaterialSwitch shizukuFileOpsToggle = root.findViewById(R.id.shizukuFileOpsToggle);
+        MaterialSwitch rootExtractorToggle = root.findViewById(R.id.rootExtractorToggle);
+        com.google.android.material.button.MaterialButton rebootMenuBtn = root.findViewById(R.id.rebootMenuBtn);
+        com.google.android.material.textfield.TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
+        suCommandEt.setText(settings.getString("su_command", ""));
+
+        String labelNonRoot = rss.getString(R.string.non_root);
+        String labelRoot = rss.getString(R.string.root);
+        String labelShizuku = rss.getString(R.string.shizuku_mode);
+        boolean shizukuSupported = Build.VERSION.SDK_INT >= 23;
+        List<String> modeLabels = new ArrayList<>();
+        modeLabels.add(labelNonRoot);
+        modeLabels.add(labelRoot);
+        if (shizukuSupported) modeLabels.add(labelShizuku);
+        workingModeTv.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, modeLabels));
+
+        RootManager.WorkingMode current = rootManager.getWorkingMode();
+        if (current == RootManager.WorkingMode.ROOT) workingModeTv.setText(labelRoot, false);
+        else if (current == RootManager.WorkingMode.SHIZUKU && shizukuSupported) {
+            workingModeTv.setText(labelShizuku, false);
+        } else workingModeTv.setText(labelNonRoot, false);
+
+        rootStatusSwitch.setChecked(false);
+        Runnable refreshShizukuRow = () -> {
+            boolean running = ShizukuManager.isRunning();
+            boolean granted = ShizukuManager.hasPermission();
+            shizukuStatusSwitch.setChecked(running && granted);
+            if (!shizukuSupported) {
+                shizukuStatusSwitch.setText(getString(R.string.shizuku_unsupported));
+            } else if (granted) {
+                shizukuStatusSwitch.setText(getString(R.string.shizuku_ready));
+            } else if (running) {
+                shizukuStatusSwitch.setText(getString(R.string.shizuku_running_no_perm));
+            } else {
+                shizukuStatusSwitch.setText(getString(R.string.shizuku_not_running));
+            }
+            grantShizukuBtn.setVisibility(
+                    rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                            && running && !granted ? View.VISIBLE : View.GONE);
+        };
+        refreshShizukuRow.run();
+
+        Runnable applyModeUi = () -> {
+            RootManager.WorkingMode mode = rootManager.getWorkingMode();
+            boolean isRoot = mode == RootManager.WorkingMode.ROOT;
+            boolean isSh = mode == RootManager.WorkingMode.SHIZUKU;
+            silentInstallToggle.setEnabled(isRoot);
+            rootFileOpsToggle.setEnabled(isRoot);
+            shizukuFileOpsToggle.setEnabled(isSh);
+            rootExtractorToggle.setEnabled(isRoot);
+            rebootMenuBtn.setVisibility(isRoot && rootStatusSwitch.isChecked() ? View.VISIBLE : View.GONE);
+            refreshShizukuRow.run();
+        };
+        applyModeUi.run();
+
+        workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
+            String picked = modeLabels.get(position);
+            if (picked.equals(labelRoot)) {
+                workingModeTv.setText(labelRoot, false);
+                Extensions.showMessage(this, "Checking root…");
+                new Thread(() -> {
+                    boolean ok = rootManager.isRootAvailable();
+                    handler.post(() -> {
+                        if (ok) {
+                            rootManager.setWorkingMode(RootManager.WorkingMode.ROOT);
+                            rootStatusSwitch.setChecked(true);
+                        } else {
+                            Extensions.showMessage(this, R.string.root_denied_msg);
+                            rootStatusSwitch.setChecked(false);
+                            workingModeTv.setText(rootManager.getWorkingMode() == RootManager.WorkingMode.SHIZUKU
+                                    ? labelShizuku : labelNonRoot, false);
+                        }
+                        applyModeUi.run();
+                    });
+                }).start();
+                return;
+            }
+            if (picked.equals(labelShizuku)) {
+                if (!shizukuSupported || !ShizukuManager.isRunning()) {
+                    Extensions.showMessage(this, R.string.shizuku_not_running);
+                    workingModeTv.setText(labelNonRoot, false);
+                    return;
+                }
+                rootManager.setWorkingMode(RootManager.WorkingMode.SHIZUKU);
+                rootStatusSwitch.setChecked(false);
+                applyModeUi.run();
+                new Thread(() -> ShizukuManager.warmUp(MainActivity.this)).start();
+                if (!ShizukuManager.hasPermission()) {
+                    requestShizukuPerm(refreshShizukuRow);
+                }
+                return;
+            }
+            rootManager.setWorkingMode(RootManager.WorkingMode.NON_ROOT);
+            rootStatusSwitch.setChecked(false);
+            applyModeUi.run();
+        });
+
+        grantShizukuBtn.setOnClickListener(v -> requestShizukuPerm(refreshShizukuRow));
+
         silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
-        silentInstallToggle.setEnabled(rootManager.isRootMode());
         silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
 
         rootFileOpsToggle.setChecked(settings.getBoolean("root_file_ops", false));
-        rootFileOpsToggle.setEnabled(rootManager.isRootMode());
         rootFileOpsToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("root_file_ops", checked).apply());
 
+        shizukuFileOpsToggle.setChecked(settings.getBoolean("shizuku_file_ops", false));
+        shizukuFileOpsToggle.setOnCheckedChangeListener((v, checked) -> {
+            settings.edit().putBoolean("shizuku_file_ops", checked).apply();
+            if (checked) new Thread(() -> ShizukuManager.warmUp(MainActivity.this)).start();
+        });
+
         rootExtractorToggle.setChecked(settings.getBoolean("root_extractor", false));
-        rootExtractorToggle.setEnabled(rootManager.isRootMode());
         rootExtractorToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("root_extractor", checked).apply());
 
         rebootMenuBtn.setOnClickListener(v -> showRebootDialog());
+    }
 
-        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
-        new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.settings)).setView(settingsDialog).show();
+    private void requestShizukuPerm(Runnable onResult) {
+        final Shizuku.OnRequestPermissionResultListener[] holder =
+                new Shizuku.OnRequestPermissionResultListener[1];
+        holder[0] = (code, result) -> {
+            ShizukuManager.removePermissionListener(holder[0]);
+            handler.post(() -> {
+                if (result == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    new Thread(() -> ShizukuManager.warmUp(MainActivity.this)).start();
+                } else {
+                    Extensions.showMessage(this, R.string.shizuku_running_no_perm);
+                }
+                onResult.run();
+            });
+        };
+        ShizukuManager.requestPermission(this, holder[0]);
+    }
+
+    private void saveSuCommand(ScrollView root) {
+        try {
+            com.google.android.material.textfield.TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
+            String cmd = suCommandEt.getText() != null ? suCommandEt.getText().toString().trim() : "";
+            if (!cmd.isEmpty() && !cmd.matches("^[A-Za-z0-9_./-]+$")) {
+                Extensions.showMessage(this, "Invalid su command, keeping previous");
+                return;
+            }
+            PreferenceManager.getDefaultSharedPreferences(this).edit()
+                    .putString("su_command", cmd).apply();
+            RootManager.getInstance(this).refreshRootCache();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void refreshFileLists() {
+        try {
+            for (int id : new int[]{R.id.listViewPane1, R.id.listViewPane2}) {
+                RecyclerView pane = findViewById(id);
+                if (pane != null && pane.getAdapter() != null) {
+                    pane.getAdapter().notifyDataSetChanged();
+                }
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void showRebootDialog() {

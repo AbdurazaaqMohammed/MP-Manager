@@ -54,7 +54,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
@@ -171,29 +171,26 @@ public class FileOperationsHelper {
             return true;
         }
 
-        RootManager rm = RootManager.getInstance(context);
-        boolean useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        boolean useElevated = AccessManager.fileOpsOn(context);
 
         for (Object item : items) {
             if (item instanceof File f) {
-                // Root-aware dest naming: File.exists() lies (false) inside
-                // root-only dirs, so check via su to avoid silently
-                // overwriting an existing root file.
-                File dest = getUnusedDest(rm, destinationFolder, f.getName(), useRoot);
-                if (useRoot) {
+                File dest = getUnusedDest(destinationFolder, f.getName(), useElevated);
+                if (useElevated) {
                     try {
-                        if (f.isDirectory()) rm.copyDir(f.getAbsolutePath(), dest.getAbsolutePath());
-                        else rm.copyFile(f.getAbsolutePath(), dest.getAbsolutePath());
-                        rm.delete(f.getAbsolutePath());
+                        if (f.isDirectory()) AccessManager.copyDir(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                        else AccessManager.copyFile(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                        AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                        AccessManager.delete(context, f.getAbsolutePath(), true);
                         continue;
                     } catch (Exception e) {
                     }
                 }
                 if (f.renameTo(dest)) continue;
                 if (f.isDirectory()) {
-                    if (useRoot) {
+                    if (useElevated) {
                         try {
-                            rm.mkdir(dest.getAbsolutePath());
+                            AccessManager.mkdir(context, dest.getAbsolutePath(), true);
                         } catch (Exception ignored) {
                             //noinspection ResultOfMethodCallIgnored
                             dest.mkdir();
@@ -203,8 +200,11 @@ public class FileOperationsHelper {
                         dest.mkdir();
                     }
                     FileUtils.copyFolder(f, dest);
-                } else
+                    syncDirTimes(f, dest);
+                } else {
                     FileUtils.copyFile(f, dest);
+                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                }
                 //noinspection ResultOfMethodCallIgnored
                 f.delete();
             } else if (item instanceof ZipEntryInfo) {
@@ -215,26 +215,36 @@ public class FileOperationsHelper {
         return true;
     }
 
-    /**
-     * Dest naming that works for root-only folders: {@code File.exists()}
-     * always returns false there (no app-uid permission), so consult root
-     * {@code test -e} when root ops are on to avoid overwriting.
-     */
-    private File getUnusedDest(RootManager rm, File destDir, String name, boolean useRoot) {
+    private File getUnusedDest(File destDir, String name, boolean useElevated) {
         File first = FileUtils.getUnusedFile(destDir, name);
-        if (!useRoot) return first;
+        if (!useElevated) return first;
         try {
-            if (!rm.exists(first.getAbsolutePath())) return first;
+            if (!AccessManager.exists(context, first.getAbsolutePath())) return first;
             String base = org.apache.commons.io.FilenameUtils.getBaseName(name);
             String ext = org.apache.commons.io.FilenameUtils.getExtension(name);
             for (int i = 1; i < 1000; i++) {
                 String candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
                 File c = new File(destDir, candidate);
-                if (!rm.exists(c.getAbsolutePath())) return c;
+                if (!AccessManager.exists(context, c.getAbsolutePath())) return c;
             }
         } catch (Exception ignored) {
         }
         return first;
+    }
+
+    private void syncDirTimes(File srcDir, File dstDir) {
+        try {
+            AccessManager.preserveTime(context, srcDir.getAbsolutePath(), dstDir.getAbsolutePath());
+            File[] kids = srcDir.listFiles();
+            if (kids == null) return;
+            for (File k : kids) {
+                File d = new File(dstDir, k.getName());
+                if (!d.exists()) continue;
+                if (k.isDirectory()) syncDirTimes(k, d);
+                else AccessManager.preserveTime(context, k.getAbsolutePath(), d.getAbsolutePath());
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private boolean copyToDestination(List<Object> items) throws IOException {
@@ -254,28 +264,25 @@ public class FileOperationsHelper {
     }
 
     private boolean copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
-        RootManager rm = RootManager.getInstance(context);
-        boolean useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+        boolean useElevated = AccessManager.fileOpsOn(context);
 
         for (Object item : items) {
             if (item instanceof File f) {
-                File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : getUnusedDest(rm, destinationFolder, f.getName(), useRoot);
+                File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : getUnusedDest(destinationFolder, f.getName(), useElevated);
                 if (dest == null || dest.equals(f)) continue;
-                if (useRoot) {
+                if (useElevated) {
                     try {
-                        // RootFile (from root listing) carries the true
-                        // isDirectory; plain File.canRead()==false paths also
-                        // work here because su reads them directly.
-                        if (f.isDirectory()) rm.copyDir(f.getAbsolutePath(), dest.getAbsolutePath());
-                        else rm.copyFile(f.getAbsolutePath(), dest.getAbsolutePath());
+                        if (f.isDirectory()) AccessManager.copyDir(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                        else AccessManager.copyFile(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
+                        AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                         continue;
                     } catch (Exception e) {
                     }
                 }
                 if (f.isDirectory()) {
-                    if (useRoot) {
+                    if (useElevated) {
                         try {
-                            rm.mkdir(dest.getAbsolutePath());
+                            AccessManager.mkdir(context, dest.getAbsolutePath(), true);
                         } catch (Exception ignored) {
                             //noinspection ResultOfMethodCallIgnored
                             dest.mkdir();
@@ -285,8 +292,11 @@ public class FileOperationsHelper {
                         dest.mkdir();
                     }
                     FileUtils.copyFolder(f, dest);
-                } else
+                    syncDirTimes(f, dest);
+                } else {
                     FileUtils.copyFile(f, dest);
+                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                }
             } else if (item instanceof ZipEntryInfo) {
                 extractZipEntry((ZipEntryInfo) item, destinationFolder);
             }
@@ -308,11 +318,9 @@ public class FileOperationsHelper {
     private String getDuplicateName(String fileName, File destinationFolder) {
         String base = org.apache.commons.io.FilenameUtils.getBaseName(fileName);
         String ext = org.apache.commons.io.FilenameUtils.getExtension(fileName);
-        RootManager rm = null;
-        boolean useRoot = false;
+        boolean useElevated = false;
         try {
-            rm = RootManager.getInstance(context);
-            useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+            useElevated = AccessManager.fileOpsOn(context);
         } catch (Exception ignored) {
         }
         int i = 1;
@@ -321,7 +329,7 @@ public class FileOperationsHelper {
             candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
             i++;
         } while (new File(destinationFolder, candidate).exists()
-                || (useRoot && rm != null && rm.exists(new File(destinationFolder, candidate).getAbsolutePath())));
+                || (useElevated && AccessManager.exists(context, new File(destinationFolder, candidate).getAbsolutePath())));
         return candidate;
     }
 
@@ -632,7 +640,8 @@ public class FileOperationsHelper {
                     readable = staged;
                 }
                 try {
-                    ArchiveUtil.extract(readable, destDir);
+                    boolean keepTime = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
+                    ArchiveUtil.extract(readable, destDir, keepTime);
                 } finally {
                     if (staged != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -648,8 +657,26 @@ public class FileOperationsHelper {
         }).start();
     }
 
-    public void handleZipEntryClick(ZipEntryInfo zipEntry) {
-        File zipFile = zipEntry.getZipFile();
+    private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
+        String[] options = {"ARSC Editor Plus", "ARSC Editor", "Translation mode", "Resource querier"};
+        String[] modes = {
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_PLUS,
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR,
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_TRANSLATE,
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_QUERIER};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Open with")
+                .setSingleChoiceItems(options, -1, (dialog, which) -> {
+                    dialog.dismiss();
+                    context.startActivity(new Intent(context, io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class)
+                            .putExtra("path", arscFile.getAbsolutePath())
+                            .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
+                            .putExtra("zipEntryPath", entryPath)
+                            .putExtra("arscMode", modes[which]));
+                }).create());
+    }
+
+    public void handleZipEntryClick(ZipEntryInfo zipEntry) {        File zipFile = zipEntry.getZipFile();
         String fullPath = zipEntry.getFullPath();
         if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, adapter.pane1, false);
         else new Thread(() -> {
@@ -751,8 +778,7 @@ public class FileOperationsHelper {
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
-            }
-            else if(name.endsWith(".xml")) {
+            } else if (name.endsWith(".xml")) {
                 boolean isAxml = FileUtils.isAxml(is);
                 if(isAxml) try(InputStream rssStream = zf.getInputStream(zf.getFileHeader("resources.arsc")); InputStream is2 = zf.getInputStream(zf.getFileHeader(fullPath))) {
                     //ResourceTableParser rtp = new ResourceTableParser(rssStream);
@@ -770,6 +796,10 @@ public class FileOperationsHelper {
                         .putExtra("axml", true)
                         .putExtra("path", tempFile.getPath()), 757);
                 } else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", tempFile.getPath()));
+            } else if (name.equals("resources.arsc")) {
+                FileUtils.copyFile(is, tempFile);
+                File stagedArsc = tempFile;
+                context.handler.post(() -> showArscOpenWith(stagedArsc, zipFile, fullPath));
             } else {
                 FileUtils.copyFile(is, tempFile);
                 Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", tempFile);

@@ -28,6 +28,11 @@ android {
     }
     namespace 'io.github.abdurazaaqmohammed.MPManager'
 
+    buildFeatures {
+        aidl true
+        buildConfig true
+    }
+
     dependenciesInfo {
         // Disables dependency metadata when building APKs.
         includeInApk = false
@@ -90,4 +95,7 @@ dependencies {
     implementation("org.apache.ftpserver:ftpserver-core:1.2.1")
     implementation("commons-io:commons-io:2.22.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.85.2")
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
+    testImplementation 'junit:junit:4.13.2'
 }

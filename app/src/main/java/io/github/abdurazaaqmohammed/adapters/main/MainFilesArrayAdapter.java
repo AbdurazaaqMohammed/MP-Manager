@@ -677,12 +677,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             new ErrorUtil(context).showError(e);
             return;
         }
-        RootManager rm = RootManager.getInstance(context);
-        if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
-            Extensions.showMessage(context, "Cannot open: permission denied. Enable Root file ops for system paths.");
+        if (!AccessManager.fileOpsOn(context)) {
+            Extensions.showMessage(context, "Cannot open: permission denied. Enable elevated file ops for system paths.");
             return;
         }
-        Extensions.showMessage(context, "Reading via root…");
+        Extensions.showMessage(context, "Reading with elevated access…");
         new Thread(() -> {
             try {
                 File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
@@ -881,10 +880,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         }
                     } else {
                         File ogFolder = file.getParentFile();
-                        io.github.abdurazaaqmohammed.utils.RootManager rm = io.github.abdurazaaqmohammed.utils.RootManager.getInstance(context);
-                        if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+                        if (AccessManager.fileOpsOn(context)) {
                             try {
-                                rm.rename(file.getAbsolutePath(), new File(ogFolder, s).getAbsolutePath());
+                                AccessManager.rename(context, file.getAbsolutePath(), new File(ogFolder, s).getAbsolutePath(), true);
                                 context.loadFolderInPane(ogFolder, pane1);
                             } catch (Exception e) {
                                 if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
@@ -916,7 +914,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         ProgressManager pm = new ProgressManager(context, true);
         MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
-        SharedPreferences settings = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean[] sign = new boolean[1];
         File zipFile = isInZip ? entry.getZipFile() : null;
         if(isInZip && zipFile.getName().endsWith(".apk")) {
@@ -935,8 +933,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 new Thread(() -> {
                     try {
                         if(isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
-                        RootManager rm = RootManager.getInstance(context);
-                        boolean useRootForDelete = rm.isRootFileOpsEnabled() && rm.isRootAvailable();
+                        boolean useElevatedForDelete = AccessManager.fileOpsOn(context);
                         if (multi) {
                             if (!isInZip) {
                                 File selectedFile = null;
@@ -946,9 +943,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     if (finalSelectedFile1 != null)
                                         pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
 
-                                    if (useRootForDelete) {
+                                    if (useElevatedForDelete) {
                                         try {
-                                            rm.delete(selectedFile.getAbsolutePath());
+                                            AccessManager.delete(context, selectedFile.getAbsolutePath(), true);
                                             continue;
                                         } catch (Exception ignored) {}
                                     }
@@ -972,9 +969,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             pm.setProgress(0, total);
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
-                            if (useRootForDelete) {
+                            if (useElevatedForDelete) {
                                 try {
-                                    rm.delete(file.getAbsolutePath());
+                                    AccessManager.delete(context, file.getAbsolutePath(), true);
                                 } catch (Exception e) {
                                     if (file.isDirectory()) Util.deleteDir(file, pm, total);
                                     else file.delete();
@@ -1070,36 +1067,27 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     for (int i : selectedPositions) sources.add((File) values[i]);
                 } else sources.add(file);
 
-                // Root-aware compress: stage unreadable sources into cache so
-                // zip4j/ArchiveUtil (plain File APIs) can read them, and when
-                // the target dir itself is root-only, build in cache then
-                // move into place via su.
-                RootManager rmCompress = RootManager.getInstance(context);
-                boolean compressRoot = rmCompress.isRootFileOpsEnabled() && rmCompress.isRootAvailable();
+                boolean compressElevated = AccessManager.fileOpsOn(context);
                 File compressStageTmp = null;
                 List<File> readableSources = sources;
                 File effectiveOutput = outputZip;
                 boolean outputToRoot = false;
-                if (compressRoot) {
+                if (compressElevated) {
                     boolean anyNeedStage = false;
                     for (File s : sources) {
                         if (RootStaging.needsStaging(context, s)) { anyNeedStage = true; break; }
                     }
                     if (anyNeedStage) {
                         try {
-                            compressStageTmp = new File(context.getCacheDir(),
-                                    "compress_stage_" + System.currentTimeMillis());
+                            compressStageTmp = new File(context.getCacheDir(), "compress_stage_" + System.currentTimeMillis());
                             //noinspection ResultOfMethodCallIgnored
                             compressStageTmp.mkdirs();
                             readableSources = new ArrayList<>();
                             for (File s : sources) {
                                 if (RootStaging.needsStaging(context, s)) {
                                     File stagedChild = new File(compressStageTmp, s.getName());
-                                    if (s.isDirectory()) rmCompress.copyDir(s.getAbsolutePath(), stagedChild.getAbsolutePath());
-                                    else rmCompress.copyFile(s.getAbsolutePath(), stagedChild.getAbsolutePath());
-                                    // Ensure app-uid readability of root-created copies.
-                                    rmCompress.execute("chmod -R a+rX "
-                                            + RootManager.escapeShellArg(stagedChild.getAbsolutePath()));
+                                    if (s.isDirectory()) AccessManager.stageTree(context, s.getAbsolutePath(), stagedChild);
+                                    else AccessManager.stageFile(context, s.getAbsolutePath(), stagedChild);
                                     readableSources.add(stagedChild);
                                 } else readableSources.add(s);
                             }
@@ -1111,7 +1099,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                     File outParent = outputZip.getParentFile();
                     if (outParent != null && !outParent.canWrite()
-                            && rmCompress.exists(outParent.getAbsolutePath())) {
+                            && AccessManager.exists(context, outParent.getAbsolutePath())) {
                         outputToRoot = true;
                         if (compressStageTmp == null) {
                             compressStageTmp = new File(context.getCacheDir(),
@@ -1146,12 +1134,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 zf.addFolder(source, zipParameters);
                             else zf.addFile(source, zipParameters);
                         }
-                        if (finalToRoot) rmCompress.copyFile(finalOutput.getAbsolutePath(), outputZip.getAbsolutePath());
+                        if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
                     } finally {
+                        context.reloadCurrentFolder();
                         if (finalStageTmp != null && !finalToRoot) Util.deleteDir(finalStageTmp);
                         else if (finalStageTmp != null && finalToRoot && !finalOutput.equals(outputZip)) {
                             // Keep only the delivered archive; drop staged sources.
@@ -1166,8 +1155,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 } else {
                     try {
                         ArchiveUtil.create(finalOutput, finalSources);
-                        if (finalToRoot) rmCompress.copyFile(finalOutput.getAbsolutePath(), outputZip.getAbsolutePath());
+                        if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
+                        context.reloadCurrentFolder();
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);

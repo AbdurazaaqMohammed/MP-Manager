@@ -41,66 +41,17 @@ public final class RootStaging {
     private RootStaging() {
     }
 
-    /** True when {@code file} needs root staging to be read. */
     public static boolean needsStaging(Context context, File file) {
         if (context == null || file == null) return false;
-        return needsStaging(context, file.getAbsolutePath());
+        return AccessManager.needsElevated(context, file.getAbsolutePath());
     }
 
-    /** True when {@code absPath} needs root staging to be read. */
     public static boolean needsStaging(Context context, String absPath) {
-        if (context == null || absPath == null || absPath.isEmpty()) return false;
-        try {
-            File f = new File(absPath);
-            if (f.exists() && f.canRead()) return false;
-        } catch (Exception ignored) {
-        }
-        try {
-            RootManager rm = RootManager.getInstance(context);
-            if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) return false;
-            return rm.exists(absPath);
-        } catch (Exception e) {
-            return false;
-        }
+        return AccessManager.needsElevated(context, absPath);
     }
 
-    /**
-     * Copy a root-only file into the app cache and return the readable copy.
-     * Binary-safe (APKs, images, dex all survive). Throws with a clear
-     * message when root is off, the file is too big, or the read fails.
-     */
     public static File stageForRead(Context context, String srcAbsPath) throws IOException {
-        if (context == null) throw new IOException("No context");
-        if (srcAbsPath == null || !srcAbsPath.startsWith("/")) {
-            throw new IOException("Refusing to stage non-absolute path");
-        }
-        RootManager rm = RootManager.getInstance(context);
-        if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
-            throw new IOException("Root file access is disabled or unavailable");
-        }
-        File dir = stageDir(context);
-        String base = new File(srcAbsPath).getName();
-        if (base.isEmpty()) base = "root_file";
-        // Sanitize: keep cache file name harmless even for weird source names.
-        base = base.replaceAll("[^a-zA-Z0-9_.-]", "_");
-        File dst = new File(dir, System.currentTimeMillis() + "_" + base);
-        int dup = 0;
-        while (dst.exists() && dup < 100) {
-            dst = new File(dir, System.currentTimeMillis() + "_" + (dup++) + "_" + base);
-        }
-        try (OutputStream os = new FileOutputStream(dst)) {
-            rm.streamFromRoot(srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
-        } catch (IOException e) {
-            //noinspection ResultOfMethodCallIgnored
-            dst.delete();
-            throw e;
-        }
-        if (!dst.isFile() || !dst.canRead()) {
-            //noinspection ResultOfMethodCallIgnored
-            dst.delete();
-            throw new IOException("Staging failed for " + srcAbsPath);
-        }
-        return dst;
+        return AccessManager.stageForRead(context, srcAbsPath);
     }
 
     /**
@@ -119,22 +70,8 @@ public final class RootStaging {
         return new StagedInputStream(staged);
     }
 
-    /**
-     * Write a (possibly edited) staged copy back to its root-original path.
-     * Only call from explicit user Save actions; callers should confirm first
-     * when {@link RootManager#isPathInKeyDirectory(String)} is true.
-     */
     public static void writeBack(Context context, File stagedCopy, String originalAbsPath) throws IOException {
-        if (context == null) throw new IOException("No context");
-        if (stagedCopy == null || !stagedCopy.isFile()) throw new IOException("Nothing to save");
-        if (originalAbsPath == null || !originalAbsPath.startsWith("/")) {
-            throw new IOException("Refusing to write non-absolute path");
-        }
-        RootManager rm = RootManager.getInstance(context);
-        if (!rm.isRootFileOpsEnabled() || !rm.isRootAvailable()) {
-            throw new IOException("Root file access is disabled or unavailable");
-        }
-        rm.streamToRoot(stagedCopy, originalAbsPath);
+        AccessManager.writeBack(context, stagedCopy, originalAbsPath);
     }
 
     /** True when writing back to {@code absPath} deserves an extra user confirmation. */
