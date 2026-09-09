@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.text.ClipboardManager;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -68,6 +68,7 @@ import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -234,8 +235,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
-                String[] baseItems = new String[] { "Copy " + direction, "Move " + direction, "Rename", "Delete", "Compress", "Properties", "Share", "Open with", "Bookmark", "Command Helper", context.getString(R.string.checksums) };
-                List<String> itemsList = new ArrayList<>(Arrays.asList(baseItems));
+                List<FileMenuOrder.MenuItem> visibleMenu = new ArrayList<>();
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COPY, FileMenuOrder.labelFor(context, FileMenuOrder.COPY, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.MOVE, FileMenuOrder.labelFor(context, FileMenuOrder.MOVE, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.RENAME, FileMenuOrder.labelFor(context, FileMenuOrder.RENAME, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COMPRESS, FileMenuOrder.labelFor(context, FileMenuOrder.COMPRESS, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.PROPERTIES, FileMenuOrder.labelFor(context, FileMenuOrder.PROPERTIES, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.SHARE, FileMenuOrder.labelFor(context, FileMenuOrder.SHARE, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.OPEN_WITH, FileMenuOrder.labelFor(context, FileMenuOrder.OPEN_WITH, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BOOKMARK, FileMenuOrder.labelFor(context, FileMenuOrder.BOOKMARK, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMD, FileMenuOrder.labelFor(context, FileMenuOrder.CMD, direction)));
+                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CHECK, FileMenuOrder.labelFor(context, FileMenuOrder.CHECK, direction)));
 
                 if (multi && !isInZip) {
                     boolean allApks = true;
@@ -247,14 +258,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         }
                     }
                     if (allApks) {
-                        itemsList.add(context.getString(R.string.batch_sign));
-                        itemsList.add(context.getString(R.string.batch_optimize));
-                        itemsList.add(context.getString(R.string.batch_install));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_SIGN, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_SIGN, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_OPT, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_OPT, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_INSTALL, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_INSTALL, direction)));
                     }
                 }
 
                 if (!multi && !isInZip && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
-                    itemsList.add(context.getString(R.string.extract));
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
@@ -275,21 +286,27 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         boolean isArsc1 = ext1.equals("arsc") || ext1.equals("apk");
                         boolean isArsc2 = ext2.equals("arsc") || ext2.equals("apk");
 
-                        if (isZip1 && isZip2) itemsList.add("Compare ZIP");
-                        if (isArsc1 && isArsc2) itemsList.add("Compare ARSC");
+                        if (isZip1 && isZip2) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_ZIP, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_ZIP, direction)));
+                        if (isArsc1 && isArsc2) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_ARSC, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_ARSC, direction)));
                         if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) {
-                            itemsList.add("Compare Text");
+                            visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_TEXT, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_TEXT, direction)));
                             if (compareFile1 instanceof File && compareFile2 instanceof File
                                     && !((File) compareFile1).isDirectory() && !((File) compareFile2).isDirectory())
-                                itemsList.add(context.getString(R.string.compare_hashes));
+                                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_HASH, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_HASH, direction)));
                         }
                         if (ext1.equals("apk") && ext2.equals("apk")
                                 && compareFile1 instanceof File && compareFile2 instanceof File)
-                            itemsList.add(context.getString(R.string.compare_apks));
+                            visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_APK, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_APK, direction)));
                     }
                 }
 
-                String[] items = itemsList.toArray(new String[0]);
+                List<FileMenuOrder.MenuItem> menuItems = FileMenuOrder.sortItems(context, visibleMenu);
+                String[] items = new String[menuItems.size()];
+                String[] itemIds = new String[menuItems.size()];
+                for (int mi = 0; mi < menuItems.size(); mi++) {
+                    items[mi] = menuItems.get(mi).label;
+                    itemIds[mi] = menuItems.get(mi).id;
+                }
 
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
@@ -298,7 +315,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 gridView.setNumColumns(2);
                 gridView.setBackgroundColor(Color.TRANSPARENT);
                 gridView.setPadding(16, 16, 16, 16);
-                gridView.setAdapter(new DialogAdapter(context, items));
+                gridView.setAdapter(new DialogAdapter(context, menuItems, isInZip));
                 gridView.setVerticalSpacing(40);
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(fileName)
@@ -308,9 +325,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 gridView.setOnItemClickListener((parent1, view, position1, id) -> {
                     dialog.dismiss();
                     try {
-                        String selectedAction = items[position1];
-                        switch (selectedAction) {
-                            case "Compare Text":
+                        String actionId = itemIds[position1];
+                        switch (actionId) {
+                            case FileMenuOrder.CMP_TEXT:
                                 context.startActivity(new Intent(context, CompareTextActivity.class)
                                         .putExtra("file1", finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getFullPath())
                                         .putExtra("file2", finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getFullPath())
@@ -320,22 +337,22 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         .putExtra("zip2", finalCompareFile2 instanceof ZipEntryInfo ? ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath() : null)
                                 );
                                 return;
-                            case "Compare ZIP":
+                            case FileMenuOrder.CMP_ZIP:
                                 new CompareZipDialog(context,
                                         finalCompareFile1 instanceof File ? (File) finalCompareFile1 : ((ZipEntryInfo) finalCompareFile1).getZipFile(),
                                         finalCompareFile2 instanceof File ? (File) finalCompareFile2 : ((ZipEntryInfo) finalCompareFile2).getZipFile()
                                 ).show();
                                 return;
-                            case "Compare ARSC":
+                            case FileMenuOrder.CMP_ARSC:
                                 new CompareArscDialog(context,
                                         finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getZipFile().getAbsolutePath(),
                                         finalCompareFile2 instanceof File ? ((File) finalCompareFile2).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile2).getZipFile().getAbsolutePath()
                                 ).show();
                                 return;
-                            case "Compare hashes":
+                            case FileMenuOrder.CMP_HASH:
                                 checksumDialogs.showCompareHashesDialog((File) finalCompareFile1, (File) finalCompareFile2);
                                 return;
-                            case "Checksums":
+                            case FileMenuOrder.CHECK:
                                 if (isInZip) {
                                     if (multi) {
                                         Extensions.showMessage(context, "Checksums for multiple zip entries not supported");
@@ -355,26 +372,26 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 }
                                 checksumDialogs.showChecksumsDialog(checksumFiles);
                                 return;
-                            case "Compare APKs":
+                            case FileMenuOrder.CMP_APK:
                                 apkTools.showCompareApksDialog((File) finalCompareFile1, (File) finalCompareFile2);
                                 return;
-                            case "Batch sign APKs": {
+                            case FileMenuOrder.BATCH_SIGN: {
                                 List<File> apks = new ArrayList<>();
                                 for (int bp : selectedPositions) apks.add((File) values[bp]);
                                 apkTools.batchSignApks(apks);
                                 return;
                             }
-                            case "Batch optimize APKs": {
+                            case FileMenuOrder.BATCH_OPT: {
                                 List<File> apks = new ArrayList<>();
                                 for (int bp : selectedPositions) apks.add((File) values[bp]);
                                 apkTools.batchOptimizeApks(apks);
                                 return;
                             }
-                            case "Install APKs": {
+                            case FileMenuOrder.BATCH_INSTALL: {
                                 for (int bp : selectedPositions) InstallUtil.installApkWithDialog(context, (File) values[bp]);
                                 return;
                             }
-                            case "Command Helper":
+                            case FileMenuOrder.CMD:
                                 if (isInZip) {
                                     Extensions.showMessage(context, "Command Helper not supported for zip entries");
                                     return;
@@ -387,46 +404,48 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 }
                                 commandHelper.showCommandHelperDialog(cmdFilePaths);
                                 return;
-                            case "Extract":
+                            case FileMenuOrder.EXTRACT:
                                 if (isInZip || multi) return;
                                 fileOps.extractArchive(file);
                                 return;
                             default:
-                                switch (position1) {
-                                    case 0:
+                                switch (actionId) {
+                                    case FileMenuOrder.COPY:
                                         if (multi) {
                                             List<Object> itemsToCopy = new ArrayList<>();
                                             for (int f : selectedPositions) itemsToCopy.add(values[f]);
                                             fileOps.copyItemsAsync(itemsToCopy);
                                         } else fileOps.copyAsync(item);
                                         break;
-                                    case 1:
+                                    case FileMenuOrder.MOVE:
                                         if (context.pane1Folder == context.pane2Folder) {
                                             break;
                                         }
                                         fileOps.moveAsync(item);
                                         break;
-                                    case 2:
+                                    case FileMenuOrder.RENAME:
                                         showRenameDialog(finalPosition1, file, entry, fileName, multi);
                                         break;
-                                    case 3:
+                                    case FileMenuOrder.DELETE:
                                         showDeleteDialog(finalPosition1, file, entry, multi);
                                         break;
-                                    case 4:
+                                    case FileMenuOrder.COMPRESS:
                                         showCompressDialog(file, fileName, multi);
                                         break;
-                                    case 5:
+                                    case FileMenuOrder.PROPERTIES:
                                         propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, getFilesToDisplay(multi, finalPosition1).toString());
                                         break;
-                                    case 6:
-                                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
-                                        String shareMime = MimeUtil.getMimeTypeForAction(context, file);
-                                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
+                                    case FileMenuOrder.SHARE:
+                                        withReadableCopy(file, readable -> {
+                                            Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+                                            String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
+                                            context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
+                                        });
                                         break;
-                                    case 7:
+                                    case FileMenuOrder.OPEN_WITH:
                                         showOpenWithDialog(file, fileName);
                                         break;
-                                    case 8:
+                                    case FileMenuOrder.BOOKMARK:
                                         if (!isInZip) context.addBookmark(file);
                                         break;
                                 }
