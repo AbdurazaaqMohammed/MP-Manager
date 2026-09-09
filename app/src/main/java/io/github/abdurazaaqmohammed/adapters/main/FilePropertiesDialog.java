@@ -38,6 +38,8 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 
@@ -110,7 +112,7 @@ public class FilePropertiesDialog {
 
         if (!isInZip) {
             TextView modifiedView = addPropertyRow(propRows, context.getString(R.string.modified),
-                    new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(file.lastModified()));
+                    UiPrefs.formatDate(context, file.lastModified()));
             modifiedView.setOnClickListener(v -> showEditLastModifiedDialog(file, modifiedView));
             if (!multi && file.isFile()) {
                 addPropertyRow(propRows, context.getString(R.string.reported_mime), MimeUtil.getReportedMimeType(context, file));
@@ -131,7 +133,7 @@ public class FilePropertiesDialog {
             long modTime = entry.getLastModified();
             if (modTime > 0) {
                 addPropertyRow(propRows, context.getString(R.string.modified),
-                        new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(modTime));
+                        UiPrefs.formatDate(context, modTime));
             }
         }
 
@@ -236,15 +238,10 @@ public class FilePropertiesDialog {
     private long getFolderSize(File file, TextView toUpdate) {
         File[] files = file.listFiles();
         if (files == null) {
-            // Root-only dir: fall back to du via su (read-only).
             try {
-                RootManager rm = RootManager.getInstance(context);
-                if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-                    RootManager.ShellResult r = rm.execute(
-                            "du -sb " + RootManager.escapeShellArg(file.getAbsolutePath()) + " 2>/dev/null");
-                    if (r.isSuccess() && r.output != null) {
-                        String first = r.output.trim().split("\\s+")[0];
-                        long size = Long.parseLong(first);
+                if (AccessManager.fileOpsOn(context)) {
+                    long size = AccessManager.dirSize(context, file.getAbsolutePath());
+                    if (size >= 0) {
                         if (toUpdate != null) {
                             context.handler.post(() -> toUpdate.setText(FileSize.getHumanReadableFileSize(size)));
                         }
@@ -281,24 +278,19 @@ public class FilePropertiesDialog {
             Calendar result = Calendar.getInstance();
             result.set(y, m, d, h, min, 0);
             long newTime = result.getTimeInMillis();
-            RootManager rm = RootManager.getInstance(context);
-            if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
+            if (AccessManager.fileOpsOn(context)) {
                 new Thread(() -> {
                     try {
-                        String touchTime = String.format(Locale.US, "%04d%02d%02d%02d%02d.%02d",
-                                y, m + 1, d, h, min, 0);
-                        // Escaped arg (no string-concat quoting) to avoid shell injection.
-                        rm.execute("touch -t " + touchTime + " "
-                                + RootManager.escapeShellArg(file.getAbsolutePath()));
+                        AccessManager.touchMtime(context, file.getAbsolutePath(), newTime);
                         context.handler.post(() -> {
-                            modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
+                            modifiedView.setText(UiPrefs.formatDate(context, newTime));
                             Extensions.showMessage(context, "Last modified updated");
                         });
                     } catch (Exception e) { new ErrorUtil(context).showError(e); }
                 }).start();
             } else {
                 if (file.setLastModified(newTime)) {
-                    modifiedView.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(newTime));
+                    modifiedView.setText(UiPrefs.formatDate(context, newTime));
                 } else {
                     Extensions.showMessage(context, "Failed to update last modified");
                 }
