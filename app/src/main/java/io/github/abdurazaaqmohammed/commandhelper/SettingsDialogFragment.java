@@ -131,13 +131,13 @@ public class SettingsDialogFragment extends DialogFragment {
         EditText nameInput = new EditText(getActivity());
         nameInput.setHint(R.string.profile_name);
         if (existingName != null) nameInput.setText(existingName);
-        layout.addView(nameInput);
+        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(getActivity(), nameInput, null, 0));
         EditText cmdInput = new EditText(getActivity());
         cmdInput.setHint(R.string.command_template_hint);
         cmdInput.setSingleLine(false);
         cmdInput.setLines(3);
         if (existingCommand != null) cmdInput.setText(existingCommand);
-        layout.addView(cmdInput);
+        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(getActivity(), cmdInput, null, 0));
         builder.setView(layout);
         builder.setPositiveButton(R.string.save, (d, w) -> {
             String name = nameInput.getText().toString().trim();

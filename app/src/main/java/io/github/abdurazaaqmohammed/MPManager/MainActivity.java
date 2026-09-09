@@ -90,7 +90,9 @@ import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
 import io.github.abdurazaaqmohammed.player.PlayerManager;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.QrUtil;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
 import rikka.shizuku.Shizuku;
@@ -408,6 +410,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 9021) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null
+                    && overlayImageCallback != null) {
+                overlayImageCallback.onImagePicked(data.getData());
+            }
+            return;
+        }
         if (resultCode == 0) if (doesNotHaveStoragePerm(this)) {
             Extensions.showMessage(this, "Storage perm needed as file manager");
         } else recreate();
@@ -694,7 +703,7 @@ public class MainActivity extends AppCompatActivity {
         input.setHint(rss.getString(R.string.group_name));
         new MaterialAlertDialogBuilder(this)
             .setTitle(rss.getString(R.string.add_group))
-            .setView(input)
+            .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 16))
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                 String name = input.getText().toString().trim();
@@ -1405,8 +1414,15 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout container = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
-        String[] options = { "Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Settings"};
-        int[] icons = {R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.baseline_settings_24};
+        java.util.ArrayList<String> sidebarOptions = new java.util.ArrayList<>(java.util.Arrays.asList("Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Tools Kit", "Settings"));
+        java.util.ArrayList<Integer> sidebarIcons = new java.util.ArrayList<>(java.util.Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.tools_24px, R.drawable.baseline_settings_24));
+        if (RootManager.getInstance(this).isRootAvailable()) {
+            sidebarOptions.add(sidebarOptions.size() - 1, "Wi-Fi Passwords");
+            sidebarIcons.add(sidebarIcons.size() - 1, R.drawable.wifi_24px);
+        }
+        String[] options = sidebarOptions.toArray(new String[0]);
+        int[] icons = new int[sidebarIcons.size()];
+        for (int sidebarIndex = 0; sidebarIndex < sidebarIcons.size(); sidebarIndex++) icons[sidebarIndex] = sidebarIcons.get(sidebarIndex);
         sidebar.setAdapter(new ArrayAdapter<>(this, R.layout.item_dropdown_option, options) {
             @NonNull
             @Override
@@ -1417,25 +1433,29 @@ public class MainActivity extends AppCompatActivity {
 
                 convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
                 convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-                if (position == 3 && Build.VERSION.SDK_INT < 24)
+                if (options[position].equals("Color Picker") && Build.VERSION.SDK_INT < 24)
                     convertView.setVisibility(View.GONE);
-                if (position == 4 && Build.VERSION.SDK_INT < 20)
-                    convertView.setVisibility(View.GONE); // Technically floating window works in sdk 19 but you can't exit the app with it
+                if (options[position].equals("Layout Inspector") && Build.VERSION.SDK_INT < 20)
+                    convertView.setVisibility(View.GONE);
                 return convertView;
             }
         });
         sidebar.setOnItemClickListener((parent, view, position, id) -> {
-            switch (position) {
-                case 0:
+            String selected = options[position];
+            switch (selected) {
+                case "Extract APK":
                     startActivityForResult(new Intent(this, APKExtractorActivity.class), 11);
                     break;
-                case 1:
+                case "FTP Server":
                     showFtpServerDialog();
                     break;
-                case 2:
+                case "FTP Client":
                     showFtpClientDialog();
                     break;
-                case 3:
+                case "Wi-Fi Passwords":
+                    showWifiPasswordsDialog();
+                    break;
+                case "Color Picker":
                     if(Build.VERSION.SDK_INT < 24) return;
                     PreferencesDialogFragment dialogFragment = new PreferencesDialogFragment();
                     dialogFragment.show(getSupportFragmentManager(), "preferences_dialog");
@@ -1470,7 +1490,7 @@ public class MainActivity extends AppCompatActivity {
                         });
                     });
                     break;
-                case 4:
+                case "Layout Inspector":
                     if(Build.VERSION.SDK_INT < 20) return;
                     if (DataRepository.getInstance().getAppState().isRunning()) {
                         DataRepository.getInstance().updateStatus(false);
@@ -1486,7 +1506,10 @@ public class MainActivity extends AppCompatActivity {
                     new ServiceManager(this).show();
                     DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                     break;
-                case 5:
+                case "Tools Kit":
+                    startActivity(new Intent(this, io.github.abdurazaaqmohammed.tools.ToolsHubActivity.class));
+                    break;
+                case "Settings":
                     showSettingsDialog();
                     break;
             }
@@ -1710,15 +1733,16 @@ public class MainActivity extends AppCompatActivity {
                         case "Filter":
                             LinearLayout topBar = findViewById(R.id.topBar);
                             LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
-                            EditText filterBar = (EditText) topBar.getChildAt(2);
+                            com.google.android.material.textfield.TextInputLayout filterBox = (com.google.android.material.textfield.TextInputLayout) topBar.getChildAt(2);
+                            EditText filterBar = (EditText) filterBox.getEditText();
                             if (pathLayout.getVisibility() == View.VISIBLE) {
                                 pathLayout.setVisibility(View.GONE);
-                                filterBar.setVisibility(View.VISIBLE);
-                                filterBar.requestFocus();
+                                filterBox.setVisibility(View.VISIBLE);
+                                if (filterBar != null) filterBar.requestFocus();
                             } else {
                                 pathLayout.setVisibility(View.VISIBLE);
-                                filterBar.setVisibility(View.GONE);
-                                filterBar.setText("");
+                                filterBox.setVisibility(View.GONE);
+                                if (filterBar != null) filterBar.setText("");
                             }
                             break;
                         case "Search":
@@ -1838,9 +1862,9 @@ public class MainActivity extends AppCompatActivity {
                         new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
                                 .append(dir1Files.length - foldersCount));
             }
-            loadFolderInPane(homeDir1, true);
-            loadFolderInPane(homeDir2, false);
+            loadFolderInPane(resolveStartupFolder(true, homeDir1), true);
             loadFolderInPane(resolveStartupFolder(false, homeDir2), false);
+            new Thread(() -> AccessManager.warmUp(MainActivity.this)).start();
         });
     }
 
@@ -2712,13 +2736,20 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        workingModeTv.setOnItemClickListener((parent, view, position, id) -> {
-            boolean isRoot = position == 1;
-            if (isRoot && !rootManager.isRootAvailable()) {
-                Extensions.showMessage(this, "Root not available on this device");
-                workingModeTv.setText(workingModes[0], false);
-                return;
+        sizeSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
+            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                updatePreview.run();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar s) {
+                settings.edit().putInt("file_list_scale", 60 + s.getProgress()).apply();
+                refreshFileLists();
             }
         });
         linesSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -3073,12 +3104,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupFilterBar() {
         LinearLayout topBar = findViewById(R.id.topBar);
-        EditText filterBar = new EditText(this);
-        filterBar.setHint("Filter...");
+        com.google.android.material.textfield.TextInputLayout filterBox =
+                io.github.abdurazaaqmohammed.ui.UiFields.box(this, "Filter...");
+        EditText filterBar = io.github.abdurazaaqmohammed.ui.UiFields.field(filterBox, 0);
         filterBar.setVisibility(View.GONE);
-        filterBar.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        filterBox.setVisibility(View.GONE);
+        filterBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         filterBar.setSingleLine(true);
-        topBar.addView(filterBar, 2);
+        topBar.addView(filterBox, 2);
 
         filterBar.addTextChangedListener(new TextWatcher() {
             @Override
@@ -3355,7 +3388,341 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void showWifiPasswordsDialog() {
+        if (!io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.isRooted(this)) {
+            Extensions.showMessage(this, "Root access required");
+            return;
+        }
+        LinearLayout loadingView = new LinearLayout(this);
+        loadingView.setOrientation(LinearLayout.VERTICAL);
+        loadingView.setPadding(48, 48, 48, 48);
+        loadingView.setGravity(android.view.Gravity.CENTER);
+        android.widget.ProgressBar progressBar = new android.widget.ProgressBar(this);
+        TextView loadingText = new TextView(this);
+        loadingText.setText("Loading...");
+        loadingText.setPadding(0, 24, 0, 0);
+        loadingText.setGravity(android.view.Gravity.CENTER);
+        loadingView.addView(progressBar);
+        loadingView.addView(loadingText);
+        AlertDialog loadingDialog = dialogUtil.getDialogBuilder().setTitle("Wi-Fi Passwords").setView(loadingView).setNegativeButton(android.R.string.cancel, null).show();
+        new Thread(() -> {
+            java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> entries = io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.loadWifiPasswords(MainActivity.this);
+            runOnUiThread(() -> {
+                try {
+                    loadingDialog.dismiss();
+                } catch (Exception ignored) {
+                }
+                if (entries == null || entries.isEmpty()) {
+                    dialogUtil.getDialogBuilder().setTitle("Wi-Fi Passwords").setMessage("No saved networks found").setPositiveButton(android.R.string.ok, null).show();
+                    return;
+                }
+                LinearLayout wifiBox = new LinearLayout(MainActivity.this);
+                wifiBox.setOrientation(LinearLayout.VERTICAL);
+                float wifiDensity = getResources().getDisplayMetrics().density;
+                int wifiPad = (int) (16 * wifiDensity);
+                LinearLayout searchRow = new LinearLayout(MainActivity.this);
+                searchRow.setOrientation(LinearLayout.HORIZONTAL);
+                searchRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                com.google.android.material.textfield.TextInputLayout wifiSearchBox =
+                        io.github.abdurazaaqmohammed.ui.UiFields.box(MainActivity.this, "Search networks");
+                EditText wifiSearch = io.github.abdurazaaqmohammed.ui.UiFields.field(wifiSearchBox, 0);
+                wifiSearch.setSingleLine(true);
+                LinearLayout.LayoutParams wifiSearchParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                searchRow.addView(wifiSearchBox, wifiSearchParams);
+                CheckBox hideBox = new CheckBox(MainActivity.this);
+                hideBox.setText("Hide");
+                final boolean[] wifiShowPass = new boolean[]{!PreferenceManager.getDefaultSharedPreferences(MainActivity.this).getBoolean("wifi_hide_pass", false)};
+                hideBox.setChecked(!wifiShowPass[0]);
+                searchRow.addView(hideBox);
+                MaterialButton exportBtn = new MaterialButton(MainActivity.this);
+                exportBtn.setText("Export");
+                searchRow.addView(exportBtn);
+                LinearLayout.LayoutParams searchRowParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                searchRowParams.setMargins(wifiPad, wifiPad, wifiPad, (int) (8 * wifiDensity));
+                wifiBox.addView(searchRow, searchRowParams);
+                ListView listView = new ListView(MainActivity.this);
+                listView.setDivider(null);
+                listView.setDividerHeight(0);
+                int wifiListPad = (int) (8 * wifiDensity);
+                listView.setPadding(wifiPad, 0, wifiPad, 0);
+                listView.setClipToPadding(false);
+                LinearLayout.LayoutParams wifiListParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+                wifiBox.addView(listView, wifiListParams);
+                final java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> wifiAll = new java.util.ArrayList<>(entries);
+                final java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> wifiVisible = new java.util.ArrayList<>(entries);
+                int wifiOnSurface = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.BLACK);
+                int wifiOnVariant = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorOnSurfaceVariant, android.graphics.Color.GRAY);
+                int wifiBadgeBg = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorPrimaryContainer, android.graphics.Color.LTGRAY);
+                int wifiBadgeFg = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorOnPrimaryContainer, android.graphics.Color.BLACK);
+                int wifiCardBg = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorSurfaceContainerHigh, android.graphics.Color.WHITE);
+                android.widget.BaseAdapter wifiAdapter = new android.widget.BaseAdapter() {
+                    public int getCount() {
+                        return wifiVisible.size();
+                    }
+                    public Object getItem(int position) {
+                        return wifiVisible.get(position);
+                    }
+                    public long getItemId(int position) {
+                        return position;
+                    }
+                    public View getView(int position, View convertView, ViewGroup parent) {
+                        io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e = wifiVisible.get(position);
+                        LinearLayout card = new LinearLayout(MainActivity.this);
+                        card.setOrientation(LinearLayout.VERTICAL);
+                        int cardPad = (int) (14 * wifiDensity);
+                        card.setPadding(cardPad, (int) (10 * wifiDensity), cardPad, (int) (10 * wifiDensity));
+                        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
+                        cardBg.setColor(wifiCardBg);
+                        cardBg.setCornerRadius(16 * wifiDensity);
+                        card.setBackground(cardBg);
+                        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        cardParams.setMargins(0, wifiListPad, 0, wifiListPad);
+                        card.setLayoutParams(cardParams);
+                        LinearLayout topRow = new LinearLayout(MainActivity.this);
+                        topRow.setOrientation(LinearLayout.HORIZONTAL);
+                        topRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                        TextView ssidView = new TextView(MainActivity.this);
+                        ssidView.setText(e.ssid);
+                        ssidView.setTextSize(16);
+                        ssidView.setTypeface(null, android.graphics.Typeface.BOLD);
+                        ssidView.setTextColor(wifiOnSurface);
+                        LinearLayout.LayoutParams ssidParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                        topRow.addView(ssidView, ssidParams);
+                        TextView badgeView = new TextView(MainActivity.this);
+                        badgeView.setText(e.security);
+                        badgeView.setTextSize(11);
+                        badgeView.setTypeface(null, android.graphics.Typeface.BOLD);
+                        badgeView.setTextColor(wifiBadgeFg);
+                        android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
+                        badgeBg.setColor(wifiBadgeBg);
+                        badgeBg.setCornerRadius(24 * wifiDensity);
+                        badgeView.setBackground(badgeBg);
+                        int badgePadH = (int) (10 * wifiDensity);
+                        int badgePadV = (int) (4 * wifiDensity);
+                        badgeView.setPadding(badgePadH, badgePadV, badgePadH, badgePadV);
+                        topRow.addView(badgeView);
+                        card.addView(topRow);
+                        TextView passView = new TextView(MainActivity.this);
+                        passView.setText(passText(e, wifiShowPass[0]));
+                        passView.setTextSize(14);
+                        passView.setTypeface(android.graphics.Typeface.MONOSPACE);
+                        passView.setTextColor(wifiOnVariant);
+                        passView.setTextIsSelectable(false);
+                        LinearLayout.LayoutParams passParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        passParams.topMargin = (int) (4 * wifiDensity);
+                        card.addView(passView, passParams);
+                        LinearLayout actionRow = new LinearLayout(MainActivity.this);
+                        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+                        actionRow.setGravity(android.view.Gravity.END);
+                        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        actionParams.topMargin = (int) (4 * wifiDensity);
+                        MaterialButton qrBtn = new MaterialButton(MainActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+                        qrBtn.setText("Share");
+                        qrBtn.setOnClickListener(v -> {
+                            android.widget.PopupMenu shareMenu = new android.widget.PopupMenu(MainActivity.this, v);
+                            shareMenu.getMenu().add("QR code");
+                            shareMenu.getMenu().add("Name + password");
+                            shareMenu.getMenu().add("Password only");
+                            shareMenu.setOnMenuItemClickListener(item -> {
+                                String title = item.getTitle().toString();
+                                if (title.equals("QR code")) showWifiQrDialog(e);
+                                else if (title.equals("Name + password")) shareWifiText(e.ssid + " : " + (e.password.isEmpty() ? "(Open)" : e.password));
+                                else shareWifiText(e.password.isEmpty() ? e.ssid : e.password);
+                                return true;
+                            });
+                            shareMenu.show();
+                        });
+                        MaterialButton copyPassBtn = new MaterialButton(MainActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+                        copyPassBtn.setText(android.R.string.copy);
+                        copyPassBtn.setOnClickListener(v -> {
+                            android.widget.PopupMenu copyMenu = new android.widget.PopupMenu(MainActivity.this, v);
+                            copyMenu.getMenu().add("Name + password");
+                            copyMenu.getMenu().add("Password only");
+                            copyMenu.setOnMenuItemClickListener(item -> {
+                                if (item.getTitle().toString().equals("Name + password")) {
+                                    copyPlain("wifi", e.ssid + " : " + (e.password.isEmpty() ? "(Open)" : e.password));
+                                } else {
+                                    copyWifiPassword(e);
+                                }
+                                return true;
+                            });
+                            copyMenu.show();
+                        });
+                        actionRow.addView(qrBtn);
+                        actionRow.addView(copyPassBtn);
+                        card.addView(actionRow, actionParams);
+                        return card;
+                    }
+                };
+                listView.setAdapter(wifiAdapter);
+                hideBox.setOnCheckedChangeListener((b, checked) -> {
+                    wifiShowPass[0] = !checked;
+                    PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit().putBoolean("wifi_hide_pass", checked).apply();
+                    wifiAdapter.notifyDataSetChanged();
+                });
+                exportBtn.setOnClickListener(v -> exportWifiEntries(entries));
+                final AlertDialog[] wifiDialogHolder = new AlertDialog[1];
+                wifiSearch.addTextChangedListener(new TextWatcher() {
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                        String query = s.toString().trim().toLowerCase();
+                        wifiVisible.clear();
+                        if (query.isEmpty()) {
+                            wifiVisible.addAll(wifiAll);
+                        } else {
+                            for (io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e : wifiAll) {
+                                if (e.ssid.toLowerCase().contains(query) || e.security.toLowerCase().contains(query)) {
+                                    wifiVisible.add(e);
+                                }
+                            }
+                        }
+                        wifiAdapter.notifyDataSetChanged();
+                        if (wifiDialogHolder[0] != null) {
+                            wifiDialogHolder[0].setTitle("Wi-Fi Passwords (" + wifiVisible.size() + ")");
+                        }
+                    }
+                    public void afterTextChanged(Editable s) {
+                    }
+                });
+                AlertDialog listDialog = dialogUtil.getDialogBuilder().setTitle("Wi-Fi Passwords (" + entries.size() + ")").setView(wifiBox).setPositiveButton(android.R.string.copy, (d, w) -> {
+                    StringBuilder all = new StringBuilder();
+                    for (io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e : entries) {
+                        all.append(e.ssid).append(" : ").append(e.password.isEmpty() ? "(Open)" : e.password).append("\n");
+                    }
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("wifi", all.toString().trim());
+                    clipboard.setPrimaryClip(clip);
+                    Extensions.showMessage(MainActivity.this, rss.getString(R.string.copied));
+                }).setNegativeButton(android.R.string.cancel, null).show();
+                wifiDialogHolder[0] = listDialog;
+                listView.setOnItemClickListener((p, v, pos, itemId) -> {
+                    io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e = wifiVisible.get(pos);
+                    copyWifiPassword(e);
+                });
+            });
+        }).start();
+    }
+
+    private static String passText(io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e, boolean show) {
+        if (e.password.isEmpty()) return "Open network";
+        if (show) return e.password;
+        StringBuilder mask = new StringBuilder();
+        for (int i = 0; i < Math.max(8, e.password.length()); i++) mask.append('•');
+        return mask.toString();
+    }
+
+    private void copyPlain(String label, String value) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        android.content.ClipData clip = android.content.ClipData.newPlainText(label, value);
+        clipboard.setPrimaryClip(clip);
+        Extensions.showMessage(MainActivity.this, rss.getString(R.string.copied));
+    }
+
+    private void shareWifiText(String text) {
+        Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
+        startActivity(Intent.createChooser(share, "Share Wi-Fi"));
+    }
+
+    private void copyWifiPassword(io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e) {
+        String value = e.password.isEmpty() ? e.ssid : e.password;
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        android.content.ClipData clip = android.content.ClipData.newPlainText("wifi", value);
+        clipboard.setPrimaryClip(clip);
+        Extensions.showMessage(MainActivity.this, rss.getString(R.string.copied));
+    }
+
+    private void showWifiQrDialog(io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e) {
+        try {
+            String config = QrUtil.wifiConfig(e.ssid, e.password, e.security);
+            Bitmap qr = QrUtil.generate(config, 1024);
+            float density = getResources().getDisplayMetrics().density;
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+            int pad = (int) (20 * density);
+            box.setPadding(pad, pad, pad, pad);
+            ImageView qrView = new ImageView(this);
+            qrView.setImageBitmap(qr);
+            int size = (int) (260 * density);
+            box.addView(qrView, new LinearLayout.LayoutParams(size, size));
+            TextView ssidView = new TextView(this);
+            ssidView.setText(e.ssid);
+            ssidView.setTextSize(18);
+            ssidView.setTypeface(null, android.graphics.Typeface.BOLD);
+            ssidView.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams ssidParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            ssidParams.topMargin = (int) (12 * density);
+            box.addView(ssidView, ssidParams);
+            TextView secView = new TextView(this);
+            secView.setText(e.security + (e.password.isEmpty() ? "" : " : " + e.password));
+            secView.setTextSize(14);
+            secView.setGravity(android.view.Gravity.CENTER);
+            secView.setTextIsSelectable(true);
+            box.addView(secView);
+            dialogUtil.getDialogBuilder().setTitle("Share Wi-Fi").setView(box)
+                    .setPositiveButton("Share", (d, w) -> {
+                        Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, config);
+                        startActivity(Intent.createChooser(share, "Share Wi-Fi"));
+                    })
+                    .setNeutralButton("Save image", (d, w) -> new Thread(() -> {
+                        try {
+                            QrUtil.saveToGallery(MainActivity.this, qr, e.ssid + "_wifi_qr");
+                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "QR image saved"));
+                        } catch (Exception ex) {
+                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "Save failed: " + ex.getMessage()));
+                        }
+                    }).start())
+                    .setNegativeButton(android.R.string.cancel, null).show();
+        } catch (Exception ex) {
+            Extensions.showMessage(this, "QR failed: " + ex.getMessage());
+        }
+    }
+
+    private void exportWifiEntries(java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> entries) {
+        new Thread(() -> {
+            try {
+                StringBuilder all = new StringBuilder();
+                for (io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e : entries) {
+                    all.append("SSID: ").append(e.ssid).append('\n');
+                    all.append("Security: ").append(e.security).append('\n');
+                    all.append("Password: ").append(e.password.isEmpty() ? "(Open)" : e.password).append("\n\n");
+                }
+                String fileName = "wifi_passwords.txt";
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                    values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
+                    values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/MP Manager");
+                    Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri == null) throw new Exception("Cannot create file");
+                    try (java.io.OutputStream os = getContentResolver().openOutputStream(uri)) {
+                        if (os == null) throw new Exception("Cannot open file");
+                        os.write(all.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                } else {
+                    java.io.File dir = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "MP Manager");
+                    if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new Exception("Cannot create folder");
+                    java.io.File out = new java.io.File(dir, fileName);
+                    try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
+                        fos.write(all.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(out)));
+                }
+                runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "Exported to Download/MP Manager"));
+            } catch (Exception ex) {
+                runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "Export failed: " + ex.getMessage()));
+            }
+        }).start();
+    }
+
     public static IEZFtpServer ftpServer;
+
+    public interface ImagePickCallback {
+        void onImagePicked(Uri uri);
+    }
+
+    public static ImagePickCallback overlayImageCallback;
 
     private void showFtpServerDialog() {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_ftp_server, null);
