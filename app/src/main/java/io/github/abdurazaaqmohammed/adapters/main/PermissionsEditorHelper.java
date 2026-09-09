@@ -117,7 +117,7 @@ public class PermissionsEditorHelper {
         numericInput.setText(String.valueOf(permBits[4]));
         numericInput.setSelectAllOnFocus(true);
         numericInput.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(4) });
-        numericInput.setLayoutParams(new LinearLayout.LayoutParams(dp(80), ViewGroup.LayoutParams.WRAP_CONTENT));
+        numericInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         numericInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -134,7 +134,10 @@ public class PermissionsEditorHelper {
             }
         });
         numericRow.addView(numLabel);
-        numericRow.addView(numericInput);
+        com.google.android.material.textfield.TextInputLayout numericBox =
+                io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, numericInput, null, 0);
+        numericBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        numericRow.addView(numericBox);
         root.addView(numericRow);
 
         View.OnClickListener permListener = v -> {

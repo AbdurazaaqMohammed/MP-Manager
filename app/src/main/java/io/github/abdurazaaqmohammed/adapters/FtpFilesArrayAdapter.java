@@ -142,7 +142,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         input.setText(file.getName());
         dialogUtil.getDialogBuilder()
                 .setTitle(context.rss.getString(R.string.rename))
-                .setView(input)
+                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, input, null, 16))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {

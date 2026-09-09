@@ -49,7 +49,9 @@ import java.util.Locale;
 import java.util.TreeMap;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -584,7 +586,7 @@ public class HexEditorActivity extends AppCompatActivity {
         input.setText(getClipboardText());
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Paste from " + formats[formatIndex])
-                .setView(input)
+                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, "Paste bytes", 16))
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     try {
                         byte[] data = parsePastedBytes(formatIndex, input.getText().toString());
@@ -673,6 +675,7 @@ public class HexEditorActivity extends AppCompatActivity {
 
     /** Write mods to the (staged) file, then root write-back when staged. */
     private void saveChangesRoot() {
+        backupForSave();
         try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
             for (java.util.Map.Entry<Integer, Integer> entry : mods.entrySet()) {
                 w.seek(entry.getKey());
@@ -693,6 +696,26 @@ public class HexEditorActivity extends AppCompatActivity {
                     runOnUiThread(() -> new ErrorUtil(this).showError(e));
                 }
             }).start();
+        }
+    }
+
+    private void backupForSave() {
+        try {
+            if (!UiPrefs.genBackup(this)) return;
+            if (rootOriginalPath != null) {
+                if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginalPath)) {
+                    AccessManager.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
+                }
+            } else if (file != null && file.isFile()) {
+                File bak = new File(file.getPath() + ".bak");
+                try (RandomAccessFile in = new RandomAccessFile(file, "r");
+                     RandomAccessFile out = new RandomAccessFile(bak, "rw")) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                }
+            }
+        } catch (Exception ignored) {
         }
     }
 
@@ -718,7 +741,7 @@ public class HexEditorActivity extends AppCompatActivity {
         input.setText(String.format(Locale.US, "%X", cursorPos));
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Go to offset")
-                .setView(input)
+                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     try {

@@ -39,7 +39,9 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
@@ -598,6 +600,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             saveTabTextRoot(tab, text);
             return;
         }
+        backupForSave(tab.file, null);
         try (OutputStream os = (tab.file == null
                 ? getContentResolver().openOutputStream(tab.fileUri, "wt")
                 : FileUtils.getOutputStream(tab.file))) {
@@ -612,6 +615,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
 
     /** Save a root-staged tab: local staged write, then root write-back. */
     private void saveTabTextRoot(EditorTab tab, String text) {
+        backupForSave(tab.file, tab.rootOriginalPath);
         try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
             os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(Charset.forName("UTF-8")));
         } catch (Exception e) {
@@ -757,6 +761,21 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
         } else super.onBackPressed();
+    }
+
+    private void backupForSave(File directFile, String rootOriginal) {
+        try {
+            if (!UiPrefs.genBackup(this)) return;
+            if (rootOriginal != null) {
+                if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginal)) {
+                    AccessManager.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
+                }
+            } else if (directFile != null && directFile.isFile()) {
+                File bak = new File(directFile.getPath() + ".bak");
+                FileUtils.copyFile(directFile, bak);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void saveFile() {

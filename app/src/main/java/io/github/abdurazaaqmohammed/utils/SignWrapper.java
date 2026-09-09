@@ -138,7 +138,7 @@ public class SignWrapper {
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
-        layout.addView(pwInput);
+        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(activity, pwInput, null, 0));
         new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.rss.getString(R.string.enter_password))
                 .setView(layout)

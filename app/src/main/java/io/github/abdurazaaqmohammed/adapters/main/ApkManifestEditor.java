@@ -450,7 +450,7 @@ public class ApkManifestEditor {
         AlertDialog d = dialogUtil.getDialogBuilder()
                 .setCustomTitle(uiHelper.getTitle(
                         "Edit: " + entry.getMiddleTag().trim()))
-                .setView(input)
+                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dlg, w) -> {
                     String newVal = input.getText().toString();

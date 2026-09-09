@@ -1042,7 +1042,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.jump_to_line)
-                .setView(input)
+                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(requireContext(), input, getString(R.string.jump_to_line), 16))
                 .setPositiveButton(R.string.go, (dialog, which) -> {
                     CharSequence val = input.getText();
                     if (!TextUtils.isEmpty(val)) {

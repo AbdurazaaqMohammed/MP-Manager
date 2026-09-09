@@ -80,6 +80,7 @@ import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -188,6 +189,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         holder.fileNameView.setText("");
         holder.fileDateView.setText("");
         holder.fileIconView.setImageDrawable(null);
+
+        int scale = UiPrefs.getScale(context);
+        holder.fileNameView.setTextSize(UiPrefs.nameSize(scale));
+        holder.fileNameView.setMaxLines(UiPrefs.getMaxLines(context));
+        holder.fileNameView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        int iconPx = UiPrefs.iconDp(context, scale);
+        ViewGroup.LayoutParams iconParams = holder.fileIconView.getLayoutParams();
+        if (iconParams != null) {
+            iconParams.width = iconPx;
+            iconParams.height = iconPx;
+            holder.fileIconView.setLayoutParams(iconParams);
+        }
 
         if (isInZip) {
             entry = (ZipEntryInfo) item;
@@ -650,6 +663,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setNegativeButton(android.R.string.cancel, null).show();
             } else if (fileName.endsWith(".zip")) {
                 withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+            } else if (fileName.endsWith(".arsc")) {
+                withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
                 dialogUtil.styleAlertDialog(
                         dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
@@ -750,16 +765,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void restoreBakRootAware(File bakFile, File origFile, String fileName) {
         String bakPath = bakFile.getPath();
         String origPath = origFile.getPath();
-        RootManager rm = RootManager.getInstance(context);
-        boolean useRoot = rm.isRootFileOpsEnabled() && rm.isRootAvailable()
+        boolean useElevated = AccessManager.fileOpsOn(context)
                 && (RootStaging.needsStaging(context, bakPath) || RootStaging.needsStaging(context, origPath));
-        if (useRoot) {
+        if (useElevated) {
             new Thread(() -> {
                 try {
-                    boolean origExists = rm.exists(origPath) || origFile.exists();
-                    if (origExists) rm.rename(origPath, origPath + "_tmp_.bak");
-                    rm.rename(bakPath, origPath);
-                    if (origExists) rm.rename(origPath + "_tmp_.bak", bakPath);
+                    boolean origExists = AccessManager.exists(context, origPath) || origFile.exists();
+                    if (origExists) AccessManager.rename(context, origPath, origPath + "_tmp_.bak", true);
+                    AccessManager.rename(context, bakPath, origPath, true);
+                    if (origExists) AccessManager.rename(context, origPath + "_tmp_.bak", bakPath, true);
                     context.handler.post(() -> context.loadFolderInPane(
                             bakFile.getParentFile() != null ? bakFile.getParentFile() : new File("/"), pane1));
                 } catch (Exception e) {

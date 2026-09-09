@@ -34,6 +34,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 public class FileIconLoader {
 
@@ -65,21 +66,17 @@ public class FileIconLoader {
         } else {
             setupNonFolderIconView(zipEntry.getFullPath(), fileIconView);
             fileDateView.setVisibility(View.VISIBLE);
-            Date lastModifiedDate = new Date(zipEntry.getLastModified());
-            SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd HH:mm");
-            String formattedDate = sdf.format(lastModifiedDate);
-            fileDateView.setText(new StringBuilder(formattedDate).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
+            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
         }
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
         if (file.isFile()) {
             fileDateView.setVisibility(View.VISIBLE);
-            Date lastModifiedDate = new Date(file.lastModified());
-            SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd HH:mm");
-            String formattedDate = sdf.format(lastModifiedDate);
+            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
             setupNonFolderIconView(file.getPath(), fileIconView);
-            fileDateView.setText(new StringBuilder(formattedDate).append(' ').append(FileSize.getHumanReadableFileSize(file.length())));
+            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, file.lastModified())).append(' ').append(FileSize.getHumanReadableFileSize(file.length())));
         } else {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);

@@ -2046,7 +2046,7 @@ public class DexEditorActivity extends AppCompatActivity {
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(pad, pad, pad, pad);
-        container.addView(editText);
+        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, editText, getString(R.string.edit_string), 0));
         container.setLayoutParams(params);
 
         final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
@@ -2082,7 +2082,7 @@ public class DexEditorActivity extends AppCompatActivity {
         LinearLayout container = new LinearLayout(this);
         container.setPadding(pad, pad, pad, pad);
         container.setLayoutParams(params);
-        container.addView(editText);
+        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, editText, null, 0));
 
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.filter_strings)
@@ -2106,8 +2106,8 @@ public class DexEditorActivity extends AppCompatActivity {
         swMatchCase.setText(R.string.match_case);
         swMatchCase.setChecked(true);
 
-        container.addView(etFind);
-        container.addView(etReplace);
+        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, etFind, null, 0));
+        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, etReplace, null, 0));
         container.addView(swMatchCase);
 
         new MaterialAlertDialogBuilder(this)

@@ -142,8 +142,10 @@ public class AIOverViewActivity extends AppCompatActivity {
         params.topMargin = padding;
         params.rightMargin = padding;
         params.bottomMargin = padding;
-        input.setLayoutParams(params);
-        container.addView(input);
+        com.google.android.material.textfield.TextInputLayout boxed =
+                io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 0);
+        boxed.setLayoutParams(params);
+        container.addView(boxed);
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Edit Prompt")

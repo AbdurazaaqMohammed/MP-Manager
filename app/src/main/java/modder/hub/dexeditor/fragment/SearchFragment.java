@@ -390,13 +390,12 @@ public class SearchFragment extends Fragment {
         etExcludes.setHint("com/gms/\nandroidx/");
         etExcludes.setMinLines(3);
         etExcludes.setGravity(android.view.Gravity.TOP);
-
         TextView tvExplanation = new TextView(requireContext());
         tvExplanation.setText(R.string.search_ex_paths);
         tvExplanation.setTextSize(14);
         tvExplanation.setPadding(0, 20, 0, 0);
 
-        layout.addView(etExcludes);
+        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(requireContext(), etExcludes, null, 0));
         layout.addView(tvExplanation);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());

@@ -146,12 +146,14 @@ public class CommandHelperSettingsDialog extends DialogFragment {
         int p = dp2(16);
         layout.setPadding(p, p, p, p);
         TextInputLayout nameLayout = new TextInputLayout(getActivity());
+        nameLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         TextInputEditText nameInput = new TextInputEditText(getActivity());
         nameInput.setHint(R.string.profile_name);
         if (existingName != null) nameInput.setText(existingName);
         nameLayout.addView(nameInput);
         layout.addView(nameLayout);
         TextInputLayout cmdLayout = new TextInputLayout(getActivity());
+        cmdLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         TextInputEditText cmdInput = new TextInputEditText(getActivity());
         cmdInput.setHint(R.string.command_template_hint);
         cmdInput.setSingleLine(false);
