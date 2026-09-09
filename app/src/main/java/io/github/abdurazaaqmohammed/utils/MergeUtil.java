@@ -19,23 +19,272 @@ import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValue;
 import com.reandroid.arsc.value.ValueType;
 
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+
+import android.os.Build;
+import android.view.View;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+
+import androidx.preference.PreferenceManager;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
 public class MergeUtil {
+    public static class Options {
+        public boolean autosign = true;
+        public boolean deviceOnly = true;
+        public boolean extractNativeLibs = true;
+        public List<String> splitNames = null;
+    }
+
     public static void mergeSplitApk(File file, MainActivity context) {
+        Options opts = new Options();
+        try {
+            opts.autosign = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("autosign", true);
+            opts.deviceOnly = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("antisplit_device_only", true);
+            opts.extractNativeLibs = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("antisplit_extract_native_libs", true);
+        } catch (Exception ignored) {
+        }
+        mergeSplitApk(file, context, opts);
+    }
+
+    public static void showAntisplitDialog(File file, MainActivity context) {
+        new Thread(() -> {
+            List<FileHeader> splits = new ArrayList<>();
+            try (ZipFile zf = new ZipFile(file)) {
+                for (FileHeader fh : zf.getFileHeaders()) {
+                    if (!fh.isDirectory() && fh.getFileName().toLowerCase(Locale.US).endsWith(".apk")) {
+                        splits.add(fh);
+                    }
+                }
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+                return;
+            }
+            if (splits.isEmpty()) {
+                context.handler.post(() -> Extensions.showMessage(context, "No APK splits found"));
+                return;
+            }
+            String baseName = findBaseSplit(splits);
+            context.handler.post(() -> showAntisplitDialogInner(file, context, splits, baseName));
+        }).start();
+    }
+
+    private static String findBaseSplit(List<FileHeader> splits) {
+        for (FileHeader fh : splits) {
+            String name = new File(fh.getFileName()).getName();
+            if (name.equalsIgnoreCase("base.apk")) return fh.getFileName();
+        }
+        String fallback = null;
+        long biggest = -1;
+        for (FileHeader fh : splits) {
+            String name = new File(fh.getFileName()).getName().toLowerCase(Locale.US);
+            if (!name.contains("split") && !name.startsWith("config.")) return fh.getFileName();
+            try {
+                long size = fh.getUncompressedSize();
+                if (size > biggest) {
+                    biggest = size;
+                    fallback = fh.getFileName();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return fallback != null ? fallback : splits.get(0).getFileName();
+    }
+
+    private static boolean matchesDevice(String entryName, MainActivity context) {
+        String lower = entryName.toLowerCase(Locale.US);
+        int dpi = 320;
+        try {
+            dpi = context.getResources().getDisplayMetrics().densityDpi;
+        } catch (Exception ignored) {
+        }
+        String bucket = dpi <= 120 ? "ldpi" : dpi <= 160 ? "mdpi" : dpi <= 213 ? "tvdpi"
+                : dpi <= 320 ? "xhdpi" : dpi <= 480 ? "xxhdpi" : "xxxhdpi";
+        if (lower.contains(bucket) || lower.contains("nodpi")) return true;
+        try {
+            for (String abi : Build.SUPPORTED_ABIS) {
+                if (abi != null && lower.contains(abi.toLowerCase(Locale.US))) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            String lang = Locale.getDefault().getLanguage();
+            if (lang != null && !lang.isEmpty() && lower.contains("config." + lang.toLowerCase(Locale.US))) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private static void showAntisplitDialogInner(File file, MainActivity context, List<FileHeader> splits, String baseName) {
+        float density = context.getResources().getDisplayMetrics().density;
+        int pad = (int) (16 * density);
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(pad, pad, pad, 0);
+
+        TextView splitsTitle = new TextView(context);
+        splitsTitle.setText("Splits (" + splits.size() + ")");
+        splitsTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        root.addView(splitsTitle);
+
+        LinearLayout checkBoxHolder = new LinearLayout(context);
+        checkBoxHolder.setOrientation(LinearLayout.VERTICAL);
+        List<CheckBox> boxes = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        for (FileHeader fh : splits) {
+            String fullName = fh.getFileName();
+            String shortName = new File(fullName).getName();
+            names.add(fullName);
+            CheckBox cb = new MaterialCheckBox(context);
+            boolean isBase = fullName.equals(baseName);
+            cb.setText(isBase ? shortName + " (base)" : shortName);
+            cb.setChecked(true);
+            cb.setEnabled(!isBase);
+            cb.setTag(fullName);
+            checkBoxHolder.addView(cb);
+            boxes.add(cb);
+        }
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(checkBoxHolder);
+        root.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, (int) (200 * density)));
+
+        boolean deviceOnlySaved = true;
+        boolean extractSaved = true;
+        boolean autosignSaved = true;
+        try {
+            deviceOnlySaved = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("antisplit_device_only", true);
+            extractSaved = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("antisplit_extract_native_libs", true);
+            autosignSaved = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("autosign", true);
+        } catch (Exception ignored) {
+        }
+
+        Runnable applyDeviceSelection = () -> {
+            for (CheckBox cb : boxes) {
+                String fullName = (String) cb.getTag();
+                if (fullName.equals(baseName)) {
+                    cb.setChecked(true);
+                } else {
+                    cb.setChecked(matchesDevice(fullName, context));
+                }
+            }
+        };
+
+        MaterialSwitch deviceOnlySwitch = new MaterialSwitch(context);
+        deviceOnlySwitch.setText("Device specs only");
+        deviceOnlySwitch.setChecked(deviceOnlySaved);
+        root.addView(deviceOnlySwitch);
+
+        MaterialSwitch extractSwitch = new MaterialSwitch(context);
+        extractSwitch.setText("extractNativeLibs");
+        extractSwitch.setChecked(extractSaved);
+        root.addView(extractSwitch);
+
+        LinearLayout signRow = new LinearLayout(context);
+        signRow.setOrientation(LinearLayout.HORIZONTAL);
+        signRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        CheckBox autosignBox = new MaterialCheckBox(context);
+        autosignBox.setText(R.string.auto_sign);
+        autosignBox.setChecked(autosignSaved);
+        LinearLayout.LayoutParams signParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        signRow.addView(autosignBox, signParams);
+        MaterialButton signSettings = new MaterialButton(context);
+        signSettings.setText(R.string.sign_set);
+        signSettings.setOnClickListener(context.uiHelper.showSignSettingsDialog());
+        signRow.addView(signSettings);
+        root.addView(signRow);
+
+        if (deviceOnlySaved) applyDeviceSelection.run();
+        deviceOnlySwitch.setOnCheckedChangeListener((b, checked) -> {
+            if (checked) applyDeviceSelection.run();
+        });
+
+        new MaterialAlertDialogBuilder(context)
+                .setTitle("AntiSplit")
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Merge", (d, w) -> {
+                    boolean deviceOnly = deviceOnlySwitch.isChecked();
+                    boolean extractLibs = extractSwitch.isChecked();
+                    boolean autosign = autosignBox.isChecked();
+                    try {
+                        PreferenceManager.getDefaultSharedPreferences(context).edit()
+                                .putBoolean("antisplit_device_only", deviceOnly)
+                                .putBoolean("antisplit_extract_native_libs", extractLibs)
+                                .putBoolean("autosign", autosign)
+                                .apply();
+                    } catch (Exception ignored) {
+                    }
+                    Options opts = new Options();
+                    opts.autosign = autosign;
+                    opts.deviceOnly = deviceOnly;
+                    opts.extractNativeLibs = extractLibs;
+                    List<String> selected = new ArrayList<>();
+                    for (CheckBox cb : boxes) {
+                        String fullName = (String) cb.getTag();
+                        if (fullName.equals(baseName)) {
+                            selected.add(fullName);
+                        } else if (deviceOnly) {
+                            if (matchesDevice(fullName, context)) selected.add(fullName);
+                        } else if (cb.isChecked()) {
+                            selected.add(fullName);
+                        }
+                    }
+                    if (!selected.contains(baseName)) selected.add(0, baseName);
+                    opts.splitNames = selected;
+                    mergeSplitApk(file, context, opts);
+                }).show();
+    }
+
+    public static void mergeSplitApk(File file, MainActivity context, Options opts) {
+        if (opts == null) opts = new Options();
+        final Options options = opts;
         ProgressManager pm = new ProgressManager(context, true).show();
         new RunUtil(null, context, null).runInBackground(() -> {
             APKLogger logger = pm.getLogger();
             File dir = new File(context.getCacheDir(), UUID.randomUUID().toString());
-            try(ApkBundle bundle = new ApkBundle(); ArchiveFile zf = new ArchiveFile(file)) {
+            try(ApkBundle bundle = new ApkBundle()) {
                 bundle.setAPKLogger(logger);
-                zf.extractAll(dir);
-                bundle.loadApkDirectory(dir, false);
+                if (options.splitNames != null && !options.splitNames.isEmpty()) {
+                    if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
+                        logger.logMessage("Cannot create temp dir");
+                        return false;
+                    }
+                    try (ZipFile zf = new ZipFile(file)) {
+                        for (String name : options.splitNames) {
+                            try {
+                                net.lingala.zip4j.model.FileHeader fh = zf.getFileHeader(name);
+                                if (fh != null) zf.extractFile(fh, dir.getAbsolutePath());
+                            } catch (Exception e) {
+                                logger.logMessage("Skip " + name + ": " + e.getMessage());
+                            }
+                        }
+                    }
+                    bundle.loadApkDirectory(dir, false);
+                } else {
+                    try(ArchiveFile zf = new ArchiveFile(file)) {
+                        zf.extractAll(dir);
+                        bundle.loadApkDirectory(dir, false);
+                    }
+                }
                 for (ApkModule apkModule : bundle.getApkModuleList()) {
                     String protect = Util.isProtected(apkModule);
                     if (protect != null) {
@@ -46,16 +295,44 @@ public class MergeUtil {
                 }
                 try(ApkModule mergedModule = bundle.mergeModules(false)) {
                     sanitizeManifest(mergedModule);
+                    if (options.extractNativeLibs) {
+                        try {
+                            mergedModule.setExtractNativeLibs(true);
+                        } catch (Exception e) {
+                            logger.logMessage("extractNativeLibs: " + e.getMessage());
+                        }
+                    }
                     mergedModule.refreshTable();
                     mergedModule.refreshManifest();
                     logger.logMessage("Writing apk ...");
                     File outputFile = io.github.abdurazaaqmohammed.utils.FileUtils.getUnusedFile(new File(file.getParentFile(), file.getName().replaceFirst("\\.(?:xapk|aspk|apk[sm])", "_antisplit.apk")));
                     mergedModule.writeApk(outputFile);
                     pm.dismiss();
-                    context.handler.post(() -> {
-                        Extensions.showMessage(context, "Saved to: " + outputFile.getName());
-                        context.reloadCurrentFolder();
-                    });
+                    if (options.autosign) {
+                        context.handler.post(() -> SignWrapper.requireAuth(context, sw -> {
+                            ProgressManager signPm = new ProgressManager(context, true);
+                            signPm.setText("Signing " + outputFile.getName());
+                            signPm.show();
+                            new Thread(() -> {
+                                try {
+                                    sw.signApk(outputFile);
+                                    signPm.dismiss();
+                                    context.handler.post(() -> {
+                                        Extensions.showMessage(context, "Saved to: " + outputFile.getName());
+                                        context.reloadCurrentFolder();
+                                    });
+                                } catch (Exception e) {
+                                    signPm.dismiss();
+                                    new ErrorUtil(context).showError(e);
+                                }
+                            }).start();
+                        }));
+                    } else {
+                        context.handler.post(() -> {
+                            Extensions.showMessage(context, "Saved to: " + outputFile.getName());
+                            context.reloadCurrentFolder();
+                        });
+                    }
                 }
             }
             Util.deleteDir(dir);
