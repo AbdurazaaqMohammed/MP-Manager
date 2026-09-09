@@ -844,12 +844,31 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 SignatureKeyDialog.show(context, readable, true);
                                 break;
                             case 3:
-                                MergeUtil.mergeSplitApk(readable, context);
+                                MergeUtil.showAntisplitDialog(readable, context);
                                 break;
                         }
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
+                }).create());
+    }
+
+    private void showArscOpenWith(File arscFile, File apkFile, String entryPath) {
+        String[] options = {"ARSC Editor Plus", "ARSC Editor", "Translation mode", "Resource querier"};
+        String[] modes = {
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_PLUS,
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR,
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_TRANSLATE,
+                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_QUERIER};
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Open with")
+                .setSingleChoiceItems(options, -1, (dialog, which) -> {
+                    dialog.dismiss();
+                    context.startActivity(new Intent(context, io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class)
+                            .putExtra("path", arscFile.getAbsolutePath())
+                            .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())
+                            .putExtra("zipEntryPath", entryPath)
+                            .putExtra("arscMode", modes[which]));
                 }).create());
     }
 
