@@ -34,6 +34,8 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
@@ -108,6 +110,32 @@ public class ApkToolsHandler {
     private String overlayImageBase64;
     private OverlayForm activeOverlayForm;
     private Runnable activeAdvRender;
+    private static OverlayInjectorUtil.AdvWidget styleClipboard;
+
+    private static void pasteStyle(OverlayInjectorUtil.AdvWidget dst,
+                                   OverlayInjectorUtil.AdvWidget src) {
+        if (dst == null || src == null) return;
+        dst.text = src.text;
+        dst.textSizeSp = src.textSizeSp;
+        dst.textColor = src.textColor;
+        dst.fontStyle = src.fontStyle;
+        dst.font = src.font;
+        dst.fontPath = src.fontPath;
+        dst.imageB64 = src.imageB64;
+        dst.btnAction = src.btnAction;
+        dst.url = src.url;
+        dst.btnBg = src.btnBg;
+        dst.btnBg2 = src.btnBg2;
+        dst.btnCornerRadiusDp = src.btnCornerRadiusDp;
+        dst.btnBorderWidthDp = src.btnBorderWidthDp;
+        dst.btnBorderColor = src.btnBorderColor;
+        dst.btnPaddingDp = src.btnPaddingDp;
+        dst.btnAnim = src.btnAnim;
+        dst.btnAnimColors = src.btnAnimColors == null ? null
+                : new ArrayList<>(src.btnAnimColors);
+        dst.btnAnimSpeedMs = src.btnAnimSpeedMs;
+        dst.btnAnimRainbow = src.btnAnimRainbow;
+    }
 
     private void renderAdvSafe() {
         if (activeAdvRender != null) activeAdvRender.run();
@@ -694,7 +722,11 @@ public class ApkToolsHandler {
                                             apkCloner.setPath(filePath, pkgNameFromApk, pkgNameInput);
                                             try {
                                                 apkCloner.processApk();
-                                                if (sign[0]) wrapper[0].signApk(new File(filePath.replace(".apk", "_clone.apk")));
+                                                File cloned = new File(filePath.replace(".apk", "_clone.apk"));
+                                                ApkZipAlignUtil.ensureInstallable(cloned);
+                                                if (sign[0]) {
+                                                    wrapper[0].signApk(cloned);
+                                                }
                                                 pm.dismiss();
                                                 context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                                             } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
@@ -1034,8 +1066,10 @@ public class ApkToolsHandler {
         MaterialButton bg1Btn;
         MaterialButton bg2Btn;
         MaterialButton borderColorBtn;
-        MaterialButton animABtn;
-        MaterialButton animBBtn;
+        LinearLayout animColorsRow;
+        java.util.ArrayList<Integer> animColors = new java.util.ArrayList<>(
+                java.util.Arrays.asList(-16776961, -65536));
+        Runnable renderAnimChips;
         MaterialButton titleColorBtn;
         TextInputEditText titleColorHex;
         MaterialSwitch rainbowSwitch;
@@ -1060,8 +1094,6 @@ public class ApkToolsHandler {
         float borderDp;
         int borderC = -1;
         boolean animOn;
-        int animA = -16776961;
-        int animB = -65536;
         int animMs = 500;
         int titleC;
     }
@@ -1107,8 +1139,7 @@ public class ApkToolsHandler {
         f.bg1Btn = view.findViewById(R.id.overlayBg1Btn);
         f.bg2Btn = view.findViewById(R.id.overlayBg2Btn);
         f.borderColorBtn = view.findViewById(R.id.overlayBorderColorBtn);
-        f.animABtn = view.findViewById(R.id.overlayAnimABtn);
-        f.animBBtn = view.findViewById(R.id.overlayAnimBBtn);
+        f.animColorsRow = view.findViewById(R.id.overlayAnimColorsRow);
         f.titleColorBtn = view.findViewById(R.id.overlayTitleColorBtn);
         f.titleColorHex = view.findViewById(R.id.overlayTitleColorHex);
         f.rainbowSwitch = view.findViewById(R.id.overlayRainbowSwitch);
@@ -1227,8 +1258,14 @@ public class ApkToolsHandler {
         dlg.borderWidthDp = parseFloatSafe(textOf(f.borderWidthInput), 0f);
         dlg.borderColor = f.borderC;
         dlg.animBorder = f.animSwitch.isChecked();
-        dlg.animColorA = f.animA;
-        dlg.animColorB = f.animB;
+        while (f.animColors.size() < 2) f.animColors.add(f.animColors.isEmpty() ? -16776961 : -65536);
+        dlg.animColorA = f.animColors.get(0);
+        dlg.animColorB = f.animColors.get(1);
+        if (f.animColors.size() > 2) {
+            dlg.animExtraColors = new ArrayList<>(f.animColors.subList(2, f.animColors.size()));
+        } else {
+            dlg.animExtraColors = null;
+        }
         dlg.rainbowAnim = f.rainbowSwitch != null && f.rainbowSwitch.isChecked();
         dlg.animSpeedMs = Math.max(100, parseIntSafe(textOf(f.speedInput), 500));
     }
@@ -1287,8 +1324,11 @@ public class ApkToolsHandler {
         f.animOn = o.animBorder;
         if (f.rainbowSwitch != null) f.rainbowSwitch.setChecked(o.rainbowAnim);
         if (f.animBox != null) f.animBox.setVisibility(o.animBorder ? View.VISIBLE : View.GONE);
-        f.animA = o.animColorA;
-        f.animB = o.animColorB;
+        f.animColors.clear();
+        f.animColors.add(o.animColorA);
+        f.animColors.add(o.animColorB);
+        if (o.animExtraColors != null) f.animColors.addAll(o.animExtraColors);
+        if (f.renderAnimChips != null) f.renderAnimChips.run();
         setText(f.speedInput, String.valueOf(o.animSpeedMs));
         f.animMs = o.animSpeedMs;
         f.titleC = o.titleColor;
@@ -1507,14 +1547,57 @@ public class ApkToolsHandler {
             refreshStyleLabels(f);
             updatePreview.run();
         }));
-        f.animABtn.setOnClickListener(v -> showColorWheel(f.animA, (argb, hex) -> {
-            f.animA = argb;
-            refreshStyleLabels(f);
-        }));
-        f.animBBtn.setOnClickListener(v -> showColorWheel(f.animB, (argb, hex) -> {
-            f.animB = argb;
-            refreshStyleLabels(f);
-        }));
+        f.renderAnimChips = () -> {
+            if (f.animColorsRow == null) return;
+            f.animColorsRow.removeAllViews();
+            if (f.animColors.size() < 2) {
+                while (f.animColors.size() < 2) f.animColors.add(f.animColors.isEmpty() ? -16776961 : -65536);
+            }
+            for (int i = 0; i < f.animColors.size(); i++) {
+                final int idx = i;
+                int color = f.animColors.get(idx);
+                MaterialButton chip = new MaterialButton(context);
+                chip.setText("");
+                chip.setCornerRadius(dp(24));
+                try {
+                    chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
+                } catch (Exception ignored) {
+                }
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
+                int m = dp(4);
+                lp.setMargins(m, 0, m, 0);
+                chip.setLayoutParams(lp);
+                chip.setOnClickListener(x -> showColorWheel(color, (argb, hex) -> {
+                    f.animColors.set(idx, argb);
+                    f.renderAnimChips.run();
+                    updatePreview.run();
+                }));
+                chip.setOnLongClickListener(x -> {
+                    if (f.animColors.size() > 2) {
+                        f.animColors.remove(idx);
+                        f.renderAnimChips.run();
+                        updatePreview.run();
+                    } else {
+                        Extensions.showMessage(context, "Need at least 2 colors");
+                    }
+                    return true;
+                });
+                f.animColorsRow.addView(chip);
+            }
+            MaterialButton add = new MaterialButton(context);
+            add.setBackgroundResource(R.drawable.add_24px);
+            LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(dp(48), dp(48));
+            int am = dp(4);
+            alp.setMargins(am, 0, am, 0);
+            add.setLayoutParams(alp);
+            add.setOnClickListener(x -> showColorWheel(-65536, (argb, hex) -> {
+                f.animColors.add(argb);
+                f.renderAnimChips.run();
+                updatePreview.run();
+            }));
+            f.animColorsRow.addView(add);
+        };
+        f.renderAnimChips.run();
         f.titleColorBtn.setOnClickListener(v -> showColorWheel(f.titleC == 0 ? -16777216 : f.titleC, (argb, hex) -> {
             f.titleC = argb;
             if (f.titleColorHex != null) f.titleColorHex.setText(hex);
@@ -1580,8 +1663,6 @@ public class ApkToolsHandler {
         f.bg1Btn.setText("BG: " + shortHex(f.bgC1));
         f.bg2Btn.setText(f.bgC2set ? "Gradient: " + shortHex(f.bgC2) : "Gradient: none");
         f.borderColorBtn.setText("Border: " + shortHex(f.borderC));
-        f.animABtn.setText("Anim A: " + shortHex(f.animA));
-        f.animBBtn.setText("Anim B: " + shortHex(f.animB));
         if (f.titleColorBtn != null) {
             f.titleColorBtn.setText("");
             try {
@@ -1991,6 +2072,32 @@ public class ApkToolsHandler {
             header.setTypeface(null, android.graphics.Typeface.BOLD);
             header.setTextSize(15);
             advProps.addView(header);
+            LinearLayout styleRow2 = new LinearLayout(context);
+            styleRow2.setOrientation(LinearLayout.HORIZONTAL);
+            MaterialButton copyBtn = new MaterialButton(context);
+            copyBtn.setText("Copy style");
+            copyBtn.setOnClickListener(x -> {
+                styleClipboard = OverlayInjectorUtil.copyWidget(w);
+                Extensions.showMessage(context, "Style copied (" + w.kind + ")");
+                showAdvProps[0].run();
+            });
+            styleRow2.addView(copyBtn, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            MaterialButton pasteBtn = new MaterialButton(context);
+            pasteBtn.setText("Paste style");
+            boolean canPaste = styleClipboard != null && w.kind.equals(styleClipboard.kind);
+            pasteBtn.setEnabled(canPaste);
+            pasteBtn.setAlpha(canPaste ? 1f : 0.5f);
+            pasteBtn.setOnClickListener(x -> {
+                if (styleClipboard == null || !w.kind.equals(styleClipboard.kind)) return;
+                pasteStyle(w, styleClipboard);
+                renderAdv[0].run();
+                showAdvProps[0].run();
+                Extensions.showMessage(context, "Style pasted");
+            });
+            styleRow2.addView(pasteBtn, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            advProps.addView(styleRow2);
             MaterialButton delBtn = new MaterialButton(context);
             delBtn.setText("Delete widget");
             delBtn.setOnClickListener(x -> {
@@ -2231,13 +2338,102 @@ public class ApkToolsHandler {
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 advProps.addView(btnBorderRow);
                 MaterialSwitch animBtnSwitch = new MaterialSwitch(context);
-                animBtnSwitch.setText("Animated border (uses Style options anim settings)");
+                animBtnSwitch.setText("Animated border");
                 animBtnSwitch.setChecked(w.btnAnim);
+                advProps.addView(animBtnSwitch);
+                LinearLayout animBtnBox = new LinearLayout(context);
+                animBtnBox.setOrientation(LinearLayout.VERTICAL);
+                advProps.addView(animBtnBox);
+                final Runnable[] renderBtnAnim = new Runnable[1];
+                renderBtnAnim[0] = () -> {
+                    animBtnBox.removeAllViews();
+                    if (!w.btnAnim) return;
+                    if (w.btnAnimColors == null) w.btnAnimColors = new ArrayList<>();
+                    if (w.btnAnimColors.size() < 2) {
+                        while (w.btnAnimColors.size() < 2) {
+                            w.btnAnimColors.add(w.btnAnimColors.isEmpty() ? -16776961 : -65536);
+                        }
+                    }
+                    LinearLayout chipRow = new LinearLayout(context);
+                    chipRow.setOrientation(LinearLayout.HORIZONTAL);
+                    animBtnBox.addView(chipRow);
+                    for (int i = 0; i < w.btnAnimColors.size(); i++) {
+                        final int idx = i;
+                        int color = w.btnAnimColors.get(idx);
+                        MaterialButton chip = new MaterialButton(context);
+                        chip.setText("");
+                        chip.setCornerRadius(dp(24));
+                        try {
+                            chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
+                        } catch (Exception ignored) {
+                        }
+                        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
+                        int m = dp(4);
+                        lp.setMargins(m, 0, m, 0);
+                        chip.setLayoutParams(lp);
+                        chip.setOnClickListener(x -> showColorWheel(color, (argb, hex) -> {
+                            w.btnAnimColors.set(idx, argb);
+                            renderBtnAnim[0].run();
+                            renderAdv[0].run();
+                        }));
+                        chip.setOnLongClickListener(x -> {
+                            if (w.btnAnimColors.size() > 2) {
+                                w.btnAnimColors.remove(idx);
+                                renderBtnAnim[0].run();
+                                renderAdv[0].run();
+                            } else {
+                                Extensions.showMessage(context, "Need at least 2 colors");
+                            }
+                            return true;
+                        });
+                        chipRow.addView(chip);
+                    }
+                    MaterialButton add = new MaterialButton(context);
+                    add.setBackgroundResource(R.drawable.add_24px);
+                    LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(dp(48), dp(48));
+                    int am = dp(4);
+                    alp.setMargins(am, 0, am, 0);
+                    add.setLayoutParams(alp);
+                    add.setOnClickListener(x -> showColorWheel(-65536, (argb, hex) -> {
+                        w.btnAnimColors.add(argb);
+                        renderBtnAnim[0].run();
+                        renderAdv[0].run();
+                    }));
+                    chipRow.addView(add);
+                    EditText speedInput = new EditText(context);
+                    speedInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+                    if (w.btnAnimSpeedMs > 0) speedInput.setText(String.valueOf(w.btnAnimSpeedMs));
+                    speedInput.setHint("Speed ms (500)");
+                    speedInput.addTextChangedListener(new TextWatcher() {
+                        public void beforeTextChanged(CharSequence s, int a, int b, int c) {
+                        }
+
+                        public void onTextChanged(CharSequence s, int a, int b, int c) {
+                            try {
+                                w.btnAnimSpeedMs = s.length() == 0 ? 0 : Integer.parseInt(s.toString());
+                            } catch (Exception ignored) {
+                            }
+                        }
+
+                        public void afterTextChanged(Editable s) {
+                        }
+                    });
+                    animBtnBox.addView(UiFields.wrap(context, speedInput, "Animation speed ms", 0));
+                    MaterialSwitch rainbowBtnSwitch = new MaterialSwitch(context);
+                    rainbowBtnSwitch.setText("Rainbow (RGB) mode");
+                    rainbowBtnSwitch.setChecked(w.btnAnimRainbow);
+                    rainbowBtnSwitch.setOnCheckedChangeListener((b, c) -> w.btnAnimRainbow = c);
+                    animBtnBox.addView(rainbowBtnSwitch);
+                };
                 animBtnSwitch.setOnCheckedChangeListener((b, c) -> {
                     w.btnAnim = c;
+                    if (c && (w.btnAnimColors == null || w.btnAnimColors.isEmpty())) {
+                        w.btnAnimColors = new ArrayList<>(java.util.Arrays.asList(-16776961, -65536));
+                    }
+                    renderBtnAnim[0].run();
                     renderAdv[0].run();
                 });
-                advProps.addView(animBtnSwitch);
+                renderBtnAnim[0].run();
                 MaterialAutoCompleteTextView actionTv = new MaterialAutoCompleteTextView(context);
                 actionTv.setAdapter(new ArrayAdapter<>(context,
                         android.R.layout.simple_dropdown_item_1line, new String[]{"Dismiss", "Open URL"}));

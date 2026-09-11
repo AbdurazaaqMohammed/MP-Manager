@@ -601,27 +601,19 @@
                     android:orientation="vertical"
                     android:visibility="gone">
 
-                    <LinearLayout
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:layout_marginTop="4dp"
+                        android:text="Animation colors (tap to change, long-press to remove)"
+                        android:textSize="13sp" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/overlayAnimABtn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:text="Anim color A" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/overlayAnimBBtn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:text="Anim color B" />
-                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/overlayAnimColorsRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="4dp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
