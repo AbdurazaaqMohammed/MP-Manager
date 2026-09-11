@@ -10,6 +10,8 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.zip.CRC32;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
@@ -35,6 +37,12 @@ public final class ApkZipAlignUtil {
         return name.equals("AndroidManifest.xml")
                 || name.equals("resources.arsc")
                 || (name.startsWith("res/") && !name.endsWith(".xml"));
+    }
+
+    private static int alignFor(String name, int method) {
+        if (name.equals("resources.arsc")) return ALIGN_RES_ARSC;
+        if (method == 0 && name.startsWith("lib/") && name.endsWith(".so")) return 4096;
+        return 0;
     }
 
     public static boolean ensureInstallable(File apk) throws IOException {
@@ -105,10 +113,11 @@ public final class ApkZipAlignUtil {
                 }
                 boolean wantStore = mustStore(name);
                 boolean isStored = e.method == 0;
+                int align = alignFor(name, e.method);
                 if (wantStore && !isStored) {
                     outEntries.add(convertToStored(raf, e, out));
-                } else if (name.equals("resources.arsc")) {
-                    outEntries.add(rewriteStored(raf, e, out));
+                } else if (align > 0 && isStored) {
+                    outEntries.add(rewriteStored(raf, e, out, align));
                 } else {
                     outEntries.add(rawCopyEntry(raf, e, out));
                 }
@@ -133,21 +142,21 @@ public final class ApkZipAlignUtil {
         return n;
     }
 
-    private static CDEntry rewriteStored(RandomAccessFile raf, CDEntry e, CountingOut out) throws IOException {
+    private static CDEntry rewriteStored(RandomAccessFile raf, CDEntry e, CountingOut out, int align) throws IOException {
         LocalHeader lh = readLocalHeader(raf, e.localOffset);
         if ((lh.flags & FLAG_DESCRIPTOR) != 0) {
-            // Materialize: recompute from central directory values instead.
-            return materializeStored(e, lh, out, streamOf(raf, e, lh));
+            return materializeStored(e, lh, out, streamOf(raf, e, lh), align);
         }
         byte[] baseExtra = stripAlignBlocks(lh.extra);
         long headerLen0 = 30L + lh.name.length + baseExtra.length;
         long dataOff0 = out.pos + headerLen0;
-        long pad = (ALIGN_RES_ARSC - (dataOff0 % ALIGN_RES_ARSC)) % ALIGN_RES_ARSC;
-        byte[] extra = appendAlignBlock(baseExtra, pad);
+        long pad = align > 0 ? (align - (dataOff0 % align)) % align : 0;
+        byte[] extra = appendAlignBlock(baseExtra, pad, align);
         int flags = lh.flags & ~FLAG_DESCRIPTOR;
         long off = out.pos;
         writeLocalHeader(out, e, 0, lh.crc, e.compSize, e.compSize, flags, lh.name, extra);
         copyBytes(raf, e.localOffset + lh.headerLen, out, e.compSize);
+        assertAligned(dataOff0, extra.length - baseExtra.length, align, e.name());
         CDEntry n = e.copy();
         n.localOffset = off;
         n.flags = flags;
@@ -171,11 +180,9 @@ public final class ApkZipAlignUtil {
         byte[] extra = new byte[0];
         long headerLen0 = 30L + lh.name.length;
         long dataOff0 = out.pos + headerLen0;
-        long pad = 0;
-        if (e.name().equals("resources.arsc")) {
-            pad = (ALIGN_RES_ARSC - (dataOff0 % ALIGN_RES_ARSC)) % ALIGN_RES_ARSC;
-        }
-        extra = appendAlignBlock(extra, pad);
+        int align = alignFor(e.name(), 0);
+        long pad = align > 0 ? (align - (dataOff0 % align)) % align : 0;
+        extra = appendAlignBlock(extra, pad, align);
         int flags = (lh.flags & ~FLAG_DESCRIPTOR) | FLAG_UTF8;
         long off = out.pos;
         writeLocalHeader(out, e, 0, (int) crc.getValue(), size, size, flags, lh.name, extra);
@@ -184,6 +191,7 @@ public final class ApkZipAlignUtil {
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
         }
+        assertAligned(dataOff0, extra.length, align, e.name());
         CDEntry n = e.copy();
         n.localOffset = off;
         n.method = 0;
@@ -197,7 +205,7 @@ public final class ApkZipAlignUtil {
     }
 
     private static CDEntry materializeStored(CDEntry e, LocalHeader lh,
-                                             CountingOut out, InputStream data) throws IOException {
+                                             CountingOut out, InputStream data, int align) throws IOException {
         CRC32 crc = new CRC32();
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         byte[] tmp = new byte[65536];
@@ -211,12 +219,13 @@ public final class ApkZipAlignUtil {
         byte[] baseExtra = stripAlignBlocks(lh.extra);
         long headerLen0 = 30L + lh.name.length + baseExtra.length;
         long dataOff0 = out.pos + headerLen0;
-        long pad = (ALIGN_RES_ARSC - (dataOff0 % ALIGN_RES_ARSC)) % ALIGN_RES_ARSC;
-        byte[] extra = appendAlignBlock(baseExtra, pad);
+        long pad = align > 0 ? (align - (dataOff0 % align)) % align : 0;
+        byte[] extra = appendAlignBlock(baseExtra, pad, align);
         int flags = (lh.flags & ~FLAG_DESCRIPTOR) | FLAG_UTF8;
         long off = out.pos;
         writeLocalHeader(out, e, 0, (int) crc.getValue(), bytes.length, bytes.length, flags, lh.name, extra);
         out.write(bytes);
+        assertAligned(dataOff0, extra.length - baseExtra.length, align, e.name());
         CDEntry out_e = e.copy();
         out_e.localOffset = off;
         out_e.method = 0;
@@ -482,15 +491,201 @@ public final class ApkZipAlignUtil {
         }
     }
 
-    private static byte[] appendAlignBlock(byte[] baseExtra, long pad) throws IOException {
+    private static byte[] appendAlignBlock(byte[] baseExtra, long pad, int align) throws IOException {
         if (pad == 0) return baseExtra;
-        long ext = pad < 4 ? pad + 4 : pad;
+        long ext = pad;
+        while (ext < 4) ext += align <= 0 ? 4 : align;
         ByteArrayOutputStream bos = new ByteArrayOutputStream(baseExtra.length + (int) ext);
         bos.write(baseExtra);
         writeU16(bos, ALIGN_EXTRA_ID);
         writeU16(bos, (int) (ext - 4));
         for (long i = 4; i < ext; i++) bos.write(0);
         return bos.toByteArray();
+    }
+
+    private static void assertAligned(long dataOff0, long extBytes, int align, String name) throws IOException {
+        if (align <= 0) return;
+        if ((dataOff0 + extBytes) % align != 0) {
+            throw new IOException("Alignment math failed for " + name);
+        }
+    }
+
+    public static void rebuildApk(File inputApk, File outputApk,
+                                  Map<String, File> replacements,
+                                  Map<String, Integer> methods,
+                                  Map<String, File> additions,
+                                  java.util.Set<String> skip) throws IOException {
+        List<CDEntry> entries = readCentralDirectory(inputApk);
+        List<File> tmps = new ArrayList<>();
+        try (RandomAccessFile raf = new RandomAccessFile(inputApk, "r");
+             CountingOut out = new CountingOut(new FileOutputStream(outputApk))) {
+            List<CDEntry> outEntries = new ArrayList<>(entries.size()
+                    + (additions == null ? 0 : additions.size()));
+            for (CDEntry e : entries) {
+                String name = e.name();
+                if (e.isDir) continue;
+                if (skip != null && skip.contains(name)) continue;
+                if (replacements != null && replacements.containsKey(name)) {
+                    int method = methods != null && methods.containsKey(name)
+                            ? methods.get(name) : e.method;
+                    if (method != 0 && method != 8) method = 8;
+                    if (mustStore(name)) method = 0;
+                    outEntries.add(writeFileEntry(out, name, replacements.get(name), method,
+                            e.time, e.date, outputApk.getParentFile(), tmps));
+                    continue;
+                }
+                boolean wantStore = mustStore(name);
+                boolean isStored = e.method == 0;
+                int align = alignFor(name, e.method);
+                if (wantStore && !isStored) {
+                    outEntries.add(convertToStored(raf, e, out));
+                } else if (align > 0 && isStored) {
+                    outEntries.add(rewriteStored(raf, e, out, align));
+                } else {
+                    outEntries.add(rawCopyEntry(raf, e, out));
+                }
+            }
+            if (additions != null) {
+                int[] now = dosTime(System.currentTimeMillis());
+                for (Map.Entry<String, File> a : additions.entrySet()) {
+                    String name = a.getKey();
+                    int method = methods != null && methods.containsKey(name) ? methods.get(name) : 8;
+                    if (method != 0 && method != 8) method = 8;
+                    if (mustStore(name)) method = 0;
+                    outEntries.add(writeFileEntry(out, name, a.getValue(), method,
+                            now[0], now[1], outputApk.getParentFile(), tmps));
+                }
+            }
+            long cdOffset = out.pos;
+            writeCentralDirectory(out, outEntries);
+            writeEndOfCentralDirectory(out, outEntries, cdOffset, readArchiveComment(inputApk));
+        } finally {
+            for (File t : tmps) {
+                try {
+                    t.delete();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        String issue = installIssue(outputApk);
+        if (issue != null) throw new IOException("Rebuilt APK invalid: " + issue);
+    }
+
+    private static CDEntry writeFileEntry(CountingOut out, String name, File file, int method,
+                                          int time, int date, File tmpDir,
+                                          List<File> tmps) throws IOException {
+        byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        int flags = 0;
+        for (byte b : nameBytes) {
+            if ((b & 0x80) != 0) {
+                flags = FLAG_UTF8;
+                break;
+            }
+        }
+        int align = alignFor(name, method);
+        if (method == 0) {
+            long size = file.length();
+            int crc = crcOfFile(file);
+            byte[] extra = new byte[0];
+            long dataOff0 = out.pos + 30 + nameBytes.length;
+            long pad = align > 0 ? (align - (dataOff0 % align)) % align : 0;
+            extra = appendAlignBlock(extra, pad, align);
+            assertAligned(dataOff0, extra.length, align, name);
+            long off = out.pos;
+            CDEntry stub = new CDEntry();
+            stub.time = time;
+            stub.date = date;
+            writeLocalHeader(out, stub, 0, crc, size, size, flags, nameBytes, extra);
+            copyFileBytes(file, out);
+            CDEntry n = new CDEntry();
+            n.madeBy = (3 << 8) | 20;
+            n.needVer = 10;
+            n.flags = flags;
+            n.method = 0;
+            n.time = time;
+            n.date = date;
+            n.crc = crc;
+            n.compSize = size;
+            n.uncompSize = size;
+            n.localOffset = off;
+            n.internalAttr = 0;
+            n.externalAttr = 0x81A40000L;
+            n.name = nameBytes;
+            n.extra = new byte[0];
+            n.comment = new byte[0];
+            n.isDir = false;
+            return n;
+        }
+        File tmp = new File(tmpDir, ".deflate" + System.nanoTime() + ".tmp");
+        tmps.add(tmp);
+        CRC32 crc = new CRC32();
+        try (InputStream in = new java.io.FileInputStream(file);
+             FileOutputStream fos = new FileOutputStream(tmp);
+             java.util.zip.DeflaterOutputStream dos = new java.util.zip.DeflaterOutputStream(fos,
+                     new java.util.zip.Deflater(java.util.zip.Deflater.DEFAULT_COMPRESSION, true))) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                crc.update(buf, 0, n);
+                dos.write(buf, 0, n);
+            }
+            dos.finish();
+        }
+        long compSize = tmp.length();
+        long off = out.pos;
+        CDEntry stub = new CDEntry();
+        stub.time = time;
+        stub.date = date;
+        writeLocalHeader(out, stub, 8, (int) crc.getValue(), compSize, file.length(), flags, nameBytes, new byte[0]);
+        copyFileBytes(tmp, out);
+        CDEntry n = new CDEntry();
+        n.madeBy = (3 << 8) | 20;
+        n.needVer = 20;
+        n.flags = flags;
+        n.method = 8;
+        n.time = time;
+        n.date = date;
+        n.crc = (int) crc.getValue();
+        n.compSize = compSize;
+        n.uncompSize = file.length();
+        n.localOffset = off;
+        n.internalAttr = 0;
+        n.externalAttr = 0100644 << 16;
+        n.name = nameBytes;
+        n.extra = new byte[0];
+        n.comment = new byte[0];
+        n.isDir = false;
+        return n;
+    }
+
+    private static int crcOfFile(File file) throws IOException {
+        CRC32 crc = new CRC32();
+        try (InputStream in = new java.io.FileInputStream(file)) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) != -1) crc.update(buf, 0, n);
+        }
+        return (int) crc.getValue();
+    }
+
+    private static void copyFileBytes(File file, OutputStream out) throws IOException {
+        try (InputStream in = new java.io.FileInputStream(file)) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        }
+    }
+
+    private static int[] dosTime(long millis) {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTimeInMillis(millis);
+        int time = (cal.get(java.util.Calendar.HOUR_OF_DAY) << 11)
+                | (cal.get(java.util.Calendar.MINUTE) << 5)
+                | (cal.get(java.util.Calendar.SECOND) / 2);
+        int date = ((cal.get(java.util.Calendar.YEAR) - 1980) << 9)
+                | ((cal.get(java.util.Calendar.MONTH) + 1) << 5)
+                | cal.get(java.util.Calendar.DAY_OF_MONTH);
+        return new int[]{time, date};
     }
 
     private static void copyBytes(RandomAccessFile raf, long pos, OutputStream out, long len) throws IOException {

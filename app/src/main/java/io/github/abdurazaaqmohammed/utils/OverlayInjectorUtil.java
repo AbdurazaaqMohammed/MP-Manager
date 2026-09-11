@@ -3,21 +3,15 @@ package io.github.abdurazaaqmohammed.utils;
 import android.content.Context;
 import android.util.Base64;
 
-import com.android.tools.smali.baksmali.Baksmali;
-import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
 import com.android.tools.smali.dexlib2.DexFileFactory;
-import com.android.tools.smali.smali.Smali;
-import com.android.tools.smali.smali.SmaliOptions;
 import com.reandroid.apk.APKLogger;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
-import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -145,9 +139,9 @@ public class OverlayInjectorUtil {
     }
 
     public static File addOverlayToActivities(Context context, File inputApk,
-                                             List<String> activityClassNames,
-                                             ToastOptions toast, DialogOptions dialog,
-                                             APKLogger logger) throws Exception {
+                                              List<String> activityClassNames,
+                                              ToastOptions toast, DialogOptions dialog,
+                                              APKLogger logger) throws Exception {
         if (toast == null && dialog == null) throw new IOException("Nothing to inject");
         debugInit(context);
         debug("input=" + inputApk.getAbsolutePath());
@@ -158,28 +152,76 @@ public class OverlayInjectorUtil {
                 throw new IOException("Could not locate the selected activities in any dex file");
             }
             debug("dexEntries=" + targetEntries);
+            Map<String, byte[]> fontBytes = collectFontAssets(dialog);
+            Map<String, String> fontAssets = new LinkedHashMap<>();
+            int fi = 0;
+            for (String path : fontBytes.keySet()) fontAssets.put(path, "mpfont_" + (fi++) + ".ttf");
+            if (!fontAssets.isEmpty() && logger != null) {
+                logger.logMessage("Embedding " + fontAssets.size() + " font(s) as APK assets");
+            }
+            Set<String> descriptors = new LinkedHashSet<>();
+            for (String className : activityClassNames) {
+                descriptors.add("L" + className.replace('.', '/') + ";");
+            }
             File workDir = new File(context.getCacheDir(), "add_overlay_" + System.currentTimeMillis());
             workDir.mkdirs();
             try {
-                Map<String, File> dexEntryToSmaliDir = disassembleApk(inputApk, workDir, targetEntries, logger);
-                Map<String, byte[]> fontBytes = collectFontAssets(dialog);
-                Map<String, String> fontAssets = new LinkedHashMap<>();
-                int fi = 0;
-                for (String path : fontBytes.keySet()) fontAssets.put(path, "mpfont_" + (fi++) + ".ttf");
-                if (!fontAssets.isEmpty() && logger != null) {
-                    logger.logMessage("Embedding " + fontAssets.size() + " font(s) as APK assets");
+                Map<String, File> replacements = new LinkedHashMap<>();
+                Map<String, File> additions = new LinkedHashMap<>();
+                int ai = 0;
+                for (Map.Entry<String, byte[]> fe : fontBytes.entrySet()) {
+                    String assetName = fontAssets.get(fe.getKey());
+                    if (assetName == null) continue;
+                    File tmp = new File(workDir, "font_" + (ai++) + ".tmp");
+                    try (FileOutputStream fos = new FileOutputStream(tmp)) {
+                        fos.write(fe.getValue());
+                    }
+                    additions.put("assets/" + assetName, tmp);
                 }
-                Set<String> modifiedEntries = new LinkedHashSet<>();
-                List<File> patchedFiles = new ArrayList<>();
-                for (Map.Entry<String, File> e : dexEntryToSmaliDir.entrySet()) {
-                    boolean changed = patchSmaliDir(e.getValue(), activityClassNames, toast, dialog, fontAssets, logger, patchedFiles);
-                    if (changed) modifiedEntries.add(e.getKey());
+                com.android.tools.smali.baksmali.BaksmaliOptions baksmaliOptions =
+                        FastDexPatch.defaultBaksmaliOptions();
+                for (String entry : targetEntries) {
+                    byte[] origBytes = FastDexPatch.readDexBytes(inputApk, entry);
+                    com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex =
+                            new com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile(
+                                    com.android.tools.smali.dexlib2.Opcodes.getDefault(), origBytes);
+                    int api = detectDexApi(inputApk, entry);
+                    File patchDir = new File(workDir, "patch_" + entry.replace('/', '_').replace('.', '_'));
+                    Map<String, File> smaliFiles =
+                            FastDexPatch.disassembleClasses(dex, descriptors, patchDir, baksmaliOptions, logger);
+                    if (smaliFiles.isEmpty()) continue;
+                    List<File> touched = new ArrayList<>();
+                    boolean changed = false;
+                    for (Map.Entry<String, File> se : smaliFiles.entrySet()) {
+                        String className = FastDexPatch.descriptorToClassName(se.getKey());
+                        try {
+                            if (patchOneSmali(se.getValue(), className, toast, dialog, fontAssets, logger, touched)) {
+                                changed = true;
+                            } else {
+                                se.getValue().delete();
+                            }
+                        } catch (IOException e) {
+                            throw new IOException("While patching " + className + ": " + e.getMessage(), e);
+                        }
+                    }
+                    if (!changed) continue;
+                    File miniDex = FastDexPatch.assembleMiniDex(patchDir, api, logger);
+                    byte[] merged = FastDexPatch.mergeDex(dex, miniDex, api);
+                    File mergedFile = new File(workDir, entry + ".merged");
+                    try (FileOutputStream fos = new FileOutputStream(mergedFile)) {
+                        fos.write(merged);
+                    }
+                    replacements.put(entry, mergedFile);
+                    if (logger != null) logger.logMessage("Injected overlay into " + entry);
                 }
-                if (modifiedEntries.isEmpty()) {
+                if (replacements.isEmpty()) {
                     throw new IOException("Could not patch any dex file (activities may already be patched)");
                 }
-                Map<String, File> assembled = assembleDexFiles(inputApk, workDir, dexEntryToSmaliDir, modifiedEntries, patchedFiles, logger);
-                return buildOutputApk(inputApk, assembled, "_overlay", fontBytes, fontAssets, logger);
+                File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
+                        FilenameUtils.getBaseName(inputApk.getName()) + "_overlay.apk"));
+                ApkZipAlignUtil.rebuildApk(inputApk, outputFile, replacements, null, additions, null);
+                if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
+                return outputFile;
             } finally {
                 deleteDirectory(workDir);
             }
@@ -1429,24 +1471,6 @@ public class OverlayInjectorUtil {
         }
     }
 
-    private static boolean patchSmaliDir(File smaliDir, List<String> activityClassNames,
-                                         ToastOptions toast, DialogOptions dialog,
-                                         Map<String, String> fontAssets, APKLogger logger,
-                                         List<File> patchedFiles) throws IOException {
-        boolean changed = false;
-        for (String className : activityClassNames) {
-            String relPath = className.replace('.', '/') + ".smali";
-            File smaliFile = new File(smaliDir, relPath);
-            if (!smaliFile.isFile()) continue;
-            try {
-                if (patchOneSmali(smaliFile, className, toast, dialog, fontAssets, logger, patchedFiles)) changed = true;
-            } catch (IOException e) {
-                throw new IOException("While patching " + className + ": " + e.getMessage(), e);
-            }
-        }
-        return changed;
-    }
-
     private static boolean patchOneSmali(File smaliFile, String className,
                                          ToastOptions toast, DialogOptions dialog,
                                          Map<String, String> fontAssets,
@@ -1628,116 +1652,6 @@ public class OverlayInjectorUtil {
         return result;
     }
 
-    private static Map<String, File> disassembleApk(File inputApk, File workDir,
-                                                    Set<String> entriesToDisassemble, APKLogger logger) throws Exception {
-        Map<String, File> result = new LinkedHashMap<>();
-        Opcodes opcodes = Opcodes.getDefault();
-        MultiDexContainer<? extends DexBackedDexFile> container = DexFileFactory.loadDexContainer(inputApk, opcodes);
-        int jobs = Runtime.getRuntime().availableProcessors();
-        for (String entryName : container.getDexEntryNames()) {
-            if (entriesToDisassemble != null && !entriesToDisassemble.contains(entryName)) continue;
-            File smaliDir = smaliDirForEntry(workDir, entryName);
-            MultiDexContainer.DexEntry<? extends DexBackedDexFile> dexEntry = container.getEntry(entryName);
-            if (dexEntry == null) continue;
-            if (logger != null) logger.logMessage("Disassembling " + entryName + " ...");
-            BaksmaliOptions options = new BaksmaliOptions();
-            options.parameterRegisters = true;
-            options.localsDirective = true;
-            if (!Baksmali.disassembleDexFile(dexEntry.getDexFile(), smaliDir, jobs, options)) {
-                throw new IOException("Failed to disassemble " + entryName);
-            }
-            result.put(entryName, smaliDir);
-        }
-        return result;
-    }
-
-    private static Map<String, File> assembleDexFiles(File inputApk, File workDir, Map<String, File> dexEntryToSmaliDir,
-                                                      Set<String> entriesToAssemble, List<File> patchedFiles,
-                                                      APKLogger logger) throws Exception {
-        Map<String, File> result = new LinkedHashMap<>();
-        int jobs = Runtime.getRuntime().availableProcessors();
-        for (Map.Entry<String, File> entry : dexEntryToSmaliDir.entrySet()) {
-            String entryName = entry.getKey();
-            if (entriesToAssemble != null && !entriesToAssemble.contains(entryName)) continue;
-            int api = detectDexApi(inputApk, entryName);
-            debug("assembling " + entryName + " with apiLevel=" + api);
-            if (patchedFiles != null && !patchedFiles.isEmpty()) {
-                trialAssemblePatched(entry.getValue(), patchedFiles, api, logger);
-            }
-            File smaliDir = entry.getValue();
-            File outputDex = new File(workDir, entryName);
-            if (logger != null) logger.logMessage("Assembling " + entryName + " ...");
-            SmaliOptions options = new SmaliOptions();
-            options.outputDexFile = outputDex.getPath();
-            options.jobs = jobs;
-            options.apiLevel = api;
-            boolean[] ok = new boolean[1];
-            String errOut = assembleWithErrCapture(options, smaliDir.getPath(), ok);
-            if (!ok[0]) {
-                debug("assemble failed for " + entryName + ", captured output:\n" + errOut);
-                throw new IOException("Failed to assemble " + entryName + ":\n" + errOut);
-            }
-            if (!errOut.isEmpty()) debug("assemble " + entryName + " warnings:\n" + errOut);
-            result.put(entryName, outputDex);
-        }
-        return result;
-    }
-
-    private static void trialAssemblePatched(File smaliDir, List<File> patchedFiles, int api,
-                                             APKLogger logger) throws Exception {
-        for (File smaliFile : patchedFiles) {
-            if (!smaliFile.getAbsolutePath().startsWith(smaliDir.getAbsolutePath())) continue;
-            File trialOut = new File(smaliDir, ".trial_" + System.nanoTime() + ".dex");
-            try {
-                SmaliOptions options = new SmaliOptions();
-                options.outputDexFile = trialOut.getPath();
-                options.jobs = 1;
-                options.apiLevel = api;
-                boolean[] ok = new boolean[1];
-                String errOut = assembleWithErrCapture(options, smaliFile.getPath(), ok);
-                if (!ok[0]) {
-                    throw new IOException("Syntax check failed for " + smaliFile.getName() + ":\n" + errOut);
-                }
-                if (logger != null) logger.logMessage("Syntax OK: " + smaliFile.getName());
-            } finally {
-                try {
-                    trialOut.delete();
-                } catch (Exception ignored) {
-                }
-            }
-        }
-    }
-
-    private static String assembleWithErrCapture(SmaliOptions options, String input, boolean[] ok) throws IOException {
-        java.io.PrintStream oldErr = System.err;
-        java.io.ByteArrayOutputStream errBuf = new java.io.ByteArrayOutputStream();
-        java.io.PrintStream capture;
-        try {
-            capture = new java.io.PrintStream(errBuf, true, "UTF-8");
-        } catch (Exception e) {
-            capture = new java.io.PrintStream(errBuf);
-        }
-        System.setErr(capture);
-        boolean success;
-        try {
-            success = Smali.assemble(options, input);
-        } finally {
-            try {
-                capture.flush();
-            } catch (Exception ignored) {
-            }
-            System.setErr(oldErr);
-        }
-        String captured = "";
-        try {
-            captured = errBuf.toString("UTF-8");
-        } catch (Exception ignored) {
-        }
-        debug("assemble(" + input + ") ok=" + ok + " output:\n" + captured);
-        if (ok != null && ok.length > 0) ok[0] = success;
-        return captured;
-    }
-
     private static int detectDexApi(File inputApk, String entryName) {
         try (ZipFile zin = new ZipFile(inputApk)) {
             FileHeader header = zin.getFileHeader(entryName);
@@ -1762,80 +1676,6 @@ public class OverlayInjectorUtil {
             debug("dex version detect failed: " + e);
         }
         return 28;
-    }
-
-    private static File buildOutputApk(File inputApk, Map<String, File> assembledDexFiles,
-                                       String suffix, Map<String, byte[]> fontBytes,
-                                       Map<String, String> fontAssets, APKLogger logger) throws IOException {
-        File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
-                FilenameUtils.getBaseName(inputApk.getName()) + suffix + ".apk"));
-        Set<String> replacedEntries = assembledDexFiles.keySet();
-
-        Map<String, CompressionMethod> originalDexMethods = new LinkedHashMap<>();
-        try (ZipFile zin = new ZipFile(inputApk)) {
-            for (FileHeader header : zin.getFileHeaders()) {
-                if (replacedEntries.contains(header.getFileName())) {
-                    CompressionMethod method = header.getCompressionMethod();
-                    if (method != CompressionMethod.STORE && method != CompressionMethod.DEFLATE) {
-                        method = CompressionMethod.DEFLATE;
-                    }
-                    originalDexMethods.put(header.getFileName(), method);
-                }
-            }
-        }
-
-        try (ZipFile zin = new ZipFile(inputApk); ZipFile zout = new ZipFile(outputFile)) {
-            for (FileHeader header : zin.getFileHeaders()) {
-                String name = header.getFileName();
-                if (header.isDirectory()) continue;
-                if (replacedEntries.contains(name)) continue;
-                CompressionMethod method = header.getCompressionMethod();
-                if (method != CompressionMethod.STORE && method != CompressionMethod.DEFLATE) {
-                    method = CompressionMethod.DEFLATE;
-                }
-                try (InputStream is = zin.getInputStream(header)) {
-                    ZipParameters params = new ZipParameters();
-                    params.setCompressionMethod(name.equals("AndroidManifest.xml") || name.equals("resources.arsc") || (name.startsWith("res/") && !name.endsWith(".xml")) ? CompressionMethod.STORE : method);
-                    params.setEncryptFiles(false);
-                    params.setFileNameInZip(name);
-                    zout.addStream(is, params);
-                }
-            }
-            for (Map.Entry<String, File> entry : assembledDexFiles.entrySet()) {
-                CompressionMethod method = originalDexMethods.getOrDefault(entry.getKey(), CompressionMethod.DEFLATE);
-                ZipParameters params = new ZipParameters();
-                params.setCompressionMethod(method);
-                params.setEncryptFiles(false);
-                params.setFileNameInZip(entry.getKey());
-                zout.addFile(entry.getValue(), params);
-            }
-            if (fontBytes != null && fontAssets != null) {
-                for (Map.Entry<String, byte[]> fe : fontBytes.entrySet()) {
-                    String assetName = fontAssets.get(fe.getKey());
-                    if (assetName == null || fe.getValue() == null) continue;
-                    ZipParameters params = new ZipParameters();
-                    params.setCompressionMethod(CompressionMethod.DEFLATE);
-                    params.setEncryptFiles(false);
-                    params.setFileNameInZip("assets/" + assetName);
-                    try (InputStream is = new java.io.ByteArrayInputStream(fe.getValue())) {
-                        zout.addStream(is, params);
-                    }
-                    if (logger != null) logger.logMessage("Embedded font asset: assets/" + assetName);
-                }
-            }
-        }
-        if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
-        if (ApkZipAlignUtil.ensureInstallable(outputFile) && logger != null) {
-            logger.logMessage("Zipaligned");
-        }
-        return outputFile;
-    }
-
-    private static File smaliDirForEntry(File workDir, String entryName) {
-        String base = entryName;
-        if (base.endsWith(".dex")) base = base.substring(0, base.length() - ".dex".length());
-        if ("classes".equals(base)) return new File(workDir, "smali");
-        return new File(workDir, "smali_" + base);
     }
 
     private static String readFile(File file) throws IOException {

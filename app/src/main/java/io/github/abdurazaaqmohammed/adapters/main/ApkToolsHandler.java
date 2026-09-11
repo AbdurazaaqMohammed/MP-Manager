@@ -1267,7 +1267,7 @@ public class ApkToolsHandler {
             dlg.animExtraColors = null;
         }
         dlg.rainbowAnim = f.rainbowSwitch != null && f.rainbowSwitch.isChecked();
-        dlg.animSpeedMs = Math.max(100, parseIntSafe(textOf(f.speedInput), 500));
+        dlg.animSpeedMs = Math.max(100, parseIntSafe(textOf(f.speedInput), 2500));
     }
 
     private void applyAdvanced(OverlayForm f, List<OverlayInjectorUtil.AdvWidget> widgets,
@@ -1711,7 +1711,7 @@ public class ApkToolsHandler {
             float density = context.getResources().getDisplayMetrics().density;
             f.radiusDp = parseFloatSafe(textOf(f.radiusInput), 16f);
             f.borderDp = parseFloatSafe(textOf(f.borderWidthInput), 0f);
-            f.animMs = Math.max(100, parseIntSafe(textOf(f.speedInput), 500));
+            f.animMs = Math.max(100, parseIntSafe(textOf(f.speedInput), 2500));
             String orientText = f.orientTv.getText() == null ? "" : f.orientTv.getText().toString();
             if (orientText.startsWith("Left")) f.orient = 1;
             else if (orientText.startsWith("Top-left")) f.orient = 2;
@@ -2403,7 +2403,7 @@ public class ApkToolsHandler {
                     EditText speedInput = new EditText(context);
                     speedInput.setInputType(InputType.TYPE_CLASS_NUMBER);
                     if (w.btnAnimSpeedMs > 0) speedInput.setText(String.valueOf(w.btnAnimSpeedMs));
-                    speedInput.setHint("Speed ms (500)");
+                    speedInput.setHint("Speed ms");
                     speedInput.addTextChangedListener(new TextWatcher() {
                         public void beforeTextChanged(CharSequence s, int a, int b, int c) {
                         }
