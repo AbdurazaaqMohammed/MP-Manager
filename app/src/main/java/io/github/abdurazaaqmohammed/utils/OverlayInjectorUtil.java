@@ -106,7 +106,7 @@ public class OverlayInjectorUtil {
         public int animColorB = -1;
         public java.util.List<Integer> animExtraColors;
         public boolean rainbowAnim;
-        public int animSpeedMs = 500;
+        public int animSpeedMs = 2500;
         public int titleColor;
         public int msgColor;
         public int btnColor;
@@ -366,9 +366,7 @@ public class OverlayInjectorUtil {
         boolean useAnim = !useWave && opts.animBorder && blinkListener != null && borderDp > 0;
         boolean useImage = opts.imageBase64 != null && !opts.imageBase64.isEmpty();
         boolean useAdvanced = opts.advanced && opts.widgets != null && !opts.widgets.isEmpty();
-        boolean useDlgFont = !useAdvanced
-                && ((opts.dlgFont != null && !opts.dlgFont.isEmpty())
-                || (opts.dlgFontPath != null && !opts.dlgFontPath.isEmpty()));
+        boolean useDlgFont = needsFontWalk(opts);
         StringBuilder sb = new StringBuilder();
         sb.append(".method private ").append(DIALOG_HELPER).append("()V\n");
         sb.append("    .locals ").append(useAdvanced ? 8 : (useAnim || useDlgFont || useWave) ? 6 : 5).append("\n");
@@ -505,42 +503,11 @@ public class OverlayInjectorUtil {
             } else {
                 sb.append("    sget-object v1, Landroid/graphics/Typeface;->DEFAULT:Landroid/graphics/Typeface;\n");
             }
-            sb.append("    const v2, 0x1020016\n");
-            sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog;->findViewById(I)Landroid/view/View;\n");
+            sb.append("    invoke-virtual {v0}, Landroid/app/AlertDialog;->getWindow()Landroid/view/Window;\n");
             sb.append("    move-result-object v2\n");
-            sb.append("    if-eqz v2, :dlg_tf_msg\n");
-            sb.append("    instance-of v3, v2, Landroid/widget/TextView;\n");
-            sb.append("    if-eqz v3, :dlg_tf_msg\n");
-            sb.append("    check-cast v2, Landroid/widget/TextView;\n");
-            sb.append("    invoke-virtual {v2, v1}, Landroid/widget/TextView;->setTypeface(Landroid/graphics/Typeface;)V\n");
-            sb.append("    :dlg_tf_msg\n");
-            sb.append("    const v2, 0x1020017\n");
-            sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog;->findViewById(I)Landroid/view/View;\n");
+            sb.append("    invoke-virtual {v2}, Landroid/view/Window;->getDecorView()Landroid/view/View;\n");
             sb.append("    move-result-object v2\n");
-            sb.append("    if-eqz v2, :dlg_tf_btn\n");
-            sb.append("    instance-of v3, v2, Landroid/widget/TextView;\n");
-            sb.append("    if-eqz v3, :dlg_tf_btn\n");
-            sb.append("    check-cast v2, Landroid/widget/TextView;\n");
-            sb.append("    invoke-virtual {v2, v1}, Landroid/widget/TextView;->setTypeface(Landroid/graphics/Typeface;)V\n");
-            sb.append("    :dlg_tf_btn\n");
-            sb.append("    const/4 v2, -0x1\n");
-            sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog;->getButton(I)Landroid/widget/Button;\n");
-            sb.append("    move-result-object v2\n");
-            sb.append("    if-eqz v2, :dlg_tf_b2\n");
-            sb.append("    invoke-virtual {v2, v1}, Landroid/widget/Button;->setTypeface(Landroid/graphics/Typeface;)V\n");
-            sb.append("    :dlg_tf_b2\n");
-            sb.append("    const/4 v2, -0x2\n");
-            sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog;->getButton(I)Landroid/widget/Button;\n");
-            sb.append("    move-result-object v2\n");
-            sb.append("    if-eqz v2, :dlg_tf_b3\n");
-            sb.append("    invoke-virtual {v2, v1}, Landroid/widget/Button;->setTypeface(Landroid/graphics/Typeface;)V\n");
-            sb.append("    :dlg_tf_b3\n");
-            sb.append("    const/4 v2, -0x3\n");
-            sb.append("    invoke-virtual {v0, v2}, Landroid/app/AlertDialog;->getButton(I)Landroid/widget/Button;\n");
-            sb.append("    move-result-object v2\n");
-            sb.append("    if-eqz v2, :dlg_tf_end\n");
-            sb.append("    invoke-virtual {v2, v1}, Landroid/widget/Button;->setTypeface(Landroid/graphics/Typeface;)V\n");
-            sb.append("    :dlg_tf_end\n");
+            sb.append("    invoke-static {v2, v1}, ").append(fontWalkType(classDescriptor)).append("->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
         }
         if (useBg) {
             sb.append("    invoke-virtual {v0}, Landroid/app/AlertDialog;->getWindow()Landroid/view/Window;\n");
@@ -975,7 +942,7 @@ public class OverlayInjectorUtil {
             sb.append("    const v1, 0x").append(Integer.toHexString(w.btnBg)).append("\n");
             sb.append("    new-instance v4, ").append(waveRgb).append("\n");
             sb.append("    invoke-direct {v4, v1, v2, v3}, ").append(waveRgb).append("-><init>(IFF)V\n");
-            sb.append("    const-wide v1, 0x").append(Long.toHexString(w.btnAnimSpeedMs > 0 ? w.btnAnimSpeedMs : 500)).append("L\n");
+            sb.append("    const-wide v1, 0x").append(Long.toHexString(w.btnAnimSpeedMs > 0 ? w.btnAnimSpeedMs : 2500)).append("L\n");
             sb.append("    iput-wide v1, v4, ").append(waveRgb).append("->durationMs:J\n");
             sb.append(waveColorsSmali(waveRgb, widgetWaveColors(w), w.btnAnimRainbow));
             sb.append("    invoke-virtual {v7, v4}, Landroid/widget/Button;->setBackground(Landroid/graphics/drawable/Drawable;)V\n");
@@ -1378,6 +1345,55 @@ public class OverlayInjectorUtil {
         return s.toString();
     }
 
+    static String fontWalkType(String classDescriptor) {
+        return classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpFontWalk;";
+    }
+
+    static boolean needsFontWalk(DialogOptions opts) {
+        if (opts == null || opts.advanced) return false;
+        return (opts.dlgFont != null && !opts.dlgFont.isEmpty())
+                || (opts.dlgFontPath != null && !opts.dlgFontPath.isEmpty());
+    }
+
+    static String fontWalkSmali(String walkType) {
+        StringBuilder s = new StringBuilder();
+        s.append(".class public ").append(walkType).append("\n");
+        s.append(".super Ljava/lang/Object;\n");
+        s.append(".source \"mpFontWalk.java\"\n\n");
+        s.append(".method public constructor <init>()V\n");
+        s.append("    .locals 0\n");
+        s.append("    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n");
+        s.append("    return-void\n");
+        s.append(".end method\n\n");
+        s.append(".method public static applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
+        s.append("    .locals 3\n");
+        s.append("    instance-of v0, p0, Landroid/widget/TextView;\n");
+        s.append("    if-eqz v0, :mp_fw_kids\n");
+        s.append("    check-cast p0, Landroid/widget/TextView;\n");
+        s.append("    invoke-virtual {p0, p1}, Landroid/widget/TextView;->setTypeface(Landroid/graphics/Typeface;)V\n");
+        s.append("    return-void\n");
+        s.append("    :mp_fw_kids\n");
+        s.append("    instance-of v0, p0, Landroid/view/ViewGroup;\n");
+        s.append("    if-eqz v0, :mp_fw_end\n");
+        s.append("    check-cast p0, Landroid/view/ViewGroup;\n");
+        s.append("    invoke-virtual {p0}, Landroid/view/ViewGroup;->getChildCount()I\n");
+        s.append("    move-result v0\n");
+        s.append("    const/4 v1, 0x0\n");
+        s.append("    :mp_fw_loop\n");
+        s.append("    if-ge v1, v0, :mp_fw_end\n");
+        s.append("    invoke-virtual {p0, v1}, Landroid/view/ViewGroup;->getChildAt(I)Landroid/view/View;\n");
+        s.append("    move-result-object v2\n");
+        s.append("    if-eqz v2, :mp_fw_next\n");
+        s.append("    invoke-static {v2, p1}, ").append(walkType).append("->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
+        s.append("    :mp_fw_next\n");
+        s.append("    add-int/lit8 v1, v1, 0x1\n");
+        s.append("    goto :mp_fw_loop\n");
+        s.append("    :mp_fw_end\n");
+        s.append("    return-void\n");
+        s.append(".end method\n");
+        return s.toString();
+    }
+
     static Map<String, byte[]> collectFontAssets(DialogOptions dialog) {
         Map<String, byte[]> out = new LinkedHashMap<>();
         if (dialog == null) return out;
@@ -1479,6 +1495,14 @@ public class OverlayInjectorUtil {
                     writeFile(listenerFile, urlViewListenerSmali(urlViewListener));
                     patchedFiles.add(listenerFile);
                     if (logger != null) logger.logMessage("Generated " + urlViewListener);
+                }
+                if (needsFontWalk(dialog)) {
+                    String fontWalk = fontWalkType(classDescriptor);
+                    File walkFile = new File(smaliFile.getParentFile(),
+                            smaliFile.getName().replace(".smali", "$mpFontWalk.smali"));
+                    writeFile(walkFile, fontWalkSmali(fontWalk));
+                    patchedFiles.add(walkFile);
+                    if (logger != null) logger.logMessage("Generated " + fontWalk);
                 }
                 if (dialog.dontShowAgain) {
                     noshowListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpNoShow;";

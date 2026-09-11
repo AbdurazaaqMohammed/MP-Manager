@@ -28,6 +28,7 @@ public class OverlaySmaliAuditTest {
     private static final String DISMISS = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpDismiss;";
     private static final String RGB = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpRgb;";
     private static final String TICK = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpRgbTick;";
+    private static final String FONTWALK = "Lcom/abdurazaagmohammed/AntiSplit/main/MainActivity$mpFontWalk;";
 
     @Test
     public void regularDialogAnimatedBorder() {
@@ -99,6 +100,8 @@ public class OverlaySmaliAuditTest {
         auditMethod(smali, "regularDialogWithFontAndImage");
         assertFalse(smali, smali.contains("createFromFile"));
         assertFalse(smali, smali.contains(".catch"));
+        assertTrue(smali, smali.contains("$mpFontWalk;"));
+        assertTrue(smali, smali.contains("applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V"));
     }
 
     @Test
@@ -193,6 +196,7 @@ public class OverlaySmaliAuditTest {
         assertFalse(smali, smali.contains("fill-array-data"));
         assertFalse(smali, smali.contains("createFromFile"));
         assertFalse(smali, smali.contains("create(Ljava/lang/String;)"));
+        assertFalse(smali, smali.contains("mpFontWalk"));
     }
 
     @Test
@@ -328,6 +332,7 @@ public class OverlaySmaliAuditTest {
         auditMethod(OverlayInjectorUtil.noshowListenerSmali(NOSHOW), "noshowListener");
         auditMethod(OverlayInjectorUtil.dismissSmali(DISMISS), "dismissListener");
         auditMethod(OverlayInjectorUtil.blinkSmali(BLINK), "blinkListener");
+        auditMethod(OverlayInjectorUtil.fontWalkSmali(FONTWALK), "fontWalk");
     }
 
     // ---------- audit engine ----------

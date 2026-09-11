@@ -1011,7 +1011,7 @@ public class ApkToolsHandler {
         }
 
         dialogUtil.getDialogBuilder()
-                .setTitle("Add Toast")
+                .setTitle("Select Activity")
                 .setMultiChoiceItems(displayItems, checked, (dialog, which, isChecked) -> {
                     if (isChecked) selectedIndices.add(which);
                     else selectedIndices.remove(which);
