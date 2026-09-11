@@ -67,6 +67,7 @@ public class ApkOptimizer {
                 opt.addFile(f, params);
             }
         }
+        ApkZipAlignUtil.ensureInstallable(optFile);
         return optFile;
     }
 }

@@ -99,6 +99,7 @@ import rikka.shizuku.Shizuku;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -468,6 +469,19 @@ public class MainActivity extends AppCompatActivity {
                                             zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
                                             zf.addFile(path, zp);
                                         }
+                                    } catch (Exception e) {
+                                        pm.dismiss();
+                                        new ErrorUtil(this).showError(e);
+                                        return;
+                                    }
+                                    try {
+                                        ApkZipAlignUtil.ensureInstallable(zipFile);
+                                    } catch (Exception e) {
+                                        pm.dismiss();
+                                        new ErrorUtil(this).showError(e);
+                                        return;
+                                    }
+                                    try {
                                         if(sign[0]) wrapper[0].signApk(zipFile);
                                         pm.dismiss();
                                         handler.post(() -> loadZipFolderInPane(zipFile, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
@@ -2125,6 +2139,7 @@ public class MainActivity extends AppCompatActivity {
                     pane1History.remove(pane1History.size() - 1);
                 }
                 pane1History.add(new NavigationHistoryEntry(folder, false, null));
+                historyAdapter.notifyDataSetChanged();
                 pane1HistoryIndex++;
             }
         } else {
@@ -2135,6 +2150,7 @@ public class MainActivity extends AppCompatActivity {
                     pane2History.remove(pane2History.size() - 1);
                 }
                 pane2History.add(new NavigationHistoryEntry(folder, false, null));
+                historyAdapter.notifyDataSetChanged();
                 pane2HistoryIndex++;
             }
         }

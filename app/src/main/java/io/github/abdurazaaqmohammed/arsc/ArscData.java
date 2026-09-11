@@ -13,6 +13,9 @@ import com.reandroid.graphics.AndroidColor;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionMethod;
+
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -754,25 +757,34 @@ public class ArscData {
         }
         if (apkFile != null && apkFile.isFile()) {
             ZipFile zf = new ZipFile(apkFile);
-            FileHeader existing = null;
             try {
-                existing = zf.getFileHeader(zipEntryPath);
-            } catch (Exception ignored) {
-            }
-            if (existing != null) {
+                FileHeader existing = null;
                 try {
-                    zf.removeFile(existing);
+                    existing = zf.getFileHeader(zipEntryPath);
+                } catch (Exception ignored) {
+                }
+                if (existing != null) {
+                    try {
+                        zf.removeFile(existing);
+                    } catch (Exception e) {
+                        throw new IOException("Cannot replace entry: " + e.getMessage());
+                    }
+                }
+                ZipParameters params = new ZipParameters();
+                params.setCompressionMethod(CompressionMethod.STORE);
+                params.setFileNameInZip(zipEntryPath);
+                try {
+                    zf.addFile(arscFile, params);
                 } catch (Exception e) {
-                    throw new IOException("Cannot replace entry: " + e.getMessage());
+                    throw new IOException("Cannot write entry: " + e.getMessage());
+                }
+            } finally {
+                try {
+                    zf.close();
+                } catch (Exception ignored) {
                 }
             }
-            ZipParameters params = new ZipParameters();
-            params.setFileNameInZip(zipEntryPath);
-            try {
-                zf.addFile(arscFile, params);
-            } catch (Exception e) {
-                throw new IOException("Cannot write entry: " + e.getMessage());
-            }
+            ApkZipAlignUtil.ensureInstallable(apkFile);
         }
     }
 

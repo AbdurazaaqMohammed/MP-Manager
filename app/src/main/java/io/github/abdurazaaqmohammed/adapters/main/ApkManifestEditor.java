@@ -50,6 +50,7 @@ import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -529,6 +530,7 @@ public class ApkManifestEditor {
         try (ZipFile sourceZip = new ZipFile(apkFile); InputStream is = new ByteArrayInputStream(newBytes)) {
             sourceZip.addStream(is, zp);
         }
+        ApkZipAlignUtil.ensureInstallable(apkFile);
     }
 
     private void replaceZipEntry(File apkFile, String entryPath, InputStream is)
@@ -539,5 +541,6 @@ public class ApkManifestEditor {
         try (ZipFile sourceZip = new ZipFile(apkFile)) {
             sourceZip.addStream(is, zp);
         }
+        ApkZipAlignUtil.ensureInstallable(apkFile);
     }
 }

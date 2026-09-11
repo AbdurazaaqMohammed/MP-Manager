@@ -407,6 +407,9 @@ public class ToastInjectorUtil {
             }
         }
         if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
+        if (ApkZipAlignUtil.ensureInstallable(outputFile) && logger != null) {
+            logger.logMessage("Zipaligned");
+        }
         return outputFile;
     }
 

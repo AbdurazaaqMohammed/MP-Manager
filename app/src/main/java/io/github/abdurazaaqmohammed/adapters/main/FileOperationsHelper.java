@@ -53,6 +53,7 @@ import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -519,6 +520,9 @@ public class FileOperationsHelper {
             }
         } finally {
             if (tempFileDir != null) Util.deleteDir(tempFileDir);
+        }
+        if (zipFile.getName().toLowerCase(java.util.Locale.US).endsWith(".apk")) {
+            ApkZipAlignUtil.ensureInstallable(zipFile);
         }
     }
 

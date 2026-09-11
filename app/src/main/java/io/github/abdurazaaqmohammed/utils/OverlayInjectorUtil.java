@@ -72,6 +72,9 @@ public class OverlayInjectorUtil {
         public int btnBorderColor = -1;
         public int btnPaddingDp;
         public boolean btnAnim;
+        public java.util.List<Integer> btnAnimColors;
+        public int btnAnimSpeedMs;
+        public boolean btnAnimRainbow;
         public int leftDp;
         public int topDp;
     }
@@ -101,6 +104,7 @@ public class OverlayInjectorUtil {
         public boolean animBorder;
         public int animColorA = -1;
         public int animColorB = -1;
+        public java.util.List<Integer> animExtraColors;
         public boolean rainbowAnim;
         public int animSpeedMs = 500;
         public int titleColor;
@@ -132,6 +136,9 @@ public class OverlayInjectorUtil {
         c.btnBorderColor = w.btnBorderColor;
         c.btnPaddingDp = w.btnPaddingDp;
         c.btnAnim = w.btnAnim;
+        c.btnAnimColors = w.btnAnimColors == null ? null : new java.util.ArrayList<>(w.btnAnimColors);
+        c.btnAnimSpeedMs = w.btnAnimSpeedMs;
+        c.btnAnimRainbow = w.btnAnimRainbow;
         c.leftDp = w.leftDp;
         c.topDp = w.topDp;
         return c;
@@ -323,19 +330,19 @@ public class OverlayInjectorUtil {
         sb.append("    const v1, 0x").append(Integer.toHexString(bg)).append("\n");
         sb.append("    new-instance v4, ").append(waveRgb).append("\n");
         sb.append("    invoke-direct {v4, v1, v2, v3}, ").append(waveRgb).append("-><init>(IFF)V\n");
-        sb.append(wavePaletteSmali(opts, waveRgb));
+        sb.append("    const-wide v1, 0x").append(Long.toHexString(Math.max(100, opts.animSpeedMs))).append("L\n");
+        sb.append("    iput-wide v1, v4, ").append(waveRgb).append("->durationMs:J\n");
+        sb.append(waveColorsSmali(waveRgb, dialogAnimColors(opts), opts.rainbowAnim));
         return sb.toString();
     }
 
-    private static String wavePaletteSmali(DialogOptions opts, String waveRgb) {
-        int colorA = opts.animColorA != -1 ? opts.animColorA : 0xFFFFFFFF;
-        int colorB = opts.animColorB != -1 ? opts.animColorB : 0xFF000000;
+    private static String waveColorsSmali(String waveRgb, int[] colors, boolean rainbow) {
         StringBuilder sb = new StringBuilder();
-        sb.append("    const v1, 0x").append(Integer.toHexString(colorA)).append("\n");
-        sb.append("    iput v1, v4, ").append(waveRgb).append("->colorA:I\n");
-        sb.append("    const v1, 0x").append(Integer.toHexString(colorB)).append("\n");
-        sb.append("    iput v1, v4, ").append(waveRgb).append("->colorB:I\n");
-        sb.append("    const/4 v1, 0x").append(opts.rainbowAnim ? "1" : "0").append("\n");
+        if (!rainbow) {
+            appendAnimColors(sb, colors, 1, 3, 2);
+            sb.append("    iput-object v3, v4, ").append(waveRgb).append("->colors:[I\n");
+        }
+        sb.append("    const/4 v1, 0x").append(rainbow ? "1" : "0").append("\n");
         sb.append("    iput-boolean v1, v4, ").append(waveRgb).append("->rainbow:Z\n");
         return sb.toString();
     }
@@ -551,8 +558,7 @@ public class OverlayInjectorUtil {
             sb.append("    move-result-object v1\n");
             sb.append("    new-instance v5, Landroid/os/Handler;\n");
             sb.append("    invoke-direct {v5, v1}, Landroid/os/Handler;-><init>(Landroid/os/Looper;)V\n");
-            int[] animColors = opts.rainbowAnim ? rainbowColors()
-                    : new int[]{opts.animColorA, opts.animColorB};
+            int[] animColors = dialogAnimColors(opts);
             appendAnimColors(sb, animColors, 2, 1, 3);
             sb.append("    const v0, 0x").append(Integer.toHexString(Math.max(100, opts.animSpeedMs))).append("\n");
             sb.append("    const v3, 0x").append(Integer.toHexString(Float.floatToRawIntBits(borderDp))).append("\n");
@@ -592,6 +598,37 @@ public class OverlayInjectorUtil {
             out[i] = hsvToArgb((i * 30) % 360, 1f, 1f);
         }
         return out;
+    }
+
+    static int[] dialogAnimColors(DialogOptions opts) {
+        if (opts.rainbowAnim) return rainbowColors();
+        java.util.List<Integer> all = new java.util.ArrayList<>();
+        all.add(opts.animColorA != -1 ? opts.animColorA : 0xFFFFFFFF);
+        all.add(opts.animColorB != -1 ? opts.animColorB : 0xFF000000);
+        if (opts.animExtraColors != null) all.addAll(opts.animExtraColors);
+        int[] out = new int[all.size()];
+        for (int i = 0; i < out.length; i++) out[i] = all.get(i);
+        return out;
+    }
+
+    static int[] buttonAnimColors(DialogOptions opts, int borderColor) {
+        if (opts.rainbowAnim) return rainbowColors();
+        java.util.List<Integer> all = new java.util.ArrayList<>();
+        all.add(opts.animColorA != -1 ? opts.animColorA : borderColor);
+        all.add(opts.animColorB != -1 ? opts.animColorB : 0xFF000000);
+        if (opts.animExtraColors != null) all.addAll(opts.animExtraColors);
+        int[] out = new int[all.size()];
+        for (int i = 0; i < out.length; i++) out[i] = all.get(i);
+        return out;
+    }
+
+    static int[] widgetWaveColors(AdvWidget w) {
+        if (w.btnAnimColors != null && !w.btnAnimColors.isEmpty()) {
+            int[] out = new int[w.btnAnimColors.size()];
+            for (int i = 0; i < out.length; i++) out[i] = w.btnAnimColors.get(i);
+            return out;
+        }
+        return new int[]{0xFF0000FF, 0xFFFF0000};
     }
 
     private static int hsvToArgb(float hue, float sat, float val) {
@@ -938,13 +975,16 @@ public class OverlayInjectorUtil {
             sb.append("    const v1, 0x").append(Integer.toHexString(w.btnBg)).append("\n");
             sb.append("    new-instance v4, ").append(waveRgb).append("\n");
             sb.append("    invoke-direct {v4, v1, v2, v3}, ").append(waveRgb).append("-><init>(IFF)V\n");
-            sb.append(wavePaletteSmali(opts, waveRgb));
+            sb.append("    const-wide v1, 0x").append(Long.toHexString(w.btnAnimSpeedMs > 0 ? w.btnAnimSpeedMs : 500)).append("L\n");
+            sb.append("    iput-wide v1, v4, ").append(waveRgb).append("->durationMs:J\n");
+            sb.append(waveColorsSmali(waveRgb, widgetWaveColors(w), w.btnAnimRainbow));
             sb.append("    invoke-virtual {v7, v4}, Landroid/widget/Button;->setBackground(Landroid/graphics/drawable/Drawable;)V\n");
             if (hasPadding) {
                 appendDpToPx(sb, Float.floatToRawIntBits((float) w.btnPaddingDp), 3, 5, 1);
                 sb.append("    float-to-int v3, v3\n");
                 sb.append("    invoke-virtual {v7, v3, v3, v3, v3}, Landroid/widget/Button;->setPadding(IIII)V\n");
             }
+            sb.append("    move-object v2, v7\n");
             return sb.toString();
         }
         sb.append("    new-instance v4, Landroid/graphics/drawable/GradientDrawable;\n");
@@ -985,10 +1025,8 @@ public class OverlayInjectorUtil {
             sb.append("    invoke-virtual {v2, v3, v3, v3, v3}, Landroid/widget/Button;->setPadding(IIII)V\n");
         }
         if (anim) {
-            int colorA = opts.animColorA != -1 ? opts.animColorA : borderColor;
-            int colorB = opts.animColorB != -1 ? opts.animColorB : 0xFF000000;
             int ms = Math.max(100, opts.animSpeedMs);
-            int[] btnAnimColors = opts.rainbowAnim ? rainbowColors() : new int[]{colorA, colorB};
+            int[] btnAnimColors = buttonAnimColors(opts, borderColor);
             appendAnimColors(sb, btnAnimColors, 1, 3, 7);
             sb.append("    invoke-static {}, Landroid/os/Looper;->getMainLooper()Landroid/os/Looper;\n");
             sb.append("    move-result-object v1\n");
@@ -1107,9 +1145,9 @@ public class OverlayInjectorUtil {
         s.append(".field public offset:F\n");
         s.append(".field private period:F\n");
         s.append(".field private bgColor:I\n");
-        s.append(".field public colorA:I\n");
-        s.append(".field public colorB:I\n");
-        s.append(".field public rainbow:Z\n\n");
+        s.append(".field public colors:[I\n");
+        s.append(".field public rainbow:Z\n");
+        s.append(".field public durationMs:J\n\n");
         s.append(".method public constructor <init>(IFF)V\n");
         s.append("    .locals 2\n");
         s.append("    invoke-direct {p0}, Landroid/graphics/drawable/Drawable;-><init>()V\n");
@@ -1140,12 +1178,6 @@ public class OverlayInjectorUtil {
         s.append("    new-instance v0, Landroid/graphics/Matrix;\n");
         s.append("    invoke-direct {v0}, Landroid/graphics/Matrix;-><init>()V\n");
         s.append("    iput-object v0, p0, ").append(rgbType).append("->shaderMatrix:Landroid/graphics/Matrix;\n");
-        s.append("    const v0, 0xffff0000\n");
-        s.append("    iput v0, p0, ").append(rgbType).append("->colorA:I\n");
-        s.append("    const v0, 0xff000000\n");
-        s.append("    iput v0, p0, ").append(rgbType).append("->colorB:I\n");
-        s.append("    const/4 v0, 0x0\n");
-        s.append("    iput-boolean v0, p0, ").append(rgbType).append("->rainbow:Z\n");
         s.append("    return-void\n");
         s.append(".end method\n\n");
         s.append(".method protected onBoundsChange(Landroid/graphics/Rect;)V\n");
@@ -1161,7 +1193,8 @@ public class OverlayInjectorUtil {
         s.append("    mul-float v0, v0, v1\n");
         s.append("    iput v0, p0, ").append(rgbType).append("->period:F\n");
         s.append("    iget-boolean v1, p0, ").append(rgbType).append("->rainbow:Z\n");
-        s.append("    if-eqz v1, :mp_rgb_two\n");
+        s.append("    if-eqz v1, :mp_rgb_custom\n");
+        s.append("    :mp_rgb_seven\n");
         s.append("    const/4 v1, 0x7\n");
         s.append("    new-array v3, v1, [I\n");
         int[] waveColors = {0xFFFF0000, 0xFFFF00FF, 0xFF0000FF, 0xFF00FFFF, 0xFF00FF00, 0xFFFFFF00, 0xFFFF0000};
@@ -1179,23 +1212,25 @@ public class OverlayInjectorUtil {
             s.append("    aput v1, v4, v2\n");
         }
         s.append("    goto :mp_rgb_grad\n");
-        s.append("    :mp_rgb_two\n");
+        s.append("    :mp_rgb_custom\n");
+        s.append("    iget-object v3, p0, ").append(rgbType).append("->colors:[I\n");
+        s.append("    if-eqz v3, :mp_rgb_seven\n");
+        s.append("    array-length v5, v3\n");
         s.append("    const/4 v1, 0x2\n");
-        s.append("    new-array v3, v1, [I\n");
-        s.append("    iget v1, p0, ").append(rgbType).append("->colorA:I\n");
+        s.append("    if-lt v5, v1, :mp_rgb_seven\n");
+        s.append("    new-array v4, v5, [F\n");
+        s.append("    add-int/lit8 v1, v5, -0x1\n");
+        s.append("    int-to-float v1, v1\n");
         s.append("    const/4 v2, 0x0\n");
-        s.append("    aput v1, v3, v2\n");
-        s.append("    iget v1, p0, ").append(rgbType).append("->colorB:I\n");
-        s.append("    const/4 v2, 0x1\n");
-        s.append("    aput v1, v3, v2\n");
-        s.append("    const/4 v1, 0x2\n");
-        s.append("    new-array v4, v1, [F\n");
-        s.append("    const v1, 0x0\n");
-        s.append("    const/4 v2, 0x0\n");
-        s.append("    aput v1, v4, v2\n");
-        s.append("    const v1, 0x3f800000\n");
-        s.append("    const/4 v2, 0x1\n");
-        s.append("    aput v1, v4, v2\n");
+        s.append("    :mp_rgb_posloop\n");
+        s.append("    if-ge v2, v5, :mp_rgb_posdone\n");
+        s.append("    int-to-float v6, v2\n");
+        s.append("    div-float v6, v6, v1\n");
+        s.append("    aput v6, v4, v2\n");
+        s.append("    add-int/lit8 v2, v2, 0x1\n");
+        s.append("    goto :mp_rgb_posloop\n");
+        s.append("    :mp_rgb_posdone\n");
+        s.append("    goto :mp_rgb_grad\n");
         s.append("    :mp_rgb_grad\n");
         s.append("    move-object v6, v3\n");
         s.append("    move-object v7, v4\n");
@@ -1224,7 +1259,7 @@ public class OverlayInjectorUtil {
         s.append("    move-result-object v1\n");
 
         s.append("    iput-object v1, p0, ").append(rgbType).append("->animator:Landroid/animation/ValueAnimator;\n");
-        s.append("    const-wide v2, 0x9c4L\n");
+        s.append("    iget-wide v2, p0, ").append(rgbType).append("->durationMs:J\n");
         s.append("    invoke-virtual {v1, v2, v3}, Landroid/animation/ValueAnimator;->setDuration(J)Landroid/animation/ValueAnimator;\n");
         s.append("    const/4 v2, -0x1\n");
         s.append("    invoke-virtual {v1, v2}, Landroid/animation/ValueAnimator;->setRepeatCount(I)V\n");
@@ -1736,7 +1771,7 @@ public class OverlayInjectorUtil {
                 }
                 try (InputStream is = zin.getInputStream(header)) {
                     ZipParameters params = new ZipParameters();
-                    params.setCompressionMethod(method);
+                    params.setCompressionMethod(name.equals("AndroidManifest.xml") || name.equals("resources.arsc") || (name.startsWith("res/") && !name.endsWith(".xml")) ? CompressionMethod.STORE : method);
                     params.setEncryptFiles(false);
                     params.setFileNameInZip(name);
                     zout.addStream(is, params);
@@ -1766,6 +1801,9 @@ public class OverlayInjectorUtil {
             }
         }
         if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
+        if (ApkZipAlignUtil.ensureInstallable(outputFile) && logger != null) {
+            logger.logMessage("Zipaligned");
+        }
         return outputFile;
     }
 

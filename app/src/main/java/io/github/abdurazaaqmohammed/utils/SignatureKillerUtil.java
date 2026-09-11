@@ -142,6 +142,7 @@ public class SignatureKillerUtil {
             } finally {
                 zout.close();
             }
+            ApkZipAlignUtil.ensureInstallable(outFile);
         } catch (Exception e) {
             //noinspection ResultOfMethodCallIgnored
             outFile.delete();
