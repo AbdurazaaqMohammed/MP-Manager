@@ -1,2 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <!-- ARSC editors: toolbar menu items (also used as anchor view lookup, so they
+         must be real resource ids, never small ints that can collide) -->
+    <item name="arsc_menu_save" type="id" />
+    <item name="arsc_menu_more" type="id" />
+    <!-- ARSC Plus: fragment container for the Sora text editor -->
+    <item name="arsc_text_editor_container" type="id" />
+</resources>

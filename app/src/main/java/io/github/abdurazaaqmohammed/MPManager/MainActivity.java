@@ -420,7 +420,15 @@ public class MainActivity extends AppCompatActivity {
         }
         if (resultCode == 0) if (doesNotHaveStoragePerm(this)) {
             Extensions.showMessage(this, "Storage perm needed as file manager");
-        } else recreate();
+        } else {
+            // Editor was closed without returning a modified file (back press /
+            // discard in ARSC, text or dex editors). Refresh the listing in place;
+            // recreate() would drop the user back at the home folder.
+            try {
+                refreshPane(lastPaneSelected == 1);
+            } catch (Exception ignored) {
+            }
+        }
         else {
             boolean pane1 = lastPaneSelected == 1;
             if (requestCode == 11 && resultCode == RESULT_OK) {
@@ -512,6 +520,16 @@ public class MainActivity extends AppCompatActivity {
     public void closeBookmarksDrawer() {
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
         isBookmarksDrawerOpen = false;
+    }
+
+    /** Clears any selection in the given pane and resets the bottom-bar UI. Call on UI thread. */
+    public void clearPaneSelection(boolean pane1) {
+        try {
+            RecyclerView paneView = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (paneView != null && paneView.getAdapter() instanceof MainFilesArrayAdapter a) a.clearSelection();
+            else setMultiSelectModeUI(false);
+        } catch (Exception ignored) {
+        }
     }
 
     public void setMultiSelectModeUI(boolean enabled) {
@@ -1862,10 +1880,10 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             });
-            setupFilterBar();
         }).start();
 
         handler.post(() -> {
+            setupFilterBar();
             setupNavigationButtons();
             StorageUtil.populateStorageUI(this, container);
             File[] dir1Files = homeDir1.listFiles();
@@ -2158,6 +2176,8 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = folder.getParentFile() != null ? folder.getParentFile() : folder;
         pane.setAdapter(new MainFilesArrayAdapter(this, files, parent, pane1, false, null));
+        // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
+        if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
     }
 
@@ -2232,8 +2252,11 @@ public class MainActivity extends AppCompatActivity {
             setCurrentFolder(zipFile.getPath() + "!" + path, entries);
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             ZipEntryInfo finalParent = parent;
+            boolean isCurrentPane = pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2;
             handler.post(() -> {
                 pane.setAdapter(new MainFilesArrayAdapter(this, entries.toArray(new ZipEntryInfo[0]), finalParent, pane1, true, path));
+                // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
+                if (isCurrentPane) setMultiSelectModeUI(false);
                 updateNavigationButtons();
             });
         } catch (IOException e) {

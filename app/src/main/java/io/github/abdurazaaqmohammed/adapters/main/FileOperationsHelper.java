@@ -143,12 +143,14 @@ public class FileOperationsHelper {
             if (adapter.isInZip) {
                 if (!copyFromZip(itemsToMove)) return;
                 for (Object o : itemsToMove) deleteZipEntry((ZipEntryInfo) o);
+                context.handler.post(() -> adapter.clearSelection());
             } else {
                 moveToDestination(itemsToMove);
             }
         } else if (adapter.isInZip) {
             if (!copyToDestination(Collections.singletonList(item))) return;
             deleteZipEntry((ZipEntryInfo) item);
+            context.handler.post(() -> adapter.clearSelection());
         } else {
             moveToDestination(Collections.singletonList(item));
         }
@@ -212,7 +214,10 @@ public class FileOperationsHelper {
                 extractZipEntry((ZipEntryInfo) item, destinationFolder);
             }
         }
-        context.handler.post(() -> context.loadFolderInPane(destinationFolder, !adapter.pane1));
+        context.handler.post(() -> {
+            adapter.clearSelection();
+            context.loadFolderInPane(destinationFolder, !adapter.pane1);
+        });
         return true;
     }
 
@@ -672,11 +677,21 @@ public class FileOperationsHelper {
                 .setTitle("Open with")
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
-                    context.startActivity(new Intent(context, io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class)
+                    // Simple MT-style "ARSC Editor" lives in its own activity;
+                    // Plus / Translation / Querier stay in ArscEditorActivity.
+                    Class<?> target = io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR.equals(modes[which])
+                            ? io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity.class
+                            : io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class;
+                    Intent arscIntent = new Intent(context, target)
                             .putExtra("path", arscFile.getAbsolutePath())
                             .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
                             .putExtra("zipEntryPath", entryPath)
-                            .putExtra("arscMode", modes[which]));
+                            .putExtra("arscMode", modes[which]);
+                    // Inside an archive the editor only edits the extracted copy and
+                    // returns it via setResult(757); MainActivity then shows the
+                    // "APK/ZIP updated" prompt and injects the file itself.
+                    if (zipFile != null) context.startActivityForResult(arscIntent, 757);
+                    else context.startActivity(arscIntent);
                 }).create());
     }
 

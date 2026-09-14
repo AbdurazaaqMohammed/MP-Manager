@@ -22,6 +22,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Verifies single-pass rebuildApk: replacements applied, additions appended,
+ * skips dropped, payloads intact, methods per aapt rules, resources.arsc
+ * 4-byte aligned and stored .so files 4096-byte aligned.
+ */
 public class ApkRebuildTest {
 
     private static byte[] bytes(int len, int seed) {

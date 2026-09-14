@@ -24,6 +24,11 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Verifies the DexPatcher-style fast pipeline: assemble a tiny dex, describe
+ * one class, text-patch it, assemble only that file, merge back with DexPool.
+ * Also covers the binary toast-call prescan and dex version preservation.
+ */
 public class FastDexTest {
 
     private static final String A_SMALI =

@@ -10,13 +10,6 @@ import com.reandroid.arsc.value.ResValue;
 import com.reandroid.arsc.value.ValueType;
 import com.reandroid.graphics.AndroidColor;
 
-import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.model.FileHeader;
-import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionMethod;
-
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -87,23 +80,117 @@ public class ArscData {
                 typeNode.dir = true;
                 typeNode.tag = spec;
                 typeNode.parent = pkgNode;
-                Iterator<ResourceEntry> it = spec.getResources();
-                while (it.hasNext()) {
-                    ResourceEntry re = it.next();
-                    Node fileNode = new Node();
-                    fileNode.label = re.getName();
-                    fileNode.key = pkg.getName() + "/" + spec.getTypeName() + "/" + re.getName();
-                    fileNode.depth = 2;
-                    fileNode.dir = false;
-                    fileNode.tag = re;
-                    fileNode.parent = typeNode;
-                    typeNode.children.add(fileNode);
+                try {
+                    Iterator<TypeBlock> blocks = spec.getTypeBlocks();
+                    while (blocks.hasNext()) {
+                        TypeBlock tb;
+                        try {
+                            tb = blocks.next();
+                        } catch (Exception ignored) {
+                            continue;
+                        }
+                        if (tb == null) continue;
+                        Node cfgNode = new Node();
+                        int count = 0;
+                        try {
+                            count = tb.listEntries(true).size();
+                        } catch (Exception ignored) {
+                        }
+                        cfgNode.label = configLabel(tb) + "  (" + count + ")";
+                        cfgNode.key = pkg.getName() + "/" + spec.getTypeName();
+                        cfgNode.depth = 2;
+                        cfgNode.dir = true;
+                        cfgNode.tag = tb;
+                        cfgNode.parent = typeNode;
+                        typeNode.children.add(cfgNode);
+                    }
+                } catch (Exception ignored) {
                 }
                 pkgNode.children.add(typeNode);
             }
             roots.add(pkgNode);
         }
         return roots;
+    }
+
+    public static List<ResourceEntry> resourcesOf(SpecTypePair spec) {
+        List<ResourceEntry> out = new ArrayList<>();
+        try {
+            Iterator<ResourceEntry> it = spec.getResources();
+            while (it.hasNext()) {
+                try {
+                    ResourceEntry re = it.next();
+                    if (re != null) out.add(re);
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public static List<ResourceEntry> resourcesOf(TypeBlock tb) {
+        List<ResourceEntry> out = new ArrayList<>();
+        java.util.HashSet<Integer> seen = new java.util.HashSet<>();
+        try {
+            for (Entry e : tb.listEntries(true)) {
+                if (e == null || e.isNull()) continue;
+                try {
+                    ResourceEntry re = e.getResourceEntry();
+                    if (re == null || !seen.add(re.getResourceId())) continue;
+                    out.add(re);
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public int deleteTypeBlock(TypeBlock tb) {
+        int count = 0;
+        List<Entry> removed = new ArrayList<>();
+        List<ValueType> types = new ArrayList<>();
+        List<Integer> datas = new ArrayList<>();
+        try {
+            for (Entry e : tb.listEntries(true)) {
+                if (e == null || e.isNull()) continue;
+                ValueType t = null;
+                int d = 0;
+                try {
+                    t = e.getValueType();
+                    ResValue rv = e.getResValue();
+                    if (rv != null) d = rv.getData();
+                } catch (Exception ignored) {
+                }
+                removed.add(e);
+                types.add(t);
+                datas.add(d);
+                try {
+                    e.setNull(true);
+                    count++;
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        if (count > 0) {
+            final List<Entry> fRemoved = new ArrayList<>(removed);
+            final List<ValueType> fTypes = new ArrayList<>(types);
+            final List<Integer> fDatas = new ArrayList<>(datas);
+            String label = configLabel(tb);
+            pushHistory("Delete config " + label + " (" + count + ")", () -> {
+                for (int i = 0; i < fRemoved.size(); i++) {
+                    try {
+                        if (fTypes.get(i) != null) {
+                            fRemoved.get(i).setValueAsRaw(fTypes.get(i), fDatas.get(i));
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+        return count;
     }
 
     public static String hex(int id) {
@@ -251,6 +338,10 @@ public class ArscData {
 
     public boolean setEntryValue(Entry e, String newText) {
         if (e == null) return false;
+        try {
+            if (e.isComplex()) return false;
+        } catch (Exception ignored) {
+        }
         ValueType type = null;
         try {
             type = e.getValueType();
@@ -515,6 +606,7 @@ public class ArscData {
         public ResourceEntry entry;
         public String line;
         public String detail;
+        public Entry sample;
     }
 
     public List<SearchHit> search(String query, String searchType, String pathFilter) {
@@ -601,6 +693,7 @@ public class ArscData {
                         if (v != null && (q.isEmpty() || v.toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US)))) {
                             SearchHit hit = new SearchHit();
                             hit.entry = re;
+                            hit.sample = e;
                             hit.line = re.getName();
                             hit.detail = v;
                             out.add(hit);
@@ -632,6 +725,7 @@ public class ArscData {
                         if (data == want) {
                             SearchHit hit = new SearchHit();
                             hit.entry = re;
+                            hit.sample = e;
                             hit.line = re.getName();
                             hit.detail = String.valueOf(data);
                             out.add(hit);
@@ -663,6 +757,7 @@ public class ArscData {
                         if (data == want) {
                             SearchHit hit = new SearchHit();
                             hit.entry = re;
+                            hit.sample = e;
                             hit.line = re.getName();
                             hit.detail = String.format(Locale.US, "#%08X", data);
                             out.add(hit);
@@ -718,6 +813,90 @@ public class ArscData {
         return (int) (Long.parseLong(t, 16) & 0xFFFFFFFFL);
     }
 
+    public File exportStringsXml(File dir) throws IOException {
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new IOException("Cannot create dir");
+        StringBuilder sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
+        int count = 0;
+        try {
+            Iterator<ResourceEntry> all = table.getResources();
+            while (all.hasNext()) {
+                ResourceEntry re;
+                try {
+                    re = all.next();
+                } catch (Exception e) {
+                    continue;
+                }
+                if (re == null || !"string".equals(re.getType())) continue;
+                Entry e = defaultEntry(re);
+                if (e == null || e.isNull()) continue;
+                ValueType vt = null;
+                try {
+                    vt = e.getValueType();
+                } catch (Exception ignored) {
+                }
+                if (vt != ValueType.STRING) continue;
+                String v = null;
+                try {
+                    v = e.getValueAsString();
+                } catch (Exception ignored) {
+                }
+                if (v == null) continue;
+                sb.append("    <string name=\"").append(escapeXml(re.getName())).append("\">")
+                        .append(escapeXml(v)).append("</string>\n");
+                count++;
+            }
+        } catch (Exception ignored) {
+        }
+        sb.append("</resources>\n");
+        File out = new File(dir, "strings_export_" + count + ".xml");
+        try (OutputStream os = new FileOutputStream(out)) {
+            os.write(sb.toString().getBytes("UTF-8"));
+        }
+        return out;
+    }
+
+    public int importStringsXml(File xml) throws Exception {
+        javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(false);
+        org.w3c.dom.Document doc;
+        try (InputStream in = new FileInputStream(xml)) {
+            doc = dbf.newDocumentBuilder().parse(in);
+        }
+        org.w3c.dom.NodeList nodes = doc.getElementsByTagName("string");
+        int applied = 0;
+        for (int i = 0; i < nodes.getLength(); i++) {
+            org.w3c.dom.Node n = nodes.item(i);
+            if (n == null || n.getNodeType() != org.w3c.dom.Node.ELEMENT_NODE) continue;
+            org.w3c.dom.Element el = (org.w3c.dom.Element) n;
+            String name = el.getAttribute("name");
+            if (name == null || name.isEmpty()) continue;
+            String value = el.getTextContent();
+            if (value == null) value = "";
+            try {
+                Iterator<ResourceEntry> all = table.getResources();
+                while (all.hasNext()) {
+                    ResourceEntry re;
+                    try {
+                        re = all.next();
+                    } catch (Exception e) {
+                        continue;
+                    }
+                    if (re == null || !"string".equals(re.getType()) || !name.equals(re.getName())) continue;
+                    Iterator<Entry> it = re.iterator();
+                    while (it.hasNext()) {
+                        Entry e = it.next();
+                        if (e == null || e.isNull()) continue;
+                        if (setEntryValue(e, value)) applied++;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        if (applied > 0) pushHistory("Import strings (" + applied + ")", null);
+        return applied;
+    }
+
     public List<ResourceEntry> stringEntries(String query) {
         List<ResourceEntry> out = new ArrayList<>();
         try {
@@ -744,47 +923,397 @@ public class ArscData {
         return out;
     }
 
+
+    public PackageBlock packageByName(String name) {
+        try {
+            for (PackageBlock p : table.listPackages()) {
+                if (p.getName().equals(name)) return p;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    public List<SpecTypePair> typesOf(String pkgName) {
+        List<SpecTypePair> out = new ArrayList<>();
+        try {
+            PackageBlock pkg = packageByName(pkgName);
+            if (pkg == null) return out;
+            for (SpecTypePair spec : pkg.listSpecTypePairs()) {
+                if (spec != null) out.add(spec);
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public List<TypeBlock> configsOf(String pkgName, String typeName) {
+        List<TypeBlock> out = new ArrayList<>();
+        try {
+            PackageBlock pkg = packageByName(pkgName);
+            if (pkg == null) return out;
+            SpecTypePair spec = pkg.getSpecTypePair(typeName);
+            if (spec == null) return out;
+            Iterator<TypeBlock> it = spec.getTypeBlocks();
+            while (it.hasNext()) {
+                try {
+                    TypeBlock tb = it.next();
+                    if (tb != null) out.add(tb);
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public static String configLabel(TypeBlock tb) {
+        try {
+            String dir = tb.buildUniqueDirectoryName();
+            if (dir != null && !dir.isEmpty()) return dir;
+        } catch (Exception ignored) {
+        }
+        try {
+            String type = tb.getTypeName();
+            String q = tb.getQualifiers();
+            if (q == null) q = "";
+            if (q.isEmpty()) return type == null ? "" : type;
+            if (q.startsWith("-")) return (type == null ? "" : type) + q;
+            return (type == null ? "" : type) + "-" + q;
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    public static String entryValue(Entry e) {
+        if (e == null) return "?";
+        try {
+            String s = e.getValueAsString();
+            if (s != null) return s;
+        } catch (Exception ignored) {
+        }
+        try {
+            String s = e.getResValue().decodeValue();
+            if (s != null) return s;
+        } catch (Exception ignored) {
+        }
+        return "?";
+    }
+
+    public static String entryIdHex(Entry e) {
+        try {
+            return String.format(Locale.US, "%04X", e.getResourceId() & 0xFFFF);
+        } catch (Exception ex) {
+            return "????";
+        }
+    }
+
+    public static String typeIdHex(PackageBlock pkg, SpecTypePair spec) {
+        try {
+            return String.format(Locale.US, "%02X%02X", pkg.getId() & 0xFF, spec.getTypeId() & 0xFF);
+        } catch (Exception ex) {
+            return "????";
+        }
+    }
+
+    public static class SimpleHit {
+        public ResourceEntry re;
+        public Entry entry;
+        public String value;
+        public int resId;
+    }
+
+    public List<SimpleHit> searchSimple(String query, int kind) {
+        List<SimpleHit> out = new ArrayList<>();
+        if (query == null) query = "";
+        String q = query.trim();
+        if (q.isEmpty()) return out;
+        try {
+            if (kind == 1 || kind == 2) {
+                int want;
+                try {
+                    if (kind == 2) {
+                        String t = q.replace("0x", "").replace("0X", "")
+                                .replace("#", "").replace("_", "").replace(" ", "");
+                        want = (int) (Long.parseLong(t, 16) & 0xFFFFFFFFL);
+                    } else {
+                        want = parseNumber(q);
+                    }
+                } catch (Exception e) {
+                    return out;
+                }
+                Iterator<ResourceEntry> all = table.getResources();
+                while (all.hasNext()) {
+                    ResourceEntry re;
+                    try {
+                        re = all.next();
+                    } catch (Exception e) {
+                        continue;
+                    }
+                    if (re == null) continue;
+                    try {
+                        Iterator<Entry> it = re.iterator();
+                        while (it.hasNext()) {
+                            Entry e = it.next();
+                            if (e == null || e.isNull()) continue;
+                            ValueType vt = null;
+                            try {
+                                vt = e.getValueType();
+                            } catch (Exception ignored) {
+                            }
+                            if (vt == null) continue;
+                            boolean candidate = kind == 1 ? vt.isInteger()
+                                    : (vt.isInteger() || vt.isColor() || vt.isReference());
+                            if (!candidate) continue;
+                            int d = 0;
+                            try {
+                                d = e.getResValue().getData();
+                            } catch (Exception ignored) {
+                                continue;
+                            }
+                            if (d == want) {
+                                SimpleHit h = new SimpleHit();
+                                h.re = re;
+                                h.entry = e;
+                                h.value = entryValue(e);
+                                try {
+                                    h.resId = re.getResourceId();
+                                } catch (Exception ignored) {
+                                }
+                                out.add(h);
+                                break;
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    if (out.size() >= 1000) break;
+                }
+                return out;
+            }
+            String lq = q.toLowerCase(Locale.US);
+            Iterator<ResourceEntry> all = table.getResources();
+            while (all.hasNext()) {
+                ResourceEntry re;
+                try {
+                    re = all.next();
+                } catch (Exception e) {
+                    continue;
+                }
+                if (re == null) continue;
+                try {
+                    Iterator<Entry> it = re.iterator();
+                    while (it.hasNext()) {
+                        Entry e = it.next();
+                        if (e == null || e.isNull()) continue;
+                        ValueType vt = null;
+                        try {
+                            vt = e.getValueType();
+                        } catch (Exception ignored) {
+                        }
+                        if (vt != ValueType.STRING) continue;
+                        String v = null;
+                        try {
+                            v = e.getValueAsString();
+                        } catch (Exception ignored) {
+                        }
+                        if (v != null && v.toLowerCase(Locale.US).contains(lq)) {
+                            SimpleHit h = new SimpleHit();
+                            h.re = re;
+                            h.entry = e;
+                            h.value = v;
+                            try {
+                                h.resId = re.getResourceId();
+                            } catch (Exception ignored) {
+                            }
+                            out.add(h);
+                            break;
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+                if (out.size() >= 1000) break;
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public static class PoolString {
+        public final int index;
+        public final String text;
+
+        public PoolString(int index, String text) {
+            this.index = index;
+            this.text = text;
+        }
+    }
+
+    public List<PoolString> poolStrings(String filter) {
+        List<PoolString> out = new ArrayList<>();
+        try {
+            com.reandroid.arsc.pool.TableStringPool pool = table.getTableStringPool();
+            if (pool == null) return out;
+            String lq = filter == null ? "" : filter.toLowerCase(Locale.US);
+            int n = pool.size();
+            for (int i = 0; i < n; i++) {
+                String s;
+                try {
+                    com.reandroid.arsc.item.TableString ts = pool.get(i);
+                    s = ts == null ? null : ts.get();
+                } catch (Exception e) {
+                    continue;
+                }
+                if (s == null) s = "";
+                if (!lq.isEmpty() && !s.toLowerCase(Locale.US).contains(lq)) continue;
+                out.add(new PoolString(i, s));
+                if (out.size() >= 5000) break;
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public boolean setPoolString(int index, String text) {
+        try {
+            com.reandroid.arsc.pool.TableStringPool pool = table.getTableStringPool();
+            if (pool == null) return false;
+            com.reandroid.arsc.item.TableString ts = pool.get(index);
+            if (ts == null) return false;
+            ts.set(text == null ? "" : text);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
+    public static final int TEXT_ENTRY_CAP = 5000;
+
+    public static String typeBlockText(TypeBlock tb, int cap) {
+        org.json.JSONObject obj = new org.json.JSONObject();
+        try {
+            List<Entry> entries = tb.listEntries(true);
+            int n = 0;
+            for (Entry e : entries) {
+                if (e == null || e.isNull()) continue;
+                String name;
+                try {
+                    name = e.getName();
+                } catch (Exception ex) {
+                    continue;
+                }
+                if (name == null) continue;
+                obj.put(name, entryValue(e));
+                if (++n >= cap) break;
+            }
+            return obj.toString(2);
+        } catch (Exception ex) {
+            return "{}";
+        }
+    }
+
+    public static class TextApplyResult {
+        public int updated;
+        public int created;
+        public int skippedComplex;
+        public int invalid;
+        public final List<String> badNames = new ArrayList<>();
+    }
+
+    public TextApplyResult applyTypeBlockText(TypeBlock tb, String text) throws Exception {
+        org.json.JSONObject obj = new org.json.JSONObject(text);
+        TextApplyResult r = new TextApplyResult();
+        Iterator<String> keys = obj.keys();
+        while (keys.hasNext()) {
+            String name = keys.next();
+            if (name == null || name.isEmpty()) continue;
+            Object v = obj.opt(name);
+            String vs = (v == null || v == org.json.JSONObject.NULL) ? "" : v.toString();
+            Entry en = null;
+            boolean isNew = false;
+            try {
+                en = tb.getEntry(name);
+            } catch (Exception ignored) {
+            }
+            if (en == null || en.isNull()) {
+                try {
+                    en = tb.getOrCreateEntry(name);
+                    isNew = true;
+                } catch (Exception ignored) {
+                }
+            }
+            if (en == null) {
+                r.invalid++;
+                if (r.badNames.size() < 5) r.badNames.add(name);
+                continue;
+            }
+            try {
+                if (en.isComplex()) {
+                    r.skippedComplex++;
+                    continue;
+                }
+            } catch (Exception ignored) {
+            }
+            if (setEntryValue(en, vs)) {
+                if (isNew) r.created++;
+                else r.updated++;
+            } else {
+                if (isNew) {
+                    try {
+                        en.setNull(true);
+                    } catch (Exception ignored) {
+                    }
+                }
+                r.invalid++;
+                if (r.badNames.size() < 5) r.badNames.add(name);
+            }
+        }
+        if (r.updated + r.created > 0) pushHistory("Text edit (" + (r.updated + r.created) + ")", null);
+        return r;
+    }
+
+    public ResourceEntry findByHexId(String hex) {
+        if (hex == null) return null;
+        String t = hex.trim();
+        if (t.startsWith("@")) t = t.substring(1);
+        if (t.startsWith("?")) t = t.substring(1);
+        if (t.startsWith("0x") || t.startsWith("0X")) t = t.substring(2);
+        t = t.replace("_", "").replace(" ", "");
+        if (!t.matches("(?i)[0-9a-f]{1,8}")) return null;
+        try {
+            int id = (int) (Long.parseLong(t, 16) & 0xFFFFFFFFL);
+            return table.getResource(id);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public void save() throws IOException {
+        try {
+            table.refresh();
+        } catch (Exception e) {
+            throw new IOException("Cannot refresh table: " + e.getMessage());
+        }
         File tmp = new File(arscFile.getParentFile(), arscFile.getName() + ".tmp" + System.currentTimeMillis());
         try {
             table.writeBytes(tmp);
-            copyFile(tmp, arscFile);
+            try {
+                TableBlock.load(tmp);
+            } catch (Exception e) {
+                throw new IOException("Saved table is invalid, aborting: " + e.getMessage());
+            }
+            if (arscFile.isFile()) {
+                File bak = new File(arscFile.getParentFile(), arscFile.getName() + ".bak");
+                copyFile(arscFile, bak);
+            }
+            if (!tmp.renameTo(arscFile)) {
+                copyFile(tmp, arscFile);
+            }
         } finally {
             try {
                 tmp.delete();
             } catch (Exception ignored) {
             }
-        }
-        if (apkFile != null && apkFile.isFile()) {
-            ZipFile zf = new ZipFile(apkFile);
-            try {
-                FileHeader existing = null;
-                try {
-                    existing = zf.getFileHeader(zipEntryPath);
-                } catch (Exception ignored) {
-                }
-                if (existing != null) {
-                    try {
-                        zf.removeFile(existing);
-                    } catch (Exception e) {
-                        throw new IOException("Cannot replace entry: " + e.getMessage());
-                    }
-                }
-                ZipParameters params = new ZipParameters();
-                params.setCompressionMethod(CompressionMethod.STORE);
-                params.setFileNameInZip(zipEntryPath);
-                try {
-                    zf.addFile(arscFile, params);
-                } catch (Exception e) {
-                    throw new IOException("Cannot write entry: " + e.getMessage());
-                }
-            } finally {
-                try {
-                    zf.close();
-                } catch (Exception ignored) {
-                }
-            }
-            ApkZipAlignUtil.ensureInstallable(apkFile);
         }
     }
 

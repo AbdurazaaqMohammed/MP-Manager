@@ -238,7 +238,10 @@ public class RenameUtil {
                     }
                 }
                 pm.dismiss();
-                handler.post(() -> context.loadFolderInPane(parent, pane1, false));
+                handler.post(() -> {
+                    context.clearPaneSelection(pane1);
+                    context.loadFolderInPane(parent, pane1, false);
+                });
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
@@ -288,7 +291,10 @@ public class RenameUtil {
                     zf.renameFiles(tempToFinal);
                 }
                 pm.dismiss();
-                handler.post(() -> context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false));
+                handler.post(() -> {
+                    context.clearPaneSelection(pane1);
+                    context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false);
+                });
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);

@@ -864,11 +864,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setTitle("Open with")
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
-                    context.startActivity(new Intent(context, io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class)
+                    Class<?> target = io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR.equals(modes[which])
+                            ? io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity.class
+                            : io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class;
+                    Intent arscIntent = new Intent(context, target)
                             .putExtra("path", arscFile.getAbsolutePath())
                             .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())
                             .putExtra("zipEntryPath", entryPath)
-                            .putExtra("arscMode", modes[which]));
+                            .putExtra("arscMode", modes[which]);
+                    // Inside an archive the editor only edits the extracted copy and
+                    // returns it via setResult(757); MainActivity then shows the
+                    // "APK/ZIP updated" prompt and injects the file itself.
+                    if (apkFile != null) context.startActivityForResult(arscIntent, 757);
+                    else context.startActivity(arscIntent);
                 }).create());
     }
 
@@ -1008,13 +1016,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 }
                                 if (selectedFile != null) {
                                     File finalSelectedFile = selectedFile;
-                                    context.handler.post(() -> context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1));
-                                }
+                                    context.handler.post(() -> {
+                                        clearSelection();
+                                        context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1);
+                                    });
+                                } else context.handler.post(() -> clearSelection());
                             } else {
                                 List<ZipEntryInfo> selected = new ArrayList<>();
                                 for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
                                 fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
                                 if (sign[0]) wrapper[0].signApk(zipFile);
+                                context.handler.post(() -> clearSelection());
                             }
                         } else if (!isInZip) {
                             int total = (int) Util.countInsideFolder(file).total();
@@ -1032,10 +1044,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 if (file.isDirectory()) Util.deleteDir(file, pm, total);
                                 else file.delete();
                             }
-                            context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1));
+                            context.handler.post(() -> {
+                                clearSelection();
+                                context.loadFolderInPane(file.getParentFile(), pane1);
+                            });
                         } else {
                             fileOps.deleteZipEntry(entry);
                             if (sign[0]) wrapper[0].signApk(zipFile);
+                            context.handler.post(() -> clearSelection());
                         }
                         pm.dismiss();
                     } catch (Exception e) {

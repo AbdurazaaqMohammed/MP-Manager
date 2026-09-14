@@ -144,8 +144,7 @@ public final class FastDexPatch {
                     Opcode opcode = instruction.getOpcode();
                     if (!isInvoke(opcode)) continue;
                     Reference ref = ((ReferenceInstruction) instruction).getReference();
-                    if (!(ref instanceof MethodReference)) continue;
-                    MethodReference mr = (MethodReference) ref;
+                    if (!(ref instanceof MethodReference mr)) continue;
                     if (definingClass.equals(mr.getDefiningClass()) && methodNames.contains(mr.getName())) {
                         return true;
                     }
@@ -156,21 +155,12 @@ public final class FastDexPatch {
     }
 
     private static boolean isInvoke(Opcode opcode) {
-        switch (opcode) {
-            case INVOKE_VIRTUAL:
-            case INVOKE_SUPER:
-            case INVOKE_DIRECT:
-            case INVOKE_STATIC:
-            case INVOKE_INTERFACE:
-            case INVOKE_VIRTUAL_RANGE:
-            case INVOKE_SUPER_RANGE:
-            case INVOKE_DIRECT_RANGE:
-            case INVOKE_STATIC_RANGE:
-            case INVOKE_INTERFACE_RANGE:
-                return true;
-            default:
-                return false;
-        }
+        return switch (opcode) {
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT, INVOKE_STATIC, INVOKE_INTERFACE,
+                 INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
+                 INVOKE_INTERFACE_RANGE -> true;
+            default -> false;
+        };
     }
 
     private static String assembleWithErrCapture(SmaliOptions options, String input) throws IOException {

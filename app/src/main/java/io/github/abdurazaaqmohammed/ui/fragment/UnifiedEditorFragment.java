@@ -570,7 +570,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         editor.setTabWidth(tabSize);
         boolean showLineNumbers = editorPrefs.getBoolean("show_line_numbers", editorPrefs.getBoolean("pref_show_line_numbers", true));
         editor.setLineNumberEnabled(showLineNumbers);
-        boolean wordWrap = editorPrefs.getBoolean("pref_word_wrap", false);
+        // The options-menu toggle stores "wrap_text"; fall back to the legacy
+        // "pref_word_wrap" key so either one sticks across onResume/minimize.
+        boolean wordWrap = editorPrefs.getBoolean("wrap_text", editorPrefs.getBoolean("pref_word_wrap", false));
         editor.setWordwrap(wordWrap);
     }
 
@@ -982,7 +984,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             } else if (id == 8) {
                 boolean ww = !editor.isWordwrap();
                 editor.setWordwrap(ww);
-                requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE).edit().putBoolean("wrap_text", ww).apply();
+                requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE).edit()
+                        .putBoolean("wrap_text", ww)
+                        .putBoolean("pref_word_wrap", ww)
+                        .apply();
             } else if (id == 9) {
                 editor.setEditable(!editor.isEditable());
             } else if (isSmali && id == 10) {

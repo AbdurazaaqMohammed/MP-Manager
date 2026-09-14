@@ -45,6 +45,7 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
        <application
            android:requestLegacyExternalStorage="true"
+           android:enableOnBackInvokedCallback="false"
            android:largeHeap="true"
            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
            android:name="io.github.ratul.topactivity.App"
@@ -108,6 +109,18 @@
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name="io.github.abdurazaaqmohammed.arsc.ArscEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name="io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name="io.github.abdurazaaqmohammed.arsc.ArscTextActivity"
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden"

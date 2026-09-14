@@ -4,46 +4,61 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.InputType;
-import android.text.TextWatcher;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.DynamicColors;
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputLayout;
+import com.reandroid.arsc.chunk.PackageBlock;
+import com.reandroid.arsc.chunk.TypeBlock;
+import com.reandroid.arsc.container.SpecTypePair;
 import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ValueType;
 
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
@@ -64,20 +79,29 @@ public class ArscEditorActivity extends AppCompatActivity {
     String mode = MODE_PLUS;
     boolean dirty = false;
     boolean batchRemove = false;
+    boolean savedThisSession = false;
 
     private MaterialToolbar toolbar;
+    private TabLayout tabs;
+    private ViewPager2 pager;
+    static final int REQ_TEXT = 1757;
     private ArscTreeAdapter explorerAdapter;
     private RecyclerView explorerRv;
     private RecyclerView historyRv;
     private HistoryAdapter historyAdapter;
-    private EditText searchInput;
-    private AutoCompleteTextView searchTypeTv;
-    private EditText searchPathInput;
+    private TextView searchInfo;
     private RecyclerView searchResultsRv;
     private SearchAdapter searchAdapter;
-    private EditText stringsFilter;
+    private String lastSearchQuery = "";
+    private String lastSearchType = "xml";
+    private String lastSearchPath = "";
     private RecyclerView stringsRv;
     private StringsAdapter stringsAdapter;
+    private TextView stringsApplyBtn;
+    private String stringsFilterQuery = "";
+    private boolean stringsMatchCase;
+    private boolean stringsRegex;
+    private boolean stringsExact;
     private View explorerPage;
     private View historyPage;
     private View searchPage;
@@ -115,10 +139,10 @@ public class ArscEditorActivity extends AppCompatActivity {
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
         Menu menu = toolbar.getMenu();
-        menu.add(0, 1, 0, "Save").setIcon(R.drawable.save_24px).setShowAsAction(1);
-        menu.add(0, 2, 0, "More").setIcon(R.drawable.baseline_more_vert_24).setShowAsAction(1);
+        menu.add(0, R.id.arsc_menu_save, 0, "Save").setIcon(R.drawable.save_24px).setShowAsAction(1);
+        menu.add(0, R.id.arsc_menu_more, 0, "More").setIcon(R.drawable.baseline_more_vert_24).setShowAsAction(1);
         toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
+            if (item.getItemId() == R.id.arsc_menu_save) {
                 saveNow();
                 return true;
             }
@@ -126,20 +150,18 @@ public class ArscEditorActivity extends AppCompatActivity {
             return true;
         });
         main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TabLayout tabs = new TabLayout(this);
-        String[] titles = {"EXPLORER", "HISTORY", "SEARCH", "STRINGS"};
-        for (String t : titles) tabs.addTab(tabs.newTab().setText(t));
+        tabs = new TabLayout(this);
         main.addView(tabs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        FrameLayout pages = new FrameLayout(this);
         explorerPage = buildExplorerPage();
         historyPage = buildHistoryPage();
         searchPage = buildSearchPage();
         stringsPage = buildStringsPage();
-        pages.addView(explorerPage);
-        pages.addView(historyPage);
-        pages.addView(searchPage);
-        pages.addView(stringsPage);
-        main.addView(pages, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        pager = new ViewPager2(this);
+        pager.setOffscreenPageLimit(3);
+        pager.setAdapter(new PagesAdapter(Arrays.asList(explorerPage, historyPage, searchPage, stringsPage)));
+        main.addView(pager, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        String[] titles = {"EXPLORER", "HISTORY", "SEARCH", "STRINGS"};
+        new TabLayoutMediator(tabs, pager, (tab, position) -> tab.setText(titles[position])).attach();
         batchBar = new LinearLayout(this);
         batchBar.setOrientation(LinearLayout.HORIZONTAL);
         batchBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -170,19 +192,7 @@ public class ArscEditorActivity extends AppCompatActivity {
         main.addView(batchBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(main, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
-        tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            public void onTabSelected(TabLayout.Tab tab) {
-                showPage(tab.getPosition());
-            }
-
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
-
-            public void onTabReselected(TabLayout.Tab tab) {
-            }
-        });
-        showPage(MODE_TRANSLATE.equals(mode) ? 3 : 0);
-        if (MODE_TRANSLATE.equals(mode) && tabs.getTabAt(3) != null) tabs.getTabAt(3).select();
+        if (MODE_TRANSLATE.equals(mode)) pager.setCurrentItem(3, false);
     }
 
     private String modeTitle() {
@@ -192,11 +202,8 @@ public class ArscEditorActivity extends AppCompatActivity {
         return "Arsc Editor plus";
     }
 
-    private void showPage(int index) {
-        explorerPage.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
-        historyPage.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
-        searchPage.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
-        stringsPage.setVisibility(index == 3 ? View.VISIBLE : View.GONE);
+    void selectPage(int index) {
+        if (pager != null) pager.setCurrentItem(index, false);
     }
 
     private View buildExplorerPage() {
@@ -204,14 +211,15 @@ public class ArscEditorActivity extends AppCompatActivity {
         explorerRv.setLayoutManager(new LinearLayoutManager(this));
         explorerAdapter = new ArscTreeAdapter(this, new ArscTreeAdapter.Listener() {
             public void onNodeClick(ArscData.Node node) {
-                if (!node.dir && node.tag instanceof ResourceEntry) {
-                    showEntryDialog((ResourceEntry) node.tag);
+                if (node.dir && node.tag instanceof TypeBlock) {
+                    openTextPage((TypeBlock) node.tag, null);
                 }
             }
 
             public void onNodeLongClick(ArscData.Node node, View anchor) {
-                if (node.dir) showFolderMenu(node, anchor);
-                else showFileMenu(node, anchor);
+                if (!node.dir) return;
+                if (node.tag instanceof TypeBlock) showConfigMenu(node, (TypeBlock) node.tag, anchor);
+                else showFolderMenu(node, anchor);
             }
         });
         explorerAdapter.setSelectionWatcher(this::updateBatchLabel);
@@ -232,26 +240,12 @@ public class ArscEditorActivity extends AppCompatActivity {
         page.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(12);
         page.setPadding(pad, pad, pad, pad);
-        com.google.android.material.textfield.TextInputLayout queryBox = UiFields.box(this, "Search");
-        searchInput = UiFields.field(queryBox, InputType.TYPE_CLASS_TEXT);
-        page.addView(queryBox);
-        com.google.android.material.textfield.TextInputLayout typeBox = UiFields.box(this, "Search type");
-        searchTypeTv = new AutoCompleteTextView(this);
-        searchTypeTv.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, SEARCH_TYPES));
-        searchTypeTv.setText(SEARCH_TYPES[0], false);
-        searchTypeTv.setInputType(InputType.TYPE_NULL);
-        typeBox.addView(searchTypeTv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        typeParams.topMargin = dp(8);
-        page.addView(typeBox, typeParams);
-        com.google.android.material.textfield.TextInputLayout pathBox = UiFields.box(this, "Path (pkg/type, empty = all)");
-        searchPathInput = UiFields.field(pathBox, InputType.TYPE_CLASS_TEXT);
-        LinearLayout.LayoutParams pathParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pathParams.topMargin = dp(8);
-        page.addView(pathBox, pathParams);
+        searchInfo = new TextView(this);
+        searchInfo.setTextSize(13);
+        page.addView(searchInfo);
         MaterialButton goBtn = new MaterialButton(this);
-        goBtn.setText("Search");
-        goBtn.setOnClickListener(v -> runSearch());
+        goBtn.setText("New search");
+        goBtn.setOnClickListener(v -> openSearchDialog(lastSearchPath));
         LinearLayout.LayoutParams goParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         goParams.topMargin = dp(8);
         page.addView(goBtn, goParams);
@@ -262,36 +256,360 @@ public class ArscEditorActivity extends AppCompatActivity {
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
         listParams.topMargin = dp(8);
         page.addView(searchResultsRv, listParams);
+        updateSearchInfo();
         return page;
+    }
+
+    private void updateSearchInfo() {
+        if (searchInfo == null) return;
+        int n = searchAdapter == null ? 0 : searchAdapter.getItemCount();
+        if (lastSearchQuery == null || lastSearchQuery.isEmpty()) {
+            searchInfo.setText("No search yet. Tap \"New search\".");
+        } else {
+            searchInfo.setText(n + " results - " + lastSearchQuery + " [" + lastSearchType + "]"
+                    + (lastSearchPath == null || lastSearchPath.isEmpty() ? "" : " in " + lastSearchPath));
+        }
+    }
+
+    void openSearchDialog(String initialPath) {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextInputLayout queryBox = UiFields.box(this, "Search");
+        EditText query = UiFields.field(queryBox, InputType.TYPE_CLASS_TEXT);
+        query.setText(lastSearchQuery == null ? "" : lastSearchQuery);
+        root.addView(queryBox);
+        TextInputLayout typeBox = UiFields.box(this, "Search type");
+        MaterialAutoCompleteTextView typeTv = new MaterialAutoCompleteTextView(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, SEARCH_TYPES);
+        typeTv.setAdapter(adapter);
+        typeTv.setText(lastSearchType == null ? SEARCH_TYPES[0] : lastSearchType, false);
+        adapter.getFilter().filter(null);
+        typeTv.setTextSize(16);
+        typeTv.setThreshold(0);
+        typeTv.setInputType(InputType.TYPE_NULL);
+        typeTv.setCursorVisible(false);
+        typeTv.setOnClickListener(v -> {
+            adapter.getFilter().filter(null);
+            typeTv.showDropDown();
+        });
+        typeTv.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                adapter.getFilter().filter(null);
+                typeTv.showDropDown();
+            }
+        });
+        typeBox.addView(typeTv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        typeBox.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
+        LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        typeParams.topMargin = dp(8);
+        root.addView(typeBox, typeParams);
+        TextInputLayout pathBox = UiFields.box(this, "Path (pkg/type, empty = all)");
+        EditText path = UiFields.field(pathBox, InputType.TYPE_CLASS_TEXT);
+        path.setText(initialPath != null ? initialPath : (lastSearchPath == null ? "" : lastSearchPath));
+        LinearLayout.LayoutParams pathParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pathParams.topMargin = dp(8);
+        root.addView(pathBox, pathParams);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Search resources")
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    lastSearchQuery = query.getText() == null ? "" : query.getText().toString();
+                    String picked = typeTv.getText() == null ? "" : typeTv.getText().toString();
+                    if (!Arrays.asList(SEARCH_TYPES).contains(picked)) {
+                        Extensions.showMessage(this, "Pick a search type");
+                        return;
+                    }
+                    lastSearchType = picked;
+                    lastSearchPath = path.getText() == null ? "" : path.getText().toString();
+                    selectPage(2);
+                    runSearch();
+                }).show();
+    }
+
+    private TextView stringsActionRow(String text, int icon, boolean bold) {
+        TextView row = new TextView(this);
+        row.setText(text);
+        row.setTextSize(13);
+        if (bold) row.setTypeface(null, Typeface.BOLD);
+        int pad = dp(10);
+        row.setPadding(pad, pad, pad, pad);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setCompoundDrawablesWithIntrinsicBounds(icon, 0, 0, 0);
+        row.setCompoundDrawablePadding(dp(8));
+        TypedValue tv = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+        row.setBackgroundResource(tv.resourceId);
+        return row;
     }
 
     private View buildStringsPage() {
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(12);
-        page.setPadding(pad, pad, pad, pad);
-        com.google.android.material.textfield.TextInputLayout filterBox = UiFields.box(this, "Filter strings");
-        stringsFilter = UiFields.field(filterBox, InputType.TYPE_CLASS_TEXT);
-        stringsFilter.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int a, int b, int c) {
-            }
-
-            public void onTextChanged(CharSequence s, int a, int b, int c) {
-                refreshStrings();
-            }
-
-            public void afterTextChanged(Editable s) {
-            }
+        TextView reloadRow = stringsActionRow("Reload", R.drawable.baseline_refresh_24, false);
+        reloadRow.setOnClickListener(v -> {
+            stringsFilterQuery = "";
+            stringsMatchCase = false;
+            stringsRegex = false;
+            stringsExact = false;
+            stringsAdapter.clearStaged();
+            updateStringsApply();
+            refreshStrings();
         });
-        page.addView(filterBox);
+        TextView filterRow = stringsActionRow("Filter", R.drawable.baseline_filter_list_24, false);
+        filterRow.setOnClickListener(v -> showStringsFilterDialog());
+        TextView replaceRow = stringsActionRow("Replace", R.drawable.find_replace_24px, false);
+        replaceRow.setOnClickListener(v -> showStringsReplaceDialog());
+        page.addView(reloadRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        page.addView(filterRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        page.addView(replaceRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        stringsApplyBtn = stringsActionRow("Apply changes", R.drawable.baseline_check_circle_24, true);
+        stringsApplyBtn.setVisibility(View.GONE);
+        stringsApplyBtn.setOnClickListener(v -> applyStringsStaged());
+        page.addView(stringsApplyBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         stringsRv = new RecyclerView(this);
         stringsRv.setLayoutManager(new LinearLayoutManager(this));
         stringsAdapter = new StringsAdapter();
         stringsRv.setAdapter(stringsAdapter);
-        LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        listParams.topMargin = dp(8);
-        page.addView(stringsRv, listParams);
+        page.addView(stringsRv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         return page;
+    }
+
+    private void updateStringsApply() {
+        if (stringsApplyBtn == null || stringsAdapter == null) return;
+        if (stringsAdapter.hasStaged()) {
+            stringsApplyBtn.setVisibility(View.VISIBLE);
+            stringsApplyBtn.setText("Apply changes (" + stringsAdapter.stagedCount() + ")");
+        } else {
+            stringsApplyBtn.setVisibility(View.GONE);
+        }
+    }
+
+    private static boolean matchOne(String text, String find, boolean matchCase, boolean regex, boolean exact) {
+        if (text == null || find == null) return false;
+        try {
+            if (regex) {
+                Pattern p = matchCase
+                        ? Pattern.compile(find)
+                        : Pattern.compile(find, Pattern.CASE_INSENSITIVE);
+                Matcher m = p.matcher(text);
+                return exact ? m.matches() : m.find();
+            }
+            if (exact) return matchCase ? text.equals(find) : text.equalsIgnoreCase(find);
+            return matchCase
+                    ? text.contains(find)
+                    : text.toLowerCase(Locale.US).contains(find.toLowerCase(Locale.US));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String replaceOne(String text, String find, String repl, boolean matchCase, boolean regex, boolean exact) {
+        if (text == null || find == null || repl == null) return text;
+        try {
+            if (regex) {
+                Pattern p = matchCase
+                        ? Pattern.compile(find)
+                        : Pattern.compile(find, Pattern.CASE_INSENSITIVE);
+                Matcher m = p.matcher(text);
+                if (exact) return m.matches() ? m.replaceAll(repl) : text;
+                return m.replaceAll(repl);
+            }
+            if (exact) return text;
+            if (matchCase) return text.replace(find, repl);
+            Matcher m = Pattern.compile(
+                    Pattern.quote(find), Pattern.CASE_INSENSITIVE).matcher(text);
+            return m.replaceAll(Matcher.quoteReplacement(repl));
+        } catch (Exception e) {
+            return text;
+        }
+    }
+
+    private void showStringsFilterDialog() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextInputLayout box = UiFields.box(this, "Filter");
+        EditText input = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
+        input.setText(stringsFilterQuery == null ? "" : stringsFilterQuery);
+        root.addView(box);
+        CheckBox cbCase = new CheckBox(this);
+        cbCase.setText("Match case");
+        cbCase.setChecked(stringsMatchCase);
+        CheckBox cbRegex = new CheckBox(this);
+        cbRegex.setText("Regex");
+        cbRegex.setChecked(stringsRegex);
+        CheckBox cbExact = new CheckBox(this);
+        cbExact.setText("Match exactly");
+        cbExact.setChecked(stringsExact);
+        root.addView(cbCase);
+        root.addView(cbRegex);
+        root.addView(cbExact);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Filter strings")
+                .setView(root)
+                .setNegativeButton("Clear", (d, w) -> {
+                    stringsFilterQuery = "";
+                    stringsMatchCase = false;
+                    stringsRegex = false;
+                    stringsExact = false;
+                    refreshStrings();
+                })
+                .setPositiveButton("Apply", (d, w) -> {
+                    String q = input.getText() == null ? "" : input.getText().toString();
+                    if (cbRegex.isChecked() && !q.isEmpty()) {
+                        try {
+                            Pattern.compile(q);
+                        } catch (Exception e) {
+                            Extensions.showMessage(this, "Bad regex");
+                            return;
+                        }
+                    }
+                    stringsFilterQuery = q;
+                    stringsMatchCase = cbCase.isChecked();
+                    stringsRegex = cbRegex.isChecked();
+                    stringsExact = cbExact.isChecked();
+                    refreshStrings();
+                }).show();
+    }
+
+    private void showStringsReplaceDialog() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextInputLayout findBox = UiFields.box(this, "Find");
+        EditText findInput = UiFields.field(findBox, InputType.TYPE_CLASS_TEXT);
+        root.addView(findBox);
+        TextInputLayout replBox = UiFields.box(this, "Replace with");
+        EditText replInput = UiFields.field(replBox, InputType.TYPE_CLASS_TEXT);
+        LinearLayout.LayoutParams replParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        replParams.topMargin = dp(8);
+        root.addView(replBox, replParams);
+        CheckBox cbCase = new CheckBox(this);
+        cbCase.setText("Match case");
+        cbCase.setChecked(true);
+        CheckBox cbRegex = new CheckBox(this);
+        cbRegex.setText("Regex");
+        CheckBox cbExact = new CheckBox(this);
+        cbExact.setText("Match exactly");
+        root.addView(cbCase);
+        root.addView(cbRegex);
+        root.addView(cbExact);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Replace in all strings")
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Replace", (d, w) -> {
+                    String find = findInput.getText() == null ? "" : findInput.getText().toString();
+                    String repl = replInput.getText() == null ? "" : replInput.getText().toString();
+                    if (find.isEmpty()) return;
+                    boolean mc = cbCase.isChecked();
+                    boolean rx = cbRegex.isChecked();
+                    boolean ex = cbExact.isChecked();
+                    if (rx) {
+                        try {
+                            Pattern.compile(find);
+                        } catch (Exception e) {
+                            Extensions.showMessage(this, "Bad regex");
+                            return;
+                        }
+                    }
+                    stageStringsReplace(find, repl, mc, rx, ex);
+                }).show();
+    }
+
+    private void stageStringsReplace(String find, String repl, boolean matchCase, boolean regex, boolean exact) {
+        if (data == null) return;
+        Extensions.showMessage(this, "Matching…");
+        new Thread(() -> {
+            Map<ResourceEntry, String> staged = new LinkedHashMap<>();
+            try {
+                for (ResourceEntry re : data.stringEntries("")) {
+                    if (re == null) continue;
+                    Entry e = data.defaultEntry(re);
+                    if (e == null || e.isNull()) continue;
+                    ValueType vt = null;
+                    try {
+                        vt = e.getValueType();
+                    } catch (Exception ignored) {
+                    }
+                    if (vt != ValueType.STRING) continue;
+                    String current = null;
+                    try {
+                        current = e.getValueAsString();
+                    } catch (Exception ignored) {
+                    }
+                    if (current == null) continue;
+                    if (!matchOne(current, find, matchCase, regex, exact)) continue;
+                    String next = exact && !regex ? repl : replaceOne(current, find, repl, matchCase, regex, exact);
+                    if (!next.equals(current)) staged.put(re, next);
+                }
+            } catch (Exception ignored) {
+            }
+            final int n = staged.size();
+            runOnUiThread(() -> {
+                stringsAdapter.setStaged(staged);
+                updateStringsApply();
+                Extensions.showMessage(this, n + " staged - tap Apply changes");
+            });
+        }).start();
+    }
+
+    private void showStageDialog(ResourceEntry re) {
+        EditText input = new EditText(this);
+        input.setText(stringsAdapter.pendingValue(re));
+        input.setSingleLine(false);
+        String name = re.getName();
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(name)
+                .setView(UiFields.wrap(this, input, "Value", 16))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String text = input.getText() == null ? "" : input.getText().toString();
+                    stringsAdapter.stage(re, text);
+                    updateStringsApply();
+                }).show();
+    }
+
+    private void applyStringsStaged() {
+        if (data == null || !stringsAdapter.hasStaged()) return;
+        final Map<ResourceEntry, String> staged = stringsAdapter.stagedCopy();
+        Extensions.showMessage(this, "Applying…");
+        new Thread(() -> {
+            int updated = 0;
+            int invalid = 0;
+            for (Map.Entry<ResourceEntry, String> kv : staged.entrySet()) {
+                try {
+                    Entry e = data.defaultEntry(kv.getKey());
+                    if (e == null || e.isNull()) {
+                        invalid++;
+                        continue;
+                    }
+                    if (data.setEntryValue(e, kv.getValue())) updated++;
+                    else invalid++;
+                } catch (Exception ex) {
+                    invalid++;
+                }
+            }
+            final int done = updated;
+            final int bad = invalid;
+            runOnUiThread(() -> {
+                stringsAdapter.clearStaged();
+                updateStringsApply();
+                if (done > 0) {
+                    data.pushHistory("Strings replace (" + done + ")", null);
+                    markDirty();
+                    rebuildTree();
+                    historyAdapter.refresh();
+                }
+                refreshStrings();
+                Extensions.showMessage(this, "Updated " + done + ", invalid " + bad);
+            });
+        }).start();
     }
 
     private void loadAsync(File arsc, File apk, String entryPath) {
@@ -328,18 +646,27 @@ public class ArscEditorActivity extends AppCompatActivity {
     }
 
     private void saveNow() {
-        if (data == null) return;
+        saveNow(null);
+    }
+
+    private void saveNow(Runnable onDone) {
+        if (data == null) {
+            if (onDone != null) onDone.run();
+            return;
+        }
         Extensions.showMessage(this, "Saving…");
         new Thread(() -> {
             try {
                 data.save();
                 runOnUiThread(() -> {
                     dirty = false;
+                    if (data.apkFile != null) savedThisSession = true;
                     toolbar.setSubtitle(data.arscFile.getName());
                     rebuildTree();
                     refreshStrings();
                     historyAdapter.refresh();
                     Extensions.showMessage(this, "Saved");
+                    if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> new ErrorUtil(this).showError(e));
@@ -347,20 +674,40 @@ public class ArscEditorActivity extends AppCompatActivity {
         }).start();
     }
 
+    void finishWithApkResult() {
+        if (data != null && data.apkFile != null && savedThisSession && data.arscFile != null) {
+            Intent result = new Intent();
+            result.setData(Uri.fromFile(data.arscFile));
+            setResult(757, result);
+        }
+        finish();
+    }
+
     private void showMainMenu() {
-        PopupMenu menu = new PopupMenu(this, toolbar);
+        View anchor = toolbar.findViewById(R.id.arsc_menu_more);
+        PopupMenu menu = anchor != null
+                ? new PopupMenu(this, anchor)
+                : new PopupMenu(this, toolbar, Gravity.END);
         if (!MODE_EDITOR.equals(mode)) menu.getMenu().add("Resource querier");
+        menu.getMenu().add("Search");
         menu.getMenu().add("Batch export");
         menu.getMenu().add("Batch import");
+        menu.getMenu().add("Export strings");
+        menu.getMenu().add("Import strings");
         menu.getMenu().add("Backup");
         menu.getMenu().add("Exit");
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
-            if (title.equals("Resource querier")) ArscQuerier.toggleFloat(this);
-            else if (title.equals("Batch export")) enterBatchMode(false);
-            else if (title.equals("Batch import")) batchImport(null, null);
-            else if (title.equals("Backup")) backupNow();
-            else confirmExit();
+            switch (title) {
+                case "Resource querier" -> ArscQuerier.toggleFloat(this);
+                case "Search" -> openSearchDialog("");
+                case "Batch export" -> enterBatchMode(false);
+                case "Batch import" -> batchImport(null, null);
+                case "Export strings" -> exportStrings();
+                case "Import strings" -> importStrings();
+                case "Backup" -> backupNow();
+                default -> confirmExit();
+            }
             return true;
         });
         menu.show();
@@ -380,16 +727,13 @@ public class ArscEditorActivity extends AppCompatActivity {
 
     private void confirmExit() {
         if (!dirty) {
-            finish();
+            finishWithApkResult();
             return;
         }
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Unsaved changes")
                 .setMessage("Save before exit?")
-                .setPositiveButton("Save", (d, w) -> {
-                    saveNow();
-                    finish();
-                })
+                .setPositiveButton("Save", (d, w) -> saveNow(this::finishWithApkResult))
                 .setNegativeButton("Discard", (d, w) -> finish())
                 .setNeutralButton(android.R.string.cancel, null)
                 .show();
@@ -433,6 +777,13 @@ public class ArscEditorActivity extends AppCompatActivity {
             Extensions.showMessage(this, "No editable value");
             return;
         }
+        try {
+            if (e.isComplex()) {
+                Extensions.showMessage(this, "Complex value - open its config in the TEXT tab");
+                return;
+            }
+        } catch (Exception ignored) {
+        }
         ValueType type;
         try {
             type = e.getValueType();
@@ -450,7 +801,7 @@ public class ArscEditorActivity extends AppCompatActivity {
         root.addView(info);
         EditText input;
         if (type == ValueType.BOOLEAN) {
-            AutoCompleteTextView boolTv = new AutoCompleteTextView(this);
+            MaterialAutoCompleteTextView boolTv = new MaterialAutoCompleteTextView(this);
             boolTv.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new String[]{"true", "false"}));
             boolean current = false;
             try {
@@ -459,12 +810,12 @@ public class ArscEditorActivity extends AppCompatActivity {
             }
             boolTv.setText(current ? "true" : "false", false);
             boolTv.setInputType(InputType.TYPE_NULL);
-            com.google.android.material.textfield.TextInputLayout boolBox = UiFields.box(this, "Value");
+            TextInputLayout boolBox = UiFields.box(this, "Value");
             boolBox.addView(boolTv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             root.addView(boolBox);
             input = boolTv;
         } else {
-            com.google.android.material.textfield.TextInputLayout box = UiFields.box(this, "Value");
+            TextInputLayout box = UiFields.box(this, "Value");
             EditText field = UiFields.field(box,
                     type == ValueType.STRING ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE : InputType.TYPE_CLASS_TEXT);
             String current = "";
@@ -519,7 +870,7 @@ public class ArscEditorActivity extends AppCompatActivity {
         root.setPadding(pad, pad, pad, 0);
         List<EditText> fields = new ArrayList<>();
         for (ArscData.ConfigValue cv : configs) {
-            com.google.android.material.textfield.TextInputLayout box = UiFields.box(this,
+            TextInputLayout box = UiFields.box(this,
                     cv.qualifiers.isEmpty() ? "default" : cv.qualifiers);
             EditText field = UiFields.field(box, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
             field.setText(cv.value);
@@ -561,43 +912,85 @@ public class ArscEditorActivity extends AppCompatActivity {
         menu.getMenu().add("Import");
         menu.getMenu().add("Delete");
         menu.getMenu().add("Batch export");
+        menu.getMenu().add("Batch remove");
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
-            if (title.equals("Search")) {
-                searchPathInput.setText(node.key);
-                searchInput.setText("");
-                showPage(2);
-            } else if (title.equals("Add")) {
-                promptAddEntry(pkgName, type);
-            } else if (title.equals("Import")) {
-                pickZipForImport(pkgName, type);
-            } else if (title.equals("Delete")) {
-                confirmDeleteType(pkgName, type);
-            } else {
-                enterBatchMode(false);
+            switch (title) {
+                case "Search" -> openSearchDialog(node.key);
+                case "Add" -> promptAddEntry(pkgName, type);
+                case "Import" -> pickZipForImport(pkgName, type);
+                case "Delete" -> confirmDeleteType(pkgName, type);
+                case "Batch remove" -> enterBatchMode(true);
+                default -> enterBatchMode(false);
             }
             return true;
         });
         menu.show();
     }
 
-    private void showFileMenu(ArscData.Node node, View anchor) {
-        if (!(node.tag instanceof ResourceEntry)) return;
-        ResourceEntry re = (ResourceEntry) node.tag;
+    private void showConfigMenu(ArscData.Node node, TypeBlock tb, View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add("Rename");
-        menu.getMenu().add("Copy");
-        menu.getMenu().add("Delete");
-        menu.getMenu().add("Batch remove");
+        menu.getMenu().add("Open in text editor");
+        menu.getMenu().add("Search in type");
+        menu.getMenu().add("Export config");
+        menu.getMenu().add("Delete config");
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
-            if (title.equals("Rename")) promptRename(re);
-            else if (title.equals("Copy")) promptCopy(re);
-            else if (title.equals("Delete")) confirmDeleteEntry(re);
-            else enterBatchMode(true);
+            switch (title) {
+                case "Open in text editor" -> openTextPage(tb, null);
+                case "Search in type" -> openSearchDialog(node.key);
+                case "Export config" -> exportEntriesNow(ArscData.resourcesOf(tb));
+                default -> confirmDeleteConfig(tb);
+            }
             return true;
         });
         menu.show();
+    }
+
+    private void confirmDeleteConfig(TypeBlock tb) {
+        String label = ArscData.configLabel(tb);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Delete " + label + "?")
+                .setMessage("All entries of this config will be removed after save.")
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Delete", (d, w) -> {
+                    int n = data.deleteTypeBlock(tb);
+                    if (n > 0) {
+                        markDirty();
+                        rebuildTree();
+                        refreshStrings();
+                        historyAdapter.refresh();
+                        Extensions.showMessage(this, "Deleted " + n + " entries");
+                    } else {
+                        Extensions.showMessage(this, "Nothing deleted");
+                    }
+                }).show();
+    }
+
+    void openTextPage(TypeBlock tb, String highlightName) {
+        if (tb == null || data == null) return;
+        String label = ArscData.configLabel(tb);
+        String pkgName = "";
+        try {
+            if (tb.getPackageBlock() != null) pkgName = tb.getPackageBlock().getName();
+        } catch (Exception ignored) {
+        }
+        ArscTextActivity.sessionData = data;
+        ArscTextActivity.sessionBlock = tb;
+        ArscTextActivity.sessionTitle = pkgName.isEmpty() ? label : pkgName + "/" + label;
+        ArscTextActivity.sessionHighlight = highlightName;
+        startActivityForResult(new Intent(this, ArscTextActivity.class), REQ_TEXT);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+        if (requestCode == REQ_TEXT && resultCode == RESULT_OK) {
+            markDirty();
+            rebuildTree();
+            refreshStrings();
+            historyAdapter.refresh();
+        }
     }
 
     private void promptAddEntry(String pkgName, String type) {
@@ -630,68 +1023,6 @@ public class ArscEditorActivity extends AppCompatActivity {
                             }
                         });
                     }).start();
-                }).show();
-    }
-
-    private void promptRename(ResourceEntry re) {
-        EditText input = new EditText(this);
-        input.setText(re.getName());
-        input.setSingleLine(true);
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Rename")
-                .setView(UiFields.wrap(this, input, "Name", 16))
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    String name = input.getText() == null ? "" : input.getText().toString().trim();
-                    if (name.isEmpty() || name.equals(re.getName())) return;
-                    if (data.renameEntry(re, name)) {
-                        markDirty();
-                        rebuildTree();
-                        refreshStrings();
-                        historyAdapter.refresh();
-                    } else {
-                        Extensions.showMessage(this, "Rename failed");
-                    }
-                }).show();
-    }
-
-    private void promptCopy(ResourceEntry re) {
-        EditText input = new EditText(this);
-        input.setText(re.getName() + "_copy");
-        input.setSingleLine(true);
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Copy to")
-                .setView(UiFields.wrap(this, input, "Name", 16))
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    String name = input.getText() == null ? "" : input.getText().toString().trim();
-                    if (name.isEmpty()) return;
-                    if (data.copyEntry(re, name)) {
-                        markDirty();
-                        rebuildTree();
-                        refreshStrings();
-                        historyAdapter.refresh();
-                        Extensions.showMessage(this, "Copied to " + name);
-                    } else {
-                        Extensions.showMessage(this, "Copy failed");
-                    }
-                }).show();
-    }
-
-    private void confirmDeleteEntry(ResourceEntry re) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Delete " + re.getName() + "?")
-                .setMessage("The entry will be removed from resources.arsc after save.")
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Delete", (d, w) -> {
-                    if (data.deleteEntry(re)) {
-                        markDirty();
-                        rebuildTree();
-                        refreshStrings();
-                        historyAdapter.refresh();
-                    } else {
-                        Extensions.showMessage(this, "Delete failed");
-                    }
                 }).show();
     }
 
@@ -735,8 +1066,8 @@ public class ArscEditorActivity extends AppCompatActivity {
             try {
                 File tmp = new File(getCacheDir(), "arsc_import_" + System.currentTimeMillis() + ".arsc");
                 boolean found = false;
-                try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(zip)) {
-                    for (net.lingala.zip4j.model.FileHeader fh : zf.getFileHeaders()) {
+                try (ZipFile zf = new ZipFile(zip)) {
+                    for (FileHeader fh : zf.getFileHeaders()) {
                         if (!fh.isDirectory() && fh.getFileName().endsWith("resources.arsc")) {
                             zf.extractFile(fh, getCacheDir().getAbsolutePath(), tmp.getName());
                             found = true;
@@ -772,6 +1103,61 @@ public class ArscEditorActivity extends AppCompatActivity {
         pickZipForImport(pkgName, type);
     }
 
+    private void exportStrings() {
+        if (data == null) return;
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle("Select directory");
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) return;
+            File dir = new File(files[0]);
+            Extensions.showMessage(this, "Exporting…");
+            new Thread(() -> {
+                try {
+                    File out = data.exportStringsXml(dir);
+                    runOnUiThread(() -> Extensions.showMessage(this, "Exported " + out.getName()));
+                } catch (Exception e) {
+                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                }
+            }).start();
+        });
+        picker.show();
+    }
+
+    private void importStrings() {
+        if (data == null) return;
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.FILE_SELECT;
+        props.extensions = new String[]{".xml"};
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle("Select strings file");
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) return;
+            File xml = new File(files[0]);
+            Extensions.showMessage(this, "Importing…");
+            new Thread(() -> {
+                try {
+                    int n = data.importStringsXml(xml);
+                    runOnUiThread(() -> {
+                        if (n > 0) {
+                            markDirty();
+                            rebuildTree();
+                            refreshStrings();
+                            historyAdapter.refresh();
+                        }
+                        Extensions.showMessage(this, "Imported " + n + " values");
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                }
+            }).start();
+        });
+        picker.show();
+    }
+
     void enterBatchMode(boolean remove) {
         batchRemove = remove;
         explorerAdapter.setBatchMode(true);
@@ -790,20 +1176,47 @@ public class ArscEditorActivity extends AppCompatActivity {
         if (batchLabel != null) batchLabel.setText("Selected: " + explorerAdapter.getBatchSelected());
     }
 
-    private void onBatchGo() {
-        if (batchRemove) {
-            List<ArscData.Node> leaves = explorerAdapter.getCheckedLeaves();
-            if (leaves.isEmpty()) {
-                Extensions.showMessage(this, "Nothing selected");
-                return;
+    private List<ResourceEntry> collectBatchEntries() {
+        List<ResourceEntry> out = new ArrayList<>();
+        HashSet<Integer> seen = new HashSet<>();
+        for (ArscData.Node n : explorerAdapter.getCheckedNodes()) {
+            try {
+                if (n.tag instanceof TypeBlock) {
+                    for (ResourceEntry re : ArscData.resourcesOf((TypeBlock) n.tag)) {
+                        if (re != null && seen.add(re.getResourceId())) out.add(re);
+                    }
+                } else if (n.tag instanceof SpecTypePair) {
+                    for (ResourceEntry re : ArscData.resourcesOf((SpecTypePair) n.tag)) {
+                        if (re != null && seen.add(re.getResourceId())) out.add(re);
+                    }
+                } else if (n.tag instanceof PackageBlock) {
+                    for (SpecTypePair spec : ((PackageBlock) n.tag).listSpecTypePairs()) {
+                        for (ResourceEntry re : ArscData.resourcesOf(spec)) {
+                            if (re != null && seen.add(re.getResourceId())) out.add(re);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
             }
+        }
+        return out;
+    }
+
+    private void onBatchGo() {
+        List<ResourceEntry> all = collectBatchEntries();
+        if (all.isEmpty()) {
+            Extensions.showMessage(this, "Nothing selected");
+            return;
+        }
+        if (batchRemove) {
+            final List<ResourceEntry> entries = all;
             new MaterialAlertDialogBuilder(this)
-                    .setTitle("Delete " + leaves.size() + " entries?")
+                    .setTitle("Delete " + entries.size() + " entries?")
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton("Delete", (d, w) -> {
                         int n = 0;
-                        for (ArscData.Node node : leaves) {
-                            if (node.tag instanceof ResourceEntry && data.deleteEntry((ResourceEntry) node.tag)) n++;
+                        for (ResourceEntry re : entries) {
+                            if (data.deleteEntry(re)) n++;
                         }
                         if (n > 0) {
                             data.pushHistory("Batch remove " + n + " entries", null);
@@ -817,10 +1230,21 @@ public class ArscEditorActivity extends AppCompatActivity {
                     }).show();
             return;
         }
-        List<ArscData.Node> leaves = explorerAdapter.getCheckedLeaves();
-        List<ArscData.Node> dirs = explorerAdapter.getCheckedDirs();
-        if (leaves.isEmpty() && dirs.isEmpty()) {
-            Extensions.showMessage(this, "Nothing selected");
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle("Select directory");
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) return;
+            promptBatchExportName(new File(files[0]), all);
+        });
+        picker.show();
+    }
+
+    void exportEntriesNow(List<ResourceEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            Extensions.showMessage(this, "Nothing to export");
             return;
         }
         FilePickerDialog.Properties props = new FilePickerDialog.Properties();
@@ -830,12 +1254,12 @@ public class ArscEditorActivity extends AppCompatActivity {
         picker.setTitle("Select directory");
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) return;
-            promptBatchExportName(new File(files[0]), leaves, dirs);
+            promptBatchExportName(new File(files[0]), entries);
         });
         picker.show();
     }
 
-    private void promptBatchExportName(File dir, List<ArscData.Node> leaves, List<ArscData.Node> dirs) {
+    private void promptBatchExportName(File dir, List<ResourceEntry> entries) {
         EditText input = new EditText(this);
         input.setText("arsc_export");
         input.setSingleLine(true);
@@ -847,15 +1271,9 @@ public class ArscEditorActivity extends AppCompatActivity {
                     String base = input.getText() == null ? "" : input.getText().toString().trim();
                     if (base.isEmpty()) base = "arsc_export";
                     final String baseName = base;
+                    final List<ResourceEntry> all = new ArrayList<>(entries);
                     new Thread(() -> {
                         try {
-                            List<ResourceEntry> all = new ArrayList<>();
-                            for (ArscData.Node node : leaves) {
-                                if (node.tag instanceof ResourceEntry) all.add((ResourceEntry) node.tag);
-                            }
-                            for (ArscData.Node dirNode : dirs) {
-                                collectLeaves(dirNode, all);
-                            }
                             data.exportEntries(all, dir, baseName);
                             runOnUiThread(() -> {
                                 exitBatchMode();
@@ -868,52 +1286,118 @@ public class ArscEditorActivity extends AppCompatActivity {
                 }).show();
     }
 
-    private static void collectLeaves(ArscData.Node node, List<ResourceEntry> out) {
-        for (ArscData.Node child : node.children) {
-            if (child.dir) collectLeaves(child, out);
-            else if (child.tag instanceof ResourceEntry) out.add((ResourceEntry) child.tag);
-        }
-    }
-
     private void runSearch() {
         if (data == null) return;
-        String q = searchInput.getText() == null ? "" : searchInput.getText().toString();
-        String t = searchTypeTv.getText() == null ? SEARCH_TYPES[0] : searchTypeTv.getText().toString();
-        String p = searchPathInput.getText() == null ? "" : searchPathInput.getText().toString();
-        final String query = q;
-        final String type = t;
-        final String path = p;
+        final String query = lastSearchQuery == null ? "" : lastSearchQuery;
+        final String type = lastSearchType == null ? SEARCH_TYPES[0] : lastSearchType;
+        final String path = lastSearchPath == null ? "" : lastSearchPath;
         Extensions.showMessage(this, "Searching…");
         new Thread(() -> {
             List<ArscData.SearchHit> hits = data.search(query, type, path);
             runOnUiThread(() -> {
                 searchAdapter.setHits(hits);
+                updateSearchInfo();
                 Extensions.showMessage(this, hits.size() + " results");
             });
         }).start();
     }
 
     void openSearchWith(String query, String path) {
-        searchInput.setText(query == null ? "" : query);
-        searchPathInput.setText(path == null ? "" : path);
-        showPage(2);
+        lastSearchQuery = query == null ? "" : query;
+        lastSearchPath = path == null ? "" : path;
+        selectPage(2);
         runSearch();
     }
 
     void querierStringSearch(String query) {
-        searchInput.setText(query == null ? "" : query);
-        searchTypeTv.setText("string", false);
-        searchPathInput.setText("");
-        showPage(2);
+        lastSearchQuery = query == null ? "" : query;
+        lastSearchType = "string";
+        lastSearchPath = "";
+        selectPage(2);
         runSearch();
+    }
+
+    void openTextForEntry(ResourceEntry re) {
+        if (re == null) return;
+        TypeBlock tb = null;
+        try {
+            Entry e = data.defaultEntry(re);
+            if (e != null) tb = e.getTypeBlock();
+        } catch (Exception ignored) {
+        }
+        if (tb == null) {
+            Extensions.showMessage(this, "No editable value");
+            return;
+        }
+        String name = null;
+        try {
+            name = re.getName();
+        } catch (Exception ignored) {
+        }
+        openTextPage(tb, name);
+    }
+
+    void openTextForHit(ArscData.SearchHit hit) {
+        if (hit == null) return;
+        TypeBlock tb = null;
+        try {
+            if (hit.sample != null) tb = hit.sample.getTypeBlock();
+        } catch (Exception ignored) {
+        }
+        if (tb == null) {
+            try {
+                Entry e = data.defaultEntry(hit.entry);
+                if (e != null) tb = e.getTypeBlock();
+            } catch (Exception ignored) {
+            }
+        }
+        if (tb == null) {
+            Extensions.showMessage(this, "No editable value");
+            return;
+        }
+        String name = null;
+        try {
+            name = hit.entry.getName();
+        } catch (Exception ignored) {
+        }
+        openTextPage(tb, name);
     }
 
     private void refreshStrings() {
         if (data == null || stringsAdapter == null) return;
-        String q = stringsFilter.getText() == null ? "" : stringsFilter.getText().toString();
+        final String q = stringsFilterQuery == null ? "" : stringsFilterQuery;
+        final boolean mc = stringsMatchCase;
+        final boolean rx = stringsRegex;
+        final boolean ex = stringsExact;
         new Thread(() -> {
-            List<ResourceEntry> list = data.stringEntries(q);
-            runOnUiThread(() -> stringsAdapter.setItems(list));
+            List<ResourceEntry> list = data.stringEntries("");
+            Map<ResourceEntry, String> values = new LinkedHashMap<>();
+            for (ResourceEntry re : list) {
+                if (re == null) continue;
+                String name;
+                try {
+                    name = re.getName();
+                } catch (Exception e) {
+                    continue;
+                }
+                String v = data.entryDisplay(re);
+                if (q.isEmpty() || matchOne(name, q, mc, rx, ex) || matchOne(v, q, mc, rx, ex)) {
+                    values.put(re, v == null ? "" : v);
+                }
+            }
+            List<ResourceEntry> out = new ArrayList<>(values.keySet());
+            out.sort((a, b) -> {
+                String va = values.get(a);
+                String vb = values.get(b);
+                int c = va.compareToIgnoreCase(vb);
+                if (c != 0) return c;
+                try {
+                    return a.getName().compareToIgnoreCase(b.getName());
+                } catch (Exception e) {
+                    return 0;
+                }
+            });
+            runOnUiThread(() -> stringsAdapter.setItems(out));
         }).start();
     }
 
@@ -925,6 +1409,49 @@ public class ArscEditorActivity extends AppCompatActivity {
     protected void onDestroy() {
         ArscQuerier.hideFloat(this);
         super.onDestroy();
+    }
+
+    static class PagesAdapter extends RecyclerView.Adapter<PagesAdapter.PageHolder> {
+        private final List<View> pages;
+
+        PagesAdapter(List<View> pages) {
+            this.pages = pages;
+        }
+
+        @NonNull
+        @Override
+        public PageHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            FrameLayout frame = new FrameLayout(parent.getContext());
+            frame.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            return new PageHolder(frame);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PageHolder holder, int position) {
+            View page = pages.get(position);
+            if (page.getParent() instanceof ViewGroup && page.getParent() != holder.frame) {
+                ((ViewGroup) page.getParent()).removeView(page);
+            }
+            if (holder.frame.getChildCount() == 0) {
+                holder.frame.addView(page, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return pages.size();
+        }
+
+        static class PageHolder extends RecyclerView.ViewHolder {
+            final FrameLayout frame;
+
+            PageHolder(@NonNull FrameLayout frame) {
+                super(frame);
+                this.frame = frame;
+            }
+        }
     }
 
     class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.Holder> {
@@ -956,7 +1483,7 @@ public class ArscEditorActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             ArscData.HistoryEntry entry = items.get(position);
-            holder.text.setText(new java.text.SimpleDateFormat("HH:mm:ss", Locale.US).format(new java.util.Date(entry.time)) + "  " + entry.desc);
+            holder.text.setText(new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date(entry.time)) + "  " + entry.desc);
             if (entry.revert == null) {
                 holder.revert.setVisibility(View.GONE);
             } else {
@@ -1024,7 +1551,7 @@ public class ArscEditorActivity extends AppCompatActivity {
             ArscData.SearchHit hit = hits.get(position);
             holder.line.setText(hit.entry.getPackageName() + "/" + hit.line);
             holder.detail.setText(hit.detail == null ? "" : hit.detail);
-            holder.itemView.setOnClickListener(v -> showEntryDialog(hit.entry));
+            holder.itemView.setOnClickListener(v -> openTextForHit(hit));
         }
 
         @Override
@@ -1032,7 +1559,7 @@ public class ArscEditorActivity extends AppCompatActivity {
             return hits.size();
         }
 
-        class Holder extends RecyclerView.ViewHolder {
+        static class Holder extends RecyclerView.ViewHolder {
             final TextView line;
             final TextView detail;
 
@@ -1045,11 +1572,48 @@ public class ArscEditorActivity extends AppCompatActivity {
     }
 
     class StringsAdapter extends RecyclerView.Adapter<StringsAdapter.Holder> {
+        private static final int COLOR_STAGED = 0xFF2E7D32;
         private List<ResourceEntry> items = new ArrayList<>();
+        private final Map<ResourceEntry, String> staged = new LinkedHashMap<>();
 
         void setItems(List<ResourceEntry> newItems) {
             items = newItems == null ? new ArrayList<>() : newItems;
             notifyDataSetChanged();
+        }
+
+        void stage(ResourceEntry re, String newValue) {
+            String current = data == null ? "" : data.entryDisplay(re);
+            if (newValue == null || newValue.equals(current)) staged.remove(re);
+            else staged.put(re, newValue);
+            notifyDataSetChanged();
+        }
+
+        void setStaged(Map<ResourceEntry, String> next) {
+            staged.clear();
+            if (next != null) staged.putAll(next);
+            notifyDataSetChanged();
+        }
+
+        boolean hasStaged() {
+            return !staged.isEmpty();
+        }
+
+        int stagedCount() {
+            return staged.size();
+        }
+
+        Map<ResourceEntry, String> stagedCopy() {
+            return new LinkedHashMap<>(staged);
+        }
+
+        void clearStaged() {
+            staged.clear();
+            notifyDataSetChanged();
+        }
+
+        String pendingValue(ResourceEntry re) {
+            String v = staged.get(re);
+            return v != null ? v : (data == null ? "" : data.entryDisplay(re));
         }
 
         @NonNull
@@ -1065,7 +1629,7 @@ public class ArscEditorActivity extends AppCompatActivity {
             TextView value = new TextView(ArscEditorActivity.this);
             value.setTextSize(13);
             value.setSingleLine(true);
-            value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            value.setEllipsize(TextUtils.TruncateAt.END);
             row.addView(name);
             row.addView(value);
             return new Holder(row, name, value);
@@ -1075,13 +1639,16 @@ public class ArscEditorActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             ResourceEntry re = items.get(position);
             holder.name.setText(re.getPackageName() + "/string/" + re.getName());
-            holder.value.setText(data.entryDisplay(re));
+            boolean isStaged = staged.containsKey(re);
+            holder.value.setText(isStaged ? staged.get(re) : data.entryDisplay(re));
+            if (holder.value.getTag() == null) holder.value.setTag(holder.value.getCurrentTextColor());
+            holder.value.setTextColor(isStaged ? COLOR_STAGED : (int) holder.value.getTag());
             holder.itemView.setOnClickListener(v -> {
                 if (MODE_TRANSLATE.equals(mode)) showEditDialog(re, true);
-                else showEntryDialog(re);
+                else showStageDialog(re);
             });
             holder.itemView.setOnLongClickListener(v -> {
-                showEditDialog(re, MODE_TRANSLATE.equals(mode));
+                openTextForEntry(re);
                 return true;
             });
         }
