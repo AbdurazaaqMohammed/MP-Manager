@@ -701,4 +701,8 @@ Layout Inspector
     <string name="status_unknown">Unknown (select an access mode to check)</string>
     <string name="root_denied_msg">Root not available with this su command</string>
     <string name="preview_sample_name">example_document.pdf</string>
+    <string name="verify_hash_hint">Paste hash to verify</string>
+    <string name="verify">Verify</string>
+    <string name="hash_match">Match: %1$s</string>
+    <string name="hash_no_match">No match</string>
 </resources>

@@ -94,12 +94,78 @@ public class ChecksumDialogs {
         container.addView(header);
     }
 
+    public interface HashProvider {
+        Map<String, String> getHashes();
+    }
+
+    public void addVerifySection(LinearLayout container, HashProvider provider) {
+        TextView title = new TextView(context);
+        title.setText(R.string.verify);
+        title.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
+        title.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        title.setPadding(0, dp(10), 0, dp(4));
+        container.addView(title);
+        android.widget.EditText input = new android.widget.EditText(context);
+        input.setHint(R.string.verify_hash_hint);
+        input.setTypeface(Typeface.MONOSPACE);
+        input.setTextSize(13);
+        input.setSingleLine(false);
+        container.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        com.google.android.material.button.MaterialButton verifyBtn = new com.google.android.material.button.MaterialButton(
+                context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        verifyBtn.setText(R.string.verify);
+        verifyBtn.setTextSize(12);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        btnParams.topMargin = dp(4);
+        container.addView(verifyBtn, btnParams);
+        TextView result = new TextView(context);
+        result.setTextSize(13);
+        result.setTypeface(Typeface.MONOSPACE);
+        container.addView(result);
+        verifyBtn.setOnClickListener(v -> {
+            String pasted = input.getText() == null ? "" : input.getText().toString();
+            String norm = pasted.toLowerCase(java.util.Locale.US).replaceAll("[^0-9a-f]", "");
+            Map<String, String> hashes = null;
+            try {
+                hashes = provider.getHashes();
+            } catch (Exception ignored) {
+            }
+            String match = null;
+            if (!norm.isEmpty() && hashes != null) {
+                for (Map.Entry<String, String> e : hashes.entrySet()) {
+                    if (e.getValue() == null) continue;
+                    String h = e.getValue().toLowerCase(java.util.Locale.US).replaceAll("[^0-9a-f]", "");
+                    if (!h.isEmpty() && h.equals(norm)) {
+                        match = e.getKey();
+                        break;
+                    }
+                }
+            }
+            if (match != null) {
+                result.setText(context.getString(R.string.hash_match, match));
+                result.setTextColor(Color.rgb(0x4C, 0xAF, 0x50));
+            } else {
+                result.setText(context.getString(R.string.hash_no_match));
+                result.setTextColor(Color.rgb(0xF4, 0x43, 0x36));
+            }
+        });
+    }
+
     public void startChecksumComputation(LinearLayout container, File file) {
+        startChecksumComputation(container, file, null);
+    }
+
+    public void startChecksumComputation(LinearLayout container, File file, Map<String, String> out) {
         Map<String, TextView> views = new HashMap<>();
         for (String algo : HashUtil.ALGORITHMS) views.put(algo, addChecksumRow(container, algo));
         new Thread(() -> {
             try {
                 Map<String, String> hashes = HashUtil.hashAll(file);
+                if (out != null) {
+                    out.clear();
+                    out.putAll(hashes);
+                }
                 context.handler.post(() -> {
                     for (Map.Entry<String, String> e : hashes.entrySet()) {
                         TextView tv = views.get(e.getKey());
@@ -122,6 +188,10 @@ public class ChecksumDialogs {
     }
 
     public void startZipEntryChecksumComputation(LinearLayout container, File zipFile, String entryPath) {
+        startZipEntryChecksumComputation(container, zipFile, entryPath, null);
+    }
+
+    public void startZipEntryChecksumComputation(LinearLayout container, File zipFile, String entryPath, Map<String, String> out) {
         Map<String, TextView> views = new HashMap<>();
         for (String algo : HashUtil.ALGORITHMS) views.put(algo, addChecksumRow(container, algo));
         new Thread(() -> {
@@ -142,6 +212,10 @@ public class ChecksumDialogs {
                     }
                 }
                 Map<String, String> hashes = HashUtil.hashAll(tmpFile);
+                if (out != null) {
+                    out.clear();
+                    out.putAll(hashes);
+                }
                 context.handler.post(() -> {
                     for (Map.Entry<String, String> e : hashes.entrySet()) {
                         TextView tv = views.get(e.getKey());
@@ -178,14 +252,18 @@ public class ChecksumDialogs {
                             TextView valueView = addChecksumRow(container, e.getKey());
                             valueView.setText(e.getValue());
                         }
+                        addVerifySection(container, () -> results.get(0));
                     } else {
+                        Map<String, String> merged = new HashMap<>();
                         for (int i = 0; i < files.size(); i++) {
                             addChecksumFileHeader(container, files.get(i).getName());
                             for (Map.Entry<String, String> e : results.get(i).entrySet()) {
                                 TextView valueView = addChecksumRow(container, e.getKey());
                                 valueView.setText(e.getValue());
+                                merged.put(files.get(i).getName() + " " + e.getKey(), e.getValue());
                             }
                         }
+                        addVerifySection(container, () -> merged);
                     }
                     dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                             .setTitle(files.size() > 1 ? context.getString(R.string.checksums) : context.getString(R.string.checksums_of, files.get(0).getName()))

@@ -37,6 +37,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.HashUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -182,6 +183,8 @@ public class FilePropertiesDialog {
             return;
         }
 
+        java.util.Map<String, String> propHashes = new java.util.HashMap<>();
+        ChecksumDialogs.HashProvider propSupplier = () -> propHashes;
         if (!isInZip && !multi && file.isFile()) {
             if (RootStaging.needsStaging(context, file)) {
                 // Root-only file: hash a staged copy (HashUtil needs FileInputStream).
@@ -194,7 +197,8 @@ public class FilePropertiesDialog {
                             File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
                             context.handler.post(() -> {
                                 checksumRows.removeAllViews();
-                                checksumDialogs.startChecksumComputation(checksumRows, staged);
+                                checksumDialogs.startChecksumComputation(checksumRows, staged, propHashes);
+                                checksumDialogs.addVerifySection(checksumRows, propSupplier);
                             });
                         } catch (Exception e) {
                             context.handler.post(() -> {
@@ -214,15 +218,23 @@ public class FilePropertiesDialog {
             } else {
                 propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
                     checksumRows.removeAllViews();
-                    checksumDialogs.startChecksumComputation(checksumRows, file);
+                    checksumDialogs.startChecksumComputation(checksumRows, file, propHashes);
+                    checksumDialogs.addVerifySection(checksumRows, propSupplier);
                 });
-                checksumDialogs.startChecksumComputation(checksumRows, file);
+                checksumDialogs.startChecksumComputation(checksumRows, file, propHashes);
+                checksumDialogs.addVerifySection(checksumRows, propSupplier);
             }
         } else if (isInZip && !multi && !entry.isDirectory()) {
-            checksumDialogs.addCrc32Row(checksumRows, entry.computeCrc32());
+            java.util.Map<String, String> zipHashes = new java.util.HashMap<>();
+            long entryCrc = entry.computeCrc32();
+            if (entryCrc >= 0) zipHashes.put("CRC32", HashUtil.crc32Hex(entryCrc));
+            checksumDialogs.addCrc32Row(checksumRows, entryCrc);
+            checksumDialogs.addVerifySection(checksumRows, () -> zipHashes);
             propView.findViewById(R.id.computeChecksums).setOnClickListener(btn -> {
                 checksumRows.removeAllViews();
-                checksumDialogs.startZipEntryChecksumComputation(checksumRows, entry.getZipFile(), entry.getFullPath());
+                checksumDialogs.addCrc32Row(checksumRows, entry.computeCrc32());
+                checksumDialogs.startZipEntryChecksumComputation(checksumRows, entry.getZipFile(), entry.getFullPath(), zipHashes);
+                checksumDialogs.addVerifySection(checksumRows, () -> zipHashes);
             });
         } else {
             checksumSection.setVisibility(View.GONE);
