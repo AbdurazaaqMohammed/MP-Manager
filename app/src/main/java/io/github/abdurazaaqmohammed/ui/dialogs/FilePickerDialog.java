@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ui.dialogs;
 
+import android.app.Activity;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -321,7 +322,8 @@ public class FilePickerDialog {
 
     private void returnSelection() {
         if (selectedPaths.isEmpty()) {
-            Toast.makeText(context, R.string.select_none, Toast.LENGTH_SHORT).show();
+            if(context instanceof Activity a) Extensions.showMessage(a, R.string.select_none);
+            else Toast.makeText(context, R.string.select_none, Toast.LENGTH_SHORT).show();
             return;
         }
         if (listener != null) listener.onFileSelected(selectedPaths.toArray(new String[0]));
