@@ -85,8 +85,6 @@ dependencies {
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'io.github.java-diff-utils:java-diff-utils:4.17'
     implementation(platform("io.github.Rosemoe.sora-editor:bom:0.23.6"))
-    implementation("androidx.collection:collection:1.6.0-rc01")
-    implementation 'androidx.preference:preference:1.2.1'
     implementation "androidx.biometric:biometric:1.1.0"
     implementation "androidx.window:window:1.5.1"
 
