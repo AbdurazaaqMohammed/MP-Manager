@@ -99,6 +99,9 @@ public class SignatureKeyDialog {
         view3.setChecked(prefs.getBoolean("v3", true));
         view4.setChecked(prefs.getBoolean("v4", false));
 
+        CompoundButton cbZipalign = view.findViewById(R.id.cb_zipalign);
+        cbZipalign.setChecked(prefs.getBoolean("zipalign", true));
+
         CompoundButton cbBiometric = view.findViewById(R.id.cb_biometric);
         cbBiometric.setVisibility(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? View.VISIBLE : View.GONE);
         cbBiometric.setChecked(prefs.getBoolean("useBiometrics", false));
@@ -209,8 +212,9 @@ public class SignatureKeyDialog {
                     boolean v2 = view2.isChecked();
                     boolean v3 = view3.isChecked();
                     boolean v4 = view4.isChecked();
+                    boolean zipalign = cbZipalign.isChecked();
                     String signedByS = signedBy.getText().toString();
-                    prefs.edit().putBoolean("v1", v1).putBoolean("v2", v2).putBoolean("v3", v3).putBoolean("v4", v4).putString("signedBy", signedByS).apply();
+                    prefs.edit().putBoolean("v1", v1).putBoolean("v2", v2).putBoolean("v3", v3).putBoolean("v4", v4).putBoolean("zipalign", zipalign).putString("signedBy", signedByS).apply();
 
                     if(file != null) {
                         ProgressManager pm = new ProgressManager(activity, true).show();
@@ -233,7 +237,7 @@ public class SignatureKeyDialog {
                                         try {
                                             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", "android"));
                                             SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath())),
-                                                    storedPass, v1, v2, v3, v4, signedByS);
+                                                    storedPass, v1, v2, v3, v4, signedByS, zipalign);
                                             File cacheDir = new File(activity.getCacheDir(), UUID.randomUUID().toString());
                                             String sigFileName = file.getName();
                                             File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));
@@ -283,7 +287,7 @@ public class SignatureKeyDialog {
                         } else new Thread(() -> {
                             try {
                                 SignWrapper signWrapper = new SignWrapper(new File(prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath())),
-                                        resolvedPassword, v1, v2, v3, v4, signedByS);
+                                        resolvedPassword, v1, v2, v3, v4, signedByS, zipalign);
                                 File cacheDir = new File(activity.getCacheDir(), UUID.randomUUID().toString());
                                 String sigFileName = file.getName();
                                 File file2 = new File(file.getParentFile(), sigFileName.replaceFirst("\\.(xapk|aspk|apk[sm]|apk)$", "_signed.$1"));

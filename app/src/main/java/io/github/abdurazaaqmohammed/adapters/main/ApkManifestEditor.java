@@ -41,6 +41,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -50,7 +51,6 @@ import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -510,6 +510,176 @@ public class ApkManifestEditor {
         writeManifestEntries(apkFile, entries);
     }
 
+    public void removeManifestPermission(File apkFile, String perm) throws Exception {
+        List<XMLEntry> entries = decodeManifest(apkFile);
+        if (entries == null) throw new IOException("Failed to decode AndroidManifest.xml");
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            XMLEntry item = entries.get(i);
+            if (item.getTag().contains("uses-permission") && perm.equals(item.getValue())) entries.remove(i);
+        }
+        writeManifestEntries(apkFile, entries);
+    }
+
+    public void showPermissionsDialog(File apkFile) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            String[] perms;
+            try {
+                android.content.pm.PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(
+                        apkFile.getPath(), android.content.pm.PackageManager.GET_PERMISSIONS);
+                perms = pi == null ? null : pi.requestedPermissions;
+                if (perms == null || perms.length == 0) throw new IOException("No permissions found");
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+                return;
+            }
+            String[] labels = new String[perms.length];
+            for (int i = 0; i < perms.length; i++) {
+                boolean dangerous = false;
+                try {
+                    int level = context.getPackageManager().getPermissionInfo(perms[i], 0).protectionLevel
+                            & android.content.pm.PermissionInfo.PROTECTION_MASK_BASE;
+                    dangerous = level == android.content.pm.PermissionInfo.PROTECTION_DANGEROUS;
+                } catch (Exception ignored) {
+                }
+                labels[i] = perms[i] + (dangerous ? " (dangerous)" : "");
+            }
+            boolean[] keep = new boolean[perms.length];
+            java.util.Arrays.fill(keep, true);
+            pm.dismiss();
+            context.handler.post(() -> {
+                AlertDialog dialog = dialogUtil.getDialogBuilder()
+                        .setTitle("Permissions (" + perms.length + ")")
+                        .setMultiChoiceItems(labels, keep, (d, which, isChecked) -> keep[which] = isChecked)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton("Remove unchecked", (d, which) -> {
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                            boolean[] sign = {settings.getBoolean("autosign", true)};
+                            Runnable doEdit = () -> {
+                                ProgressManager pm2 = new ProgressManager(context, true).show();
+                                new Thread(() -> {
+                                    try {
+                                        int removed = 0;
+                                        for (int i = 0; i < perms.length; i++) {
+                                            if (keep[i]) continue;
+                                            try {
+                                                removeManifestPermission(apkFile, perms[i]);
+                                                removed++;
+                                            } catch (Exception ignored) {
+                                            }
+                                        }
+                                        if (sign[0]) wrapper[0].signApk(apkFile);
+                                        pm2.dismiss();
+                                        int done = removed;
+                                        context.handler.post(() -> {
+                                            Extensions.showMessage(context, done + " permissions removed");
+                                            context.loadFolderInPane(apkFile.getParentFile(), true);
+                                        });
+                                    } catch (Exception e) {
+                                        pm2.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                    }
+                                }).start();
+                            };
+                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                wrapper[0] = sw;
+                                doEdit.run();
+                            });
+                            else doEdit.run();
+                        }).create();
+                dialogUtil.styleAlertDialog(dialog);
+            });
+        }).start();
+    }
+
+    public void showManifestTogglesDialog(File apkFile) {
+        String[] attrs = {"android:debuggable", "android:allowBackup", "android:usesCleartextTraffic",
+                "android:requestLegacyExternalStorage", "android:largeHeap"};
+        String[] labels = {"Debuggable", "Allow backup", "Cleartext traffic", "Legacy external storage", "Large heap"};
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            boolean[] current = new boolean[attrs.length];
+            try {
+                List<XMLEntry> entries = decodeManifest(apkFile);
+                if (entries == null) throw new IOException("Failed to decode AndroidManifest.xml");
+                for (int i = 0; i < attrs.length; i++) {
+                    String key = attrs[i].split(":")[1];
+                    for (XMLEntry e : entries) {
+                        if (e.getTag().contains(key)) {
+                            current[i] = "true".equalsIgnoreCase(e.getValue());
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+                return;
+            }
+            pm.dismiss();
+            context.handler.post(() -> {
+                LinearLayout root = new LinearLayout(context);
+                root.setOrientation(LinearLayout.VERTICAL);
+                int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+                root.setPadding(pad, pad / 2, pad, pad / 2);
+                android.widget.CheckBox[] boxes = new android.widget.CheckBox[attrs.length];
+                for (int i = 0; i < attrs.length; i++) {
+                    boxes[i] = new android.widget.CheckBox(context);
+                    boxes[i].setText(labels[i]);
+                    boxes[i].setChecked(current[i]);
+                    root.addView(boxes[i]);
+                }
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                boolean[] sign = new boolean[1];
+                android.widget.CheckBox autosign = new android.widget.CheckBox(context);
+                autosign.setText("Autosign");
+                autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                autosign.setOnCheckedChangeListener((b, c) -> settings.edit().putBoolean("autosign", sign[0] = c).apply());
+                root.addView(autosign);
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setTitle("Manifest toggles")
+                        .setView(root)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton("Apply", (dialog, which) -> {
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            Runnable doEdit = () -> {
+                                ProgressManager pm2 = new ProgressManager(context, true).show();
+                                new Thread(() -> {
+                                    try {
+                                        int changed = 0;
+                                        for (int i = 0; i < attrs.length; i++) {
+                                            if (boxes[i].isChecked() == current[i]) continue;
+                                            try {
+                                                writeManifestAttrValue(apkFile, attrs[i], boxes[i].isChecked() ? "true" : "false");
+                                                changed++;
+                                            } catch (Exception ignored) {
+                                            }
+                                        }
+                                        if (sign[0]) wrapper[0].signApk(apkFile);
+                                        pm2.dismiss();
+                                        int done = changed;
+                                        context.handler.post(() -> {
+                                            Extensions.showMessage(context, done + " toggles applied");
+                                            context.loadFolderInPane(apkFile.getParentFile(), true);
+                                        });
+                                    } catch (Exception e) {
+                                        pm2.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                    }
+                                }).start();
+                            };
+                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                wrapper[0] = sw;
+                                doEdit.run();
+                            });
+                            else doEdit.run();
+                        }).create());
+            });
+        }).start();
+    }
+
     private void writeManifestEntries(File apkFile, List<XMLEntry> entries) throws Exception {
         replaceZipEntry(apkFile, "AndroidManifest.xml", new aXMLEncoder().encodeString(entries, context));
     }
@@ -530,7 +700,6 @@ public class ApkManifestEditor {
         try (ZipFile sourceZip = new ZipFile(apkFile); InputStream is = new ByteArrayInputStream(newBytes)) {
             sourceZip.addStream(is, zp);
         }
-        ApkZipAlignUtil.ensureInstallable(apkFile);
     }
 
     private void replaceZipEntry(File apkFile, String entryPath, InputStream is)
@@ -541,6 +710,5 @@ public class ApkManifestEditor {
         try (ZipFile sourceZip = new ZipFile(apkFile)) {
             sourceZip.addStream(is, zp);
         }
-        ApkZipAlignUtil.ensureInstallable(apkFile);
     }
 }

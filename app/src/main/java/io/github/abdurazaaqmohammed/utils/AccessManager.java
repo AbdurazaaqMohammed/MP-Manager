@@ -114,7 +114,7 @@ public final class AccessManager {
         Backend backend = active(context);
         if (backend == Backend.ROOT) {
             RootManager.RootEntry e = RootManager.getInstance(context).statEntry(absPath);
-            return e != null ? e.lastModified : 0;
+            return e != null ? e.lastModified() : 0;
         }
         if (backend == Backend.SHIZUKU) return ShizukuManager.getMtime(context, absPath);
         try {
@@ -326,8 +326,8 @@ public final class AccessManager {
             if (backend == Backend.ROOT) {
                 RootManager.ShellResult r = RootManager.getInstance(context).execute(
                         "du -sb " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
-                if (r.isSuccess() && r.output != null) {
-                    return Long.parseLong(r.output.trim().split("\\s+")[0]);
+                if (r.isSuccess() && r.output() != null) {
+                    return Long.parseLong(r.output().trim().split("\\s+")[0]);
                 }
                 return -1;
             }

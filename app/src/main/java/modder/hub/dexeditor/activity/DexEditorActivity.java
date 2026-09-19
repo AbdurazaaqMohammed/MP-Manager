@@ -404,6 +404,8 @@ public class DexEditorActivity extends AppCompatActivity {
                 refreshExplorerPage(position);
             }
         });
+        int openTab = getIntent().getIntExtra("openTab", -1);
+        if (openTab >= 0 && openTab < 4 && explorerViewPager != null) explorerViewPager.setCurrentItem(openTab, false);
     }
 
     private void initializeLogic() {

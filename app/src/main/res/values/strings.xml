@@ -396,6 +396,7 @@
     <string name="skip_duration">Skip Duration</string>
     <string name="select_icon">Select Icon</string>
     <string name="processing">Processing…</string>
+    <string name="processing_x">Processing %1$ss…</string>
     <string name="exclude_list">Exclude list</string>
     <string name="save_code">You need to save all the codes before proceeding. Do you want to continue ?</string>
     <string name="save_and_continue">Save and Continue</string>
@@ -599,6 +600,8 @@ Layout Inspector
     <string name="root_file_operations">Root file operations</string>
     <string name="root_extractor_features">Root features in APK Extractor</string>
     <string name="use_biometrics">Use device biometrics instead of password</string>
+    <string name="zipalign">Zipalign before signing</string>
+    <string name="zipalign_explanation">Aligns uncompressed data inside the APK (manifest, resources, native libraries) so Android can install and run it efficiently. This must run before signing, so keep it on unless the APK is already aligned.</string>
     <string name="choose_signature_key">Choose signature key</string>
     <string name="select_signature_file">Select signature file</string>
     <string name="pick_file">Pick file</string>

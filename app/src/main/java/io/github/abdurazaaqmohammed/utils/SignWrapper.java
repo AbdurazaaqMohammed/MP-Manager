@@ -64,16 +64,22 @@ public class SignWrapper {
     private final boolean v2;
     private final boolean v3;
     private final boolean v4;
+    private final boolean zipalign;
     private final String signedBy;
 
-    public SignWrapper(File signatureKeyFile, String password, boolean v1Enabled, boolean v2Enabled, boolean v3Enabled, boolean v4Enabled, CharSequence signedBy) {
+    public SignWrapper(File signatureKeyFile, String password, boolean v1Enabled, boolean v2Enabled, boolean v3Enabled, boolean v4Enabled, CharSequence signedBy, boolean zipalign) {
         this.key = signatureKeyFile;
         this.password = password == null ? new char[0] : password.toCharArray();
         this.v1 = v1Enabled;
         this.v2 = v2Enabled;
         this.v3 = v3Enabled;
         this.v4 = v4Enabled;
+        this.zipalign = zipalign;
         this.signedBy = signedBy == null ? null : signedBy.toString();
+    }
+
+    public SignWrapper(File signatureKeyFile, String password, boolean v1Enabled, boolean v2Enabled, boolean v3Enabled, boolean v4Enabled, CharSequence signedBy) {
+        this(signatureKeyFile, password, v1Enabled, v2Enabled, v3Enabled, v4Enabled, signedBy, true);
     }
 
     public SignWrapper(File signatureKeyFile, String password, boolean v1Enabled, boolean v2Enabled, boolean v3Enabled, boolean v4Enabled) {
@@ -92,6 +98,7 @@ public class SignWrapper {
         this.v2 = settings.getBoolean("v2", true);
         this.v3 = settings.getBoolean("v3", true);
         this.v4 = settings.getBoolean("v4", false);
+        this.zipalign = settings.getBoolean("zipalign", true);
         this.signedBy = settings.getString("signedBy", DEFAULT_SIGNED_BY);
     }
 
@@ -113,25 +120,26 @@ public class SignWrapper {
         boolean v2 = prefs.getBoolean("v2", true);
         boolean v3 = prefs.getBoolean("v3", true);
         boolean v4 = prefs.getBoolean("v4", false);
+        boolean zipalign = prefs.getBoolean("zipalign", true);
         String signedBy = prefs.getString("signedBy", DEFAULT_SIGNED_BY);
 
         if (keyPath.endsWith("debug.keystore")) {
-            callback.onAuthenticated(new SignWrapper(keyFile, "android", v1, v2, v3, v4, signedBy));
+            callback.onAuthenticated(new SignWrapper(keyFile, "android", v1, v2, v3, v4, signedBy, zipalign));
         } else if (isPk8OrPemPath(keyPath)) {
-            callback.onAuthenticated(new SignWrapper(keyFile, null, v1, v2, v3, v4, signedBy));
+            callback.onAuthenticated(new SignWrapper(keyFile, null, v1, v2, v3, v4, signedBy, zipalign));
         } else if (prefs.getBoolean("useBiometrics", false) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", ""));
             if (!TextUtils.isEmpty(storedPass)) {
-                authenticateWithBiometrics(activity, keyFile, storedPass, v1, v2, v3, v4, signedBy, callback);
+                authenticateWithBiometrics(activity, keyFile, storedPass, v1, v2, v3, v4, signedBy, zipalign, callback);
                 return;
             }
-            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, callback);
+            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback);
         } else {
-            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, callback);
+            requestPassword(activity, keyFile, v1, v2, v3, v4, signedBy, zipalign, callback);
         }
     }
 
-    private static void requestPassword(MainActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, SignKeyCallback callback) {
+    private static void requestPassword(MainActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
         EditText pwInput = new EditText(activity);
         pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         pwInput.setHint(activity.rss.getString(R.string.enter_password));
@@ -152,13 +160,13 @@ public class SignWrapper {
                         Extensions.showMessage(activity, R.string.invalid_password);
                         return;
                     }
-                    callback.onAuthenticated(new SignWrapper(keyFile, password, v1, v2, v3, v4, signedBy));
+                    callback.onAuthenticated(new SignWrapper(keyFile, password, v1, v2, v3, v4, signedBy, zipalign));
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
-    private static void authenticateWithBiometrics(MainActivity activity, File keyFile, String storedPass, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, SignKeyCallback callback) {
+    private static void authenticateWithBiometrics(MainActivity activity, File keyFile, String storedPass, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
         Executor executor = ContextCompat.getMainExecutor(activity);
         BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
@@ -170,7 +178,7 @@ public class SignWrapper {
             @Override
             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
-                callback.onAuthenticated(new SignWrapper(keyFile, storedPass, v1, v2, v3, v4, signedBy));
+                callback.onAuthenticated(new SignWrapper(keyFile, storedPass, v1, v2, v3, v4, signedBy, zipalign));
             }
 
             @Override
@@ -209,6 +217,9 @@ public class SignWrapper {
     }
 
     public void signApk(File inputApk, File output, boolean v1, boolean v2, boolean v3, boolean v4) throws Exception {
+        if (zipalign) {
+            ApkZipAlignUtil.ensureInstallable(inputApk);
+        }
         boolean inPlace = inputApk.equals(output);
         File actualOutput = inPlace ? resolveSibling(output, output.getName() + ".tmp") : output;
 

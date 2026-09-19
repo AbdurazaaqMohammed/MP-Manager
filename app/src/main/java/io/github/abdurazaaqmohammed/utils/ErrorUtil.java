@@ -36,7 +36,7 @@ public class ErrorUtil {
                 .setMessage(s)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.copy_log, (dialog, which) -> copyText(s));
-        b.show();
+       context.runOnUiThread(b::show);// b.show();
     }
 
     public void showError(Throwable e) {

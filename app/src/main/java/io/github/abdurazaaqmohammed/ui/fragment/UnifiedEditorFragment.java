@@ -641,6 +641,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     // ===== Search/Replace =====
     public void showSearchPanel() { searchPanel.setVisibility(View.VISIBLE); }
 
+    public void searchFor(String query, boolean useRegex, boolean matchCase) {
+        if (editor == null || query == null || query.isEmpty()) return;
+        try {
+            searchPanel.setVisibility(View.VISIBLE);
+            if (searchInput != null) searchInput.setText(query);
+            regex = useRegex;
+            matchCase = matchCase;
+            wholeWord = false;
+            int type = useRegex ? EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
+                    : EditorSearcher.SearchOptions.TYPE_NORMAL;
+            startSearch(query, type, !matchCase);
+        } catch (Exception ignored) {
+        }
+    }
+
     private void performSearch() {
         CharSequence query = searchInput.getText();
         if (TextUtils.isEmpty(query)) return;
