@@ -54,6 +54,7 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 
 public class ApkManifestEditor {
 
@@ -239,6 +240,12 @@ public class ApkManifestEditor {
                                             } else entries.add(4, new XMLEntry("android:installLocation", "=\"", installLocationSelected[0], "\""));
                                         }
 
+                                        if (UiPrefs.genBackup(context)) {
+                                            try {
+                                                FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
+                                            } catch (Exception ignored) {
+                                            }
+                                        }
                                         writeManifestEntries(apkFile, entries);
                                         if(sign[0]) wrapper[0].signApk(apkFile);
                                         pm.dismiss();
