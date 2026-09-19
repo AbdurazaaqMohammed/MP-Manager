@@ -72,7 +72,6 @@ public class RootFile extends File {
         this.statMode = null;
     }
 
-    /** True when this instance carries root-obtained stat data. */
     public boolean hasRootStat() {
         return hasStat;
     }
@@ -113,47 +112,34 @@ public class RootFile extends File {
 
     @Override
     public boolean canRead() {
-        // App uid still cannot read the original path; readability comes
-        // from staging via RootStaging. Report super's answer when we have
-        // no stat, otherwise report existence (listing is possible via root).
         if (hasStat) return statExists && super.canRead();
         return super.canRead();
     }
 
     @Override
     public File[] listFiles() {
-        File[] direct = super.listFiles();
-        if (direct != null) return direct;
+        return super.listFiles();
         // Caller (MainActivity) performs the root fallback with stat, so
         // just return null here to signal "needs root listing".
-        return null;
     }
 
     @Override
     public File[] listFiles(FileFilter filter) {
-        File[] direct = super.listFiles(filter);
-        if (direct != null) return direct;
-        return null;
+        return super.listFiles(filter);
     }
 
     @Override
     public File[] listFiles(FilenameFilter filter) {
-        File[] direct = super.listFiles(filter);
-        if (direct != null) return direct;
-        return null;
+        return super.listFiles(filter);
     }
 
     @Override
     public String[] list() {
-        String[] direct = super.list();
-        if (direct != null) return direct;
-        return null;
+        return super.list();
     }
 
     @Override
     public String[] list(FilenameFilter filter) {
-        String[] direct = super.list(filter);
-        if (direct != null) return direct;
-        return null;
+        return super.list(filter);
     }
 }

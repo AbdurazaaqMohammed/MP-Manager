@@ -74,12 +74,10 @@ public final class RootStaging {
         AccessManager.writeBack(context, stagedCopy, originalAbsPath);
     }
 
-    /** True when writing back to {@code absPath} deserves an extra user confirmation. */
     public static boolean needsWriteConfirm(String absPath) {
         return RootManager.isPathInKeyDirectory(absPath);
     }
 
-    /** App-private staging directory (created on demand). */
     public static File stageDir(Context context) throws IOException {
         File dir = new File(context.getCacheDir(), STAGE_DIR);
         if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
@@ -88,10 +86,6 @@ public final class RootStaging {
         return dir;
     }
 
-    /**
-     * Best-effort cleanup of staged copies older than {@code maxAgeMs}.
-     * Safe: only deletes inside our own cache staging dir.
-     */
     public static void cleanup(Context context, long maxAgeMs) {
         if (context == null) return;
         try {

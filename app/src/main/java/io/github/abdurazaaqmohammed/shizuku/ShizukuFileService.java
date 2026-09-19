@@ -17,8 +17,19 @@ import java.util.regex.Pattern;
 
 public class ShizukuFileService extends IFileService.Stub {
 
-    public static final int SERVICE_VERSION = 1;
+    public static final int SERVICE_VERSION = 2;
     public static final long MAX_BYTES = 100L * 1024L * 1024L;
+
+    private static final String[] SHELL_PREFIXES = new String[]{
+            "settings put global private_dns_mode ",
+            "settings put global private_dns_specifier ",
+            "settings put secure enabled_accessibility_services ",
+            "settings put secure accessibility_enabled ",
+            "appops set ",
+            "cmd appops set ",
+            "pm grant ",
+            "pm trim-caches"
+    };
 
     private static final Pattern ALLOWED =
             Pattern.compile("^/storage/emulated/\\d+/Android/(data|obb|media)(/.*)?$");
@@ -358,5 +369,82 @@ public class ShizukuFileService extends IFileService.Stub {
             return false;
         }
         return f.setLastModified(millis);
+    }
+
+    @Override
+    public String shell(String command, int timeoutSeconds) {
+        if (!shellAllowed(command)) {
+            fail("Command not allowed");
+            return "-1\nrefused";
+        }
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
+            StringBuilder out = new StringBuilder();
+            final Process p = process;
+            Thread reader = new Thread(() -> {
+                try {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    java.io.InputStream in = p.getInputStream();
+                    while ((n = in.read(buf)) != -1) {
+                        synchronized (out) {
+                            if (out.length() < 65536) out.append(new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8));
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+            });
+            reader.setDaemon(true);
+            reader.start();
+            int timeout = timeoutSeconds <= 0 ? 15 : Math.min(timeoutSeconds, 60);
+            boolean done = process.waitFor(timeout, java.util.concurrent.TimeUnit.SECONDS);
+            if (!done) {
+                try {
+                    process.destroyForcibly();
+                } catch (Exception ignored) {
+                }
+                fail("Command timed out");
+                return "-1\ntimeout";
+            }
+            try {
+                reader.join(2000);
+            } catch (Exception ignored) {
+            }
+            int code;
+            String text;
+            synchronized (out) {
+                code = process.exitValue();
+                text = out.toString().trim();
+            }
+            return code + "\n" + text;
+        } catch (Exception e) {
+            fail(e.getMessage());
+            return "-1\nerror";
+        } finally {
+            if (process != null) {
+                try {
+                    process.destroy();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    private boolean shellAllowed(String command) {
+        if (command == null || command.isEmpty() || command.length() > 2048) return false;
+        boolean prefixOk = false;
+        for (String prefix : SHELL_PREFIXES) {
+            if (command.startsWith(prefix)) {
+                prefixOk = true;
+                break;
+            }
+        }
+        if (!prefixOk) return false;
+        for (int i = 0; i < command.length(); i++) {
+            char c = command.charAt(i);
+            if (c == ';' || c == '&' || c == '|' || c == '`' || c == '$' || c == '(' || c == ')' || c == '<' || c == '>' || c == '\n' || c == '\r') return false;
+        }
+        return true;
     }
 }

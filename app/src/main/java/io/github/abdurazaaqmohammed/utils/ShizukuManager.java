@@ -404,4 +404,40 @@ public final class ShizukuManager {
             throw new IOException("touch failed: " + e.getMessage());
         }
     }
+
+    public static int shellExit(Context context, String command, int timeoutSeconds) {
+        try {
+            if (!ready()) return -1;
+            IFileService s = serviceSync(context);
+            String raw = s.shell(command, timeoutSeconds);
+            if (raw == null) return -1;
+            int cut = raw.indexOf('\n');
+            String code = cut < 0 ? raw.trim() : raw.substring(0, cut).trim();
+            return Integer.parseInt(code);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public static boolean shellOk(Context context, String command, int timeoutSeconds) {
+        return shellExit(context, command, timeoutSeconds) == 0;
+    }
+
+    public static boolean shellOkFast(Context context, String command, int timeoutSeconds) {
+        try {
+            if (!ready()) return false;
+            IFileService s = io.github.abdurazaaqmohammed.shizuku.ShizukuConnection.peek();
+            if (s == null) {
+                io.github.abdurazaaqmohammed.shizuku.ShizukuConnection.ensureBackground(context);
+                return false;
+            }
+            String raw = s.shell(command, timeoutSeconds);
+            if (raw == null) return false;
+            int cut = raw.indexOf('\n');
+            String code = cut < 0 ? raw.trim() : raw.substring(0, cut).trim();
+            return Integer.parseInt(code) == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

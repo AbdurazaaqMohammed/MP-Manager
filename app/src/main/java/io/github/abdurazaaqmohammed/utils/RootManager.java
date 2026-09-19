@@ -9,7 +9,6 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -143,6 +142,28 @@ public class RootManager {
                 .apply();
     }
 
+    public boolean autoEnableRootIfAvailable() {
+        try {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            boolean modeTouched = prefs.contains("working_mode");
+            boolean opsTouched = prefs.contains("root_file_ops");
+            if (modeTouched && opsTouched) return false;
+            if (!isRootAvailable()) return false;
+            boolean changed = false;
+            if (!modeTouched) {
+                setWorkingMode(WorkingMode.ROOT);
+                changed = true;
+            }
+            if (!opsTouched) {
+                prefs.edit().putBoolean("root_file_ops", true).apply();
+                changed = true;
+            }
+            return changed;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public boolean isRootMode() {
         return getWorkingMode() == WorkingMode.ROOT;
     }
@@ -202,8 +223,6 @@ public class RootManager {
             return false;
         }
     }
-
-    // ========== Safety Utilities ==========
 
     public static String escapeShellArg(String arg) {
         if (arg == null) return "";
@@ -267,6 +286,10 @@ public class RootManager {
         if (!isRootMode()) {
             return new ShellResult(-1, "", "Root mode is disabled");
         }
+        return spawnSu(command, timeoutSeconds);
+    }
+
+    private ShellResult spawnSu(String command, int timeoutSeconds) {
         synchronized (lock) {
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", command});
@@ -296,6 +319,96 @@ public class RootManager {
                 return new ShellResult(-1, "", e.getMessage());
             }
         }
+    }
+
+    public static String quoteForSh(String s) {
+        if (s == null) return "''";
+        return "'" + s.replace("'", "'\\''") + "'";
+    }
+
+    private String[] suCommandForFs(String shellCommand) {
+        boolean global = false;
+        try {
+            global = prefersGlobalNs();
+        } catch (Exception ignored) {
+        }
+        if (global) {
+            return new String[]{suBinary(), "-c",
+                    "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(shellCommand)};
+        }
+        return new String[]{suBinary(), "-c", shellCommand};
+    }
+
+    public ShellResult executeGlobalNs(String command, int timeoutSeconds) {
+        if (!isRootMode()) {
+            return new ShellResult(-1, "", "Root mode is disabled");
+        }
+        String wrapped = "nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh(command);
+        return spawnSu(wrapped, timeoutSeconds);
+    }
+
+    private volatile int nsWinner;
+    private volatile boolean nsProbing;
+
+    public void kickNsProbe() {
+        boolean start = false;
+        synchronized (this) {
+            if (nsWinner == 0 && !nsProbing) {
+                nsProbing = true;
+                start = true;
+            }
+        }
+        if (!start) return;
+        new Thread(() -> {
+            boolean global = false;
+            try {
+                global = probeNamespaces();
+            } catch (Exception ignored) {
+            }
+            synchronized (RootManager.this) {
+                nsWinner = global ? 2 : 1;
+                nsProbing = false;
+            }
+        }).start();
+    }
+
+    public boolean prefersGlobalNs() {
+        if (nsWinner == 2) return true;
+        kickNsProbe();
+        return false;
+    }
+
+    private boolean probeNamespaces() {
+        try {
+            ShellResult plain = spawnSu("ls -1A -- /data/data 2>/dev/null | wc -l", 10);
+            int plainCount = parseCount(plain);
+            ShellResult global = spawnSu("nsenter --mount=/proc/1/ns/mnt -- /system/bin/sh -c " + quoteForSh("ls -1A -- /data/data 2>/dev/null | wc -l"), 10);
+            int globalCount = parseCount(global);
+            if (globalCount > plainCount && globalCount > 1) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private static int parseCount(ShellResult r) {
+        try {
+            if (r != null && r.isSuccess() && r.output != null) return Integer.parseInt(r.output.trim());
+        } catch (Exception ignored) {
+        }
+        return -1;
+    }
+
+    public ShellResult executeFs(String command, int timeoutSeconds) {
+        if (!isRootMode()) {
+            return new ShellResult(-1, "", "Root mode is disabled");
+        }
+        boolean global = false;
+        try {
+            global = prefersGlobalNs();
+        } catch (Exception ignored) {
+        }
+        if (global) return executeGlobalNs(command, timeoutSeconds);
+        return spawnSu(command, timeoutSeconds);
     }
 
     public ShellResult executeWithInput(String command, String input) {
@@ -343,7 +456,7 @@ public class RootManager {
     // ========== File Operations ==========
 
     public List<String> listFiles(String path) throws IOException {
-        ShellResult result = execute("ls -1 " + escapeShellArg(path));
+        ShellResult result = executeFs("ls -1 " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
         List<String> files = new ArrayList<>();
         for (String line : result.output.split("\n")) {
@@ -353,7 +466,7 @@ public class RootManager {
     }
 
     public List<String> listFilesDetailed(String path) throws IOException {
-        ShellResult result = execute("ls -la " + escapeShellArg(path));
+        ShellResult result = executeFs("ls -la " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
         List<String> entries = new ArrayList<>();
         for (String line : result.output.split("\n")) {
@@ -363,22 +476,22 @@ public class RootManager {
     }
 
     public boolean exists(String path) {
-        ShellResult result = execute("test -e " + escapeShellArg(path) + " && echo yes || echo no");
+        ShellResult result = executeFs("test -e " + escapeShellArg(path) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public boolean isDirectory(String path) {
-        ShellResult result = execute("test -d " + escapeShellArg(path) + " && echo yes || echo no");
+        ShellResult result = executeFs("test -d " + escapeShellArg(path) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public boolean isFile(String path) {
-        ShellResult result = execute("test -f " + escapeShellArg(path) + " && echo yes || echo no");
+        ShellResult result = executeFs("test -f " + escapeShellArg(path) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public long getFileSize(String path) {
-        ShellResult result = execute("stat -c %s " + escapeShellArg(path));
+        ShellResult result = executeFs("stat -c %s " + escapeShellArg(path), 30);
         if (result.isSuccess()) {
             try {
                 return Long.parseLong(result.output.trim());
@@ -390,17 +503,17 @@ public class RootManager {
     }
 
     public String getPermissions(String path) {
-        ShellResult result = execute("stat -c %a " + escapeShellArg(path));
+        ShellResult result = executeFs("stat -c %a " + escapeShellArg(path), 30);
         return result.isSuccess() ? result.output.trim() : null;
     }
 
     public String getOwner(String path) {
-        ShellResult result = execute("stat -c %U:%G " + escapeShellArg(path));
+        ShellResult result = executeFs("stat -c %U:%G " + escapeShellArg(path), 30);
         return result.isSuccess() ? result.output.trim() : null;
     }
 
     public File[] listRootFiles(String path) {
-        ShellResult result = execute("ls -1a " + escapeShellArg(path));
+        ShellResult result = executeFs("ls -1a " + escapeShellArg(path), 30);
         if (!result.isSuccess() || result.output == null) return null;
 
         String[] names = result.output.split("\\r?\\n");
@@ -439,49 +552,57 @@ public class RootManager {
     }
 
     public void mkdir(String path) throws IOException {
-        ShellResult result = execute("mkdir -p " + escapeShellArg(path));
+        ShellResult result = executeFs("mkdir -p " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("mkdir failed: " + result.error);
+        invalidateListCache();
     }
 
     public void delete(String path) throws IOException {
         if (isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
-        ShellResult result = execute("rm -rf " + escapeShellArg(path));
+        ShellResult result = executeFs("rm -rf " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
+        invalidateListCache();
     }
 
     public void deleteFile(String path) throws IOException {
         if (isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
-        ShellResult result = execute("rm -f " + escapeShellArg(path));
+        ShellResult result = executeFs("rm -f " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
+        invalidateListCache();
     }
 
     public void rename(String oldPath, String newPath) throws IOException {
-        ShellResult result = execute("mv " + escapeShellArg(oldPath) + " " + escapeShellArg(newPath));
+        ShellResult result = executeFs("mv " + escapeShellArg(oldPath) + " " + escapeShellArg(newPath), 30);
         if (!result.isSuccess()) throw new IOException("rename failed: " + result.error);
+        invalidateListCache();
     }
 
     public void copyFile(String src, String dest) throws IOException {
-        ShellResult result = execute("cp -f " + escapeShellArg(src) + " " + escapeShellArg(dest));
+        ShellResult result = executeFs("cp -f " + escapeShellArg(src) + " " + escapeShellArg(dest), 60);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        invalidateListCache();
     }
 
     public void copyDir(String src, String dest) throws IOException {
-        ShellResult result = execute("cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest));
+        ShellResult result = executeFs("cp -rf " + escapeShellArg(src) + " " + escapeShellArg(dest), 120);
         if (!result.isSuccess()) throw new IOException("copy failed: " + result.error);
+        invalidateListCache();
     }
 
     public void touch(String path) throws IOException {
-        ShellResult result = execute("touch " + escapeShellArg(path));
+        ShellResult result = executeFs("touch " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("touch failed: " + result.error);
+        invalidateListCache();
     }
 
     public void ln(String target, String link) throws IOException {
-        ShellResult result = execute("ln -sf " + escapeShellArg(target) + " " + escapeShellArg(link));
+        ShellResult result = executeFs("ln -sf " + escapeShellArg(target) + " " + escapeShellArg(link), 30);
         if (!result.isSuccess()) throw new IOException("ln failed: " + result.error);
+        invalidateListCache();
     }
 
     public String readFile(String path) throws IOException {
@@ -517,7 +638,7 @@ public class RootManager {
                         if (err.length() > 0) err.append("\n");
                         err.append(line);
                     }
-                    throw new IOException("write failed: " + err.toString());
+                    throw new IOException("write failed: " + err);
                 }
             } catch (IOException e) {
                 throw e;
@@ -554,7 +675,7 @@ public class RootManager {
                         if (err.length() > 0) err.append("\n");
                         err.append(line);
                     }
-                    throw new IOException("append failed: " + err.toString());
+                    throw new IOException("append failed: " + err);
                 }
             } catch (IOException e) {
                 throw e;
@@ -565,8 +686,9 @@ public class RootManager {
     }
 
     public void copyToRoot(File localSource, String rootPath) throws IOException {
-        ShellResult result = execute("cp " + escapeShellArg(localSource.getAbsolutePath()) + " " + escapeShellArg(rootPath));
+        ShellResult result = executeFs("cp " + escapeShellArg(localSource.getAbsolutePath()) + " " + escapeShellArg(rootPath), 60);
         if (!result.isSuccess()) throw new IOException("copy to root failed: " + result.error);
+        invalidateListCache();
     }
 
     public void installSilent(String apkPath) throws IOException {
@@ -807,16 +929,9 @@ public class RootManager {
         }
     }
 
-    // ========== Root-aware stat / listing with metadata ==========
-    // These helpers are the safe bridge between "su can see it" and
-    // "java.io.File cannot". Reads never modify the device; every path
-    // going to a shell is passed through escapeShellArg, and every write
-    // or delete goes through isPathBlocked.
 
-    /** Max file size (bytes) that may be staged through root for viewing/editing. */
     public static final long MAX_STAGE_BYTES = 100L * 1024L * 1024L;
 
-    /** Directories that are only readable with root on stock Android. */
     private static final String[] ROOT_ONLY_PREFIXES = {
             "/data/data", "/data/user", "/data/user_de",
             "/data/system", "/data/misc", "/data/vendor",
@@ -824,29 +939,10 @@ public class RootManager {
             "/root"
     };
 
-    /** Metadata for one path, obtained via root stat. */
-    public static class RootEntry {
-        public final String path;
-        public final boolean exists;
-        public final boolean isDirectory;
-        public final boolean isFile;
-        public final long length;
-        public final long lastModified;
-        public final String mode;
-
-        public RootEntry(String path, boolean exists, boolean isDirectory,
-                         boolean isFile, long length, long lastModified, String mode) {
-            this.path = path;
-            this.exists = exists;
-            this.isDirectory = isDirectory;
-            this.isFile = isFile;
-            this.length = length;
-            this.lastModified = lastModified;
-            this.mode = mode;
-        }
+    public record RootEntry(String path, boolean exists, boolean isDirectory, boolean isFile,
+                            long length, long lastModified, String mode) {
     }
 
-    /** Heuristic: is this path inside a directory that normally needs root? */
     public static boolean isRootOnlyPath(String path) {
         if (path == null) return false;
         String normalized = path.endsWith("/") && path.length() > 1
@@ -857,10 +953,6 @@ public class RootManager {
         return false;
     }
 
-    /**
-     * True when the app uid cannot access {@code path} directly but root can.
-     * Used to decide "stage via su" vs "plain java.io.File".
-     */
     public boolean needsRootFor(String path) {
         if (path == null || path.isEmpty()) return false;
         try {
@@ -876,14 +968,13 @@ public class RootManager {
         }
     }
 
-    /** Stat one path via root. Never throws; returns exists=false when unknown. */
     public RootEntry statEntry(String path) {
         if (path == null || path.isEmpty() || !isRootMode()) {
             return new RootEntry(path, false, false, false, 0L, 0L, null);
         }
         try {
-            ShellResult r = execute("stat -c '%n\037%F\037%s\037%Y\037%a' "
-                    + escapeShellArg(path) + " 2>/dev/null");
+            ShellResult r = executeFs("stat -c '%n\037%F\037%s\037%Y\037%a' "
+                    + escapeShellArg(path) + " 2>/dev/null", 30);
             if (r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
                 String line = r.output.split("\\r?\\n")[0];
                 String[] parts = line.split("\037", -1);
@@ -924,39 +1015,144 @@ public class RootManager {
         }
     }
 
-    /**
-     * List a directory via root, returning {@link RootFile} items that carry
-     * stat metadata (isDirectory/length/lastModified work without app-uid
-     * permission). One su invocation for the whole directory.
-     * Returns null when the listing itself failed.
-     */
     public File[] listRootFilesWithStat(String dirPath) {
-        if (dirPath == null || dirPath.isEmpty()) return null;
-        // Single shell loop: stat every child, \037-separated fields so that
-        // spaces/tabs/pipes in names survive. A trailing is-dir flag from
-        // `test -d` (which follows symlinks) classifies symlinks correctly.
-        // Newline-in-name is not supported (vanishingly rare on Android) and
-        // such entries are skipped.
-        String script = "d=" + escapeShellArg(dirPath) + "; "
-                + "for f in \"$d\"/* \"$d\"/.*; do "
-                + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
-                + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
-                + "if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$f\" 2>/dev/null); then :; "
-                + "else s=$(printf '%s\037unknown\0370\0370\037' \"$f\"); fi; "
-                + "if [ -d \"$f\" ]; then printf '%s\0371\\n' \"$s\"; "
-                + "else printf '%s\0370\\n' \"$s\"; fi; "
-                + "done";
-        ShellResult result = execute(script, 30);
-        if (!result.isSuccess() || result.output == null) return null;
-        List<File> files = new ArrayList<>();
-        for (String line : result.output.split("\\r?\\n")) {
+        File[] cached = cachedList(dirPath);
+        if (cached != null) return cached;
+        File[] fresh = listRootFilesFresh(dirPath);
+        putCachedList(dirPath, fresh);
+        return fresh == null ? null : fresh.clone();
+    }
+
+    private record ListCacheEntry(File[] files, long at) {
+    }
+
+    private final java.util.Map<String, ListCacheEntry> listCache = new java.util.HashMap<>();
+    private static final long LIST_CACHE_TTL = 8000L;
+
+    private synchronized File[] cachedList(String dirPath) {
+        if (dirPath == null) return null;
+        try {
+            ListCacheEntry e = listCache.get(dirPath);
+            if (e != null && e.files != null && System.currentTimeMillis() - e.at < LIST_CACHE_TTL) {
+                return e.files.clone();
+            }
+            if (e != null) listCache.remove(dirPath);
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private synchronized void putCachedList(String dirPath, File[] files) {
+        if (dirPath == null) return;
+        try {
+            if (files == null) {
+                listCache.remove(dirPath);
+                return;
+            }
+            if (listCache.size() > 60) listCache.clear();
+            listCache.put(dirPath, new ListCacheEntry(files.clone(), System.currentTimeMillis()));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public synchronized void invalidateListCache() {
+        try {
+            listCache.clear();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private File[] listRootFilesFresh(String dirPath) {
+        File[] primary = listRootFilesDetailed(dirPath);
+        if (!isAppDataDir(dirPath)) {
+            if (primary != null && primary.length > 0) return primary;
+            File[] portable = listRootFilesPortable(dirPath);
+            if (portable != null && portable.length > 0) return portable;
+            return primary != null ? primary : portable;
+        }
+        if (primary != null && primary.length >= 30) return primary;
+        File[] explicit = listAppDataDirsExplicit(dirPath);
+        File[] merged = unionRootFiles(primary, explicit);
+        if (merged != null && merged.length > 0) return merged;
+        File[] portable = listRootFilesPortable(dirPath);
+        return unionRootFiles(merged, portable);
+    }
+
+    private static boolean isAppDataDir(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty()) return false;
+        String n = dirPath.endsWith("/") && dirPath.length() > 1
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        if (n.equals("/data/data")) return true;
+        return n.matches("^/data/user(_de)?/\\d+$");
+    }
+
+    private static File[] unionRootFiles(File[] a, File[] b) {
+        java.util.LinkedHashMap<String, File> map = new java.util.LinkedHashMap<>();
+        if (a != null) {
+            for (File f : a) {
+                if (f != null && !map.containsKey(f.getName())) map.put(f.getName(), f);
+            }
+        }
+        if (b != null) {
+            for (File f : b) {
+                if (f != null && !map.containsKey(f.getName())) map.put(f.getName(), f);
+            }
+        }
+        if (map.isEmpty()) return a != null ? a : b;
+        return map.values().toArray(new File[0]);
+    }
+
+    public File[] listAppDataDirsExplicit(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        String base = dirPath.endsWith("/") && dirPath.length() > 1
+                ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+        List<String> pkgs = new ArrayList<>();
+        try {
+            List<android.content.pm.ApplicationInfo> apps =
+                    context.getPackageManager().getInstalledApplications(0);
+            if (apps != null) {
+                for (android.content.pm.ApplicationInfo app : apps) {
+                    if (app != null && isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        if (pkgs.isEmpty()) return null;
+        List<File> out = new ArrayList<>();
+        for (int i = 0; i < pkgs.size(); i += 150) {
+            int end = Math.min(i + 150, pkgs.size());
+            StringBuilder script = new StringBuilder("for p in");
+            for (int j = i; j < end; j++) {
+                script.append(" ").append(escapeShellArg(base + "/" + pkgs.get(j)));
+            }
+            script.append("; do [ -e \"$p\" ] || [ -L \"$p\" ] || continue; ");
+            script.append("if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$p\" 2>/dev/null); then :; ");
+            script.append("else s=$(printf '%s\037unknown\0370\0370\037' \"$p\"); fi; ");
+            script.append("if [ -d \"$p\" ]; then printf '%s\0371\\n' \"$s\"; ");
+            script.append("else printf '%s\0370\\n' \"$s\"; fi; done");
+            try {
+                ShellResult r = executeFs(script.toString(), 30);
+                if (r.isSuccess() && r.output != null) parseStatLines(out, r.output, base);
+            } catch (Exception ignored) {
+            }
+        }
+        return out.toArray(new File[0]);
+    }
+
+    private void parseStatLines(List<File> files, String output, String fallbackParent) {
+        for (String line : output.split("\\r?\\n")) {
             if (line.trim().isEmpty()) continue;
             String[] parts = line.split("\037", -1);
             if (parts.length < 6) continue;
             String full = parts[0];
             String name = full;
+            String parent = fallbackParent;
             int slash = full.lastIndexOf('/');
-            if (slash >= 0 && slash + 1 < full.length()) name = full.substring(slash + 1);
+            if (slash >= 0) {
+                if (slash + 1 < full.length()) name = full.substring(slash + 1);
+                parent = full.substring(0, slash);
+            }
             if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
             long size;
             long mtime;
@@ -971,25 +1167,50 @@ public class RootManager {
                 mtime = 0L;
             }
             String mode = parts[4].trim();
-            // Authoritative dir flag (follows symlinks); anything else is
-            // treated as a file so taps attempt a clean staged open.
             boolean dir = "1".equals(parts[5].trim());
-            files.add(new RootFile(dirPath, name,
+            files.add(new RootFile(parent, name,
                     true, dir, !dir,
                     dir ? 0L : Math.max(0L, size), mtime,
                     mode.isEmpty() ? null : mode));
         }
+    }
+
+    public File[] listRootFilesPortable(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        ShellResult result = executeFs("ls -1Ap -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+        if (!result.isSuccess() || result.output == null) return null;
+        List<File> files = new ArrayList<>();
+        for (String line : result.output.split("\\r?\\n")) {
+            if (line.isEmpty()) continue;
+            boolean dir = line.endsWith("/");
+            String name = dir ? line.substring(0, line.length() - 1) : line;
+            int slash = name.lastIndexOf('/');
+            if (slash >= 0) name = name.substring(slash + 1);
+            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+            files.add(new RootFile(dirPath, name, true, dir, !dir, 0L, 0L, null));
+        }
         return files.toArray(new File[0]);
     }
 
-    /**
-     * Binary-safe root read: streams {@code su -c "cat src"} stdout into
-     * {@code out} without ever converting bytes to String (safe for APKs,
-     * images, dex, etc.). Enforces {@code maxBytes} so a huge /data file
-     * cannot OOM or fill the cache. Read-only: never modifies the device.
-     *
-     * @return number of bytes copied
-     */
+    public File[] listRootFilesDetailed(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty()) return null;
+
+        String script = "d=" + escapeShellArg(dirPath) + "; "
+                + "for f in \"$d\"/* \"$d\"/.*; do "
+                + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
+                + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
+                + "if s=$(stat -c '%n\037%F\037%s\037%Y\037%a' \"$f\" 2>/dev/null); then :; "
+                + "else s=$(printf '%s\037unknown\0370\0370\037' \"$f\"); fi; "
+                + "if [ -d \"$f\" ]; then printf '%s\0371\\n' \"$s\"; "
+                + "else printf '%s\0370\\n' \"$s\"; fi; "
+                + "done";
+        ShellResult result = executeFs(script, 30);
+        if (!result.isSuccess() || result.output == null) return null;
+        List<File> files = new ArrayList<>();
+        parseStatLines(files, result.output, dirPath);
+        return files.toArray(new File[0]);
+    }
+
     public long streamFromRoot(String srcPath, java.io.OutputStream out, long maxBytes) throws IOException {
         if (!isRootMode()) throw new IOException("Root mode is disabled");
         if (srcPath == null || !srcPath.startsWith("/")) {
@@ -1001,7 +1222,7 @@ public class RootManager {
         }
         Process process = null;
         try {
-            process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "cat " + escapeShellArg(srcPath)});
+            process = Runtime.getRuntime().exec(suCommandForFs("cat " + escapeShellArg(srcPath)));
             java.io.InputStream stdout = process.getInputStream();
             byte[] buf = new byte[65536];
             long total = 0;
@@ -1028,7 +1249,7 @@ public class RootManager {
                     if (err.length() > 0) err.append("\n");
                     err.append(line);
                 }
-                throw new IOException("Root read failed: " + err.toString());
+                throw new IOException("Root read failed: " + err);
             }
             return total;
         } catch (IOException e) {
@@ -1062,21 +1283,9 @@ public class RootManager {
         }
         Process process = null;
         try {
-            process = Runtime.getRuntime().exec(new String[]{suBinary(), "-c", "cat > " + escapeShellArg(dstPath)});
-            DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
-            java.io.FileInputStream fis = new java.io.FileInputStream(localSrc);
-            byte[] buf = new byte[65536];
-            int n;
-            try {
-                while ((n = fis.read(buf)) != -1) stdin.write(buf, 0, n);
-            } finally {
-                try {
-                    fis.close();
-                } catch (IOException ignored) {
-                }
-            }
-            stdin.flush();
-            stdin.close();
+            String cmd = "cat " + escapeShellArg(localSrc.getAbsolutePath())
+                    + " > " + escapeShellArg(dstPath);
+            process = Runtime.getRuntime().exec(suCommandForFs(cmd));
             boolean finished = process.waitFor(60, TimeUnit.SECONDS);
             if (!finished) {
                 process.destroyForcibly();
@@ -1090,8 +1299,9 @@ public class RootManager {
                     if (err.length() > 0) err.append("\n");
                     err.append(line);
                 }
-                throw new IOException("Root write failed: " + err.toString());
+                throw new IOException("Root write failed: " + err);
             }
+            invalidateListCache();
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
@@ -1226,19 +1436,15 @@ public class RootManager {
         }
     }
 
-    public static class ShellResult {
-        public final int exitCode;
-        public final String output;
-        public final String error;
+    public record ShellResult(int exitCode, String output, String error) {
+            public ShellResult(int exitCode, String output, String error) {
+                this.exitCode = exitCode;
+                this.output = output != null ? output : "";
+                this.error = error != null ? error : "";
+            }
 
-        public ShellResult(int exitCode, String output, String error) {
-            this.exitCode = exitCode;
-            this.output = output != null ? output : "";
-            this.error = error != null ? error : "";
+            public boolean isSuccess() {
+                return exitCode == 0;
+            }
         }
-
-        public boolean isSuccess() {
-            return exitCode == 0;
-        }
-    }
 }
