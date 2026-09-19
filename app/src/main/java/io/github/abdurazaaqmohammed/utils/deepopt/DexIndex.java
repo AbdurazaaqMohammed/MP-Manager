@@ -22,7 +22,6 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -125,7 +124,6 @@ public class DexIndex {
         }
     }
 
-    /** Defining-class-aware reflection detection; keys off real call sites, not bare names. */
     private void detectReflection() {
         for (ClassDef classDef : classByType.values()) {
             for (Method method : classDef.getMethods()) {
@@ -136,8 +134,7 @@ public class DexIndex {
                     Reference reference = ((ReferenceInstruction) instruction).getReference();
                     if (reference instanceof StringReference) {
                         allStrings.add(((StringReference) reference).getString());
-                    } else if (reference instanceof MethodReference) {
-                        MethodReference ref = (MethodReference) reference;
+                    } else if (reference instanceof MethodReference ref) {
                         String defining = ref.getDefiningClass();
                         String name = ref.getName();
                         if ("Landroid/content/res/Resources;".equals(defining)
