@@ -26,7 +26,6 @@ import android.media.MediaRecorder;
 import android.media.ToneGenerator;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.DhcpInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
@@ -58,7 +57,6 @@ import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.DisplayMetrics;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -74,7 +72,6 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -82,9 +79,11 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -96,7 +95,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
-import java.util.Stack;
 
 import android.location.Location;
 import android.location.LocationListener;
@@ -107,6 +105,7 @@ import org.json.JSONObject;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import io.github.abdurazaaqmohammed.utils.QrUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ToolRunnerActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -114,7 +113,6 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private SensorEventListener activeListener;
     private float[] accelValues = null;
     private float[] magnetValues = null;
-    private float compassBearing = 0f;
     private CompassView compassView;
     private TextView compassText;
     private LevelView levelView;
@@ -125,11 +123,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private TextView stopwatchText;
     private Runnable stopwatchTick = null;
     private ArrayAdapter<String> lapAdapter;
-    private ArrayList<String> laps = new ArrayList<>();
+    private final ArrayList<String> laps = new ArrayList<>();
     private int lapCount = 0;
     private CountDownTimer countDownTimer = null;
     private long timerRemaining = 0L;
-    private long timerTotal = 0L;
     private boolean timerRunning = false;
     private TextView timerText;
     private CameraManager cameraManager;
@@ -138,6 +135,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private boolean pendingTorchRetry = false;
     private boolean screenLightOn = false;
     private View screenLightView;
+    private androidx.appcompat.app.AlertDialog screenLightDialog = null;
+    private androidx.appcompat.app.AlertDialog fullscreenTestDialog = null;
+    private androidx.appcompat.app.AlertDialog strobeDialog = null;
     private boolean sosRunning = false;
     private Runnable sosTick = null;
     private int sosStep = 0;
@@ -163,8 +163,24 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private MediaRecorder voiceRecorder;
     private MediaPlayer voicePlayer;
     private boolean recordingNow = false;
-    private boolean pendingAudioRetry = false;
+    private boolean recordingPaused = false;
     private Runnable pendingAudioAction = null;
+    private java.io.File recCurrentFile = null;
+    private java.io.File recOutFile = null;
+    private long recStartElapsed = 0L;
+    private long recPausedTotal = 0L;
+    private long recPauseStarted = 0L;
+    private List<Float> recAmps = new ArrayList<>();
+    private Runnable recTick = null;
+    private boolean playSeeking = false;
+    private Runnable playTick = null;
+    private List<Float> playAmps = new ArrayList<>();
+    private int playDurationMs = 0;
+    private RecWaveView recWaveView = null;
+    private RecWaveView playWaveView = null;
+    private TextView recTimerText = null;
+    private TextView playTimeText = null;
+    private SeekBar playSeek = null;
     private LocationManager locationManager;
     private LocationListener gpsListener;
     private boolean gpsRunning = false;
@@ -175,7 +191,6 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private TextView gpsText;
     private CountDownTimer pomoTimer = null;
     private boolean pomoRunning = false;
-    private long pomoLeft = 0L;
     private int pomoPhase = 0;
     private int pomoCycle = 1;
     private TextView pomoText;
@@ -190,29 +205,21 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private TextView qrScanOutput = null;
     private android.widget.ImageView qrGenView = null;
     private Bitmap qrGenBitmap = null;
-    private int reactionState = 0;
-    private long reactionShownAt = 0L;
-    private Runnable reactionPending = null;
-    private View reactionPad;
-    private TextView reactionText;
-    private List<Integer> memSeq = new ArrayList<>();
-    private int memPos = 0;
-    private boolean memAccept = false;
-    private int memScore = 0;
-    private TextView memText;
-    private List<Button> memButtons = new ArrayList<>();
-    private String[] tttBoard = new String[9];
-    private boolean tttOver = false;
-    private int tttWins = 0;
-    private int tttLosses = 0;
-    private int tttDraws = 0;
-    private TextView tttText;
-    private List<Button> tttButtons = new ArrayList<>();
+    private java.io.File qrGenFile = null;
+    private java.io.File ttsLastFile = null;
+    private final Runnable reactionPending = null;
+    private final List<Button> memButtons = new ArrayList<>();
+    private final String[] tttBoard = new String[9];
+
     private android.content.ClipboardManager.OnPrimaryClipChangedListener clipListener = null;
     private boolean strobeOn = false;
     private Runnable strobeTick = null;
     private int strobeHz = 4;
     private View strobeView;
+    private boolean eventActive = false;
+    private Ringtone activeRingtone;
+    private TextView altimeterText;
+    private Sensor altimeterSensor;
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences toolPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean toolDark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
@@ -229,7 +236,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         String toolTitle = getIntent().getStringExtra("tool_title");
         if (toolTitle == null || toolTitle.isEmpty()) {
             ToolRegistry.ToolItem found = ToolRegistry.findById(this, toolId);
-            toolTitle = found == null ? "Tool" : found.title;
+            toolTitle = found == null ? "Tool" : found.title();
         }
         if (toolId == null) {
             toolId = "calc";
@@ -240,11 +247,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialToolbar toolbar = new MaterialToolbar(this);
         toolbar.setTitle(toolTitle);
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         ScrollView scroll = new ScrollView(this);
         LinearLayout box = new LinearLayout(this);
@@ -255,218 +258,161 @@ public class ToolRunnerActivity extends AppCompatActivity {
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
         String id = toolId;
-        if (id.equals("calc")) {
-            buildCalculator(box);
-        } else if (id.equals("converter")) {
-            buildConverter(box);
-        } else if (id.equals("ruler")) {
-            buildRuler(box);
-        } else if (id.equals("protractor")) {
-            buildProtractor(box);
-        } else if (id.equals("compass")) {
-            buildCompass(box);
-        } else if (id.equals("level")) {
-            buildLevel(box);
-        } else if (id.equals("stopwatch")) {
-            buildStopwatch(box);
-        } else if (id.equals("timer")) {
-            buildTimer(box);
-        } else if (id.equals("flashlight")) {
-            buildFlashlight(box);
-        } else if (id.equals("magnifier")) {
-            buildMagnifier(box);
-        } else if (id.equals("password")) {
-            buildPassword(box);
-        } else if (id.equals("hash")) {
-            buildHash(box);
-        } else if (id.equals("base64")) {
-            buildBase64(box);
-        } else if (id.equals("json")) {
-            buildJson(box);
-        } else if (id.equals("textcounter")) {
-            buildTextCounter(box);
-        } else if (id.equals("datediff")) {
-            buildDateDiff(box);
-        } else if (id.equals("bmi")) {
-            buildBmi(box);
-        } else if (id.equals("discount")) {
-            buildDiscount(box);
-        } else if (id.equals("emi")) {
-            buildEmi(box);
-        } else if (id.equals("random")) {
-            buildRandom(box);
-        } else if (id.equals("tally")) {
-            buildTally(box);
-        } else if (id.equals("metronome")) {
-            buildMetronome(box);
-        } else if (id.equals("deviceinfo")) {
-            buildDeviceInfo(box);
-        } else if (id.equals("netinfo")) {
-            buildNetInfo(box);
-        } else if (id.equals("worldclock")) {
-            buildWorldClock(box);
-        } else if (id.equals("currency")) {
-            buildCurrency(box);
-        } else if (id.equals("tip")) {
-            buildTip(box);
-        } else if (id.equals("gpa")) {
-            buildGpa(box);
-        } else if (id.equals("pomodoro")) {
-            buildPomodoro(box);
-        } else if (id.equals("hiit")) {
-            buildHiit(box);
-        } else if (id.equals("wheel")) {
-            buildWheel(box);
-        } else if (id.equals("caseconv")) {
-            buildCaseConv(box);
-        } else if (id.equals("morse")) {
-            buildMorse(box);
-        } else if (id.equals("baseconv")) {
-            buildBaseConv(box);
-        } else if (id.equals("fuel")) {
-            buildFuel(box);
-        } else if (id.equals("ohm")) {
-            buildOhm(box);
-        } else if (id.equals("resistor")) {
-            buildResistor(box);
-        } else if (id.equals("notes")) {
-            buildNotes(box);
-        } else if (id.equals("checklist")) {
-            buildChecklist(box);
-        } else if (id.equals("tone")) {
-            buildTone(box);
-        } else if (id.equals("recorder")) {
-            buildRecorder(box);
-        } else if (id.equals("gps")) {
-            buildGps(box);
-        } else if (id.equals("storage")) {
-            buildStorage(box);
-        } else if (id.equals("battery")) {
-            buildBattery(box);
-        } else if (id.equals("sensors")) {
-            buildSensors(box);
-        } else if (id.equals("tts")) {
-            buildTts(box);
-        } else if (id.equals("bmr")) {
-            buildBmr(box);
-        } else if (id.equals("compound")) {
-            buildCompound(box);
-        } else if (id.equals("percent")) {
-            buildPercent(box);
-        } else if (id.equals("fraction")) {
-            buildFraction(box);
-        } else if (id.equals("agecalc")) {
-            buildAgeCalc(box);
-        } else if (id.equals("dateadd")) {
-            buildDateAdd(box);
-        } else if (id.equals("timecalc")) {
-            buildTimeCalc(box);
-        } else if (id.equals("savings")) {
-            buildSavings(box);
-        } else if (id.equals("gst")) {
-            buildGst(box);
-        } else if (id.equals("pace")) {
-            buildPace(box);
-        } else if (id.equals("cooking")) {
-            buildCooking(box);
-        } else if (id.equals("lorem")) {
-            buildLorem(box);
-        } else if (id.equals("strength")) {
-            buildStrength(box);
-        } else if (id.equals("uuid")) {
-            buildUuid(box);
-        } else if (id.equals("colorconv")) {
-            buildColorConv(box);
-        } else if (id.equals("regex")) {
-            buildRegex(box);
-        } else if (id.equals("urlcodec")) {
-            buildUrlCodec(box);
-        } else if (id.equals("binarytext")) {
-            buildBinaryText(box);
-        } else if (id.equals("caesar")) {
-            buildCaesar(box);
-        } else if (id.equals("cards")) {
-            buildCards(box);
-        } else if (id.equals("oracle")) {
-            buildOracle(box);
-        } else if (id.equals("prime")) {
-            buildPrime(box);
-        } else if (id.equals("quadratic")) {
-            buildQuadratic(box);
-        } else if (id.equals("matrix")) {
-            buildMatrix(box);
-        } else if (id.equals("triangle")) {
-            buildTriangle(box);
-        } else if (id.equals("geometry")) {
-            buildGeometry(box);
-        } else if (id.equals("water")) {
-            buildWater(box);
-        } else if (id.equals("sleep")) {
-            buildSleep(box);
-        } else if (id.equals("bodyfat")) {
-            buildBodyFat(box);
-        } else if (id.equals("habit")) {
-            buildHabit(box);
-        } else if (id.equals("expense")) {
-            buildExpense(box);
-        } else if (id.equals("unitprice")) {
-            buildUnitPrice(box);
-        } else if (id.equals("screentest")) {
-            buildScreenTest(box);
-        } else if (id.equals("vibration")) {
-            buildVibration(box);
-        } else if (id.equals("strobe")) {
-            buildStrobe(box);
-        } else if (id.equals("altimeter")) {
-            buildAltimeter(box);
-        } else if (id.equals("nfc")) {
-            buildNfc(box);
-        } else if (id.equals("bluetooth")) {
-            buildBluetooth(box);
-        } else if (id.equals("apps")) {
-            buildApps(box);
-        } else if (id.equals("cpuinfo")) {
-            buildCpuInfo(box);
-        } else if (id.equals("clipboard")) {
-            buildClipboard(box);
-        } else if (id.equals("datausage")) {
-            buildDataUsage(box);
-        } else if (id.equals("volume")) {
-            buildVolume(box);
-        } else if (id.equals("ringtone")) {
-            buildRingtone(box);
-        } else if (id.equals("wallpaper")) {
-            buildWallpaper(box);
-        } else if (id.equals("quicksettings")) {
-            buildQuickSettings(box);
-        } else if (id.equals("attendance")) {
-            buildAttendance(box);
-        } else if (id.equals("typing")) {
-            buildTyping(box);
-        } else if (id.equals("reaction")) {
-            buildReaction(box);
-        } else if (id.equals("memory")) {
-            buildMemory(box);
-        } else if (id.equals("tictactoe")) {
-            buildTicTacToe(box);
-        } else if (id.equals("lottery")) {
-            buildLottery(box);
-        } else if (id.equals("moon")) {
-            buildMoon(box);
-        } else if (id.equals("eventcount")) {
-            buildEventCount(box);
-        } else if (id.equals("qrgen")) {
-            buildQrGen(box);
-        } else if (id.equals("qrscan")) {
-            buildQrScan(box);
-        } else {
-            TextView t = new TextView(this);
-            t.setText("Unknown tool");
-            box.addView(t);
+        switch (id) {
+            case "calc" -> buildCalculator(box);
+            case "converter" -> buildConverter(box);
+            case "ruler" -> buildRuler(box);
+            case "protractor" -> buildProtractor(box);
+            case "compass" -> buildCompass(box);
+            case "level" -> buildLevel(box);
+            case "stopwatch" -> buildStopwatch(box);
+            case "timer" -> buildTimer(box);
+            case "flashlight" -> buildFlashlight(box);
+            case "magnifier" -> buildMagnifier(box);
+            case "password" -> buildPassword(box);
+            case "hash" -> buildHash(box);
+            case "base64" -> buildBase64(box);
+            case "json" -> buildJson(box);
+            case "textcounter" -> buildTextCounter(box);
+            case "datediff" -> buildDateDiff(box);
+            case "bmi" -> buildBmi(box);
+            case "discount" -> buildDiscount(box);
+            case "emi" -> buildEmi(box);
+            case "random" -> buildRandom(box);
+            case "tally" -> buildTally(box);
+            case "metronome" -> buildMetronome(box);
+            case "devicehub" -> buildDeviceHub(box);
+            case "connectivity" -> buildConnectivityHub(box);
+            case "deviceinfo", "battery", "cpuinfo", "storage", "sensors", "altimeter" ->
+                    buildDeviceHub(box);
+            case "netinfo", "datausage" -> buildConnectivityHub(box);
+            case "worldclock" -> buildWorldClock(box);
+            case "currency" -> buildCurrency(box);
+            case "tip" -> buildTip(box);
+            case "gpa" -> buildGpa(box);
+            case "pomodoro" -> buildPomodoro(box);
+            case "hiit" -> buildHiit(box);
+            case "wheel" -> buildWheel(box);
+            case "caseconv" -> buildCaseConv(box);
+            case "morse" -> buildMorse(box);
+            case "baseconv" -> buildBaseConv(box);
+            case "fuel" -> buildFuel(box);
+            case "ohm" -> buildOhm(box);
+            case "resistor" -> buildResistor(box);
+            case "notes" -> buildNotes(box);
+            case "checklist" -> buildChecklist(box);
+            case "tone" -> buildTone(box);
+            case "recorder" -> buildRecorder(box);
+            case "gps" -> buildGps(box);
+            case "pricelab", "gst", "percent", "unitprice" ->
+                    buildTabbedLab(box, "Price & Tax Lab", "Discounts, GST/VAT, tips, percentages and best-value compares.", new String[]{"Discount", "Tax", "Tip", "Percent", "Compare"}, new String[]{"discount", "gst", "tip", "percent", "unitprice"}, id);
+            case "financelab", "compound", "savings" ->
+                    buildTabbedLab(box, "Finance Lab", "Loans, compound growth and savings goals in one place.", new String[]{"EMI", "Interest", "Savings"}, new String[]{"emi", "compound", "savings"}, id);
+            case "datelab", "agecalc", "dateadd", "timecalc", "eventcount" ->
+                    buildTabbedLab(box, "Date Toolkit", "Differences, exact age, date math, durations and countdowns.", new String[]{"Diff & Age", "Add", "Duration", "Countdown"}, new String[]{"datediff", "dateadd", "timecalc", "eventcount"}, id);
+            case "healthlab", "bmr", "bodyfat", "water", "sleep" ->
+                    buildTabbedLab(box, "Health Hub", "BMI, calories, body fat, water and sleep in one dashboard.", new String[]{"BMI", "Calories", "Body fat", "Water", "Sleep"}, new String[]{"bmi", "bmr", "bodyfat", "water", "sleep"}, id);
+            case "codelab", "urlcodec", "binarytext", "caesar" ->
+                    buildTabbedLab(box, "Encoder Lab", "Hashes, Base64, URL, binary, ciphers and Morse.", new String[]{"Hash", "Base64", "URL", "Binary", "Caesar", "Morse"}, new String[]{"hash", "base64", "urlcodec", "binarytext", "caesar", "morse"}, id);
+            case "textlab", "lorem", "regex" ->
+                    buildTabbedLab(box, "Text Studio", "Count, convert case, lorem, JSON and regex.", new String[]{"Counter", "Case", "Lorem", "JSON", "Regex"}, new String[]{"textcounter", "caseconv", "lorem", "json", "regex"}, id);
+            case "timerlab" ->
+                    buildTabbedLab(box, "Timer Suite", "Stopwatch, countdown, Pomodoro and intervals.", new String[]{"Stopwatch", "Timer", "Pomodoro", "Intervals"}, new String[]{"stopwatch", "timer", "pomodoro", "hiit"}, id);
+            case "pubgenlab", "strength", "uuid" ->
+                    buildTabbedLab(box, "Generator Studio", "Passwords, strength, UUIDs and random draws.", new String[]{"Password", "Strength", "UUID", "Random"}, new String[]{"password", "strength", "uuid", "random"}, id);
+            case "tts" -> buildTts(box);
+            case "fraction" -> buildFraction(box);
+            case "pace" -> buildPace(box);
+            case "cooking" -> buildCooking(box);
+            case "colorconv" -> buildColorConv(box);
+            case "cards" -> buildCards(box);
+            case "prime" -> buildPrime(box);
+            case "quadratic" -> buildQuadratic(box);
+            case "matrix" -> buildMatrix(box);
+            case "triangle" -> buildTriangle(box);
+            case "geometry" -> buildGeometry(box);
+            case "habit" -> buildHabit(box);
+            case "expense" -> buildExpense(box);
+            case "screentest" -> buildScreenTest(box);
+            case "vibration" -> buildVibration(box);
+            case "strobe" -> buildStrobe(box);
+            case "nfc" -> buildNfc(box);
+            case "bluetooth" -> buildBluetooth(box);
+            case "volume" -> buildVolume(box);
+            case "ringtone" -> buildRingtone(box);
+            case "wallpaper" -> buildWallpaper(box);
+            case "quicksettings" -> buildQuickSettings(box);
+            case "attendance" -> buildAttendance(box);
+            case "typing" -> buildTyping(box);
+            case "qrgen" -> buildQrGen(box);
+            case "qrscan" -> buildQrScan(box);
+            default -> {
+                TextView t = new TextView(this);
+                t.setText("Unknown tool");
+                box.addView(t);
+            }
         }
     }
     protected void onPause() {
         super.onPause();
+        strobeOn = false;
+        sosRunning = false;
+        try {
+            if (torchOn && cameraManager != null && torchCameraId != null && Build.VERSION.SDK_INT >= 23) {
+                cameraManager.setTorchMode(torchCameraId, false);
+            }
+        } catch (Exception ignored) {
+        }
+        torchOn = false;
+        screenLightOn = false;
+        try {
+            if (screenLightDialog != null && screenLightDialog.isShowing()) {
+                screenLightDialog.dismiss();
+            }
+        } catch (Exception ignored) {
+        }
+        screenLightDialog = null;
+        try {
+            if (fullscreenTestDialog != null && fullscreenTestDialog.isShowing()) {
+                fullscreenTestDialog.dismiss();
+            }
+        } catch (Exception ignored) {
+        }
+        fullscreenTestDialog = null;
+        try {
+            if (strobeDialog != null && strobeDialog.isShowing()) {
+                strobeDialog.dismiss();
+            }
+        } catch (Exception ignored) {
+        }
+        strobeDialog = null;
+        try {
+            if (strobeTick != null) handler.removeCallbacks(strobeTick);
+        } catch (Exception ignored) {
+        }
+        try {
+            if (sosTick != null) handler.removeCallbacks(sosTick);
+        } catch (Exception ignored) {
+        }
+        eventActive = false;
+        if (reactionPending != null) {
+            try {
+                handler.removeCallbacks(reactionPending);
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            if (activeRingtone != null) {
+                activeRingtone.stop();
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            if (vibrator != null) {
+                vibrator.cancel();
+            }
+        } catch (Exception ignored) {
+        }
         if (sensorManager != null && activeListener != null) {
             try {
                 sensorManager.unregisterListener(activeListener);
@@ -497,6 +443,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
             startCompassSensors();
         } else if (toolId.equals("level")) {
             startLevelSensors();
+        } else if (toolId.equals("sensors")) {
+            startSensorsListener();
+        } else if (toolId.equals("altimeter") && altimeterText != null && altimeterSensor != null) {
+            startAltimeterListener(altimeterText, altimeterSensor);
         } else if (toolId.equals("gps") && gpsRunning) {
             startGpsUpdates();
         } else if (toolId.equals("nfc")) {
@@ -596,6 +546,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
         clipListener = null;
         strobeOn = false;
+        eventActive = false;
+        try {
+            if (activeRingtone != null) {
+                activeRingtone.stop();
+            }
+        } catch (Exception ignored) {
+        }
+        activeRingtone = null;
+        try {
+            if (vibrator != null) {
+                vibrator.cancel();
+            }
+        } catch (Exception ignored) {
+        }
     }
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -611,11 +575,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             if (granted && pendingAudioAction != null) {
                 Runnable action = pendingAudioAction;
                 pendingAudioAction = null;
-                pendingAudioRetry = false;
                 action.run();
             } else if (!granted) {
                 pendingAudioAction = null;
-                pendingAudioRetry = false;
                 toast("Microphone permission denied");
             }
         } else if (requestCode == 9003 && pendingGpsRetry) {
@@ -681,7 +643,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 }
                 hex.append(h.toUpperCase(Locale.US));
             }
-            b.append("ID ").append(hex.toString()).append("\n");
+            b.append("ID ").append(hex).append("\n");
             String[] techs = tag.getTechList();
             b.append("Tech: ");
             for (int i = 0; i < techs.length; i++) {
@@ -729,7 +691,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 return new String(payload, 1 + langLen, payload.length - 1 - langLen, utf16 ? "UTF-16" : "UTF-8");
             } else if (rec.getTnf() == NdefRecord.TNF_WELL_KNOWN && java.util.Arrays.equals(rec.getType(), NdefRecord.RTD_URI)) {
                 byte[] payload = rec.getPayload();
-                return new String(payload, 1, payload.length - 1, "UTF-8");
+                return new String(payload, 1, payload.length - 1, StandardCharsets.UTF_8);
             }
         } catch (Exception ignored) {
         }
@@ -737,7 +699,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
     private TextView btText;
     private ArrayAdapter<String> btAdapter;
-    private List<String> btNames = new ArrayList<>();
+    private final List<String> btNames = new ArrayList<>();
     private void refreshBtList() {
         if (btAdapter == null) {
             return;
@@ -804,7 +766,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         return (int) (v * getResources().getDisplayMetrics().density);
     }
     private void toast(String msg) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+        Extensions.showMessage(this, msg);
     }
     private void copyText(String label, String value) {
         try {
@@ -899,6 +861,96 @@ public class ToolRunnerActivity extends AppCompatActivity {
         } catch (Exception ignored) {
         }
     }
+
+    private void buildTabbedLab(LinearLayout box, String title, String subtitle, String[] labels, String[] ids, String selectedId) {
+        addTitle(box, title);
+        addLabel(box, subtitle);
+        final LinearLayout tabRow = new LinearLayout(this);
+        tabRow.setOrientation(LinearLayout.HORIZONTAL);
+        box.addView(tabRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        final LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        box.addView(container, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        final List<MaterialButton> tabBtns = new ArrayList<>();
+        int initial = 0;
+        for (int i = 0; i < ids.length; i++) if (ids[i].equals(selectedId)) initial = i;
+        final int[] current = new int[]{initial};
+        for (int i = 0; i < labels.length; i++) {
+            final int index = i;
+            MaterialButton t = new MaterialButton(this);
+            t.setText(labels[i]);
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            int m = dp(3);
+            p.setMargins(m, m, m, m);
+            tabRow.addView(t, p);
+            tabBtns.add(t);
+            t.setOnClickListener(v -> {
+                current[0] = index;
+                refreshTabs(tabBtns, current[0]);
+                container.removeAllViews();
+                buildById(container, ids[index]);
+            });
+        }
+        refreshTabs(tabBtns, current[0]);
+        buildById(container, ids[current[0]]);
+    }
+
+    private void refreshTabs(List<MaterialButton> btns, int selected) {
+        for (int i = 0; i < btns.size(); i++) {
+            try {
+                btns.get(i).setStrokeWidth(i == selected ? dp(2) : 0);
+                btns.get(i).setAlpha(i == selected ? 1f : 0.75f);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private void buildById(LinearLayout container, String id) {
+        switch (id) {
+            case "discount" -> buildDiscount(container);
+            case "gst" -> buildGst(container);
+            case "tip" -> buildTip(container);
+            case "percent" -> buildPercent(container);
+            case "unitprice" -> buildUnitPrice(container);
+            case "emi" -> buildEmi(container);
+            case "compound" -> buildCompound(container);
+            case "savings" -> buildSavings(container);
+            case "datediff" -> buildDateDiff(container);
+            case "agecalc" -> buildAgeCalc(container);
+            case "dateadd" -> buildDateAdd(container);
+            case "timecalc" -> buildTimeCalc(container);
+            case "eventcount" -> buildEventCount(container);
+            case "bmi" -> buildBmi(container);
+            case "bmr" -> buildBmr(container);
+            case "bodyfat" -> buildBodyFat(container);
+            case "water" -> buildWater(container);
+            case "sleep" -> buildSleep(container);
+            case "hash" -> buildHash(container);
+            case "base64" -> buildBase64(container);
+            case "urlcodec" -> buildUrlCodec(container);
+            case "binarytext" -> buildBinaryText(container);
+            case "caesar" -> buildCaesar(container);
+            case "morse" -> buildMorse(container);
+            case "textcounter" -> buildTextCounter(container);
+            case "caseconv" -> buildCaseConv(container);
+            case "lorem" -> buildLorem(container);
+            case "json" -> buildJson(container);
+            case "regex" -> buildRegex(container);
+            case "stopwatch" -> buildStopwatch(container);
+            case "timer" -> buildTimer(container);
+            case "pomodoro" -> buildPomodoro(container);
+            case "hiit" -> buildHiit(container);
+            case "password" -> buildPassword(container);
+            case "strength" -> buildStrength(container);
+            case "uuid" -> buildUuid(container);
+            case "random" -> buildRandom(container);
+            default -> {
+                TextView t = new TextView(this);
+                t.setText("Unknown section");
+                container.addView(t);
+            }
+        }
+    }
+
     private void buildCalculator(LinearLayout box) {
         addTitle(box, "Calculator");
         final EditText display = makeInput(box, "0", InputType.TYPE_CLASS_TEXT);
@@ -921,34 +973,31 @@ public class ToolRunnerActivity extends AppCompatActivity {
             LinearLayout row = makeRow(box);
             for (String key : r) {
                 String label = key;
-                if (key.equals("div")) {
-                    label = "÷";
-                } else if (key.equals("mul")) {
-                    label = "×";
-                } else if (key.equals("sub")) {
-                    label = "-";
-                } else if (key.equals("add")) {
-                    label = "+";
-                } else if (key.equals("eq")) {
-                    label = "=";
-                } else if (key.equals("pow")) {
-                    label = "x^y";
-                } else if (key.equals("DEL")) {
-                    label = "⌫";
-                }
+                label = switch (key) {
+                    case "div" -> "÷";
+                    case "mul" -> "×";
+                    case "sub" -> "-";
+                    case "add" -> "+";
+                    case "eq" -> "=";
+                    case "pow" -> "x^y";
+                    case "DEL" -> "⌫";
+                    default -> label;
+                };
                 MaterialButton b = makeRowButton(row, label, 1f);
                 final String k = key;
-                b.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        String cur = display.getText().toString();
-                        if (k.equals("C")) {
+                b.setOnClickListener(v -> {
+                    String cur = display.getText().toString();
+                    switch (k) {
+                        case "C" -> {
                             display.setText("");
                             result.setText("= 0");
-                        } else if (k.equals("DEL")) {
+                        }
+                        case "DEL" -> {
                             if (cur.length() > 0) {
                                 display.setText(cur.substring(0, cur.length() - 1));
                             }
-                        } else if (k.equals("eq")) {
+                        }
+                        case "eq" -> {
                             String expr = display.getText().toString();
                             try {
                                 double val = evalExpression(expr);
@@ -958,41 +1007,29 @@ public class ToolRunnerActivity extends AppCompatActivity {
                             } catch (Exception e) {
                                 result.setText("Error");
                             }
-                        } else if (k.equals("div")) {
-                            display.append("÷");
-                        } else if (k.equals("mul")) {
-                            display.append("×");
-                        } else if (k.equals("sub")) {
-                            display.append("-");
-                        } else if (k.equals("add")) {
-                            display.append("+");
-                        } else if (k.equals("ans")) {
-                            display.append(lastAns[0]);
-                        } else if (k.equals("pow")) {
-                            display.append("^");
-                        } else if (k.equals("sqrt")) {
-                            display.append("sqrt(");
-                        } else {
-                            display.append(k);
                         }
-                        String expr2 = display.getText().toString();
-                        if (!expr2.isEmpty()) {
-                            try {
-                                double val2 = evalExpression(expr2);
-                                result.setText("= " + formatNumber(val2));
-                            } catch (Exception ignored) {
-                            }
+                        case "div" -> display.append("÷");
+                        case "mul" -> display.append("×");
+                        case "sub" -> display.append("-");
+                        case "add" -> display.append("+");
+                        case "ans" -> display.append(lastAns[0]);
+                        case "pow" -> display.append("^");
+                        case "sqrt" -> display.append("sqrt(");
+                        default -> display.append(k);
+                    }
+                    String expr2 = display.getText().toString();
+                    if (!expr2.isEmpty()) {
+                        try {
+                            double val2 = evalExpression(expr2);
+                            result.setText("= " + formatNumber(val2));
+                        } catch (Exception ignored) {
                         }
                     }
                 });
             }
         }
         MaterialButton copyBtn = makeButton(box, "Copy result");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("calc", result.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("calc", result.getText().toString()));
     }
     private String formatNumber(double v) {
         if (Double.isNaN(v) || Double.isInfinite(v)) {
@@ -1186,11 +1223,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText input = makeInput(box, "Value", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         final TextView output = makeOutput(box);
         output.setText("Result");
-        final List<String[]> unitState = new ArrayList<>();
-        Runnable refreshUnits = new Runnable() {
-            public void run() {
-            }
-        };
+        new ArrayList<>();
         catSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 String[] units = unitsForCategory(categories[position]);
@@ -1236,33 +1269,24 @@ public class ToolRunnerActivity extends AppCompatActivity {
         fromSpinner.setOnItemSelectedListener(convertListener);
         toSpinner.setOnItemSelectedListener(convertListener);
         MaterialButton swapBtn = makeButton(box, "Swap units");
-        swapBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                int f = fromSpinner.getSelectedItemPosition();
-                int t = toSpinner.getSelectedItemPosition();
-                fromSpinner.setSelection(t);
-                toSpinner.setSelection(f);
-            }
+        swapBtn.setOnClickListener(v -> {
+            int f = fromSpinner.getSelectedItemPosition();
+            int t = toSpinner.getSelectedItemPosition();
+            fromSpinner.setSelection(t);
+            toSpinner.setSelection(f);
         });
     }
     private String[] unitsForCategory(String cat) {
-        if (cat.equals("Length")) {
-            return new String[]{"mm", "cm", "m", "km", "inch", "ft", "yd", "mile"};
-        } else if (cat.equals("Weight")) {
-            return new String[]{"mg", "g", "kg", "ton", "oz", "lb"};
-        } else if (cat.equals("Temperature")) {
-            return new String[]{"C", "F", "K"};
-        } else if (cat.equals("Data")) {
-            return new String[]{"B", "KB", "MB", "GB", "TB", "Kb", "Mb", "Gb"};
-        } else if (cat.equals("Speed")) {
-            return new String[]{"m/s", "km/h", "mph", "knot", "ft/s"};
-        } else if (cat.equals("Time")) {
-            return new String[]{"ms", "s", "min", "h", "day", "week"};
-        } else if (cat.equals("Area")) {
-            return new String[]{"mm2", "cm2", "m2", "ha", "km2", "ft2", "acre"};
-        } else {
-            return new String[]{"mL", "L", "m3", "tsp", "tbsp", "cup", "floz", "gal"};
-        }
+        return switch (cat) {
+            case "Length" -> new String[]{"mm", "cm", "m", "km", "inch", "ft", "yd", "mile"};
+            case "Weight" -> new String[]{"mg", "g", "kg", "ton", "oz", "lb"};
+            case "Temperature" -> new String[]{"C", "F", "K"};
+            case "Data" -> new String[]{"B", "KB", "MB", "GB", "TB", "Kb", "Mb", "Gb"};
+            case "Speed" -> new String[]{"m/s", "km/h", "mph", "knot", "ft/s"};
+            case "Time" -> new String[]{"ms", "s", "min", "h", "day", "week"};
+            case "Area" -> new String[]{"mm2", "cm2", "m2", "ha", "km2", "ft2", "acre"};
+            default -> new String[]{"mL", "L", "m3", "tsp", "tbsp", "cup", "floz", "gal"};
+        };
     }
     private void convertUnits(String cat, Spinner from, Spinner to, EditText input, TextView output) {
         try {
@@ -1288,120 +1312,356 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
     }
     private double toBase(double v, String unit, String cat) {
-        if (cat.equals("Length")) {
-            if (unit.equals("mm")) return v / 1000.0;
-            if (unit.equals("cm")) return v / 100.0;
-            if (unit.equals("m")) return v;
-            if (unit.equals("km")) return v * 1000.0;
-            if (unit.equals("inch")) return v * 0.0254;
-            if (unit.equals("ft")) return v * 0.3048;
-            if (unit.equals("yd")) return v * 0.9144;
-            if (unit.equals("mile")) return v * 1609.344;
-        } else if (cat.equals("Weight")) {
-            if (unit.equals("mg")) return v / 1000000.0;
-            if (unit.equals("g")) return v / 1000.0;
-            if (unit.equals("kg")) return v;
-            if (unit.equals("ton")) return v * 1000.0;
-            if (unit.equals("oz")) return v * 0.028349523125;
-            if (unit.equals("lb")) return v * 0.45359237;
-        } else if (cat.equals("Data")) {
-            if (unit.equals("B")) return v;
-            if (unit.equals("KB")) return v * 1024.0;
-            if (unit.equals("MB")) return v * 1048576.0;
-            if (unit.equals("GB")) return v * 1073741824.0;
-            if (unit.equals("TB")) return v * 1099511627776.0;
-            if (unit.equals("Kb")) return v * 128.0;
-            if (unit.equals("Mb")) return v * 131072.0;
-            if (unit.equals("Gb")) return v * 134217728.0;
-        } else if (cat.equals("Speed")) {
-            if (unit.equals("m/s")) return v;
-            if (unit.equals("km/h")) return v / 3.6;
-            if (unit.equals("mph")) return v * 0.44704;
-            if (unit.equals("knot")) return v * 0.514444;
-            if (unit.equals("ft/s")) return v * 0.3048;
-        } else if (cat.equals("Time")) {
-            if (unit.equals("ms")) return v / 1000.0;
-            if (unit.equals("s")) return v;
-            if (unit.equals("min")) return v * 60.0;
-            if (unit.equals("h")) return v * 3600.0;
-            if (unit.equals("day")) return v * 86400.0;
-            if (unit.equals("week")) return v * 604800.0;
-        } else if (cat.equals("Area")) {
-            if (unit.equals("mm2")) return v / 1000000.0;
-            if (unit.equals("cm2")) return v / 10000.0;
-            if (unit.equals("m2")) return v;
-            if (unit.equals("ha")) return v * 10000.0;
-            if (unit.equals("km2")) return v * 1000000.0;
-            if (unit.equals("ft2")) return v * 0.09290304;
-            if (unit.equals("acre")) return v * 4046.8564224;
-        } else if (cat.equals("Volume")) {
-            if (unit.equals("mL")) return v / 1000.0;
-            if (unit.equals("L")) return v;
-            if (unit.equals("m3")) return v * 1000.0;
-            if (unit.equals("tsp")) return v * 0.00492892159375;
-            if (unit.equals("tbsp")) return v * 0.01478676478125;
-            if (unit.equals("cup")) return v * 0.2365882365;
-            if (unit.equals("floz")) return v * 0.0295735295625;
-            if (unit.equals("gal")) return v * 3.785411784;
+        switch (cat) {
+            case "Length" -> {
+                switch (unit) {
+                    case "mm" -> {
+                        return v / 1000.0;
+                    }
+                    case "cm" -> {
+                        return v / 100.0;
+                    }
+                    case "m" -> {
+                        return v;
+                    }
+                    case "km" -> {
+                        return v * 1000.0;
+                    }
+                    case "inch" -> {
+                        return v * 0.0254;
+                    }
+                    case "ft" -> {
+                        return v * 0.3048;
+                    }
+                    case "yd" -> {
+                        return v * 0.9144;
+                    }
+                    case "mile" -> {
+                        return v * 1609.344;
+                    }
+                }
+            }
+            case "Weight" -> {
+                switch (unit) {
+                    case "mg" -> {
+                        return v / 1000000.0;
+                    }
+                    case "g" -> {
+                        return v / 1000.0;
+                    }
+                    case "kg" -> {
+                        return v;
+                    }
+                    case "ton" -> {
+                        return v * 1000.0;
+                    }
+                    case "oz" -> {
+                        return v * 0.028349523125;
+                    }
+                    case "lb" -> {
+                        return v * 0.45359237;
+                    }
+                }
+            }
+            case "Data" -> {
+                switch (unit) {
+                    case "B" -> {
+                        return v;
+                    }
+                    case "KB" -> {
+                        return v * 1024.0;
+                    }
+                    case "MB" -> {
+                        return v * 1048576.0;
+                    }
+                    case "GB" -> {
+                        return v * 1073741824.0;
+                    }
+                    case "TB" -> {
+                        return v * 1099511627776.0;
+                    }
+                    case "Kb" -> {
+                        return v * 128.0;
+                    }
+                    case "Mb" -> {
+                        return v * 131072.0;
+                    }
+                    case "Gb" -> {
+                        return v * 134217728.0;
+                    }
+                }
+            }
+            case "Speed" -> {
+                switch (unit) {
+                    case "m/s" -> {
+                        return v;
+                    }
+                    case "km/h" -> {
+                        return v / 3.6;
+                    }
+                    case "mph" -> {
+                        return v * 0.44704;
+                    }
+                    case "knot" -> {
+                        return v * 0.514444;
+                    }
+                    case "ft/s" -> {
+                        return v * 0.3048;
+                    }
+                }
+            }
+            case "Time" -> {
+                switch (unit) {
+                    case "ms" -> {
+                        return v / 1000.0;
+                    }
+                    case "s" -> {
+                        return v;
+                    }
+                    case "min" -> {
+                        return v * 60.0;
+                    }
+                    case "h" -> {
+                        return v * 3600.0;
+                    }
+                    case "day" -> {
+                        return v * 86400.0;
+                    }
+                    case "week" -> {
+                        return v * 604800.0;
+                    }
+                }
+            }
+            case "Area" -> {
+                switch (unit) {
+                    case "mm2" -> {
+                        return v / 1000000.0;
+                    }
+                    case "cm2" -> {
+                        return v / 10000.0;
+                    }
+                    case "m2" -> {
+                        return v;
+                    }
+                    case "ha" -> {
+                        return v * 10000.0;
+                    }
+                    case "km2" -> {
+                        return v * 1000000.0;
+                    }
+                    case "ft2" -> {
+                        return v * 0.09290304;
+                    }
+                    case "acre" -> {
+                        return v * 4046.8564224;
+                    }
+                }
+            }
+            case "Volume" -> {
+                switch (unit) {
+                    case "mL" -> {
+                        return v / 1000.0;
+                    }
+                    case "L" -> {
+                        return v;
+                    }
+                    case "m3" -> {
+                        return v * 1000.0;
+                    }
+                    case "tsp" -> {
+                        return v * 0.00492892159375;
+                    }
+                    case "tbsp" -> {
+                        return v * 0.01478676478125;
+                    }
+                    case "cup" -> {
+                        return v * 0.2365882365;
+                    }
+                    case "floz" -> {
+                        return v * 0.0295735295625;
+                    }
+                    case "gal" -> {
+                        return v * 3.785411784;
+                    }
+                }
+            }
         }
         return v;
     }
     private double fromBase(double base, String unit, String cat) {
-        if (cat.equals("Length")) {
-            if (unit.equals("mm")) return base * 1000.0;
-            if (unit.equals("cm")) return base * 100.0;
-            if (unit.equals("m")) return base;
-            if (unit.equals("km")) return base / 1000.0;
-            if (unit.equals("inch")) return base / 0.0254;
-            if (unit.equals("ft")) return base / 0.3048;
-            if (unit.equals("yd")) return base / 0.9144;
-            if (unit.equals("mile")) return base / 1609.344;
-        } else if (cat.equals("Weight")) {
-            if (unit.equals("mg")) return base * 1000000.0;
-            if (unit.equals("g")) return base * 1000.0;
-            if (unit.equals("kg")) return base;
-            if (unit.equals("ton")) return base / 1000.0;
-            if (unit.equals("oz")) return base / 0.028349523125;
-            if (unit.equals("lb")) return base / 0.45359237;
-        } else if (cat.equals("Data")) {
-            if (unit.equals("B")) return base;
-            if (unit.equals("KB")) return base / 1024.0;
-            if (unit.equals("MB")) return base / 1048576.0;
-            if (unit.equals("GB")) return base / 1073741824.0;
-            if (unit.equals("TB")) return base / 1099511627776.0;
-            if (unit.equals("Kb")) return base / 128.0;
-            if (unit.equals("Mb")) return base / 131072.0;
-            if (unit.equals("Gb")) return base / 134217728.0;
-        } else if (cat.equals("Speed")) {
-            if (unit.equals("m/s")) return base;
-            if (unit.equals("km/h")) return base * 3.6;
-            if (unit.equals("mph")) return base / 0.44704;
-            if (unit.equals("knot")) return base / 0.514444;
-            if (unit.equals("ft/s")) return base / 0.3048;
-        } else if (cat.equals("Time")) {
-            if (unit.equals("ms")) return base * 1000.0;
-            if (unit.equals("s")) return base;
-            if (unit.equals("min")) return base / 60.0;
-            if (unit.equals("h")) return base / 3600.0;
-            if (unit.equals("day")) return base / 86400.0;
-            if (unit.equals("week")) return base / 604800.0;
-        } else if (cat.equals("Area")) {
-            if (unit.equals("mm2")) return base * 1000000.0;
-            if (unit.equals("cm2")) return base * 10000.0;
-            if (unit.equals("m2")) return base;
-            if (unit.equals("ha")) return base / 10000.0;
-            if (unit.equals("km2")) return base / 1000000.0;
-            if (unit.equals("ft2")) return base / 0.09290304;
-            if (unit.equals("acre")) return base / 4046.8564224;
-        } else if (cat.equals("Volume")) {
-            if (unit.equals("mL")) return base * 1000.0;
-            if (unit.equals("L")) return base;
-            if (unit.equals("m3")) return base / 1000.0;
-            if (unit.equals("tsp")) return base / 0.00492892159375;
-            if (unit.equals("tbsp")) return base / 0.01478676478125;
-            if (unit.equals("cup")) return base / 0.2365882365;
-            if (unit.equals("floz")) return base / 0.0295735295625;
-            if (unit.equals("gal")) return base / 3.785411784;
+        switch (cat) {
+            case "Length" -> {
+                switch (unit) {
+                    case "mm" -> {
+                        return base * 1000.0;
+                    }
+                    case "cm" -> {
+                        return base * 100.0;
+                    }
+                    case "m" -> {
+                        return base;
+                    }
+                    case "km" -> {
+                        return base / 1000.0;
+                    }
+                    case "inch" -> {
+                        return base / 0.0254;
+                    }
+                    case "ft" -> {
+                        return base / 0.3048;
+                    }
+                    case "yd" -> {
+                        return base / 0.9144;
+                    }
+                    case "mile" -> {
+                        return base / 1609.344;
+                    }
+                }
+            }
+            case "Weight" -> {
+                switch (unit) {
+                    case "mg" -> {
+                        return base * 1000000.0;
+                    }
+                    case "g" -> {
+                        return base * 1000.0;
+                    }
+                    case "kg" -> {
+                        return base;
+                    }
+                    case "ton" -> {
+                        return base / 1000.0;
+                    }
+                    case "oz" -> {
+                        return base / 0.028349523125;
+                    }
+                    case "lb" -> {
+                        return base / 0.45359237;
+                    }
+                }
+            }
+            case "Data" -> {
+                switch (unit) {
+                    case "B" -> {
+                        return base;
+                    }
+                    case "KB" -> {
+                        return base / 1024.0;
+                    }
+                    case "MB" -> {
+                        return base / 1048576.0;
+                    }
+                    case "GB" -> {
+                        return base / 1073741824.0;
+                    }
+                    case "TB" -> {
+                        return base / 1099511627776.0;
+                    }
+                    case "Kb" -> {
+                        return base / 128.0;
+                    }
+                    case "Mb" -> {
+                        return base / 131072.0;
+                    }
+                    case "Gb" -> {
+                        return base / 134217728.0;
+                    }
+                }
+            }
+            case "Speed" -> {
+                switch (unit) {
+                    case "m/s" -> {
+                        return base;
+                    }
+                    case "km/h" -> {
+                        return base * 3.6;
+                    }
+                    case "mph" -> {
+                        return base / 0.44704;
+                    }
+                    case "knot" -> {
+                        return base / 0.514444;
+                    }
+                    case "ft/s" -> {
+                        return base / 0.3048;
+                    }
+                }
+            }
+            case "Time" -> {
+                switch (unit) {
+                    case "ms" -> {
+                        return base * 1000.0;
+                    }
+                    case "s" -> {
+                        return base;
+                    }
+                    case "min" -> {
+                        return base / 60.0;
+                    }
+                    case "h" -> {
+                        return base / 3600.0;
+                    }
+                    case "day" -> {
+                        return base / 86400.0;
+                    }
+                    case "week" -> {
+                        return base / 604800.0;
+                    }
+                }
+            }
+            case "Area" -> {
+                switch (unit) {
+                    case "mm2" -> {
+                        return base * 1000000.0;
+                    }
+                    case "cm2" -> {
+                        return base * 10000.0;
+                    }
+                    case "m2" -> {
+                        return base;
+                    }
+                    case "ha" -> {
+                        return base / 10000.0;
+                    }
+                    case "km2" -> {
+                        return base / 1000000.0;
+                    }
+                    case "ft2" -> {
+                        return base / 0.09290304;
+                    }
+                    case "acre" -> {
+                        return base / 4046.8564224;
+                    }
+                }
+            }
+            case "Volume" -> {
+                switch (unit) {
+                    case "mL" -> {
+                        return base * 1000.0;
+                    }
+                    case "L" -> {
+                        return base;
+                    }
+                    case "m3" -> {
+                        return base / 1000.0;
+                    }
+                    case "tsp" -> {
+                        return base / 0.00492892159375;
+                    }
+                    case "tbsp" -> {
+                        return base / 0.01478676478125;
+                    }
+                    case "cup" -> {
+                        return base / 0.2365882365;
+                    }
+                    case "floz" -> {
+                        return base / 0.0295735295625;
+                    }
+                    case "gal" -> {
+                        return base / 3.785411784;
+                    }
+                }
+            }
         }
         return base;
     }
@@ -1454,13 +1714,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
         } catch (Exception ignored) {
         }
         updateRulerInfo();
-        group.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            public void onCheckedChanged(RadioGroup g, int checkedId) {
-                rulerMode = (checkedId == inchBtn.getId()) ? 1 : 0;
-                rulerView.setMode(rulerMode);
-                rulerView.setCal(rulerCal);
-                updateRulerInfo();
-            }
+        group.setOnCheckedChangeListener((g, checkedId) -> {
+            rulerMode = (checkedId == inchBtn.getId()) ? 1 : 0;
+            rulerView.setMode(rulerMode);
+            rulerView.setCal(rulerCal);
+            updateRulerInfo();
         });
         calBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
@@ -1496,11 +1754,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         } else {
             rulerInfo.setText("Screen width: " + new DecimalFormat("0.00").format(inches) + " inch");
         }
-        rulerView.post(new Runnable() {
-            public void run() {
-                updateRulerInfoText();
-            }
-        });
+        rulerView.post(() -> updateRulerInfoText());
     }
     private void updateRulerInfoText() {
         try {
@@ -1523,8 +1777,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         private int mode = 0;
         private float cal = 1.0f;
         private int bgColor = Color.WHITE;
-        private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         public RulerView(Context context) {
             super(context);
             int primary = Color.parseColor("#1B73E8");
@@ -1601,17 +1855,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
         box.addView(protractorView, pp);
         protractorText = makeOutput(box);
         protractorText.setText("Angle: 0 deg");
-        protractorView.setListener(new ProtractorView.AngleListener() {
-            public void onAngle(float deg) {
-                protractorText.setText("Angle: " + new DecimalFormat("0.0").format(deg) + " deg");
-            }
-        });
+        protractorView.setListener(deg -> protractorText.setText("Angle: " + new DecimalFormat("0.0").format(deg) + " deg"));
         MaterialButton resetBtn = makeButton(box, "Reset");
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                protractorView.setAngle(0f);
-                protractorText.setText("Angle: 0 deg");
-            }
+        resetBtn.setOnClickListener(v -> {
+            protractorView.setAngle(0f);
+            protractorText.setText("Angle: 0 deg");
         });
     }
     private static class ProtractorView extends View {
@@ -1621,10 +1869,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         private float angle = 0f;
         private AngleListener listener;
         private int bgColor = Color.WHITE;
-        private Paint arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint needlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint needlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         public ProtractorView(Context context) {
             super(context);
             int primary = Color.parseColor("#1B73E8");
@@ -1716,11 +1964,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         compassText.setText("Waiting for sensors");
         compassText.setGravity(Gravity.CENTER);
         MaterialButton calBtn = makeButton(box, "Restart sensors");
-        calBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                startCompassSensors();
-            }
-        });
+        calBtn.setOnClickListener(v -> startCompassSensors());
         startCompassSensors();
     }
     private void startCompassSensors() {
@@ -1762,7 +2006,6 @@ public class ToolRunnerActivity extends AppCompatActivity {
                         if (az < 0) {
                             az += 360f;
                         }
-                        compassBearing = az;
                         if (compassView != null) {
                             compassView.setBearing(az);
                         }
@@ -1792,10 +2035,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private static class CompassView extends View {
         private float bearing = 0f;
         private int bgColor = Color.WHITE;
-        private Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint needlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint needlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         public CompassView(Context context) {
             super(context);
             int primary = Color.parseColor("#1B73E8");
@@ -1916,8 +2159,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         private float pitch = 0f;
         private float roll = 0f;
         private int bgColor = Color.WHITE;
-        private Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         public LevelView(Context context) {
             super(context);
             int primary = Color.parseColor("#1B73E8");
@@ -1945,8 +2188,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
             canvas.drawCircle(cx, cy, maxR, ringPaint);
             canvas.drawCircle(cx, cy, maxR / 3f, ringPaint);
             canvas.drawCircle(cx, cy, 10, ringPaint);
-            float bx = cx + Math.max(-1f, Math.min(1f, pitch / 20f)) * maxR;
-            float by = cy + Math.max(-1f, Math.min(1f, roll / 20f)) * maxR;
+            float bx = cx + Math.max(-1f, Math.min(1f, roll / 20f)) * maxR;
+            float by = cy + Math.max(-1f, Math.min(1f, pitch / 20f)) * maxR;
             float dx = bx - cx;
             float dy = by - cy;
             float dist = (float) Math.sqrt(dx * dx + dy * dy);
@@ -1982,39 +2225,33 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 }
             }
         };
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (stopwatchRunning) {
-                    stopwatchPauseSilent();
-                    ((Button) v).setText("Start");
-                } else {
-                    stopwatchBase = SystemClock.elapsedRealtime();
-                    stopwatchRunning = true;
-                    ((Button) v).setText("Pause");
-                    handler.post(stopwatchTick);
-                }
+        startBtn.setOnClickListener(v -> {
+            if (stopwatchRunning) {
+                stopwatchPauseSilent();
+                ((Button) v).setText("Start");
+            } else {
+                stopwatchBase = SystemClock.elapsedRealtime();
+                stopwatchRunning = true;
+                ((Button) v).setText("Pause");
+                handler.post(stopwatchTick);
             }
         });
-        lapBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (stopwatchRunning) {
-                    lapCount++;
-                    laps.add(0, "Lap " + lapCount + "  " + formatStopwatch(elapsedStopwatch()));
-                    lapAdapter.notifyDataSetChanged();
-                    vibrateTick();
-                }
-            }
-        });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                stopwatchRunning = false;
-                stopwatchAccum = 0L;
-                stopwatchText.setText("00:00.00");
-                laps.clear();
+        lapBtn.setOnClickListener(v -> {
+            if (stopwatchRunning) {
+                lapCount++;
+                laps.add(0, "Lap " + lapCount + "  " + formatStopwatch(elapsedStopwatch()));
                 lapAdapter.notifyDataSetChanged();
-                lapCount = 0;
-                startBtn.setText("Start");
+                vibrateTick();
             }
+        });
+        resetBtn.setOnClickListener(v -> {
+            stopwatchRunning = false;
+            stopwatchAccum = 0L;
+            stopwatchText.setText("00:00.00");
+            laps.clear();
+            lapAdapter.notifyDataSetChanged();
+            lapCount = 0;
+            startBtn.setText("Start");
         });
     }
     private long elapsedStopwatch() {
@@ -2049,67 +2286,60 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton startBtn = makeRowButton(row2, "Start", 1f);
         MaterialButton pauseBtn = makeRowButton(row2, "Pause", 1f);
         MaterialButton resetBtn = makeRowButton(row2, "Reset", 1f);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (timerRunning) {
-                    return;
+        startBtn.setOnClickListener(v -> {
+            if (timerRunning) {
+                return;
+            }
+            long total = timerRemaining;
+            if (total <= 0) {
+                long h = parseLongSafe(hInput.getText().toString());
+                long m = parseLongSafe(mInput.getText().toString());
+                long s = parseLongSafe(sInput.getText().toString());
+                total = (h * 3600 + m * 60 + s) * 1000;
+            }
+            if (total <= 0) {
+                toast("Enter a duration");
+                return;
+            }
+            timerRunning = true;
+            try {
+                if (countDownTimer != null) {
+                    countDownTimer.cancel();
                 }
-                long total = timerRemaining;
-                if (total <= 0) {
-                    long h = parseLongSafe(hInput.getText().toString());
-                    long m = parseLongSafe(mInput.getText().toString());
-                    long s = parseLongSafe(sInput.getText().toString());
-                    total = (h * 3600 + m * 60 + s) * 1000;
+            } catch (Exception ignored) {
+            }
+            countDownTimer = new CountDownTimer(total, 200) {
+                public void onTick(long left) {
+                    timerRemaining = left;
+                    timerText.setText(formatTimer(left));
                 }
-                if (total <= 0) {
-                    toast("Enter a duration");
-                    return;
+                public void onFinish() {
+                    timerRunning = false;
+                    timerRemaining = 0;
+                    timerText.setText("Done");
+                    toast("Time is up");
+                    vibrateTick();
+                    beep();
                 }
-                timerTotal = total;
-                timerRunning = true;
+            };
+            countDownTimer.start();
+        });
+        pauseBtn.setOnClickListener(v -> {
+            if (timerRunning && countDownTimer != null) {
+                countDownTimer.cancel();
+                timerRunning = false;
+            }
+        });
+        resetBtn.setOnClickListener(v -> {
+            if (countDownTimer != null) {
                 try {
-                    if (countDownTimer != null) {
-                        countDownTimer.cancel();
-                    }
+                    countDownTimer.cancel();
                 } catch (Exception ignored) {
                 }
-                countDownTimer = new CountDownTimer(total, 200) {
-                    public void onTick(long left) {
-                        timerRemaining = left;
-                        timerText.setText(formatTimer(left));
-                    }
-                    public void onFinish() {
-                        timerRunning = false;
-                        timerRemaining = 0;
-                        timerText.setText("Done");
-                        toast("Time is up");
-                        vibrateTick();
-                        beep();
-                    }
-                };
-                countDownTimer.start();
             }
-        });
-        pauseBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (timerRunning && countDownTimer != null) {
-                    countDownTimer.cancel();
-                    timerRunning = false;
-                }
-            }
-        });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (countDownTimer != null) {
-                    try {
-                        countDownTimer.cancel();
-                    } catch (Exception ignored) {
-                    }
-                }
-                timerRunning = false;
-                timerRemaining = 0;
-                timerText.setText("00:00");
-            }
+            timerRunning = false;
+            timerRemaining = 0;
+            timerText.setText("00:00");
         });
     }
     private long parseLongSafe(String s) {
@@ -2137,20 +2367,57 @@ public class ToolRunnerActivity extends AppCompatActivity {
         try {
             ToneGenerator tg = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
             tg.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 600);
-            handler.postDelayed(new Runnable() {
-                public void run() {
-                    try {
-                        tg.release();
-                    } catch (Exception ignored) {
-                    }
+            handler.postDelayed(() -> {
+                try {
+                    tg.release();
+                } catch (Exception ignored) {
                 }
             }, 800);
         } catch (Exception ignored) {
         }
     }
+
+    private void showScreenLightOverlay(final MaterialButton screenBtn) {
+        android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+        root.setBackgroundColor(Color.WHITE);
+        final MaterialButton exit = new MaterialButton(this);
+        exit.setText("Turn off screen light");
+        exit.setBackgroundColor(Color.parseColor("#CC000000"));
+        exit.setTextColor(Color.WHITE);
+        android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        int m = dp(24);
+        ep.setMargins(m, m, m, dp(48));
+        root.addView(exit, ep);
+        final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+        Runnable close = () -> {
+            try { holder[0].dismiss(); } catch (Exception ignored) {}
+            screenLightOn = false;
+            screenLightDialog = null;
+            if (screenBtn != null) screenBtn.setText("Screen light: OFF");
+        };
+        root.setOnClickListener(v -> close.run());
+        exit.setOnClickListener(v -> close.run());
+        androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+        holder[0] = d;
+        screenLightDialog = d;
+        d.setOnDismissListener(di -> {
+            screenLightOn = false;
+            screenLightDialog = null;
+            if (screenBtn != null) screenBtn.setText("Screen light: OFF");
+        });
+        d.show();
+        if (d.getWindow() != null) {
+            d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            android.view.WindowManager.LayoutParams lp = d.getWindow().getAttributes();
+            lp.screenBrightness = 1.0f;
+            d.getWindow().setAttributes(lp);
+            d.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
     private void buildFlashlight(LinearLayout box) {
         addTitle(box, "Flashlight");
-        addLabel(box, "Torch uses the camera flash. Screen light fills the display white.");
+        addLabel(box, "Torch uses the camera flash. Screen light fills the whole display white at max brightness.");
         if (Build.VERSION.SDK_INT >= 21) {
             try {
                 cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
@@ -2171,26 +2438,29 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         }
         final MaterialButton torchBtn = makeButton(box, "Torch: OFF");
-        torchBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                setTorch(!torchOn);
-                torchBtn.setText(torchOn ? "Torch: ON" : "Torch: OFF");
-            }
+        torchBtn.setOnClickListener(v -> {
+            setTorch(!torchOn);
+            torchBtn.setText(torchOn ? "Torch: ON" : "Torch: OFF");
         });
         final MaterialButton screenBtn = makeButton(box, "Screen light: OFF");
         screenLightView = new View(this);
         screenLightView.setBackgroundColor(Color.WHITE);
         screenLightView.setVisibility(View.GONE);
-        box.addView(screenLightView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(120)));
-        screenBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                screenLightOn = !screenLightOn;
-                screenLightView.setVisibility(screenLightOn ? View.VISIBLE : View.GONE);
-                screenBtn.setText(screenLightOn ? "Screen light: ON" : "Screen light: OFF");
-                if (screenLightOn) {
-                    toast("Maximize brightness for best effect");
-                }
+        screenLightView.setMinimumHeight(dp(4));
+        box.addView(screenLightView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(4)));
+        screenBtn.setOnClickListener(v -> {
+            if (screenLightOn) {
+                try {
+                    if (screenLightDialog != null && screenLightDialog.isShowing()) screenLightDialog.dismiss();
+                } catch (Exception ignored) {}
+                screenLightOn = false;
+                screenLightDialog = null;
+                screenBtn.setText("Screen light: OFF");
+                return;
             }
+            screenLightOn = true;
+            screenBtn.setText("Screen light: ON (tap to turn off)");
+            showScreenLightOverlay(screenBtn);
         });
         final MaterialButton sosBtn = makeButton(box, "SOS blink: OFF");
         sosBtn.setOnClickListener(new View.OnClickListener() {
@@ -2286,15 +2556,13 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        invertBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                if (checked) {
-                    zoom.setBackgroundColor(Color.parseColor("#000000"));
-                    zoom.setTextColor(Color.parseColor("#FFFF00"));
-                } else {
-                    zoom.setBackgroundColor(Color.parseColor("#FFFFFF"));
-                    zoom.setTextColor(Color.parseColor("#000000"));
-                }
+        invertBox.setOnCheckedChangeListener((b, checked) -> {
+            if (checked) {
+                zoom.setBackgroundColor(Color.parseColor("#000000"));
+                zoom.setTextColor(Color.parseColor("#FFFF00"));
+            } else {
+                zoom.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                zoom.setTextColor(Color.parseColor("#000000"));
             }
         });
     }
@@ -2334,44 +2602,38 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         });
         MaterialButton genBtn = makeButton(box, "Generate");
-        genBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                int len = 4 + lengthBar.getProgress();
-                StringBuilder pool = new StringBuilder();
-                if (upperBox.isChecked()) {
-                    pool.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        genBtn.setOnClickListener(v -> {
+            int len = 4 + lengthBar.getProgress();
+            StringBuilder pool = new StringBuilder();
+            if (upperBox.isChecked()) {
+                pool.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+            }
+            if (lowerBox.isChecked()) {
+                pool.append("abcdefghijklmnopqrstuvwxyz");
+            }
+            if (digitBox.isChecked()) {
+                pool.append("0123456789");
+            }
+            if (symbolBox.isChecked()) {
+                pool.append("!@#$%^&*()-_=+[]{};:,.?");
+            }
+            if (pool.length() == 0) {
+                toast("Pick at least one set");
+                return;
+            }
+            try {
+                SecureRandom random = new SecureRandom();
+                StringBuilder out = new StringBuilder();
+                for (int i = 0; i < len; i++) {
+                    out.append(pool.charAt(random.nextInt(pool.length())));
                 }
-                if (lowerBox.isChecked()) {
-                    pool.append("abcdefghijklmnopqrstuvwxyz");
-                }
-                if (digitBox.isChecked()) {
-                    pool.append("0123456789");
-                }
-                if (symbolBox.isChecked()) {
-                    pool.append("!@#$%^&*()-_=+[]{};:,.?");
-                }
-                if (pool.length() == 0) {
-                    toast("Pick at least one set");
-                    return;
-                }
-                try {
-                    SecureRandom random = new SecureRandom();
-                    StringBuilder out = new StringBuilder();
-                    for (int i = 0; i < len; i++) {
-                        out.append(pool.charAt(random.nextInt(pool.length())));
-                    }
-                    output.setText(out.toString());
-                } catch (Exception e) {
-                    output.setText("Error");
-                }
+                output.setText(out.toString());
+            } catch (Exception e) {
+                output.setText("Error");
             }
         });
         MaterialButton copyBtn = makeButton(box, "Copy");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("password", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("password", output.getText().toString()));
     }
     private void buildHash(LinearLayout box) {
         addTitle(box, "Hash Generator");
@@ -2379,27 +2641,21 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         output.setText("Result appears here");
         MaterialButton goBtn = makeButton(box, "Compute MD5 SHA-1 SHA-256 SHA-512");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String s = input.getText().toString();
-                try {
-                    StringBuilder b = new StringBuilder();
-                    b.append("MD5: ").append(hashString(s, "MD5")).append("\n\n");
-                    b.append("SHA-1: ").append(hashString(s, "SHA-1")).append("\n\n");
-                    b.append("SHA-256: ").append(hashString(s, "SHA-256")).append("\n\n");
-                    b.append("SHA-512: ").append(hashString(s, "SHA-512"));
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Error: " + e.getMessage());
-                }
+        goBtn.setOnClickListener(v -> {
+            String s = input.getText().toString();
+            try {
+                StringBuilder b = new StringBuilder();
+                b.append("MD5: ").append(hashString(s, "MD5")).append("\n\n");
+                b.append("SHA-1: ").append(hashString(s, "SHA-1")).append("\n\n");
+                b.append("SHA-256: ").append(hashString(s, "SHA-256")).append("\n\n");
+                b.append("SHA-512: ").append(hashString(s, "SHA-512"));
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Error: " + e.getMessage());
             }
         });
         MaterialButton copyBtn = makeButton(box, "Copy");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("hash", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("hash", output.getText().toString()));
     }
     private String hashString(String s, String algo) throws Exception {
         MessageDigest digest = MessageDigest.getInstance(algo);
@@ -2422,32 +2678,24 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton encBtn = makeRowButton(row, "Encode", 1f);
         MaterialButton decBtn = makeRowButton(row, "Decode", 1f);
-        encBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String s = input.getText().toString();
-                    output.setText(Base64.encodeToString(s.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP));
-                } catch (Exception e) {
-                    output.setText("Error");
-                }
+        encBtn.setOnClickListener(v -> {
+            try {
+                String s = input.getText().toString();
+                output.setText(Base64.encodeToString(s.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP));
+            } catch (Exception e) {
+                output.setText("Error");
             }
         });
-        decBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String s = input.getText().toString().trim();
-                    output.setText(new String(Base64.decode(s, Base64.DEFAULT), StandardCharsets.UTF_8));
-                } catch (Exception e) {
-                    output.setText("Invalid Base64");
-                }
+        decBtn.setOnClickListener(v -> {
+            try {
+                String s = input.getText().toString().trim();
+                output.setText(new String(Base64.decode(s, Base64.DEFAULT), StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                output.setText("Invalid Base64");
             }
         });
         MaterialButton copyBtn = makeButton(box, "Copy result");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("base64", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("base64", output.getText().toString()));
     }
     private void buildJson(LinearLayout box) {
         addTitle(box, "JSON Formatter");
@@ -2459,53 +2707,60 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton fmtBtn = makeRowButton(row, "Format", 1f);
         MaterialButton minBtn = makeRowButton(row, "Minify", 1f);
         MaterialButton validBtn = makeRowButton(row, "Validate", 1f);
-        fmtBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String s = input.getText().toString().trim();
-                    if (s.startsWith("[")) {
-                        org.json.JSONArray arr = new org.json.JSONArray(s);
-                        output.setText(arr.toString(2));
-                    } else {
-                        JSONObject obj = new JSONObject(s);
-                        output.setText(obj.toString(2));
-                    }
-                } catch (Exception e) {
-                    output.setText("Invalid JSON");
+        fmtBtn.setOnClickListener(v -> {
+            try {
+                Object parsed = parseJsonValue(input.getText().toString().trim());
+                if (parsed instanceof JSONObject) {
+                    output.setText(((JSONObject) parsed).toString(2));
+                } else if (parsed instanceof org.json.JSONArray) {
+                    output.setText(((org.json.JSONArray) parsed).toString(2));
+                } else {
+                    output.setText(String.valueOf(parsed));
                 }
+            } catch (Exception e) {
+                output.setText("Invalid JSON");
             }
         });
-        minBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String s = input.getText().toString().trim();
-                    if (s.startsWith("[")) {
-                        org.json.JSONArray arr = new org.json.JSONArray(s);
-                        output.setText(arr.toString());
-                    } else {
-                        JSONObject obj = new JSONObject(s);
-                        output.setText(obj.toString());
-                    }
-                } catch (Exception e) {
-                    output.setText("Invalid JSON");
+        minBtn.setOnClickListener(v -> {
+            try {
+                Object parsed = parseJsonValue(input.getText().toString().trim());
+                if (parsed instanceof JSONObject) {
+                    output.setText(((JSONObject) parsed).toString());
+                } else if (parsed instanceof org.json.JSONArray) {
+                    output.setText(((org.json.JSONArray) parsed).toString());
+                } else {
+                    output.setText(String.valueOf(parsed));
                 }
+            } catch (Exception e) {
+                output.setText("Invalid JSON");
             }
         });
-        validBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String s = input.getText().toString().trim();
-                    if (s.startsWith("[")) {
-                        new org.json.JSONArray(s);
-                    } else {
-                        new JSONObject(s);
-                    }
-                    output.setText("Valid JSON");
-                } catch (Exception e) {
-                    output.setText("Invalid JSON");
-                }
+        validBtn.setOnClickListener(v -> {
+            try {
+                parseJsonValue(input.getText().toString().trim());
+                output.setText("Valid JSON");
+            } catch (Exception e) {
+                output.setText("Invalid JSON");
             }
         });
+    }
+    private Object parseJsonValue(String s) throws Exception {
+        String t = s == null ? "" : s.trim();
+        if (t.startsWith("{")) {
+            return new JSONObject(t);
+        }
+        if (t.startsWith("[")) {
+            return new org.json.JSONArray(t);
+        }
+        org.json.JSONTokener tokener = new org.json.JSONTokener(t);
+        Object v = tokener.nextValue();
+        while (tokener.more()) {
+            char c = tokener.next();
+            if (c != 0 && !Character.isWhitespace(c)) {
+                throw new org.json.JSONException("Trailing data");
+            }
+        }
+        return v;
     }
     private void buildTextCounter(LinearLayout box) {
         addTitle(box, "Text Counter");
@@ -2545,56 +2800,40 @@ public class ToolRunnerActivity extends AppCompatActivity {
         d2.setText(fmt.format(new Date()));
         final TextView output = makeOutput(box);
         MaterialButton todayBtn = makeButton(box, "Set both to today");
-        todayBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-                d1.setText(today);
-                d2.setText(today);
-            }
+        todayBtn.setOnClickListener(v -> {
+            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+            d1.setText(today);
+            d2.setText(today);
         });
         MaterialButton calcBtn = makeButton(box, "Calculate difference");
-        calcBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                    f.setLenient(false);
-                    Date a = f.parse(d1.getText().toString().trim());
-                    Date b = f.parse(d2.getText().toString().trim());
-                    long diff = Math.abs(b.getTime() - a.getTime());
-                    long days = diff / 86400000L;
-                    long weeks = days / 7;
-                    long months = days / 30;
-                    output.setText(days + " days  (" + weeks + " weeks, about " + months + " months)");
-                } catch (Exception e) {
-                    output.setText("Use yyyy-MM-dd");
-                }
+        calcBtn.setOnClickListener(v -> {
+            try {
+                java.time.LocalDate a = java.time.LocalDate.parse(d1.getText().toString().trim());
+                java.time.LocalDate b = java.time.LocalDate.parse(d2.getText().toString().trim());
+                java.time.LocalDate from = a.isBefore(b) ? a : b;
+                java.time.LocalDate to = a.isBefore(b) ? b : a;
+                long days = java.time.temporal.ChronoUnit.DAYS.between(from, to);
+                java.time.Period p = java.time.Period.between(from, to);
+                long weeks = days / 7;
+                output.setText(days + " days  (" + weeks + " weeks, " + p.getYears() + "y " + p.getMonths() + "m " + p.getDays() + "d)");
+            } catch (Exception e) {
+                output.setText("Use yyyy-MM-dd");
             }
         });
         MaterialButton ageBtn = makeButton(box, "Age from start date to today");
-        ageBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                    f.setLenient(false);
-                    Date birth = f.parse(d1.getText().toString().trim());
-                    Calendar c1 = Calendar.getInstance();
-                    c1.setTime(birth);
-                    Calendar c2 = Calendar.getInstance();
-                    int years = c2.get(Calendar.YEAR) - c1.get(Calendar.YEAR);
-                    int months = c2.get(Calendar.MONTH) - c1.get(Calendar.MONTH);
-                    int days = c2.get(Calendar.DAY_OF_MONTH) - c1.get(Calendar.DAY_OF_MONTH);
-                    if (days < 0) {
-                        months--;
-                        days += 30;
-                    }
-                    if (months < 0) {
-                        years--;
-                        months += 12;
-                    }
-                    output.setText(years + " years, " + months + " months, " + days + " days");
-                } catch (Exception e) {
-                    output.setText("Use yyyy-MM-dd");
+        ageBtn.setOnClickListener(v -> {
+            try {
+                java.time.LocalDate birth = java.time.LocalDate.parse(d1.getText().toString().trim());
+                java.time.LocalDate today = java.time.LocalDate.now();
+                if (birth.isAfter(today)) {
+                    output.setText("Birth date is in the future");
+                    return;
                 }
+                java.time.Period p = java.time.Period.between(birth, today);
+                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(birth, today);
+                output.setText(p.getYears() + " years, " + p.getMonths() + " months, " + p.getDays() + " days  (" + totalDays + " days total)");
+            } catch (Exception e) {
+                output.setText("Use yyyy-MM-dd");
             }
         });
     }
@@ -2605,26 +2844,28 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         output.setText("Enter height and weight");
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double h = Double.parseDouble(heightInput.getText().toString()) / 100.0;
-                    double w = Double.parseDouble(weightInput.getText().toString());
-                    double bmi = w / (h * h);
-                    String cat;
-                    if (bmi < 18.5) {
-                        cat = "Underweight";
-                    } else if (bmi < 25) {
-                        cat = "Normal";
-                    } else if (bmi < 30) {
-                        cat = "Overweight";
-                    } else {
-                        cat = "Obese";
-                    }
-                    output.setText("BMI " + new DecimalFormat("0.0").format(bmi) + "  " + cat);
-                } catch (Exception e) {
-                    output.setText("Invalid input");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double h = Double.parseDouble(heightInput.getText().toString()) / 100.0;
+                double w = Double.parseDouble(weightInput.getText().toString());
+                if (h <= 0 || w <= 0) {
+                    output.setText("Height and weight must be above zero");
+                    return;
                 }
+                double bmi = w / (h * h);
+                String cat;
+                if (bmi < 18.5) {
+                    cat = "Underweight";
+                } else if (bmi < 25) {
+                    cat = "Normal";
+                } else if (bmi < 30) {
+                    cat = "Overweight";
+                } else {
+                    cat = "Obese";
+                }
+                output.setText("BMI " + new DecimalFormat("0.0").format(bmi) + "  " + cat);
+            } catch (Exception e) {
+                output.setText("Invalid input");
             }
         });
     }
@@ -2635,21 +2876,19 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText taxInput = makeInput(box, "Tax percent (optional)", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double price = Double.parseDouble(priceInput.getText().toString());
-                    double disc = discInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(discInput.getText().toString());
-                    double tax = taxInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(taxInput.getText().toString());
-                    double saved = price * disc / 100.0;
-                    double afterDisc = price - saved;
-                    double taxAmt = afterDisc * tax / 100.0;
-                    double total = afterDisc + taxAmt;
-                    DecimalFormat df = new DecimalFormat("0.00");
-                    output.setText("You save " + df.format(saved) + ", pay " + df.format(total));
-                } catch (Exception e) {
-                    output.setText("Invalid input");
-                }
+        goBtn.setOnClickListener(v -> {
+            try {
+                double price = Double.parseDouble(priceInput.getText().toString());
+                double disc = discInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(discInput.getText().toString());
+                double tax = taxInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(taxInput.getText().toString());
+                double saved = price * disc / 100.0;
+                double afterDisc = price - saved;
+                double taxAmt = afterDisc * tax / 100.0;
+                double total = afterDisc + taxAmt;
+                DecimalFormat df = new DecimalFormat("0.00");
+                output.setText("You save " + df.format(saved) + ", pay " + df.format(total));
+            } catch (Exception e) {
+                output.setText("Invalid input");
             }
         });
     }
@@ -2660,26 +2899,24 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText nInput = makeInput(box, "Months", InputType.TYPE_CLASS_NUMBER);
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double p = Double.parseDouble(pInput.getText().toString());
-                    double annual = Double.parseDouble(rInput.getText().toString());
-                    int n = Integer.parseInt(nInput.getText().toString().trim());
-                    double r = annual / 1200.0;
-                    double emi;
-                    if (r == 0) {
-                        emi = p / n;
-                    } else {
-                        double pow = Math.pow(1 + r, n);
-                        emi = p * r * pow / (pow - 1);
-                    }
-                    double total = emi * n;
-                    DecimalFormat df = new DecimalFormat("0.00");
-                    output.setText("EMI " + df.format(emi) + "  Total " + df.format(total) + "  Interest " + df.format(total - p));
-                } catch (Exception e) {
-                    output.setText("Invalid input");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double p = Double.parseDouble(pInput.getText().toString());
+                double annual = Double.parseDouble(rInput.getText().toString());
+                int n = Integer.parseInt(nInput.getText().toString().trim());
+                double r = annual / 1200.0;
+                double emi;
+                if (r == 0) {
+                    emi = p / n;
+                } else {
+                    double pow = Math.pow(1 + r, n);
+                    emi = p * r * pow / (pow - 1);
                 }
+                double total = emi * n;
+                DecimalFormat df = new DecimalFormat("0.00");
+                output.setText("EMI " + df.format(emi) + "  Total " + df.format(total) + "  Interest " + df.format(total - p));
+            } catch (Exception e) {
+                output.setText("Invalid input");
             }
         });
     }
@@ -2698,36 +2935,30 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton numBtn = makeRowButton(row, "Number", 1f);
         MaterialButton diceBtn = makeRowButton(row, "Dice", 1f);
         MaterialButton coinBtn = makeRowButton(row, "Coin", 1f);
-        numBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    int min = Integer.parseInt(minInput.getText().toString().trim());
-                    int max = Integer.parseInt(maxInput.getText().toString().trim());
-                    if (min > max) {
-                        int t = min;
-                        min = max;
-                        max = t;
-                    }
-                    output.setText(String.valueOf(min + random.nextInt(max - min + 1)));
-                    vibrateTick();
-                } catch (Exception e) {
-                    output.setText("?");
+        numBtn.setOnClickListener(v -> {
+            try {
+                int min = Integer.parseInt(minInput.getText().toString().trim());
+                int max = Integer.parseInt(maxInput.getText().toString().trim());
+                if (min > max) {
+                    int t = min;
+                    min = max;
+                    max = t;
                 }
+                output.setText(String.valueOf(min + random.nextInt(max - min + 1)));
+                vibrateTick();
+            } catch (Exception e) {
+                output.setText("?");
             }
         });
-        diceBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                int d = 1 + random.nextInt(6);
-                String[] faces = new String[]{"⚀", "⚁", "⚂", "⚃", "⚄", "⚅"};
-                output.setText(faces[d - 1] + "  " + d);
-                vibrateTick();
-            }
+        diceBtn.setOnClickListener(v -> {
+            int d = 1 + random.nextInt(6);
+            String[] faces = new String[]{"⚀", "⚁", "⚂", "⚃", "⚄", "⚅"};
+            output.setText(faces[d - 1] + "  " + d);
+            vibrateTick();
         });
-        coinBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(random.nextBoolean() ? "Heads" : "Tails");
-                vibrateTick();
-            }
+        coinBtn.setOnClickListener(v -> {
+            output.setText(random.nextBoolean() ? "Heads" : "Tails");
+            vibrateTick();
         });
     }
     private void buildTally(LinearLayout box) {
@@ -2741,25 +2972,19 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton addBtn = makeRowButton(row, "+1", 1f);
         MaterialButton subBtn = makeRowButton(row, "-1", 1f);
         MaterialButton resetBtn = makeRowButton(row, "Reset", 1f);
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                tallyCount++;
-                tallyText.setText(String.valueOf(tallyCount));
-                vibrateTick();
-            }
+        addBtn.setOnClickListener(v -> {
+            tallyCount++;
+            tallyText.setText(String.valueOf(tallyCount));
+            vibrateTick();
         });
-        subBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                tallyCount--;
-                tallyText.setText(String.valueOf(tallyCount));
-                vibrateTick();
-            }
+        subBtn.setOnClickListener(v -> {
+            tallyCount--;
+            tallyText.setText(String.valueOf(tallyCount));
+            vibrateTick();
         });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                tallyCount = 0;
-                tallyText.setText("0");
-            }
+        resetBtn.setOnClickListener(v -> {
+            tallyCount = 0;
+            tallyText.setText("0");
         });
     }
     private ToneGenerator getTone() {
@@ -2836,109 +3061,277 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         });
     }
-    private void buildDeviceInfo(LinearLayout box) {
-        addTitle(box, "Device Info");
-        TextView output = makeOutput(box);
+    private LinearLayout addSectionCard(LinearLayout box, String title) {
+        TextView t = new TextView(this);
+        t.setText(title);
+        t.setTextSize(16);
+        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLACK));
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tp.setMargins(0, dp(14), 0, dp(6));
+        box.addView(t, tp);
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(14), dp(14), dp(14), dp(14));
         try {
-            DisplayMetrics dm = getResources().getDisplayMetrics();
-            StringBuilder b = new StringBuilder();
-            b.append("Model: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\n");
-            b.append("Android: ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
-            b.append("Board: ").append(Build.BOARD).append("  Brand: ").append(Build.BRAND).append("\n");
-            b.append("Device: ").append(Build.DEVICE).append("  Product: ").append(Build.PRODUCT).append("\n");
-            b.append("Screen: ").append(dm.widthPixels).append(" x ").append(dm.heightPixels).append("  density ").append(dm.densityDpi).append("\n");
-            b.append("xdpi ").append(new DecimalFormat("0.0").format(dm.xdpi)).append("  ydpi ").append(new DecimalFormat("0.0").format(dm.ydpi)).append("\n");
-            Runtime rt = Runtime.getRuntime();
-            b.append("Heap: ").append(rt.totalMemory() / 1048576L).append(" MB  free ").append(rt.freeMemory() / 1048576L).append(" MB\n");
-            if (sensorManager != null) {
-                List<Sensor> sensors = sensorManager.getSensorList(Sensor.TYPE_ALL);
-                b.append("Sensors: ").append(sensors.size()).append("\n");
-                int shown = 0;
-                for (Sensor s : sensors) {
-                    if (shown >= 20) {
-                        break;
-                    }
-                    b.append("- ").append(s.getName()).append("\n");
-                    shown++;
-                }
-            }
-            output.setText(b.toString());
-        } catch (Exception e) {
-            output.setText("Unavailable");
-        }
-        MaterialButton copyBtn = makeButton(box, "Copy info");
-        final TextView outRef = output;
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("device", outRef.getText().toString());
-            }
-        });
+            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            gd.setCornerRadius(dp(16));
+            gd.setColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#14000000")));
+            card.setBackground(gd);
+        } catch (Exception ignored) {}
+        box.addView(card, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return card;
     }
-    private void buildNetInfo(LinearLayout box) {
-        addTitle(box, "Network Info");
-        TextView output = makeOutput(box);
+
+    private TextView addCardOutput(LinearLayout card) {
+        TextView t = new TextView(this);
+        t.setTextSize(14);
+        t.setTypeface(android.graphics.Typeface.MONOSPACE);
+        t.setTextIsSelectable(true);
+        t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        card.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return t;
+    }
+
+    private String readBatterySummary() {
+        try {
+            Intent battery = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (battery == null) return "Unavailable";
+            int level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+            int pct = scale <= 0 ? level : Math.round(level * 100f / scale);
+            int status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            String statusStr = status == BatteryManager.BATTERY_STATUS_CHARGING ? "Charging" : status == BatteryManager.BATTERY_STATUS_FULL ? "Full" : status == BatteryManager.BATTERY_STATUS_DISCHARGING ? "Discharging" : status == BatteryManager.BATTERY_STATUS_NOT_CHARGING ? "Not charging" : "Unknown";
+            int plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+            String plugStr = plugged == BatteryManager.BATTERY_PLUGGED_AC ? "AC" : plugged == BatteryManager.BATTERY_PLUGGED_USB ? "USB" : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "Wireless" : "Unplugged";
+            int temp = battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
+            int volt = battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
+            String tech = battery.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY);
+            return "Level " + pct + "%  •  " + statusStr + "\nPower " + plugStr + "  •  " + new DecimalFormat("0.0").format(temp / 10.0) + " °C  •  " + volt + " mV  •  " + (tech == null ? "-" : tech);
+        } catch (Exception e) {
+            return "Unavailable";
+        }
+    }
+
+    private String readCpuSummary() {
         try {
             StringBuilder b = new StringBuilder();
+            b.append("Cores: ").append(Runtime.getRuntime().availableProcessors()).append("\n");
+            if (Build.VERSION.SDK_INT >= 21) {
+                try {
+                    String[] abis = Build.SUPPORTED_ABIS;
+                    if (abis != null) {
+                        b.append("ABI: ");
+                        for (int i = 0; i < abis.length; i++) {
+                            if (i > 0) b.append(", ");
+                            b.append(abis[i]);
+                        }
+                        b.append("\n");
+                    }
+                } catch (Exception ignored) {}
+            }
+            b.append("Hardware: ").append(Build.HARDWARE).append("  Board: ").append(Build.BOARD).append("\n");
+            try {
+                java.io.File f = new java.io.File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
+                if (f.exists()) {
+                    java.util.Scanner s = new java.util.Scanner(f);
+                    if (s.hasNext()) b.append("CPU0: ").append(Long.parseLong(s.next().trim()) / 1000).append(" MHz\n");
+                    s.close();
+                }
+            } catch (Exception ignored) {}
+            return b.toString();
+        } catch (Exception e) {
+            return "Unavailable";
+        }
+    }
+
+    private String readStorageSummary() {
+        try {
+            StringBuilder b = new StringBuilder();
+            StatFs internal = new StatFs(Environment.getDataDirectory().getAbsolutePath());
+            long bs = internal.getBlockSizeLong();
+            b.append("Internal ").append(formatBytes((internal.getBlockCountLong() - internal.getAvailableBlocksLong()) * bs)).append(" used / ").append(formatBytes(internal.getBlockCountLong() * bs)).append("\n");
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            am.getMemoryInfo(mi);
+            b.append("RAM ").append(formatBytes(mi.totalMem - mi.availMem)).append(" used / ").append(formatBytes(mi.totalMem)).append(mi.lowMemory ? "  •  LOW" : "  •  OK");
+            return b.toString();
+        } catch (Exception e) {
+            return "Unavailable";
+        }
+    }
+
+    private String readNetworkSummary() {
+        StringBuilder b = new StringBuilder();
+        try {
             ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             if (cm != null) {
                 try {
                     NetworkInfo active = cm.getActiveNetworkInfo();
-                    if (active != null) {
-                        b.append("Active: ").append(active.getTypeName()).append(" connected=").append(active.isConnected()).append("\n");
-                    } else {
-                        b.append("Active: none\n");
-                    }
+                    if (active != null) b.append("Active: ").append(active.getTypeName()).append(" connected=").append(active.isConnected()).append("\n");
+                    else b.append("Active: none\n");
                 } catch (Exception e) {
                     b.append("Active: unknown\n");
                 }
             }
             try {
                 WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-                if (wm != null) {
-                    b.append("Wi-Fi enabled: ").append(wm.isWifiEnabled()).append("\n");
+                if (wm != null && wm.isWifiEnabled()) {
                     WifiInfo info = wm.getConnectionInfo();
                     if (info != null) {
                         String ssid = info.getSSID() == null ? "-" : info.getSSID().replace("\"", "");
-                        b.append("SSID: ").append(ssid).append("\n");
-                        b.append("BSSID: ").append(info.getBSSID()).append("\n");
-                        b.append("Link speed: ").append(info.getLinkSpeed()).append(" Mbps\n");
-                        b.append("RSSI: ").append(info.getRssi()).append(" dBm\n");
-                        int ip = info.getIpAddress();
-                        b.append("IP: ").append(ipToString(ip)).append("\n");
+                        b.append("Wi-Fi ").append(ssid).append("  ").append(info.getRssi()).append(" dBm  ").append(info.getLinkSpeed()).append(" Mbps\n");
+                        b.append("IP ").append(ipToString(info.getIpAddress()));
                     }
-                    DhcpInfo dhcp = wm.getDhcpInfo();
-                    if (dhcp != null) {
-                        b.append("Gateway: ").append(ipToString(dhcp.gateway)).append("\n");
-                        b.append("DNS1: ").append(ipToString(dhcp.dns1)).append("\n");
-                        b.append("DNS2: ").append(ipToString(dhcp.dns2)).append("\n");
-                    }
+                } else {
+                    b.append("Wi-Fi off or unavailable");
                 }
             } catch (Exception e) {
-                b.append("Wi-Fi: unavailable\n");
+                b.append("Wi-Fi: unavailable");
             }
-            output.setText(b.toString());
         } catch (Exception e) {
-            output.setText("Unavailable");
+            return "Unavailable";
         }
-        MaterialButton refreshBtn = makeButton(box, "Refresh");
-        final TextView outRef = output;
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                box.removeAllViews();
-                onDestroyCleanupForRefresh();
-                buildNetInfo(box);
-                addTitle(box, "Refreshed");
+        return b.toString();
+    }
+
+    private String readDataUsageSummary() {
+        try {
+            long mRx = TrafficStats.getMobileRxBytes();
+            long mTx = TrafficStats.getMobileTxBytes();
+            long tRx = TrafficStats.getTotalRxBytes();
+            long tTx = TrafficStats.getTotalTxBytes();
+            StringBuilder b = new StringBuilder();
+            b.append("Mobile ↓ ").append(mRx < 0 ? "-" : formatBytes(mRx)).append("  ↑ ").append(mTx < 0 ? "-" : formatBytes(mTx)).append("\n");
+            b.append("Total ↓ ").append(tRx < 0 ? "-" : formatBytes(tRx)).append("  ↑ ").append(tTx < 0 ? "-" : formatBytes(tTx)).append("\n");
+            b.append("Counters reset on reboot");
+            return b.toString();
+        } catch (Exception e) {
+            return "Unavailable";
+        }
+    }
+
+    private void buildDeviceHub(LinearLayout box) {
+        String preset = getIntent().getStringExtra("tab");
+        addTitle(box, "Device Hub");
+        LinearLayout overview = addSectionCard(box, "Overview");
+        final TextView overText = addCardOutput(overview);
+        LinearLayout power = addSectionCard(box, "Battery & Power");
+        final TextView powerText = addCardOutput(power);
+        final android.widget.ProgressBar levelBar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        levelBar.setMax(100);
+        power.addView(levelBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout compute = addSectionCard(box, "Processor & Memory");
+        final TextView computeText = addCardOutput(compute);
+        LinearLayout stor = addSectionCard(box, "Storage & RAM");
+        final TextView storText = addCardOutput(stor);
+        LinearLayout disp = addSectionCard(box, "Display");
+        final TextView dispText = addCardOutput(disp);
+        LinearLayout sens = addSectionCard(box, "Live sensors & altimeter");
+        sensorLiveText = addCardOutput(sens);
+        sensorLiveText.setText("Starting sensors...");
+        final TextView altText = addCardOutput(sens);
+        altText.setText("Barometer: starting...");
+        final Runnable refreshAll = () -> {
+            try {
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+                StringBuilder o = new StringBuilder();
+                o.append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\n");
+                o.append("Android ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
+                o.append(Build.BRAND).append(" ").append(Build.DEVICE).append("  •  ").append(Build.PRODUCT).append("  •  ").append(Build.HARDWARE);
+                overText.setText(o.toString());
+                String bs = readBatterySummary();
+                powerText.setText(bs);
+                try {
+                    Intent bat = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+                    int l = bat.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+                    int s = bat.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                    levelBar.setProgress(s <= 0 ? l : Math.round(l * 100f / s));
+                } catch (Exception ignored) {}
+                computeText.setText(readCpuSummary());
+                storText.setText(readStorageSummary());
+                dispText.setText(dm.widthPixels + " × " + dm.heightPixels + "  •  " + dm.densityDpi + " dpi\nxdpi " + new DecimalFormat("0.0").format(dm.xdpi) + "  ydpi " + new DecimalFormat("0.0").format(dm.ydpi) + "  •  density " + dm.density);
+                if (sensorManager != null) {
+                    List<Sensor> all = sensorManager.getSensorList(Sensor.TYPE_ALL);
+                    StringBuilder sl = new StringBuilder();
+                    sl.append(all.size()).append(" sensors: ");
+                    for (int i = 0; i < Math.min(6, all.size()); i++) {
+                        if (i > 0) sl.append(", ");
+                        sl.append(all.get(i).getName());
+                    }
+                    if (all.size() > 6) sl.append(" …");
+                    sensorLiveText.setText("Starting live feed…\n" + sl);
+                }
+            } catch (Exception e) {
+                overText.setText("Unavailable");
             }
+        };
+        refreshAll.run();
+        try {
+            sensorLatest = new float[5][];
+            startSensorsListener();
+        } catch (Exception ignored) {}
+        try {
+            if (sensorManager != null) {
+                Sensor pressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
+                if (pressure != null) {
+                    altText.setText("Barometer present — tap below for altitude readout.");
+                    MaterialButton altBtn = new MaterialButton(this);
+                    altBtn.setText("Open altimeter");
+                    sens.addView(altBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    altBtn.setOnClickListener(v -> {
+                        box.removeAllViews();
+                        buildAltimeter(box);
+                    });
+                } else {
+                    altText.setText("No barometer on this device");
+                }
+            }
+        } catch (Exception ignored) {}
+        LinearLayout row = makeRow(box);
+        MaterialButton refreshBtn = makeRowButton(row, "Refresh all", 1f);
+        MaterialButton copyBtn = makeRowButton(row, "Copy report", 1f);
+        refreshBtn.setOnClickListener(v -> {
+            refreshAll.run();
+            try { startSensorsListener(); } catch (Exception ignored) {}
+            toast("Refreshed");
         });
-        MaterialButton copyBtn = makeButton(box, "Copy info");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("network", outRef.getText().toString());
-            }
+        copyBtn.setOnClickListener(v -> copyText("device-hub", overText.getText() + "\n\n" + powerText.getText() + "\n\n" + computeText.getText() + "\n\n" + storText.getText() + "\n\n" + dispText.getText()));
+        if ("battery".equals(preset) || "power".equals(preset)) {
+            // preset hook: nothing to scroll in ScrollView wrapper, button order conveys priority
+        }
+    }
+
+    private void buildConnectivityHub(LinearLayout box) {
+        addTitle(box, "Connectivity Hub");
+        LinearLayout net = addSectionCard(box, "Network");
+        final TextView netText = addCardOutput(net);
+        LinearLayout data = addSectionCard(box, "Data usage");
+        final TextView dataText = addCardOutput(data);
+        final Runnable refresh = () -> {
+            netText.setText(readNetworkSummary());
+            dataText.setText(readDataUsageSummary());
+        };
+        refresh.run();
+        LinearLayout row = makeRow(box);
+        MaterialButton r = makeRowButton(row, "Refresh", 1f);
+        MaterialButton c = makeRowButton(row, "Copy", 1f);
+        r.setOnClickListener(v -> refresh.run());
+        c.setOnClickListener(v -> copyText("connectivity", netText.getText() + "\n\n" + dataText.getText()));
+        addLabel(box, "Short-range radios");
+        LinearLayout row2 = makeRow(box);
+        MaterialButton btBtn = makeRowButton(row2, "Bluetooth pairs", 1f);
+        MaterialButton nfcBtn = makeRowButton(row2, "NFC reader", 1f);
+        btBtn.setOnClickListener(v -> {
+            box.removeAllViews();
+            buildBluetooth(box);
+        });
+        nfcBtn.setOnClickListener(v -> {
+            box.removeAllViews();
+            buildNfc(box);
         });
     }
-    private void onDestroyCleanupForRefresh() {
-    }
+
     private String ipToString(int ip) {
         return (ip & 255) + "." + ((ip >> 8) & 255) + "." + ((ip >> 16) & 255) + "." + ((ip >> 24) & 255);
     }
@@ -2999,22 +3392,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
         box.addView(toZone);
         final TextView convOut = makeOutput(box);
         MaterialButton convBtn = makeButton(box, "Convert");
-        convBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String[] parts = timeInput.getText().toString().trim().split(":");
-                    int hh = Integer.parseInt(parts[0].trim());
-                    int mm = Integer.parseInt(parts[1].trim());
-                    Calendar c = Calendar.getInstance(java.util.TimeZone.getTimeZone(fromZone.getSelectedItem().toString()));
-                    c.set(Calendar.HOUR_OF_DAY, hh);
-                    c.set(Calendar.MINUTE, mm);
-                    c.set(Calendar.SECOND, 0);
-                    SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
-                    f.setTimeZone(java.util.TimeZone.getTimeZone(toZone.getSelectedItem().toString()));
-                    convOut.setText(f.format(c.getTime()) + " in " + toZone.getSelectedItem().toString());
-                } catch (Exception e) {
-                    convOut.setText("Use HH:mm");
-                }
+        convBtn.setOnClickListener(v -> {
+            try {
+                String[] parts = timeInput.getText().toString().trim().split(":");
+                int hh = Integer.parseInt(parts[0].trim());
+                int mm = Integer.parseInt(parts[1].trim());
+                Calendar c = Calendar.getInstance(java.util.TimeZone.getTimeZone(fromZone.getSelectedItem().toString()));
+                c.set(Calendar.HOUR_OF_DAY, hh);
+                c.set(Calendar.MINUTE, mm);
+                c.set(Calendar.SECOND, 0);
+                SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
+                f.setTimeZone(java.util.TimeZone.getTimeZone(toZone.getSelectedItem().toString()));
+                convOut.setText(f.format(c.getTime()) + " in " + toZone.getSelectedItem().toString());
+            } catch (Exception e) {
+                convOut.setText("Use HH:mm");
             }
         });
     }
@@ -3035,10 +3426,6 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText amount = makeInput(box, "Amount", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         amount.setText("100");
         final TextView output = makeOutput(box);
-        Runnable compute = new Runnable() {
-            public void run() {
-            }
-        };
         android.widget.AdapterView.OnItemSelectedListener listener = new android.widget.AdapterView.OnItemSelectedListener() {
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 convertCurrency(codes, perUsd, fromCur, toCur, amount, output);
@@ -3058,13 +3445,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         });
         MaterialButton swapBtn = makeButton(box, "Swap");
-        swapBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                int f = fromCur.getSelectedItemPosition();
-                int t = toCur.getSelectedItemPosition();
-                fromCur.setSelection(t);
-                toCur.setSelection(f);
-            }
+        swapBtn.setOnClickListener(v -> {
+            int f = fromCur.getSelectedItemPosition();
+            int t = toCur.getSelectedItemPosition();
+            fromCur.setSelection(t);
+            toCur.setSelection(f);
         });
         convertCurrency(codes, perUsd, fromCur, toCur, amount, output);
     }
@@ -3097,17 +3482,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final int[] tipPct = new int[]{15};
         final int[] people = new int[]{1};
-        Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    double bill = Double.parseDouble(billInput.getText().toString());
-                    double tip = bill * tipPct[0] / 100.0;
-                    double total = bill + tip;
-                    DecimalFormat df = new DecimalFormat("0.00");
-                    output.setText("Tip " + df.format(tip) + "  Total " + df.format(total) + "  Each " + df.format(total / people[0]));
-                } catch (Exception e) {
-                    output.setText("Enter bill amount");
-                }
+        Runnable compute = () -> {
+            try {
+                double bill = Double.parseDouble(billInput.getText().toString());
+                double tip = bill * tipPct[0] / 100.0;
+                double total = bill + tip;
+                DecimalFormat df = new DecimalFormat("0.00");
+                output.setText("Tip " + df.format(tip) + "  Total " + df.format(total) + "  Each " + df.format(total / people[0]));
+            } catch (Exception e) {
+                output.setText("Enter bill amount");
             }
         };
         tipBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -3151,31 +3534,29 @@ public class ToolRunnerActivity extends AppCompatActivity {
         rowsBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(rowsBox);
         final TextView output = makeOutput(box);
-        final Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    double totalPoints = 0;
-                    double totalCredits = 0;
-                    for (int i = 0; i < rowsBox.getChildCount(); i++) {
-                        LinearLayout row = (LinearLayout) rowsBox.getChildAt(i);
-                        Spinner g = (Spinner) row.getChildAt(0);
-                        EditText c = (EditText) row.getChildAt(1);
-                        String cs = c.getText().toString().trim();
-                        if (cs.isEmpty()) {
-                            continue;
-                        }
-                        double credits = Double.parseDouble(cs);
-                        totalPoints += points[g.getSelectedItemPosition()] * credits;
-                        totalCredits += credits;
+        final Runnable compute = () -> {
+            try {
+                double totalPoints = 0;
+                double totalCredits = 0;
+                for (int i = 0; i < rowsBox.getChildCount(); i++) {
+                    LinearLayout row = (LinearLayout) rowsBox.getChildAt(i);
+                    Spinner g = (Spinner) row.getChildAt(0);
+                    EditText c = (EditText) row.getChildAt(1);
+                    String cs = c.getText().toString().trim();
+                    if (cs.isEmpty()) {
+                        continue;
                     }
-                    if (totalCredits <= 0) {
-                        output.setText("Add courses with credits");
-                        return;
-                    }
-                    output.setText("GPA " + new DecimalFormat("0.00").format(totalPoints / totalCredits) + "  Credits " + new DecimalFormat("0.#").format(totalCredits));
-                } catch (Exception e) {
-                    output.setText("Check credits");
+                    double credits = Double.parseDouble(cs);
+                    totalPoints += points[g.getSelectedItemPosition()] * credits;
+                    totalCredits += credits;
                 }
+                if (totalCredits <= 0) {
+                    output.setText("Add courses with credits");
+                    return;
+                }
+                output.setText("GPA " + new DecimalFormat("0.00").format(totalPoints / totalCredits) + "  Credits " + new DecimalFormat("0.#").format(totalCredits));
+            } catch (Exception e) {
+                output.setText("Check credits");
             }
         };
         final android.widget.AdapterView.OnItemSelectedListener gradeListener = new android.widget.AdapterView.OnItemSelectedListener() {
@@ -3185,53 +3566,41 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void onNothingSelected(android.widget.AdapterView<?> parent) {
             }
         };
-        Runnable addRow = new Runnable() {
-            public void run() {
-            }
-        };
-        final Runnable addCourseRow = new Runnable() {
-            public void run() {
-                LinearLayout row = new LinearLayout(ToolRunnerActivity.this);
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                Spinner g = new Spinner(ToolRunnerActivity.this);
-                ArrayAdapter<String> ga = new ArrayAdapter<>(ToolRunnerActivity.this, android.R.layout.simple_spinner_item, grades);
-                ga.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                g.setAdapter(ga);
-                g.setSelection(1);
-                g.setOnItemSelectedListener(gradeListener);
-                row.addView(g, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                final EditText c = makeRowInput(row, "Credits", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL, 1f, "3");
-                c.addTextChangedListener(new TextWatcher() {
-                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    }
-                    public void onTextChanged(CharSequence s, int start, int before, int count) {
-                        compute.run();
-                    }
-                    public void afterTextChanged(Editable s) {
-                    }
-                });
-                MaterialButton del = new MaterialButton(ToolRunnerActivity.this);
-                del.setText("X");
-                del.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        rowsBox.removeView(row);
-                        compute.run();
-                    }
-                });
-                row.addView(del, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.5f));
-                rowsBox.addView(row);
+        final Runnable addCourseRow = () -> {
+            LinearLayout row = new LinearLayout(ToolRunnerActivity.this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            Spinner g = new Spinner(ToolRunnerActivity.this);
+            ArrayAdapter<String> ga = new ArrayAdapter<>(ToolRunnerActivity.this, android.R.layout.simple_spinner_item, grades);
+            ga.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            g.setAdapter(ga);
+            g.setSelection(1);
+            g.setOnItemSelectedListener(gradeListener);
+            row.addView(g, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            final EditText c = makeRowInput(row, "Credits", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL, 1f, "3");
+            c.addTextChangedListener(new TextWatcher() {
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    compute.run();
+                }
+                public void afterTextChanged(Editable s) {
+                }
+            });
+            MaterialButton del = new MaterialButton(ToolRunnerActivity.this);
+            del.setText("X");
+            del.setOnClickListener(v -> {
+                rowsBox.removeView(row);
                 compute.run();
-            }
+            });
+            row.addView(del, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.5f));
+            rowsBox.addView(row);
+            compute.run();
         };
         addCourseRow.run();
         addCourseRow.run();
         addCourseRow.run();
         MaterialButton addBtn = makeButton(box, "Add course");
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                addCourseRow.run();
-            }
-        });
+        addBtn.setOnClickListener(v -> addCourseRow.run());
     }
     private void buildPomodoro(LinearLayout box) {
         addTitle(box, "Pomodoro Timer");
@@ -3249,51 +3618,45 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton startBtn = makeRowButton(row, "Start", 1f);
         MaterialButton skipBtn = makeRowButton(row, "Skip", 1f);
         MaterialButton resetBtn = makeRowButton(row, "Reset", 1f);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (pomoRunning) {
-                    if (pomoTimer != null) {
-                        pomoTimer.cancel();
-                    }
-                    pomoRunning = false;
-                    ((Button) v).setText("Start");
-                    return;
-                }
-                long focusMs = parseLongSafe(focusInput.getText().toString()) * 60000L;
-                long breakMs = parseLongSafe(breakInput.getText().toString()) * 60000L;
-                if (focusMs <= 0 || breakMs <= 0) {
-                    toast("Enter minutes");
-                    return;
-                }
-                pomoRunning = true;
-                ((Button) v).setText("Pause");
-                startPomoPhase(focusMs, breakMs);
-            }
-        });
-        skipBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (pomoTimer != null) {
-                    pomoTimer.cancel();
-                }
-                long focusMs = parseLongSafe(focusInput.getText().toString()) * 60000L;
-                long breakMs = parseLongSafe(breakInput.getText().toString()) * 60000L;
-                advancePomoPhase(focusMs, breakMs);
-                if (pomoRunning) {
-                    startPomoPhase(focusMs, breakMs);
-                }
-            }
-        });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+        startBtn.setOnClickListener(v -> {
+            if (pomoRunning) {
                 if (pomoTimer != null) {
                     pomoTimer.cancel();
                 }
                 pomoRunning = false;
-                pomoPhase = 0;
-                pomoCycle = 1;
-                pomoText.setText("Ready");
-                startBtn.setText("Start");
+                ((Button) v).setText("Start");
+                return;
             }
+            long focusMs = parseLongSafe(focusInput.getText().toString()) * 60000L;
+            long breakMs = parseLongSafe(breakInput.getText().toString()) * 60000L;
+            if (focusMs <= 0 || breakMs <= 0) {
+                toast("Enter minutes");
+                return;
+            }
+            pomoRunning = true;
+            ((Button) v).setText("Pause");
+            startPomoPhase(focusMs, breakMs);
+        });
+        skipBtn.setOnClickListener(v -> {
+            if (pomoTimer != null) {
+                pomoTimer.cancel();
+            }
+            long focusMs = parseLongSafe(focusInput.getText().toString()) * 60000L;
+            long breakMs = parseLongSafe(breakInput.getText().toString()) * 60000L;
+            advancePomoPhase();
+            if (pomoRunning) {
+                startPomoPhase(focusMs, breakMs);
+            }
+        });
+        resetBtn.setOnClickListener(v -> {
+            if (pomoTimer != null) {
+                pomoTimer.cancel();
+            }
+            pomoRunning = false;
+            pomoPhase = 0;
+            pomoCycle = 1;
+            pomoText.setText("Ready");
+            startBtn.setText("Start");
         });
     }
     private void startPomoPhase(final long focusMs, final long breakMs) {
@@ -3306,14 +3669,13 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
         pomoTimer = new CountDownTimer(duration, 500) {
             public void onTick(long left) {
-                pomoLeft = left;
                 String label = pomoPhase == 0 ? "Focus " + pomoCycle : "Break";
                 pomoText.setText(label + "\n" + formatTimer(left));
             }
             public void onFinish() {
                 beep();
                 vibrateTick();
-                advancePomoPhase(focusMs, breakMs);
+                advancePomoPhase();
                 if (pomoRunning) {
                     startPomoPhase(focusMs, breakMs);
                 }
@@ -3321,7 +3683,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         };
         pomoTimer.start();
     }
-    private void advancePomoPhase(long focusMs, long breakMs) {
+    private void advancePomoPhase() {
         if (pomoPhase == 0) {
             pomoPhase = 1;
         } else {
@@ -3344,33 +3706,29 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton startBtn = makeRowButton(row, "Start", 1f);
         MaterialButton stopBtn = makeRowButton(row, "Stop", 1f);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (hiitRunning) {
-                    return;
-                }
-                long work = parseLongSafe(workInput.getText().toString()) * 1000L;
-                long rest = parseLongSafe(restInput.getText().toString()) * 1000L;
-                int rounds = (int) parseLongSafe(roundsInput.getText().toString());
-                if (work <= 0 || rest <= 0 || rounds <= 0) {
-                    toast("Enter work, rest and rounds");
-                    return;
-                }
-                hiitRunning = true;
-                runHiitRound(output, work, rest, rounds, 1, true);
+        startBtn.setOnClickListener(v -> {
+            if (hiitRunning) {
+                return;
             }
+            long work = parseLongSafe(workInput.getText().toString()) * 1000L;
+            long rest = parseLongSafe(restInput.getText().toString()) * 1000L;
+            int rounds = (int) parseLongSafe(roundsInput.getText().toString());
+            if (work <= 0 || rest <= 0 || rounds <= 0) {
+                toast("Enter work, rest and rounds");
+                return;
+            }
+            hiitRunning = true;
+            runHiitRound(output, work, rest, rounds, 1, true);
         });
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hiitRunning = false;
-                if (hiitTimer != null) {
-                    try {
-                        hiitTimer.cancel();
-                    } catch (Exception ignored) {
-                    }
+        stopBtn.setOnClickListener(v -> {
+            hiitRunning = false;
+            if (hiitTimer != null) {
+                try {
+                    hiitTimer.cancel();
+                } catch (Exception ignored) {
                 }
-                output.setText("Stopped");
             }
+            output.setText("Stopped");
         });
     }
     private void runHiitRound(final TextView output, final long work, final long rest, final int rounds, final int current, final boolean isWork) {
@@ -3422,18 +3780,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         });
         wheelView.setOptions(parseWheelOptions(optionsInput.getText().toString()));
-        wheelView.setListener(new WheelView.WheelListener() {
-            public void onResult(String name) {
-                result.setText(name);
-                vibrateTick();
-            }
+        wheelView.setListener(name -> {
+            result.setText(name);
+            vibrateTick();
         });
         MaterialButton spinBtn = makeButton(box, "Spin");
-        spinBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                wheelView.setOptions(parseWheelOptions(optionsInput.getText().toString()));
-                wheelView.spin();
-            }
+        spinBtn.setOnClickListener(v -> {
+            wheelView.setOptions(parseWheelOptions(optionsInput.getText().toString()));
+            wheelView.spin();
         });
     }
     private List<String> parseWheelOptions(String raw) {
@@ -3461,10 +3815,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         private float rotation = 0f;
         private boolean spinning = false;
         private WheelListener listener;
-        private Paint slicePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private Paint pointerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private int[] palette = new int[]{Color.parseColor("#1B73E8"), Color.parseColor("#0D652D"), Color.parseColor("#B06000"), Color.parseColor("#A50E0E"), Color.parseColor("#681DA8"), Color.parseColor("#00696B")};
+        private final Paint slicePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint pointerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final int[] palette = new int[]{Color.parseColor("#1B73E8"), Color.parseColor("#0D652D"), Color.parseColor("#B06000"), Color.parseColor("#A50E0E"), Color.parseColor("#681DA8"), Color.parseColor("#00696B")};
         private int bgWheel = Color.WHITE;
         public WheelView(Context context) {
             super(context);
@@ -3566,48 +3920,22 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row3 = makeRow(box);
         MaterialButton altBtn = makeRowButton(row3, "aLtErNaTe", 1f);
         MaterialButton reverseBtn = makeRowButton(row3, "Reverse", 1f);
-        upperBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(input.getText().toString().toUpperCase(Locale.US));
+        upperBtn.setOnClickListener(v -> output.setText(input.getText().toString().toUpperCase(Locale.US)));
+        lowerBtn.setOnClickListener(v -> output.setText(input.getText().toString().toLowerCase(Locale.US)));
+        titleBtn.setOnClickListener(v -> output.setText(toTitleCase(input.getText().toString())));
+        sentenceBtn.setOnClickListener(v -> output.setText(toSentenceCase(input.getText().toString())));
+        altBtn.setOnClickListener(v -> {
+            String s = input.getText().toString();
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < s.length(); i++) {
+                char c = s.charAt(i);
+                b.append(i % 2 == 0 ? Character.toUpperCase(c) : Character.toLowerCase(c));
             }
+            output.setText(b.toString());
         });
-        lowerBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(input.getText().toString().toLowerCase(Locale.US));
-            }
-        });
-        titleBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(toTitleCase(input.getText().toString()));
-            }
-        });
-        sentenceBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(toSentenceCase(input.getText().toString()));
-            }
-        });
-        altBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String s = input.getText().toString();
-                StringBuilder b = new StringBuilder();
-                for (int i = 0; i < s.length(); i++) {
-                    char c = s.charAt(i);
-                    b.append(i % 2 == 0 ? Character.toUpperCase(c) : Character.toLowerCase(c));
-                }
-                output.setText(b.toString());
-            }
-        });
-        reverseBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(new StringBuilder(input.getText().toString()).reverse().toString());
-            }
-        });
+        reverseBtn.setOnClickListener(v -> output.setText(new StringBuilder(input.getText().toString()).reverse().toString()));
         MaterialButton copyBtn = makeButton(box, "Copy result");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("case", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("case", output.getText().toString()));
     }
     private String toTitleCase(String s) {
         StringBuilder b = new StringBuilder();
@@ -3680,6 +4008,24 @@ public class ToolRunnerActivity extends AppCompatActivity {
         m.put("7", "--...");
         m.put("8", "---..");
         m.put("9", "----.");
+        m.put(".", ".-.-.-");
+        m.put(",", "--..--");
+        m.put("?", "..--..");
+        m.put("'", ".----.");
+        m.put("!", "-.-.--");
+        m.put("/", "-..-.");
+        m.put("(", "-.--.");
+        m.put(")", "-.--.-");
+        m.put("&", ".-...");
+        m.put(":", "---...");
+        m.put(";", "-.-.-.");
+        m.put("=", "-...-");
+        m.put("+", ".-.-.");
+        m.put("-", "-....-");
+        m.put("_", "..--.-");
+        m.put("\"", ".-..-.");
+        m.put("$", "...-..-");
+        m.put("@", ".--.-.");
         return m;
     }
     private void buildMorse(LinearLayout box) {
@@ -3695,77 +4041,65 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton encBtn = makeRowButton(row, "Encode", 1f);
         MaterialButton decBtn = makeRowButton(row, "Decode", 1f);
-        encBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String s = input.getText().toString().toUpperCase(Locale.US);
-                StringBuilder b = new StringBuilder();
-                for (int i = 0; i < s.length(); i++) {
-                    char c = s.charAt(i);
-                    if (c == ' ') {
-                        b.append("  ");
-                    } else {
-                        String code = enc.get(String.valueOf(c));
-                        if (code != null) {
-                            if (b.length() > 0 && b.charAt(b.length() - 1) != ' ') {
-                                b.append(' ');
-                            }
-                            b.append(code);
+        encBtn.setOnClickListener(v -> {
+            String s = input.getText().toString().toUpperCase(Locale.US);
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < s.length(); i++) {
+                char c = s.charAt(i);
+                if (c == ' ') {
+                    b.append("  ");
+                } else {
+                    String code = enc.get(String.valueOf(c));
+                    if (code != null) {
+                        if (b.length() > 0 && b.charAt(b.length() - 1) != ' ') {
+                            b.append(' ');
                         }
+                        b.append(code);
                     }
                 }
-                output.setText(b.toString().trim());
             }
+            output.setText(b.toString().trim());
         });
-        decBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String s = input.getText().toString().trim();
-                StringBuilder b = new StringBuilder();
-                for (String word : s.split("   ")) {
-                    for (String code : word.trim().split(" ")) {
-                        String letter = dec.get(code.trim());
-                        if (letter != null) {
-                            b.append(letter);
-                        }
+        decBtn.setOnClickListener(v -> {
+            String s = input.getText().toString().trim();
+            StringBuilder b = new StringBuilder();
+            for (String word : s.split("   ")) {
+                for (String code : word.trim().split(" ")) {
+                    String letter = dec.get(code.trim());
+                    if (letter != null) {
+                        b.append(letter);
                     }
-                    b.append(' ');
                 }
-                output.setText(b.toString().trim());
+                b.append(' ');
             }
+            output.setText(b.toString().trim());
         });
         LinearLayout row2 = makeRow(box);
         MaterialButton playBtn = makeRowButton(row2, "Play", 1f);
         MaterialButton copyBtn = makeRowButton(row2, "Copy", 1f);
-        playBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                final String code = output.getText().toString();
-                new Thread(new Runnable() {
-                    public void run() {
-                        try {
-                            ToneGenerator tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
-                            for (int i = 0; i < code.length(); i++) {
-                                char c = code.charAt(i);
-                                if (c == '.') {
-                                    tg.startTone(ToneGenerator.TONE_PROP_BEEP, 120);
-                                    Thread.sleep(200);
-                                } else if (c == '-') {
-                                    tg.startTone(ToneGenerator.TONE_PROP_BEEP, 360);
-                                    Thread.sleep(440);
-                                } else {
-                                    Thread.sleep(240);
-                                }
-                            }
-                            tg.release();
-                        } catch (Exception ignored) {
+        playBtn.setOnClickListener(v -> {
+            final String code = output.getText().toString();
+            new Thread(() -> {
+                try {
+                    ToneGenerator tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
+                    for (int i = 0; i < code.length(); i++) {
+                        char c = code.charAt(i);
+                        if (c == '.') {
+                            tg.startTone(ToneGenerator.TONE_PROP_BEEP, 120);
+                            Thread.sleep(200);
+                        } else if (c == '-') {
+                            tg.startTone(ToneGenerator.TONE_PROP_BEEP, 360);
+                            Thread.sleep(440);
+                        } else {
+                            Thread.sleep(240);
                         }
                     }
-                }).start();
-            }
+                    tg.release();
+                } catch (Exception ignored) {
+                }
+            }).start();
         });
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("morse", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("morse", output.getText().toString()));
     }
     private void buildBaseConv(LinearLayout box) {
         addTitle(box, "Base Converter");
@@ -3780,21 +4114,19 @@ public class ToolRunnerActivity extends AppCompatActivity {
         fromBase.setSelection(2);
         box.addView(fromBase);
         final TextView output = makeOutput(box);
-        Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    String s = input.getText().toString().trim().replace("0x", "").replace("0X", "");
-                    long v = Long.parseLong(s, radix[fromBase.getSelectedItemPosition()]);
-                    StringBuilder b = new StringBuilder();
-                    b.append("Bin: ").append(Long.toBinaryString(v)).append("\n");
-                    b.append("Oct: ").append(Long.toOctalString(v)).append("\n");
-                    b.append("Dec: ").append(v).append("\n");
-                    b.append("Hex: ").append(Long.toHexString(v).toUpperCase(Locale.US)).append("\n");
-                    b.append("Bits: ").append(v == 0 ? 1 : (64 - Long.numberOfLeadingZeros(v)));
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Invalid for selected base");
-                }
+        Runnable compute = () -> {
+            try {
+                String s = input.getText().toString().trim().replace("0x", "").replace("0X", "");
+                long v = Long.parseLong(s, radix[fromBase.getSelectedItemPosition()]);
+                StringBuilder b = new StringBuilder();
+                b.append("Bin: ").append(Long.toBinaryString(v)).append("\n");
+                b.append("Oct: ").append(Long.toOctalString(v)).append("\n");
+                b.append("Dec: ").append(v).append("\n");
+                b.append("Hex: ").append(Long.toHexString(v).toUpperCase(Locale.US)).append("\n");
+                b.append("Bits: ").append(v == 0 ? 1 : (64 - Long.numberOfLeadingZeros(v)));
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Invalid for selected base");
             }
         };
         final Runnable computeRef = compute;
@@ -3823,27 +4155,29 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText priceInput = makeInput(box, "Price per liter (optional)", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double dist = Double.parseDouble(distInput.getText().toString());
-                    double fuel = Double.parseDouble(fuelInput.getText().toString());
-                    double per100 = fuel / dist * 100.0;
-                    double kml = dist / fuel;
-                    double mpg = kml * 2.35215;
-                    DecimalFormat df = new DecimalFormat("0.00");
-                    StringBuilder b = new StringBuilder();
-                    b.append("Consumption ").append(df.format(per100)).append(" L/100km\n");
-                    b.append("Economy ").append(df.format(kml)).append(" km/L  (").append(df.format(mpg)).append(" mpg)\n");
-                    String ps = priceInput.getText().toString().trim();
-                    if (!ps.isEmpty()) {
-                        double price = Double.parseDouble(ps);
-                        b.append("Trip cost ").append(df.format(fuel * price)).append("  (").append(df.format(fuel * price / dist)).append(" per km)");
-                    }
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Enter distance and fuel");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double dist = Double.parseDouble(distInput.getText().toString());
+                double fuel = Double.parseDouble(fuelInput.getText().toString());
+                if (dist <= 0 || fuel <= 0) {
+                    output.setText("Distance and fuel must be above zero");
+                    return;
                 }
+                double per100 = fuel / dist * 100.0;
+                double kml = dist / fuel;
+                double mpg = kml * 2.35215;
+                DecimalFormat df = new DecimalFormat("0.00");
+                StringBuilder b = new StringBuilder();
+                b.append("Consumption ").append(df.format(per100)).append(" L/100km\n");
+                b.append("Economy ").append(df.format(kml)).append(" km/L  (").append(df.format(mpg)).append(" mpg)\n");
+                String ps = priceInput.getText().toString().trim();
+                if (!ps.isEmpty()) {
+                    double price = Double.parseDouble(ps);
+                    b.append("Trip cost ").append(df.format(fuel * price)).append("  (").append(df.format(fuel * price / dist)).append(" per km)");
+                }
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Enter distance and fuel");
             }
         });
     }
@@ -3856,56 +4190,42 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText pInput = makeInput(box, "Power W", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Solve");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    Double V = parseDoubleOrNull(vInput.getText().toString());
-                    Double I = parseDoubleOrNull(iInput.getText().toString());
-                    Double R = parseDoubleOrNull(rInput.getText().toString());
-                    Double P = parseDoubleOrNull(pInput.getText().toString());
-                    for (int k = 0; k < 6; k++) {
-                        if (V == null && I != null && R != null) {
-                            V = I * R;
-                        }
-                        if (V == null && P != null && I != null && I != 0) {
-                            V = P / I;
-                        }
-                        if (V == null && P != null && R != null && R > 0) {
-                            V = Math.sqrt(P * R);
-                        }
-                        if (I == null && V != null && R != null && R != 0) {
-                            I = V / R;
-                        }
-                        if (I == null && P != null && V != null && V != 0) {
-                            I = P / V;
-                        }
-                        if (I == null && P != null && R != null && R > 0) {
-                            I = Math.sqrt(P / R);
-                        }
-                        if (R == null && V != null && I != null && I != 0) {
-                            R = V / I;
-                        }
-                        if (R == null && V != null && P != null && P != 0) {
-                            R = V * V / P;
-                        }
-                        if (R == null && P != null && I != null && I != 0) {
-                            R = P / (I * I);
-                        }
-                        if (P == null && V != null && I != null) {
-                            P = V * I;
-                        }
-                        if (P == null && V != null && R != null && R != 0) {
-                            P = V * V / R;
-                        }
-                        if (P == null && I != null && R != null) {
-                            P = I * I * R;
-                        }
+        goBtn.setOnClickListener(v -> {
+            try {
+                Double V = parseDoubleOrNull(vInput.getText().toString());
+                Double I = parseDoubleOrNull(iInput.getText().toString());
+                Double R = parseDoubleOrNull(rInput.getText().toString());
+                Double P = parseDoubleOrNull(pInput.getText().toString());
+                for (int k = 0; k < 6; k++) {
+                    if (V == null && I != null && R != null) {
+                        V = I * R;
                     }
-                    DecimalFormat df = new DecimalFormat("0.####");
-                    output.setText("V=" + fmtNull(V, df) + "  I=" + fmtNull(I, df) + "  R=" + fmtNull(R, df) + "  P=" + fmtNull(P, df));
-                } catch (Exception e) {
-                    output.setText("Enter at least two values");
+                    if (V == null && P != null && I != null && I != 0) {
+                        V = P / I;
+                    }
+                    if (V == null && P != null && R != null && R > 0) {
+                        V = Math.sqrt(P * R);
+                    }
+                    if (I == null && V != null && R != null && R != 0) {
+                        I = V / R;
+                    }
+                    if (I == null && P != null && V != null && V != 0) {
+                        I = P / V;
+                    }
+                    if (R == null && V != null && I != null && I != 0) {
+                        R = V / I;
+                    }
+                    if (R == null && V != null && P != null && P != 0) {
+                        R = V * V / P;
+                    }
+                    if (P == null && V != null && I != null) {
+                        P = V * I;
+                    }
                 }
+                DecimalFormat df = new DecimalFormat("0.####");
+                output.setText("V=" + fmtNull(V, df) + "  I=" + fmtNull(I, df) + "  R=" + fmtNull(R, df) + "  P=" + fmtNull(P, df));
+            } catch (Exception e) {
+                output.setText("Enter at least two values");
             }
         });
     }
@@ -3942,46 +4262,44 @@ public class ToolRunnerActivity extends AppCompatActivity {
         bandsBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(bandsBox);
         final TextView output = makeOutput(box);
-        final Runnable compute = new Runnable() {
-            public void run() {
-            }
-        };
-        final Runnable buildBands = new Runnable() {
-            public void run() {
-            }
-        };
         final int[] bandCount = new int[]{4};
-        final Runnable computeValue = new Runnable() {
-            public void run() {
-                try {
-                    int n = bandsBox.getChildCount();
-                    List<Integer> digits = new ArrayList<>();
-                    for (int i = 0; i < n; i++) {
-                        Spinner s = (Spinner) bandsBox.getChildAt(i);
-                        digits.add(s.getSelectedItemPosition());
-                    }
-                    int[] digitVal = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2};
-                    double[] tolMap = new double[]{20, 1, 2, 20, 20, 0.5, 0.25, 0.1, 0.05, 20, 5, 10};
-                    double value;
-                    double tol;
-                    if (bandCount[0] == 4) {
-                        int d1 = digitVal[digits.get(0)];
-                        int d2 = digitVal[digits.get(1)];
-                        int mult = digitVal[digits.get(2)];
-                        tol = tolMap[digits.get(3)];
-                        value = (d1 * 10 + d2) * Math.pow(10, mult);
-                    } else {
-                        int d1 = digitVal[digits.get(0)];
-                        int d2 = digitVal[digits.get(1)];
-                        int d3 = digitVal[digits.get(2)];
-                        int mult = digitVal[digits.get(3)];
-                        tol = tolMap[digits.get(4)];
-                        value = (d1 * 100 + d2 * 10 + d3) * Math.pow(10, mult);
-                    }
-                    output.setText(formatOhms(value) + "  Tol " + tol + "%");
-                } catch (Exception e) {
-                    output.setText("Pick band colors");
+        final Runnable computeValue = () -> {
+            try {
+                int n = bandsBox.getChildCount();
+                List<Integer> digits = new ArrayList<>();
+                for (int i = 0; i < n; i++) {
+                    Spinner s = (Spinner) bandsBox.getChildAt(i);
+                    digits.add(s.getSelectedItemPosition());
                 }
+                int[] digitVal = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2};
+                double[] tolMap = new double[]{20, 1, 2, 20, 20, 0.5, 0.25, 0.1, 0.05, 20, 5, 10};
+                double value;
+                double tol;
+                if (bandCount[0] == 4) {
+                    int d1 = digitVal[digits.get(0)];
+                    int d2 = digitVal[digits.get(1)];
+                    if (d1 < 0 || d2 < 0) {
+                        output.setText("Gold/Silver invalid as digits");
+                        return;
+                    }
+                    int mult = digitVal[digits.get(2)];
+                    tol = tolMap[digits.get(3)];
+                    value = (d1 * 10 + d2) * Math.pow(10, mult);
+                } else {
+                    int d1 = digitVal[digits.get(0)];
+                    int d2 = digitVal[digits.get(1)];
+                    int d3 = digitVal[digits.get(2)];
+                    if (d1 < 0 || d2 < 0 || d3 < 0) {
+                        output.setText("Gold/Silver invalid as digits");
+                        return;
+                    }
+                    int mult = digitVal[digits.get(3)];
+                    tol = tolMap[digits.get(4)];
+                    value = (d1 * 100 + d2 * 10 + d3) * Math.pow(10, mult);
+                }
+                output.setText(formatOhms(value) + "  Tol " + tol + "%");
+            } catch (Exception e) {
+                output.setText("Pick band colors");
             }
         };
         final android.widget.AdapterView.OnItemSelectedListener bandListener = new android.widget.AdapterView.OnItemSelectedListener() {
@@ -3991,30 +4309,26 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void onNothingSelected(android.widget.AdapterView<?> parent) {
             }
         };
-        final Runnable rebuild = new Runnable() {
-            public void run() {
-                bandsBox.removeAllViews();
-                int count = bandCount[0] == 4 ? 4 : 5;
-                String[] labels = bandCount[0] == 4 ? new String[]{"Digit 1", "Digit 2", "Multiplier", "Tolerance"} : new String[]{"Digit 1", "Digit 2", "Digit 3", "Multiplier", "Tolerance"};
-                int[] defaults = bandCount[0] == 4 ? new int[]{2, 7, 3, 10} : new int[]{2, 7, 3, 3, 10};
-                for (int i = 0; i < count; i++) {
-                    addLabel(bandsBox, labels[i]);
-                    Spinner s = new Spinner(ToolRunnerActivity.this);
-                    ArrayAdapter<String> ca = new ArrayAdapter<>(ToolRunnerActivity.this, android.R.layout.simple_spinner_item, colors);
-                    ca.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                    s.setAdapter(ca);
-                    s.setSelection(defaults[i]);
-                    s.setOnItemSelectedListener(bandListener);
-                    bandsBox.addView(s);
-                }
-                computeValue.run();
+        final Runnable rebuild = () -> {
+            bandsBox.removeAllViews();
+            int count = bandCount[0] == 4 ? 4 : 5;
+            String[] labels = bandCount[0] == 4 ? new String[]{"Digit 1", "Digit 2", "Multiplier", "Tolerance"} : new String[]{"Digit 1", "Digit 2", "Digit 3", "Multiplier", "Tolerance"};
+            int[] defaults = bandCount[0] == 4 ? new int[]{2, 7, 3, 10} : new int[]{2, 7, 3, 3, 10};
+            for (int i = 0; i < count; i++) {
+                addLabel(bandsBox, labels[i]);
+                Spinner s = new Spinner(ToolRunnerActivity.this);
+                ArrayAdapter<String> ca = new ArrayAdapter<>(ToolRunnerActivity.this, android.R.layout.simple_spinner_item, colors);
+                ca.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                s.setAdapter(ca);
+                s.setSelection(defaults[i]);
+                s.setOnItemSelectedListener(bandListener);
+                bandsBox.addView(s);
             }
+            computeValue.run();
         };
-        modeGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            public void onCheckedChanged(RadioGroup g, int checkedId) {
-                bandCount[0] = (checkedId == fiveBtn.getId()) ? 5 : 4;
-                rebuild.run();
-            }
+        modeGroup.setOnCheckedChangeListener((g, checkedId) -> {
+            bandCount[0] = (checkedId == fiveBtn.getId()) ? 5 : 4;
+            rebuild.run();
         });
         rebuild.run();
     }
@@ -4047,37 +4361,67 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, notes);
         listView.setAdapter(adapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(260)));
-        final Runnable persist = new Runnable() {
-            public void run() {
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(notes)).apply();
-                } catch (Exception ignored) {
-                }
+        final Runnable persist = () -> {
+            try {
+                getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(notes)).apply();
+            } catch (Exception ignored) {
             }
         };
         MaterialButton addBtn = makeButton(box, "Save note");
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String t = input.getText().toString().trim();
-                if (t.isEmpty()) {
-                    toast("Write something first");
-                    return;
-                }
-                notes.add(0, t);
-                input.setText("");
-                adapter.notifyDataSetChanged();
-                persist.run();
+        addBtn.setOnClickListener(v -> {
+            String t = input.getText().toString().trim();
+            if (t.isEmpty()) {
+                toast("Write something first");
+                return;
             }
+            notes.add(0, t);
+            input.setText("");
+            adapter.notifyDataSetChanged();
+            persist.run();
         });
-        listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
-            public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                notes.remove(position);
-                adapter.notifyDataSetChanged();
-                persist.run();
-                return true;
-            }
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            notes.remove(position);
+            adapter.notifyDataSetChanged();
+            persist.run();
+            return true;
         });
         addLabel(box, "Long-press a note to delete it.");
+        LinearLayout exportRow = makeRow(box);
+        MaterialButton exportBtn = makeRowButton(exportRow, "Export file", 1f);
+        MaterialButton shareNotesBtn = makeRowButton(exportRow, "Share", 1f);
+        MaterialButton locateNotesBtn = makeRowButton(exportRow, "Locate file", 1f);
+        final java.io.File[] lastExport = new java.io.File[1];
+        exportBtn.setOnClickListener(v -> {
+            if (notes.isEmpty()) {
+                toast("No notes to export");
+                return;
+            }
+            try {
+                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_DOCUMENTS) , "Notes");
+                dir.mkdirs();
+                java.io.File out = new java.io.File(dir, "notes_" + System.currentTimeMillis() + ".txt");
+                StringBuilder sb = new StringBuilder();
+                for (String n : notes) sb.append(n).append("\n\n");
+                java.io.FileWriter w = new java.io.FileWriter(out);
+                w.write(sb.toString().trim());
+                w.close();
+                lastExport[0] = out;
+                toast("Exported " + out.getName());
+            } catch (Exception e) {
+                toast("Export failed");
+            }
+        });
+        shareNotesBtn.setOnClickListener(v -> {
+            if (lastExport[0] != null && lastExport[0].exists()) shareToolFile(lastExport[0], "text/plain");
+            else if (!notes.isEmpty()) {
+                Intent s = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, android.text.TextUtils.join("\n\n", notes));
+                startActivity(Intent.createChooser(s, "Share notes"));
+            } else toast("Nothing to share");
+        });
+        locateNotesBtn.setOnClickListener(v -> {
+            if (lastExport[0] != null && lastExport[0].exists()) locateToolFile(lastExport[0]);
+            else toast("Export first");
+        });
     }
     private static class CheckItem {
         String title;
@@ -4105,75 +4449,94 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final LinearLayout listBox = new LinearLayout(this);
         listBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(listBox);
-        final Runnable persist = new Runnable() {
-            public void run() {
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(items)).apply();
-                } catch (Exception ignored) {
-                }
-            }
-        };
-        final Runnable refresh = new Runnable() {
-            public void run() {
+        final Runnable persist = () -> {
+            try {
+                getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(items)).apply();
+            } catch (Exception ignored) {
             }
         };
         final Runnable[] render = new Runnable[1];
-        render[0] = new Runnable() {
-            public void run() {
-                listBox.removeAllViews();
-                for (int i = 0; i < items.size(); i++) {
-                    final int idx = i;
-                    CheckItem item = items.get(i);
-                    LinearLayout row = new LinearLayout(ToolRunnerActivity.this);
-                    row.setOrientation(LinearLayout.HORIZONTAL);
-                    row.setGravity(Gravity.CENTER_VERTICAL);
-                    CheckBox cb = new CheckBox(ToolRunnerActivity.this);
-                    cb.setText(item.title);
-                    cb.setChecked(item.done);
-                    cb.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-                        public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                            items.get(idx).done = checked;
-                            persist.run();
-                        }
-                    });
-                    row.addView(cb, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                    MaterialButton del = new MaterialButton(ToolRunnerActivity.this);
-                    del.setText("X");
-                    del.setOnClickListener(v -> {
-                        items.remove(idx);
-                        persist.run();
-                        render[0].run();
-                    });
-                    row.addView(del, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    listBox.addView(row);
-                }
+        render[0] = () -> {
+            listBox.removeAllViews();
+            for (int i = 0; i < items.size(); i++) {
+                final int idx = i;
+                CheckItem item = items.get(i);
+                LinearLayout row = new LinearLayout(ToolRunnerActivity.this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                CheckBox cb = new CheckBox(ToolRunnerActivity.this);
+                cb.setText(item.title);
+                cb.setChecked(item.done);
+                cb.setOnCheckedChangeListener((b, checked) -> {
+                    items.get(idx).done = checked;
+                    persist.run();
+                });
+                row.addView(cb, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                MaterialButton del = new MaterialButton(ToolRunnerActivity.this);
+                del.setText("X");
+                del.setOnClickListener(v -> {
+                    items.remove(idx);
+                    persist.run();
+                    render[0].run();
+                });
+                row.addView(del, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                listBox.addView(row);
             }
         };
         render[0].run();
         MaterialButton addBtn = makeButton(box, "Add item");
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String t = input.getText().toString().trim();
-                if (t.isEmpty()) {
-                    return;
-                }
-                items.add(new CheckItem(t, false));
-                input.setText("");
-                persist.run();
-                render[0].run();
+        addBtn.setOnClickListener(v -> {
+            String t = input.getText().toString().trim();
+            if (t.isEmpty()) {
+                return;
             }
+            items.add(new CheckItem(t, false));
+            input.setText("");
+            persist.run();
+            render[0].run();
         });
         MaterialButton clearBtn = makeButton(box, "Clear completed");
-        clearBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                for (int i = items.size() - 1; i >= 0; i--) {
-                    if (items.get(i).done) {
-                        items.remove(i);
-                    }
+        clearBtn.setOnClickListener(v -> {
+            for (int i = items.size() - 1; i >= 0; i--) {
+                if (items.get(i).done) {
+                    items.remove(i);
                 }
-                persist.run();
-                render[0].run();
             }
+            persist.run();
+            render[0].run();
+        });
+        LinearLayout exportRow = makeRow(box);
+        MaterialButton exportBtn = makeRowButton(exportRow, "Export file", 1f);
+        MaterialButton shareBtn = makeRowButton(exportRow, "Share", 1f);
+        MaterialButton locateBtn = makeRowButton(exportRow, "Locate file", 1f);
+        final java.io.File[] lastExport = new java.io.File[1];
+        exportBtn.setOnClickListener(v -> {
+            if (items.isEmpty()) {
+                toast("Nothing to export");
+                return;
+            }
+            try {
+                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_DOCUMENTS), "Notes");
+                dir.mkdirs();
+                java.io.File out = new java.io.File(dir, "checklist_" + System.currentTimeMillis() + ".txt");
+                StringBuilder sb = new StringBuilder();
+                for (CheckItem it : items) sb.append(it.done ? "[x] " : "[ ] ").append(it.title).append("\n");
+                java.io.FileWriter w = new java.io.FileWriter(out);
+                w.write(sb.toString().trim());
+                w.close();
+                lastExport[0] = out;
+                toast("Exported " + out.getName());
+            } catch (Exception e) {
+                toast("Export failed");
+            }
+        });
+        shareBtn.setOnClickListener(v -> {
+            if (lastExport[0] != null && lastExport[0].exists()) shareToolFile(lastExport[0], "text/plain");
+            else toast("Export first");
+        });
+        locateBtn.setOnClickListener(v -> {
+            if (lastExport[0] != null && lastExport[0].exists()) locateToolFile(lastExport[0]);
+            else toast("Export first");
         });
     }
     private void stopTone() {
@@ -4219,17 +4582,100 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton playBtn = makeRowButton(row, "Play", 1f);
         MaterialButton stopBtn = makeRowButton(row, "Stop", 1f);
-        playBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                stopTone();
-                startTone(freq[0]);
+        playBtn.setOnClickListener(v -> {
+            stopTone();
+            startTone(freq[0]);
+        });
+        stopBtn.setOnClickListener(v -> stopTone());
+        addLabel(box, "Waveform");
+        final Spinner waveSpinner = new Spinner(this);
+        final String[] waves = new String[]{"Sine", "Square", "Sawtooth"};
+        ArrayAdapter<String> waveAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, waves);
+        waveAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        waveSpinner.setAdapter(waveAdapter);
+        box.addView(waveSpinner);
+        final TextView durLabel = addLabel(box, "Save length: 3 s");
+        SeekBar durBar = new SeekBar(this);
+        durBar.setMax(27);
+        durBar.setProgress(2);
+        box.addView(durBar);
+        final int[] toneSecs = new int[]{3};
+        durBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+                toneSecs[0] = 1 + progress;
+                durLabel.setText("Save length: " + toneSecs[0] + " s");
+            }
+            public void onStartTrackingTouch(SeekBar s) {
+            }
+            public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                stopTone();
+        LinearLayout toneRow2 = makeRow(box);
+        MaterialButton saveToneBtn = makeRowButton(toneRow2, "Save WAV", 1f);
+        MaterialButton shareToneBtn = makeRowButton(toneRow2, "Share", 1f);
+        MaterialButton locateToneBtn = makeRowButton(toneRow2, "Locate file", 1f);
+        final java.io.File[] lastTone = new java.io.File[1];
+        saveToneBtn.setOnClickListener(v -> {
+            try {
+                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_MUSIC), "Tones");
+                dir.mkdirs();
+                java.io.File out = new java.io.File(dir, "tone_" + freq[0] + "hz_" + System.currentTimeMillis() + ".wav");
+                writeToneWav(out, freq[0], waveSpinner.getSelectedItemPosition(), toneSecs[0]);
+                lastTone[0] = out;
+                toast("Saved " + out.getName());
+            } catch (Exception e) {
+                toast("Save failed");
             }
         });
+        shareToneBtn.setOnClickListener(v -> {
+            if (lastTone[0] != null && lastTone[0].exists()) shareToolFile(lastTone[0], "audio/*");
+            else toast("Save first");
+        });
+        locateToneBtn.setOnClickListener(v -> {
+            if (lastTone[0] != null && lastTone[0].exists()) locateToolFile(lastTone[0]);
+            else toast("Save first");
+        });
+    }
+    private void writeToneWav(java.io.File out, int freqHz, int kind, int seconds) throws Exception {
+        int sr = 44100;
+        int n = Math.max(1, sr * Math.max(1, seconds));
+        int dataSize = n * 2;
+        java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+        byte[] h = new byte[44];
+        h[0] = 'R'; h[1] = 'I'; h[2] = 'F'; h[3] = 'F';
+        int chunk = 36 + dataSize;
+        h[4] = (byte) (chunk & 255); h[5] = (byte) ((chunk >> 8) & 255); h[6] = (byte) ((chunk >> 16) & 255); h[7] = (byte) ((chunk >> 24) & 255);
+        h[8] = 'W'; h[9] = 'A'; h[10] = 'V'; h[11] = 'E';
+        h[12] = 'f'; h[13] = 'm'; h[14] = 't'; h[15] = ' ';
+        h[16] = 16; h[20] = 1; h[22] = 1;
+        h[24] = (byte) (sr & 255); h[25] = (byte) ((sr >> 8) & 255); h[26] = (byte) ((sr >> 16) & 255); h[27] = (byte) ((sr >> 24) & 255);
+        int br = sr * 2;
+        h[28] = (byte) (br & 255); h[29] = (byte) ((br >> 8) & 255); h[30] = (byte) ((br >> 16) & 255); h[31] = (byte) ((br >> 24) & 255);
+        h[32] = 2; h[34] = 16;
+        h[36] = 'd'; h[37] = 'a'; h[38] = 't'; h[39] = 'a';
+        h[40] = (byte) (dataSize & 255); h[41] = (byte) ((dataSize >> 8) & 255); h[42] = (byte) ((dataSize >> 16) & 255); h[43] = (byte) ((dataSize >> 24) & 255);
+        os.write(h);
+        double step = 2.0 * Math.PI * freqHz / sr;
+        double phase = 0;
+        byte[] buf = new byte[4096];
+        int pos = 0;
+        for (int i = 0; i < n; i++) {
+            double s;
+            if (kind == 1) s = Math.signum(Math.sin(phase));
+            else if (kind == 2) s = 2.0 * (phase / (2.0 * Math.PI) - Math.floor(phase / (2.0 * Math.PI) + 0.5));
+            else s = Math.sin(phase);
+            short v = (short) (s * 16000);
+            buf[pos++] = (byte) (v & 255);
+            buf[pos++] = (byte) ((v >> 8) & 255);
+            if (pos == buf.length) {
+                os.write(buf);
+                pos = 0;
+            }
+            phase += step;
+            if (phase > 2.0 * Math.PI * 4096) phase -= 2.0 * Math.PI * 4096;
+        }
+        if (pos > 0) os.write(buf, 0, pos);
+        os.close();
     }
     private void startTone(final int freqHz) {
         try {
@@ -4239,7 +4685,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 minBuf = sampleRate;
             }
             final AudioTrack track;
-            if (Build.VERSION.SDK_INT >= 21) {
+            if (Build.VERSION.SDK_INT >= 23) {
                 track = new AudioTrack.Builder().setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build()).setAudioFormat(new AudioFormat.Builder().setSampleRate(sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()).setBufferSizeInBytes(Math.max(minBuf, sampleRate)).build();
             } else {
                 track = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuf, sampleRate), AudioTrack.MODE_STREAM);
@@ -4247,24 +4693,22 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toneTrack = track;
             tonePlaying = true;
             track.play();
-            toneThread = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        double phase = 0;
-                        double step = 2.0 * Math.PI * freqHz / sampleRate;
-                        short[] buf = new short[2048];
-                        while (tonePlaying && !Thread.currentThread().isInterrupted()) {
-                            for (int i = 0; i < buf.length; i++) {
-                                buf[i] = (short) (Math.sin(phase) * 16000);
-                                phase += step;
-                                if (phase > 2.0 * Math.PI * 4096) {
-                                    phase -= 2.0 * Math.PI * 4096;
-                                }
+            toneThread = new Thread(() -> {
+                try {
+                    double phase = 0;
+                    double step = 2.0 * Math.PI * freqHz / sampleRate;
+                    short[] buf = new short[2048];
+                    while (tonePlaying && !Thread.currentThread().isInterrupted()) {
+                        for (int i = 0; i < buf.length; i++) {
+                            buf[i] = (short) (Math.sin(phase) * 16000);
+                            phase += step;
+                            if (phase > 2.0 * Math.PI * 4096) {
+                                phase -= 2.0 * Math.PI * 4096;
                             }
-                            track.write(buf, 0, buf.length);
                         }
-                    } catch (Exception ignored) {
+                        track.write(buf, 0, buf.length);
                     }
+                } catch (Exception ignored) {
                 }
             });
             toneThread.start();
@@ -4272,118 +4716,505 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toast("Tone failed");
         }
     }
+    private java.io.File recordingsDir() {
+        try {
+            java.io.File d = new java.io.File(Environment.getExternalStorageDirectory(), "Recordings");
+            d.mkdirs();
+            if (d.isDirectory()) return d;
+        } catch (Exception ignored) {
+        }
+        java.io.File c = new java.io.File(getCacheDir(), "recordings");
+        try {
+            c.mkdirs();
+        } catch (Exception ignored) {
+        }
+        return c;
+    }
+    private void shareToolFile(java.io.File f, String mime) {
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
+            Intent s = new Intent(Intent.ACTION_SEND);
+            s.setType(mime);
+            s.putExtra(Intent.EXTRA_STREAM, uri);
+            s.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(s, "Share"));
+        } catch (Exception e) {
+            toast("Share failed");
+        }
+    }
+    private void openToolFile(java.io.File f, String mime) {
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
+            Intent v = new Intent(Intent.ACTION_VIEW);
+            v.setDataAndType(uri, mime);
+            v.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(v, "Open with"));
+        } catch (Exception e) {
+            toast("No app found");
+        }
+    }
+    private void locateToolFile(java.io.File f) {
+        try {
+            Intent i = new Intent(this, io.github.abdurazaaqmohammed.MPManager.MainActivity.class);
+            i.putExtra("locatePath", f.getPath());
+            startActivity(i);
+        } catch (Exception e) {
+            toast("Locate failed");
+        }
+    }
+    private String fmtDur(long ms) {
+        long s = Math.max(0, ms / 1000);
+        return String.format(Locale.US, "%02d:%02d", s / 60, s % 60);
+    }
+    private long audioDuration(java.io.File f) {
+        android.media.MediaMetadataRetriever r = new android.media.MediaMetadataRetriever();
+        try {
+            r.setDataSource(f.getAbsolutePath());
+            return Long.parseLong(r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION));
+        } catch (Exception e) {
+            return 0;
+        } finally {
+            try {
+                r.release();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+    private void saveAmps(java.io.File audio, List<Float> amps) {
+        try {
+            java.io.FileOutputStream os = new java.io.FileOutputStream(audio.getAbsolutePath() + ".amp");
+            for (Float v : amps) os.write(Math.max(0, Math.min(255, Math.round(v * 255))));
+            os.close();
+        } catch (Exception ignored) {
+        }
+    }
+    private List<Float> loadAmps(java.io.File audio) {
+        List<Float> out = new ArrayList<>();
+        try {
+            java.io.File f = new java.io.File(audio.getAbsolutePath() + ".amp");
+            if (!f.exists()) return out;
+            java.io.FileInputStream in = new java.io.FileInputStream(f);
+            int b;
+            while ((b = in.read()) >= 0) out.add(b / 255f);
+            in.close();
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+    private static class RecWaveView extends View {
+        private List<Float> amps = new ArrayList<>();
+        private float progress = -1f;
+        private final Paint played = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint rest = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
+        RecWaveView(Context ctx) {
+            super(ctx);
+            played.setColor(0xFF1B73E8);
+            rest.setColor(0xFF9E9E9E);
+            line.setColor(0x33000000);
+            played.setStrokeWidth(4f);
+            rest.setStrokeWidth(4f);
+        }
+        void setAmps(List<Float> a) {
+            amps = a == null ? new ArrayList<>() : a;
+            invalidate();
+        }
+        void push(float v) {
+            amps.add(Math.max(0f, Math.min(1f, v)));
+            if (amps.size() > 400) amps.remove(0);
+            invalidate();
+        }
+        void setProgress(float p) {
+            progress = p;
+            invalidate();
+        }
+        void reset() {
+            amps = new ArrayList<>();
+            progress = -1f;
+            invalidate();
+        }
+        protected void onDraw(Canvas canvas) {
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+            canvas.drawRect(0, h / 2f - 1, w, h / 2f + 1, line);
+            if (amps.isEmpty()) return;
+            int n = Math.min(amps.size(), Math.max(1, w / 6));
+            int start = amps.size() - n;
+            float playedUntil = progress < 0 ? n : Math.round(progress * n);
+            for (int i = 0; i < n; i++) {
+                float v = amps.get(start + i);
+                float bh = Math.max(4, v * (h - 8));
+                float x = i * 6f + 2;
+                float top = h / 2f - bh / 2f;
+                canvas.drawLine(x, top, x, top + bh, i < playedUntil ? played : rest);
+            }
+        }
+    }
     private void buildRecorder(LinearLayout box) {
         addTitle(box, "Voice Recorder");
         final TextView status = makeOutput(box);
         status.setText("Ready");
-        final MaterialButton recBtn = makeButton(box, "Start recording");
-        final MaterialButton playBtn = makeButton(box, "Play last");
+        recTimerText = new TextView(this);
+        recTimerText.setText("00:00");
+        recTimerText.setTextSize(40);
+        recTimerText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        recTimerText.setGravity(Gravity.CENTER);
+        box.addView(recTimerText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        recWaveView = new RecWaveView(this);
+        recWaveView.setMinimumHeight(dp(90));
+        box.addView(recWaveView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(90)));
+        addLabel(box, "Quality");
+        final Spinner fmtSpinner = new Spinner(this);
+        final String[] fmtNames = new String[]{"High quality (AAC)", "Small size (AMR)"};
+        ArrayAdapter<String> fmtAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, fmtNames);
+        fmtAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        fmtSpinner.setAdapter(fmtAdapter);
+        box.addView(fmtSpinner);
+        LinearLayout recRow = makeRow(box);
+        final MaterialButton recBtn = makeRowButton(recRow, "Record", 1f);
+        final MaterialButton pauseBtn = makeRowButton(recRow, "Pause", 1f);
+        pauseBtn.setEnabled(false);
+        addLabel(box, "Now playing");
+        final TextView nowPlaying = makeOutput(box);
+        nowPlaying.setText("Nothing loaded");
+        playWaveView = new RecWaveView(this);
+        playWaveView.setMinimumHeight(dp(90));
+        box.addView(playWaveView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(90)));
+        playTimeText = new TextView(this);
+        playTimeText.setText("00:00 / 00:00");
+        playTimeText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        box.addView(playTimeText);
+        playSeek = new SeekBar(this);
+        playSeek.setMax(0);
+        playSeek.setProgress(0);
+        box.addView(playSeek);
+        playSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+                if (fromUser && voicePlayer != null && playDurationMs > 0) {
+                    try {
+                        voicePlayer.seekTo(progress);
+                    } catch (Exception ignored) {
+                    }
+                    playTimeText.setText(fmtDur(progress) + " / " + fmtDur(playDurationMs));
+                    if (playWaveView != null) playWaveView.setProgress(playDurationMs == 0 ? 0 : progress / (float) playDurationMs);
+                }
+            }
+            public void onStartTrackingTouch(SeekBar s) {
+                playSeeking = true;
+            }
+            public void onStopTrackingTouch(SeekBar s) {
+                playSeeking = false;
+            }
+        });
+        LinearLayout playRow = makeRow(box);
+        final MaterialButton playBtn = makeRowButton(playRow, "Play", 1f);
+        final MaterialButton stopPlayBtn = makeRowButton(playRow, "Stop", 1f);
+        final MaterialButton speedBtn = makeRowButton(playRow, "1x", 1f);
+        final float[] speeds = new float[]{1f, 1.25f, 1.5f, 2f};
+        final int[] speedIdx = new int[]{0};
+        speedBtn.setOnClickListener(v -> {
+            speedIdx[0] = (speedIdx[0] + 1) % speeds.length;
+            speedBtn.setText(speeds[speedIdx[0]] + "x");
+            try {
+                if (voicePlayer != null && Build.VERSION.SDK_INT >= 23) {
+                    voicePlayer.setPlaybackParams(voicePlayer.getPlaybackParams().setSpeed(speeds[speedIdx[0]]));
+                }
+            } catch (Exception ignored) {
+            }
+        });
         final android.widget.ListView listView = new android.widget.ListView(this);
         final List<java.io.File> files = new ArrayList<>();
         final List<String> names = new ArrayList<>();
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
         listView.setAdapter(adapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
-        final Runnable refreshList = new Runnable() {
-            public void run() {
-                files.clear();
-                names.clear();
-                try {
-                    java.io.File dir = new java.io.File(getCacheDir(), "recordings");
-                    java.io.File[] all = dir.listFiles();
-                    if (all != null) {
-                        java.util.Arrays.sort(all, new java.util.Comparator<java.io.File>() {
-                            public int compare(java.io.File a, java.io.File b) {
-                                return Long.compare(b.lastModified(), a.lastModified());
+        final Runnable refreshList = () -> {
+            files.clear();
+            names.clear();
+            try {
+                File legacy = new File(getCacheDir(), "recordings");
+                File[] old = legacy.listFiles();
+                if (old != null && old.length > 0) {
+                    File dest = recordingsDir();
+                    for (File f : old) {
+                        if (f.getName().endsWith(".amp")) continue;
+                        try {
+                            File t = new File(dest, f.getName());
+                            if (!t.exists() && f.renameTo(t)) {
+                                File a = new File(f.getAbsolutePath() + ".amp");
+                                if (a.exists()) a.renameTo(new File(t.getAbsolutePath() + ".amp"));
+                            } else {
+                                files.add(f);
                             }
-                        });
-                        for (java.io.File f : all) {
+                        } catch (Exception ignored) {
                             files.add(f);
-                            names.add(f.getName() + "  (" + formatBytes(f.length()) + ")");
                         }
                     }
-                } catch (Exception ignored) {
                 }
-                adapter.notifyDataSetChanged();
+                File dir = recordingsDir();
+                File[] all = dir.listFiles();
+                if (all != null) {
+                    java.util.Arrays.sort(all, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                    for (File f : all) {
+                        if (f.isDirectory() || f.getName().endsWith(".amp")) continue;
+                        if (!files.contains(f)) files.add(f);
+                    }
+                }
+                for (File f : files) {
+                    long d = audioDuration(f);
+                    names.add(f.getName() + "  " + (d > 0 ? fmtDur(d) + "  " : "") + formatBytes(f.length()));
+                }
+            } catch (Exception ignored) {
             }
+            adapter.notifyDataSetChanged();
         };
         refreshList.run();
-        recBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (recordingNow) {
-                    try {
-                        voiceRecorder.stop();
-                    } catch (Exception ignored) {
-                    }
-                    try {
-                        voiceRecorder.release();
-                    } catch (Exception ignored) {
-                    }
-                    voiceRecorder = null;
-                    recordingNow = false;
-                    recBtn.setText("Start recording");
-                    status.setText("Saved");
-                    refreshList.run();
-                    return;
-                }
+        final Runnable startRecording = new Runnable() {
+            public void run() {
                 if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                    pendingAudioRetry = true;
-                    final Runnable self = new Runnable() {
-                        public void run() {
-                            recBtn.performClick();
-                        }
-                    };
-                    pendingAudioAction = self;
+                    pendingAudioAction = this;
                     ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{android.Manifest.permission.RECORD_AUDIO}, 9002);
                     return;
                 }
                 try {
-                    java.io.File dir = new java.io.File(getCacheDir(), "recordings");
-                    dir.mkdirs();
-                    java.io.File out = new java.io.File(dir, "rec_" + System.currentTimeMillis() + ".3gp");
+                    if (voicePlayer != null) {
+                        try {
+                            voicePlayer.stop();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    java.io.File dir = recordingsDir();
+                    String ext = fmtSpinner.getSelectedItemPosition() == 0 ? ".m4a" : ".3gp";
+                    recOutFile = new java.io.File(dir, "rec_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) + ext);
                     voiceRecorder = new MediaRecorder();
                     voiceRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                    voiceRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-                    voiceRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-                    voiceRecorder.setOutputFile(out.getAbsolutePath());
+                    if (fmtSpinner.getSelectedItemPosition() == 0) {
+                        voiceRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                        voiceRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+                        voiceRecorder.setAudioSamplingRate(44100);
+                        voiceRecorder.setAudioEncodingBitRate(128000);
+                    } else {
+                        voiceRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                        voiceRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                    }
+                    voiceRecorder.setOutputFile(recOutFile.getAbsolutePath());
                     voiceRecorder.prepare();
                     voiceRecorder.start();
                     recordingNow = true;
-                    recBtn.setText("Stop recording");
-                    status.setText("Recording " + out.getName());
+                    recordingPaused = false;
+                    recPausedTotal = 0L;
+                    recStartElapsed = SystemClock.elapsedRealtime();
+                    recAmps = new ArrayList<>();
+                    if (recWaveView != null) recWaveView.reset();
+                    recBtn.setText("Stop");
+                    pauseBtn.setEnabled(true);
+                    pauseBtn.setText("Pause");
+                    status.setText("Recording " + recOutFile.getName());
+                    if (recTick == null) {
+                        recTick = new Runnable() {
+                            public void run() {
+                                if (!recordingNow || voiceRecorder == null) return;
+                                long elapsed = SystemClock.elapsedRealtime() - recStartElapsed - recPausedTotal - (recordingPaused ? (SystemClock.elapsedRealtime() - recPauseStarted) : 0);
+                                if (recTimerText != null) recTimerText.setText(fmtDur(elapsed));
+                                if (!recordingPaused) {
+                                    try {
+                                        float norm = Math.min(1f, voiceRecorder.getMaxAmplitude() / 14000f);
+                                        if (recWaveView != null) recWaveView.push(norm);
+                                        recAmps.add(norm);
+                                    } catch (Exception ignored) {
+                                    }
+                                }
+                                handler.postDelayed(this, 200);
+                            }
+                        };
+                    }
+                    handler.post(recTick);
                 } catch (Exception e) {
                     status.setText("Record failed");
+                    recordingNow = false;
+                    recBtn.setText("Record");
+                    pauseBtn.setEnabled(false);
                 }
             }
+        };
+        recBtn.setOnClickListener(v -> {
+            if (recordingNow) {
+                try {
+                    handler.removeCallbacks(recTick);
+                } catch (Exception ignored) {
+                }
+                try {
+                    if (recordingPaused && Build.VERSION.SDK_INT >= 24) {
+                        try {
+                            voiceRecorder.resume();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    voiceRecorder.stop();
+                } catch (Exception ignored) {
+                }
+                try {
+                    voiceRecorder.release();
+                } catch (Exception ignored) {
+                }
+                voiceRecorder = null;
+                recordingNow = false;
+                recordingPaused = false;
+                recBtn.setText("Record");
+                pauseBtn.setEnabled(false);
+                pauseBtn.setText("Pause");
+                if (recTimerText != null) recTimerText.setText("00:00");
+                if (recOutFile != null && recOutFile.exists()) {
+                    saveAmps(recOutFile, recAmps);
+                    status.setText("Saved " + recOutFile.getName());
+                    recCurrentFile = recOutFile;
+                    nowPlaying.setText(recOutFile.getName());
+                    playAmps = new ArrayList<>(recAmps);
+                    if (playWaveView != null) {
+                        playWaveView.setAmps(playAmps);
+                        playWaveView.setProgress(0);
+                    }
+                    playDurationMs = (int) audioDuration(recOutFile);
+                    playSeek.setMax(playDurationMs);
+                    playSeek.setProgress(0);
+                    playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
+                    recOutFile = null;
+                } else {
+                    status.setText("Saved");
+                }
+                refreshList.run();
+                return;
+            }
+            startRecording.run();
         });
-        playBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (files.isEmpty()) {
+        pauseBtn.setOnClickListener(v -> {
+            if (!recordingNow || voiceRecorder == null) return;
+            if (Build.VERSION.SDK_INT < 24) {
+                toast("Pause needs Android 7+");
+                return;
+            }
+            try {
+                if (!recordingPaused) {
+                    voiceRecorder.pause();
+                    recordingPaused = true;
+                    recPauseStarted = SystemClock.elapsedRealtime();
+                    pauseBtn.setText("Resume");
+                    status.setText("Paused");
+                } else {
+                    voiceRecorder.resume();
+                    recordingPaused = false;
+                    recPausedTotal += SystemClock.elapsedRealtime() - recPauseStarted;
+                    pauseBtn.setText("Pause");
+                    status.setText("Recording");
+                }
+            } catch (Exception e) {
+                toast("Pause failed");
+            }
+        });
+        final Runnable loadAndPlay = () -> {
+        };
+        playBtn.setOnClickListener(v -> {
+            try {
+                if (voicePlayer != null && voicePlayer.isPlaying()) {
+                    voicePlayer.pause();
+                    playBtn.setText("Play");
+                    return;
+                }
+                if (voicePlayer != null && playDurationMs > 0) {
+                    try {
+                        if (Build.VERSION.SDK_INT >= 23) voicePlayer.setPlaybackParams(voicePlayer.getPlaybackParams().setSpeed(speeds[speedIdx[0]]));
+                    } catch (Exception ignored) {
+                    }
+                    voicePlayer.start();
+                    playBtn.setText("Pause");
+                    return;
+                }
+                File f = recCurrentFile != null ? recCurrentFile : (files.isEmpty() ? null : files.get(0));
+                if (f == null || !f.exists()) {
                     toast("No recordings yet");
                     return;
                 }
-                playRecording(files.get(0), status);
+                playRecordingFile(f, status, nowPlaying, playBtn);
+            } catch (Exception e) {
+                status.setText("Play failed");
             }
         });
-        listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
-            public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                playRecording(files.get(position), status);
+        stopPlayBtn.setOnClickListener(v -> {
+            try {
+                if (voicePlayer != null) voicePlayer.pause();
+            } catch (Exception ignored) {
             }
+            try {
+                if (voicePlayer != null) voicePlayer.seekTo(0);
+            } catch (Exception ignored) {
+            }
+            playSeek.setProgress(0);
+            playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
+            if (playWaveView != null) playWaveView.setProgress(0);
+            playBtn.setText("Play");
         });
-        listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
-            public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                try {
-                    files.get(position).delete();
-                } catch (Exception ignored) {
+        if (loadAndPlay == null) return;
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= files.size()) return;
+            playRecordingFile(files.get(position), status, nowPlaying, playBtn);
+        });
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= files.size()) return true;
+            final File f = files.get(position);
+            String[] opts = new String[]{"Rename", "Share", "Locate in file manager", "Open with", "Delete"};
+            new MaterialAlertDialogBuilder(ToolRunnerActivity.this).setTitle(f.getName()).setItems(opts, (d, which) -> {
+                if (which == 0) {
+                    final EditText nameInput = new EditText(ToolRunnerActivity.this);
+                    String n = f.getName();
+                    int dot = n.lastIndexOf('.');
+                    nameInput.setText(dot > 0 ? n.substring(0, dot) : n);
+                    new MaterialAlertDialogBuilder(ToolRunnerActivity.this).setTitle("Rename").setView(nameInput).setPositiveButton("Save", (dd, w) -> {
+                        try {
+                            String base = nameInput.getText().toString().trim().replaceAll("[^a-zA-Z0-9 _-]+", "");
+                            if (base.isEmpty()) return;
+                            String ext = "";
+                            int dot2 = f.getName().lastIndexOf('.');
+                            if (dot2 > 0) ext = f.getName().substring(dot2);
+                            File t = new File(f.getParent(), base + ext);
+                            File aOld = new File(f.getAbsolutePath() + ".amp");
+                            if (f.renameTo(t)) {
+                                if (aOld.exists()) aOld.renameTo(new File(t.getAbsolutePath() + ".amp"));
+                                if (recCurrentFile == f) recCurrentFile = t;
+                                refreshList.run();
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }).setNegativeButton("Cancel", null).show();
+                } else if (which == 1) {
+                    shareToolFile(f, "audio/*");
+                } else if (which == 2) {
+                    locateToolFile(f);
+                } else if (which == 3) {
+                    openToolFile(f, "audio/*");
+                } else {
+                    try {
+                        f.delete();
+                    } catch (Exception ignored) {
+                    }
+                    try {
+                        new File(f.getAbsolutePath() + ".amp").delete();
+                    } catch (Exception ignored) {
+                    }
+                    if (recCurrentFile == f) recCurrentFile = null;
+                    refreshList.run();
                 }
-                refreshList.run();
-                return true;
-            }
+            }).show();
+            return true;
         });
-        addLabel(box, "Tap a recording to play it, long-press to delete.");
+        addLabel(box, "Tap a recording to play it, long-press for rename, share, locate, open or delete.");
     }
-    private void playRecording(java.io.File f, TextView status) {
+    private void playRecordingFile(java.io.File f, final TextView status, final TextView nowPlaying, final MaterialButton playBtn) {
         try {
+            try {
+                handler.removeCallbacks(playTick);
+            } catch (Exception ignored) {
+            }
             if (voicePlayer != null) {
                 try {
                     voicePlayer.release();
@@ -4393,17 +5224,54 @@ public class ToolRunnerActivity extends AppCompatActivity {
             voicePlayer = new MediaPlayer();
             voicePlayer.setDataSource(f.getAbsolutePath());
             voicePlayer.prepare();
-            voicePlayer.start();
-            status.setText("Playing " + f.getName());
-            voicePlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                public void onCompletion(MediaPlayer mp) {
-                    status.setText("Ready");
+            if (Build.VERSION.SDK_INT >= 23) {
+                try {
+                    voicePlayer.setPlaybackParams(voicePlayer.getPlaybackParams().setSpeed(1f));
+                } catch (Exception ignored) {
                 }
+            }
+            voicePlayer.start();
+            recCurrentFile = f;
+            playAmps = loadAmps(f);
+            if (playWaveView != null) playWaveView.setAmps(playAmps);
+            playDurationMs = voicePlayer.getDuration();
+            if (playSeek != null) {
+                playSeek.setMax(Math.max(1, playDurationMs));
+                playSeek.setProgress(0);
+            }
+            if (playTimeText != null) playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
+            status.setText("Playing " + f.getName());
+            if (nowPlaying != null) nowPlaying.setText(f.getName() + "  " + fmtDur(playDurationMs) + "  " + formatBytes(f.length()));
+            if (playBtn != null) playBtn.setText("Pause");
+            voicePlayer.setOnCompletionListener(mp -> {
+                status.setText("Ready");
+                if (playBtn != null) playBtn.setText("Play");
+                if (playSeek != null) playSeek.setProgress(0);
+                if (playTimeText != null) playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
+                if (playWaveView != null) playWaveView.setProgress(0);
             });
+            if (playTick == null) {
+                playTick = new Runnable() {
+                    public void run() {
+                        try {
+                            if (voicePlayer != null && voicePlayer.isPlaying() && !playSeeking && playSeek != null) {
+                                int pos = voicePlayer.getCurrentPosition();
+                                playSeek.setProgress(pos);
+                                if (playTimeText != null) playTimeText.setText(fmtDur(pos) + " / " + fmtDur(playDurationMs));
+                                if (playWaveView != null) playWaveView.setProgress(playDurationMs == 0 ? 0 : pos / (float) playDurationMs);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                        handler.postDelayed(this, 250);
+                    }
+                };
+            }
+            handler.post(playTick);
         } catch (Exception e) {
             status.setText("Play failed");
         }
     }
+
     private void startGpsUpdates() {
         if (locationManager == null) {
             locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -4469,168 +5337,39 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton startBtn = makeRowButton(row, "Start", 1f);
         MaterialButton stopBtn = makeRowButton(row, "Stop", 1f);
         MaterialButton resetBtn = makeRowButton(row, "Reset", 1f);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                gpsRunning = true;
-                startGpsUpdates();
-            }
+        startBtn.setOnClickListener(v -> {
+            gpsRunning = true;
+            startGpsUpdates();
         });
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                gpsRunning = false;
-                try {
-                    if (locationManager != null && gpsListener != null) {
-                        locationManager.removeUpdates(gpsListener);
-                    }
-                } catch (Exception ignored) {
+        stopBtn.setOnClickListener(v -> {
+            gpsRunning = false;
+            try {
+                if (locationManager != null && gpsListener != null) {
+                    locationManager.removeUpdates(gpsListener);
                 }
+            } catch (Exception ignored) {
             }
         });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                gpsMax = 0;
-                gpsSum = 0;
-                gpsCount = 0;
-                gpsText.setText("0.0 km/h");
-            }
+        resetBtn.setOnClickListener(v -> {
+            gpsMax = 0;
+            gpsSum = 0;
+            gpsCount = 0;
+            gpsText.setText("0.0 km/h");
         });
     }
-    private void buildStorage(LinearLayout box) {
-        addTitle(box, "Storage Info");
-        final TextView output = makeOutput(box);
-        final Runnable refresh = new Runnable() {
-            public void run() {
-                try {
-                    StringBuilder b = new StringBuilder();
-                    StatFs internal = new StatFs(Environment.getDataDirectory().getAbsolutePath());
-                    long blockSize = internal.getBlockSizeLong();
-                    long total = internal.getBlockCountLong() * blockSize;
-                    long free = internal.getAvailableBlocksLong() * blockSize;
-                    b.append("Internal total ").append(formatBytes(total)).append("\n");
-                    b.append("Internal free ").append(formatBytes(free)).append("\n");
-                    try {
-                        java.io.File ext = Environment.getExternalStorageDirectory();
-                        if (ext != null && Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                            StatFs sd = new StatFs(ext.getAbsolutePath());
-                            long bs = sd.getBlockSizeLong();
-                            b.append("Shared total ").append(formatBytes(sd.getBlockCountLong() * bs)).append("\n");
-                            b.append("Shared free ").append(formatBytes(sd.getAvailableBlocksLong() * bs)).append("\n");
-                        }
-                    } catch (Exception ignored) {
-                    }
-                    ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-                    ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-                    am.getMemoryInfo(mi);
-                    b.append("RAM total ").append(formatBytes(mi.totalMem)).append("\n");
-                    b.append("RAM free ").append(formatBytes(mi.availMem)).append("\n");
-                    b.append(mi.lowMemory ? "RAM low" : "RAM ok");
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Unavailable");
-                }
-            }
-        };
-        refresh.run();
-        MaterialButton refreshBtn = makeButton(box, "Refresh");
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                refresh.run();
-            }
-        });
-        MaterialButton copyBtn = makeButton(box, "Copy");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("storage", output.getText().toString());
-            }
-        });
-    }
-    private void buildBattery(LinearLayout box) {
-        addTitle(box, "Battery Info");
-        final TextView output = makeOutput(box);
-        final Runnable refresh = new Runnable() {
-            public void run() {
-                try {
-                    Intent battery = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-                    StringBuilder b = new StringBuilder();
-                    if (battery == null) {
-                        output.setText("Unavailable");
-                        return;
-                    }
-                    int level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-                    int scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
-                    int pct = scale <= 0 ? level : Math.round(level * 100f / scale);
-                    b.append("Level ").append(pct).append("%\n");
-                    int status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-                    String statusStr = "Unknown";
-                    if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
-                        statusStr = "Charging";
-                    } else if (status == BatteryManager.BATTERY_STATUS_FULL) {
-                        statusStr = "Full";
-                    } else if (status == BatteryManager.BATTERY_STATUS_DISCHARGING) {
-                        statusStr = "Discharging";
-                    } else if (status == BatteryManager.BATTERY_STATUS_NOT_CHARGING) {
-                        statusStr = "Not charging";
-                    }
-                    b.append("Status ").append(statusStr).append("\n");
-                    int plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
-                    String plugStr = "Unplugged";
-                    if (plugged == BatteryManager.BATTERY_PLUGGED_AC) {
-                        plugStr = "AC";
-                    } else if (plugged == BatteryManager.BATTERY_PLUGGED_USB) {
-                        plugStr = "USB";
-                    } else if (plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS) {
-                        plugStr = "Wireless";
-                    }
-                    b.append("Power ").append(plugStr).append("\n");
-                    int health = battery.getIntExtra(BatteryManager.EXTRA_HEALTH, -1);
-                    String healthStr = "Unknown";
-                    if (health == BatteryManager.BATTERY_HEALTH_GOOD) {
-                        healthStr = "Good";
-                    } else if (health == BatteryManager.BATTERY_HEALTH_OVERHEAT) {
-                        healthStr = "Overheat";
-                    } else if (health == BatteryManager.BATTERY_HEALTH_COLD) {
-                        healthStr = "Cold";
-                    } else if (health == BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE) {
-                        healthStr = "Over voltage";
-                    } else if (health == BatteryManager.BATTERY_HEALTH_DEAD) {
-                        healthStr = "Dead";
-                    }
-                    b.append("Health ").append(healthStr).append("\n");
-                    b.append("Temp ").append(new DecimalFormat("0.0").format(battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0)).append(" C\n");
-                    b.append("Voltage ").append(battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0)).append(" mV\n");
-                    b.append("Tech ").append(battery.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY));
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Unavailable");
-                }
-            }
-        };
-        refresh.run();
-        MaterialButton refreshBtn = makeButton(box, "Refresh");
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                refresh.run();
-            }
-        });
-    }
-    private void buildSensors(LinearLayout box) {
-        addTitle(box, "Sensor Tester");
-        sensorLiveText = makeOutput(box);
-        sensorLiveText.setText("Starting...");
-        if (sensorManager == null) {
-            sensorLiveText.setText("No sensors on this device");
+
+    private float[][] sensorLatest;
+    private void startSensorsListener() {
+        if (sensorManager == null || sensorLiveText == null) {
             return;
         }
-        final float[][] latest = new float[5][];
         final String[] names = new String[]{"Accel", "Gyro", "Magnet", "Light", "Proximity"};
+        final float[][] latest = sensorLatest == null ? (sensorLatest = new float[5][]) : sensorLatest;
         try {
             if (activeListener != null) {
                 sensorManager.unregisterListener(activeListener);
             }
         } catch (Exception ignored) {
-        }
-        if (compassView != null || levelView != null) {
-            return;
         }
         activeListener = new SensorEventListener() {
             public void onSensorChanged(SensorEvent event) {
@@ -4709,18 +5448,16 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView status = makeOutput(box);
         status.setText("Engine starting...");
         try {
-            ttsEngine = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-                public void onInit(int code) {
-                    try {
-                        if (code == TextToSpeech.SUCCESS) {
-                            ttsEngine.setLanguage(Locale.US);
-                            status.setText("Ready");
-                        } else {
-                            status.setText("Engine failed");
-                        }
-                    } catch (Exception e) {
+            ttsEngine = new TextToSpeech(this, code -> {
+                try {
+                    if (code == TextToSpeech.SUCCESS) {
+                        ttsEngine.setLanguage(Locale.US);
+                        status.setText("Ready");
+                    } else {
                         status.setText("Engine failed");
                     }
+                } catch (Exception e) {
+                    status.setText("Engine failed");
                 }
             });
         } catch (Exception e) {
@@ -4749,39 +5486,93 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton speakBtn = makeRowButton(row, "Speak", 1f);
         MaterialButton stopBtn = makeRowButton(row, "Stop", 1f);
-        speakBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String t = input.getText().toString().trim();
-                if (t.isEmpty()) {
-                    toast("Enter text first");
-                    return;
+        speakBtn.setOnClickListener(v -> {
+            String t = input.getText().toString().trim();
+            if (t.isEmpty()) {
+                toast("Enter text first");
+                return;
+            }
+            if (ttsEngine == null) {
+                toast("Engine not ready");
+                return;
+            }
+            try {
+                ttsEngine.setPitch(pitch[0]);
+                ttsEngine.setSpeechRate(rate[0]);
+                if (Build.VERSION.SDK_INT >= 21) {
+                    ttsEngine.speak(t, TextToSpeech.QUEUE_FLUSH, null, "tools-tts");
+                } else {
+                    ttsEngine.speak(t, TextToSpeech.QUEUE_FLUSH, null);
                 }
-                if (ttsEngine == null) {
-                    toast("Engine not ready");
-                    return;
-                }
-                try {
-                    ttsEngine.setPitch(pitch[0]);
-                    ttsEngine.setSpeechRate(rate[0]);
-                    if (Build.VERSION.SDK_INT >= 21) {
-                        ttsEngine.speak(t, TextToSpeech.QUEUE_FLUSH, null, "tools-tts");
-                    } else {
-                        ttsEngine.speak(t, TextToSpeech.QUEUE_FLUSH, null);
-                    }
-                } catch (Exception e) {
-                    toast("Speak failed");
-                }
+            } catch (Exception e) {
+                toast("Speak failed");
             }
         });
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    if (ttsEngine != null) {
-                        ttsEngine.stop();
-                    }
-                } catch (Exception ignored) {
+        stopBtn.setOnClickListener(v -> {
+            try {
+                if (ttsEngine != null) {
+                    ttsEngine.stop();
                 }
+            } catch (Exception ignored) {
             }
+        });
+        LinearLayout ttsRow2 = makeRow(box);
+        MaterialButton saveAudioBtn = makeRowButton(ttsRow2, "Save audio", 1f);
+        MaterialButton shareAudioBtn = makeRowButton(ttsRow2, "Share audio", 1f);
+        MaterialButton locateAudioBtn = makeRowButton(ttsRow2, "Locate file", 1f);
+        saveAudioBtn.setOnClickListener(v -> {
+            String t = input.getText().toString().trim();
+            if (t.isEmpty()) {
+                toast("Enter text first");
+                return;
+            }
+            if (ttsEngine == null) {
+                toast("Engine not ready");
+                return;
+            }
+            try {
+                java.io.File dir = new java.io.File(Environment.getExternalStorageDirectory(), "Speech");
+                dir.mkdirs();
+                final java.io.File out = new java.io.File(dir, "speech_" + System.currentTimeMillis() + ".wav");
+                ttsEngine.setPitch(pitch[0]);
+                ttsEngine.setSpeechRate(rate[0]);
+                int rc;
+                if (Build.VERSION.SDK_INT >= 21) {
+                    rc = ttsEngine.synthesizeToFile(t, null, out, "tools-tts-file");
+                } else {
+                    rc = ttsEngine.synthesizeToFile(t, null, out.getAbsolutePath());
+                }
+                if (rc != TextToSpeech.SUCCESS) {
+                    toast("Save failed");
+                    return;
+                }
+                status.setText("Saving " + out.getName());
+                handler.postDelayed(new Runnable() {
+                    int tries = 0;
+                    public void run() {
+                        tries++;
+                        if (out.exists() && out.length() > 0) {
+                            ttsLastFile = out;
+                            status.setText("Saved " + out.getName());
+                            toast("Audio saved");
+                        } else if (tries < 40) {
+                            handler.postDelayed(this, 500);
+                        } else {
+                            status.setText("Save timed out");
+                        }
+                    }
+                }, 500);
+            } catch (Exception e) {
+                toast("Save failed");
+            }
+        });
+        shareAudioBtn.setOnClickListener(v -> {
+            if (ttsLastFile != null && ttsLastFile.exists()) shareToolFile(ttsLastFile, "audio/*");
+            else toast("Save audio first");
+        });
+        locateAudioBtn.setOnClickListener(v -> {
+            if (ttsLastFile != null && ttsLastFile.exists()) locateToolFile(ttsLastFile);
+            else toast("Save audio first");
         });
     }
     private void buildBmr(LinearLayout box) {
@@ -4812,20 +5603,18 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final int maleId = maleBtn.getId();
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    int age = Integer.parseInt(ageInput.getText().toString().trim());
-                    double h = Double.parseDouble(heightInput.getText().toString());
-                    double w = Double.parseDouble(weightInput.getText().toString());
-                    boolean male = genderGroup.getCheckedRadioButtonId() == maleId;
-                    double bmr = male ? (10 * w + 6.25 * h - 5 * age + 5) : (10 * w + 6.25 * h - 5 * age - 161);
-                    double tdee = bmr * factors[actSpinner.getSelectedItemPosition()];
-                    DecimalFormat df = new DecimalFormat("0");
-                    output.setText("BMR " + df.format(bmr) + " kcal  TDEE " + df.format(tdee) + " kcal");
-                } catch (Exception e) {
-                    output.setText("Enter age, height and weight");
-                }
+        goBtn.setOnClickListener(v -> {
+            try {
+                int age = Integer.parseInt(ageInput.getText().toString().trim());
+                double h = Double.parseDouble(heightInput.getText().toString());
+                double w = Double.parseDouble(weightInput.getText().toString());
+                boolean male = genderGroup.getCheckedRadioButtonId() == maleId;
+                double bmr = male ? (10 * w + 6.25 * h - 5 * age + 5) : (10 * w + 6.25 * h - 5 * age - 161);
+                double tdee = bmr * factors[actSpinner.getSelectedItemPosition()];
+                DecimalFormat df = new DecimalFormat("0");
+                output.setText("BMR " + df.format(bmr) + " kcal  TDEE " + df.format(tdee) + " kcal");
+            } catch (Exception e) {
+                output.setText("Enter age, height and weight");
             }
         });
     }
@@ -4849,32 +5638,30 @@ public class ToolRunnerActivity extends AppCompatActivity {
         sipInput.setText("0");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double p = Double.parseDouble(pInput.getText().toString());
-                    double annual = Double.parseDouble(rInput.getText().toString()) / 100.0;
-                    double years = Double.parseDouble(yInput.getText().toString());
-                    int n = perYear[freqSpinner.getSelectedItemPosition()];
-                    double r = annual / n;
-                    double periods = n * years;
-                    double lump = p * Math.pow(1 + r, periods);
-                    double monthly = Double.parseDouble(sipInput.getText().toString());
-                    double sipFv = 0;
-                    if (monthly > 0) {
-                        double mr = annual / 12.0;
-                        int months = (int) Math.round(years * 12);
-                        if (mr == 0) {
-                            sipFv = monthly * months;
-                        } else {
-                            sipFv = monthly * (Math.pow(1 + mr, months) - 1) / mr * (1 + mr);
-                        }
+        goBtn.setOnClickListener(v -> {
+            try {
+                double p = Double.parseDouble(pInput.getText().toString());
+                double annual = Double.parseDouble(rInput.getText().toString()) / 100.0;
+                double years = Double.parseDouble(yInput.getText().toString());
+                int n = perYear[freqSpinner.getSelectedItemPosition()];
+                double r = annual / n;
+                double periods = n * years;
+                double lump = p * Math.pow(1 + r, periods);
+                double monthly = Double.parseDouble(sipInput.getText().toString());
+                double sipFv = 0;
+                if (monthly > 0) {
+                    double mr = annual / 12.0;
+                    int months = (int) Math.round(years * 12);
+                    if (mr == 0) {
+                        sipFv = monthly * months;
+                    } else {
+                        sipFv = monthly * (Math.pow(1 + mr, months) - 1) / mr * (1 + mr);
                     }
-                    DecimalFormat df = new DecimalFormat("0.00");
-                    output.setText("Lump sum grows to " + df.format(lump) + "\nDeposits grow to " + df.format(sipFv) + "\nTotal " + df.format(lump + sipFv));
-                } catch (Exception e) {
-                    output.setText("Check inputs");
                 }
+                DecimalFormat df = new DecimalFormat("0.00");
+                output.setText("Lump sum grows to " + df.format(lump) + "\nDeposits grow to " + df.format(sipFv) + "\nTotal " + df.format(lump + sipFv));
+            } catch (Exception e) {
+                output.setText("Check inputs");
             }
         });
     }
@@ -4901,31 +5688,33 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final int id1 = m1.getId();
         final int id2 = m2.getId();
-        Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    double x = Double.parseDouble(xInput.getText().toString());
-                    double y = Double.parseDouble(yInput.getText().toString());
-                    int mode = modeGroup.getCheckedRadioButtonId();
-                    DecimalFormat df = new DecimalFormat("0.##");
-                    if (mode == id1) {
-                        output.setText(df.format(x * y / 100.0));
-                    } else if (mode == id2) {
-                        output.setText(df.format(x / y * 100.0) + "%");
-                    } else {
-                        output.setText(df.format((y - x) / x * 100.0) + "%");
+        Runnable compute = () -> {
+            try {
+                double x = Double.parseDouble(xInput.getText().toString());
+                double y = Double.parseDouble(yInput.getText().toString());
+                int mode = modeGroup.getCheckedRadioButtonId();
+                DecimalFormat df = new DecimalFormat("0.##");
+                if (mode == id1) {
+                    output.setText(df.format(x * y / 100.0));
+                } else if (mode == id2) {
+                    if (y == 0) {
+                        output.setText("Y must not be zero");
+                        return;
                     }
-                } catch (Exception e) {
-                    output.setText("Enter X and Y");
+                    output.setText(df.format(x / y * 100.0) + "%");
+                } else {
+                    if (x == 0) {
+                        output.setText("X must not be zero");
+                        return;
+                    }
+                    output.setText(df.format((y - x) / x * 100.0) + "%");
                 }
+            } catch (Exception e) {
+                output.setText("Enter X and Y");
             }
         };
         final Runnable computeRef = compute;
-        modeGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            public void onCheckedChanged(RadioGroup g, int checkedId) {
-                computeRef.run();
-            }
-        });
+        modeGroup.setOnCheckedChangeListener((g, checkedId) -> computeRef.run());
         TextWatcher watcher = new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -4974,49 +5763,47 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText dInput = makeRowInput(row2, "d", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED, 1f, "3");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    long a = Long.parseLong(aInput.getText().toString().trim());
-                    long b = Long.parseLong(bInput.getText().toString().trim());
-                    long c = Long.parseLong(cInput.getText().toString().trim());
-                    long d = Long.parseLong(dInput.getText().toString().trim());
-                    if (b == 0 || d == 0) {
-                        output.setText("Denominator cannot be 0");
+        goBtn.setOnClickListener(v -> {
+            try {
+                long a = Long.parseLong(aInput.getText().toString().trim());
+                long b = Long.parseLong(bInput.getText().toString().trim());
+                long c = Long.parseLong(cInput.getText().toString().trim());
+                long d = Long.parseLong(dInput.getText().toString().trim());
+                if (b == 0 || d == 0) {
+                    output.setText("Denominator cannot be 0");
+                    return;
+                }
+                long num;
+                long den;
+                int op = opSpinner.getSelectedItemPosition();
+                if (op == 0) {
+                    num = a * d + c * b;
+                    den = b * d;
+                } else if (op == 1) {
+                    num = a * d - c * b;
+                    den = b * d;
+                } else if (op == 2) {
+                    num = a * c;
+                    den = b * d;
+                } else {
+                    if (c == 0) {
+                        output.setText("Cannot divide by zero");
                         return;
                     }
-                    long num;
-                    long den;
-                    int op = opSpinner.getSelectedItemPosition();
-                    if (op == 0) {
-                        num = a * d + c * b;
-                        den = b * d;
-                    } else if (op == 1) {
-                        num = a * d - c * b;
-                        den = b * d;
-                    } else if (op == 2) {
-                        num = a * c;
-                        den = b * d;
-                    } else {
-                        if (c == 0) {
-                            output.setText("Cannot divide by zero");
-                            return;
-                        }
-                        num = a * d;
-                        den = b * c;
-                    }
-                    if (den < 0) {
-                        num = -num;
-                        den = -den;
-                    }
-                    long g = gcdLong(num, den);
-                    num /= g;
-                    den /= g;
-                    DecimalFormat df = new DecimalFormat("0.####");
-                    output.setText(num + " / " + den + "  =  " + df.format((double) num / den));
-                } catch (Exception e) {
-                    output.setText("Enter four integers");
+                    num = a * d;
+                    den = b * c;
                 }
+                if (den < 0) {
+                    num = -num;
+                    den = -den;
+                }
+                long g = gcdLong(num, den);
+                num /= g;
+                den /= g;
+                DecimalFormat df = new DecimalFormat("0.####");
+                output.setText(num + " / " + den + "  =  " + df.format((double) num / den));
+            } catch (Exception e) {
+                output.setText("Enter four integers");
             }
         });
     }
@@ -5027,43 +5814,25 @@ public class ToolRunnerActivity extends AppCompatActivity {
         birthInput.setText("2000-01-01");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                    f.setLenient(false);
-                    Date birth = f.parse(birthInput.getText().toString().trim());
-                    Calendar c1 = Calendar.getInstance();
-                    c1.setTime(birth);
-                    Calendar c2 = Calendar.getInstance();
-                    if (c1.after(c2)) {
-                        output.setText("Birth date is in the future");
-                        return;
-                    }
-                    int years = c2.get(Calendar.YEAR) - c1.get(Calendar.YEAR);
-                    int months = c2.get(Calendar.MONTH) - c1.get(Calendar.MONTH);
-                    int days = c2.get(Calendar.DAY_OF_MONTH) - c1.get(Calendar.DAY_OF_MONTH);
-                    if (days < 0) {
-                        months--;
-                        days += 30;
-                    }
-                    if (months < 0) {
-                        years--;
-                        months += 12;
-                    }
-                    long totalDays = (c2.getTimeInMillis() - c1.getTimeInMillis()) / 86400000L;
-                    SimpleDateFormat dayFmt = new SimpleDateFormat("EEEE", Locale.US);
-                    Calendar next = Calendar.getInstance();
-                    next.setTime(birth);
-                    next.set(Calendar.YEAR, c2.get(Calendar.YEAR));
-                    if (!next.after(c2)) {
-                        next.add(Calendar.YEAR, 1);
-                    }
-                    long toNext = (next.getTimeInMillis() - c2.getTimeInMillis()) / 86400000L;
-                    output.setText(years + " years, " + months + " months, " + days + " days\nTotal " + totalDays + " days  (" + totalDays / 7 + " weeks)\nBorn on a " + dayFmt.format(birth) + "\nNext birthday in " + toNext + " days");
-                } catch (Exception e) {
-                    output.setText("Use yyyy-MM-dd");
+        goBtn.setOnClickListener(v -> {
+            try {
+                java.time.LocalDate birth = java.time.LocalDate.parse(birthInput.getText().toString().trim());
+                java.time.LocalDate today = java.time.LocalDate.now();
+                if (birth.isAfter(today)) {
+                    output.setText("Birth date is in the future");
+                    return;
                 }
+                java.time.Period p = java.time.Period.between(birth, today);
+                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(birth, today);
+                java.time.LocalDate next = birth.withYear(today.getYear());
+                if (!next.isAfter(today)) {
+                    next = next.plusYears(1);
+                }
+                long toNext = java.time.temporal.ChronoUnit.DAYS.between(today, next);
+                java.time.format.DateTimeFormatter dayFmt = java.time.format.DateTimeFormatter.ofPattern("EEEE", Locale.US);
+                output.setText(p.getYears() + " years, " + p.getMonths() + " months, " + p.getDays() + " days\nTotal " + totalDays + " days  (" + totalDays / 7 + " weeks)\nBorn on a " + birth.format(dayFmt) + "\nNext birthday in " + toNext + " days");
+            } catch (Exception e) {
+                output.setText("Use yyyy-MM-dd");
             }
         });
     }
@@ -5075,21 +5844,19 @@ public class ToolRunnerActivity extends AppCompatActivity {
         daysInput.setText("30");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                    f.setLenient(false);
-                    Date start = f.parse(dateInput.getText().toString().trim());
-                    int n = Integer.parseInt(daysInput.getText().toString().trim());
-                    Calendar c = Calendar.getInstance();
-                    c.setTime(start);
-                    c.add(Calendar.DAY_OF_MONTH, n);
-                    SimpleDateFormat dayFmt = new SimpleDateFormat("EEEE", Locale.US);
-                    output.setText(f.format(c.getTime()) + "  (" + dayFmt.format(c.getTime()) + ")");
-                } catch (Exception e) {
-                    output.setText("Check inputs");
-                }
+        goBtn.setOnClickListener(v -> {
+            try {
+                SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+                f.setLenient(false);
+                Date start = f.parse(dateInput.getText().toString().trim());
+                int n = Integer.parseInt(daysInput.getText().toString().trim());
+                Calendar c = Calendar.getInstance();
+                c.setTime(start);
+                c.add(Calendar.DAY_OF_MONTH, n);
+                SimpleDateFormat dayFmt = new SimpleDateFormat("EEEE", Locale.US);
+                output.setText(f.format(c.getTime()) + "  (" + dayFmt.format(c.getTime()) + ")");
+            } catch (Exception e) {
+                output.setText("Check inputs");
             }
         });
     }
@@ -5123,24 +5890,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton addBtn = makeRowButton(row, "Add", 1f);
         MaterialButton subBtn = makeRowButton(row, "Subtract", 1f);
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    long r = parseDurationToSeconds(t1.getText().toString()) + parseDurationToSeconds(t2.getText().toString());
-                    output.setText(formatDuration(r) + "  (" + r + "s, " + new DecimalFormat("0.##").format(r / 60.0) + " min)");
-                } catch (Exception e) {
-                    output.setText("Check format");
-                }
+        addBtn.setOnClickListener(v -> {
+            try {
+                long r = parseDurationToSeconds(t1.getText().toString()) + parseDurationToSeconds(t2.getText().toString());
+                output.setText(formatDuration(r) + "  (" + r + "s, " + new DecimalFormat("0.##").format(r / 60.0) + " min)");
+            } catch (Exception e) {
+                output.setText("Check format");
             }
         });
-        subBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    long r = parseDurationToSeconds(t1.getText().toString()) - parseDurationToSeconds(t2.getText().toString());
-                    output.setText(formatDuration(r) + "  (" + r + "s)");
-                } catch (Exception e) {
-                    output.setText("Check format");
-                }
+        subBtn.setOnClickListener(v -> {
+            try {
+                long r = parseDurationToSeconds(t1.getText().toString()) - parseDurationToSeconds(t2.getText().toString());
+                output.setText(formatDuration(r) + "  (" + r + "s)");
+            } catch (Exception e) {
+                output.setText("Check format");
             }
         });
     }
@@ -5153,35 +5916,33 @@ public class ToolRunnerActivity extends AppCompatActivity {
         rateInput.setText("0");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Plan");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double target = Double.parseDouble(targetInput.getText().toString());
-                    double balance = savedInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(savedInput.getText().toString());
-                    double monthly = Double.parseDouble(monthlyInput.getText().toString());
-                    double annual = rateInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(rateInput.getText().toString());
-                    if (monthly <= 0) {
-                        output.setText("Monthly deposit must be positive");
-                        return;
-                    }
-                    double mr = annual / 1200.0;
-                    int months = 0;
-                    while (balance < target && months < 1200) {
-                        balance += monthly;
-                        balance *= (1 + mr);
-                        months++;
-                    }
-                    if (months >= 1200) {
-                        output.setText("Goal unreachable in 100 years");
-                        return;
-                    }
-                    Calendar c = Calendar.getInstance();
-                    c.add(Calendar.MONTH, months);
-                    SimpleDateFormat f = new SimpleDateFormat("MMM yyyy", Locale.US);
-                    output.setText(months + " months  (around " + f.format(c.getTime()) + ")\nProjected " + new DecimalFormat("0.00").format(balance));
-                } catch (Exception e) {
-                    output.setText("Check inputs");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double target = Double.parseDouble(targetInput.getText().toString());
+                double balance = savedInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(savedInput.getText().toString());
+                double monthly = Double.parseDouble(monthlyInput.getText().toString());
+                double annual = rateInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(rateInput.getText().toString());
+                if (monthly <= 0) {
+                    output.setText("Monthly deposit must be positive");
+                    return;
                 }
+                double mr = annual / 1200.0;
+                int months = 0;
+                while (balance < target && months < 1200) {
+                    balance += monthly;
+                    balance *= (1 + mr);
+                    months++;
+                }
+                if (months >= 1200) {
+                    output.setText("Goal unreachable in 100 years");
+                    return;
+                }
+                Calendar c = Calendar.getInstance();
+                c.add(Calendar.MONTH, months);
+                SimpleDateFormat f = new SimpleDateFormat("MMM yyyy", Locale.US);
+                output.setText(months + " months  (around " + f.format(c.getTime()) + ")\nProjected " + new DecimalFormat("0.00").format(balance));
+            } catch (Exception e) {
+                output.setText("Check inputs");
             }
         });
     }
@@ -5205,22 +5966,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final int addId = addBtn2.getId();
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double amount = Double.parseDouble(amountInput.getText().toString());
-                    double rate = Double.parseDouble(rateInput.getText().toString());
-                    DecimalFormat df = new DecimalFormat("0.00");
-                    if (modeGroup.getCheckedRadioButtonId() == addId) {
-                        double tax = amount * rate / 100.0;
-                        output.setText("Tax " + df.format(tax) + "  Total " + df.format(amount + tax));
-                    } else {
-                        double net = amount / (1 + rate / 100.0);
-                        output.setText("Net " + df.format(net) + "  Tax " + df.format(amount - net));
-                    }
-                } catch (Exception e) {
-                    output.setText("Check inputs");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double amount = Double.parseDouble(amountInput.getText().toString());
+                double rate = Double.parseDouble(rateInput.getText().toString());
+                DecimalFormat df = new DecimalFormat("0.00");
+                if (modeGroup.getCheckedRadioButtonId() == addId) {
+                    double tax = amount * rate / 100.0;
+                    output.setText("Tax " + df.format(tax) + "  Total " + df.format(amount + tax));
+                } else {
+                    double net = amount / (1 + rate / 100.0);
+                    output.setText("Net " + df.format(net) + "  Tax " + df.format(amount - net));
                 }
+            } catch (Exception e) {
+                output.setText("Check inputs");
             }
         });
     }
@@ -5234,27 +5993,26 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText sInput = makeRowInput(row, "ss", InputType.TYPE_CLASS_NUMBER, 1f, "0");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double dist = Double.parseDouble(distInput.getText().toString());
-                    long secs = parseLongSafe(hInput.getText().toString()) * 3600 + parseLongSafe(mInput.getText().toString()) * 60 + parseLongSafe(sInput.getText().toString());
-                    if (dist <= 0 || secs <= 0) {
-                        output.setText("Enter distance and time");
-                        return;
-                    }
-                    double secPerKm = secs / dist;
-                    long pm = (long) (secPerKm / 60);
-                    long ps = Math.round(secPerKm % 60);
-                    double kmh = dist / (secs / 3600.0);
-                    StringBuilder b = new StringBuilder();
-                    b.append("Pace ").append(pm).append(":").append(String.format(Locale.US, "%02d", ps)).append(" per km\n");
-                    b.append("Speed ").append(new DecimalFormat("0.0").format(kmh)).append(" km/h\n");
-                    b.append("10K in ").append(formatDuration(Math.round(secPerKm * 10))).append("  Marathon in ").append(formatDuration(Math.round(secPerKm * 42.195)));
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Check inputs");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double dist = Double.parseDouble(distInput.getText().toString());
+                long secs = parseLongSafe(hInput.getText().toString()) * 3600 + parseLongSafe(mInput.getText().toString()) * 60 + parseLongSafe(sInput.getText().toString());
+                if (dist <= 0 || secs <= 0) {
+                    output.setText("Enter distance and time");
+                    return;
                 }
+                double secPerKm = secs / dist;
+                long totalPaceSecs = Math.round(secPerKm);
+                long pm = totalPaceSecs / 60;
+                long ps = totalPaceSecs % 60;
+                double kmh = dist / (secs / 3600.0);
+                StringBuilder b = new StringBuilder();
+                b.append("Pace ").append(pm).append(":").append(String.format(Locale.US, "%02d", ps)).append(" per km\n");
+                b.append("Speed ").append(new DecimalFormat("0.0").format(kmh)).append(" km/h\n");
+                b.append("10K in ").append(formatDuration(Math.round(secPerKm * 10))).append("  Marathon in ").append(formatDuration(Math.round(secPerKm * 42.195)));
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Check inputs");
             }
         });
     }
@@ -5271,18 +6029,17 @@ public class ToolRunnerActivity extends AppCompatActivity {
         cupsInput.setText("1");
         final EditText gramsInput = makeInput(box, "Grams", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         final TextView output = makeOutput(box);
-        final Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    double gpc = gramsPerCup[ingSpinner.getSelectedItemPosition()];
-                    String cs = cupsInput.getText().toString().trim();
-                    if (!cs.isEmpty()) {
-                        double grams = Double.parseDouble(cs) * gpc;
-                        output.setText(new DecimalFormat("0.#").format(grams) + " g  (" + new DecimalFormat("0.#").format(grams / 28.3495) + " oz)");
-                    }
-                } catch (Exception e) {
-                    output.setText("Enter cups or grams");
+        final boolean[] syncing = new boolean[]{false};
+        final Runnable compute = () -> {
+            try {
+                double gpc = gramsPerCup[ingSpinner.getSelectedItemPosition()];
+                String cs = cupsInput.getText().toString().trim();
+                if (!cs.isEmpty()) {
+                    double grams = Double.parseDouble(cs) * gpc;
+                    output.setText(new DecimalFormat("0.#").format(grams) + " g  (" + new DecimalFormat("0.#").format(grams / 28.3495) + " oz)");
                 }
+            } catch (Exception e) {
+                output.setText("Enter cups or grams");
             }
         };
         ingSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -5296,22 +6053,50 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (syncing[0] || !cupsInput.hasFocus()) {
+                    compute.run();
+                    return;
+                }
+                syncing[0] = true;
+                try {
+                    double gpc = gramsPerCup[ingSpinner.getSelectedItemPosition()];
+                    String cs = s.toString().trim();
+                    if (!cs.isEmpty()) {
+                        double grams = Double.parseDouble(cs) * gpc;
+                        gramsInput.setText(new DecimalFormat("0.##").format(grams));
+                    } else {
+                        gramsInput.setText("");
+                    }
+                } catch (Exception ignored) {
+                }
+                syncing[0] = false;
                 compute.run();
             }
             public void afterTextChanged(Editable s) {
             }
         });
-        MaterialButton reverseBtn = makeButton(box, "Grams to cups");
-        reverseBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+        gramsInput.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (syncing[0] || !gramsInput.hasFocus()) {
+                    return;
+                }
+                syncing[0] = true;
                 try {
                     double gpc = gramsPerCup[ingSpinner.getSelectedItemPosition()];
-                    double grams = Double.parseDouble(gramsInput.getText().toString());
-                    cupsInput.setText(new DecimalFormat("0.##").format(grams / gpc));
-                    compute.run();
-                } catch (Exception e) {
-                    output.setText("Enter grams");
+                    String gs = s.toString().trim();
+                    if (!gs.isEmpty()) {
+                        double cups = Double.parseDouble(gs) / gpc;
+                        cupsInput.setText(new DecimalFormat("0.##").format(cups));
+                    } else {
+                        cupsInput.setText("");
+                    }
+                } catch (Exception ignored) {
                 }
+                syncing[0] = false;
+            }
+            public void afterTextChanged(Editable s) {
             }
         });
         compute.run();
@@ -5326,30 +6111,28 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final String[] words = new String[]{"lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua", "enim", "ad", "minim", "veniam", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi", "aliquip", "commodo", "consequat", "duis", "aute", "irure", "fugiat", "nulla", "pariatur", "excepteur", "sint", "occaecat", "cupidatat", "proident", "sunt", "culpa", "qui", "officia", "deserunt", "mollit", "anim", "est", "laborum"};
         final Random loremRandom = new Random();
-        final Runnable generate = new Runnable() {
-            public void run() {
-                int paras = 1 + countBar.getProgress();
-                countLabel.setText("Paragraphs: " + paras);
-                StringBuilder b = new StringBuilder();
-                for (int p = 0; p < paras; p++) {
-                    int sentences = 3 + loremRandom.nextInt(3);
-                    for (int s = 0; s < sentences; s++) {
-                        int len = 5 + loremRandom.nextInt(8);
-                        for (int w = 0; w < len; w++) {
-                            String word = words[loremRandom.nextInt(words.length)];
-                            if (w == 0) {
-                                word = Character.toUpperCase(word.charAt(0)) + word.substring(1);
-                            }
-                            b.append(word);
-                            b.append(w == len - 1 ? ". " : " ");
+        final Runnable generate = () -> {
+            int paras = 1 + countBar.getProgress();
+            countLabel.setText("Paragraphs: " + paras);
+            StringBuilder b = new StringBuilder();
+            for (int p = 0; p < paras; p++) {
+                int sentences = 3 + loremRandom.nextInt(3);
+                for (int s = 0; s < sentences; s++) {
+                    int len = 5 + loremRandom.nextInt(8);
+                    for (int w = 0; w < len; w++) {
+                        String word = words[loremRandom.nextInt(words.length)];
+                        if (w == 0) {
+                            word = Character.toUpperCase(word.charAt(0)) + word.substring(1);
                         }
-                    }
-                    if (p < paras - 1) {
-                        b.append("\n\n");
+                        b.append(word);
+                        b.append(w == len - 1 ? ". " : " ");
                     }
                 }
-                output.setText(b.toString().trim());
+                if (p < paras - 1) {
+                    b.append("\n\n");
+                }
             }
+            output.setText(b.toString().trim());
         };
         countBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
@@ -5364,16 +6147,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton regenBtn = makeRowButton(row, "New", 1f);
         MaterialButton copyBtn = makeRowButton(row, "Copy", 1f);
-        regenBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                generate.run();
-            }
-        });
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("lorem", output.getText().toString());
-            }
-        });
+        regenBtn.setOnClickListener(v -> generate.run());
+        copyBtn.setOnClickListener(v -> copyText("lorem", output.getText().toString()));
     }
     private void buildStrength(LinearLayout box) {
         addTitle(box, "Password Strength");
@@ -5466,19 +6241,17 @@ public class ToolRunnerActivity extends AppCompatActivity {
         countBar.setProgress(4);
         box.addView(countBar);
         final TextView output = makeOutput(box);
-        final Runnable generate = new Runnable() {
-            public void run() {
-                int n = 1 + countBar.getProgress();
-                countLabel.setText("Count: " + n);
-                StringBuilder b = new StringBuilder();
-                for (int i = 0; i < n; i++) {
-                    b.append(java.util.UUID.randomUUID().toString());
-                    if (i < n - 1) {
-                        b.append("\n");
-                    }
+        final Runnable generate = () -> {
+            int n = 1 + countBar.getProgress();
+            countLabel.setText("Count: " + n);
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                b.append(java.util.UUID.randomUUID().toString());
+                if (i < n - 1) {
+                    b.append("\n");
                 }
-                output.setText(b.toString());
             }
+            output.setText(b.toString());
         };
         countBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
@@ -5493,16 +6266,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton regenBtn = makeRowButton(row, "New", 1f);
         MaterialButton copyBtn = makeRowButton(row, "Copy", 1f);
-        regenBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                generate.run();
-            }
-        });
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("uuid", output.getText().toString());
-            }
-        });
+        regenBtn.setOnClickListener(v -> generate.run());
+        copyBtn.setOnClickListener(v -> copyText("uuid", output.getText().toString()));
     }
     private void buildColorConv(LinearLayout box) {
         addTitle(box, "Color Converter");
@@ -5511,28 +6276,26 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final View swatch = new View(this);
         box.addView(swatch, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(80)));
         final TextView output = makeOutput(box);
-        final Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    String h = hexInput.getText().toString().trim().replace("#", "");
-                    if (h.length() == 3) {
-                        h = "" + h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
-                    }
-                    int color = Color.parseColor("#" + h);
-                    int r = Color.red(color);
-                    int g = Color.green(color);
-                    int b = Color.blue(color);
-                    float[] hsv = new float[3];
-                    Color.RGBToHSV(r, g, b, hsv);
-                    swatch.setBackgroundColor(color);
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("RGB ").append(r).append(", ").append(g).append(", ").append(b).append("\n");
-                    sb.append("HSL ").append(Math.round(hsv[0])).append(", ").append(Math.round(hsv[1] * 100)).append("%, ").append(Math.round(hsv[2] * 100)).append("%\n");
-                    sb.append("HEX #").append(String.format(Locale.US, "%02X%02X%02X", r, g, b));
-                    output.setText(sb.toString());
-                } catch (Exception e) {
-                    output.setText("Enter a valid HEX color");
+        final Runnable compute = () -> {
+            try {
+                String h = hexInput.getText().toString().trim().replace("#", "");
+                if (h.length() == 3) {
+                    h = "" + h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
                 }
+                int color = Color.parseColor("#" + h);
+                int r = Color.red(color);
+                int g = Color.green(color);
+                int b = Color.blue(color);
+                float[] hsv = new float[3];
+                Color.RGBToHSV(r, g, b, hsv);
+                swatch.setBackgroundColor(color);
+                StringBuilder sb = new StringBuilder();
+                sb.append("RGB ").append(r).append(", ").append(g).append(", ").append(b).append("\n");
+                sb.append("HSL ").append(Math.round(hsv[0])).append(", ").append(Math.round(hsv[1] * 100)).append("%, ").append(Math.round(hsv[2] * 100)).append("%\n");
+                sb.append("HEX #").append(String.format(Locale.US, "%02X%02X%02X", r, g, b));
+                output.setText(sb.toString());
+            } catch (Exception e) {
+                output.setText("Enter a valid HEX color");
             }
         };
         hexInput.addTextChangedListener(new TextWatcher() {
@@ -5548,17 +6311,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton randomBtn = makeRowButton(row, "Random", 1f);
         MaterialButton copyBtn = makeRowButton(row, "Copy", 1f);
-        randomBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Random r = new Random();
-                hexInput.setText(String.format(Locale.US, "#%02X%02X%02X", r.nextInt(256), r.nextInt(256), r.nextInt(256)));
-            }
+        randomBtn.setOnClickListener(v -> {
+            Random r = new Random();
+            hexInput.setText(String.format(Locale.US, "#%02X%02X%02X", r.nextInt(256), r.nextInt(256), r.nextInt(256)));
         });
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("color", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("color", output.getText().toString()));
     }
     private void buildRegex(LinearLayout box) {
         addTitle(box, "Regex Tester");
@@ -5574,36 +6331,34 @@ public class ToolRunnerActivity extends AppCompatActivity {
         testInput.setMinLines(3);
         testInput.setText("mail me at joe@example or ann@test");
         final TextView output = makeOutput(box);
-        final Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    int flags = 0;
-                    if (caseBox.isChecked()) {
-                        flags |= java.util.regex.Pattern.CASE_INSENSITIVE;
-                    }
-                    if (multiBox.isChecked()) {
-                        flags |= java.util.regex.Pattern.MULTILINE;
-                    }
-                    java.util.regex.Pattern p = java.util.regex.Pattern.compile(patternInput.getText().toString(), flags);
-                    java.util.regex.Matcher m = p.matcher(testInput.getText().toString());
-                    int count = 0;
-                    StringBuilder b = new StringBuilder();
-                    while (m.find() && count < 10) {
-                        count++;
-                        b.append(count).append(". ").append(m.group()).append("\n");
-                    }
-                    int total = count;
-                    while (m.find()) {
-                        total++;
-                    }
-                    if (total == 0) {
-                        output.setText("No matches");
-                    } else {
-                        output.setText(total + (total == 1 ? " match" : " matches") + "\n" + b.toString().trim());
-                    }
-                } catch (Exception e) {
-                    output.setText("Invalid pattern");
+        final Runnable compute = () -> {
+            try {
+                int flags = 0;
+                if (caseBox.isChecked()) {
+                    flags |= java.util.regex.Pattern.CASE_INSENSITIVE;
                 }
+                if (multiBox.isChecked()) {
+                    flags |= java.util.regex.Pattern.MULTILINE;
+                }
+                java.util.regex.Pattern p = java.util.regex.Pattern.compile(patternInput.getText().toString(), flags);
+                java.util.regex.Matcher m = p.matcher(testInput.getText().toString());
+                int count = 0;
+                StringBuilder b = new StringBuilder();
+                while (m.find() && count < 10) {
+                    count++;
+                    b.append(count).append(". ").append(m.group()).append("\n");
+                }
+                int total = count;
+                while (m.find()) {
+                    total++;
+                }
+                if (total == 0) {
+                    output.setText("No matches");
+                } else {
+                    output.setText(total + (total == 1 ? " match" : " matches") + "\n" + b.toString().trim());
+                }
+            } catch (Exception e) {
+                output.setText("Invalid pattern");
             }
         };
         TextWatcher watcher = new TextWatcher() {
@@ -5617,16 +6372,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         };
         patternInput.addTextChangedListener(watcher);
         testInput.addTextChangedListener(watcher);
-        caseBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                compute.run();
-            }
-        });
-        multiBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                compute.run();
-            }
-        });
+        caseBox.setOnCheckedChangeListener((b, checked) -> compute.run());
+        multiBox.setOnCheckedChangeListener((b, checked) -> compute.run());
         compute.run();
     }
     private void buildUrlCodec(LinearLayout box) {
@@ -5638,30 +6385,22 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton encBtn = makeRowButton(row, "Encode", 1f);
         MaterialButton decBtn = makeRowButton(row, "Decode", 1f);
-        encBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    output.setText(java.net.URLEncoder.encode(input.getText().toString(), "UTF-8"));
-                } catch (Exception e) {
-                    output.setText("Error");
-                }
+        encBtn.setOnClickListener(v -> {
+            try {
+                output.setText(java.net.URLEncoder.encode(input.getText().toString(), StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                output.setText("Error");
             }
         });
-        decBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    output.setText(java.net.URLDecoder.decode(input.getText().toString(), "UTF-8"));
-                } catch (Exception e) {
-                    output.setText("Invalid encoding");
-                }
+        decBtn.setOnClickListener(v -> {
+            try {
+                output.setText(java.net.URLDecoder.decode(input.getText().toString(), StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                output.setText("Invalid encoding");
             }
         });
         MaterialButton copyBtn = makeButton(box, "Copy result");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("url", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("url", output.getText().toString()));
     }
     private void buildBinaryText(LinearLayout box) {
         addTitle(box, "Binary Translator");
@@ -5672,47 +6411,39 @@ public class ToolRunnerActivity extends AppCompatActivity {
         LinearLayout row = makeRow(box);
         MaterialButton encBtn = makeRowButton(row, "To binary", 1f);
         MaterialButton decBtn = makeRowButton(row, "To text", 1f);
-        encBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    byte[] bytes = input.getText().toString().getBytes("UTF-8");
-                    StringBuilder b = new StringBuilder();
-                    for (int i = 0; i < bytes.length; i++) {
-                        if (i > 0) {
-                            b.append(' ');
-                        }
-                        String bin = Integer.toBinaryString(bytes[i] & 255);
-                        while (bin.length() < 8) {
-                            bin = "0" + bin;
-                        }
-                        b.append(bin);
+        encBtn.setOnClickListener(v -> {
+            try {
+                byte[] bytes = input.getText().toString().getBytes(StandardCharsets.UTF_8);
+                StringBuilder b = new StringBuilder();
+                for (int i = 0; i < bytes.length; i++) {
+                    if (i > 0) {
+                        b.append(' ');
                     }
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Error");
+                    String bin = Integer.toBinaryString(bytes[i] & 255);
+                    while (bin.length() < 8) {
+                        bin = "0" + bin;
+                    }
+                    b.append(bin);
                 }
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Error");
             }
         });
-        decBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String[] parts = input.getText().toString().trim().split("\\s+");
-                    java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-                    for (String part : parts) {
-                        bos.write(Integer.parseInt(part, 2));
-                    }
-                    output.setText(new String(bos.toByteArray(), "UTF-8"));
-                } catch (Exception e) {
-                    output.setText("Use 8-bit groups separated by spaces");
+        decBtn.setOnClickListener(v -> {
+            try {
+                String[] parts = input.getText().toString().trim().split("\\s+");
+                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                for (String part : parts) {
+                    bos.write(Integer.parseInt(part, 2));
                 }
+                output.setText(new String(bos.toByteArray(), StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                output.setText("Use 8-bit groups separated by spaces");
             }
         });
         MaterialButton copyBtn = makeButton(box, "Copy result");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("binary", output.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("binary", output.getText().toString()));
     }
     private void buildCaesar(LinearLayout box) {
         addTitle(box, "Caesar Cipher");
@@ -5740,24 +6471,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton encBtn = makeRowButton(row, "Encrypt", 1f);
         MaterialButton decBtn = makeRowButton(row, "Decrypt", 1f);
         MaterialButton bruteBtn = makeRowButton(row, "All shifts", 1f);
-        encBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(caesarShift(input.getText().toString(), shift[0]));
+        encBtn.setOnClickListener(v -> output.setText(caesarShift(input.getText().toString(), shift[0])));
+        decBtn.setOnClickListener(v -> output.setText(caesarShift(input.getText().toString(), 26 - (shift[0] % 26))));
+        bruteBtn.setOnClickListener(v -> {
+            StringBuilder b = new StringBuilder();
+            for (int i = 1; i < 26; i++) {
+                b.append(i).append(": ").append(caesarShift(input.getText().toString(), i)).append("\n");
             }
-        });
-        decBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                output.setText(caesarShift(input.getText().toString(), 26 - (shift[0] % 26)));
-            }
-        });
-        bruteBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                StringBuilder b = new StringBuilder();
-                for (int i = 1; i < 26; i++) {
-                    b.append(i).append(": ").append(caesarShift(input.getText().toString(), i)).append("\n");
-                }
-                output.setText(b.toString().trim());
-            }
+            output.setText(b.toString().trim());
         });
     }
     private String caesarShift(String s, int shift) {
@@ -5783,136 +6504,100 @@ public class ToolRunnerActivity extends AppCompatActivity {
         current.setGravity(Gravity.CENTER);
         current.setText("-");
         final TextView count = addLabel(box, "52 cards left");
-        final Runnable reset = new Runnable() {
-            public void run() {
-                deck.clear();
-                String[] suits = new String[]{"Spades", "Hearts", "Diamonds", "Clubs"};
-                String[] ranks = new String[]{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
-                for (String suit : suits) {
-                    for (String rank : ranks) {
-                        deck.add(rank + " of " + suit);
-                    }
+        final Runnable reset = () -> {
+            deck.clear();
+            String[] suits = new String[]{"Spades", "Hearts", "Diamonds", "Clubs"};
+            String[] ranks = new String[]{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
+            for (String suit : suits) {
+                for (String rank : ranks) {
+                    deck.add(rank + " of " + suit);
                 }
-                count.setText("52 cards left");
-                current.setText("-");
             }
+            count.setText("52 cards left");
+            current.setText("-");
         };
         reset.run();
         LinearLayout row = makeRow(box);
         MaterialButton drawBtn = makeRowButton(row, "Draw", 1f);
         MaterialButton shuffleBtn = makeRowButton(row, "Shuffle", 1f);
         MaterialButton resetBtn = makeRowButton(row, "Reset", 1f);
-        drawBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (deck.isEmpty()) {
-                    toast("Deck empty, reset first");
-                    return;
-                }
-                String card = deck.remove(deck.size() - 1);
-                current.setText(card);
-                count.setText(deck.size() + " cards left");
-                vibrateTick();
+        drawBtn.setOnClickListener(v -> {
+            if (deck.isEmpty()) {
+                toast("Deck empty, reset first");
+                return;
             }
+            String card = deck.remove(deck.size() - 1);
+            current.setText(card);
+            count.setText(deck.size() + " cards left");
+            vibrateTick();
         });
-        shuffleBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                java.util.Collections.shuffle(deck);
-                toast("Shuffled");
-            }
+        shuffleBtn.setOnClickListener(v -> {
+            java.util.Collections.shuffle(deck);
+            toast("Shuffled");
         });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                reset.run();
-            }
-        });
+        resetBtn.setOnClickListener(v -> reset.run());
     }
-    private void buildOracle(LinearLayout box) {
-        addTitle(box, "Magic 8-Ball");
-        final EditText question = makeInput(box, "Ask a yes-no question", InputType.TYPE_CLASS_TEXT);
-        final TextView answer = makeOutput(box);
-        answer.setTextSize(24);
-        answer.setGravity(Gravity.CENTER);
-        answer.setText("Ask and tap");
-        final String[] answers = new String[]{"It is certain", "Without a doubt", "Yes definitely", "Most likely", "Outlook good", "Signs point to yes", "Reply hazy, try again", "Ask again later", "Cannot predict now", "Concentrate and ask again", "Do not count on it", "My reply is no", "Outlook not so good", "Very doubtful", "No chance", "Yes", "No", "Maybe", "Definitely not", "Go for it"};
-        MaterialButton askBtn = makeButton(box, "Shake the ball");
-        askBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (question.getText().toString().trim().isEmpty()) {
-                    toast("Ask something first");
-                    return;
-                }
-                answer.setText(answers[new Random().nextInt(answers.length)]);
-                vibrateTick();
-            }
-        });
-    }
-    private void buildPrime(LinearLayout box) {
+   private void buildPrime(LinearLayout box) {
         addTitle(box, "Prime Tools");
         final EditText input = makeInput(box, "Number up to 1000000000", InputType.TYPE_CLASS_NUMBER);
         input.setText("97");
         final TextView output = makeOutput(box);
         MaterialButton checkBtn = makeButton(box, "Check prime and factorize");
-        checkBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    long n = Long.parseLong(input.getText().toString().trim());
-                    if (n < 0 || n > 1000000000L) {
-                        output.setText("Enter 0 to 1000000000");
-                        return;
-                    }
-                    StringBuilder b = new StringBuilder();
-                    b.append(n).append(n == 1 ? " is not prime\n" : (isPrimeLong(n) ? " is prime\n" : " is not prime\n"));
-                    if (n > 1) {
-                        b.append("Factors: ").append(factorizeLong(n)).append("\n");
-                        long next = n + 1;
-                        while (!isPrimeLong(next)) {
-                            next++;
-                        }
-                        b.append("Next prime: ").append(next);
-                    }
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Enter an integer");
+        checkBtn.setOnClickListener(v -> {
+            try {
+                long n = Long.parseLong(input.getText().toString().trim());
+                if (n < 0 || n > 1000000000L) {
+                    output.setText("Enter 0 to 1000000000");
+                    return;
                 }
+                StringBuilder b = new StringBuilder();
+                b.append(n).append(n == 1 ? " is not prime\n" : (isPrimeLong(n) ? " is prime\n" : " is not prime\n"));
+                if (n > 1) {
+                    b.append("Factors: ").append(factorizeLong(n)).append("\n");
+                    long next = n + 1;
+                    while (!isPrimeLong(next)) {
+                        next++;
+                    }
+                    b.append("Next prime: ").append(next);
+                }
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Enter an integer");
             }
         });
         MaterialButton listBtn = makeButton(box, "List primes up to N (max 10000)");
-        listBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    int n = Integer.parseInt(input.getText().toString().trim());
-                    if (n < 2 || n > 10000) {
-                        output.setText("Enter 2 to 10000");
-                        return;
-                    }
-                    boolean[] sieve = new boolean[n + 1];
-                    java.util.Arrays.fill(sieve, true);
-                    sieve[0] = false;
-                    if (n >= 1) {
-                        sieve[1] = false;
-                    }
-                    for (int i = 2; i * i <= n; i++) {
-                        if (sieve[i]) {
-                            for (int j = i * i; j <= n; j += i) {
-                                sieve[j] = false;
-                            }
-                        }
-                    }
-                    StringBuilder b = new StringBuilder();
-                    int count = 0;
-                    for (int i = 2; i <= n; i++) {
-                        if (sieve[i]) {
-                            if (count > 0) {
-                                b.append(", ");
-                            }
-                            b.append(i);
-                            count++;
-                        }
-                    }
-                    output.setText(count + " primes\n" + b.toString());
-                } catch (Exception e) {
-                    output.setText("Enter an integer");
+        listBtn.setOnClickListener(v -> {
+            try {
+                int n = Integer.parseInt(input.getText().toString().trim());
+                if (n < 2 || n > 10000) {
+                    output.setText("Enter 2 to 10000");
+                    return;
                 }
+                boolean[] sieve = new boolean[n + 1];
+                java.util.Arrays.fill(sieve, true);
+                sieve[0] = false;
+                sieve[1] = false;
+                for (int i = 2; i * i <= n; i++) {
+                    if (sieve[i]) {
+                        for (int j = i * i; j <= n; j += i) {
+                            sieve[j] = false;
+                        }
+                    }
+                }
+                StringBuilder b = new StringBuilder();
+                int count = 0;
+                for (int i = 2; i <= n; i++) {
+                    if (sieve[i]) {
+                        if (count > 0) {
+                            b.append(", ");
+                        }
+                        b.append(i);
+                        count++;
+                    }
+                }
+                output.setText(count + " primes\n" + b);
+            } catch (Exception e) {
+                output.setText("Enter an integer");
             }
         });
     }
@@ -5973,42 +6658,40 @@ public class ToolRunnerActivity extends AppCompatActivity {
         cInput.setText("2");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Solve");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double a = Double.parseDouble(aInput.getText().toString());
-                    double b = Double.parseDouble(bInput.getText().toString());
-                    double c = Double.parseDouble(cInput.getText().toString());
-                    DecimalFormat df = new DecimalFormat("0.####");
-                    if (a == 0) {
-                        if (b == 0) {
-                            output.setText("Not an equation");
-                        } else {
-                            output.setText("Linear root x = " + df.format(-c / b));
-                        }
-                        return;
-                    }
-                    double disc = b * b - 4 * a * c;
-                    double vx = -b / (2 * a);
-                    double vy = a * vx * vx + b * vx + c;
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("Discriminant ").append(df.format(disc)).append("\n");
-                    if (disc > 0) {
-                        sb.append("x1 = ").append(df.format((-b + Math.sqrt(disc)) / (2 * a))).append("\n");
-                        sb.append("x2 = ").append(df.format((-b - Math.sqrt(disc)) / (2 * a))).append("\n");
-                    } else if (disc == 0) {
-                        sb.append("x = ").append(df.format(-b / (2 * a))).append("\n");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double a = Double.parseDouble(aInput.getText().toString());
+                double b = Double.parseDouble(bInput.getText().toString());
+                double c = Double.parseDouble(cInput.getText().toString());
+                DecimalFormat df = new DecimalFormat("0.####");
+                if (a == 0) {
+                    if (b == 0) {
+                        output.setText("Not an equation");
                     } else {
-                        double re = -b / (2 * a);
-                        double im = Math.sqrt(-disc) / (2 * a);
-                        sb.append("x1 = ").append(df.format(re)).append(" + ").append(df.format(im)).append("i\n");
-                        sb.append("x2 = ").append(df.format(re)).append(" - ").append(df.format(im)).append("i\n");
+                        output.setText("Linear root x = " + df.format(-c / b));
                     }
-                    sb.append("Vertex (").append(df.format(vx)).append(", ").append(df.format(vy)).append(")");
-                    output.setText(sb.toString());
-                } catch (Exception e) {
-                    output.setText("Enter a, b and c");
+                    return;
                 }
+                double disc = b * b - 4 * a * c;
+                double vx = -b / (2 * a);
+                double vy = a * vx * vx + b * vx + c;
+                StringBuilder sb = new StringBuilder();
+                sb.append("Discriminant ").append(df.format(disc)).append("\n");
+                if (disc > 0) {
+                    sb.append("x1 = ").append(df.format((-b + Math.sqrt(disc)) / (2 * a))).append("\n");
+                    sb.append("x2 = ").append(df.format((-b - Math.sqrt(disc)) / (2 * a))).append("\n");
+                } else if (disc == 0) {
+                    sb.append("x = ").append(df.format(-b / (2 * a))).append("\n");
+                } else {
+                    double re = -b / (2 * a);
+                    double im = Math.sqrt(-disc) / (2 * a);
+                    sb.append("x1 = ").append(df.format(re)).append(" + ").append(df.format(im)).append("i\n");
+                    sb.append("x2 = ").append(df.format(re)).append(" - ").append(df.format(im)).append("i\n");
+                }
+                sb.append("Vertex (").append(df.format(vx)).append(", ").append(df.format(vy)).append(")");
+                output.setText(sb.toString());
+            } catch (Exception e) {
+                output.setText("Enter a, b and c");
             }
         });
     }
@@ -6035,42 +6718,43 @@ public class ToolRunnerActivity extends AppCompatActivity {
         box.addView(opSpinner);
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Compute");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double x11 = Double.parseDouble(a11.getText().toString());
-                    double x12 = Double.parseDouble(a12.getText().toString());
-                    double x21 = Double.parseDouble(a21.getText().toString());
-                    double x22 = Double.parseDouble(a22.getText().toString());
-                    double y11 = Double.parseDouble(b11.getText().toString());
-                    double y12 = Double.parseDouble(b12.getText().toString());
-                    double y21 = Double.parseDouble(b21.getText().toString());
-                    double y22 = Double.parseDouble(b22.getText().toString());
-                    DecimalFormat df = new DecimalFormat("0.####");
-                    int op = opSpinner.getSelectedItemPosition();
-                    String result;
-                    if (op == 0) {
-                        result = mat2(df, x11 + y11, x12 + y12, x21 + y21, x22 + y22);
-                    } else if (op == 1) {
-                        result = mat2(df, x11 - y11, x12 - y12, x21 - y21, x22 - y22);
-                    } else if (op == 2) {
-                        result = mat2(df, x11 * y11 + x12 * y21, x11 * y12 + x12 * y22, x21 * y11 + x22 * y21, x21 * y12 + x22 * y22);
-                    } else if (op == 3) {
-                        result = "det = " + df.format(x11 * x22 - x12 * x21);
-                    } else if (op == 4) {
-                        double det = x11 * x22 - x12 * x21;
-                        if (det == 0) {
-                            result = "Singular, no inverse";
-                        } else {
-                            result = mat2(df, x22 / det, -x12 / det, -x21 / det, x11 / det);
-                        }
-                    } else {
-                        result = mat2(df, x11, x21, x12, x22);
-                    }
-                    output.setText(result);
-                } catch (Exception e) {
-                    output.setText("Fill all cells");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double x11 = Double.parseDouble(a11.getText().toString());
+                double x12 = Double.parseDouble(a12.getText().toString());
+                double x21 = Double.parseDouble(a21.getText().toString());
+                double x22 = Double.parseDouble(a22.getText().toString());
+                DecimalFormat df = new DecimalFormat("0.####");
+                int op = opSpinner.getSelectedItemPosition();
+                double y11 = 0, y12 = 0, y21 = 0, y22 = 0;
+                if (op <= 2) {
+                    y11 = Double.parseDouble(b11.getText().toString());
+                    y12 = Double.parseDouble(b12.getText().toString());
+                    y21 = Double.parseDouble(b21.getText().toString());
+                    y22 = Double.parseDouble(b22.getText().toString());
                 }
+                String result;
+                if (op == 0) {
+                    result = mat2(df, x11 + y11, x12 + y12, x21 + y21, x22 + y22);
+                } else if (op == 1) {
+                    result = mat2(df, x11 - y11, x12 - y12, x21 - y21, x22 - y22);
+                } else if (op == 2) {
+                    result = mat2(df, x11 * y11 + x12 * y21, x11 * y12 + x12 * y22, x21 * y11 + x22 * y21, x21 * y12 + x22 * y22);
+                } else if (op == 3) {
+                    result = "det = " + df.format(x11 * x22 - x12 * x21);
+                } else if (op == 4) {
+                    double det = x11 * x22 - x12 * x21;
+                    if (det == 0) {
+                        result = "Singular, no inverse";
+                    } else {
+                        result = mat2(df, x22 / det, -x12 / det, -x21 / det, x11 / det);
+                    }
+                } else {
+                    result = mat2(df, x11, x21, x12, x22);
+                }
+                output.setText(result);
+            } catch (Exception e) {
+                output.setText("Fill all cells");
             }
         });
     }
@@ -6119,33 +6803,31 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final int rightId = rightBtn.getId();
         MaterialButton goBtn = makeButton(box, "Solve");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    DecimalFormat df = new DecimalFormat("0.##");
-                    if (modeGroup.getCheckedRadioButtonId() == rightId) {
-                        double a = Double.parseDouble(s1.getText().toString());
-                        double b = Double.parseDouble(s2.getText().toString());
-                        double hyp = Math.sqrt(a * a + b * b);
-                        double angA = Math.toDegrees(Math.atan2(a, b));
-                        output.setText("Hypotenuse " + df.format(hyp) + "\nAngles " + df.format(angA) + " and " + df.format(90 - angA) + " deg\nArea " + df.format(a * b / 2) + "  Perimeter " + df.format(a + b + hyp));
-                    } else {
-                        double a = Double.parseDouble(s1.getText().toString());
-                        double b = Double.parseDouble(s2.getText().toString());
-                        double c = Double.parseDouble(s3.getText().toString());
-                        if (a + b <= c || a + c <= b || b + c <= a) {
-                            output.setText("Not a valid triangle");
-                            return;
-                        }
-                        double s = (a + b + c) / 2;
-                        double area = Math.sqrt(s * (s - a) * (s - b) * (s - c));
-                        double angA = Math.toDegrees(Math.acos((b * b + c * c - a * a) / (2 * b * c)));
-                        double angB = Math.toDegrees(Math.acos((a * a + c * c - b * b) / (2 * a * c)));
-                        output.setText("Area " + df.format(area) + "  Perimeter " + df.format(a + b + c) + "\nAngles " + df.format(angA) + ", " + df.format(angB) + ", " + df.format(180 - angA - angB) + " deg");
+        goBtn.setOnClickListener(v -> {
+            try {
+                DecimalFormat df = new DecimalFormat("0.##");
+                if (modeGroup.getCheckedRadioButtonId() == rightId) {
+                    double a = Double.parseDouble(s1.getText().toString());
+                    double b = Double.parseDouble(s2.getText().toString());
+                    double hyp = Math.sqrt(a * a + b * b);
+                    double angA = Math.toDegrees(Math.atan2(a, b));
+                    output.setText("Hypotenuse " + df.format(hyp) + "\nAngles " + df.format(angA) + " and " + df.format(90 - angA) + " deg\nArea " + df.format(a * b / 2) + "  Perimeter " + df.format(a + b + hyp));
+                } else {
+                    double a = Double.parseDouble(s1.getText().toString());
+                    double b = Double.parseDouble(s2.getText().toString());
+                    double c = Double.parseDouble(s3.getText().toString());
+                    if (a + b <= c || a + c <= b || b + c <= a) {
+                        output.setText("Not a valid triangle");
+                        return;
                     }
-                } catch (Exception e) {
-                    output.setText("Check sides");
+                    double s = (a + b + c) / 2;
+                    double area = Math.sqrt(s * (s - a) * (s - b) * (s - c));
+                    double angA = Math.toDegrees(Math.acos((b * b + c * c - a * a) / (2 * b * c)));
+                    double angB = Math.toDegrees(Math.acos((a * a + c * c - b * b) / (2 * a * c)));
+                    output.setText("Area " + df.format(area) + "  Perimeter " + df.format(a + b + c) + "\nAngles " + df.format(angA) + ", " + df.format(angB) + ", " + df.format(180 - angA - angB) + " deg");
                 }
+            } catch (Exception e) {
+                output.setText("Check sides");
             }
         });
     }
@@ -6162,30 +6844,32 @@ public class ToolRunnerActivity extends AppCompatActivity {
         v2.setText("10");
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double a = Double.parseDouble(v1.getText().toString());
-                    String vs = v2.getText().toString().trim();
-                    double b = vs.isEmpty() ? 0 : Double.parseDouble(vs);
-                    DecimalFormat df = new DecimalFormat("0.##");
-                    int shape = shapeSpinner.getSelectedItemPosition();
-                    StringBuilder sb = new StringBuilder();
-                    if (shape == 0) {
-                        sb.append("Area ").append(df.format(Math.PI * a * a)).append("\nCircumference ").append(df.format(2 * Math.PI * a));
-                    } else if (shape == 1) {
-                        sb.append("Area ").append(df.format(a * b)).append("\nPerimeter ").append(df.format(2 * (a + b)));
-                    } else if (shape == 2) {
-                        sb.append("Area ").append(df.format(a * b / 2));
-                    } else if (shape == 3) {
-                        sb.append("Volume ").append(df.format(Math.PI * a * a * b)).append("\nSurface ").append(df.format(2 * Math.PI * a * (a + b)));
-                    } else {
-                        sb.append("Volume ").append(df.format(4.0 / 3.0 * Math.PI * a * a * a)).append("\nSurface ").append(df.format(4 * Math.PI * a * a));
-                    }
-                    output.setText(sb.toString());
-                } catch (Exception e) {
-                    output.setText("Check inputs");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double a = Double.parseDouble(v1.getText().toString());
+                String vs = v2.getText().toString().trim();
+                double b = vs.isEmpty() ? 0 : Double.parseDouble(vs);
+                if (a < 0 || b < 0) {
+                    output.setText("Lengths must not be negative");
+                    return;
                 }
+                DecimalFormat df = new DecimalFormat("0.##");
+                int shape = shapeSpinner.getSelectedItemPosition();
+                StringBuilder sb = new StringBuilder();
+                if (shape == 0) {
+                    sb.append("Area ").append(df.format(Math.PI * a * a)).append("\nCircumference ").append(df.format(2 * Math.PI * a));
+                } else if (shape == 1) {
+                    sb.append("Area ").append(df.format(a * b)).append("\nPerimeter ").append(df.format(2 * (a + b)));
+                } else if (shape == 2) {
+                    sb.append("Area ").append(df.format(a * b / 2));
+                } else if (shape == 3) {
+                    sb.append("Volume ").append(df.format(Math.PI * a * a * b)).append("\nSurface ").append(df.format(2 * Math.PI * a * (a + b)));
+                } else {
+                    sb.append("Volume ").append(df.format(4.0 / 3.0 * Math.PI * a * a * a)).append("\nSurface ").append(df.format(4 * Math.PI * a * a));
+                }
+                output.setText(sb.toString());
+            } catch (Exception e) {
+                output.setText("Check inputs");
             }
         });
     }
@@ -6205,16 +6889,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
             drunk[0] = getSharedPreferences("tools", MODE_PRIVATE).getInt("water_" + todayKey, 0);
         } catch (Exception ignored) {
         }
-        final Runnable render = new Runnable() {
-            public void run() {
-                try {
-                    double w = Double.parseDouble(weightInput.getText().toString());
-                    int target = (int) Math.round(w * 35);
-                    targetText.setText("Target " + target + " ml");
-                    todayText.setText(drunk[0] + " ml");
-                } catch (Exception e) {
-                    targetText.setText("Enter weight");
-                }
+        final Runnable render = () -> {
+            try {
+                double w = Double.parseDouble(weightInput.getText().toString());
+                int target = (int) Math.round(w * 35);
+                targetText.setText("Target " + target + " ml");
+                todayText.setText(drunk[0] + " ml");
+            } catch (Exception e) {
+                targetText.setText("Enter weight");
             }
         };
         render.run();
@@ -6231,36 +6913,28 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton add250 = makeRowButton(row, "+250", 1f);
         MaterialButton add500 = makeRowButton(row, "+500", 1f);
         MaterialButton resetBtn = makeRowButton(row, "Reset", 1f);
-        final Runnable persist = new Runnable() {
-            public void run() {
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putInt("water_" + todayKey, drunk[0]).apply();
-                } catch (Exception ignored) {
-                }
+        final Runnable persist = () -> {
+            try {
+                getSharedPreferences("tools", MODE_PRIVATE).edit().putInt("water_" + todayKey, drunk[0]).apply();
+            } catch (Exception ignored) {
             }
         };
-        add250.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                drunk[0] += 250;
-                todayText.setText(drunk[0] + " ml");
-                persist.run();
-                vibrateTick();
-            }
+        add250.setOnClickListener(v -> {
+            drunk[0] += 250;
+            todayText.setText(drunk[0] + " ml");
+            persist.run();
+            vibrateTick();
         });
-        add500.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                drunk[0] += 500;
-                todayText.setText(drunk[0] + " ml");
-                persist.run();
-                vibrateTick();
-            }
+        add500.setOnClickListener(v -> {
+            drunk[0] += 500;
+            todayText.setText(drunk[0] + " ml");
+            persist.run();
+            vibrateTick();
         });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                drunk[0] = 0;
-                todayText.setText("0 ml");
-                persist.run();
-            }
+        resetBtn.setOnClickListener(v -> {
+            drunk[0] = 0;
+            todayText.setText("0 ml");
+            persist.run();
         });
     }
     private void buildSleep(LinearLayout box) {
@@ -6270,40 +6944,36 @@ public class ToolRunnerActivity extends AppCompatActivity {
         wakeInput.setText("07:00");
         final TextView output = makeOutput(box);
         MaterialButton bedBtn = makeButton(box, "Best bedtimes");
-        bedBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String[] parts = wakeInput.getText().toString().trim().split(":");
-                    Calendar c = Calendar.getInstance();
-                    c.set(Calendar.HOUR_OF_DAY, Integer.parseInt(parts[0].trim()));
-                    c.set(Calendar.MINUTE, Integer.parseInt(parts[1].trim()));
-                    c.set(Calendar.SECOND, 0);
-                    SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
-                    StringBuilder b = new StringBuilder();
-                    for (int i = 6; i >= 3; i--) {
-                        Calendar t = (Calendar) c.clone();
-                        t.add(Calendar.MINUTE, -i * 90 - 15);
-                        b.append(i).append(" cycles: ").append(f.format(t.getTime())).append("\n");
-                    }
-                    output.setText(b.toString().trim());
-                } catch (Exception e) {
-                    output.setText("Use HH:mm");
-                }
-            }
-        });
-        MaterialButton nowBtn = makeButton(box, "Sleeping now, when to wake");
-        nowBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Calendar now = Calendar.getInstance();
+        bedBtn.setOnClickListener(v -> {
+            try {
+                String[] parts = wakeInput.getText().toString().trim().split(":");
+                Calendar c = Calendar.getInstance();
+                c.set(Calendar.HOUR_OF_DAY, Integer.parseInt(parts[0].trim()));
+                c.set(Calendar.MINUTE, Integer.parseInt(parts[1].trim()));
+                c.set(Calendar.SECOND, 0);
                 SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
                 StringBuilder b = new StringBuilder();
-                for (int i = 3; i <= 6; i++) {
-                    Calendar t = (Calendar) now.clone();
-                    t.add(Calendar.MINUTE, i * 90 + 15);
+                for (int i = 6; i >= 3; i--) {
+                    Calendar t = (Calendar) c.clone();
+                    t.add(Calendar.MINUTE, -i * 90 - 15);
                     b.append(i).append(" cycles: ").append(f.format(t.getTime())).append("\n");
                 }
                 output.setText(b.toString().trim());
+            } catch (Exception e) {
+                output.setText("Use HH:mm");
             }
+        });
+        MaterialButton nowBtn = makeButton(box, "Sleeping now, when to wake");
+        nowBtn.setOnClickListener(v -> {
+            Calendar now = Calendar.getInstance();
+            SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
+            StringBuilder b = new StringBuilder();
+            for (int i = 3; i <= 6; i++) {
+                Calendar t = (Calendar) now.clone();
+                t.add(Calendar.MINUTE, i * 90 + 15);
+                b.append(i).append(" cycles: ").append(f.format(t.getTime())).append("\n");
+            }
+            output.setText(b.toString().trim());
         });
     }
     private void buildBodyFat(LinearLayout box) {
@@ -6328,35 +6998,45 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         final int maleId = maleBtn.getId();
         MaterialButton goBtn = makeButton(box, "Calculate");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double waist = Double.parseDouble(waistInput.getText().toString());
-                    double neck = Double.parseDouble(neckInput.getText().toString());
-                    double height = Double.parseDouble(heightInput.getText().toString());
-                    boolean male = genderGroup.getCheckedRadioButtonId() == maleId;
-                    double bf;
-                    if (male) {
-                        bf = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(height)) - 450;
-                    } else {
-                        double hip = Double.parseDouble(hipInput.getText().toString());
-                        bf = 495 / (1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(height)) - 450;
-                    }
-                    String cat;
-                    double low = male ? 18 : 25;
-                    if (bf < (male ? 6 : 14)) {
-                        cat = "Essential";
-                    } else if (bf < low) {
-                        cat = "Athletic";
-                    } else if (bf < (male ? 25 : 32)) {
-                        cat = "Fit";
-                    } else {
-                        cat = "High";
-                    }
-                    output.setText(new DecimalFormat("0.0").format(bf) + "%  " + cat);
-                } catch (Exception e) {
-                    output.setText("Check measurements");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double waist = Double.parseDouble(waistInput.getText().toString());
+                double neck = Double.parseDouble(neckInput.getText().toString());
+                double height = Double.parseDouble(heightInput.getText().toString());
+                boolean male = genderGroup.getCheckedRadioButtonId() == maleId;
+                double bf;
+                if (height <= 0 || neck <= 0) {
+                    output.setText("Height and neck must be above zero");
+                    return;
                 }
+                if (male) {
+                    if (waist <= neck) {
+                        output.setText("Waist must exceed neck");
+                        return;
+                    }
+                    bf = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(height)) - 450;
+                } else {
+                    double hip = Double.parseDouble(hipInput.getText().toString());
+                    if (waist + hip <= neck) {
+                        output.setText("Waist plus hip must exceed neck");
+                        return;
+                    }
+                    bf = 495 / (1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(height)) - 450;
+                }
+                String cat;
+                double low = male ? 18 : 25;
+                if (bf < (male ? 6 : 14)) {
+                    cat = "Essential";
+                } else if (bf < low) {
+                    cat = "Athletic";
+                } else if (bf < (male ? 25 : 32)) {
+                    cat = "Fit";
+                } else {
+                    cat = "High";
+                }
+                output.setText(new DecimalFormat("0.0").format(bf) + "%  " + cat);
+            } catch (Exception e) {
+                output.setText("Check measurements");
             }
         });
     }
@@ -6389,76 +7069,66 @@ public class ToolRunnerActivity extends AppCompatActivity {
         listBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(listBox);
         final String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        final Runnable persist = new Runnable() {
-            public void run() {
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(items)).apply();
-                } catch (Exception ignored) {
-                }
+        final Runnable persist = () -> {
+            try {
+                getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(items)).apply();
+            } catch (Exception ignored) {
             }
         };
         final Runnable[] render = new Runnable[1];
-        render[0] = new Runnable() {
-            public void run() {
-                listBox.removeAllViews();
-                for (int i = 0; i < items.size(); i++) {
-                    final int idx = i;
-                    HabitItem item = items.get(i);
-                    LinearLayout row = new LinearLayout(ToolRunnerActivity.this);
-                    row.setOrientation(LinearLayout.HORIZONTAL);
-                    row.setGravity(Gravity.CENTER_VERTICAL);
-                    TextView label = new TextView(ToolRunnerActivity.this);
-                    label.setText(item.title + "\n" + item.streak + " day streak");
-                    label.setTextSize(15);
-                    row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                    MaterialButton doneBtn = new MaterialButton(ToolRunnerActivity.this);
-                    doneBtn.setText(today.equals(item.lastDone) ? "Done" : "Check");
-                    doneBtn.setEnabled(!today.equals(item.lastDone));
-                    doneBtn.setOnClickListener(new View.OnClickListener() {
-                        public void onClick(View v) {
-                            HabitItem it = items.get(idx);
-                            try {
-                                SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                                Date last = f.parse(it.lastDone);
-                                long gap = (f.parse(today).getTime() - last.getTime()) / 86400000L;
-                                it.streak = gap == 1 ? it.streak + 1 : 1;
-                            } catch (Exception e) {
-                                it.streak = 1;
-                            }
-                            it.lastDone = today;
-                            persist.run();
-                            render[0].run();
-                            vibrateTick();
-                        }
-                    });
-                    row.addView(doneBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    MaterialButton del = new MaterialButton(ToolRunnerActivity.this);
-                    del.setText("X");
-                    del.setOnClickListener(new View.OnClickListener() {
-                        public void onClick(View v) {
-                            items.remove(idx);
-                            persist.run();
-                            render[0].run();
-                        }
-                    });
-                    row.addView(del, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    listBox.addView(row);
-                }
+        render[0] = () -> {
+            listBox.removeAllViews();
+            for (int i = 0; i < items.size(); i++) {
+                final int idx = i;
+                HabitItem item = items.get(i);
+                LinearLayout row = new LinearLayout(ToolRunnerActivity.this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                TextView label = new TextView(ToolRunnerActivity.this);
+                label.setText(item.title + "\n" + item.streak + " day streak");
+                label.setTextSize(15);
+                row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                MaterialButton doneBtn = new MaterialButton(ToolRunnerActivity.this);
+                doneBtn.setText(today.equals(item.lastDone) ? "Done" : "Check");
+                doneBtn.setEnabled(!today.equals(item.lastDone));
+                doneBtn.setOnClickListener(v -> {
+                    HabitItem it = items.get(idx);
+                    try {
+                        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+                        Date last = f.parse(it.lastDone);
+                        long gap = (f.parse(today).getTime() - last.getTime()) / 86400000L;
+                        it.streak = gap == 1 ? it.streak + 1 : 1;
+                    } catch (Exception e) {
+                        it.streak = 1;
+                    }
+                    it.lastDone = today;
+                    persist.run();
+                    render[0].run();
+                    vibrateTick();
+                });
+                row.addView(doneBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                MaterialButton del = new MaterialButton(ToolRunnerActivity.this);
+                del.setText("X");
+                del.setOnClickListener(v -> {
+                    items.remove(idx);
+                    persist.run();
+                    render[0].run();
+                });
+                row.addView(del, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                listBox.addView(row);
             }
         };
         render[0].run();
         MaterialButton addBtn = makeButton(box, "Add habit");
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String t = input.getText().toString().trim();
-                if (t.isEmpty()) {
-                    return;
-                }
-                items.add(new HabitItem(t, 0, ""));
-                input.setText("");
-                persist.run();
-                render[0].run();
+        addBtn.setOnClickListener(v -> {
+            String t = input.getText().toString().trim();
+            if (t.isEmpty()) {
+                return;
             }
+            items.add(new HabitItem(t, 0, ""));
+            input.setText("");
+            persist.run();
+            render[0].run();
         });
     }
     private static class ExpenseItem {
@@ -6491,56 +7161,48 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
         listView.setAdapter(adapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
-        final Runnable refresh = new Runnable() {
-            public void run() {
-                names.clear();
-                double total = 0;
-                DecimalFormat df = new DecimalFormat("0.00");
-                for (int i = items.size() - 1; i >= 0; i--) {
-                    ExpenseItem e = items.get(i);
-                    names.add(e.label + "  " + df.format(e.amount));
-                    total += e.amount;
-                }
-                totalText.setText("Total " + df.format(total) + "  (" + items.size() + " items)");
-                adapter.notifyDataSetChanged();
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(items)).apply();
-                } catch (Exception ignored) {
-                }
+        final Runnable refresh = () -> {
+            names.clear();
+            double total = 0;
+            DecimalFormat df = new DecimalFormat("0.00");
+            for (int i = items.size() - 1; i >= 0; i--) {
+                ExpenseItem e = items.get(i);
+                names.add(e.label + "  " + df.format(e.amount));
+                total += e.amount;
+            }
+            totalText.setText("Total " + df.format(total) + "  (" + items.size() + " items)");
+            adapter.notifyDataSetChanged();
+            try {
+                getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(items)).apply();
+            } catch (Exception ignored) {
             }
         };
         refresh.run();
         MaterialButton addBtn = makeButton(box, "Add expense");
-        addBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String label = labelInput.getText().toString().trim();
-                    double amount = Double.parseDouble(amountInput.getText().toString());
-                    if (label.isEmpty()) {
-                        label = "Expense";
-                    }
-                    items.add(new ExpenseItem(label, amount));
-                    labelInput.setText("");
-                    amountInput.setText("");
-                    refresh.run();
-                } catch (Exception e) {
-                    toast("Enter an amount");
+        addBtn.setOnClickListener(v -> {
+            try {
+                String label = labelInput.getText().toString().trim();
+                double amount = Double.parseDouble(amountInput.getText().toString());
+                if (label.isEmpty()) {
+                    label = "Expense";
                 }
+                items.add(new ExpenseItem(label, amount));
+                labelInput.setText("");
+                amountInput.setText("");
+                refresh.run();
+            } catch (Exception e) {
+                toast("Enter an amount");
             }
         });
-        listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
-            public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                items.remove(items.size() - 1 - position);
-                refresh.run();
-                return true;
-            }
+        listView.setOnItemLongClickListener((parent, view, position, id) -> {
+            items.remove(items.size() - 1 - position);
+            refresh.run();
+            return true;
         });
         MaterialButton clearBtn = makeButton(box, "Clear all");
-        clearBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                items.clear();
-                refresh.run();
-            }
+        clearBtn.setOnClickListener(v -> {
+            items.clear();
+            refresh.run();
         });
     }
     private void buildUnitPrice(LinearLayout box) {
@@ -6551,75 +7213,95 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText qtyB = makeInput(box, "Pack B quantity", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         final TextView output = makeOutput(box);
         MaterialButton goBtn = makeButton(box, "Compare");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    double pa = Double.parseDouble(priceA.getText().toString());
-                    double qa = Double.parseDouble(qtyA.getText().toString());
-                    double pb = Double.parseDouble(priceB.getText().toString());
-                    double qb = Double.parseDouble(qtyB.getText().toString());
-                    double ua = pa / qa;
-                    double ub = pb / qb;
-                    DecimalFormat df = new DecimalFormat("0.0000");
-                    StringBuilder b = new StringBuilder();
-                    b.append("A ").append(df.format(ua)).append(" per unit\nB ").append(df.format(ub)).append(" per unit\n");
-                    if (ua < ub) {
-                        b.append("A is cheaper by ").append(new DecimalFormat("0.0").format((ub - ua) / ub * 100)).append("%");
-                    } else if (ub < ua) {
-                        b.append("B is cheaper by ").append(new DecimalFormat("0.0").format((ua - ub) / ua * 100)).append("%");
-                    } else {
-                        b.append("Same value");
-                    }
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Fill all four fields");
+        goBtn.setOnClickListener(v -> {
+            try {
+                double pa = Double.parseDouble(priceA.getText().toString());
+                double qa = Double.parseDouble(qtyA.getText().toString());
+                double pb = Double.parseDouble(priceB.getText().toString());
+                double qb = Double.parseDouble(qtyB.getText().toString());
+                if (qa <= 0 || qb <= 0) {
+                    output.setText("Quantities must be above zero");
+                    return;
                 }
+                double ua = pa / qa;
+                double ub = pb / qb;
+                DecimalFormat df = new DecimalFormat("0.0000");
+                StringBuilder b = new StringBuilder();
+                b.append("A ").append(df.format(ua)).append(" per unit\nB ").append(df.format(ub)).append(" per unit\n");
+                if (ua < ub) {
+                    b.append("A is cheaper by ").append(new DecimalFormat("0.0").format((ub - ua) / ub * 100)).append("%");
+                } else if (ub < ua) {
+                    b.append("B is cheaper by ").append(new DecimalFormat("0.0").format((ua - ub) / ua * 100)).append("%");
+                } else {
+                    b.append("Same value");
+                }
+                output.setText(b.toString());
+            } catch (Exception e) {
+                output.setText("Fill all four fields");
             }
         });
     }
     private void buildScreenTest(LinearLayout box) {
         addTitle(box, "Screen Tester");
-        addLabel(box, "Fill the screen with a solid color to spot dead pixels. Tap the color to exit.");
-        final View fillView = new View(this);
-        fillView.setVisibility(View.GONE);
-        box.addView(fillView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(160)));
-        LinearLayout row1 = makeRow(box);
-        MaterialButton redBtn = makeRowButton(row1, "Red", 1f);
-        MaterialButton greenBtn = makeRowButton(row1, "Green", 1f);
-        MaterialButton blueBtn = makeRowButton(row1, "Blue", 1f);
-        LinearLayout row2 = makeRow(box);
-        MaterialButton whiteBtn = makeRowButton(row2, "White", 1f);
-        MaterialButton blackBtn = makeRowButton(row2, "Black", 1f);
-        MaterialButton grayBtn = makeRowButton(row2, "Gray", 1f);
-        View.OnClickListener showColor = new View.OnClickListener() {
-            public void onClick(View v) {
-                fillView.setBackgroundColor(((ColorDrawableLike) v.getTag()).color);
-                fillView.setVisibility(View.VISIBLE);
+        addLabel(box, "Tap a color to fill the ENTIRE screen. Tap anywhere to cycle colors, tap EXIT (or back) to leave. Great for dead-pixel checks.");
+        final int[] cycle = new int[]{Color.RED, Color.GREEN, Color.BLUE, Color.WHITE, Color.BLACK, Color.GRAY, Color.YELLOW, Color.CYAN, Color.MAGENTA};
+        final String[] names = new String[]{"Red", "Green", "Blue", "White", "Black", "Gray", "Yellow", "Cyan", "Magenta"};
+        final int[] current = new int[]{0};
+        // Fullscreen runner that supports tap-to-cycle + exit button
+        final java.util.concurrent.atomic.AtomicInteger idx = new java.util.concurrent.atomic.AtomicInteger(0);
+        final Runnable[] openIdx = new Runnable[1];
+        openIdx[0] = () -> {
+            final android.widget.FrameLayout root = new android.widget.FrameLayout(ToolRunnerActivity.this);
+            root.setBackgroundColor(cycle[idx.get() % cycle.length]);
+            final MaterialButton exit = new MaterialButton(ToolRunnerActivity.this);
+            exit.setText(names[idx.get() % names.length] + "  •  tap screen for next  •  EXIT");
+            android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            int m = dp(24);
+            ep.setMargins(m, m, m, dp(48));
+            root.addView(exit, ep);
+            final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+            root.setOnClickListener(v2 -> {
+                idx.set((idx.get() + 1) % cycle.length);
+                root.setBackgroundColor(cycle[idx.get()]);
+                exit.setText(names[idx.get()] + "  •  tap screen for next  •  EXIT");
+            });
+            exit.setOnClickListener(v2 -> {
+                try { holder[0].dismiss(); } catch (Exception ignored) {}
+            });
+            androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(ToolRunnerActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+            holder[0] = d;
+            fullscreenTestDialog = d;
+            d.setOnDismissListener(di -> {
+                if (fullscreenTestDialog == holder[0]) fullscreenTestDialog = null;
+            });
+            d.show();
+            if (d.getWindow() != null) {
+                d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                d.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
         };
-        redBtn.setTag(new ColorDrawableLike(Color.RED));
-        greenBtn.setTag(new ColorDrawableLike(Color.GREEN));
-        blueBtn.setTag(new ColorDrawableLike(Color.BLUE));
-        whiteBtn.setTag(new ColorDrawableLike(Color.WHITE));
-        blackBtn.setTag(new ColorDrawableLike(Color.BLACK));
-        grayBtn.setTag(new ColorDrawableLike(Color.GRAY));
-        redBtn.setOnClickListener(showColor);
-        greenBtn.setOnClickListener(showColor);
-        blueBtn.setOnClickListener(showColor);
-        whiteBtn.setOnClickListener(showColor);
-        blackBtn.setOnClickListener(showColor);
-        grayBtn.setOnClickListener(showColor);
-        fillView.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                fillView.setVisibility(View.GONE);
+        String[] labels = new String[]{"Red", "Green", "Blue", "White", "Black", "Gray", "Yellow", "Cyan", "Magenta"};
+        for (int r = 0; r < 3; r++) {
+            LinearLayout row = makeRow(box);
+            for (int c = 0; c < 3; c++) {
+                final int index = r * 3 + c;
+                MaterialButton b = makeRowButton(row, labels[index], 1f);
+                b.setBackgroundColor(cycle[index]);
+                b.setTextColor(index == 3 || index == 6 || index == 7 ? Color.BLACK : Color.WHITE);
+                b.setOnClickListener(v -> {
+                    idx.set(index);
+                    current[0] = index;
+                    openIdx[0].run();
+                });
             }
+        }
+        MaterialButton fullBtn = makeButton(box, "Start fullscreen cycle test");
+        fullBtn.setOnClickListener(v -> {
+            idx.set(0);
+            openIdx[0].run();
         });
     }
     private static class ColorDrawableLike {
-        final int color;
-        ColorDrawableLike(int c) {
-            color = c;
-        }
     }
     private void vibratePattern(long[] pattern) {
         try {
@@ -6646,54 +7328,34 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton heartbeatBtn = makeRowButton(row2, "Heartbeat", 1f);
         MaterialButton customBtn = makeRowButton(row2, "Custom", 1f);
         MaterialButton stopBtn = makeRowButton(row2, "Stop", 1f);
-        shortBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                vibratePattern(new long[]{0, 150});
-            }
-        });
-        longBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                vibratePattern(new long[]{0, 600});
-            }
-        });
-        sosBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                vibratePattern(new long[]{0, 150, 150, 150, 150, 150, 300, 400, 200, 400, 200, 400, 300, 150, 150, 150, 150, 150});
-            }
-        });
-        heartbeatBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                vibratePattern(new long[]{0, 120, 120, 180, 400});
-            }
-        });
-        customBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    String[] parts = customInput.getText().toString().trim().split(",");
-                    long[] pattern = new long[parts.length];
-                    for (int i = 0; i < parts.length; i++) {
-                        pattern[i] = Math.max(0, Long.parseLong(parts[i].trim()));
-                    }
-                    vibratePattern(pattern);
-                } catch (Exception e) {
-                    toast("Use numbers separated by commas");
+        shortBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 150}));
+        longBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 600}));
+        sosBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 150, 150, 150, 150, 150, 300, 400, 200, 400, 200, 400, 300, 150, 150, 150, 150, 150}));
+        heartbeatBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 120, 120, 180, 400}));
+        customBtn.setOnClickListener(v -> {
+            try {
+                String[] parts = customInput.getText().toString().trim().split(",");
+                long[] pattern = new long[parts.length];
+                for (int i = 0; i < parts.length; i++) {
+                    pattern[i] = Math.max(0, Long.parseLong(parts[i].trim()));
                 }
+                vibratePattern(pattern);
+            } catch (Exception e) {
+                toast("Use numbers separated by commas");
             }
         });
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    if (vibrator != null) {
-                        vibrator.cancel();
-                    }
-                } catch (Exception ignored) {
+        stopBtn.setOnClickListener(v -> {
+            try {
+                if (vibrator != null) {
+                    vibrator.cancel();
                 }
+            } catch (Exception ignored) {
             }
         });
     }
     private void buildStrobe(LinearLayout box) {
         addTitle(box, "Strobe Light");
-        addLabel(box, "Flashing light. Look away if sensitive.");
+        addLabel(box, "Warning: flashing lights can trigger seizures. Fullscreen mode fills the whole display.");
         final TextView hzLabel = addLabel(box, "Flashes per second: 4");
         SeekBar hzBar = new SeekBar(this);
         hzBar.setMax(9);
@@ -6712,12 +7374,13 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        final MaterialButton toggleBtn = makeButton(box, "Start");
+        final MaterialButton toggleBtn = makeButton(box, "Start (preview)");
+        final MaterialButton fullBtn = makeButton(box, "Start FULLSCREEN strobe");
         toggleBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (strobeOn) {
                     strobeOn = false;
-                    toggleBtn.setText("Start");
+                    toggleBtn.setText("Start (preview)");
                     return;
                 }
                 strobeOn = true;
@@ -6725,12 +7388,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 if (strobeTick == null) {
                     strobeTick = new Runnable() {
                         public void run() {
-                            if (!strobeOn || strobeView == null) {
+                            if (!strobeOn) {
                                 return;
                             }
-                            boolean white = strobeView.getTag() == null || "b".equals(strobeView.getTag());
-                            strobeView.setBackgroundColor(white ? Color.BLACK : Color.WHITE);
-                            strobeView.setTag(white ? "b" : "w");
+                            if (strobeView != null) {
+                                boolean white = strobeView.getTag() == null || "b".equals(strobeView.getTag());
+                                strobeView.setBackgroundColor(white ? Color.BLACK : Color.WHITE);
+                                strobeView.setTag(white ? "b" : "w");
+                            }
                             handler.postDelayed(this, 1000L / Math.max(1, strobeHz * 2));
                         }
                     };
@@ -6738,6 +7403,58 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 handler.post(strobeTick);
             }
         });
+        fullBtn.setOnClickListener(v -> {
+            strobeOn = false;
+            try { if (strobeTick != null) handler.removeCallbacks(strobeTick); } catch (Exception ignored) {}
+            toggleBtn.setText("Start (preview)");
+            openFullscreenStrobe();
+        });
+    }
+
+    private void openFullscreenStrobe() {
+        final android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+        root.setBackgroundColor(Color.WHITE);
+        final MaterialButton exit = new MaterialButton(this);
+        exit.setText("STOP  •  exit strobe");
+        android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        int m = dp(24);
+        ep.setMargins(m, m, m, dp(48));
+        root.addView(exit, ep);
+        final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+        final boolean[] on = new boolean[]{true};
+        final Runnable[] flip = new Runnable[1];
+        flip[0] = new Runnable() {
+            public void run() {
+                if (holder[0] == null || !holder[0].isShowing()) return;
+                on[0] = !on[0];
+                root.setBackgroundColor(on[0] ? Color.WHITE : Color.BLACK);
+                handler.postDelayed(this, 1000L / Math.max(1, strobeHz * 2));
+            }
+        };
+        root.setOnClickListener(v -> {
+            try { handler.removeCallbacks(flip[0]); } catch (Exception ignored) {}
+            try { holder[0].dismiss(); } catch (Exception ignored) {}
+        });
+        exit.setOnClickListener(v -> {
+            try { handler.removeCallbacks(flip[0]); } catch (Exception ignored) {}
+            try { holder[0].dismiss(); } catch (Exception ignored) {}
+        });
+        androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+        holder[0] = d;
+        strobeDialog = d;
+        d.setOnDismissListener(di -> {
+            try { handler.removeCallbacks(flip[0]); } catch (Exception ignored) {}
+            if (strobeDialog == holder[0]) strobeDialog = null;
+        });
+        d.show();
+        if (d.getWindow() != null) {
+            d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            android.view.WindowManager.LayoutParams lp = d.getWindow().getAttributes();
+            lp.screenBrightness = 1.0f;
+            d.getWindow().setAttributes(lp);
+            d.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+        handler.post(flip[0]);
     }
     private void buildAltimeter(LinearLayout box) {
         addTitle(box, "Altimeter");
@@ -6754,14 +7471,16 @@ public class ToolRunnerActivity extends AppCompatActivity {
             output.setText("No barometer on this device");
             return;
         }
+        altimeterText = output;
+        altimeterSensor = pressure;
+        startAltimeterListener(output, pressure);
+    }
+    private void startAltimeterListener(final TextView output, Sensor pressure) {
         try {
             if (activeListener != null) {
                 sensorManager.unregisterListener(activeListener);
             }
         } catch (Exception ignored) {
-        }
-        if (compassView != null || levelView != null) {
-            return;
         }
         activeListener = new SensorEventListener() {
             public void onSensorChanged(SensorEvent event) {
@@ -6801,11 +7520,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
         enableNfcDispatch();
         MaterialButton copyBtn = makeButton(box, "Copy tag info");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("nfc", nfcText.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("nfc", nfcText.getText().toString()));
     }
     private void buildBluetooth(LinearLayout box) {
         addTitle(box, "Paired Bluetooth");
@@ -6816,286 +7531,18 @@ public class ToolRunnerActivity extends AppCompatActivity {
         listView.setAdapter(btAdapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(240)));
         MaterialButton refreshBtn = makeButton(box, "Refresh");
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                refreshBtList();
-            }
-        });
+        refreshBtn.setOnClickListener(v -> refreshBtList());
         MaterialButton openBtn = makeButton(box, "Open Bluetooth settings");
-        openBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    startActivity(new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS));
-                } catch (Exception e) {
-                    toast("Cannot open settings");
-                }
+        openBtn.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS));
+            } catch (Exception e) {
+                toast("Cannot open settings");
             }
         });
         refreshBtList();
     }
-    private void buildApps(LinearLayout box) {
-        addTitle(box, "Installed Apps");
-        final EditText search = makeInput(box, "Search apps", InputType.TYPE_CLASS_TEXT);
-        final android.widget.ListView listView = new android.widget.ListView(this);
-        final List<android.content.pm.ApplicationInfo> all = new ArrayList<>();
-        final List<String> names = new ArrayList<>();
-        final List<android.content.pm.ApplicationInfo> visible = new ArrayList<>();
-        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
-        listView.setAdapter(adapter);
-        box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(320)));
-        final android.content.pm.PackageManager pm = getPackageManager();
-        final Runnable reload = new Runnable() {
-            public void run() {
-                all.clear();
-                try {
-                    all.addAll(pm.getInstalledApplications(0));
-                } catch (Exception ignored) {
-                }
-                java.util.Collections.sort(all, new java.util.Comparator<android.content.pm.ApplicationInfo>() {
-                    public int compare(android.content.pm.ApplicationInfo a, android.content.pm.ApplicationInfo b) {
-                        return String.valueOf(pm.getApplicationLabel(a)).compareToIgnoreCase(String.valueOf(pm.getApplicationLabel(b)));
-                    }
-                });
-                filterApps(pm, all, visible, names, search.getText().toString());
-                adapter.notifyDataSetChanged();
-            }
-        };
-        reload.run();
-        search.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterApps(pm, all, visible, names, s.toString());
-                adapter.notifyDataSetChanged();
-            }
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
-            public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                try {
-                    android.content.pm.ApplicationInfo app = visible.get(position);
-                    Intent launch = pm.getLaunchIntentForPackage(app.packageName);
-                    if (launch != null) {
-                        startActivity(launch);
-                    } else {
-                        Intent info = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + app.packageName));
-                        startActivity(info);
-                    }
-                } catch (Exception e) {
-                    toast("Cannot open");
-                }
-            }
-        });
-        listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
-            public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                try {
-                    android.content.pm.ApplicationInfo app = visible.get(position);
-                    Intent del = new Intent(Intent.ACTION_DELETE, android.net.Uri.parse("package:" + app.packageName));
-                    startActivity(del);
-                } catch (Exception e) {
-                    toast("Cannot uninstall");
-                }
-                return true;
-            }
-        });
-        addLabel(box, "Tap to open, long-press to uninstall.");
-    }
-    private void filterApps(android.content.pm.PackageManager pm, List<android.content.pm.ApplicationInfo> all, List<android.content.pm.ApplicationInfo> visible, List<String> names, String query) {
-        visible.clear();
-        names.clear();
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.US);
-        for (android.content.pm.ApplicationInfo app : all) {
-            String label = String.valueOf(pm.getApplicationLabel(app));
-            if (q.isEmpty() || label.toLowerCase(Locale.US).contains(q) || app.packageName.toLowerCase(Locale.US).contains(q)) {
-                visible.add(app);
-                names.add(label + "\n" + app.packageName);
-            }
-        }
-    }
-    private String readProcFile(String path) {
-        StringBuilder b = new StringBuilder();
-        java.io.BufferedReader reader = null;
-        try {
-            reader = new java.io.BufferedReader(new java.io.FileReader(path));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (b.length() > 0) {
-                    b.append("\n");
-                }
-                b.append(line);
-                if (b.length() > 4000) {
-                    break;
-                }
-            }
-        } catch (Exception ignored) {
-        } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        return b.toString();
-    }
-    private void buildCpuInfo(LinearLayout box) {
-        addTitle(box, "CPU Info");
-        final TextView output = makeOutput(box);
-        try {
-            StringBuilder b = new StringBuilder();
-            b.append("Cores: ").append(Runtime.getRuntime().availableProcessors()).append("\n");
-            String[] abis = Build.SUPPORTED_ABIS;
-            b.append("ABI: ");
-            for (int i = 0; i < abis.length; i++) {
-                if (i > 0) {
-                    b.append(", ");
-                }
-                b.append(abis[i]);
-            }
-            b.append("\nHardware: ").append(Build.HARDWARE).append("  Board: ").append(Build.BOARD).append("\n");
-            try {
-                String freq = readProcFile("sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq").trim();
-                if (!freq.isEmpty()) {
-                    b.append("CPU0 now: ").append(Long.parseLong(freq) / 1000).append(" MHz\n");
-                }
-            } catch (Exception ignored) {
-            }
-            String cpuinfo = readProcFile("proc/cpuinfo");
-            int shown = 0;
-            for (String line : cpuinfo.split("\n")) {
-                String t = line.trim();
-                if (t.startsWith("Processor") || t.startsWith("Hardware") || t.startsWith("model name")) {
-                    b.append(t).append("\n");
-                    shown++;
-                    if (shown >= 6) {
-                        break;
-                    }
-                }
-            }
-            output.setText(b.toString().trim());
-        } catch (Exception e) {
-            output.setText("Unavailable");
-        }
-        MaterialButton copyBtn = makeButton(box, "Copy");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("cpu", output.getText().toString());
-            }
-        });
-    }
-    private void buildClipboard(LinearLayout box) {
-        addTitle(box, "Clipboard History");
-        final Gson gson = new Gson();
-        final String prefsKey = "clips_json";
-        final List<String> clips = new ArrayList<>();
-        try {
-            String saved = getSharedPreferences("tools", MODE_PRIVATE).getString(prefsKey, "[]");
-            List<String> loaded = gson.fromJson(saved, new TypeToken<List<String>>() {
-            }.getType());
-            if (loaded != null) {
-                clips.addAll(loaded);
-            }
-        } catch (Exception ignored) {
-        }
-        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, clips);
-        final android.widget.ListView listView = new android.widget.ListView(this);
-        listView.setAdapter(adapter);
-        box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(260)));
-        final Runnable persist = new Runnable() {
-            public void run() {
-                List<String> trimmed = clips.size() > 50 ? clips.subList(0, 50) : clips;
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putString(prefsKey, gson.toJson(trimmed)).apply();
-                } catch (Exception ignored) {
-                }
-            }
-        };
-        final Runnable saveCurrent = new Runnable() {
-            public void run() {
-                try {
-                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    CharSequence text = cm.getPrimaryClip() == null || cm.getPrimaryClip().getItemCount() == 0 ? null : cm.getPrimaryClip().getItemAt(0).coerceToText(ToolRunnerActivity.this);
-                    if (text != null) {
-                        String s = text.toString();
-                        if (!s.isEmpty() && (clips.isEmpty() || !clips.get(0).equals(s))) {
-                            clips.add(0, s.length() > 200 ? s.substring(0, 200) : s);
-                            adapter.notifyDataSetChanged();
-                            persist.run();
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-        };
-        saveCurrent.run();
-        try {
-            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            clipListener = new android.content.ClipboardManager.OnPrimaryClipChangedListener() {
-                public void onPrimaryClipChanged() {
-                    saveCurrent.run();
-                }
-            };
-            cm.addPrimaryClipChangedListener(clipListener);
-        } catch (Exception ignored) {
-        }
-        MaterialButton saveBtn = makeButton(box, "Save current clip");
-        saveBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                saveCurrent.run();
-            }
-        });
-        listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
-            public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                copyText("clip", clips.get(position));
-            }
-        });
-        listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
-            public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                clips.remove(position);
-                adapter.notifyDataSetChanged();
-                persist.run();
-                return true;
-            }
-        });
-        MaterialButton clearBtn = makeButton(box, "Clear history");
-        clearBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                clips.clear();
-                adapter.notifyDataSetChanged();
-                persist.run();
-            }
-        });
-    }
-    private void buildDataUsage(LinearLayout box) {
-        addTitle(box, "Data Usage");
-        addLabel(box, "Counters reset on reboot.");
-        final TextView output = makeOutput(box);
-        final Runnable refresh = new Runnable() {
-            public void run() {
-                try {
-                    StringBuilder b = new StringBuilder();
-                    b.append("Mobile down ").append(formatBytes(TrafficStats.getMobileRxBytes())).append("\n");
-                    b.append("Mobile up ").append(formatBytes(TrafficStats.getMobileTxBytes())).append("\n");
-                    b.append("Total down ").append(formatBytes(TrafficStats.getTotalRxBytes())).append("\n");
-                    b.append("Total up ").append(formatBytes(TrafficStats.getTotalTxBytes())).append("\n");
-                    int uid = android.os.Process.myUid();
-                    b.append("This app down ").append(formatBytes(TrafficStats.getUidRxBytes(uid))).append("\n");
-                    b.append("This app up ").append(formatBytes(TrafficStats.getUidTxBytes(uid)));
-                    output.setText(b.toString());
-                } catch (Exception e) {
-                    output.setText("Unavailable");
-                }
-            }
-        };
-        refresh.run();
-        MaterialButton refreshBtn = makeButton(box, "Refresh");
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                refresh.run();
-            }
-        });
-    }
+
     private void buildVolume(LinearLayout box) {
         addTitle(box, "Volume Panel");
         final android.media.AudioManager audio = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -7134,14 +7581,12 @@ public class ToolRunnerActivity extends AppCompatActivity {
             box.addView(bar);
         }
         MaterialButton muteBtn = makeButton(box, "Mute music stream");
-        muteBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    audio.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
-                    toast("Music muted, use sliders to restore");
-                } catch (Exception e) {
-                    toast("Failed");
-                }
+        muteBtn.setOnClickListener(v -> {
+            try {
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
+                toast("Music muted, use sliders to restore");
+            } catch (Exception e) {
+                toast("Failed");
             }
         });
     }
@@ -7161,26 +7606,24 @@ public class ToolRunnerActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(280)));
         final Ringtone[] current = new Ringtone[]{null};
-        final Runnable load = new Runnable() {
-            public void run() {
-                names.clear();
-                uris.clear();
+        final Runnable load = () -> {
+            names.clear();
+            uris.clear();
+            try {
+                RingtoneManager manager = new RingtoneManager(ToolRunnerActivity.this);
+                manager.setType(typeVals[typeSpinner.getSelectedItemPosition()]);
+                android.database.Cursor cursor = manager.getCursor();
+                while (cursor.moveToNext()) {
+                    names.add(cursor.getString(RingtoneManager.TITLE_COLUMN_INDEX));
+                    uris.add(manager.getRingtoneUri(cursor.getPosition()));
+                }
                 try {
-                    RingtoneManager manager = new RingtoneManager(ToolRunnerActivity.this);
-                    manager.setType(typeVals[typeSpinner.getSelectedItemPosition()]);
-                    android.database.Cursor cursor = manager.getCursor();
-                    while (cursor.moveToNext()) {
-                        names.add(cursor.getString(RingtoneManager.TITLE_COLUMN_INDEX));
-                        uris.add(manager.getRingtoneUri(cursor.getPosition()));
-                    }
-                    try {
-                        cursor.close();
-                    } catch (Exception ignored) {
-                    }
+                    cursor.close();
                 } catch (Exception ignored) {
                 }
-                adapter.notifyDataSetChanged();
+            } catch (Exception ignored) {
             }
+            adapter.notifyDataSetChanged();
         };
         load.run();
         typeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -7190,119 +7633,336 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void onNothingSelected(android.widget.AdapterView<?> parent) {
             }
         });
-        listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
-            public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                try {
-                    if (current[0] != null) {
-                        current[0].stop();
-                    }
-                    current[0] = RingtoneManager.getRingtone(ToolRunnerActivity.this, uris.get(position));
-                    current[0].play();
-                } catch (Exception e) {
-                    toast("Play failed");
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            try {
+                if (current[0] != null) {
+                    current[0].stop();
                 }
+                current[0] = RingtoneManager.getRingtone(ToolRunnerActivity.this, uris.get(position));
+                current[0].play();
+                activeRingtone = current[0];
+            } catch (Exception e) {
+                toast("Play failed");
             }
         });
         MaterialButton stopBtn = makeButton(box, "Stop preview");
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    if (current[0] != null) {
-                        current[0].stop();
-                    }
-                } catch (Exception ignored) {
+        stopBtn.setOnClickListener(v -> {
+            try {
+                if (current[0] != null) {
+                    current[0].stop();
                 }
+            } catch (Exception ignored) {
             }
+            activeRingtone = null;
         });
     }
     private void buildWallpaper(LinearLayout box) {
         addTitle(box, "Wallpaper Maker");
-        final int[] picks = new int[]{Color.parseColor("#1B73E8"), Color.parseColor("#0D652D"), Color.parseColor("#A50E0E"), Color.parseColor("#681DA8"), Color.parseColor("#000000"), Color.parseColor("#FFFFFF")};
-        final int[] first = new int[]{picks[0]};
-        final int[] second = new int[]{picks[3]};
-        final boolean[] gradient = new boolean[]{true};
-        LinearLayout row1 = makeRow(box);
-        for (int c : picks) {
-            Button sw = new Button(this);
-            sw.setBackgroundColor(c);
-            final int color = c;
-            sw.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    first[0] = color;
-                }
+        addLabel(box, "Pick any colors from the wheel, blend gradients, preview fullscreen, then set or save.");
+        final int[] first = new int[]{Color.parseColor("#1B73E8")};
+        final int[] second = new int[]{Color.parseColor("#681DA8")};
+        final int[] which = new int[]{0};
+        final String[] direction = new String[]{"Top → Bottom"};
+
+        LinearLayout whichRow = makeRow(box);
+        final MaterialButton firstTab = makeRowButton(whichRow, "Color 1 ●", 1f);
+        final MaterialButton secondTab = makeRowButton(whichRow, "Color 2", 1f);
+        final View currentSwatch = new View(this);
+        currentSwatch.setBackgroundColor(first[0]);
+        box.addView(currentSwatch, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)));
+        final TextView hexLabel = makeOutput(box);
+        hexLabel.setText("#1B73E8");
+
+        final io.github.abdurazaaqmohammed.ui.views.ColorWheelView wheel = new io.github.abdurazaaqmohammed.ui.views.ColorWheelView(this);
+        box.addView(wheel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(300)));
+        addLabel(box, "Alpha (transparency)");
+        SeekBar alphaBar = new SeekBar(this);
+        alphaBar.setMax(255);
+        alphaBar.setProgress(255);
+        box.addView(alphaBar);
+
+        wheel.setListener(() -> {
+            int c = wheel.getColor(alphaBar.getProgress());
+            if (which[0] == 0) first[0] = c; else second[0] = c;
+            currentSwatch.setBackgroundColor(c);
+            hexLabel.setText(String.format("#%08X", c));
+            renderWallpaperPreview(previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
+        });
+        alphaBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                int c = wheel.getColor(p);
+                if (which[0] == 0) first[0] = c; else second[0] = c;
+                currentSwatch.setBackgroundColor(c);
+                hexLabel.setText(String.format("#%08X", c));
+                renderWallpaperPreview(previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
+            }
+            public void onStartTrackingTouch(SeekBar s) {}
+            public void onStopTrackingTouch(SeekBar s) {}
+        });
+        firstTab.setOnClickListener(v -> {
+            which[0] = 0;
+            firstTab.setText("Color 1 ●");
+            secondTab.setText("Color 2");
+            wheel.setColor(first[0]);
+            currentSwatch.setBackgroundColor(first[0]);
+        });
+        secondTab.setOnClickListener(v -> {
+            which[0] = 1;
+            firstTab.setText("Color 1");
+            secondTab.setText("Color 2 ●");
+            wheel.setColor(second[0]);
+            currentSwatch.setBackgroundColor(second[0]);
+        });
+        wheel.setColor(first[0]);
+
+        addLabel(box, "Presets (tap = set current color)");
+        final int[] presets = new int[]{Color.parseColor("#1B73E8"), Color.parseColor("#0D652D"), Color.parseColor("#A50E0E"), Color.parseColor("#681DA8"), Color.parseColor("#FF6D00"), Color.parseColor("#00BCD4"), Color.parseColor("#000000"), Color.parseColor("#FFFFFF"), Color.parseColor("#FF4081"), Color.parseColor("#9E9E9E")};
+        LinearLayout presetRow1 = makeRow(box);
+        LinearLayout presetRow2 = makeRow(box);
+        for (int i = 0; i < presets.length; i++) {
+            final int color = presets[i];
+            MaterialButton sw = new MaterialButton(this);
+            sw.setText("");
+            sw.setBackgroundColor(color);
+            sw.setMinHeight(dp(48));
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(48), 1f);
+            int mm = dp(3);
+            p.setMargins(mm, mm, mm, mm);
+            (i < 5 ? presetRow1 : presetRow2).addView(sw, p);
+            sw.setOnClickListener(v -> {
+                if (which[0] == 0) first[0] = color; else second[0] = color;
+                wheel.setColor(color);
+                currentSwatch.setBackgroundColor(color);
+                renderWallpaperPreview(previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
             });
-            row1.addView(sw, new LinearLayout.LayoutParams(0, dp(48), 1f));
         }
-        addLabel(box, "Tap a swatch for the first color.");
-        LinearLayout row2 = makeRow(box);
-        for (int c : picks) {
-            Button sw = new Button(this);
-            sw.setBackgroundColor(c);
-            final int color = c;
-            sw.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    second[0] = color;
-                }
-            });
-            row2.addView(sw, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        }
-        addLabel(box, "Tap a swatch for the second color.");
+
         final CheckBox gradientBox = new CheckBox(this);
-        gradientBox.setText("Gradient blend");
+        gradientBox.setText("Gradient blend (off = solid Color 1)");
         gradientBox.setChecked(true);
         box.addView(gradientBox);
+        gradientHolder[0] = true;
+        addLabel(box, "Gradient direction");
+        final Spinner dirSpinner = new Spinner(this);
+        final String[] dirs = new String[]{"Top → Bottom", "Left → Right", "Diagonal", "Radial"};
+        ArrayAdapter<String> dirAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, dirs);
+        dirAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        dirSpinner.setAdapter(dirAdapter);
+        box.addView(dirSpinner);
+        dirSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                direction[0] = dirs[position];
+                renderWallpaperPreview(previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
+            }
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+
         final android.widget.ImageView preview = new android.widget.ImageView(this);
-        box.addView(preview, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(200)));
-        final Runnable render = new Runnable() {
-            public void run() {
+        preview.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        box.addView(preview, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(260)));
+        previewHolder[0] = preview;
+        gradientBox.setOnCheckedChangeListener((b, checked) -> {
+            gradientHolder[0] = checked;
+            renderWallpaperPreview(preview, first[0], second[0], checked, direction[0]);
+        });
+        renderWallpaperPreview(preview, first[0], second[0], true, direction[0]);
+
+        LinearLayout btnRow = makeRow(box);
+        MaterialButton previewBtn = makeRowButton(btnRow, "Fullscreen preview", 1f);
+        MaterialButton swapBtn = makeRowButton(btnRow, "Swap", 1f);
+        previewBtn.setOnClickListener(v -> {
+            Object tag = preview.getTag();
+            if (!(tag instanceof Bitmap)) {
+                toast("Nothing to preview");
+                return;
+            }
+            android.widget.ImageView full = new android.widget.ImageView(ToolRunnerActivity.this);
+            full.setImageBitmap((Bitmap) tag);
+            full.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+            android.widget.FrameLayout root = new android.widget.FrameLayout(ToolRunnerActivity.this);
+            root.setBackgroundColor(Color.BLACK);
+            root.addView(full, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            MaterialButton exit = new MaterialButton(ToolRunnerActivity.this);
+            exit.setText("EXIT preview");
+            android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            int m = dp(24);
+            ep.setMargins(m, m, m, dp(48));
+            root.addView(exit, ep);
+            final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+            root.setOnClickListener(v2 -> { try { holder[0].dismiss(); } catch (Exception ignored) {} });
+            exit.setOnClickListener(v2 -> { try { holder[0].dismiss(); } catch (Exception ignored) {} });
+            androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(ToolRunnerActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+            holder[0] = d;
+            d.show();
+            if (d.getWindow() != null) d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        });
+        swapBtn.setOnClickListener(v -> {
+            int t = first[0];
+            first[0] = second[0];
+            second[0] = t;
+            wheel.setColor(which[0] == 0 ? first[0] : second[0]);
+            renderWallpaperPreview(preview, first[0], second[0], gradientHolder[0], direction[0]);
+        });
+        LinearLayout btnRow2 = makeRow(box);
+        MaterialButton applyBtn = makeRowButton(btnRow2, "Set as wallpaper", 1f);
+        MaterialButton saveBtn = makeRowButton(btnRow2, "Save to gallery", 1f);
+        applyBtn.setOnClickListener(v -> {
+            try {
+                Object tag = preview.getTag();
+                if (!(tag instanceof Bitmap)) {
+                    return;
+                }
+                WallpaperManager wm = WallpaperManager.getInstance(ToolRunnerActivity.this);
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+                Bitmap scaled = Bitmap.createScaledBitmap((Bitmap) tag, dm.widthPixels, dm.heightPixels, true);
                 try {
-                    int w = 540;
-                    int h = 960;
-                    android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888);
-                    if (gradientBox.isChecked()) {
-                        for (int y = 0; y < h; y++) {
-                            float t = y / (float) h;
-                            int r = Math.round(Color.red(first[0]) * (1 - t) + Color.red(second[0]) * t);
-                            int g = Math.round(Color.green(first[0]) * (1 - t) + Color.green(second[0]) * t);
-                            int b = Math.round(Color.blue(first[0]) * (1 - t) + Color.blue(second[0]) * t);
-                            int color = Color.rgb(r, g, b);
-                            for (int x = 0; x < w; x++) {
-                                bmp.setPixel(x, y, color);
-                            }
-                        }
+                    if (Build.VERSION.SDK_INT >= 24) {
+                        wm.setBitmap(scaled, null, true, WallpaperManager.FLAG_SYSTEM);
                     } else {
-                        bmp.eraseColor(first[0]);
+                        wm.setBitmap(scaled);
                     }
-                    preview.setImageBitmap(bmp);
-                    preview.setTag(bmp);
-                } catch (Exception e) {
-                    toast("Render failed");
+                } finally {
+                    try { if (scaled != tag) scaled.recycle(); } catch (Exception ignored) {}
                 }
-            }
-        };
-        gradientBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                gradient[0] = checked;
-                render.run();
+                toast("Wallpaper set");
+            } catch (Exception e) {
+                toast("Failed: " + e.getMessage());
             }
         });
-        render.run();
-        MaterialButton applyBtn = makeButton(box, "Set as wallpaper");
-        applyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+        saveBtn.setOnClickListener(v -> {
+            try {
+                Object tag = preview.getTag();
+                if (!(tag instanceof Bitmap)) {
+                    return;
+                }
+                String name = "wallpaper_" + System.currentTimeMillis() + ".png";
+                android.content.ContentValues cv = new android.content.ContentValues();
+                cv.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name);
+                cv.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png");
+                android.net.Uri uri = getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                if (uri == null) {
+                    toast("Save failed");
+                    return;
+                }
+                java.io.OutputStream os = getContentResolver().openOutputStream(uri);
+                ((Bitmap) tag).compress(Bitmap.CompressFormat.PNG, 100, os);
+                os.close();
+                toast("Saved to gallery");
+            } catch (Exception e) {
+                toast("Save failed");
+            }
+        });
+        MaterialButton copyHex = makeButton(box, "Copy colors as HEX");
+        copyHex.setOnClickListener(v -> copyText("wallpaper", String.format("Color1 #%08X  Color2 #%08X", first[0], second[0])));
+        LinearLayout btnRow3 = makeRow(box);
+        MaterialButton shareWpBtn = makeRowButton(btnRow3, "Share image", 1f);
+        MaterialButton locateWpBtn = makeRowButton(btnRow3, "Locate file", 1f);
+        shareWpBtn.setOnClickListener(v -> {
+            try {
+                Object tag = preview.getTag();
+                if (!(tag instanceof Bitmap)) return;
+                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES), "Wallpapers");
+                dir.mkdirs();
+                java.io.File out = new java.io.File(dir, "wallpaper_" + System.currentTimeMillis() + ".png");
+                java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+                ((Bitmap) tag).compress(Bitmap.CompressFormat.PNG, 100, os);
+                os.close();
+                shareToolFile(out, "image/png");
+            } catch (Exception e) {
+                toast("Share failed");
+            }
+        });
+        locateWpBtn.setOnClickListener(v -> {
+            try {
+                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES), "Wallpapers");
+                java.io.File[] all = dir.listFiles();
+                if (all == null || all.length == 0) {
+                    toast("Save or share first");
+                    return;
+                }
+                java.io.File latest = all[0];
+                for (java.io.File f : all) if (f.lastModified() > latest.lastModified()) latest = f;
+                locateToolFile(latest);
+            } catch (Exception e) {
+                toast("Locate failed");
+            }
+        });
+    }
+
+    private final android.widget.ImageView[] previewHolder = new android.widget.ImageView[1];
+    private final boolean[] gradientHolder = new boolean[]{true};
+
+    private void renderWallpaperPreview(android.widget.ImageView preview, int first, int second, boolean gradient, String direction) {
+        if (preview == null) return;
+        try {
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int w = Math.max(540, Math.min(1080, dm.widthPixels));
+            int h = Math.max(960, Math.min(1920, dm.heightPixels));
+            Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            if (!gradient) {
+                bmp.eraseColor(first);
+            } else if ("Left → Right".equals(direction)) {
+                int[] row = new int[w];
+                for (int x = 0; x < w; x++) {
+                    float t = x / (float) w;
+                    row[x] = Color.argb(
+                            Math.round(Color.alpha(first) * (1 - t) + Color.alpha(second) * t),
+                            Math.round(Color.red(first) * (1 - t) + Color.red(second) * t),
+                            Math.round(Color.green(first) * (1 - t) + Color.green(second) * t),
+                            Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t));
+                }
+                for (int y = 0; y < h; y++) bmp.setPixels(row, 0, w, 0, y, w, 1);
+            } else if ("Diagonal".equals(direction)) {
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < w; x++) {
+                        float t = (x / (float) w + y / (float) h) / 2f;
+                        bmp.setPixel(x, y, Color.argb(
+                                Math.round(Color.alpha(first) * (1 - t) + Color.alpha(second) * t),
+                                Math.round(Color.red(first) * (1 - t) + Color.red(second) * t),
+                                Math.round(Color.green(first) * (1 - t) + Color.green(second) * t),
+                                Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t)));
+                    }
+                }
+            } else if ("Radial".equals(direction)) {
+                float cx = w / 2f;
+                float cy = h / 2f;
+                float max = (float) Math.sqrt(cx * cx + cy * cy);
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < w; x++) {
+                        float dx = x - cx;
+                        float dy = y - cy;
+                        float t = Math.min(1f, (float) Math.sqrt(dx * dx + dy * dy) / max);
+                        bmp.setPixel(x, y, Color.argb(
+                                Math.round(Color.alpha(first) * (1 - t) + Color.alpha(second) * t),
+                                Math.round(Color.red(first) * (1 - t) + Color.red(second) * t),
+                                Math.round(Color.green(first) * (1 - t) + Color.green(second) * t),
+                                Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t)));
+                    }
+                }
+            } else {
+                int[] pixels = new int[w * h];
+                for (int y = 0; y < h; y++) {
+                    float t = y / (float) h;
+                    int r = Math.round(Color.red(first) * (1 - t) + Color.red(second) * t);
+                    int g = Math.round(Color.green(first) * (1 - t) + Color.green(second) * t);
+                    int b = Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t);
+                    int a = Math.round(Color.alpha(first) * (1 - t) + Color.alpha(second) * t);
+                    java.util.Arrays.fill(pixels, y * w, (y + 1) * w, Color.argb(a, r, g, b));
+                }
+                bmp.setPixels(pixels, 0, w, 0, 0, w, h);
+            }
+            Object old = preview.getTag();
+            preview.setImageBitmap(bmp);
+            preview.setTag(bmp);
+            if (old instanceof Bitmap && old != bmp) {
                 try {
-                    Object tag = preview.getTag();
-                    if (!(tag instanceof android.graphics.Bitmap)) {
-                        return;
-                    }
-                    WallpaperManager wm = WallpaperManager.getInstance(ToolRunnerActivity.this);
-                    wm.setBitmap((android.graphics.Bitmap) tag);
-                    toast("Wallpaper set");
-                } catch (Exception e) {
-                    toast("Failed, check wallpaper permission");
+                    ((Bitmap) old).recycle();
+                } catch (Exception ignored) {
                 }
             }
-        });
+        } catch (Exception e) {
+            toast("Render failed");
+        }
     }
     private void buildQuickSettings(LinearLayout box) {
         addTitle(box, "System Shortcuts");
@@ -7321,17 +7981,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
             final String action = entry[1];
             final String label = entry[0];
             MaterialButton b = makeButton(box, label);
-            b.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    try {
-                        Intent intent = new Intent(action);
-                        if (label.startsWith("App info")) {
-                            intent.setData(android.net.Uri.parse("package:" + getPackageName()));
-                        }
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        toast("Cannot open");
+            b.setOnClickListener(v -> {
+                try {
+                    Intent intent = new Intent(action);
+                    if (label.startsWith("App info")) {
+                        intent.setData(android.net.Uri.parse("package:" + getPackageName()));
                     }
+                    startActivity(intent);
+                } catch (Exception e) {
+                    toast("Cannot open");
                 }
             });
         }
@@ -7347,43 +8005,41 @@ public class ToolRunnerActivity extends AppCompatActivity {
         box.addView(reqBar);
         final int[] required = new int[]{75};
         final TextView output = makeOutput(box);
-        final Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    int present = Integer.parseInt(presentInput.getText().toString());
-                    int total = Integer.parseInt(totalInput.getText().toString());
-                    if (total <= 0 || present < 0 || present > total) {
-                        output.setText("Check numbers");
-                        return;
-                    }
-                    double pct = present * 100.0 / total;
-                    DecimalFormat df = new DecimalFormat("0.0");
-                    StringBuilder b = new StringBuilder();
-                    b.append("Now ").append(df.format(pct)).append("%\n");
-                    if (pct >= required[0]) {
-                        int bunk = 0;
-                        while ((present * 100.0 / (total + bunk + 1)) >= required[0]) {
-                            bunk++;
-                        }
-                        b.append("Safe. You can skip ").append(bunk).append(" classes.");
-                    } else {
-                        int need = 0;
-                        while (((present + need) * 100.0 / (total + need)) < required[0]) {
-                            need++;
-                            if (need > 1000) {
-                                break;
-                            }
-                        }
-                        b.append("Short. Attend next ").append(need).append(" classes.");
-                    }
-                    output.setText(b.toString());
-                    try {
-                        getSharedPreferences("tools", MODE_PRIVATE).edit().putInt("att_present", present).putInt("att_total", total).apply();
-                    } catch (Exception ignored) {
-                    }
-                } catch (Exception e) {
-                    output.setText("Enter numbers");
+        final Runnable compute = () -> {
+            try {
+                int present = Integer.parseInt(presentInput.getText().toString());
+                int total = Integer.parseInt(totalInput.getText().toString());
+                if (total <= 0 || present < 0 || present > total) {
+                    output.setText("Check numbers");
+                    return;
                 }
+                double pct = present * 100.0 / total;
+                DecimalFormat df = new DecimalFormat("0.0");
+                StringBuilder b = new StringBuilder();
+                b.append("Now ").append(df.format(pct)).append("%\n");
+                if (pct >= required[0]) {
+                    int bunk = 0;
+                    while ((present * 100.0 / (total + bunk + 1)) >= required[0]) {
+                        bunk++;
+                    }
+                    b.append("Safe. You can skip ").append(bunk).append(" classes.");
+                } else {
+                    int need = 0;
+                    while (((present + need) * 100.0 / (total + need)) < required[0]) {
+                        need++;
+                        if (need > 1000) {
+                            break;
+                        }
+                    }
+                    b.append("Short. Attend next ").append(need).append(" classes.");
+                }
+                output.setText(b.toString());
+                try {
+                    getSharedPreferences("tools", MODE_PRIVATE).edit().putInt("att_present", present).putInt("att_total", total).apply();
+                } catch (Exception ignored) {
+                }
+            } catch (Exception e) {
+                output.setText("Enter numbers");
             }
         };
         try {
@@ -7417,9 +8073,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
     private void buildTyping(LinearLayout box) {
         addTitle(box, "Typing Test");
-        final String target = "The quick brown fox jumps over the lazy dog near the quiet river bank at dawn";
+        final String[] phrases = new String[]{
+                "The quick brown fox jumps over the lazy dog near the quiet river bank at dawn",
+                "Pack my box with five dozen liquor jugs and a cozy blanket for winter",
+                "Coding every day builds skill faster than reading about code ever will",
+                "Bright stars shine over silent mountains while rivers run to the sea"};
+        final String[] target = new String[]{phrases[0]};
         TextView targetView = makeOutput(box);
-        targetView.setText(target);
+        targetView.setText(target[0]);
         final EditText input = makeInput(box, "Type here", InputType.TYPE_CLASS_TEXT);
         final TextView stats = makeOutput(box);
         stats.setText("Start typing to begin");
@@ -7438,9 +8099,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     return;
                 }
                 int correct = 0;
-                int n = Math.min(typed.length(), target.length());
+                int n = Math.min(typed.length(), target[0].length());
                 for (int i = 0; i < n; i++) {
-                    if (typed.charAt(i) == target.charAt(i)) {
+                    if (typed.charAt(i) == target[0].charAt(i)) {
                         correct++;
                     }
                 }
@@ -7449,7 +8110,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 double acc = typed.length() == 0 ? 100 : correct * 100.0 / typed.length();
                 DecimalFormat df = new DecimalFormat("0");
                 stats.setText(df.format(wpm) + " WPM  " + df.format(acc) + "% accuracy");
-                if (typed.equals(target)) {
+                if (typed.equals(target[0])) {
                     active[0] = false;
                     stats.setText("Done. " + df.format(wpm) + " WPM  " + df.format(acc) + "% accuracy");
                     vibrateTick();
@@ -7458,436 +8119,28 @@ public class ToolRunnerActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
             }
         });
-        MaterialButton resetBtn = makeButton(box, "Reset");
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                input.setText("");
-                active[0] = false;
-                stats.setText("Start typing to begin");
-            }
-        });
-    }
-    private void buildReaction(LinearLayout box) {
-        addTitle(box, "Reaction Test");
-        addLabel(box, "Tap Start, wait for green, then tap fast. Tapping red fails.");
-        reactionPad = new View(this);
-        reactionPad.setBackgroundColor(Color.parseColor("#D93025"));
-        box.addView(reactionPad, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(200)));
-        reactionText = makeOutput(box);
-        reactionText.setGravity(Gravity.CENTER);
-        reactionText.setText("Press Start");
-        reactionState = 0;
-        long best = 0;
-        try {
-            best = getSharedPreferences("tools", MODE_PRIVATE).getLong("reaction_best", 0);
-        } catch (Exception ignored) {
-        }
-        final long[] bestRef = new long[]{best};
-        if (best > 0) {
-            reactionText.setText("Press Start\nBest " + best + " ms");
-        }
         LinearLayout row = makeRow(box);
-        MaterialButton startBtn = makeRowButton(row, "Start", 1f);
-        MaterialButton resetBtn = makeRowButton(row, "Reset best", 1f);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                reactionState = 1;
-                reactionPad.setBackgroundColor(Color.parseColor("#D93025"));
-                reactionText.setText("Wait for green...");
-                if (reactionPending != null) {
-                    handler.removeCallbacks(reactionPending);
-                }
-                reactionPending = new Runnable() {
-                    public void run() {
-                        if (reactionState != 1) {
-                            return;
-                        }
-                        reactionState = 2;
-                        reactionShownAt = SystemClock.elapsedRealtime();
-                        reactionPad.setBackgroundColor(Color.parseColor("#0D652D"));
-                        reactionText.setText("TAP NOW");
-                    }
-                };
-                handler.postDelayed(reactionPending, 1500 + new Random().nextInt(2500));
-            }
+        MaterialButton resetBtn = makeRowButton(row, "Reset", 1f);
+        resetBtn.setOnClickListener(v -> {
+            input.setText("");
+            active[0] = false;
+            stats.setText("Start typing to begin");
         });
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                bestRef[0] = 0;
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putLong("reaction_best", 0).apply();
-                } catch (Exception ignored) {
-                }
-                reactionText.setText("Press Start");
+        MaterialButton nextBtn = makeRowButton(row, "New phrase", 1f);
+        nextBtn.setOnClickListener(v -> {
+            String current = target[0];
+            String next = current;
+            while (next.equals(current)) {
+                next = phrases[new Random().nextInt(phrases.length)];
             }
-        });
-        reactionPad.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (reactionState == 1) {
-                    reactionState = 0;
-                    if (reactionPending != null) {
-                        handler.removeCallbacks(reactionPending);
-                    }
-                    reactionText.setText("Too early, press Start again");
-                } else if (reactionState == 2) {
-                    long ms = SystemClock.elapsedRealtime() - reactionShownAt;
-                    reactionState = 0;
-                    reactionPad.setBackgroundColor(Color.parseColor("#D93025"));
-                    StringBuilder b = new StringBuilder();
-                    b.append(ms).append(" ms");
-                    if (bestRef[0] == 0 || ms < bestRef[0]) {
-                        bestRef[0] = ms;
-                        b.append("  New best");
-                        try {
-                            getSharedPreferences("tools", MODE_PRIVATE).edit().putLong("reaction_best", ms).apply();
-                        } catch (Exception ignored) {
-                        }
-                    } else {
-                        b.append("  Best ").append(bestRef[0]).append(" ms");
-                    }
-                    reactionText.setText(b.toString());
-                    vibrateTick();
-                }
-            }
+            target[0] = next;
+            targetView.setText(next);
+            input.setText("");
+            active[0] = false;
+            stats.setText("Start typing to begin");
         });
     }
-    private void buildMemory(LinearLayout box) {
-        addTitle(box, "Memory Game");
-        addLabel(box, "Watch the flashing tiles, then repeat the sequence.");
-        memText = makeOutput(box);
-        memText.setGravity(Gravity.CENTER);
-        memText.setText("Score 0");
-        memScore = 0;
-        memSeq.clear();
-        memButtons.clear();
-        android.widget.GridLayout grid = new android.widget.GridLayout(this);
-        grid.setColumnCount(3);
-        box.addView(grid, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        for (int i = 0; i < 9; i++) {
-            final int idx = i;
-            Button tile = new Button(this);
-            tile.setText(String.valueOf(i + 1));
-            tile.setMinHeight(dp(64));
-            android.widget.GridLayout.LayoutParams p = new android.widget.GridLayout.LayoutParams();
-            p.width = 0;
-            p.columnSpec = android.widget.GridLayout.spec(i % 3, 1f);
-            p.height = dp(64);
-            int m = dp(4);
-            p.setMargins(m, m, m, m);
-            tile.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    onMemoryTap(idx);
-                }
-            });
-            memButtons.add(tile);
-            grid.addView(tile, p);
-        }
-        MaterialButton startBtn = makeButton(box, "Start new game");
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                memScore = 0;
-                memSeq.clear();
-                memText.setText("Score 0");
-                extendMemorySequence();
-            }
-        });
-    }
-    private void extendMemorySequence() {
-        memSeq.add(new Random().nextInt(9));
-        memPos = 0;
-        memAccept = false;
-        memText.setText("Watch... (" + memSeq.size() + " steps)");
-        for (int i = 0; i < memSeq.size(); i++) {
-            final int step = i;
-            handler.postDelayed(new Runnable() {
-                public void run() {
-                    flashMemoryTile(memSeq.get(step));
-                    if (step == memSeq.size() - 1) {
-                        handler.postDelayed(new Runnable() {
-                            public void run() {
-                                memAccept = true;
-                                memText.setText("Your turn (" + memSeq.size() + " steps)");
-                            }
-                        }, 500);
-                    }
-                }
-            }, 600L * (i + 1));
-        }
-    }
-    private void flashMemoryTile(int idx) {
-        try {
-            final Button tile = memButtons.get(idx);
-            tile.setBackgroundColor(Color.parseColor("#1B73E8"));
-            handler.postDelayed(new Runnable() {
-                public void run() {
-                    try {
-                        tile.setBackgroundResource(android.R.drawable.btn_default);
-                    } catch (Exception ignored) {
-                    }
-                }
-            }, 350);
-            vibrateTick();
-        } catch (Exception ignored) {
-        }
-    }
-    private void onMemoryTap(int idx) {
-        if (!memAccept || memSeq.isEmpty()) {
-            return;
-        }
-        if (memSeq.get(memPos) == idx) {
-            memPos++;
-            flashMemoryTile(idx);
-            if (memPos >= memSeq.size()) {
-                memAccept = false;
-                memScore++;
-                memText.setText("Score " + memScore);
-                handler.postDelayed(new Runnable() {
-                    public void run() {
-                        extendMemorySequence();
-                    }
-                }, 800);
-            }
-        } else {
-            memAccept = false;
-            memText.setText("Game over. Score " + memScore + ". Start again.");
-            memSeq.clear();
-        }
-    }
-    private void buildTicTacToe(LinearLayout box) {
-        addTitle(box, "Tic-Tac-Toe");
-        addLabel(box, "You play X, computer plays O.");
-        tttText = makeOutput(box);
-        tttText.setGravity(Gravity.CENTER);
-        tttButtons.clear();
-        for (int i = 0; i < 9; i++) {
-            tttBoard[i] = "";
-        }
-        tttOver = false;
-        android.widget.GridLayout grid = new android.widget.GridLayout(this);
-        grid.setColumnCount(3);
-        box.addView(grid, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        for (int i = 0; i < 9; i++) {
-            final int idx = i;
-            Button cell = new Button(this);
-            cell.setText("");
-            cell.setTextSize(32);
-            cell.setMinHeight(dp(72));
-            android.widget.GridLayout.LayoutParams p = new android.widget.GridLayout.LayoutParams();
-            p.width = 0;
-            p.columnSpec = android.widget.GridLayout.spec(i % 3, 1f);
-            p.height = dp(72);
-            int m = dp(4);
-            p.setMargins(m, m, m, m);
-            cell.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    onTttTap(idx);
-                }
-            });
-            tttButtons.add(cell);
-            grid.addView(cell, p);
-        }
-        updateTttText();
-        MaterialButton resetBtn = makeButton(box, "New game");
-        resetBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                for (int i = 0; i < 9; i++) {
-                    tttBoard[i] = "";
-                    tttButtons.get(i).setText("");
-                }
-                tttOver = false;
-                updateTttText();
-            }
-        });
-    }
-    private void onTttTap(int idx) {
-        if (tttOver || !tttBoard[idx].isEmpty()) {
-            return;
-        }
-        tttBoard[idx] = "X";
-        tttButtons.get(idx).setText("X");
-        if (tttWinner("X")) {
-            tttOver = true;
-            tttWins++;
-            updateTttText();
-            return;
-        }
-        if (tttFull()) {
-            tttOver = true;
-            tttDraws++;
-            updateTttText();
-            return;
-        }
-        int move = tttBestMove();
-        tttBoard[move] = "O";
-        tttButtons.get(move).setText("O");
-        if (tttWinner("O")) {
-            tttOver = true;
-            tttLosses++;
-        } else if (tttFull()) {
-            tttOver = true;
-            tttDraws++;
-        }
-        updateTttText();
-    }
-    private boolean tttWinner(String p) {
-        int[][] lines = new int[][]{{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6}, {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6}};
-        for (int[] line : lines) {
-            if (tttBoard[line[0]].equals(p) && tttBoard[line[1]].equals(p) && tttBoard[line[2]].equals(p)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    private boolean tttFull() {
-        for (String s : tttBoard) {
-            if (s.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-    private int tttBestMove() {
-        for (int i = 0; i < 9; i++) {
-            if (tttBoard[i].isEmpty()) {
-                tttBoard[i] = "O";
-                boolean win = tttWinner("O");
-                tttBoard[i] = "";
-                if (win) {
-                    return i;
-                }
-            }
-        }
-        for (int i = 0; i < 9; i++) {
-            if (tttBoard[i].isEmpty()) {
-                tttBoard[i] = "X";
-                boolean win = tttWinner("X");
-                tttBoard[i] = "";
-                if (win) {
-                    return i;
-                }
-            }
-        }
-        if (tttBoard[4].isEmpty()) {
-            return 4;
-        }
-        int[] corners = new int[]{0, 2, 6, 8};
-        List<Integer> free = new ArrayList<>();
-        for (int c : corners) {
-            if (tttBoard[c].isEmpty()) {
-                free.add(c);
-            }
-        }
-        if (!free.isEmpty()) {
-            return free.get(new Random().nextInt(free.size()));
-        }
-        for (int i = 0; i < 9; i++) {
-            if (tttBoard[i].isEmpty()) {
-                return i;
-            }
-        }
-        return 0;
-    }
-    private void updateTttText() {
-        if (tttText == null) {
-            return;
-        }
-        String state = tttOver ? (tttWinner("X") ? "You win" : (tttWinner("O") ? "Computer wins" : "Draw")) : "Your move";
-        tttText.setText(state + "\nYou " + tttWins + "  CPU " + tttLosses + "  Draw " + tttDraws);
-    }
-    private void buildLottery(LinearLayout box) {
-        addTitle(box, "Lottery Picker");
-        final EditText countInput = makeInput(box, "Numbers to pick", InputType.TYPE_CLASS_NUMBER);
-        countInput.setText("6");
-        final EditText maxInput = makeInput(box, "Max number", InputType.TYPE_CLASS_NUMBER);
-        maxInput.setText("49");
-        final TextView output = makeOutput(box);
-        output.setTextSize(24);
-        output.setGravity(Gravity.CENTER);
-        output.setText("-");
-        MaterialButton goBtn = makeButton(box, "Pick numbers");
-        goBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    int count = Integer.parseInt(countInput.getText().toString().trim());
-                    int max = Integer.parseInt(maxInput.getText().toString().trim());
-                    if (count <= 0 || max <= 0 || count > max || count > 20) {
-                        output.setText("Count must be 1 to 20 and not above max");
-                        return;
-                    }
-                    List<Integer> pool = new ArrayList<>();
-                    for (int i = 1; i <= max; i++) {
-                        pool.add(i);
-                    }
-                    java.util.Collections.shuffle(pool);
-                    List<Integer> picked = pool.subList(0, count);
-                    java.util.Collections.sort(picked);
-                    StringBuilder b = new StringBuilder();
-                    for (int i = 0; i < picked.size(); i++) {
-                        if (i > 0) {
-                            b.append("  ");
-                        }
-                        b.append(picked.get(i));
-                    }
-                    output.setText(b.toString());
-                    vibrateTick();
-                } catch (Exception e) {
-                    output.setText("Enter count and max");
-                }
-            }
-        });
-        MaterialButton copyBtn = makeButton(box, "Copy");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("lottery", output.getText().toString());
-            }
-        });
-    }
-    private void buildMoon(LinearLayout box) {
-        addTitle(box, "Moon Phase");
-        final EditText dateInput = makeInput(box, "Date yyyy-MM-dd, empty for today", InputType.TYPE_CLASS_DATETIME);
-        final TextView output = makeOutput(box);
-        output.setTextSize(20);
-        output.setGravity(Gravity.CENTER);
-        final Runnable compute = new Runnable() {
-            public void run() {
-                try {
-                    Date date = new Date();
-                    String raw = dateInput.getText().toString().trim();
-                    if (!raw.isEmpty()) {
-                        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                        f.setLenient(false);
-                        date = f.parse(raw);
-                    }
-                    double known = Date.UTC(100, 0, 6, 18, 14, 0);
-                    double days = (date.getTime() - known) / 86400000.0;
-                    double age = ((days % 29.530588853) + 29.530588853) % 29.530588853;
-                    int phase = (int) Math.floor((age / 29.530588853) * 8 + 0.5) % 8;
-                    String[] names = new String[]{"New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"};
-                    String[] icons = new String[]{"●", "◐", "◑", "◒", "○", "◓", "◑", "◐"};
-                    double illum = (1 - Math.cos(2 * Math.PI * age / 29.530588853)) / 2 * 100;
-                    output.setText(icons[phase] + "\n" + names[phase] + "\nMoon age " + new DecimalFormat("0.0").format(age) + " days  (" + new DecimalFormat("0").format(illum) + "% lit)");
-                } catch (Exception e) {
-                    output.setText("Use yyyy-MM-dd");
-                }
-            }
-        };
-        dateInput.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                compute.run();
-            }
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        compute.run();
-        MaterialButton copyBtn = makeButton(box, "Copy");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("moon", output.getText().toString());
-            }
-        });
-    }
+
     private void buildEventCount(LinearLayout box) {
         addTitle(box, "Event Countdown");
         final EditText titleInput = makeInput(box, "Event name", InputType.TYPE_CLASS_TEXT);
@@ -7904,6 +8157,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
         output.setGravity(Gravity.CENTER);
         final Runnable ticker = new Runnable() {
             public void run() {
+                if (!eventActive) {
+                    return;
+                }
                 try {
                     String raw = dateInput.getText().toString().trim();
                     if (raw.isEmpty()) {
@@ -7930,19 +8186,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     output.setText("Use yyyy-MM-dd HH:mm");
                 }
-                handler.postDelayed(this, 1000);
+                if (eventActive) {
+                    handler.postDelayed(this, 1000);
+                }
             }
         };
+        eventActive = true;
         handler.post(ticker);
         MaterialButton saveBtn = makeButton(box, "Save event");
-        saveBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    getSharedPreferences("tools", MODE_PRIVATE).edit().putString("event_title", titleInput.getText().toString().trim()).putString("event_date", dateInput.getText().toString().trim()).apply();
-                    toast("Saved");
-                } catch (Exception e) {
-                    toast("Save failed");
-                }
+        saveBtn.setOnClickListener(v -> {
+            try {
+                getSharedPreferences("tools", MODE_PRIVATE).edit().putString("event_title", titleInput.getText().toString().trim()).putString("event_date", dateInput.getText().toString().trim()).apply();
+                toast("Saved");
+            } catch (Exception e) {
+                toast("Save failed");
             }
         });
     }
@@ -7960,102 +8217,111 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton genBtn = makeRowButton(row, "Generate", 1f);
         MaterialButton saveBtn = makeRowButton(row, "Save", 1f);
         MaterialButton shareBtn = makeRowButton(row, "Share", 1f);
-        genBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String text = input.getText().toString().trim();
-                if (text.isEmpty()) {
-                    toast("Enter text first");
-                    return;
-                }
+        genBtn.setOnClickListener(v -> {
+            String text = input.getText().toString().trim();
+            if (text.isEmpty()) {
+                toast("Enter text first");
+                return;
+            }
+            try {
+                qrGenBitmap = QrUtil.generate(text, 1024);
+                qrGenView.setImageBitmap(qrGenBitmap);
+                qrGenView.setVisibility(View.VISIBLE);
+            } catch (Exception e) {
+                toast("QR failed: " + e.getMessage());
+            }
+        });
+        saveBtn.setOnClickListener(v -> {
+            if (qrGenBitmap == null) {
+                toast("Generate first");
+                return;
+            }
+            new Thread(() -> {
                 try {
-                    qrGenBitmap = QrUtil.generate(text, 1024);
-                    qrGenView.setImageBitmap(qrGenBitmap);
-                    qrGenView.setVisibility(View.VISIBLE);
-                } catch (Exception e) {
-                    toast("QR failed: " + e.getMessage());
-                }
-            }
-        });
-        saveBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (qrGenBitmap == null) {
-                    toast("Generate first");
-                    return;
-                }
-                new Thread(new Runnable() {
-                    public void run() {
-                        try {
-                            QrUtil.saveToGallery(ToolRunnerActivity.this, qrGenBitmap, "qr_" + System.currentTimeMillis());
-                            handler.post(new Runnable() {
-                                public void run() {
-                                    toast("QR image saved");
-                                }
-                            });
-                        } catch (final Exception e) {
-                            handler.post(new Runnable() {
-                                public void run() {
-                                    toast("Save failed: " + e.getMessage());
-                                }
-                            });
-                        }
+                    QrUtil.saveToGallery(ToolRunnerActivity.this, qrGenBitmap, "qr_" + System.currentTimeMillis());
+                    try {
+                        java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES), "QRCodes");
+                        dir.mkdirs();
+                        java.io.File out = new java.io.File(dir, "qr_" + System.currentTimeMillis() + ".png");
+                        java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+                        qrGenBitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
+                        os.close();
+                        qrGenFile = out;
+                    } catch (Exception ignored) {
                     }
-                }).start();
-            }
-        });
-        shareBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String text = input.getText().toString().trim();
-                if (text.isEmpty()) {
-                    toast("Enter text first");
-                    return;
+                    handler.post(() -> toast("QR image saved"));
+                } catch (final Exception e) {
+                    handler.post(() -> toast("Save failed: " + e.getMessage()));
                 }
-                Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
-                startActivity(Intent.createChooser(share, "Share"));
+            }).start();
+        });
+        shareBtn.setOnClickListener(v -> {
+            if (qrGenBitmap != null) {
+                try {
+                    java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES),  "QRCodes");
+                    dir.mkdirs();
+                    java.io.File out = new java.io.File(dir, "qr_" + System.currentTimeMillis() + ".png");
+                    java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+                    qrGenBitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
+                    os.close();
+                    qrGenFile = out;
+                    shareToolFile(out, "image/png");
+                    return;
+                } catch (Exception ignored) {
+                }
             }
+            String text = input.getText().toString().trim();
+            if (text.isEmpty()) {
+                toast("Enter text first");
+                return;
+            }
+            Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
+            startActivity(Intent.createChooser(share, "Share"));
+        });
+        LinearLayout qrRow2 = makeRow(box);
+        MaterialButton qrLocateBtn = makeRowButton(qrRow2, "Locate image file", 1f);
+        MaterialButton qrOpenBtn = makeRowButton(qrRow2, "Open image", 1f);
+        qrLocateBtn.setOnClickListener(v -> {
+            if (qrGenFile != null && qrGenFile.exists()) locateToolFile(qrGenFile);
+            else toast("Generate or save first");
+        });
+        qrOpenBtn.setOnClickListener(v -> {
+            if (qrGenFile != null && qrGenFile.exists()) openToolFile(qrGenFile, "image/png");
+            else toast("Generate or save first");
         });
         MaterialButton copyBtn = makeButton(box, "Copy text");
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                copyText("qr", input.getText().toString());
-            }
-        });
+        copyBtn.setOnClickListener(v -> copyText("qr", input.getText().toString()));
         addLabel(box, "Wi-Fi shortcut: WIFI:T:WPA;S:MyNet;P:pass123;;");
     }
 
     private void buildQrScan(LinearLayout box) {
         addTitle(box, "QR Scanner");
         MaterialButton scanBtn = makeButton(box, "Scan with camera");
-        scanBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    pendingQrScan = true;
-                    ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{android.Manifest.permission.CAMERA}, 9005);
-                    return;
-                }
-                startQrScan();
+        scanBtn.setOnClickListener(v -> {
+            if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                pendingQrScan = true;
+                ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{android.Manifest.permission.CAMERA}, 9005);
+                return;
             }
+            startQrScan();
         });
         qrScanOutput = makeOutput(box);
         qrScanOutput.setText("No scan yet");
         LinearLayout row = makeRow(box);
         MaterialButton copyBtn = makeRowButton(row, "Copy", 1f);
         MaterialButton shareBtn = makeRowButton(row, "Share", 1f);
-        copyBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (qrScanOutput != null) copyText("qr", qrScanOutput.getText().toString());
-            }
+        copyBtn.setOnClickListener(v -> {
+            if (qrScanOutput != null) copyText("qr", qrScanOutput.getText().toString());
         });
-        shareBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (qrScanOutput == null) return;
-                String text = qrScanOutput.getText().toString();
-                if (text.isEmpty()) {
-                    toast("Nothing to share");
-                    return;
-                }
-                Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
-                startActivity(Intent.createChooser(share, "Share scan"));
+        shareBtn.setOnClickListener(v -> {
+            if (qrScanOutput == null) return;
+            String text = qrScanOutput.getText().toString();
+            if (text.isEmpty()) {
+                toast("Nothing to share");
+                return;
             }
+            Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
+            startActivity(Intent.createChooser(share, "Share scan"));
         });
     }
 
@@ -8073,7 +8339,5 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
 
     private static class StackHelper {
-        Stack<Double> values = new Stack<>();
-        Stack<Character> ops = new Stack<>();
     }
 }
