@@ -295,14 +295,17 @@
         android:focusable="true">
 
         <TextView
+            android:id="@+id/sidebarTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:text="@string/app_name"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:layout_marginTop="4dp"
             android:gravity="center"
-            android:textStyle="bold" />
+            android:text="@string/app_name"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:drawableStartCompat="@mipmap/ic_launcher"
+            android:padding="8dp"/>
 
         <LinearLayout
             android:id="@+id/storageContainer"
@@ -311,11 +314,18 @@
             android:orientation="vertical"
             android:padding="12dp" />
 
-        <ListView
-            android:id="@+id/sidebarList"
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/sidebarRefresh"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:divider="@android:color/darker_gray"
-            android:dividerHeight="1dp" />
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <ListView
+                android:id="@+id/sidebarList"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@android:color/darker_gray"
+                android:dividerHeight="1dp" />
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
 </io.github.abdurazaaqmohammed.ui.MyDrawerLayout>
