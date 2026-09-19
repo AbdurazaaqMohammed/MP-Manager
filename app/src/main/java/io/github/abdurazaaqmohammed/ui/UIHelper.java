@@ -88,7 +88,20 @@ public class UIHelper {
                 new AboutLibrary("ANTLR", "The ANTLR Project", "https://github.com/antlr/antlr4", "BSD-3-Clause", "BSD-3-Clause.txt"),
                 new AboutLibrary("joni", "JRuby", "https://github.com/jruby/joni", "MIT", "MIT.txt"),
                 new AboutLibrary("ftp4j", "Carlo Pelliccia (Sauron Software)", "http://www.sauronsoftware.it/projects/ftp4j", "LGPL", "LGPL-2.1.txt"),
-                new AboutLibrary("Volley", "Google", "https://github.com/google/volley", "Apache-2.0", "Apache-2.0.txt")
+                new AboutLibrary("Volley", "Google", "https://github.com/google/volley", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("Shizuku", "RikkaApps", "https://github.com/RikkaApps/Shizuku", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("ZXing", "zxing", "https://github.com/zxing/zxing", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("zxing-android-embedded", "Journey Mobile", "https://github.com/journeyapps/zxing-android-embedded", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("JCommander", "Cedric Beust", "https://github.com/cbeust/jcommander", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("Apache Commons Compress", "Apache Software Foundation", "https://commons.apache.org/proper/commons-compress", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("Apache Commons Net", "Apache Software Foundation", "https://commons.apache.org/proper/commons-net", "Apache-2.0", "Apache-2.0.txt"),
+                new AboutLibrary("XZ for Java", "Tukaani", "https://tukaani.org/xz/java.html", "Public Domain", ""),
+                new AboutLibrary("JunRAR", "JunRAR", "https://github.com/junrar/junrar", "UnRAR License", ""),
+                new AboutLibrary("smali/baksmali", "JesusFreke and the Android Open Source Project", "https://github.com/JesusFreke/smali", "BSD-3-Clause", "BSD-3-Clause.txt"),
+                new AboutLibrary("Screen Color Picker", "codehasan", "https://github.com/codehasan/ScreenColorPicker", "MIT", "MIT.txt"),
+                new AboutLibrary("Layout Inspector", "Ratul Hasan", "https://github.com/AbdurazaaqMohammed/Layout-Inspector", "GPL-3.0", "GPL-3.0+.txt"),
+                new AboutLibrary("Viz.js", "Mike Daines", "https://github.com/mdaines/viz.js", "MIT", "MIT.txt"),
+                new AboutLibrary("svg-pan-zoom", "Andrea Leofreddi", "https://github.com/ariutta/svg-pan-zoom", "BSD-2-Clause", "")
         );
 
         LinearLayout libsContainer = aboutView.findViewById(R.id.aboutLibs);
