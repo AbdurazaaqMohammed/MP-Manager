@@ -44,6 +44,7 @@ public class FileIconLoader {
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon;
     private static int cachedIconTheme = -1;
+    private static int cachedIconBucket = -1;
 
     private final MainActivity context;
     private final boolean isInZip;
@@ -160,26 +161,39 @@ public class FileIconLoader {
     }
 
     private static void ensureCachedIcons(Resources res, int theme) {
-        if (cachedIconTheme == theme) return;
+        float density = res.getDisplayMetrics().density;
+        int bucket = (int) (density * 4);
+        if (cachedIconTheme == theme && cachedIconBucket == bucket) return;
         cachedIconTheme = theme;
-        int color = theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE;
-        cachedFolderIcon  = tintAndCache(res, R.drawable.folder_24px, color);
-        cachedApkIcon     = tintAndCache(res, R.drawable.apk_document_24px, color);
-        cachedImageIcon   = tintAndCache(res, R.drawable.image_24px, color);
-        cachedVideoIcon   = tintAndCache(res, R.drawable.video_24px, color);
-        cachedMusicIcon   = tintAndCache(res, R.drawable.music_24px, color);
-        cachedArchiveIcon = tintAndCache(res, R.drawable.baseline_folder_zip_24, color);
-        cachedPdfIcon     = tintAndCache(res, R.drawable.pdf_24px, color);
-        cachedTextIcon    = tintAndCache(res, R.drawable.baseline_text_snippet_24, color);
-        cachedFileIcon    = tintAndCache(res, R.drawable.baseline_insert_drive_file_24, color);
+        cachedIconBucket = bucket;
+        cachedFolderIcon  = badge(res, density, R.drawable.ic_folder_mt, 0xFF252525, false);
+        cachedApkIcon     = badge(res, density, R.drawable.apk_document_24px, 0xFF2E7D32, true);
+        cachedImageIcon   = badge(res, density, R.drawable.image_24px, 0xFF6A1B9A, true);
+        cachedVideoIcon   = badge(res, density, R.drawable.video_24px, 0xFFC62828, true);
+        cachedMusicIcon   = badge(res, density, R.drawable.music_24px, 0xFF00897B, true);
+        cachedArchiveIcon = badge(res, density, R.drawable.baseline_folder_zip_24, 0xFFE65100, true);
+        cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
+        cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
+        cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
+                theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
     }
 
-    private static Drawable tintAndCache(Resources res, int id, int color) {
-        Drawable d = ResourcesCompat.getDrawable(res, id, null);
-        if (d == null) return null;
-        d = d.mutate();
-        DrawableCompat.setTint(d, color);
-        return d;
+    private static Drawable badge(Resources res, float density, int glyphId, int bgColor, boolean whiteGlyph) {
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setCornerRadius(6 * density);
+        bg.setColor(bgColor);
+        Drawable glyph = ResourcesCompat.getDrawable(res, glyphId, null);
+        if (glyph != null) {
+            glyph = glyph.mutate();
+            if (whiteGlyph) DrawableCompat.setTint(glyph, Color.WHITE);
+        } else {
+            glyph = new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);
+        }
+        android.graphics.drawable.LayerDrawable layer = new android.graphics.drawable.LayerDrawable(
+                new Drawable[]{bg, glyph});
+        int inset = (int) (6 * density + 0.5f);
+        layer.setLayerInset(1, inset, inset, inset, inset);
+        return layer;
     }
 
     private static Bitmap loadImageThumbnail(String path) {
