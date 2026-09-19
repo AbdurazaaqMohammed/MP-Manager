@@ -3,9 +3,9 @@ package io.github.abdurazaaqmohammed.MPManager;
 import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
 import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPermissions;
 
+import android.Manifest;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
@@ -16,9 +16,11 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.ContentValues;
-import android.graphics.Bitmap;
-import android.provider.MediaStore;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.RotateDrawable;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -28,157 +30,89 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
-import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.graphics.drawable.DrawableCompat;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
-import androidx.preference.PreferenceManager;
 import android.provider.Settings;
+import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextUtils;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
-import com.google.android.material.tabs.TabLayout;
-import com.lilincpp.github.libezftp.EZFtpServer;
-import com.lilincpp.github.libezftp.user.EZFtpUser;
-import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
-import com.lilincpp.github.libezftp.IEZFtpServer;
-import com.lilincpp.github.libezftp.EZFtpClient;
-import com.lilincpp.github.libezftp.IEZFtpClient;
-import com.lilincpp.github.libezftp.EZFtpFile;
-import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
-
-import java.security.Security;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
-import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
-import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
-import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
-import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
-import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
-import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
-import io.github.abdurazaaqmohammed.ui.UIHelper;
-import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
-import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
-import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
-import io.github.abdurazaaqmohammed.player.PlayerManager;
-import io.github.abdurazaaqmohammed.utils.CopyUtil;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
-import io.github.abdurazaaqmohammed.utils.QrUtil;
-import io.github.abdurazaaqmohammed.utils.ShizukuManager;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
-import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
-import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
-import rikka.shizuku.Shizuku;
-import io.github.abdurazaaqmohammed.utils.DialogUtil;
-import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-import io.github.abdurazaaqmohammed.utils.LegacyUtils;
-import io.github.abdurazaaqmohammed.utils.ProgressManager;
-import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.RootManager;
-import io.github.abdurazaaqmohammed.utils.StorageUtil;
-import io.github.codehasan.colorpicker.ServiceState;
-import io.github.codehasan.colorpicker.extensions.Extensions;
-import io.github.codehasan.colorpicker.services.ColorPickerService;
-import io.github.codehasan.colorpicker.PreferencesDialogFragment;
-import io.github.ratul.topactivity.manager.ServiceManager;
-import io.github.ratul.topactivity.repository.DataRepository;
-import io.github.ratul.topactivity.services.PackageMonitoringService;
-import io.github.ratul.topactivity.utils.PermissionUtil;
-
 import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.util.TypedValue;
+import android.view.GestureDetector;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.SubMenu;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.animation.DecelerateInterpolator;
-import android.view.GestureDetector;
-import androidx.core.view.GestureDetectorCompat;
-import android.view.MotionEvent;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.CheckBox;
+import android.widget.ListView;
+import android.widget.PopupMenu;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.ScrollView;
+import android.widget.SeekBar;
+import android.widget.TextView;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.view.GestureDetectorCompat;
+import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager2.widget.ViewPager2;
-import com.google.android.material.tabs.TabLayoutMediator;
-import android.widget.ListView;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.SeekBar;
-import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
-
+import com.github.paul035.LocaleHelper;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
-import android.content.res.Configuration;
-import android.graphics.Color;
-import android.graphics.drawable.RotateDrawable;
-
-import android.content.res.Resources;
-import android.view.LayoutInflater;
-import android.view.ViewGroup;
-import android.widget.AutoCompleteTextView;
-import android.widget.PopupMenu;
-import android.widget.ScrollView;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.SubMenu;
-import android.widget.Toast;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
-import com.github.paul035.LocaleHelper;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.lilincpp.github.libezftp.EZFtpClient;
+import com.lilincpp.github.libezftp.EZFtpFile;
+import com.lilincpp.github.libezftp.EZFtpServer;
+import com.lilincpp.github.libezftp.IEZFtpClient;
+import com.lilincpp.github.libezftp.IEZFtpServer;
+import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
+import com.lilincpp.github.libezftp.user.EZFtpUser;
+import com.lilincpp.github.libezftp.user.EZFtpUserPermission;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apkeditor.compile.BuildOptions;
 import com.reandroid.apkeditor.compile.Builder;
@@ -188,7 +122,78 @@ import com.reandroid.utils.io.FileUtil;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.security.Security;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
+import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
+import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
+import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
+import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
+import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
+import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
+import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
+import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
+import io.github.abdurazaaqmohammed.player.PlayerManager;
+import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
+import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
+import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.DialogUtil;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.LegacyUtils;
+import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.StorageUtil;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.codehasan.colorpicker.PreferencesDialogFragment;
+import io.github.codehasan.colorpicker.ServiceState;
+import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.codehasan.colorpicker.services.ColorPickerService;
+import io.github.ratul.topactivity.manager.ServiceManager;
+import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.services.PackageMonitoringService;
+import io.github.ratul.topactivity.utils.PermissionUtil;
+import rikka.shizuku.Shizuku;
 
 public class MainActivity extends AppCompatActivity {
     boolean logEnabled;
@@ -212,6 +217,7 @@ public class MainActivity extends AppCompatActivity {
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
     public boolean isSidebarDrawerOpen;
     public boolean isBookmarksDrawerOpen;
+    private BroadcastReceiver storageRefreshReceiver;
     public Handler handler;
     private boolean systemTheme;
     public int theme;
@@ -439,13 +445,24 @@ public class MainActivity extends AppCompatActivity {
                     if (path != null) loadFolderInPane(new File(path.toString()), pane1);
                 }
             } else if(requestCode == 757) {
-                Uri uri = data.getData();
-                String path = uri.getPath();
-                if(path.startsWith(getCacheDir().getPath())) {
+                if (data == null || data.getData() == null) return;
+                handleModifiedFileResult(data.getData());
+            }
+        }
+    }
+
+    public void handleModifiedFileResult(Uri uri) {
+        boolean pane1 = lastPaneSelected == 1;
+        String path = uri == null ? null : uri.getPath();
+        File zipFile = pane1 ? pane1Folder : pane2Folder;
+        if (path == null || !path.startsWith(getCacheDir().getPath())) return;
+        if (zipFile == null || !zipFile.isFile()) {
+            Extensions.showMessage(this, "Archive no longer open");
+            return;
+        }
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
                     String modifiedFileName = path.substring(path.lastIndexOf("/") + 1);
                     LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.item_modified_dialog, null);
-                    File zipFile = pane1 ? pane1Folder : pane2Folder;
                     String zipFileName = zipFile.getName();
                     boolean isApk = zipFileName.endsWith(".apk");
                     ll.<TextView>findViewById(R.id.modifiedText).setText(rss.getString(R.string.file_modified_x, modifiedFileName, (isApk ? "APK" : "ZIP")));
@@ -461,6 +478,10 @@ public class MainActivity extends AppCompatActivity {
                             dialog.dismiss();
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doWork = () -> {
+                                if (!zipFile.isFile() || !new File(path).isFile()) {
+                                    Extensions.showMessage(this, "File no longer available");
+                                    return;
+                                }
                                 ProgressManager pm = new ProgressManager(this, true).show();
                                 pm.setText(rss.getString(R.string.adding, modifiedFileName));
                                 new Thread(() -> {
@@ -470,7 +491,9 @@ public class MainActivity extends AppCompatActivity {
                                         if(modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
                                             File modifiedFile = new File(path);
                                             File folder = modifiedFile.getParentFile();
-                                            zf.addFiles(Arrays.asList(folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"))));
+                                            File[] dexFiles = folder == null ? null : folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"));
+                                            if (dexFiles == null || dexFiles.length == 0) throw new IOException("No dex files found");
+                                            zf.addFiles(Arrays.asList(dexFiles));
                                         } else {
                                             ZipParameters zp = new ZipParameters();
                                             boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
@@ -483,16 +506,18 @@ public class MainActivity extends AppCompatActivity {
                                         return;
                                     }
                                     try {
-                                        ApkZipAlignUtil.ensureInstallable(zipFile);
-                                    } catch (Exception e) {
-                                        pm.dismiss();
-                                        new ErrorUtil(this).showError(e);
-                                        return;
-                                    }
-                                    try {
                                         if(sign[0]) wrapper[0].signApk(zipFile);
                                         pm.dismiss();
-                                        handler.post(() -> loadZipFolderInPane(zipFile, ((MainFilesArrayAdapter) getCurrentPane().getAdapter()).currentZipPath, pane1, false));
+                                        handler.post(() -> {
+                                            try {
+                                                RecyclerView.Adapter a = getCurrentPane().getAdapter();
+                                                String zipPath = a instanceof MainFilesArrayAdapter
+                                                        ? ((MainFilesArrayAdapter) a).currentZipPath : "";
+                                                loadZipFolderInPane(zipFile, zipPath, pane1, false);
+                                            } catch (Exception ex) {
+                                                new ErrorUtil(this).showError(ex);
+                                            }
+                                        });
                                     } catch (Exception e) {
                                         pm.dismiss();
                                         new ErrorUtil(this).showError(e);
@@ -504,9 +529,6 @@ public class MainActivity extends AppCompatActivity {
                                 doWork.run();
                             }); else doWork.run();
                         }).setNegativeButton(rss.getString(android.R.string.cancel), null).show();
-                }
-            }
-        }
     }
 
     public void openBookmarksDrawer() {
@@ -522,7 +544,6 @@ public class MainActivity extends AppCompatActivity {
         isBookmarksDrawerOpen = false;
     }
 
-    /** Clears any selection in the given pane and resets the bottom-bar UI. Call on UI thread. */
     public void clearPaneSelection(boolean pane1) {
         try {
             RecyclerView paneView = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
@@ -735,7 +756,7 @@ public class MainActivity extends AppCompatActivity {
         input.setHint(rss.getString(R.string.group_name));
         new MaterialAlertDialogBuilder(this)
             .setTitle(rss.getString(R.string.add_group))
-            .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 16))
+            .setView(UiFields.wrap(this, input, null, 16))
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                 String name = input.getText().toString().trim();
@@ -806,7 +827,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        androidx.appcompat.app.AlertDialog heightDialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog heightDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Adjust height")
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1096,8 +1117,8 @@ public class MainActivity extends AppCompatActivity {
         bookmarkLabels.clear();
         String json = PreferenceManager.getDefaultSharedPreferences(this).getString("bookmark_labels", "{}");
         try {
-            Map<String, String> map = new com.google.gson.Gson().fromJson(json,
-                    new com.google.gson.reflect.TypeToken<Map<String, String>>() {}.getType());
+            Map<String, String> map = new Gson().fromJson(json,
+                    new TypeToken<Map<String, String>>() {}.getType());
             if (map != null) bookmarkLabels.putAll(map);
         } catch (Exception ignored) {
         }
@@ -1105,7 +1126,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveBookmarkLabels() {
         PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putString("bookmark_labels", new com.google.gson.Gson().toJson(bookmarkLabels)).apply();
+                .putString("bookmark_labels", new Gson().toJson(bookmarkLabels)).apply();
     }
 
     private void applyBookmarksBarHeight(int percent) {
@@ -1119,8 +1140,8 @@ public class MainActivity extends AppCompatActivity {
         bookmarkGroups.clear();
         String json = PreferenceManager.getDefaultSharedPreferences(this).getString("bookmark_groups", "[]");
         try {
-            List<String> groups = new com.google.gson.Gson().fromJson(json,
-                    new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
+            List<String> groups = new Gson().fromJson(json,
+                    new TypeToken<List<String>>() {}.getType());
             bookmarkGroups.addAll(groups);
         } catch (Exception ignored) {
         }
@@ -1128,7 +1149,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveBookmarkGroups() {
         PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putString("bookmark_groups", new com.google.gson.Gson().toJson(bookmarkGroups)).apply();
+                .putString("bookmark_groups", new Gson().toJson(bookmarkGroups)).apply();
     }
 
     private ArrayList<File> loadGroupBookmarks(String group) {
@@ -1136,8 +1157,8 @@ public class MainActivity extends AppCompatActivity {
         String json = PreferenceManager.getDefaultSharedPreferences(this)
                 .getString("bookmarks_group_" + group, "[]");
         try {
-            List<String> paths = new com.google.gson.Gson().fromJson(json,
-                    new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
+            List<String> paths = new Gson().fromJson(json,
+                    new TypeToken<List<String>>() {}.getType());
             for (String path : paths) out.add(new File(path));
         } catch (Exception ignored) {
         }
@@ -1148,7 +1169,7 @@ public class MainActivity extends AppCompatActivity {
         List<String> paths = new ArrayList<>();
         for (File f : files) paths.add(f.getPath());
         PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putString("bookmarks_group_" + group, new com.google.gson.Gson().toJson(paths)).apply();
+                .putString("bookmarks_group_" + group, new Gson().toJson(paths)).apply();
     }
 
     private View.OnTouchListener getBookmarksSwipeDownCloseListener() {
@@ -1183,11 +1204,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void reduceDragSensitivity(ViewPager2 viewPager) {
         try {
-            java.lang.reflect.Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
+            Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
             recyclerViewField.setAccessible(true);
             RecyclerView recyclerView = (RecyclerView) recyclerViewField.get(viewPager);
 
-            java.lang.reflect.Field touchSlopField = RecyclerView.class.getDeclaredField("mTouchSlop");
+            Field touchSlopField = RecyclerView.class.getDeclaredField("mTouchSlop");
             touchSlopField.setAccessible(true);
             int touchSlop = (int) touchSlopField.get(recyclerView);
             touchSlopField.set(recyclerView, touchSlop * 2);
@@ -1304,8 +1325,8 @@ public class MainActivity extends AppCompatActivity {
         rss = /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, lang).getResources();
 
         new Thread(() -> {
-            Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-            Security.addProvider(new android.sun.security.provider.JavaKeyStoreProvider());
+            Security.addProvider(new BouncyCastleProvider());
+            Security.addProvider(new JavaKeyStoreProvider());
         }).start();
 
         requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
@@ -1444,14 +1465,22 @@ public class MainActivity extends AppCompatActivity {
                 drawerLayout.openDrawer(GravityCompat.START);
         };
 
+        findViewById(R.id.sidebarTitle).setOnClickListener(v -> uiHelper.showAboutDialog());
         LinearLayout container = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
-        java.util.ArrayList<String> sidebarOptions = new java.util.ArrayList<>(java.util.Arrays.asList("Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Tools Kit", "Settings"));
-        java.util.ArrayList<Integer> sidebarIcons = new java.util.ArrayList<>(java.util.Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.tools_24px, R.drawable.baseline_settings_24));
-        if (RootManager.getInstance(this).isRootAvailable()) {
-            sidebarOptions.add(sidebarOptions.size() - 1, "Wi-Fi Passwords");
-            sidebarIcons.add(sidebarIcons.size() - 1, R.drawable.wifi_24px);
+        ArrayList<String> sidebarOptions = new ArrayList<>(Arrays.asList("Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Wi-Fi Manager", "Tools Kit", "Settings"));
+        ArrayList<Integer> sidebarIcons = new ArrayList<>(Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.wifi_24px, R.drawable.tools_24px, R.drawable.baseline_settings_24));
+        SwipeRefreshLayout sidebarRefresh = findViewById(R.id.sidebarRefresh);
+        if (sidebarRefresh != null) {
+            sidebarRefresh.setOnRefreshListener(() -> {
+                try {
+                    StorageUtil.populateStorageUI(this, container);
+                } catch (Exception ignored) {
+                }
+                sidebarRefresh.setRefreshing(false);
+            });
         }
+        registerStorageRefreshReceiver();
         String[] options = sidebarOptions.toArray(new String[0]);
         int[] icons = new int[sidebarIcons.size()];
         for (int sidebarIndex = 0; sidebarIndex < sidebarIcons.size(); sidebarIndex++) icons[sidebarIndex] = sidebarIcons.get(sidebarIndex);
@@ -1484,8 +1513,8 @@ public class MainActivity extends AppCompatActivity {
                 case "FTP Client":
                     showFtpClientDialog();
                     break;
-                case "Wi-Fi Passwords":
-                    showWifiPasswordsDialog();
+                case "Wi-Fi Manager":
+                    startActivity(new Intent(this, WifiManagerActivity.class));
                     break;
                 case "Color Picker":
                     if(Build.VERSION.SDK_INT < 24) return;
@@ -1493,7 +1522,7 @@ public class MainActivity extends AppCompatActivity {
                     dialogFragment.show(getSupportFragmentManager(), "preferences_dialog");
                     handler.post(() -> {
                         AlertDialog ad = (AlertDialog) dialogFragment.requireDialog();
-                        ((androidx.appcompat.widget.Toolbar) ad.findViewById(R.id.topAppBar)).setOnMenuItemClickListener(item -> {
+                        ((Toolbar) ad.findViewById(R.id.topAppBar)).setOnMenuItemClickListener(item -> {
                             if (item.getItemId() == R.id.menu_github) {
                                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/codehasan/ScreenColorPicker")));
                                 return true;
@@ -1529,6 +1558,10 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
+                    try {
+                        RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
+                    } catch (Exception ignored) {
+                    }
                     if (!requestMissingPermissions(this)) return;
 
                     DataRepository.getInstance().updateStatus(true);
@@ -1539,7 +1572,7 @@ public class MainActivity extends AppCompatActivity {
                     DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                     break;
                 case "Tools Kit":
-                    startActivity(new Intent(this, io.github.abdurazaaqmohammed.tools.ToolsHubActivity.class));
+                    startActivity(new Intent(this, ToolsHubActivity.class));
                     break;
                 case "Settings":
                     showSettingsDialog();
@@ -1636,7 +1669,17 @@ public class MainActivity extends AppCompatActivity {
                         .setNeutralButton(android.R.string.paste, null) // Note: Need to set it after otherwise the dialog auto close
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                             File inputPath = new File(input.getText().toString());
-                            if (inputPath.exists() && inputPath.isDirectory() || (!inputPath.exists() && inputPath.mkdirs())) {
+                            boolean canOpen = inputPath.exists() && inputPath.isDirectory() || (!inputPath.exists() && inputPath.mkdirs());
+                            if (!canOpen) {
+                                try {
+                                    String abs = inputPath.getAbsolutePath();
+                                    if (AccessManager.exists(this, abs) && RootManager.getInstance(this).isDirectory(abs)) {
+                                        canOpen = true;
+                                    }
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            if (canOpen) {
                                 boolean isPane1 = lastPaneSelected == 1;
                                 if (isPane1)
                                     pane1Folder = inputPath;
@@ -1731,6 +1774,7 @@ public class MainActivity extends AppCompatActivity {
                 menu.add(0, 0, 0, "Refresh").setIcon(R.drawable.baseline_refresh_24);
                 menu.add(0, 1, 0, "Filter").setIcon(R.drawable.baseline_filter_list_24);
                 menu.add(0, 2, 0, "Search").setIcon(R.drawable.baseline_search_24);
+                menu.add(0, 15, 0, "Find in files").setIcon(R.drawable.ic_search_replace);
                 menu.add(0, 3, 0, "Select all").setIcon(R.drawable.baseline_select_all_24);
                 menu.add(0, 4, 0, "Sort").setIcon(R.drawable.baseline_sort_24);
 
@@ -1765,7 +1809,7 @@ public class MainActivity extends AppCompatActivity {
                         case "Filter":
                             LinearLayout topBar = findViewById(R.id.topBar);
                             LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
-                            com.google.android.material.textfield.TextInputLayout filterBox = (com.google.android.material.textfield.TextInputLayout) topBar.getChildAt(2);
+                            TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
                             EditText filterBar = (EditText) filterBox.getEditText();
                             if (pathLayout.getVisibility() == View.VISIBLE) {
                                 pathLayout.setVisibility(View.GONE);
@@ -1779,6 +1823,9 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         case "Search":
                             showSearchDialog();
+                            break;
+                        case "Find in files":
+                            showFindInFilesDialog();
                             break;
                         case "Select all":
                             if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
@@ -1882,6 +1929,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }).start();
 
+        String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
         handler.post(() -> {
             setupFilterBar();
             setupNavigationButtons();
@@ -1894,9 +1942,29 @@ public class MainActivity extends AppCompatActivity {
                         new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
                                 .append(dir1Files.length - foldersCount));
             }
-            loadFolderInPane(resolveStartupFolder(true, homeDir1), true);
+            if(TextUtils.isEmpty(locate)) loadFolderInPane(resolveStartupFolder(true, homeDir1), true);
             loadFolderInPane(resolveStartupFolder(false, homeDir2), false);
             new Thread(() -> AccessManager.warmUp(MainActivity.this)).start();
+            new Thread(() -> {
+                try {
+                    RootManager rm = RootManager.getInstance(MainActivity.this);
+                    if (rm.autoEnableRootIfAvailable()) {
+                        handler.post(() -> {
+                            try {
+                                Extensions.showMessage(MainActivity.this, "Root detected, root access enabled");
+                                LinearLayout storageBox = findViewById(R.id.storageContainer);
+                                if (storageBox != null) StorageUtil.populateStorageUI(MainActivity.this, storageBox);
+                            } catch (Exception ignored) {
+                            }
+                        });
+                    }
+                    try {
+                        rm.kickNsProbe();
+                    } catch (Exception ignored) {
+                    }
+                } catch (Exception ignored) {
+                }
+            }).start();
         });
     }
 
@@ -1931,7 +1999,7 @@ public class MainActivity extends AppCompatActivity {
         else if (isBookmarksDrawerOpen) closeBookmarksDrawer();
         else {
             ViewGroup topBar = findViewById(R.id.topBar);
-            com.google.android.material.textfield.TextInputLayout filterBox = (com.google.android.material.textfield.TextInputLayout) topBar.getChildAt(2);
+            TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
             EditText filterBar = filterBox.getEditText();
             if (filterBox.getVisibility() == View.VISIBLE) {
                 topBar.getChildAt(1).setVisibility(View.VISIBLE);
@@ -2040,10 +2108,17 @@ public class MainActivity extends AppCompatActivity {
         }
         File[] files = folder.listFiles(this::isNotHidden);
         if (files == null) {
-            if (AccessManager.fileOpsOn(this)) {
+            boolean elevated = AccessManager.fileOpsOn(this);
+            if (!elevated) {
+                try {
+                    elevated = RootPermissionHelper.hasElevatedShell(this);
+                } catch (Exception ignored) {
+                }
+            }
+            if (elevated) {
                 files = AccessManager.listWithStat(this, folder.getAbsolutePath());
                 if (files != null) {
-                    File[] filtered = java.util.Arrays.stream(files)
+                    File[] filtered = Arrays.stream(files)
                             .filter(this::isNotHidden)
                             .toArray(File[]::new);
                     files = filtered;
@@ -2276,7 +2351,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /** Root fallback for creating a folder when direct mkdir fails. */
     private boolean mkdirViaRoot(File parent, String name) {
         try {
             if (name == null || name.isEmpty() || name.contains("/") || name.contains("\0")) return false;
@@ -2288,7 +2362,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /** Root fallback for creating an empty file when direct create fails. */
     private boolean touchViaRoot(File parent, String name) {
         try {
             if (name == null || name.isEmpty() || name.contains("/") || name.contains("\0")) return false;
@@ -2329,7 +2402,7 @@ public class MainActivity extends AppCompatActivity {
                 if (filesAdapter.isInZip) loadZipFolderInPane(pane1 ? pane1Folder : pane2Folder, filesAdapter.currentZipPath, pane1, false);
                 else loadFolderInPane(pane1 ? pane1Folder : pane2Folder, pane1, false);
             } else if (adapter instanceof FtpFilesArrayAdapter ftpAdapter && ftpAdapter.getItemCount() > 0)
-                fetchFtpDirAndLoad(((FTPFileWrapper) ftpAdapter.getItem(0)).getParent(), pane1);
+                fetchFtpDirAndLoad(ftpAdapter.getItem(0).getParent(), pane1);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
         }
@@ -2420,6 +2493,54 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        try {
+            String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
+            if (locate != null && !locate.isEmpty()) {
+                try {
+                    getIntent().removeExtra("locatePath");
+                } catch (Exception ignored) {
+                }
+                java.io.File target = new java.io.File(locate);
+                java.io.File folder = target.isFile() ? target.getParentFile() : target;
+                if (folder != null && folder.exists()) {
+                    loadFolderInPane(folder, true);
+                    Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            LinearLayout storageBox = findViewById(R.id.storageContainer);
+            if (storageBox != null) StorageUtil.populateStorageUI(this, storageBox);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void registerStorageRefreshReceiver() {
+        try {
+            if (storageRefreshReceiver != null) return;
+            storageRefreshReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    handler.post(() -> {
+                        try {
+                            LinearLayout storageBox = findViewById(R.id.storageContainer);
+                            if (storageBox != null) StorageUtil.populateStorageUI(MainActivity.this, storageBox);
+                        } catch (Exception ignored) {
+                        }
+                    });
+                }
+            };
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+            filter.addAction(Intent.ACTION_MEDIA_UNMOUNTED);
+            filter.addAction(Intent.ACTION_MEDIA_REMOVED);
+            filter.addAction(Intent.ACTION_MEDIA_EJECT);
+            filter.addAction(Intent.ACTION_MEDIA_BAD_REMOVAL);
+            filter.addDataScheme("file");
+            registerReceiver(storageRefreshReceiver, filter);
+        } catch (Exception ignored) {
+        }
     }
 
     public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {
@@ -2437,7 +2558,24 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        FileUtil.deleteDirectory(getCacheDir());
+        try {
+            File cache = getCacheDir();
+            File[] kids = cache.listFiles();
+            if (kids != null) {
+                for (File k : kids) {
+                    if (k.getName().equals("root_staging")) continue;
+                    FileUtil.deleteDirectory(k);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            if (storageRefreshReceiver != null) {
+                unregisterReceiver(storageRefreshReceiver);
+                storageRefreshReceiver = null;
+            }
+        } catch (Exception ignored) {
+        }
         if (isServiceBound) {
             getApplicationContext().unbindService(serviceConnection);
             isServiceBound = false;
@@ -2636,6 +2774,178 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private record ContentHit(File file, int line, String snippet) {
+    }
+
+    private void showFindInFilesDialog() {
+        boolean isPane1 = lastPaneSelected == 1;
+        RecyclerView.Adapter a = getCurrentPane().getAdapter();
+        if (!(a instanceof MainFilesArrayAdapter)) {
+            Extensions.showMessage(this, "Find in files needs a local folder");
+            return;
+        }
+        if (((MainFilesArrayAdapter) a).isInZip) {
+            Extensions.showMessage(this, "Find in files needs a local folder");
+            return;
+        }
+        File startDir = isPane1 ? pane1Folder : pane2Folder;
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density + 0.5f);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextInputLayout box =
+                UiFields.box(this, "Text to find");
+        EditText queryInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
+        root.addView(box);
+        CheckBox cbCase = new CheckBox(this);
+        cbCase.setText("Match case");
+        CheckBox cbRegex = new CheckBox(this);
+        cbRegex.setText("Regex");
+        root.addView(cbCase);
+        root.addView(cbRegex);
+        TextView scope = new TextView(this);
+        scope.setText(startDir.getPath());
+        scope.setTextSize(12);
+        root.addView(scope);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Find in files")
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.search_go, (d, w) -> {
+                    String q = queryInput.getText() == null ? "" : queryInput.getText().toString();
+                    if (q.isEmpty()) {
+                        Extensions.showMessage(this, "Enter a search query");
+                        return;
+                    }
+                    runFindInFiles(startDir, q, cbCase.isChecked(), cbRegex.isChecked());
+                }).show();
+    }
+
+    private void runFindInFiles(File startDir, String query, boolean matchCase, boolean regex) {
+        Pattern pattern = null;
+        if (regex) {
+            try {
+                pattern = Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
+            } catch (Exception e) {
+                Extensions.showMessage(this, "Invalid Regex");
+                return;
+            }
+        }
+        final Pattern finalPattern = pattern;
+        final String needle = matchCase ? query : query.toLowerCase();
+        ProgressManager pm = new ProgressManager(this, true).show();
+        pm.setText(rss.getString(R.string.searching));
+        new Thread(() -> {
+            List<ContentHit> hits = new ArrayList<>();
+            int[] scanned = {0};
+            findInFilesRecursive(startDir, needle, matchCase, regex, finalPattern, hits, scanned, pm);
+            pm.dismiss();
+            handler.post(() -> {
+                if (hits.isEmpty()) {
+                    Extensions.showMessage(this, "No files found");
+                    return;
+                }
+                showContentHitsDialog(hits, query, regex, matchCase);
+            });
+        }).start();
+    }
+
+    private void findInFilesRecursive(File dir, String needle, boolean matchCase, boolean regex,
+                                      Pattern pattern, List<ContentHit> hits, int[] scanned, ProgressManager pm) {
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            if (hits.size() >= 500) return;
+            if (f.isDirectory()) {
+                findInFilesRecursive(f, needle, matchCase, regex, pattern, hits, scanned, pm);
+            } else if (f.isFile() && f.length() < 2097152) {
+                scanned[0]++;
+                if (scanned[0] % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
+                    pm.setText(scanned[0] + " files…");
+                }
+                try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+                    String line;
+                    int lineNo = 0;
+                    while ((line = br.readLine()) != null) {
+                        lineNo++;
+                        if (lineNo == 1 && line.indexOf('\0') >= 0) break;
+                        boolean hit;
+                        if (regex && pattern != null) hit = pattern.matcher(line).find();
+                        else hit = matchCase ? line.contains(needle) : line.toLowerCase().contains(needle);
+                        if (hit) {
+                            String snippet = line.trim();
+                            if (snippet.length() > 140) snippet = snippet.substring(0, 140) + "…";
+                            hits.add(new ContentHit(f, lineNo, snippet));
+                            if (hits.size() >= 500) return;
+                        }
+                        if (lineNo > 20000) break;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    private void showContentHitsDialog(List<ContentHit> hits, String query, boolean regex, boolean matchCase) {
+        RecyclerView list = new RecyclerView(this);
+        list.setLayoutManager(new LinearLayoutManager(this));
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle(hits.size() + " matches")
+                .setView(list)
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        list.setAdapter(new RecyclerView.Adapter<>() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                LinearLayout row = new LinearLayout(MainActivity.this);
+                row.setOrientation(LinearLayout.VERTICAL);
+                int pad = (int) (12 * getResources().getDisplayMetrics().density + 0.5f);
+                row.setPadding(pad, dpToPx(8), pad, dpToPx(8));
+                TextView title = new TextView(MainActivity.this);
+                title.setTextSize(14);
+                title.setSingleLine(true);
+                title.setEllipsize(TextUtils.TruncateAt.END);
+                TextView sub = new TextView(MainActivity.this);
+                sub.setTextSize(12);
+                sub.setTypeface(Typeface.MONOSPACE);
+                sub.setSingleLine(true);
+                sub.setEllipsize(TextUtils.TruncateAt.END);
+                row.addView(title);
+                row.addView(sub);
+                return new RecyclerView.ViewHolder(row) {
+                };
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                ContentHit hit = hits.get(position);
+                LinearLayout row = (LinearLayout) holder.itemView;
+                ((TextView) row.getChildAt(0)).setText(hit.file.getName() + " :" + hit.line);
+                ((TextView) row.getChildAt(1)).setText(hit.snippet);
+                row.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    startActivity(new Intent(MainActivity.this,
+                            TextEditorActivity.class)
+                            .putExtra("path", hit.file.getAbsolutePath())
+                            .putExtra("search", query)
+                            .putExtra("searchRegex", regex)
+                            .putExtra("searchMatchCase", matchCase));
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return hits.size();
+            }
+        });
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     private void showSettingsDialog() {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         ScrollView settingsDialog = (ScrollView) LayoutInflater.from(MainActivity.this).inflate(R.layout.dialog_settings, null);
@@ -2717,7 +3027,7 @@ public class MainActivity extends AppCompatActivity {
         setupFileOpsSettings(settingsDialog, settings);
         setupAccessSettings(settingsDialog, settings);
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
-        androidx.appcompat.app.AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this)
+        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.settings)).setView(settingsDialog).create();
         settingsAlert.setOnDismissListener(d -> {
             saveSuCommand(settingsDialog);
@@ -2754,14 +3064,14 @@ public class MainActivity extends AppCompatActivity {
             linesLabel.setText(getString(R.string.filename_max_lines, ln));
             pvName.setTextSize(UiPrefs.nameSize(sc));
             pvName.setMaxLines(ln);
-            pvName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            pvName.setEllipsize(TextUtils.TruncateAt.END);
             pvDate.setTextSize(UiPrefs.dateSize(sc));
             String pattern = dateTv.getText() != null ? dateTv.getText().toString() : "";
             String dateText;
             try {
-                dateText = new java.text.SimpleDateFormat(
+                dateText = new SimpleDateFormat(
                         pattern.isEmpty() ? UiPrefs.DATE_PRESETS[0] : pattern,
-                        java.util.Locale.getDefault()).format(new java.util.Date());
+                        Locale.getDefault()).format(new Date());
             } catch (Exception e) {
                 dateText = UiPrefs.formatDate(this, System.currentTimeMillis());
             }
@@ -2812,7 +3122,7 @@ public class MainActivity extends AppCompatActivity {
                 android.R.layout.simple_dropdown_item_1line, UiPrefs.DATE_PRESETS);
         dateTv.setAdapter(dateAdapter);
         dateTv.setText(UiPrefs.getDatePattern(this), false);
-        dateTv.addTextChangedListener(new android.text.TextWatcher() {
+        dateTv.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {
             }
@@ -2823,7 +3133,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void afterTextChanged(android.text.Editable s) {
+            public void afterTextChanged(Editable s) {
             }
         });
         updatePreview.run();
@@ -2834,7 +3144,7 @@ public class MainActivity extends AppCompatActivity {
             AutoCompleteTextView dateTv = root.findViewById(R.id.dateFormatTv);
             String pattern = dateTv.getText() != null ? dateTv.getText().toString().trim() : "";
             if (pattern.isEmpty()) return;
-            new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault());
+            new SimpleDateFormat(pattern, Locale.getDefault());
             PreferenceManager.getDefaultSharedPreferences(this).edit()
                     .putString("date_format", pattern).apply();
         } catch (Exception ignored) {
@@ -2864,17 +3174,17 @@ public class MainActivity extends AppCompatActivity {
         root.findViewById(R.id.pickHomeBtn1).setOnClickListener(v ->
                 pickDirInto(homeTv1, chosen -> {
                     settings.edit().putString("home1", chosen).apply();
-                    homeDir1 = new java.io.File(chosen);
+                    homeDir1 = new File(chosen);
                 }));
         root.findViewById(R.id.pickHomeBtn2).setOnClickListener(v ->
                 pickDirInto(homeTv2, chosen -> {
                     settings.edit().putString("home2", chosen).apply();
-                    homeDir2 = new java.io.File(chosen);
+                    homeDir2 = new File(chosen);
                 }));
 
         TextView appPathTv = root.findViewById(R.id.appPathTv);
         appPathTv.setText(UiPrefs.appPathDir(this,
-                new java.io.File(android.os.Environment.getExternalStorageDirectory(), "MP Manager").getPath()));
+                new File(Environment.getExternalStorageDirectory(), "MP Manager").getPath()));
         root.findViewById(R.id.pickAppPathBtn).setOnClickListener(v ->
                 pickDirInto(appPathTv, chosen ->
                         settings.edit().putString("app_path_dir", chosen).apply()));
@@ -2888,7 +3198,7 @@ public class MainActivity extends AppCompatActivity {
         FilePickerDialog.Properties props = new FilePickerDialog.Properties();
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
         props.selection_type = FilePickerDialog.DIR_SELECT;
-        props.root = android.os.Environment.getExternalStorageDirectory();
+        props.root = Environment.getExternalStorageDirectory();
         FilePickerDialog picker = new FilePickerDialog(this, props);
         picker.setTitle(getString(R.string.pick_folder));
         picker.setDialogSelectionListener(files -> {
@@ -2916,14 +3226,14 @@ public class MainActivity extends AppCompatActivity {
 
         AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
         List<String> levels = new ArrayList<>();
-        for (net.lingala.zip4j.model.enums.CompressionLevel cl
-                : net.lingala.zip4j.model.enums.CompressionLevel.values()) {
+        for (CompressionLevel cl
+                : CompressionLevel.values()) {
             levels.add(cl.name());
         }
         compressTv.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, levels));
         compressTv.setText(settings.getString("compressLevel",
-                net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION.name()), false);
+                CompressionLevel.NO_COMPRESSION.name()), false);
         compressTv.setOnItemClickListener((p, v, pos, id) ->
                 settings.edit().putString("compressLevel", levels.get(pos)).apply());
     }
@@ -2933,13 +3243,13 @@ public class MainActivity extends AppCompatActivity {
         AutoCompleteTextView workingModeTv = root.findViewById(R.id.workingModeTv);
         MaterialSwitch rootStatusSwitch = root.findViewById(R.id.rootStatusSwitch);
         MaterialSwitch shizukuStatusSwitch = root.findViewById(R.id.shizukuStatusSwitch);
-        com.google.android.material.button.MaterialButton grantShizukuBtn = root.findViewById(R.id.grantShizukuBtn);
+        MaterialButton grantShizukuBtn = root.findViewById(R.id.grantShizukuBtn);
         MaterialSwitch silentInstallToggle = root.findViewById(R.id.silentInstallToggle);
         MaterialSwitch rootFileOpsToggle = root.findViewById(R.id.rootFileOpsToggle);
         MaterialSwitch shizukuFileOpsToggle = root.findViewById(R.id.shizukuFileOpsToggle);
         MaterialSwitch rootExtractorToggle = root.findViewById(R.id.rootExtractorToggle);
-        com.google.android.material.button.MaterialButton rebootMenuBtn = root.findViewById(R.id.rebootMenuBtn);
-        com.google.android.material.textfield.TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
+        MaterialButton rebootMenuBtn = root.findViewById(R.id.rebootMenuBtn);
+        TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
         suCommandEt.setText(settings.getString("su_command", ""));
 
         String labelNonRoot = rss.getString(R.string.non_root);
@@ -3060,7 +3370,7 @@ public class MainActivity extends AppCompatActivity {
         holder[0] = (code, result) -> {
             ShizukuManager.removePermissionListener(holder[0]);
             handler.post(() -> {
-                if (result == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                if (result == PackageManager.PERMISSION_GRANTED) {
                     new Thread(() -> ShizukuManager.warmUp(MainActivity.this)).start();
                 } else {
                     Extensions.showMessage(this, R.string.shizuku_running_no_perm);
@@ -3073,7 +3383,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveSuCommand(ScrollView root) {
         try {
-            com.google.android.material.textfield.TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
+            TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
             String cmd = suCommandEt.getText() != null ? suCommandEt.getText().toString().trim() : "";
             if (!cmd.isEmpty() && !cmd.matches("^[A-Za-z0-9_./-]+$")) {
                 Extensions.showMessage(this, "Invalid su command, keeping previous");
@@ -3143,9 +3453,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupFilterBar() {
         LinearLayout topBar = findViewById(R.id.topBar);
-        com.google.android.material.textfield.TextInputLayout filterBox =
-                io.github.abdurazaaqmohammed.ui.UiFields.box(this, "Filter...");
-        EditText filterBar = io.github.abdurazaaqmohammed.ui.UiFields.field(filterBox, 0);
+        TextInputLayout filterBox =
+                UiFields.box(this, "Filter...");
+        EditText filterBar = UiFields.field(filterBox, 0);
         filterBar.setVisibility(View.GONE);
         filterBox.setVisibility(View.GONE);
         filterBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -3250,8 +3560,8 @@ public class MainActivity extends AppCompatActivity {
         cbOnlyThisFolder.setText(rss.getString(R.string.only_for_this_folder));
         layout.addView(cbOnlyThisFolder);
 
-        io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle directionToggle =
-                new io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle(this);
+        SortDirectionToggle directionToggle =
+                new SortDirectionToggle(this);
         directionToggle.setDescending(reverse);
         layout.addView(directionToggle);
 
@@ -3427,334 +3737,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showWifiPasswordsDialog() {
-        if (!io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.isRooted(this)) {
-            Extensions.showMessage(this, "Root access required");
-            return;
-        }
-        LinearLayout loadingView = new LinearLayout(this);
-        loadingView.setOrientation(LinearLayout.VERTICAL);
-        loadingView.setPadding(48, 48, 48, 48);
-        loadingView.setGravity(android.view.Gravity.CENTER);
-        android.widget.ProgressBar progressBar = new android.widget.ProgressBar(this);
-        TextView loadingText = new TextView(this);
-        loadingText.setText("Loading...");
-        loadingText.setPadding(0, 24, 0, 0);
-        loadingText.setGravity(android.view.Gravity.CENTER);
-        loadingView.addView(progressBar);
-        loadingView.addView(loadingText);
-        AlertDialog loadingDialog = dialogUtil.getDialogBuilder().setTitle("Wi-Fi Passwords").setView(loadingView).setNegativeButton(android.R.string.cancel, null).show();
-        new Thread(() -> {
-            java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> entries = io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.loadWifiPasswords(MainActivity.this);
-            runOnUiThread(() -> {
-                try {
-                    loadingDialog.dismiss();
-                } catch (Exception ignored) {
-                }
-                if (entries == null || entries.isEmpty()) {
-                    dialogUtil.getDialogBuilder().setTitle("Wi-Fi Passwords").setMessage("No saved networks found").setPositiveButton(android.R.string.ok, null).show();
-                    return;
-                }
-                LinearLayout wifiBox = new LinearLayout(MainActivity.this);
-                wifiBox.setOrientation(LinearLayout.VERTICAL);
-                float wifiDensity = getResources().getDisplayMetrics().density;
-                int wifiPad = (int) (16 * wifiDensity);
-                LinearLayout searchRow = new LinearLayout(MainActivity.this);
-                searchRow.setOrientation(LinearLayout.HORIZONTAL);
-                searchRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-                com.google.android.material.textfield.TextInputLayout wifiSearchBox =
-                        io.github.abdurazaaqmohammed.ui.UiFields.box(MainActivity.this, "Search networks");
-                EditText wifiSearch = io.github.abdurazaaqmohammed.ui.UiFields.field(wifiSearchBox, 0);
-                wifiSearch.setSingleLine(true);
-                LinearLayout.LayoutParams wifiSearchParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-                searchRow.addView(wifiSearchBox, wifiSearchParams);
-                CheckBox hideBox = new CheckBox(MainActivity.this);
-                hideBox.setText("Hide");
-                final boolean[] wifiShowPass = new boolean[]{!PreferenceManager.getDefaultSharedPreferences(MainActivity.this).getBoolean("wifi_hide_pass", false)};
-                hideBox.setChecked(!wifiShowPass[0]);
-                searchRow.addView(hideBox);
-                MaterialButton exportBtn = new MaterialButton(MainActivity.this);
-                exportBtn.setText("Export");
-                searchRow.addView(exportBtn);
-                LinearLayout.LayoutParams searchRowParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                searchRowParams.setMargins(wifiPad, wifiPad, wifiPad, (int) (8 * wifiDensity));
-                wifiBox.addView(searchRow, searchRowParams);
-                ListView listView = new ListView(MainActivity.this);
-                listView.setDivider(null);
-                listView.setDividerHeight(0);
-                int wifiListPad = (int) (8 * wifiDensity);
-                listView.setPadding(wifiPad, 0, wifiPad, 0);
-                listView.setClipToPadding(false);
-                LinearLayout.LayoutParams wifiListParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-                wifiBox.addView(listView, wifiListParams);
-                final java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> wifiAll = new java.util.ArrayList<>(entries);
-                final java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> wifiVisible = new java.util.ArrayList<>(entries);
-                int wifiOnSurface = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.BLACK);
-                int wifiOnVariant = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorOnSurfaceVariant, android.graphics.Color.GRAY);
-                int wifiBadgeBg = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorPrimaryContainer, android.graphics.Color.LTGRAY);
-                int wifiBadgeFg = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorOnPrimaryContainer, android.graphics.Color.BLACK);
-                int wifiCardBg = MaterialColors.getColor(MainActivity.this, com.google.android.material.R.attr.colorSurfaceContainerHigh, android.graphics.Color.WHITE);
-                android.widget.BaseAdapter wifiAdapter = new android.widget.BaseAdapter() {
-                    public int getCount() {
-                        return wifiVisible.size();
-                    }
-                    public Object getItem(int position) {
-                        return wifiVisible.get(position);
-                    }
-                    public long getItemId(int position) {
-                        return position;
-                    }
-                    public View getView(int position, View convertView, ViewGroup parent) {
-                        io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e = wifiVisible.get(position);
-                        LinearLayout card = new LinearLayout(MainActivity.this);
-                        card.setOrientation(LinearLayout.VERTICAL);
-                        int cardPad = (int) (14 * wifiDensity);
-                        card.setPadding(cardPad, (int) (10 * wifiDensity), cardPad, (int) (10 * wifiDensity));
-                        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
-                        cardBg.setColor(wifiCardBg);
-                        cardBg.setCornerRadius(16 * wifiDensity);
-                        card.setBackground(cardBg);
-                        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                        cardParams.setMargins(0, wifiListPad, 0, wifiListPad);
-                        card.setLayoutParams(cardParams);
-                        LinearLayout topRow = new LinearLayout(MainActivity.this);
-                        topRow.setOrientation(LinearLayout.HORIZONTAL);
-                        topRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-                        TextView ssidView = new TextView(MainActivity.this);
-                        ssidView.setText(e.ssid);
-                        ssidView.setTextSize(16);
-                        ssidView.setTypeface(null, android.graphics.Typeface.BOLD);
-                        ssidView.setTextColor(wifiOnSurface);
-                        LinearLayout.LayoutParams ssidParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-                        topRow.addView(ssidView, ssidParams);
-                        TextView badgeView = new TextView(MainActivity.this);
-                        badgeView.setText(e.security);
-                        badgeView.setTextSize(11);
-                        badgeView.setTypeface(null, android.graphics.Typeface.BOLD);
-                        badgeView.setTextColor(wifiBadgeFg);
-                        android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
-                        badgeBg.setColor(wifiBadgeBg);
-                        badgeBg.setCornerRadius(24 * wifiDensity);
-                        badgeView.setBackground(badgeBg);
-                        int badgePadH = (int) (10 * wifiDensity);
-                        int badgePadV = (int) (4 * wifiDensity);
-                        badgeView.setPadding(badgePadH, badgePadV, badgePadH, badgePadV);
-                        topRow.addView(badgeView);
-                        card.addView(topRow);
-                        TextView passView = new TextView(MainActivity.this);
-                        passView.setText(passText(e, wifiShowPass[0]));
-                        passView.setTextSize(14);
-                        passView.setTypeface(android.graphics.Typeface.MONOSPACE);
-                        passView.setTextColor(wifiOnVariant);
-                        passView.setTextIsSelectable(false);
-                        LinearLayout.LayoutParams passParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                        passParams.topMargin = (int) (4 * wifiDensity);
-                        card.addView(passView, passParams);
-                        LinearLayout actionRow = new LinearLayout(MainActivity.this);
-                        actionRow.setOrientation(LinearLayout.HORIZONTAL);
-                        actionRow.setGravity(android.view.Gravity.END);
-                        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                        actionParams.topMargin = (int) (4 * wifiDensity);
-                        MaterialButton qrBtn = new MaterialButton(MainActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
-                        qrBtn.setText("Share");
-                        qrBtn.setOnClickListener(v -> {
-                            android.widget.PopupMenu shareMenu = new android.widget.PopupMenu(MainActivity.this, v);
-                            shareMenu.getMenu().add("QR code");
-                            shareMenu.getMenu().add("Name + password");
-                            shareMenu.getMenu().add("Password only");
-                            shareMenu.setOnMenuItemClickListener(item -> {
-                                String title = item.getTitle().toString();
-                                if (title.equals("QR code")) showWifiQrDialog(e);
-                                else if (title.equals("Name + password")) shareWifiText(e.ssid + " : " + (e.password.isEmpty() ? "(Open)" : e.password));
-                                else shareWifiText(e.password.isEmpty() ? e.ssid : e.password);
-                                return true;
-                            });
-                            shareMenu.show();
-                        });
-                        MaterialButton copyPassBtn = new MaterialButton(MainActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
-                        copyPassBtn.setText(android.R.string.copy);
-                        copyPassBtn.setOnClickListener(v -> {
-                            android.widget.PopupMenu copyMenu = new android.widget.PopupMenu(MainActivity.this, v);
-                            copyMenu.getMenu().add("Name + password");
-                            copyMenu.getMenu().add("Password only");
-                            copyMenu.setOnMenuItemClickListener(item -> {
-                                if (item.getTitle().toString().equals("Name + password")) {
-                                    copyPlain("wifi", e.ssid + " : " + (e.password.isEmpty() ? "(Open)" : e.password));
-                                } else {
-                                    copyWifiPassword(e);
-                                }
-                                return true;
-                            });
-                            copyMenu.show();
-                        });
-                        actionRow.addView(qrBtn);
-                        actionRow.addView(copyPassBtn);
-                        card.addView(actionRow, actionParams);
-                        return card;
-                    }
-                };
-                listView.setAdapter(wifiAdapter);
-                hideBox.setOnCheckedChangeListener((b, checked) -> {
-                    wifiShowPass[0] = !checked;
-                    PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit().putBoolean("wifi_hide_pass", checked).apply();
-                    wifiAdapter.notifyDataSetChanged();
-                });
-                exportBtn.setOnClickListener(v -> exportWifiEntries(entries));
-                final AlertDialog[] wifiDialogHolder = new AlertDialog[1];
-                wifiSearch.addTextChangedListener(new TextWatcher() {
-                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    }
-                    public void onTextChanged(CharSequence s, int start, int before, int count) {
-                        String query = s.toString().trim().toLowerCase();
-                        wifiVisible.clear();
-                        if (query.isEmpty()) {
-                            wifiVisible.addAll(wifiAll);
-                        } else {
-                            for (io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e : wifiAll) {
-                                if (e.ssid.toLowerCase().contains(query) || e.security.toLowerCase().contains(query)) {
-                                    wifiVisible.add(e);
-                                }
-                            }
-                        }
-                        wifiAdapter.notifyDataSetChanged();
-                        if (wifiDialogHolder[0] != null) {
-                            wifiDialogHolder[0].setTitle("Wi-Fi Passwords (" + wifiVisible.size() + ")");
-                        }
-                    }
-                    public void afterTextChanged(Editable s) {
-                    }
-                });
-                AlertDialog listDialog = dialogUtil.getDialogBuilder().setTitle("Wi-Fi Passwords (" + entries.size() + ")").setView(wifiBox).setPositiveButton(android.R.string.copy, (d, w) -> {
-                    StringBuilder all = new StringBuilder();
-                    for (io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e : entries) {
-                        all.append(e.ssid).append(" : ").append(e.password.isEmpty() ? "(Open)" : e.password).append("\n");
-                    }
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    android.content.ClipData clip = android.content.ClipData.newPlainText("wifi", all.toString().trim());
-                    clipboard.setPrimaryClip(clip);
-                    Extensions.showMessage(MainActivity.this, rss.getString(R.string.copied));
-                }).setNegativeButton(android.R.string.cancel, null).show();
-                wifiDialogHolder[0] = listDialog;
-                listView.setOnItemClickListener((p, v, pos, itemId) -> {
-                    io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e = wifiVisible.get(pos);
-                    copyWifiPassword(e);
-                });
-            });
-        }).start();
-    }
-
-    private static String passText(io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e, boolean show) {
-        if (e.password.isEmpty()) return "Open network";
-        if (show) return e.password;
-        StringBuilder mask = new StringBuilder();
-        for (int i = 0; i < Math.max(8, e.password.length()); i++) mask.append('•');
-        return mask.toString();
-    }
-
-    private void copyPlain(String label, String value) {
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        android.content.ClipData clip = android.content.ClipData.newPlainText(label, value);
-        clipboard.setPrimaryClip(clip);
-        Extensions.showMessage(MainActivity.this, rss.getString(R.string.copied));
-    }
-
-    private void shareWifiText(String text) {
-        Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
-        startActivity(Intent.createChooser(share, "Share Wi-Fi"));
-    }
-
-    private void copyWifiPassword(io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e) {
-        String value = e.password.isEmpty() ? e.ssid : e.password;
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        android.content.ClipData clip = android.content.ClipData.newPlainText("wifi", value);
-        clipboard.setPrimaryClip(clip);
-        Extensions.showMessage(MainActivity.this, rss.getString(R.string.copied));
-    }
-
-    private void showWifiQrDialog(io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e) {
-        try {
-            String config = QrUtil.wifiConfig(e.ssid, e.password, e.security);
-            Bitmap qr = QrUtil.generate(config, 1024);
-            float density = getResources().getDisplayMetrics().density;
-            LinearLayout box = new LinearLayout(this);
-            box.setOrientation(LinearLayout.VERTICAL);
-            box.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-            int pad = (int) (20 * density);
-            box.setPadding(pad, pad, pad, pad);
-            ImageView qrView = new ImageView(this);
-            qrView.setImageBitmap(qr);
-            int size = (int) (260 * density);
-            box.addView(qrView, new LinearLayout.LayoutParams(size, size));
-            TextView ssidView = new TextView(this);
-            ssidView.setText(e.ssid);
-            ssidView.setTextSize(18);
-            ssidView.setTypeface(null, android.graphics.Typeface.BOLD);
-            ssidView.setGravity(android.view.Gravity.CENTER);
-            LinearLayout.LayoutParams ssidParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            ssidParams.topMargin = (int) (12 * density);
-            box.addView(ssidView, ssidParams);
-            TextView secView = new TextView(this);
-            secView.setText(e.security + (e.password.isEmpty() ? "" : " : " + e.password));
-            secView.setTextSize(14);
-            secView.setGravity(android.view.Gravity.CENTER);
-            secView.setTextIsSelectable(true);
-            box.addView(secView);
-            dialogUtil.getDialogBuilder().setTitle("Share Wi-Fi").setView(box)
-                    .setPositiveButton("Share", (d, w) -> {
-                        Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, config);
-                        startActivity(Intent.createChooser(share, "Share Wi-Fi"));
-                    })
-                    .setNeutralButton("Save image", (d, w) -> new Thread(() -> {
-                        try {
-                            QrUtil.saveToGallery(MainActivity.this, qr, e.ssid + "_wifi_qr");
-                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "QR image saved"));
-                        } catch (Exception ex) {
-                            runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "Save failed: " + ex.getMessage()));
-                        }
-                    }).start())
-                    .setNegativeButton(android.R.string.cancel, null).show();
-        } catch (Exception ex) {
-            Extensions.showMessage(this, "QR failed: " + ex.getMessage());
-        }
-    }
-
-    private void exportWifiEntries(java.util.List<io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry> entries) {
-        new Thread(() -> {
-            try {
-                StringBuilder all = new StringBuilder();
-                for (io.github.abdurazaaqmohammed.utils.WifiPasswordUtil.WifiEntry e : entries) {
-                    all.append("SSID: ").append(e.ssid).append('\n');
-                    all.append("Security: ").append(e.security).append('\n');
-                    all.append("Password: ").append(e.password.isEmpty() ? "(Open)" : e.password).append("\n\n");
-                }
-                String fileName = "wifi_passwords.txt";
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ContentValues values = new ContentValues();
-                    values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-                    values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
-                    values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/MP Manager");
-                    Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-                    if (uri == null) throw new Exception("Cannot create file");
-                    try (java.io.OutputStream os = getContentResolver().openOutputStream(uri)) {
-                        if (os == null) throw new Exception("Cannot open file");
-                        os.write(all.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    }
-                } else {
-                    java.io.File dir = new java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "MP Manager");
-                    if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new Exception("Cannot create folder");
-                    java.io.File out = new java.io.File(dir, fileName);
-                    try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
-                        fos.write(all.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    }
-                    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(out)));
-                }
-                runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "Exported to Download/MP Manager"));
-            } catch (Exception ex) {
-                runOnUiThread(() -> Extensions.showMessage(MainActivity.this, "Export failed: " + ex.getMessage()));
-            }
-        }).start();
-    }
-
     public static IEZFtpServer ftpServer;
 
     public interface ImagePickCallback {
@@ -3803,7 +3785,7 @@ public class MainActivity extends AppCompatActivity {
         pl.setEnabled(serverNotStarted);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
-            Toast.makeText(this, "Please allow notifications to show FTP server running", Toast.LENGTH_LONG);
+            Extensions.showMessage(this, "Please allow notifications to show FTP server running");
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
         }
 

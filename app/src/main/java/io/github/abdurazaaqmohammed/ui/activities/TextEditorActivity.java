@@ -52,7 +52,9 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         String title;
         Uri fileUri;
         File file;
-        /** Absolute path of the root-original file when editing a staged copy. Null for normal files. */
+        String pendingSearch;
+        boolean pendingSearchRegex;
+        boolean pendingSearchMatchCase;
         String rootOriginalPath;
         boolean axml;
         List<ResEntry> resEntries;
@@ -61,6 +63,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         boolean loaded;
         boolean loading;
         boolean modified;
+        boolean loadFailed;
     }
 
     private DrawerLayout drawerLayout;
@@ -135,6 +138,9 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 o.put("title", t.title);
                 if (t.file != null) o.put("file", t.file.getPath());
                 else if (t.fileUri != null) o.put("uri", t.fileUri.toString());
+                if (t.rootOriginalPath != null && !t.rootOriginalPath.isEmpty()) {
+                    o.put("rootOriginal", t.rootOriginalPath);
+                }
                 o.put("modified", t.modified);
                 boolean untitledWithText = t.file == null && t.fileUri == null && t.loaded
                         && t.content != null && !t.content.isEmpty();
@@ -181,6 +187,13 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 } else {
                     String uriStr = o.optString("uri", null);
                     if (uriStr != null) t.fileUri = Uri.parse(uriStr);
+                }
+                String savedRootOriginal = o.optString("rootOriginal", null);
+                if (savedRootOriginal != null && !savedRootOriginal.isEmpty()) {
+                    t.rootOriginalPath = savedRootOriginal;
+                    if (t.title == null || !t.title.endsWith(" (root)")) {
+                        t.title = new File(savedRootOriginal).getName() + " (root)";
+                    }
                 }
                 t.modified = o.optBoolean("modified", false);
                 if (o.has("content")) {
@@ -423,9 +436,34 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             existing = findExistingRootTab(earlyRootOriginal);
         }
         if (existing != null) {
+            if (!existing.modified && file != null && existing.file != null
+                    && !file.getAbsolutePath().equals(existing.file.getAbsolutePath())
+                    && earlyRootOriginal != null && !earlyRootOriginal.isEmpty()
+                    && earlyRootOriginal.equals(existing.rootOriginalPath)) {
+                existing.file = file;
+                existing.fileUri = uri;
+                existing.loaded = false;
+                existing.content = null;
+                existing.loadFailed = false;
+            }
+            if (existing.loadFailed) {
+                existing.loaded = false;
+            }
             int idx = tabs.indexOf(existing);
             selectTab(idx);
             updateTabsList();
+            if (intent.hasExtra("search")) {
+                existing.pendingSearch = intent.getStringExtra("search");
+                existing.pendingSearchRegex = intent.getBooleanExtra("searchRegex", false);
+                existing.pendingSearchMatchCase = intent.getBooleanExtra("searchMatchCase", false);
+                if (existing.loaded) {
+                    UnifiedEditorFragment f2 = getFragment();
+                    if (f2 != null) {
+                        f2.searchFor(existing.pendingSearch, existing.pendingSearchRegex, existing.pendingSearchMatchCase);
+                        existing.pendingSearch = null;
+                    }
+                }
+            }
             return;
         }
 
@@ -440,6 +478,11 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         tab.fileUri = uri;
         tab.axml = isAxml;
         tab.resEntries = entries;
+        if (intent.hasExtra("search")) {
+            tab.pendingSearch = intent.getStringExtra("search");
+            tab.pendingSearchRegex = intent.getBooleanExtra("searchRegex", false);
+            tab.pendingSearchMatchCase = intent.getBooleanExtra("searchMatchCase", false);
+        }
         String rootOriginal = intent.getStringExtra("rootOriginalPath");
         if (rootOriginal != null && !rootOriginal.isEmpty() && file != null
                 && !rootOriginal.equals(file.getAbsolutePath())) {
@@ -479,7 +522,6 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         return null;
     }
 
-    /** Match an already-open root-staged tab so re-opening doesn't duplicate tabs. */
     private EditorTab findExistingRootTab(String rootOriginalPath) {
         if (rootOriginalPath == null || rootOriginalPath.isEmpty()) return null;
         for (EditorTab tab : tabs) {
@@ -491,6 +533,17 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     private void loadTabContent(EditorTab tab) {
         tab.loading = true;
         new Thread(() -> {
+            if (tab.rootOriginalPath != null && (tab.file == null || !tab.file.exists())) {
+                try {
+                    File restaged = RootStaging.stageForRead(TextEditorActivity.this, tab.rootOriginalPath);
+                    tab.file = restaged;
+                    tab.fileUri = Uri.fromFile(restaged);
+                } catch (Exception e) {
+                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                    applyLoadedText(tab, tab.content == null ? "" : tab.content);
+                    return;
+                }
+            }
             if (tab.pendingDecoded != null) {
                 applyLoadedText(tab, tab.pendingDecoded);
                 return;
@@ -520,8 +573,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         if (tab.axml) {
             try (InputStream is = tab.file != null ? FileUtils.getInputStream(tab.file)
                     : getContentResolver().openInputStream(tab.fileUri)) {
+                tab.loadFailed = false;
                 return new aXMLDecoder(is, tab.resEntries).decodeAsString();
             } catch (Exception e) {
+                tab.loadFailed = true;
                 runOnUiThread(() -> new ErrorUtil(this).showError(e));
                 return "";
             }
@@ -536,8 +591,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             while ((line = reader.readLine()) != null) {
                 sb.append(line).append('\n');
             }
+            tab.loadFailed = false;
             return sb.toString();
         } catch (Exception e) {
+            tab.loadFailed = true;
             runOnUiThread(() -> new ErrorUtil(this).showError(e));
             return "";
         }
@@ -554,6 +611,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                     boolean wasModified = tab.modified;
                     f.setText(tab.content);
                     tab.modified = wasModified;
+                    if (tab.pendingSearch != null && !tab.pendingSearch.isEmpty()) {
+                        f.searchFor(tab.pendingSearch, tab.pendingSearchRegex, tab.pendingSearchMatchCase);
+                        tab.pendingSearch = null;
+                    }
                 }
             }
             updateTabsList();
@@ -569,9 +630,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         }
         new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
                 .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
-                    if (position == currentIndex) saveFile(); // editor holds the latest text
-                    else saveTabText(tab, tab.content);       // content was stashed when switching away
-                    removeTab(position);
+                    if (position == currentIndex) saveFile(() -> removeTabRef(tab)); // editor holds the latest text
+                    else saveTabText(tab, tab.content, () -> removeTabRef(tab));       // content was stashed when switching away
                 })
                 .setNegativeButton(R.string.dont_save, (dialog, which) -> removeTab(position))
                 .setNeutralButton(android.R.string.cancel, null)
@@ -580,8 +640,13 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     }
 
     private void saveTabText(EditorTab tab, String text) {
+        saveTabText(tab, text, null);
+    }
+
+    private void saveTabText(EditorTab tab, String text, Runnable onDone) {
         if (tab.fileUri == null && tab.file == null) {
             Extensions.showMessage(this, "No file to save");
+            if (onDone != null) onDone.run();
             return;
         }
         // Root-staged tab: confirm before touching key system paths, then
@@ -592,12 +657,12 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 new MaterialAlertDialogBuilder(this)
                         .setTitle("Write to system path?")
                         .setMessage("Save back to\n" + target + "\n\nModifying system files can break apps or boot. Continue?")
-                        .setPositiveButton(android.R.string.ok, (d, w) -> saveTabTextRoot(tab, text))
+                        .setPositiveButton(android.R.string.ok, (d, w) -> saveTabTextRoot(tab, text, onDone))
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
                 return;
             }
-            saveTabTextRoot(tab, text);
+            saveTabTextRoot(tab, text, onDone);
             return;
         }
         backupForSave(tab.file, null);
@@ -607,14 +672,18 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(Charset.forName("UTF-8")));
             tab.content = text;
             tab.modified = false;
+            if (onDone != null) onDone.run();
         } catch (Exception e) {
             tab.modified = true;
             new ErrorUtil(this).showError(e);
         }
     }
 
-    /** Save a root-staged tab: local staged write, then root write-back. */
     private void saveTabTextRoot(EditorTab tab, String text) {
+        saveTabTextRoot(tab, text, null);
+    }
+
+    private void saveTabTextRoot(EditorTab tab, String text, Runnable onDone) {
         backupForSave(tab.file, tab.rootOriginalPath);
         try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
             os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(Charset.forName("UTF-8")));
@@ -624,16 +693,60 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             return;
         }
         tab.content = text;
-        tab.modified = false;
         Extensions.showMessage(this, "Writing back as root…");
         new Thread(() -> {
             try {
-                RootStaging.writeBack(this, tab.file, tab.rootOriginalPath);
-                runOnUiThread(() -> Extensions.showMessage(this, "Saved (root write-back OK)"));
+                if (text.isEmpty() && originalKnownNonEmpty(tab)) {
+                    String target = tab.rootOriginalPath;
+                    runOnUiThread(() -> new MaterialAlertDialogBuilder(this)
+                            .setTitle("Overwrite with empty file?")
+                            .setMessage("The editor is empty but\n" + target + "\n still has content. Overwrite it with nothing?")
+                            .setPositiveButton("Overwrite", (d, w) -> new Thread(() -> doRootWriteBack(tab, text, onDone)).start())
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show());
+                    return;
+                }
+                doRootWriteBack(tab, text, onDone);
             } catch (Exception e) {
                 runOnUiThread(() -> new ErrorUtil(this).showError(e));
             }
         }).start();
+    }
+
+    private boolean originalKnownNonEmpty(EditorTab tab) {
+        try {
+            if (tab.rootOriginalPath == null) {
+                File f = tab.file;
+                return f != null && f.isFile() && f.length() > 0;
+            }
+            return AccessManager.getSize(this, tab.rootOriginalPath) > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void doRootWriteBack(EditorTab tab, String text) {
+        doRootWriteBack(tab, text, null);
+    }
+
+    private void doRootWriteBack(EditorTab tab, String text, Runnable onDone) {
+        try {
+            RootStaging.writeBack(this, tab.file, tab.rootOriginalPath);
+            runOnUiThread(() -> {
+                tab.modified = false;
+                updateTabsList();
+                persistSession();
+                Extensions.showMessage(this, "Saved (root write-back OK)");
+                if (onDone != null) onDone.run();
+            });
+        } catch (Exception e) {
+            runOnUiThread(() -> new ErrorUtil(this).showError(e));
+        }
+    }
+
+    private void removeTabRef(EditorTab tab) {
+        int idx = tabs.indexOf(tab);
+        if (idx >= 0) removeTab(idx);
     }
 
     private void removeTab(int position) {
@@ -694,14 +807,15 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         if (t != null && t.modified) {
             new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
                     .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
-                        manualFinish = true;
-                        saveFile();
-                        currentFileUri = t.fileUri != null ? t.fileUri : Uri.fromFile(currentFile);
-                        Intent resultIntent = new Intent();
-                        resultIntent.setData(currentFileUri);
-                        resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        setResult(757, resultIntent);
-                        finish();
+                        saveFile(() -> {
+                            manualFinish = true;
+                            currentFileUri = t.fileUri != null ? t.fileUri : Uri.fromFile(currentFile);
+                            Intent resultIntent = new Intent();
+                            resultIntent.setData(currentFileUri);
+                            resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            setResult(757, resultIntent);
+                            finish();
+                        });
                     })
                     .setNegativeButton(R.string.dont_save, (dialog, which) -> {
                         manualFinish = true;
@@ -744,14 +858,15 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         if (t != null && t.modified && f != null && f.getEditor() != null) {
             new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
                     .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
-                        manualFinish = true;
-                        saveFile();
-                        currentFileUri = t.fileUri != null ? t.fileUri : Uri.fromFile(currentFile);
-                        Intent resultIntent = new Intent();
-                        resultIntent.setData(currentFileUri);
-                        resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        setResult(757, resultIntent);
-                        finish();
+                        saveFile(() -> {
+                            manualFinish = true;
+                            currentFileUri = t.fileUri != null ? t.fileUri : Uri.fromFile(currentFile);
+                            Intent resultIntent = new Intent();
+                            resultIntent.setData(currentFileUri);
+                            resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            setResult(757, resultIntent);
+                            finish();
+                        });
                     })
                     .setNegativeButton(R.string.dont_save, (dialog, which) -> {
                         manualFinish = true;
@@ -783,7 +898,21 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         if (f == null || f.getEditor() == null) return;
         EditorTab tab = getCurrentTab();
         if (tab == null) return;
-        saveTabText(tab, f.getEditor().getText().toString());
+        saveFile(null);
+    }
+
+    private void saveFile(Runnable onDone) {
+        UnifiedEditorFragment f = getFragment();
+        if (f == null || f.getEditor() == null) {
+            if (onDone != null) onDone.run();
+            return;
+        }
+        EditorTab tab = getCurrentTab();
+        if (tab == null) {
+            if (onDone != null) onDone.run();
+            return;
+        }
+        saveTabText(tab, f.getEditor().getText().toString(), onDone);
         updateTabsList();
         persistSession();
     }

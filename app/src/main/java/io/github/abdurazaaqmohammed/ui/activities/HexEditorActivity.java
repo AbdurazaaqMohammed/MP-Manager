@@ -24,7 +24,6 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -64,7 +63,6 @@ public class HexEditorActivity extends AppCompatActivity {
     private RandomAccessFile raf;
     private long size;
     private boolean readOnly;
-    /** Absolute root-original path when editing a staged copy. Null for normal files. */
     private String rootOriginalPath;
 
     private final TreeMap<Integer, Integer> mods = new TreeMap<>();
@@ -474,7 +472,7 @@ public class HexEditorActivity extends AppCompatActivity {
             lastPattern = buildPattern(searchTypeIndex, searchValue.getText().toString(), searchBigEndian.isChecked());
             return true;
         } catch (Exception e) {
-            Toast.makeText(this, "Invalid search value for " + DATA_TYPES.get(searchTypeIndex), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Invalid search value for " + DATA_TYPES.get(searchTypeIndex));
             return false;
         }
     }
@@ -511,7 +509,7 @@ public class HexEditorActivity extends AppCompatActivity {
                     lastMatchPos = f;
                     setCursor((int) f, true);
                 } else {
-                    Toast.makeText(this, "Not found", Toast.LENGTH_SHORT).show();
+                    Extensions.showMessage(this, "Not found");
                 }
             });
         }).start();
@@ -527,14 +525,14 @@ public class HexEditorActivity extends AppCompatActivity {
         if (!ensureSearchPattern()) return;
         long target = lastMatchPos >= 0 ? lastMatchPos : cursorPos;
         if (target + lastPattern.length > size) {
-            Toast.makeText(this, "Not found", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Not found");
             return;
         }
         byte[] repl;
         try {
             repl = buildPattern(replaceTypeIndex, replaceValue.getText().toString(), replaceBigEndian.isChecked());
         } catch (Exception e) {
-            Toast.makeText(this, "Invalid replace value for " + DATA_TYPES.get(replaceTypeIndex), Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Invalid replace value for " + DATA_TYPES.get(replaceTypeIndex));
             return;
         }
         writeBytesAt(target, repl, null);
@@ -591,13 +589,13 @@ public class HexEditorActivity extends AppCompatActivity {
                     try {
                         byte[] data = parsePastedBytes(formatIndex, input.getText().toString());
                         if (data == null || data.length == 0) {
-                            Toast.makeText(this, "Nothing to paste", Toast.LENGTH_SHORT).show();
+                            Extensions.showMessage(this, "Nothing to paste");
                             return;
                         }
                         writeBytesAt(cursorPos, data, null);
-                        Toast.makeText(this, "Pasted " + data.length + " bytes", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Pasted " + data.length + " bytes");
                     } catch (IllegalArgumentException e) {
-                        Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+                        Extensions.showMessage(this, e.getMessage());
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -654,14 +652,14 @@ public class HexEditorActivity extends AppCompatActivity {
 
     private void saveChanges() {
         if (mods.isEmpty()) {
-            Toast.makeText(this, "Nothing to save", Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, "Nothing to save");
             return;
         }
         if (readOnly) {
             Extensions.showMessage(this, "File is read-only");
             return;
         }
-        if (rootOriginalPath != null && RootStaging.needsWriteConfirm(rootOriginalPath)) {
+        if (RootStaging.needsWriteConfirm(rootOriginalPath)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle("Write to system path?")
                     .setMessage("Save back to\n" + rootOriginalPath + "\n\nModifying system files can break apps or boot. Continue?")
@@ -673,7 +671,6 @@ public class HexEditorActivity extends AppCompatActivity {
         saveChangesRoot();
     }
 
-    /** Write mods to the (staged) file, then root write-back when staged. */
     private void saveChangesRoot() {
         backupForSave();
         try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
@@ -681,7 +678,7 @@ public class HexEditorActivity extends AppCompatActivity {
                 w.seek(entry.getKey());
                 w.writeByte(entry.getValue());
             }
-            Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show();
+            Extensions.showMessage(this, R.string.saved);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
             return;
@@ -748,7 +745,7 @@ public class HexEditorActivity extends AppCompatActivity {
                         long target = Long.parseLong(input.getText().toString().trim(), 16);
                         setCursor((int) Math.min(target, Math.max(0, size - 1)), true);
                     } catch (NumberFormatException ignored) {
-                        Toast.makeText(this, "Invalid offset", Toast.LENGTH_SHORT).show();
+                        Extensions.showMessage(this, "Invalid offset");
                     }
                 }).show();
     }

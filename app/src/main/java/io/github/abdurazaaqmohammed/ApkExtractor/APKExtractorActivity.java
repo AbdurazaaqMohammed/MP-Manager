@@ -896,10 +896,10 @@ public class APKExtractorActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 action.run();
-                //runOnUiThread(() -> Toast.makeText(this, actionName + " done", Toast.LENGTH_SHORT).show());
+                //runOnUiThread(() -> Extensions.showMessage(this, actionName + " done"));
             } catch (Exception e) {
                 new ErrorUtil(this).showError(e);
-                //runOnUiThread(() -> Toast.makeText(this, actionName + " failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                //runOnUiThread(() -> Extensions.showMessage(this, actionName + " failed: " + e.getMessage()));
             }
         }).start();
     }
