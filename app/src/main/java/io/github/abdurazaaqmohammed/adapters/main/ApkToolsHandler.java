@@ -426,7 +426,7 @@ public class ApkToolsHandler {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton("More", (dialog, which) -> {
-                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate), "Kill signature verification", "Add Toast / Dialog", "Remove all toasts"};
+                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate), "Kill signature verification", "Add Toast / Dialog", "Remove all toasts", "Remove signature", "Signature health", "Manifest toggles", "Permissions"};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
@@ -723,7 +723,6 @@ public class ApkToolsHandler {
                                             try {
                                                 apkCloner.processApk();
                                                 File cloned = new File(filePath.replace(".apk", "_clone.apk"));
-                                                ApkZipAlignUtil.ensureInstallable(cloned);
                                                 if (sign[0]) {
                                                     wrapper[0].signApk(cloned);
                                                 }
@@ -741,6 +740,10 @@ public class ApkToolsHandler {
                     else if (which1 == 7) killSignatureVerification(file, fileName);
                     else if (which1 == 8) showAddToastDialog(file, filePath);
                     else if (which1 == 9) showRemoveAllToastsDialog(file);
+                    else if (which1 == 10) removeSignature(file);
+                    else if (which1 == 11) showSignatureHealthDialog(file);
+                    else if (which1 == 12) manifestEditor.showManifestTogglesDialog(file);
+                    else if (which1 == 13) manifestEditor.showPermissionsDialog(file);
                     }).show();
                 })
                 .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
@@ -3575,5 +3578,97 @@ public class ApkToolsHandler {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void removeSignature(File apk) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            boolean ok = io.github.abdurazaaqmohammed.utils.SignatureStripUtil.strip(apk);
+            pm.dismiss();
+            context.handler.post(() -> {
+                Extensions.showMessage(context, ok ? "Signature removed" : "Failed to remove signature");
+                if (ok) context.loadFolderInPane(apk.getParentFile(), pane1, false);
+            });
+        }).start();
+    }
+
+    private void showSignatureHealthDialog(File apk) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            String report = buildSignatureHealthReport(apk);
+            pm.dismiss();
+            context.handler.post(() -> {
+                TextView tv = new TextView(context);
+                tv.setText(report);
+                tv.setTextIsSelectable(true);
+                tv.setTextSize(13);
+                tv.setTypeface(android.graphics.Typeface.MONOSPACE);
+                int pad = dp(16);
+                tv.setPadding(pad, pad, pad, pad);
+                android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+                scroll.addView(tv);
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setTitle("Signature health")
+                        .setView(scroll)
+                        .setNegativeButton(android.R.string.ok, null)
+                        .setNeutralButton("Re-sign", (d, w) -> SignatureKeyDialog.show(context, apk, false))
+                        .setPositiveButton("Fix alignment", (d, w) -> {
+                            ProgressManager pm2 = new ProgressManager(context, true).show();
+                            new Thread(() -> {
+                                try {
+                                    ApkZipAlignUtil.ensureInstallable(apk);
+                                    pm2.dismiss();
+                                    context.handler.post(() -> showSignatureHealthDialog(apk));
+                                } catch (Exception e) {
+                                    pm2.dismiss();
+                                    new ErrorUtil(context).showError(e);
+                                }
+                            }).start();
+                        })
+                        .show());
+            });
+        }).start();
+    }
+
+    private String buildSignatureHealthReport(File apk) {
+        StringBuilder sb = new StringBuilder();
+        String issue = ApkZipAlignUtil.installIssue(apk);
+        sb.append("Zipalign: ").append(issue == null ? "OK" : issue).append('\n');
+        ApkVerifier.Result result = null;
+        String verifyError = null;
+        try {
+            result = new ApkVerifier.Builder(apk).build().verify();
+        } catch (Exception e) {
+            verifyError = e.getMessage() != null ? e.getMessage() : e.toString();
+        }
+        String v1;
+        String v2;
+        if (verifyError != null) {
+            v1 = "error: " + verifyError;
+            v2 = "error: " + verifyError;
+        } else {
+            try {
+                v1 = result.isVerifiedUsingV1Scheme() ? "verified" : "missing or invalid";
+            } catch (Exception e) {
+                v1 = "error: " + e.getMessage();
+            }
+            try {
+                v2 = result.isVerifiedUsingV2Scheme() ? "verified" : "missing or invalid";
+            } catch (Exception e) {
+                v2 = "error: " + e.getMessage();
+            }
+        }
+        sb.append("V1 (JAR): ").append(v1).append('\n');
+        sb.append("V2 (APK Signature Scheme v2): ").append(v2).append('\n');
+        String sha256 = "none";
+        try {
+            List<X509Certificate> certs = CertUtil.getCertificatesUnverified(apk);
+            if (certs == null || certs.isEmpty()) certs = CertUtil.getCertificates(apk);
+            if (certs != null && !certs.isEmpty()) sha256 = CertUtil.getSha256(certs.get(0));
+        } catch (Exception e) {
+            sha256 = "error: " + (e.getMessage() != null ? e.getMessage() : e.toString());
+        }
+        sb.append("Cert SHA-256: ").append(sha256);
+        return sb.toString();
     }
 }
