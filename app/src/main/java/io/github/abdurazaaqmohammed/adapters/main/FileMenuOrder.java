@@ -34,11 +34,15 @@ public final class FileMenuOrder {
     public static final String CMP_TEXT = "cmp_text";
     public static final String CMP_HASH = "cmp_hash";
     public static final String CMP_APK = "cmp_apk";
+    public static final String BATCH_CROP = "batch_crop";
+    public static final String BATCH_EXIF = "batch_exif";
+    public static final String BATCH_STRIP_META = "batch_strip_meta";
 
     public static final String[] DEFAULT_ORDER = {
             COPY, MOVE, RENAME, DELETE, COMPRESS, PROPERTIES, SHARE, OPEN_WITH,
             BOOKMARK, CMD, CHECK, EXTRACT, BATCH_SIGN, BATCH_OPT, BATCH_INSTALL,
-            CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK
+            CMP_ZIP, CMP_ARSC, CMP_TEXT, CMP_HASH, CMP_APK,
+            BATCH_CROP, BATCH_EXIF, BATCH_STRIP_META
     };
 
     private FileMenuOrder() {
@@ -131,6 +135,12 @@ public final class FileMenuOrder {
                 return context.getString(R.string.compare_hashes);
             case CMP_APK:
                 return context.getString(R.string.compare_apks);
+            case BATCH_CROP:
+                return "Crop images";
+            case BATCH_EXIF:
+                return "Set EXIF tags";
+            case BATCH_STRIP_META:
+                return "Remove metadata";
             default:
                 return id;
         }
@@ -173,6 +183,12 @@ public final class FileMenuOrder {
             case CMP_HASH:
             case CMP_APK:
                 return R.drawable.baseline_swap_horiz_24;
+            case BATCH_CROP:
+                return R.drawable.edit_24px;
+            case BATCH_EXIF:
+                return R.drawable.baseline_text_snippet_24;
+            case BATCH_STRIP_META:
+                return R.drawable.baseline_delete_24;
             default:
                 return 0;
         }

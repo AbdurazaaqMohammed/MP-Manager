@@ -3,9 +3,10 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
-import androidx.preference.PreferenceManager;
 import android.text.ClipboardManager;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -22,12 +23,14 @@ import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
@@ -67,24 +70,28 @@ import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
-import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.HashUtil;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.JpegMetaStrip;
+import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
+import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
-import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAdapter.ViewHolder> {
 
@@ -181,7 +188,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final View convertView = holder.itemView;
         position = holder.getBindingAdapterPosition();
+        if (position < 0 || position >= values.length) return;
         Object item = values[position];
+        final ViewHolder bindHolder = holder;
+        final Object boundItem = item;
         File file;
         ZipEntryInfo entry;
         String fileName;
@@ -238,7 +248,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 };
             }
 
-            int finalPosition1 = finalPosition;
             View.OnLongClickListener originalLongClickListener = v -> {
                 context.setSelectedPane(pane1 ? 1 : 2);
                 if (isInZip) {
@@ -274,6 +283,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_SIGN, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_SIGN, direction)));
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_OPT, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_OPT, direction)));
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_INSTALL, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_INSTALL, direction)));
+                    }
+                    boolean hasImage = false;
+                    for (int bp : selectedPositions) {
+                        Object selected = values[bp];
+                        if (selected instanceof File && FileUtils.isImageFile(((File) selected).getName())) {
+                            hasImage = true;
+                            break;
+                        }
+                    }
+                    if (hasImage) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_CROP, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_CROP, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_EXIF, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_EXIF, direction)));
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BATCH_STRIP_META, FileMenuOrder.labelFor(context, FileMenuOrder.BATCH_STRIP_META, direction)));
                     }
                 }
 
@@ -404,6 +426,33 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 for (int bp : selectedPositions) InstallUtil.installApkWithDialog(context, (File) values[bp]);
                                 return;
                             }
+                            case FileMenuOrder.BATCH_CROP: {
+                                List<File> images = selectedImageFiles();
+                                if (images.isEmpty()) {
+                                    Extensions.showMessage(context, "No images selected");
+                                    return;
+                                }
+                                showBatchCropDialog(images);
+                                return;
+                            }
+                            case FileMenuOrder.BATCH_EXIF: {
+                                List<File> images = selectedJpegFiles();
+                                if (images.isEmpty()) {
+                                    Extensions.showMessage(context, "No JPEG files selected");
+                                    return;
+                                }
+                                showBatchExifDialog(images);
+                                return;
+                            }
+                            case FileMenuOrder.BATCH_STRIP_META: {
+                                List<File> images = selectedJpegFiles();
+                                if (images.isEmpty()) {
+                                    Extensions.showMessage(context, "No JPEG files selected");
+                                    return;
+                                }
+                                confirmBatchStrip(images);
+                                return;
+                            }
                             case FileMenuOrder.CMD:
                                 if (isInZip) {
                                     Extensions.showMessage(context, "Command Helper not supported for zip entries");
@@ -437,16 +486,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         fileOps.moveAsync(item);
                                         break;
                                     case FileMenuOrder.RENAME:
-                                        showRenameDialog(finalPosition1, file, entry, fileName, multi);
+                                        showRenameDialog(finalPosition, file, entry, fileName, multi);
                                         break;
                                     case FileMenuOrder.DELETE:
-                                        showDeleteDialog(finalPosition1, file, entry, multi);
+                                        showDeleteDialog(finalPosition, file, entry, multi);
                                         break;
                                     case FileMenuOrder.COMPRESS:
                                         showCompressDialog(file, fileName, multi);
                                         break;
                                     case FileMenuOrder.PROPERTIES:
-                                        propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, getFilesToDisplay(multi, finalPosition1).toString());
+                                        propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, getFilesToDisplay(multi, finalPosition).toString());
                                         break;
                                     case FileMenuOrder.SHARE:
                                         withReadableCopy(file, readable -> {
@@ -471,41 +520,420 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 dialogUtil.styleAlertDialog(dialog);
                 return true;
             };
-            context.handler.post(() -> convertView.setOnTouchListener(new SwipeTouchListener(
-                    context,
-                    originalClickListener,
-                    originalLongClickListener,
-                    finalPosition,
-                    MainFilesArrayAdapter.this,
-                    pane1 ? 1 : 2)));
+            context.handler.post(() -> {
+                int currentPos = bindHolder.getBindingAdapterPosition();
+                if (currentPos == RecyclerView.NO_POSITION || currentPos < 0 || currentPos >= values.length) return;
+                if (values[currentPos] != boundItem) return;
+                convertView.setOnTouchListener(new SwipeTouchListener(
+                        context,
+                        originalClickListener,
+                        originalLongClickListener,
+                        finalPosition,
+                        MainFilesArrayAdapter.this,
+                        pane1 ? 1 : 2));
+            });
         }).start();
 
     }
 
+    public void openWithForFile(File file, String fileName) {
+        showOpenWithDialog(file, fileName);
+    }
+
+    private static boolean isJpegPath(String name) {
+        String lower = name.toLowerCase(Locale.ENGLISH);
+        return lower.endsWith(".jpg") || lower.endsWith(".jpeg");
+    }
+
+    private static boolean isPngPath(String name) {
+        return name.toLowerCase(Locale.ENGLISH).endsWith(".png");
+    }
+
+    private List<File> selectedImageFiles() {
+        List<File> out = new ArrayList<>();
+        for (int p : selectedPositions) {
+            Object o = values[p];
+            if (o instanceof File) {
+                File f = (File) o;
+                if (f.isFile() && FileUtils.isImageFile(f.getName())) out.add(f);
+            }
+        }
+        return out;
+    }
+
+    private List<File> selectedJpegFiles() {
+        List<File> out = new ArrayList<>();
+        for (File f : selectedImageFiles()) {
+            if (isJpegPath(f.getName())) out.add(f);
+        }
+        return out;
+    }
+
+    private void backupImage(File f) {
+        try {
+            FileUtils.copyFile(f, new File(f.getParent(), f.getName() + ".bak"));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private int[] imageDims(File f) {
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(f.getAbsolutePath(), bounds);
+        return new int[]{bounds.outWidth, bounds.outHeight};
+    }
+
+    private void finishBatchOp(String doneText) {
+        clearSelection();
+        context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+        Extensions.showMessage(context, doneText);
+    }
+
+    private void showBatchCropDialog(List<File> images) {
+        int minW = Integer.MAX_VALUE;
+        int minH = Integer.MAX_VALUE;
+        for (File f : images) {
+            int[] dims = imageDims(f);
+            if (dims[0] > 0) minW = Math.min(minW, dims[0]);
+            if (dims[1] > 0) minH = Math.min(minH, dims[1]);
+        }
+        if (minW == Integer.MAX_VALUE) {
+            Extensions.showMessage(context, "Cannot read images");
+            return;
+        }
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextView hint = new TextView(context);
+        hint.setTextSize(13);
+        hint.setText(images.size() + " images, centered crop. JPEG snaps to 16px.");
+        root.addView(hint);
+        EditText wInput = new EditText(context);
+        wInput.setHint("Width");
+        wInput.setText(String.valueOf(minW));
+        wInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        wInput.setSingleLine(true);
+        root.addView(wInput);
+        EditText hInput = new EditText(context);
+        hInput.setHint("Height");
+        hInput.setText(String.valueOf(minH));
+        hInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        hInput.setSingleLine(true);
+        root.addView(hInput);
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Crop " + images.size() + " images")
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Crop", (d, w) -> {
+                    int reqW;
+                    int reqH;
+                    try {
+                        reqW = Integer.parseInt(wInput.getText().toString().trim());
+                        reqH = Integer.parseInt(hInput.getText().toString().trim());
+                        if (reqW <= 0 || reqH <= 0) throw new NumberFormatException();
+                    } catch (NumberFormatException e) {
+                        Extensions.showMessage(context, "Enter width and height");
+                        return;
+                    }
+                    ArrayList<File> targets = new ArrayList<>(images);
+                    boolean needJni = false;
+                    for (File f : targets) {
+                        if (isJpegPath(f.getName())) {
+                            needJni = true;
+                            break;
+                        }
+                    }
+                    if (needJni && !NativeToolManager.loadJpegtranJni(context)) {
+                        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                                .setTitle("Crop quality")
+                                .setMessage("Lossless crop needs the JPEG tools download. Or crop now with standard quality.")
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .setNeutralButton("Standard crop", (dd, ww) -> runBatchCrop(targets, reqW, reqH, true))
+                                .setPositiveButton("Lossless", (dd, ww) -> NativeToolManager.ensureJpegtran(context,
+                                        new NativeToolManager.ReadyCallback() {
+                                            public void onReady() {
+                                                runBatchCrop(targets, reqW, reqH, false);
+                                            }
+
+                                            public void onError(String message) {
+                                                Extensions.showMessage(context, message);
+                                            }
+                                        })).create());
+                    } else {
+                        runBatchCrop(targets, reqW, reqH, false);
+                    }
+                }).create());
+    }
+
+    private void runBatchCrop(List<File> images, int reqW, int reqH, boolean forceLossy) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            try {
+                boolean useJni = NativeToolManager.loadJpegtranJni(context);
+                int done = 0;
+                int skipped = 0;
+                for (File f : images) {
+                    pm.setText(context.rss.getString(R.string.processing_x, f.getName()));
+                    int[] dims = imageDims(f);
+                    if (dims[0] <= 0 || dims[1] <= 0) {
+                        skipped++;
+                        continue;
+                    }
+                    int w = Math.min(reqW, dims[0]);
+                    int h = Math.min(reqH, dims[1]);
+                    int x = (dims[0] - w) / 2;
+                    int y = (dims[1] - h) / 2;
+                    backupImage(f);
+                    if (isJpegPath(f.getName()) && useJni && !forceLossy) {
+                        x -= x % 16;
+                        y -= y % 16;
+                        w -= w % 16;
+                        h -= h % 16;
+                        if (w <= 0 || h <= 0) {
+                            skipped++;
+                            continue;
+                        }
+                        File tmp = new File(context.getCacheDir(), "batchcrop_" + System.currentTimeMillis() + ".jpg");
+                        String[] err = new String[1];
+                        int rc = JpegtranJni.transform(f.getAbsolutePath(), tmp.getAbsolutePath(),
+                                JpegtranJni.OP_CROP, w, h, x, y, err);
+                        if (rc != 0) {
+                            tmp.delete();
+                            skipped++;
+                            continue;
+                        }
+                        FileUtils.copyFile(tmp, f);
+                        tmp.delete();
+                        try {
+                            androidx.exifinterface.media.ExifInterface exif =
+                                    new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
+                            exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                                    String.valueOf(androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL));
+                            exif.saveAttributes();
+                        } catch (Exception ignored) {
+                        }
+                    } else {
+                        boolean jpeg = isJpegPath(f.getName());
+                        BitmapFactory.Options bitmapOpts = new BitmapFactory.Options();
+                        bitmapOpts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                        Bitmap src = BitmapFactory.decodeFile(f.getAbsolutePath(), bitmapOpts);
+                        if (src == null) {
+                            skipped++;
+                            continue;
+                        }
+                        int cx = Math.max(0, Math.min(x, src.getWidth() - 1));
+                        int cy = Math.max(0, Math.min(y, src.getHeight() - 1));
+                        int cw = Math.max(1, Math.min(w, src.getWidth() - cx));
+                        int ch = Math.max(1, Math.min(h, src.getHeight() - cy));
+                        Bitmap out = Bitmap.createBitmap(src, cx, cy, cw, ch);
+                        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(f)) {
+                            out.compress(jpeg ? Bitmap.CompressFormat.JPEG : Bitmap.CompressFormat.PNG,
+                                    jpeg ? 95 : 100, fos);
+                        } catch (Exception e) {
+                            skipped++;
+                            continue;
+                        } finally {
+                            if (out != src) out.recycle();
+                            src.recycle();
+                        }
+                        if (jpeg) {
+                            try {
+                                androidx.exifinterface.media.ExifInterface exif =
+                                        new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
+                                exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                                        String.valueOf(androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL));
+                                exif.saveAttributes();
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    }
+                    done++;
+                }
+                pm.dismiss();
+                int doneCount = done;
+                int skippedCount = skipped;
+                context.handler.post(() -> finishBatchOp("Cropped " + doneCount + ", skipped " + skippedCount));
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void showBatchExifDialog(List<File> images) {
+        String[] tags = {
+                androidx.exifinterface.media.ExifInterface.TAG_IMAGE_DESCRIPTION,
+                androidx.exifinterface.media.ExifInterface.TAG_ARTIST,
+                androidx.exifinterface.media.ExifInterface.TAG_COPYRIGHT,
+                androidx.exifinterface.media.ExifInterface.TAG_SOFTWARE,
+                androidx.exifinterface.media.ExifInterface.TAG_DATETIME};
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+        root.setPadding(pad, pad / 2, pad, 0);
+        TextView hint = new TextView(context);
+        hint.setTextSize(13);
+        hint.setText(images.size() + " files. Empty fields are left unchanged.");
+        root.addView(hint);
+        List<EditText> inputs = new ArrayList<>();
+        for (String tag : tags) {
+            TextView label = new TextView(context);
+            label.setTextSize(13);
+            label.setText(tag);
+            root.addView(label);
+            EditText input = new EditText(context);
+            input.setSingleLine(true);
+            root.addView(input);
+            inputs.add(input);
+        }
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(root);
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Set EXIF tags")
+                .setView(scroll)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Apply", (d, w) -> {
+                    String[] vals = new String[tags.length];
+                    for (int i = 0; i < tags.length; i++) {
+                        vals[i] = inputs.get(i).getText() == null ? "" : inputs.get(i).getText().toString();
+                    }
+                    runBatchExif(new ArrayList<>(images), tags, vals);
+                }).create());
+    }
+
+    private void runBatchExif(List<File> images, String[] tags, String[] vals) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            int done = 0;
+            for (File f : images) {
+                pm.setText(context.rss.getString(R.string.processing_x, f.getName()));
+                try {
+                    backupImage(f);
+                    androidx.exifinterface.media.ExifInterface exif =
+                            new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
+                    for (int i = 0; i < tags.length; i++) {
+                        if (!vals[i].isEmpty()) exif.setAttribute(tags[i], vals[i]);
+                    }
+                    exif.saveAttributes();
+                    done++;
+                } catch (Exception ignored) {
+                }
+            }
+            pm.dismiss();
+            int doneCount = done;
+            context.handler.post(() -> finishBatchOp("Updated " + doneCount + " of " + images.size()));
+        }).start();
+    }
+
+    private void confirmBatchStrip(List<File> images) {
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle("Remove metadata")
+                .setMessage("Strip metadata from " + images.size() + " files? Pixels stay identical.")
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Strip", (d, w) -> runBatchStrip(new ArrayList<>(images)))
+                .create());
+    }
+
+    private void runBatchStrip(List<File> images) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            int done = 0;
+            for (File f : images) {
+                pm.setText(context.rss.getString(R.string.processing_x, f.getName()));
+                try {
+                    backupImage(f);
+                    JpegMetaStrip.stripFile(f);
+                    done++;
+                } catch (Exception ignored) {
+                }
+            }
+            pm.dismiss();
+            int doneCount = done;
+            context.handler.post(() -> finishBatchOp("Stripped " + doneCount + " of " + images.size()));
+        }).start();
+    }
+
     private void showOpenWithDialog(File file, String fileName) {
-        String[] actions = {
+        List<String> actionNames = new ArrayList<>(Arrays.asList(
                 context.getString(R.string.text_editor),
                 context.getString(R.string.archive_viewer),
                 context.getString(R.string.image_viewer),
                 context.getString(R.string.hex_editor),
                 context.getString(R.string.media_player),
-                context.getString(R.string.apk_info)
-        };
-        int[] icons = {
+                context.getString(R.string.apk_info)));
+        List<Integer> actionIcons = new ArrayList<>(Arrays.asList(
                 R.drawable.baseline_text_snippet_24,
                 R.drawable.baseline_folder_zip_24,
                 R.drawable.image_24px,
                 R.drawable.ic_hash_mt,
                 R.drawable.video_24px,
-                R.drawable.apk_document_24px
-        };
+                R.drawable.apk_document_24px));
+        List<Runnable> actionHandlers = new ArrayList<>(Arrays.asList(
+                () -> {
+                    if (!file.isFile()) {
+                        Extensions.showMessage(context, R.string.cannot_open_item);
+                        return;
+                    }
+                    openTextEditorRootAware(file);
+                },
+                () -> {
+                    String lowerName = fileName.toLowerCase(Locale.ROOT);
+                    boolean zipBased = lowerName.endsWith(".zip") || lowerName.endsWith(".apk")
+                            || lowerName.endsWith(".jar") || lowerName.endsWith(".apks") || lowerName.endsWith(".xapk");
+                    if (!file.isFile() || !zipBased) {
+                        Extensions.showMessage(context, R.string.not_supported_archive);
+                        return;
+                    }
+                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                },
+                () -> withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath())),
+                () -> {
+                    if (!file.isFile()) {
+                        Extensions.showMessage(context, R.string.cannot_open_item);
+                        return;
+                    }
+                    openHexEditorRootAware(file);
+                },
+                () -> withReadableCopy(file, readable -> context.playMediaFile(readable.getAbsolutePath())),
+                () -> {
+                    String lowerExt = fileName.toLowerCase(Locale.ROOT);
+                    if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
+                        Extensions.showMessage(context, R.string.not_an_apk);
+                        return;
+                    }
+                    withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
+                }));
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".ttf") || lower.endsWith(".otf") || lower.endsWith(".woff") || lower.endsWith(".woff2")) {
+            actionNames.add(context.getString(R.string.font_preview));
+            actionIcons.add(R.drawable.uppercase_24px);
+            actionHandlers.add(() -> showFontPreview(file, fileName));
+        }
+        if (lower.endsWith(".arsc")) {
+            actionNames.add(context.getString(R.string.arsc_functions));
+            actionIcons.add(R.drawable.apk_document_24px);
+            actionHandlers.add(() -> withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc")));
+        }
+        if (lower.endsWith(".xml")) {
+            actionNames.add(context.getString(R.string.xml_functions));
+            actionIcons.add(R.drawable.code_24px);
+            actionHandlers.add(() -> showXmlFunctions(file, fileName));
+        }
+        String keyExt = FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT);
+        if (keyExt.equals("jks") || keyExt.equals("keystore") || keyExt.equals("p12")
+                || keyExt.equals("pfx") || keyExt.equals("pk8") || keyExt.equals("pem")) {
+            actionNames.add(context.getString(R.string.import_signature));
+            actionIcons.add(R.drawable.lock_24px);
+            actionHandlers.add(() -> importSignature(file, fileName));
+        }
 
         GridView gridView = new GridView(context);
         gridView.setNumColumns(3);
         gridView.setBackgroundColor(Color.TRANSPARENT);
         gridView.setPadding(16, 16, 16, 16);
         gridView.setVerticalSpacing(24);
-        gridView.setAdapter(new ArrayAdapter<>(context, 0, actions) {
+        gridView.setAdapter(new ArrayAdapter<>(context, 0, actionNames) {
             @NonNull
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
@@ -514,7 +942,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 item.setGravity(Gravity.CENTER);
 
                 ImageView iconView = new ImageView(context);
-                iconView.setImageResource(icons[position]);
+                iconView.setImageResource(actionIcons.get(position));
                 int iconSize = (int) (40 * context.getResources().getDisplayMetrics().density + 0.5f);
                 iconView.setLayoutParams(new ViewGroup.LayoutParams(iconSize, iconSize));
                 TypedValue typedValue = new TypedValue();
@@ -522,7 +950,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 ColorUtil.changeImageColor(iconView.getDrawable(), typedValue.data);
 
                 TextView labelView = new TextView(context);
-                labelView.setText(actions[position]);
+                labelView.setText(actionNames.get(position));
                 labelView.setTextSize(12);
                 labelView.setGravity(Gravity.CENTER);
 
@@ -532,61 +960,48 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             }
         });
 
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        TextView reportedView = new TextView(context);
+        reportedView.setTextSize(12);
+        TextView actualView = new TextView(context);
+        actualView.setTextSize(12);
+        content.addView(reportedView);
+        content.addView(actualView);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        com.google.android.material.switchmaterial.SwitchMaterial useActualSwitch =
+                new com.google.android.material.switchmaterial.SwitchMaterial(context);
+        useActualSwitch.setText(R.string.use_actual_mime);
+        useActualSwitch.setChecked(settings.getBoolean("fix_mime_type", false));
+        useActualSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
+                settings.edit().putBoolean("fix_mime_type", isChecked).apply());
+        content.addView(useActualSwitch);
+        content.addView(gridView);
+        try {
+            reportedView.setText(context.getString(R.string.reported_mime) + ": "
+                    + MimeUtil.getReportedMimeType(context, file));
+        } catch (Exception ignored) {
+        }
+        new Thread(() -> {
+            String real = MimeUtil.getRealMimeType(file);
+            context.handler.post(() -> {
+                try {
+                    actualView.setText(context.getString(R.string.real_mime) + ": " + (real != null ? real : "—"));
+                } catch (Exception ignored) {
+                }
+            });
+        }).start();
+
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName)
-                .setView(wrapOpenWithContent(gridView))
-                .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> {
-                    withReadableCopy(file, readable -> {
-                        Uri u = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
-                        String mime = MimeUtil.getMimeTypeForAction(context, readable);
-                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW)
-                                .setDataAndType(u, mime != null ? mime : "application/octet-stream")
-                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Open " + fileName));
-                    });
-                })
+                .setView(content)
+                .setNeutralButton(context.rss.getString(R.string.more), (d, w) -> withReadableCopy(file, readable -> showAppsForMime(readable, fileName, useActualSwitch.isChecked())))
                 .create();
 
         gridView.setOnItemClickListener((parent1, view1, position1, id1) -> {
             dialog.dismiss();
             try {
-                switch (position1) {
-                    case 0 -> { // Text editor
-                        if (!file.isFile()) {
-                            Extensions.showMessage(context, R.string.cannot_open_item);
-                            return;
-                        }
-                        openTextEditorRootAware(file);
-                    }
-                    case 1 -> { // Archive viewer
-                        String lowerName = fileName.toLowerCase(Locale.ROOT);
-                        boolean zipBased = lowerName.endsWith(".zip") || lowerName.endsWith(".apk")
-                                || lowerName.endsWith(".jar") || lowerName.endsWith(".apks") || lowerName.endsWith(".xapk");
-                        if (!file.isFile() || !zipBased) {
-                            Extensions.showMessage(context, R.string.not_supported_archive);
-                            return;
-                        }
-                        withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
-                    }
-                    case 2 -> // Image viewer
-                        withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath()));
-                    case 3 -> { // Hex editor
-                        if (!file.isFile()) {
-                            Extensions.showMessage(context, R.string.cannot_open_item);
-                            return;
-                        }
-                        openHexEditorRootAware(file);
-                    }
-                    case 4 -> // Media player
-                        withReadableCopy(file, readable -> context.playMediaFile(readable.getAbsolutePath()));
-                    case 5 -> { // APK info
-                        String lowerExt = fileName.toLowerCase(Locale.ROOT);
-                        if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
-                            Extensions.showMessage(context, R.string.not_an_apk);
-                            return;
-                        }
-                        withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
-                    }
-                }
+                actionHandlers.get(position1).run();
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             }
@@ -594,19 +1009,273 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         dialogUtil.styleAlertDialog(dialog);
     }
 
-    private View wrapOpenWithContent(GridView gridView) {
-        LinearLayout content = new LinearLayout(context);
-        content.setOrientation(LinearLayout.VERTICAL);
+    private static String defaultAppKey(String mime) {
+        return "openwith_default_" + mime.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "_");
+    }
 
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-        CheckBox fixMimeCb = new CheckBox(context);
-        fixMimeCb.setText(R.string.fix_mime_type);
-        fixMimeCb.setChecked(settings.getBoolean("fix_mime_type", false));
-        fixMimeCb.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("fix_mime_type", isChecked).apply());
+    private void launchAppForMime(android.content.pm.ResolveInfo info, Uri uri, String mime) {
+        Intent intent = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, mime)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setClassName(info.activityInfo.packageName, info.activityInfo.name);
+        context.startActivity(intent);
+    }
 
-        content.addView(fixMimeCb);
-        content.addView(gridView);
-        return content;
+    private void showAppsForMime(File file, String fileName, boolean useActual) {
+        Uri uri;
+        try {
+            uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", file);
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+            return;
+        }
+        String mime = useActual ? MimeUtil.getRealMimeType(file) : null;
+        if (mime == null) mime = MimeUtil.getReportedMimeType(context, file);
+        if (mime == null) mime = "application/octet-stream";
+        final String chosenMime = mime;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        String def = prefs.getString(defaultAppKey(chosenMime), null);
+        android.content.pm.PackageManager pm = context.getPackageManager();
+        if (def != null) {
+            android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(def);
+            if (cn != null) {
+                try {
+                    pm.getActivityInfo(cn, 0);
+                    Intent probe = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, chosenMime);
+                    probe.setComponent(cn);
+                    List<android.content.pm.ResolveInfo> stillThere = pm.queryIntentActivities(probe, 0);
+                    if (!stillThere.isEmpty()) {
+                        probe.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        context.startActivity(probe);
+                        return;
+                    }
+                } catch (Exception ignored) {
+                }
+                prefs.edit().remove(defaultAppKey(chosenMime)).apply();
+            }
+        }
+        List<android.content.pm.ResolveInfo> apps = pm.queryIntentActivities(
+                new Intent(Intent.ACTION_VIEW).setDataAndType(uri, chosenMime),
+                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        if (apps.isEmpty()) {
+            Extensions.showMessage(context, R.string.no_apps_found);
+            return;
+        }
+        apps.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(
+                String.valueOf(a.loadLabel(pm)), String.valueOf(b.loadLabel(pm))));
+        RecyclerView list = new RecyclerView(context);
+        list.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(context));
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName + " (" + chosenMime + ")")
+                .setView(list)
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        list.setAdapter(new RecyclerView.Adapter<>() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                LinearLayout row = new LinearLayout(context);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                int pad = (int) (12 * context.getResources().getDisplayMetrics().density + 0.5f);
+                row.setPadding(pad, pad, pad, pad);
+                ImageView icon = new ImageView(context);
+                int s = (int) (40 * context.getResources().getDisplayMetrics().density + 0.5f);
+                icon.setLayoutParams(new LinearLayout.LayoutParams(s, s));
+                LinearLayout texts = new LinearLayout(context);
+                texts.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                tp.leftMargin = pad;
+                TextView name = new TextView(context);
+                name.setTextSize(15);
+                TextView sub = new TextView(context);
+                sub.setTextSize(12);
+                texts.addView(name);
+                texts.addView(sub);
+                row.addView(icon);
+                row.addView(texts, tp);
+                return new RecyclerView.ViewHolder(row) {
+                };
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                android.content.pm.ResolveInfo info = apps.get(position);
+                LinearLayout row = (LinearLayout) holder.itemView;
+                LinearLayout texts = (LinearLayout) row.getChildAt(1);
+                ImageView icon = (ImageView) row.getChildAt(0);
+                TextView name = (TextView) texts.getChildAt(0);
+                TextView sub = (TextView) texts.getChildAt(1);
+                try {
+                    icon.setImageDrawable(info.loadIcon(pm));
+                } catch (Exception ignored) {
+                }
+                String label = String.valueOf(info.loadLabel(pm));
+                name.setText(label);
+                String currentDef = prefs.getString(defaultAppKey(chosenMime), null);
+                boolean isDef = currentDef != null && currentDef.equals(
+                        new android.content.ComponentName(info.activityInfo.packageName, info.activityInfo.name).flattenToString());
+                sub.setText(isDef ? context.getString(R.string.default_app, label) : info.activityInfo.packageName);
+                row.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    try {
+                        launchAppForMime(info, uri, chosenMime);
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+                row.setOnLongClickListener(v -> {
+                    PopupMenu popup = new PopupMenu(context, row);
+                    String flat = new android.content.ComponentName(
+                            info.activityInfo.packageName, info.activityInfo.name).flattenToString();
+                    if (isDef) {
+                        popup.getMenu().add(context.getString(R.string.clear_default));
+                    } else {
+                        popup.getMenu().add(context.getString(R.string.set_as_default));
+                    }
+                    popup.setOnMenuItemClickListener(item -> {
+                        if (isDef) prefs.edit().remove(defaultAppKey(chosenMime)).apply();
+                        else prefs.edit().putString(defaultAppKey(chosenMime), flat).apply();
+                        notifyDataSetChanged();
+                        return true;
+                    });
+                    popup.show();
+                    return true;
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return apps.size();
+            }
+        });
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    private void showFontPreview(File file, String fileName) {
+        withReadableCopy(file, readable -> {
+            try {
+                android.graphics.Typeface tf = android.graphics.Typeface.createFromFile(readable);
+                LinearLayout root = new LinearLayout(context);
+                root.setOrientation(LinearLayout.VERTICAL);
+                int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+                root.setPadding(pad, pad, pad, pad);
+                TextView sample = new TextView(context);
+                sample.setText("ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789 !?@#");
+                sample.setTypeface(tf);
+                sample.setTextSize(22);
+                root.addView(sample);
+                TextView meta = new TextView(context);
+                meta.setText(fileName + " · " + readable.length() + " bytes");
+                meta.setTextSize(13);
+                root.addView(meta);
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                        .setTitle(context.getString(R.string.font_preview) + ": " + fileName)
+                        .setView(root)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create());
+            } catch (Exception e) {
+                new ErrorUtil(context).showError(e);
+            }
+        });
+    }
+
+    private void showXmlFunctions(File file, String fileName) {
+        withReadableCopy(file, readable -> {
+            boolean binary = false;
+            try (InputStream is = FileUtils.getInputStream(readable)) {
+                binary = FileUtils.isAxml(is);
+            } catch (Exception ignored) {
+            }
+            String[] items = binary
+                    ? new String[]{context.getString(R.string.open_as_text), "Decode & open"}
+                    : new String[]{context.getString(R.string.open_as_text), context.getString(R.string.format_xml)};
+            final boolean isBinary = binary;
+            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                    .setTitle(context.getString(R.string.xml_functions) + ": " + fileName)
+                    .setSingleChoiceItems(items, -1, (dialog, which) -> {
+                        dialog.dismiss();
+                        if (which == 0) {
+                            context.startActivity(rootAwareEditorIntent(readable, file)
+                                    .putExtra("path", readable.getPath()));
+                        } else if (isBinary) {
+                            try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                                context.startActivity(rootAwareEditorIntent(readable, file)
+                                        .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
+                                        .putExtra("axml", true)
+                                        .putExtra("path", readable.getPath()));
+                            } catch (Exception e) {
+                                new ErrorUtil(context).showError(e);
+                            }
+                        } else {
+                            formatXmlFile(readable, file, fileName);
+                        }
+                    }).create());
+        });
+    }
+
+    private void formatXmlFile(File readable, File original, String fileName) {
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            try {
+                javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+                dbf.setNamespaceAware(true);
+                org.w3c.dom.Document doc;
+                try (InputStream is = FileUtils.getInputStream(readable)) {
+                    doc = dbf.newDocumentBuilder().parse(is);
+                }
+                javax.xml.transform.Transformer transformer =
+                        javax.xml.transform.TransformerFactory.newInstance().newTransformer();
+                transformer.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes");
+                transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+                File out = new File(context.getCacheDir(), System.currentTimeMillis() + "_formatted.xml");
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
+                    transformer.transform(new javax.xml.transform.dom.DOMSource(doc),
+                            new javax.xml.transform.stream.StreamResult(fos));
+                }
+                if (!readable.getAbsolutePath().equals(original.getAbsolutePath())) {
+                    AccessManager.copyFile(context, out.getAbsolutePath(), original.getAbsolutePath(), true);
+                } else {
+                    FileUtils.copyFile(out, readable);
+                }
+                out.delete();
+                pm.dismiss();
+                context.handler.post(() -> {
+                    Extensions.showMessage(context, R.string.xml_formatted);
+                    context.loadFolderInPane(original.getParentFile(), pane1);
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void importSignature(File file, String fileName) {
+        File keysDir = new File(android.os.Environment.getExternalStorageDirectory()
+                + File.separator + "MT2" + File.separator + "keys");
+        new Thread(() -> {
+            try {
+                if (!keysDir.isDirectory() && !keysDir.mkdirs() && !keysDir.isDirectory()) {
+                    throw new java.io.IOException("Cannot create keys dir");
+                }
+                File dest = FileUtils.getUnusedFile(new File(keysDir, fileName));
+                try (InputStream is = FileUtils.getInputStream(file);
+                     java.io.FileOutputStream fos = new java.io.FileOutputStream(dest)) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                }
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+                Set<String> paths = new HashSet<>(prefs.getStringSet("signature_key_paths", new HashSet<>()));
+                paths.add(dest.getAbsolutePath());
+                prefs.edit().putStringSet("signature_key_paths", paths).putString("keyPath", dest.getAbsolutePath()).apply();
+                context.handler.post(() -> Extensions.showMessage(context, R.string.signature_file_set));
+            } catch (Exception e) {
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
     }
 
     private void handleFileClick(File file, String fileName) {
@@ -616,7 +1285,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             || fileName.endsWith(".gradle") || fileName.endsWith(".properties")) {
             openTextEditorRootAware(file);
         } else if(HashUtil.isChecksumFile(fileName)) {
-            withReadableCopy(file, readable -> checksumDialogs.showHashVerifyDialog(readable));
+            withReadableCopy(file, checksumDialogs::showHashVerifyDialog);
         } else if(fileName.endsWith(".xml")) {
             withReadableCopy(file, readable -> {
                 try (InputStream is = FileUtils.getInputStream(readable)) {
@@ -669,38 +1338,23 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 dialogUtil.styleAlertDialog(
                         dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
                             dialog.dismiss();
-                            if (which == 0) withReadableCopy(file, readable -> fileOps.extractArchive(readable));
-                            else withReadableCopy(file, readable -> {
-                                Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
-                                context.startActivity(new Intent(Intent.ACTION_VIEW)
-                                        .setDataAndType(uri, context.getContentResolver().getType(uri))
-                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
-                            });
+                            if (which == 0) withReadableCopy(file, fileOps::extractArchive);
+                            else showOpenWithDialog(file, fileName);
                         }).create());
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
+            } else if (fileName.endsWith(".dex")) {
+                fileOps.showDexOptionsDialog(file, null, null, fileName);
             } else {
-                withReadableCopy(file, readable -> {
-                    Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider",
-                            readable);
-                    context.startActivity(new Intent(Intent.ACTION_VIEW)
-                            .setDataAndType(uri, context.getContentResolver().getType(uri))
-                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
-                });
+                showOpenWithDialog(file, fileName);
             }
         }
     }
 
-    /** Callback for {@link #withReadableCopy(File, ReadableCallback)}. */
     private interface ReadableCallback {
         void onReady(File readable) throws Exception;
     }
 
-    /**
-     * Run {@code cb} with a readable file: the original when the app uid can
-     * read it, otherwise a root-staged cache copy (binary-safe). Staging runs
-     * off the UI thread with a clear error when root is off/unavailable.
-     */
     private void withReadableCopy(File file, ReadableCallback cb) {
         try {
             if (file != null && file.exists() && file.canRead()) {
@@ -732,7 +1386,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }).start();
     }
 
-    /** Text editor intent that remembers the root original for save-back. */
     private Intent rootAwareEditorIntent(File readable, File original) {
         Intent i = new Intent(context, TextEditorActivity.class);
         if (readable != null && original != null
@@ -761,7 +1414,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         });
     }
 
-    /** .bak restore that works on root-only paths via su rename. */
     private void restoreBakRootAware(File bakFile, File origFile, String fileName) {
         String bakPath = bakFile.getPath();
         String origPath = origFile.getPath();
@@ -795,7 +1447,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
     }
 
-    /** Split-APK menu, always operating on a readable (possibly staged) copy. */
     private void showSplitApkMenu(File readable, String displayName) {
         String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
         dialogUtil.styleAlertDialog(
@@ -1020,13 +1671,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         clearSelection();
                                         context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1);
                                     });
-                                } else context.handler.post(() -> clearSelection());
+                                } else context.handler.post(this::clearSelection);
                             } else {
                                 List<ZipEntryInfo> selected = new ArrayList<>();
                                 for (int i : selectedPositions) selected.add((ZipEntryInfo) values[i]);
                                 fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
                                 if (sign[0]) wrapper[0].signApk(zipFile);
-                                context.handler.post(() -> clearSelection());
+                                context.handler.post(this::clearSelection);
                             }
                         } else if (!isInZip) {
                             int total = (int) Util.countInsideFolder(file).total();
@@ -1051,7 +1702,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         } else {
                             fileOps.deleteZipEntry(entry);
                             if (sign[0]) wrapper[0].signApk(zipFile);
-                            context.handler.post(() -> clearSelection());
+                            context.handler.post(this::clearSelection);
                         }
                         pm.dismiss();
                     } catch (Exception e) {

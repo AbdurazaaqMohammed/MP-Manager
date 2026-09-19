@@ -184,10 +184,28 @@
                android:foregroundServiceType="mediaProjection" />
            <receiver android:name=".ftp.StopReceiver" android:exported="false" />
            <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
-            <activity
-                android:name="io.github.abdurazaaqmohammed.player.ImageViewerActivity"
-                android:configChanges="orientation|screenSize|keyboardHidden"
-                android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+             <activity
+                 android:name="io.github.abdurazaaqmohammed.player.ImageViewerActivity"
+                 android:configChanges="orientation|screenSize|keyboardHidden"
+                 android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+             <activity
+                 android:name="io.github.abdurazaaqmohammed.player.ImageEditActivity"
+                 android:exported="true"
+                 android:configChanges="orientation|screenSize|keyboardHidden"
+                 android:windowSoftInputMode="adjustResize|stateHidden"
+                 android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+                 <intent-filter>
+                     <action android:name="android.intent.action.VIEW" />
+                     <action android:name="android.intent.action.EDIT" />
+                     <category android:name="android.intent.category.DEFAULT" />
+                     <data android:mimeType="image/*" />
+                 </intent-filter>
+                 <intent-filter>
+                     <action android:name="android.intent.action.SEND" />
+                     <category android:name="android.intent.category.DEFAULT" />
+                     <data android:mimeType="image/*" />
+                 </intent-filter>
+             </activity>
             <activity
                 android:name="io.github.abdurazaaqmohammed.player.MediaPlayerActivity"
                 android:configChanges="orientation|screenSize|keyboardHidden"

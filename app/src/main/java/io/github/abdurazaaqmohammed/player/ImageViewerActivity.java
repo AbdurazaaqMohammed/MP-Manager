@@ -12,6 +12,8 @@ import android.text.format.DateFormat;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -37,6 +39,7 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 
 public class ImageViewerActivity extends AppCompatActivity {
@@ -44,10 +47,45 @@ public class ImageViewerActivity extends AppCompatActivity {
     private RecyclerView pager;
     private TextView titleText, subtitleText, counterText;
     private CheckBox batchCheck;
+    private ImagePagerAdapter pagerAdapter;
 
     private List<String> imagePaths;
     private int currentIndex;
+    private int pagerPage;
     private final Set<Integer> checkedPositions = new HashSet<>();
+
+    interface PageProvider {
+        int getPage();
+    }
+
+    static class ZoomPagerLayoutManager extends LinearLayoutManager {
+        private RecyclerView attachedPager;
+        private PageProvider pageProvider;
+
+        ZoomPagerLayoutManager(android.content.Context context) {
+            super(context, LinearLayoutManager.HORIZONTAL, false);
+        }
+
+        void bind(RecyclerView pager, PageProvider provider) {
+            attachedPager = pager;
+            pageProvider = provider;
+        }
+
+        @Override
+        public boolean canScrollHorizontally() {
+            try {
+                if (attachedPager != null && pageProvider != null) {
+                    RecyclerView.ViewHolder holder =
+                            attachedPager.findViewHolderForAdapterPosition(pageProvider.getPage());
+                    if (holder != null && holder.itemView instanceof ZoomableImageView) {
+                        if (((ZoomableImageView) holder.itemView).getCurrentScale() > 1.01f) return false;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return super.canScrollHorizontally();
+        }
+    }
 
     public static void open(Activity activity, String filePath) {
         Intent intent = new Intent(activity, ImageViewerActivity.class);
@@ -152,12 +190,21 @@ public class ImageViewerActivity extends AppCompatActivity {
         PagerSnapHelper snapHelper = new PagerSnapHelper();
         snapHelper.attachToRecyclerView(pager);
 
-        pager.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        ImagePagerAdapter adapter = new ImagePagerAdapter(imagePaths);
-        pager.setAdapter(adapter);
+        ZoomPagerLayoutManager pagerLayout = new ZoomPagerLayoutManager(this);
+        pager.setLayoutManager(pagerLayout);
+        pagerAdapter = new ImagePagerAdapter(imagePaths);
+        pager.setAdapter(pagerAdapter);
+        pagerLayout.bind(pager, () -> pagerPage);
         pager.scrollToPosition(currentIndex);
+        pagerPage = currentIndex;
+        findViewById(R.id.btnEdit).setOnClickListener(v -> showEditMenu(currentIndex));
 
         pager.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                pagerPage = getCurrentPage();
+            }
+
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
@@ -352,6 +399,177 @@ public class ImageViewerActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(intent, "Open with"));
     }
 
+    private boolean isJpegFile(String path) {
+        String lower = path.toLowerCase(Locale.US);
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return true;
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(path)) {
+            return fis.read() == 0xFF && fis.read() == 0xD8;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void refreshCurrentImage() {
+        if (pagerAdapter != null) pagerAdapter.notifyItemChanged(currentIndex);
+        updateForPosition(currentIndex);
+    }
+
+    private boolean isPngFile(String path) {
+        return path.toLowerCase(Locale.US).endsWith(".png");
+    }
+
+    static final int REQ_EDIT_IMAGE = 1401;
+
+    private void showEditMenu(int pos) {
+        if (pos < 0 || pos >= imagePaths.size()) return;
+        String path = imagePaths.get(pos);
+        boolean jpeg = isJpegFile(path);
+        if (!jpeg && !isPngFile(path)) {
+            showError("Only JPEG and PNG supported");
+            return;
+        }
+        ImageEditActivity.sessionPath = path;
+        startActivityForResult(new android.content.Intent(this, ImageEditActivity.class), REQ_EDIT_IMAGE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_EDIT_IMAGE && resultCode == RESULT_OK) {
+            refreshCurrentImage();
+        }
+    }
+
+    private void checkNativeTools() {
+        ProgressManager pm = new ProgressManager(this, true).show();
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append(NativeToolManager.diagnoseExec(ImageViewerActivity.this));
+            sb.append("ABI: ").append(NativeToolManager.deviceAbi()).append("\n");
+            File pack = new File(getFilesDir(), "native/native-" + NativeToolManager.deviceAbi());
+            sb.append("Pack dir: ").append(pack.isDirectory() ? "present" : "missing").append("\n");
+            try {
+                File nativeLibDir = new File(getApplicationInfo().nativeLibraryDir);
+                String[] bundled = nativeLibDir.list((dir, name) ->
+                        name.equals("libperl.so") || name.equals("libjpegtran.so") || name.startsWith("libperl_xs_"));
+                sb.append("Bundled tools: ");
+                if (bundled == null || bundled.length == 0) sb.append("none\n");
+                else {
+                    for (int i = 0; i < bundled.length; i++) {
+                        if (i > 0) sb.append(", ");
+                        sb.append(bundled[i]);
+                    }
+                    sb.append("\n");
+                }
+            } catch (Exception e) {
+                sb.append("Bundled tools: error ").append(e.getMessage()).append("\n");
+            }
+            File jpegtran = NativeToolManager.jpegtranBinary(this);
+            sb.append("jpegtran: ").append(NativeToolManager.describeFile(jpegtran)).append("\n");
+            if (jpegtran.isFile()) {
+                try {
+                    System.load(jpegtran.getAbsolutePath());
+                    sb.append("System.load probe: LOADED\n");
+                } catch (Throwable t) {
+                    sb.append("System.load probe: FAILED ").append(String.valueOf(t.getMessage())).append("\n");
+                }
+            }
+            if (jpegtran.isFile()) {
+                try {
+                    List<String> cmd = new ArrayList<>();
+                    cmd.add(jpegtran.getAbsolutePath());
+                    Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                    StringBuilder out = new StringBuilder();
+                    try (java.io.BufferedReader br = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(process.getInputStream()))) {
+                        char[] buf = new char[2048];
+                        int n;
+                        while ((n = br.read(buf)) != -1 && out.length() < 2048) out.append(buf, 0, n);
+                    }
+                    process.waitFor();
+                    String firstLine = out.length() == 0 ? "(no output)" : out.toString().split("\n")[0];
+                    sb.append("jpegtran exec: OK (").append(firstLine.trim()).append(")\n");
+                } catch (Exception e) {
+                    sb.append("jpegtran exec: FAILED ").append(e.getMessage()).append("\n");
+                }
+            }
+            File jniLib = new File(getFilesDir(), "native/" + "native-" + NativeToolManager.deviceAbi() + "/lib/libjpegtran_jni.so");
+            sb.append("jni lib: ").append(NativeToolManager.describeFile(jniLib)).append("\n");
+            if (jniLib.isFile()) {
+                try {
+                    if (io.github.abdurazaaqmohammed.utils.JpegtranJni.load(jniLib.getAbsolutePath())) {
+                        sb.append("JNI load probe: LOADED\n");
+                    } else {
+                        sb.append("JNI load probe: FAILED\n");
+                    }
+                } catch (Throwable t) {
+                    sb.append("JNI load probe: FAILED ").append(String.valueOf(t.getMessage())).append("\n");
+                }
+            }
+            pm.dismiss();
+            String report = sb.toString();
+            runOnUiThread(() -> {
+                TextView text = new TextView(this);
+                text.setTextSize(13);
+                text.setTypeface(android.graphics.Typeface.MONOSPACE);
+                text.setTextIsSelectable(true);
+                int pad = dp(12);
+                text.setPadding(pad, pad, pad, pad);
+                text.setText(report.trim());
+                ScrollView scroll = new ScrollView(this);
+                scroll.addView(text);
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Native tools")
+                        .setView(scroll)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+            });
+        }).start();
+    }
+
+
+
+    private void showError(String message) {
+        io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, message);
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private static android.graphics.Matrix orientationMatrix(int orientation) {
+        android.graphics.Matrix matrix = new android.graphics.Matrix();
+        switch (orientation) {
+            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                matrix.postRotate(180);
+                break;
+            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
+                matrix.postScale(1, -1);
+                break;
+            case ExifInterface.ORIENTATION_TRANSPOSE:
+                matrix.postRotate(90);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                matrix.postRotate(90);
+                break;
+            case ExifInterface.ORIENTATION_TRANSVERSE:
+                matrix.postRotate(270);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                matrix.postRotate(270);
+                break;
+            default:
+                return null;
+        }
+        return matrix;
+    }
+
+
     private static class ImagePagerAdapter extends RecyclerView.Adapter<ImagePagerAdapter.ViewHolder> {
         private final List<String> paths;
 
@@ -362,23 +580,59 @@ public class ImageViewerActivity extends AppCompatActivity {
             ZoomableImageView imageView = new ZoomableImageView(parent.getContext());
             imageView.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            imageView.setAdjustViewBounds(true);
+            imageView.setScaleType(ImageView.ScaleType.MATRIX);
             return new ViewHolder(imageView);
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             String path = paths.get(position);
-            BitmapFactory.Options opts = new BitmapFactory.Options();
-            opts.inSampleSize = 1;
-            opts.inPreferredConfig = Bitmap.Config.RGB_565;
-            Bitmap bitmap = BitmapFactory.decodeFile(path, opts);
+            Bitmap bitmap = decodeSampled(path, 2048);
             if (bitmap != null) {
                 holder.imageView.setImageBitmap(bitmap);
             } else {
                 holder.imageView.setImageResource(android.R.drawable.ic_menu_gallery);
             }
             holder.imageView.resetZoom();
+        }
+
+        private Bitmap decodeSampled(String path, int maxSize) {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(path, bounds);
+            int sample = 1;
+            int largest = Math.max(bounds.outWidth, bounds.outHeight);
+            while (largest / (sample * 2) >= maxSize && sample < 16) {
+                sample *= 2;
+            }
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            opts.inPreferredConfig = Bitmap.Config.RGB_565;
+            Bitmap bitmap = null;
+            try {
+                bitmap = BitmapFactory.decodeFile(path, opts);
+            } catch (OutOfMemoryError e) {
+                opts.inSampleSize = sample * 2;
+                try {
+                    bitmap = BitmapFactory.decodeFile(path, opts);
+                } catch (OutOfMemoryError ignored) {
+                    return null;
+                }
+            }
+            if (bitmap == null) return null;
+            try {
+                int orientation = new ExifInterface(path).getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                android.graphics.Matrix matrix = orientationMatrix(orientation);
+                if (matrix != null) {
+                    Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0,
+                            bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                    bitmap.recycle();
+                    bitmap = rotated;
+                }
+            } catch (Exception ignored) {
+            }
+            return bitmap;
         }
 
         @Override public int getItemCount() { return paths.size(); }

@@ -13,6 +13,7 @@ import android.widget.TextView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MiniPlayerDialog {
 
@@ -43,7 +44,7 @@ public class MiniPlayerDialog {
         }
         @Override public void onError(String message) {
             if (activity != null && !activity.isFinishing()) {
-                android.widget.Toast.makeText(activity, message, android.widget.Toast.LENGTH_LONG).show();
+                Extensions.showMessage(activity, message);
             }
         }
         @Override public void onBufferUpdate(int percent) {}
