@@ -21,5 +21,6 @@ interface IFileService {
     boolean renamePath(String from, String to);
     boolean touchPath(String path);
     boolean touchMtime(String path, long millis);
+    String shell(String command, int timeoutSeconds);
     String lastError();
 }
