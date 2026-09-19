@@ -705,4 +705,6 @@ Layout Inspector
     <string name="verify">Verify</string>
     <string name="hash_match">Match: %1$s</string>
     <string name="hash_no_match">No match</string>
+    <string name="cache_cleaner_service_description">Used only when you tap Auto-clear in Storage Manager. It opens each selected app info screen, taps Storage then Clear cache, and moves to the next app. Nothing else is clicked and no data leaves your device.</string>
+    <string name="loaded_X">Loaded %1$s</string>
 </resources>

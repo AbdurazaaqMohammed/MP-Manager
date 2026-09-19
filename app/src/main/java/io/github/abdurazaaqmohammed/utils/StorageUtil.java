@@ -35,7 +35,7 @@ public class StorageUtil {
         }
     }
 
-    private static List<StorageInfo> getStorageInfos(@NonNull Context ctx) {
+    public static List<StorageInfo> getStorageInfos(@NonNull Context ctx) {
         List<StorageInfo> list = new ArrayList<>();
 
         if (Build.VERSION.SDK_INT >= 30) {
@@ -132,6 +132,22 @@ public class StorageUtil {
             row.setOnClickListener(v -> {
                 ctx.loadFolderInPane(new File(si.path), ctx.lastPaneSelected == 1);
                 ctx.closeSidebarDrawer();
+            });
+            row.setOnLongClickListener(v -> {
+                android.widget.PopupMenu menu = new android.widget.PopupMenu(ctx, v);
+                menu.getMenu().add("Manage storage");
+                menu.getMenu().add("Open location");
+                menu.setOnMenuItemClickListener(item -> {
+                    if ("Manage storage".equals(item.getTitle().toString())) {
+                        ctx.startActivity(new android.content.Intent(ctx, io.github.abdurazaaqmohammed.tools.StorageManagerActivity.class));
+                    } else {
+                        ctx.loadFolderInPane(new File(si.path), ctx.lastPaneSelected == 1);
+                        ctx.closeSidebarDrawer();
+                    }
+                    return true;
+                });
+                menu.show();
+                return true;
             });
             TextView tvName = row.findViewById(R.id.tvStorageName);
             ProgressBar pb = row.findViewById(R.id.pbUsed);
