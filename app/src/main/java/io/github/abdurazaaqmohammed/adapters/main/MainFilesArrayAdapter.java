@@ -1435,16 +1435,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             return;
         }
         boolean origExists = origFile.exists();
+        File tmpFile = new File(origPath + "_tmp_.bak");
         if (origExists) {
             //noinspection ResultOfMethodCallIgnored
-            origFile.renameTo(new File(origPath + "_tmp_" + ".bak"));
+            origFile.renameTo(tmpFile);
         }
         //noinspection ResultOfMethodCallIgnored
         bakFile.renameTo(new File(origPath));
         if (origExists) {
             //noinspection ResultOfMethodCallIgnored
-            origFile.renameTo(new File(bakPath));
+            tmpFile.renameTo(new File(bakPath));
         }
+        context.handler.post(() -> context.loadFolderInPane(
+                bakFile.getParentFile() != null ? bakFile.getParentFile() : new File("/"), pane1));
     }
 
     private void showSplitApkMenu(File readable, String displayName) {
