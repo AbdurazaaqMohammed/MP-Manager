@@ -519,7 +519,7 @@ public class ImageViewerActivity extends AppCompatActivity {
                 ScrollView scroll = new ScrollView(this);
                 scroll.addView(text);
                 new MaterialAlertDialogBuilder(this)
-                        .setTitle("Native tools")
+                        .setTitle(getString(R.string.native_required))
                         .setView(scroll)
                         .setPositiveButton(android.R.string.ok, null)
                         .show();

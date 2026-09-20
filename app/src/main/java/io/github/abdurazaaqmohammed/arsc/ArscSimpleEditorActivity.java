@@ -77,8 +77,8 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         boolean filterable() { return false; }
     }
 
-    static final class Root extends Screen {
-        @Override String title() { return "Arsc Editor"; }
+    final class Root extends Screen {
+        @Override String title() { return getString(R.string.arsc_editor); }
     }
 
     static final class Types extends Screen {
@@ -108,19 +108,19 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         @Override boolean filterable() { return true; }
     }
 
-    static final class Pool extends Screen {
-        @Override String title() { return "String pool"; }
+    final class Pool extends Screen {
+        @Override String title() { return getString(R.string.arsc_string_pool); }
         @Override boolean filterable() { return true; }
     }
 
-    static final class Results extends Screen {
+    final class Results extends Screen {
         final String query;
         final int kind;
         final List<ArscData.SimpleHit> hits;
         Results(String query, int kind, List<ArscData.SimpleHit> hits) {
             this.query = query; this.kind = kind; this.hits = hits;
         }
-        @Override String title() { return "Search"; }
+        @Override String title() { return getString(R.string.search); }
         @Override boolean filterable() { return true; }
     }
 
@@ -166,13 +166,13 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
         toolbar = new MaterialToolbar(this);
-        toolbar.setTitle("Arsc Editor");
+        toolbar.setTitle(getString(R.string.arsc_editor));
         toolbar.setSubtitle(fileName);
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
         Menu menu = toolbar.getMenu();
-        menu.add(0, R.id.arsc_menu_save, 0, "Save").setIcon(R.drawable.save_24px).setShowAsAction(1);
-        menu.add(0, R.id.arsc_menu_more, 0, "More").setIcon(R.drawable.baseline_more_vert_24).setShowAsAction(1);
+        menu.add(0, R.id.arsc_menu_save, 0, getString(R.string.arsc_save)).setIcon(R.drawable.save_24px).setShowAsAction(1);
+        menu.add(0, R.id.arsc_menu_more, 0, getString(R.string.arsc_more)).setIcon(R.drawable.baseline_more_vert_24).setShowAsAction(1);
         toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.arsc_menu_save) {
                 saveNow();
@@ -208,7 +208,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
     }
 
     private void loadAsync(File arsc, File apk, String entryPath) {
-        Extensions.showMessage(this, "Loading resources.arsc…");
+        Extensions.showMessage(this, getString(R.string.arsc_loading));
         new Thread(() -> {
             try {
                 ArscData loaded = ArscData.load(arsc, apk, entryPath);
@@ -263,7 +263,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             adapter.setRows(configRows((Configs) s, filter));
         } else if (s instanceof Entries) {
             Entries es = (Entries) s;
-            Extensions.showMessage(this, "Loading…");
+            Extensions.showMessage(this, getString(R.string.arsc_loading_short));
             new Thread(() -> {
                 List<Row> rows = entryRows(es, filter);
                 runOnUiThread(() -> {
@@ -271,7 +271,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                 });
             }).start();
         } else if (s instanceof Pool) {
-            Extensions.showMessage(this, "Loading…");
+            Extensions.showMessage(this, getString(R.string.arsc_loading_short));
             new Thread(() -> {
                 List<Row> rows = poolRows(filter);
                 runOnUiThread(() -> {
@@ -465,7 +465,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                 .setTitle(title)
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Edit", (d, w) -> showEditEntry(e, re))
+                .setPositiveButton(getString(R.string.edit), (d, w) -> showEditEntry(e, re))
                 .show();
     }
 
@@ -475,11 +475,11 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         try {
             type = e.getValueType();
         } catch (Exception ex) {
-            Extensions.showMessage(this, "Unknown value type");
+            Extensions.showMessage(this, getString(R.string.arsc_unknown_type));
             return;
         }
         if (type == null) {
-            Extensions.showMessage(this, "Unknown value type");
+            Extensions.showMessage(this, getString(R.string.arsc_unknown_type));
             return;
         }
         LinearLayout root = new LinearLayout(this);
@@ -531,7 +531,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         }
         final String entryName = resolvedName;
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Edit " + entryName)
+                .setTitle(getString(R.string.arsc_edit_x, entryName))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -543,9 +543,9 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                         }
                         markDirty();
                         render(false);
-                        Extensions.showMessage(this, "Updated");
+                        Extensions.showMessage(this, getString(R.string.arsc_updated));
                     } else {
-                        Extensions.showMessage(this, "Invalid value for " + type.name());
+                        Extensions.showMessage(this, getString(R.string.arsc_invalid_value, type.name()));
                     }
                 }).show();
     }
@@ -563,9 +563,9 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                     if (data.setPoolString(ps.index, text)) {
                         markDirty();
                         render(false);
-                        Extensions.showMessage(this, "Updated");
+                        Extensions.showMessage(this, getString(R.string.arsc_updated));
                     } else {
-                        Extensions.showMessage(this, "Update failed");
+                        Extensions.showMessage(this, getString(R.string.arsc_update_failed));
                     }
                 }).show();
     }
@@ -606,13 +606,13 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         root.addView(group, groupParams);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Search resource value")
+                .setTitle(getString(R.string.arsc_search_value))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Search", (d, w) -> {
+                .setPositiveButton(getString(R.string.search), (d, w) -> {
                     String q = query.getText() == null ? "" : query.getText().toString();
                     if (q.trim().isEmpty()) {
-                        Extensions.showMessage(this, "Enter search text");
+                        Extensions.showMessage(this, getString(R.string.arsc_enter_search));
                         return;
                     }
                     int kind = rbInt.isChecked() ? 1 : (rbHex.isChecked() ? 2 : 0);
@@ -623,18 +623,18 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
 
     private void showSearchIdDialog() {
         EditText input = new EditText(this);
-        input.setHint("e.g. 7f0b0015");
+        input.setHint(getString(R.string.arsc_hex_hint));
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setSingleLine(true);
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Search by ID")
+                .setTitle(getString(R.string.arsc_search_id))
                 .setView(UiFields.wrap(this, input, "Hex ID", 16))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Go", (d, w) -> {
+                .setPositiveButton(getString(R.string.go), (d, w) -> {
                     String hex = input.getText() == null ? "" : input.getText().toString();
                     ResourceEntry re = data == null ? null : data.findByHexId(hex);
                     if (re == null) {
-                        Extensions.showMessage(this, "Not found");
+                        Extensions.showMessage(this, getString(R.string.arsc_not_found));
                         return;
                     }
                     Entry e = data.defaultEntry(re);
@@ -652,7 +652,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                         }
                     }
                     if (e == null) {
-                        Extensions.showMessage(this, "No value");
+                        Extensions.showMessage(this, getString(R.string.arsc_no_value));
                         return;
                     }
                     showEntryDetail(e, re);
@@ -661,12 +661,12 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
 
     private void runSimpleSearch(String query, int kind) {
         if (data == null) return;
-        Extensions.showMessage(this, "Searching…");
+        Extensions.showMessage(this, getString(R.string.arsc_searching));
         new Thread(() -> {
             List<ArscData.SimpleHit> hits = data.searchSimple(query, kind);
             runOnUiThread(() -> {
                 push(new Results(query, kind, hits));
-                Extensions.showMessage(this, hits.size() + " results");
+                Extensions.showMessage(this, getString(R.string.arsc_results_n, hits.size()));
             });
         }).start();
     }
@@ -721,7 +721,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             if (onDone != null) onDone.run();
             return;
         }
-        Extensions.showMessage(this, "Saving…");
+        Extensions.showMessage(this, getString(R.string.arsc_saving));
         new Thread(() -> {
             try {
                 data.save();
@@ -730,7 +730,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                     if (data.apkFile != null) savedThisSession = true;
                     toolbar.setSubtitle(fileName);
                     render(false);
-                    Extensions.showMessage(this, "Saved");
+                    Extensions.showMessage(this, getString(R.string.arsc_saved));
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
@@ -769,7 +769,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 File bak = data.backup();
-                runOnUiThread(() -> Extensions.showMessage(this, "Backup: " + bak.getName()));
+                runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.arsc_backup_x, bak.getName())));
             } catch (Exception e) {
                 runOnUiThread(() -> new ErrorUtil(this).showError(e));
             }
@@ -782,10 +782,10 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Unsaved changes")
-                .setMessage("Save before exit?")
-                .setPositiveButton("Save", (d, w) -> saveNow(this::finishWithApkResult))
-                .setNegativeButton("Discard", (d, w) -> finish())
+                .setTitle(getString(R.string.unsaved_changes))
+                .setMessage(getString(R.string.arsc_save_before_exit))
+                .setPositiveButton(getString(R.string.save), (d, w) -> saveNow(this::finishWithApkResult))
+                .setNegativeButton(getString(R.string.discard), (d, w) -> finish())
                 .setNeutralButton(android.R.string.cancel, null)
                 .show();
     }

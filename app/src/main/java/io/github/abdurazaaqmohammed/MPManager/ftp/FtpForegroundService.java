@@ -31,12 +31,12 @@ public class FtpForegroundService extends Service {
 
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("FTP Server")
-                .setContentText("FTP Server is running at " + ip)
+                .setContentTitle(getString(R.string.ftp_server))
+                .setContentText(getString(R.string.ftp_running_at, ip))
                 .setSmallIcon(R.drawable.cloud_upload_24px)
                 .setOngoing(true)
-                .addAction(R.drawable.stop_circle_24px, "Stop", stopPendingIntent)
-                .addAction(R.drawable.ic_copy_mt, "Copy IP", copyPendingIntent)
+                .addAction(R.drawable.stop_circle_24px, getString(R.string.ftp_stop), stopPendingIntent)
+                .addAction(R.drawable.ic_copy_mt, getString(R.string.ftp_copy_ip), copyPendingIntent)
                 .build();
 
         startForeground(NOTIFICATION_ID, notification);
@@ -47,7 +47,7 @@ public class FtpForegroundService extends Service {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID, "Background Task", NotificationManager.IMPORTANCE_LOW);
+                    CHANNEL_ID, getString(R.string.notif_channel_background), NotificationManager.IMPORTANCE_LOW);
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);

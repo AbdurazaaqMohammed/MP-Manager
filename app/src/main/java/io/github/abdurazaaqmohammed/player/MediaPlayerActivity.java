@@ -447,8 +447,8 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         }
 
         if (!isVideo) {
-            trackTitle.setText(item.title != null ? item.title : "Unknown");
-            trackArtist.setText(item.artist != null ? item.artist : "Unknown Artist");
+            trackTitle.setText(item.title != null ? item.title : getString(R.string.media_unknown));
+            trackArtist.setText(item.artist != null ? item.artist : getString(R.string.music_unknown_artist));
             trackAlbum.setText(item.album != null ? item.album : "");
 
             if (item.path != null) try (MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {

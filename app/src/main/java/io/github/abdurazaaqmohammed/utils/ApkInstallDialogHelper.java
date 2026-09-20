@@ -215,7 +215,7 @@ public class ApkInstallDialogHelper {
                     if (launchIntent != null) {
                         activity.startActivity(launchIntent);
                     } else {
-                        Extensions.showMessage(activity, "Cannot launch app");
+                        Extensions.showMessage(activity, activity.getString(R.string.install_cannot_launch));
                     }
                 }
             })

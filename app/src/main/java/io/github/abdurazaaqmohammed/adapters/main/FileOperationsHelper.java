@@ -697,14 +697,14 @@ public class FileOperationsHelper {
     }
 
     private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
-        String[] options = {"ARSC Editor Plus", "ARSC Editor", "Translation mode", "Resource querier"};
+        String[] options = {context.getString(R.string.arsc_plus), context.getString(R.string.arsc_editor), context.getString(R.string.translation_mode), context.getString(R.string.querier_title)};
         String[] modes = {
                 io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_PLUS,
                 io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR,
                 io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_TRANSLATE,
                 io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle("Open with")
+                .setTitle(context.getString(R.string.open_with))
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
                     // Simple MT-style "ARSC Editor" lives in its own activity;
@@ -732,8 +732,8 @@ public class FileOperationsHelper {
                 context.rss.getString(R.string.dex_properties),
                 context.rss.getString(R.string.dex_to_smali),
                 context.rss.getString(R.string.translation_mode),
-                "Replace strings",
-                "Merge dex files"};
+                context.rss.getString(R.string.dex_replace_strings),
+                context.rss.getString(R.string.dex_merge)};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(displayName)
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
@@ -799,7 +799,7 @@ public class FileOperationsHelper {
                 pm.dismiss();
                 File tempFolder = new File(outputDir);
                 MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-                builder.setTitle("MultiDex");
+                builder.setTitle(context.rss.getString(R.string.fo_multidex));
                 CharSequence[] fileNames = new CharSequence[dexFiles.size()];
                 for (int j = 0; j < dexFiles.size(); j++) fileNames[j] = dexFiles.get(j);
                 boolean[] selectedItems = new boolean[dexFiles.size()];
@@ -881,7 +881,7 @@ public class FileOperationsHelper {
                 byte[] head = new byte[64];
                 try (FileInputStream fis = new FileInputStream(dexFile)) {
                     int n = fis.read(head);
-                    if (n < 32) throw new IOException("Not a dex file");
+                    if (n < 32) throw new IOException(context.rss.getString(R.string.dex_not_dex));
                 }
                 String version = new String(head, 4, 3, StandardCharsets.US_ASCII);
                 int api;
@@ -1011,13 +1011,13 @@ public class FileOperationsHelper {
 
     private void showDexStringReplaceDialog(File dexFile, File zipFileOrNull) {
         android.widget.EditText findInput = new android.widget.EditText(context);
-        findInput.setHint("Find");
+        findInput.setHint(context.rss.getString(R.string.find));
         findInput.setSingleLine(true);
         android.widget.EditText replaceInput = new android.widget.EditText(context);
-        replaceInput.setHint("Replace with");
+        replaceInput.setHint(context.rss.getString(R.string.replace_with));
         replaceInput.setSingleLine(true);
         CheckBox matchCase = new CheckBox(context);
-        matchCase.setText("Match case");
+        matchCase.setText(context.rss.getString(R.string.match_case));
         matchCase.setChecked(true);
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -1029,12 +1029,12 @@ public class FileOperationsHelper {
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(dexFile.getName())
                 .setView(layout)
-                .setPositiveButton("Replace", (d, w) -> {
+                .setPositiveButton(context.rss.getString(R.string.replace), (d, w) -> {
                     String find = findInput.getText().toString();
                     String replacement = replaceInput.getText().toString();
                     boolean cs = matchCase.isChecked();
                     if (find.isEmpty()) {
-                        Extensions.showMessage(context, "Enter text to find");
+                        Extensions.showMessage(context, context.rss.getString(R.string.fo_enter_find));
                         return;
                     }
                     runDexStringReplace(dexFile, zipFileOrNull, find, replacement, cs);
@@ -1052,8 +1052,8 @@ public class FileOperationsHelper {
                 int count = io.github.abdurazaaqmohammed.utils.DexStringUtil.replaceStrings(dexFile, tmpOut, find, replacement, matchCase);
                 pm.dismiss();
                 context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                        .setMessage(count + " replacements \u2014 Apply?")
-                        .setPositiveButton("Apply", (d2, w2) -> applyDexStringReplace(dexFile, zipFileOrNull, tmpOut))
+                        .setMessage(context.rss.getString(R.string.fo_replacements_apply, count))
+                        .setPositiveButton(context.rss.getString(R.string.apply), (d2, w2) -> applyDexStringReplace(dexFile, zipFileOrNull, tmpOut))
                         .setNegativeButton(android.R.string.cancel, (d2, w2) -> tmpOut.delete())
                         .create()));
             } catch (Exception e) {
@@ -1080,7 +1080,7 @@ public class FileOperationsHelper {
                     tmpOut.delete();
                     pm.dismiss();
                     context.handler.post(() -> {
-                        Extensions.showMessage(context, "Replaced strings in " + dexFile.getName());
+                        Extensions.showMessage(context, context.rss.getString(R.string.fo_replaced, dexFile.getName()));
                         context.loadFolderInPane(dexFile.getParentFile(), adapter.pane1);
                     });
                 }
@@ -1114,7 +1114,7 @@ public class FileOperationsHelper {
                         }
                         if (names.size() < 2) {
                             pm.dismiss();
-                            context.handler.post(() -> Extensions.showMessage(context, "Need at least 2 dex files to merge"));
+                            context.handler.post(() -> Extensions.showMessage(context, context.rss.getString(R.string.fo_need_dex)));
                             return;
                         }
                         for (String n : names) {
@@ -1152,7 +1152,7 @@ public class FileOperationsHelper {
                     io.github.abdurazaaqmohammed.utils.DexMergeUtil.mergeDexFiles(inputs, merged, api);
                     pm.dismiss();
                     context.handler.post(() -> {
-                        Extensions.showMessage(context, "Merged " + inputs.size() + " dex files");
+                        Extensions.showMessage(context, context.rss.getString(R.string.fo_merged_n, inputs.size()));
                         context.loadFolderInPane(dir, adapter.pane1);
                     });
                 }

@@ -39,7 +39,7 @@ public class PlayerQueueAdapter extends RecyclerView.Adapter<PlayerQueueAdapter.
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MediaItem item = items.get(position);
         holder.indexView.setText(String.valueOf(position + 1));
-        holder.titleView.setText(item.title != null ? item.title : "Unknown");
+        holder.titleView.setText(item.title != null ? item.title : parent.getContext().getString(R.string.media_unknown));
         holder.artistView.setText(item.artist != null ? item.artist : "");
         long dur = item.duration;
         holder.durationView.setText(dur > 0 ? String.format("%d:%02d", dur / 60000, (dur / 1000) % 60) : "--:--");

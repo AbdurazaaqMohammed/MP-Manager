@@ -141,7 +141,7 @@ public class EditorSettingsActivity extends AppCompatActivity {
             layout.addView(labelInput);
 
             android.widget.TextView clickHeader = new android.widget.TextView(getContext());
-            clickHeader.setText("Click Action");
+            clickHeader.setText(getContext().getString(R.string.edsettings_click));
             clickHeader.setPadding(0, 32, 0, 8);
             layout.addView(clickHeader);
 
@@ -165,7 +165,7 @@ public class EditorSettingsActivity extends AppCompatActivity {
             setupActionSpinner(actionSpinner, dataInput1, dataInput2, actions);
 
             android.widget.TextView longHeader = new android.widget.TextView(getContext());
-            longHeader.setText("Long Press Action");
+            longHeader.setText(getContext().getString(R.string.edsettings_long));
             longHeader.setPadding(0, 32, 0, 8);
             layout.addView(longHeader);
 
@@ -204,9 +204,9 @@ public class EditorSettingsActivity extends AppCompatActivity {
             }
 
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(getContext())
-                    .setTitle(existing == null ? "Add Button" : "Edit Button")
+                    .setTitle(existing == null ? getContext().getString(R.string.edsettings_add) : getContext().getString(R.string.edsettings_edit))
                     .setView(scrollView)
-                    .setPositiveButton("Save", (dialog, which) -> {
+                    .setPositiveButton(getContext().getString(R.string.save), (dialog, which) -> {
                         try {
                             org.json.JSONObject obj = existing != null ? existing : new org.json.JSONObject();
                             String label = labelInput.getText().toString();

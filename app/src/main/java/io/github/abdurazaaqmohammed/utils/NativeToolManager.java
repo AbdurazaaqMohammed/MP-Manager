@@ -182,11 +182,11 @@ public class NativeToolManager {
         for (int i : missing) totalBytes += 12L * 1024 * 1024;
         final long approx = totalBytes;
         new MaterialAlertDialogBuilder(activity)
-                .setTitle("Native tools required")
-                .setMessage("This feature needs native binaries (~" + (approx / 1024 / 1024) + " MB download). Download now?")
-                .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError("Cancelled"))
-                .setNeutralButton("Set URL", (d, w) -> showUrlDialog(activity, cb))
-                .setPositiveButton("Download", (d, w) -> downloadPacks(activity, zips, packs, version, missing, cb))
+                .setTitle(activity.getString(R.string.native_required))
+                .setMessage(activity.getString(R.string.native_need_download, String.valueOf(approx / 1024 / 1024)))
+                .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))
+                .setNeutralButton(activity.getString(R.string.set_url), (d, w) -> showUrlDialog(activity, cb))
+                .setPositiveButton(activity.getString(R.string.native_download), (d, w) -> downloadPacks(activity, zips, packs, version, missing, cb))
                 .show();
     }
 
@@ -201,13 +201,13 @@ public class NativeToolManager {
         }
         input.setSingleLine(false);
         new MaterialAlertDialogBuilder(activity)
-                .setTitle("Tool pack server")
-                .setMessage("Base URL hosting packs.json plus the pack zips. Leave empty for the default.")
+                .setTitle(activity.getString(R.string.native_pack_server))
+                .setMessage(activity.getString(R.string.native_pack_msg))
                 .setView(input)
-                .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError("Cancelled"))
+                .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     setCustomBaseUrl(activity, input.getText() == null ? "" : input.getText().toString());
-                    cb.onError("URL saved, reopen the feature");
+                    cb.onError(activity.getString(R.string.url_saved_reopen));
                 }).show();
     }
 
@@ -224,9 +224,9 @@ public class NativeToolManager {
         bar.setMax(1000);
         root.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
-                .setTitle("Downloading native tools")
+                .setTitle(activity.getString(R.string.native_downloading))
                 .setView(root)
-                .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError("Cancelled"))
+                .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))
                 .create();
         dialog.show();
         final boolean[] cancelled = {false};

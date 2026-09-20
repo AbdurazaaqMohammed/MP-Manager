@@ -112,7 +112,7 @@ public class SignWrapper {
         try {
             keyPath = prefs.getString("keyPath", FileUtils.getDebugKeystore(activity).getPath());
         } catch (IOException e) {
-            Extensions.showMessage(activity, "Failed to load default key: " + e.getMessage());
+            Extensions.showMessage(activity, activity.getString(R.string.sig_default_key_failed, String.valueOf(e.getMessage())));
             return;
         }
         File keyFile = new File(keyPath);
@@ -172,7 +172,7 @@ public class SignWrapper {
             @Override
             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
-                Extensions.showMessage(activity, "Authentication error: " + errString);
+                Extensions.showMessage(activity, activity.getString(R.string.sig_auth_error, errString));
             }
 
             @Override
@@ -184,7 +184,7 @@ public class SignWrapper {
             @Override
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
-                Extensions.showMessage(activity, "Authentication failed");
+                Extensions.showMessage(activity, activity.getString(R.string.sig_auth_failed));
             }
         });
         BiometricPrompt.PromptInfo.Builder auth = new BiometricPrompt.PromptInfo.Builder()

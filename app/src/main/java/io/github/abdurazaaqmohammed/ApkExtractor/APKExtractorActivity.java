@@ -739,7 +739,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                     case 100: // Launch
                         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                         if (launchIntent == null)
-                            Extensions.showMessage(this, "Cannot launch this app");
+                            Extensions.showMessage(this, getString(R.string.cannot_launch_app));
                         else startActivity(launchIntent);
                         break;
                     case 101: // App Info
@@ -789,7 +789,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                         PackageManager pm = getPackageManager();
                         try {
                             ActivityInfo[] activities = pm.getPackageInfo(ai.packageName, PackageManager.GET_ACTIVITIES).activities;
-                            if(activities == null) Extensions.showMessage(this, "No launchable activities found");
+                            if(activities == null) Extensions.showMessage(this, getString(R.string.no_launch_activities));
 
                             else {
                                 String[] labels = new String[activities.length];
@@ -890,7 +890,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     private void executeRootAction(String actionName, RootRunnable action, String packageName) {
         RootManager rootManager = RootManager.getInstance(this);
         if (!rootManager.isRootMode() || !rootManager.isRootAvailable()) {
-            Extensions.showMessage(this, "Root not available");
+            Extensions.showMessage(this, getString(R.string.root_not_available));
             return;
         }
         new Thread(() -> {

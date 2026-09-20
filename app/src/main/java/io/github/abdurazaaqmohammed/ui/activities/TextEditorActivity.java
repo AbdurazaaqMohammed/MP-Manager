@@ -645,7 +645,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
 
     private void saveTabText(EditorTab tab, String text, Runnable onDone) {
         if (tab.fileUri == null && tab.file == null) {
-            Extensions.showMessage(this, "No file to save");
+            Extensions.showMessage(this, getString(R.string.editor_no_file));
             if (onDone != null) onDone.run();
             return;
         }
@@ -655,8 +655,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             if (RootStaging.needsWriteConfirm(tab.rootOriginalPath)) {
                 String target = tab.rootOriginalPath;
                 new MaterialAlertDialogBuilder(this)
-                        .setTitle("Write to system path?")
-                        .setMessage("Save back to\n" + target + "\n\nModifying system files can break apps or boot. Continue?")
+                        .setTitle(getString(R.string.editor_write_system))
+                        .setMessage(getString(R.string.editor_write_system_msg, target))
                         .setPositiveButton(android.R.string.ok, (d, w) -> saveTabTextRoot(tab, text, onDone))
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
@@ -693,15 +693,15 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             return;
         }
         tab.content = text;
-        Extensions.showMessage(this, "Writing back as root…");
+        Extensions.showMessage(this, getString(R.string.editor_writing_root));
         new Thread(() -> {
             try {
                 if (text.isEmpty() && originalKnownNonEmpty(tab)) {
                     String target = tab.rootOriginalPath;
                     runOnUiThread(() -> new MaterialAlertDialogBuilder(this)
-                            .setTitle("Overwrite with empty file?")
-                            .setMessage("The editor is empty but\n" + target + "\n still has content. Overwrite it with nothing?")
-                            .setPositiveButton("Overwrite", (d, w) -> new Thread(() -> doRootWriteBack(tab, text, onDone)).start())
+                            .setTitle(getString(R.string.editor_overwrite_empty))
+                            .setMessage(getString(R.string.editor_overwrite_empty_msg, target))
+                            .setPositiveButton(getString(R.string.editor_overwrite), (d, w) -> new Thread(() -> doRootWriteBack(tab, text, onDone)).start())
                             .setNegativeButton(android.R.string.cancel, null)
                             .show());
                     return;
@@ -736,7 +736,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 tab.modified = false;
                 updateTabsList();
                 persistSession();
-                Extensions.showMessage(this, "Saved (root write-back OK)");
+                Extensions.showMessage(this, getString(R.string.editor_saved_root));
                 if (onDone != null) onDone.run();
             });
         } catch (Exception e) {

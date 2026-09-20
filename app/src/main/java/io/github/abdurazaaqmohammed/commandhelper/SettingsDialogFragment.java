@@ -143,11 +143,11 @@ public class SettingsDialogFragment extends DialogFragment {
             String name = nameInput.getText().toString().trim();
             String cmd = cmdInput.getText().toString().trim();
             if (TextUtils.isEmpty(name)) {
-                Extensions.showMessage(getActivity(), "Name cannot be empty");
+                Extensions.showMessage(getActivity(), getString(R.string.profile_name_empty));
                 return;
             }
             if (TextUtils.isEmpty(cmd)) {
-                Extensions.showMessage(getActivity(), "Command template cannot be empty");
+                Extensions.showMessage(getActivity(), getString(R.string.profile_template_empty));
                 return;
             }
             if (index < 0) profileManager.addProfile(new Profile(name, cmd));

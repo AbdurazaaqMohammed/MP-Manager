@@ -166,8 +166,8 @@ public class ApkManifestEditor {
         quickEditDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
 
         AlertDialog menuDialog = dialogUtil.getDialogBuilder()
-                .setCustomTitle(uiHelper.getTitle("Fast Edit Attributes"))
-                .setPositiveButton("Done", (dialog, which) -> {
+                .setCustomTitle(uiHelper.getTitle(rss.getString(R.string.me_fast_attrs)))
+                .setPositiveButton(rss.getString(R.string.done), (dialog, which) -> {
                     CharSequence appNameInputText = appNameInput.getText();
                     String appNameSelected = android.text.TextUtils.isEmpty(appNameInputText) ? "" : appNameInputText.toString();
                     boolean appNameChanged = (!finalAppName.equals(appNameSelected));
@@ -186,14 +186,14 @@ public class ApkManifestEditor {
                     boolean installLocationChanged = installLocationSelected[0] != null && !installLocationSelected[0].equals(finalInstallLoc);
                     StringBuilder sb = new StringBuilder();
                     String[] options = {
-                            "App Launcher Icon",
-                            "App Name",
-                            "Install Location",
-                            "Version Code",
-                            "Version Name",
-                            "Min SDK Version",
-                            "Target SDK Version",
-                            "Edit All Activities / Properties"
+                            rss.getString(R.string.me_icon),
+                            rss.getString(R.string.appname),
+                            rss.getString(R.string.install_location),
+                            rss.getString(R.string.version_code),
+                            rss.getString(R.string.version_name),
+                            rss.getString(R.string.me_min_sdk_v),
+                            rss.getString(R.string.me_target_sdk_v),
+                            rss.getString(R.string.me_edit_all)
                     };
 
                     if(appNameChanged) sb.append(options[1]).append(", ");
@@ -202,7 +202,7 @@ public class ApkManifestEditor {
                     if(verNameChanged) sb.append(options[4]).append(", ");
                     if(minSdkVersionChanged) sb.append(options[5]).append(", ");
                     if(targetSdkVersionChanged) sb.append(options[6]);
-                    sb.append(" updated");
+                    sb.append(rss.getString(R.string.me_updated));
                     SignWrapper[] wrapper = new SignWrapper[1];
                     Runnable doEdit = () -> {
                         ProgressManager pm = new ProgressManager(context, true).show();
@@ -408,11 +408,11 @@ public class ApkManifestEditor {
         listView.setAdapter(adapter);
 
         AlertDialog d = dialogUtil.getDialogBuilder()
-                .setCustomTitle(uiHelper.getTitle("Edit Manifest Entries"))
+                .setCustomTitle(uiHelper.getTitle(rss.getString(R.string.me_edit_entries)))
                 .setView(listView)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Save All", (dlg, w) ->
-                        new RunUtil(context.handler, context, "Manifest saved")
+                .setPositiveButton(rss.getString(R.string.me_save_all), (dlg, w) ->
+                        new RunUtil(context.handler, context, rss.getString(R.string.me_manifest_saved))
                                 .runInBackground(() -> {
                                     try {
                                         writeManifestEntries(apkFile, entries);
@@ -457,7 +457,7 @@ public class ApkManifestEditor {
 
         AlertDialog d = dialogUtil.getDialogBuilder()
                 .setCustomTitle(uiHelper.getTitle(
-                        "Edit: " + entry.getMiddleTag().trim()))
+                        rss.getString(R.string.me_edit_prefix, entry.getMiddleTag().trim())))
                 .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dlg, w) -> {
@@ -492,7 +492,7 @@ public class ApkManifestEditor {
 
     public void writeManifestAttrValue(File apkFile, String attrName, String newValue) throws Exception {
         List<XMLEntry> entries = decodeManifest(apkFile);
-        if (entries == null) throw new IOException("Failed to decode AndroidManifest.xml");
+        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
 
         boolean found = false;
         for (XMLEntry e : entries) {
@@ -502,14 +502,14 @@ public class ApkManifestEditor {
             }
         }
         if (!found) {
-            throw new IOException("Attribute " + attrName + " not found in manifest");
+            throw new IOException(rss.getString(R.string.me_attr_missing, attrName));
         }
         writeManifestEntries(apkFile, entries);
     }
 
     public void removeManifestAttr(File apkFile, String attrName) throws Exception {
         List<XMLEntry> entries = decodeManifest(apkFile);
-        if (entries == null) throw new IOException("Failed to decode AndroidManifest.xml");
+        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
         for (int i = 0, listSize = entries.size(); i < listSize; i++) {
             XMLEntry item = entries.get(i);
             if (item.getTag().contains(attrName)) entries.remove(i);
@@ -519,7 +519,7 @@ public class ApkManifestEditor {
 
     public void removeManifestPermission(File apkFile, String perm) throws Exception {
         List<XMLEntry> entries = decodeManifest(apkFile);
-        if (entries == null) throw new IOException("Failed to decode AndroidManifest.xml");
+        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
         for (int i = entries.size() - 1; i >= 0; i--) {
             XMLEntry item = entries.get(i);
             if (item.getTag().contains("uses-permission") && perm.equals(item.getValue())) entries.remove(i);
@@ -557,10 +557,10 @@ public class ApkManifestEditor {
             pm.dismiss();
             context.handler.post(() -> {
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
-                        .setTitle("Permissions (" + perms.length + ")")
+                        .setTitle(rss.getString(R.string.me_perms_n, perms.length))
                         .setMultiChoiceItems(labels, keep, (d, which, isChecked) -> keep[which] = isChecked)
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton("Remove unchecked", (d, which) -> {
+                        .setPositiveButton(rss.getString(R.string.me_remove_unchecked), (d, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                             boolean[] sign = {settings.getBoolean("autosign", true)};
@@ -581,7 +581,7 @@ public class ApkManifestEditor {
                                         pm2.dismiss();
                                         int done = removed;
                                         context.handler.post(() -> {
-                                            Extensions.showMessage(context, done + " permissions removed");
+                                            Extensions.showMessage(context, rss.getString(R.string.me_perms_removed, done));
                                             context.loadFolderInPane(apkFile.getParentFile(), true);
                                         });
                                     } catch (Exception e) {
@@ -604,13 +604,13 @@ public class ApkManifestEditor {
     public void showManifestTogglesDialog(File apkFile) {
         String[] attrs = {"android:debuggable", "android:allowBackup", "android:usesCleartextTraffic",
                 "android:requestLegacyExternalStorage", "android:largeHeap"};
-        String[] labels = {"Debuggable", "Allow backup", "Cleartext traffic", "Legacy external storage", "Large heap"};
+        String[] labels = {rss.getString(R.string.me_tog_debug), rss.getString(R.string.me_tog_backup), rss.getString(R.string.me_tog_cleartext), rss.getString(R.string.me_tog_legacy), rss.getString(R.string.me_tog_heap)};
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
             boolean[] current = new boolean[attrs.length];
             try {
                 List<XMLEntry> entries = decodeManifest(apkFile);
-                if (entries == null) throw new IOException("Failed to decode AndroidManifest.xml");
+                if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
                 for (int i = 0; i < attrs.length; i++) {
                     String key = attrs[i].split(":")[1];
                     for (XMLEntry e : entries) {
@@ -641,15 +641,15 @@ public class ApkManifestEditor {
                 SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                 boolean[] sign = new boolean[1];
                 android.widget.CheckBox autosign = new android.widget.CheckBox(context);
-                autosign.setText("Autosign");
+                autosign.setText(rss.getString(R.string.auto_sign));
                 autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                 autosign.setOnCheckedChangeListener((b, c) -> settings.edit().putBoolean("autosign", sign[0] = c).apply());
                 root.addView(autosign);
                 dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                        .setTitle("Manifest toggles")
+                        .setTitle(rss.getString(R.string.me_toggles))
                         .setView(root)
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton("Apply", (dialog, which) -> {
+                        .setPositiveButton(rss.getString(R.string.apply), (dialog, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doEdit = () -> {
                                 ProgressManager pm2 = new ProgressManager(context, true).show();
@@ -668,7 +668,7 @@ public class ApkManifestEditor {
                                         pm2.dismiss();
                                         int done = changed;
                                         context.handler.post(() -> {
-                                            Extensions.showMessage(context, done + " toggles applied");
+                                            Extensions.showMessage(context, rss.getString(R.string.me_toggles_applied, done));
                                             context.loadFolderInPane(apkFile.getParentFile(), true);
                                         });
                                     } catch (Exception e) {

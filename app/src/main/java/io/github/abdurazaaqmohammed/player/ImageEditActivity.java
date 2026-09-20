@@ -234,7 +234,7 @@ public class ImageEditActivity extends AppCompatActivity {
         hInput.setSingleLine(true);
         root.addView(hInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Custom aspect ratio")
+                .setTitle(getString(R.string.img_aspect))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -242,7 +242,7 @@ public class ImageEditActivity extends AppCompatActivity {
                         float fw = Float.parseFloat(wInput.getText().toString().trim());
                         float fh = Float.parseFloat(hInput.getText().toString().trim());
                         if (fw <= 0 || fh <= 0) {
-                            showError("Values must be above zero");
+                            showError(getString(R.string.img_above_zero));
                             return;
                         }
                         aspect = fw / fh;
@@ -250,7 +250,7 @@ public class ImageEditActivity extends AppCompatActivity {
                         resetCropToFull();
                         updateInfo();
                     } catch (NumberFormatException e) {
-                        showError("Enter numbers");
+                        showError(getString(R.string.img_enter_numbers));
                     }
                 }).show();
     }
@@ -259,7 +259,7 @@ public class ImageEditActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
-        String[] names = {"Rot L", "Rot R", "Flip H", "Flip V"};
+        String[] names = {getString(R.string.img_rot_l), getString(R.string.img_rot_r), getString(R.string.img_flip_h), getString(R.string.img_flip_v)};
         String[] ops = {"left", "right", "flipH", "flipV"};
         for (int i = 0; i < names.length; i++) {
             final String op = ops[i];
@@ -276,11 +276,11 @@ public class ImageEditActivity extends AppCompatActivity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
         MaterialButton exifBtn = new MaterialButton(this);
-        exifBtn.setText("EXIF tags");
+        exifBtn.setText(getString(R.string.img_exif));
         exifBtn.setOnClickListener(v -> showExifEditor());
         row.addView(exifBtn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         MaterialButton stripBtn = new MaterialButton(this);
-        stripBtn.setText("Remove metadata");
+        stripBtn.setText(getString(R.string.img_strip_meta));
         stripBtn.setOnClickListener(v -> confirmStripMetadata());
         row.addView(stripBtn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         return row;
@@ -339,7 +339,7 @@ public class ImageEditActivity extends AppCompatActivity {
             exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
             exif.saveAttributes();
         } catch (Exception e) {
-            runOnUiThread(() -> showError("Orientation kept as-is"));
+            runOnUiThread(() -> showError(getString(R.string.img_orientation_kept)));
         }
     }
 
@@ -374,7 +374,7 @@ public class ImageEditActivity extends AppCompatActivity {
             }
         }
         if (failure[0] != null) throw failure[0];
-        if (!NativeToolManager.loadJpegtranJni(this)) throw new Exception("JNI library not available");
+        if (!NativeToolManager.loadJpegtranJni(this)) throw new Exception(getString(R.string.img_jni_missing));
     }
 
     private void readDims() {
@@ -553,14 +553,14 @@ public class ImageEditActivity extends AppCompatActivity {
                 inputs.add(input);
             }
         } catch (Exception e) {
-            showError("No EXIF in this file");
+            showError(getString(R.string.img_no_exif));
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("EXIF tags")
-                .setView(root)
+                .setTitle(getString(R.string.img_exif))
+                .setView(exifBox)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(getString(R.string.save), (d, w) -> {
                     new Thread(() -> {
                         try {
                             ExifInterface exif = new ExifInterface(workingFile.getAbsolutePath());
@@ -572,7 +572,7 @@ public class ImageEditActivity extends AppCompatActivity {
                             dirty = true;
                             runOnUiThread(() -> {
                                 updateInfo();
-                                showError("EXIF saved");
+                                showError(getString(R.string.img_exif_saved));
                             });
                         } catch (Exception e) {
                             runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
@@ -583,14 +583,14 @@ public class ImageEditActivity extends AppCompatActivity {
 
     private void confirmStripMetadata() {
         if (!isJpeg) {
-            showError("Only JPEG has removable metadata");
+            showError(getString(R.string.img_only_jpeg));
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Remove metadata")
-                .setMessage("Remove EXIF and other metadata? Image pixels stay identical.")
+                .setTitle(getString(R.string.img_strip_meta))
+                .setMessage(getString(R.string.img_strip_msg))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Strip", (d, w) -> {
+                .setPositiveButton(getString(R.string.img_strip), (d, w) -> {
                     ProgressManager pm = new ProgressManager(this, true).show();
                     new Thread(() -> {
                         try {
@@ -601,7 +601,7 @@ public class ImageEditActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 reloadPreview();
                                 updateInfo();
-                                showError("Metadata stripped");
+                                showError(getString(R.string.img_meta_stripped));
                             });
                         } catch (Exception e) {
                             pm.dismiss();
@@ -627,14 +627,14 @@ public class ImageEditActivity extends AppCompatActivity {
         }
         if (hasCrop() && isJpeg && !allowLossyCrop && !NativeToolManager.loadJpegtranJni(this)) {
             new MaterialAlertDialogBuilder(this)
-                    .setTitle("Crop quality")
-                    .setMessage("Lossless crop needs the JPEG tools download. Or crop now with standard quality.")
+                    .setTitle(getString(R.string.img_crop_quality))
+                    .setMessage(getString(R.string.img_crop_msg))
                     .setNegativeButton(android.R.string.cancel, null)
-                    .setNeutralButton("Standard crop", (d, w) -> {
+                    .setNeutralButton(getString(R.string.img_standard_crop), (d, w) -> {
                         allowLossyCrop = true;
                         doSave();
                     })
-                    .setPositiveButton("Lossless", (d, w) -> NativeToolManager.ensureJpegtran(this,
+                    .setPositiveButton(getString(R.string.img_lossless), (d, w) -> NativeToolManager.ensureJpegtran(this,
                             new NativeToolManager.ReadyCallback() {
                                 public void onReady() {
                                     doSave();
@@ -712,7 +712,7 @@ public class ImageEditActivity extends AppCompatActivity {
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
-                    if (fromShared) showError("Saved to " + originalPath);
+                    if (fromShared) showError(getString(R.string.logger_saved_to, originalPath));
                     finish();
                 });
             } catch (Exception e) {
@@ -729,10 +729,10 @@ public class ImageEditActivity extends AppCompatActivity {
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Unsaved changes")
-                .setMessage("Save before exit?")
-                .setPositiveButton("Save", (d, w) -> saveAndFinish())
-                .setNegativeButton("Discard", (d, w) -> {
+                .setTitle(getString(R.string.unsaved_changes))
+                .setMessage(getString(R.string.arsc_save_before_exit))
+                .setPositiveButton(getString(R.string.save), (d, w) -> saveAndFinish())
+                .setNegativeButton(getString(R.string.discard), (d, w) -> {
                     setResult(RESULT_CANCELED);
                     finish();
                 })

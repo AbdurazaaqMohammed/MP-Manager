@@ -258,27 +258,27 @@ public class DnsManager {
 
     public static void pinShortcut(Activity activity, DnsProfile profile) {
         if (Build.VERSION.SDK_INT < 26 || profile == null) {
-            Extensions.showMessage(activity, "Shortcuts need Android 8+");
+            Extensions.showMessage(activity, activity.getString(R.string.dns_shortcut_o));
             return;
         }
         try {
             ShortcutManager sm = (ShortcutManager) activity.getSystemService(Context.SHORTCUT_SERVICE);
             if (sm == null || !sm.isRequestPinShortcutSupported()) {
-                Extensions.showMessage(activity, "Pinned shortcuts not supported");
+                Extensions.showMessage(activity, activity.getString(R.string.dns_pinned_unsupported));
                 return;
             }
             Intent intent = new Intent(APPLY_ACTION);
             intent.setClassName(activity.getPackageName(), "io.github.abdurazaaqmohammed.tools.WifiManagerActivity");
             intent.putExtra(EXTRA_PROFILE_ID, profile.id);
             ShortcutInfo info = new ShortcutInfo.Builder(activity, "dns_" + profile.id)
-                    .setShortLabel("DNS " + profile.name)
-                    .setLongLabel("Private DNS " + profile.name + " (" + profile.describe() + ")")
+                    .setShortLabel(activity.getString(R.string.dns_applied, profile.name))
+                    .setLongLabel(activity.getString(R.string.qs_private_dns_x, profile.name) + " (" + profile.describe() + ")")
                     .setIcon(Icon.createWithResource(activity, R.drawable.wifi_24px))
                     .setIntent(intent)
                     .build();
             sm.requestPinShortcut(info, null);
         } catch (Exception e) {
-            Extensions.showMessage(activity, "Shortcut failed");
+            Extensions.showMessage(activity, activity.getString(R.string.dns_shortcut_failed));
         }
     }
 

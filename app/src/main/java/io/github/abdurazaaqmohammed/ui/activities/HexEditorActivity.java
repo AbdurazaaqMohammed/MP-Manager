@@ -137,7 +137,7 @@ public class HexEditorActivity extends AppCompatActivity {
             rootOriginalPath = rop;
         }
         if (file == null || !file.isFile()) {
-            Extensions.showMessage(this, "File not found");
+            Extensions.showMessage(this, getString(R.string.hex_file_not_found));
             finish();
             return;
         }
@@ -472,7 +472,7 @@ public class HexEditorActivity extends AppCompatActivity {
             lastPattern = buildPattern(searchTypeIndex, searchValue.getText().toString(), searchBigEndian.isChecked());
             return true;
         } catch (Exception e) {
-            Extensions.showMessage(this, "Invalid search value for " + DATA_TYPES.get(searchTypeIndex));
+            Extensions.showMessage(this, getString(R.string.hex_invalid_search, DATA_TYPES.get(searchTypeIndex)));
             return false;
         }
     }
@@ -509,7 +509,7 @@ public class HexEditorActivity extends AppCompatActivity {
                     lastMatchPos = f;
                     setCursor((int) f, true);
                 } else {
-                    Extensions.showMessage(this, "Not found");
+                    Extensions.showMessage(this, getString(R.string.hex_not_found));
                 }
             });
         }).start();
@@ -525,14 +525,14 @@ public class HexEditorActivity extends AppCompatActivity {
         if (!ensureSearchPattern()) return;
         long target = lastMatchPos >= 0 ? lastMatchPos : cursorPos;
         if (target + lastPattern.length > size) {
-            Extensions.showMessage(this, "Not found");
+            Extensions.showMessage(this, getString(R.string.hex_not_found));
             return;
         }
         byte[] repl;
         try {
             repl = buildPattern(replaceTypeIndex, replaceValue.getText().toString(), replaceBigEndian.isChecked());
         } catch (Exception e) {
-            Extensions.showMessage(this, "Invalid replace value for " + DATA_TYPES.get(replaceTypeIndex));
+            Extensions.showMessage(this, getString(R.string.hex_invalid_replace, DATA_TYPES.get(replaceTypeIndex)));
             return;
         }
         writeBytesAt(target, repl, null);
@@ -564,13 +564,13 @@ public class HexEditorActivity extends AppCompatActivity {
 
     private void showPasteFromDialog() {
         if (readOnly) {
-            Extensions.showMessage(this, "File is read-only");
+            Extensions.showMessage(this, getString(R.string.hex_read_only));
             return;
         }
-        String[] options = {"Paste from hex text", "Paste from decimal text", "Paste from binary text",
-                "Paste from ascii", "Paste from base64"};
+        String[] options = {getString(R.string.hex_paste_hex), getString(R.string.hex_paste_dec), getString(R.string.hex_paste_bin),
+                getString(R.string.hex_paste_ascii), getString(R.string.hex_paste_b64)};
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Paste from")
+                .setTitle(getString(R.string.hex_paste_from))
                 .setItems(options, (d, w) -> promptPasteInput(w))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -583,17 +583,17 @@ public class HexEditorActivity extends AppCompatActivity {
         input.setGravity(android.view.Gravity.TOP);
         input.setText(getClipboardText());
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Paste from " + formats[formatIndex])
-                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, "Paste bytes", 16))
+                .setTitle(getString(R.string.hex_paste_from_x, formats[formatIndex]))
+                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, getString(R.string.hex_paste_bytes), 16))
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     try {
                         byte[] data = parsePastedBytes(formatIndex, input.getText().toString());
                         if (data == null || data.length == 0) {
-                            Extensions.showMessage(this, "Nothing to paste");
+                            Extensions.showMessage(this, getString(R.string.hex_nothing_to_paste));
                             return;
                         }
                         writeBytesAt(cursorPos, data, null);
-                        Extensions.showMessage(this, "Pasted " + data.length + " bytes");
+                        Extensions.showMessage(this, getString(R.string.hex_pasted_n, data.length));
                     } catch (IllegalArgumentException e) {
                         Extensions.showMessage(this, e.getMessage());
                     }
@@ -614,7 +614,7 @@ public class HexEditorActivity extends AppCompatActivity {
         switch (format) {
             case 0: { // Hex text
                 String hex = text.replaceAll("[^0-9a-fA-F]", "").toLowerCase(Locale.ROOT);
-                if (hex.length() % 2 != 0) throw new IllegalArgumentException("Hex length must be even");
+                if (hex.length() % 2 != 0) throw new IllegalArgumentException(getString(R.string.hex_even));
                 byte[] out = new byte[hex.length() / 2];
                 for (int i = 0; i < out.length; i++)
                     out[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
@@ -629,7 +629,7 @@ public class HexEditorActivity extends AppCompatActivity {
             case 2: { // Binary text
                 String bits = text.replaceAll("[^01]", "");
                 if (bits.isEmpty() || bits.length() % 8 != 0)
-                    throw new IllegalArgumentException("Binary length must be a multiple of 8");
+                    throw new IllegalArgumentException(getString(R.string.hex_bin8));
                 byte[] out = new byte[bits.length() / 8];
                 for (int i = 0; i < out.length; i++)
                     out[i] = (byte) Integer.parseInt(bits.substring(i * 8, i * 8 + 8), 2);
@@ -652,17 +652,17 @@ public class HexEditorActivity extends AppCompatActivity {
 
     private void saveChanges() {
         if (mods.isEmpty()) {
-            Extensions.showMessage(this, "Nothing to save");
+            Extensions.showMessage(this, getString(R.string.hex_nothing_to_save));
             return;
         }
         if (readOnly) {
-            Extensions.showMessage(this, "File is read-only");
+            Extensions.showMessage(this, getString(R.string.hex_read_only));
             return;
         }
         if (RootStaging.needsWriteConfirm(rootOriginalPath)) {
             new MaterialAlertDialogBuilder(this)
-                    .setTitle("Write to system path?")
-                    .setMessage("Save back to\n" + rootOriginalPath + "\n\nModifying system files can break apps or boot. Continue?")
+                    .setTitle(getString(R.string.editor_write_system))
+                    .setMessage(getString(R.string.editor_write_system_msg, rootOriginalPath))
                     .setPositiveButton(android.R.string.ok, (d, w) -> saveChangesRoot())
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
@@ -684,11 +684,11 @@ public class HexEditorActivity extends AppCompatActivity {
             return;
         }
         if (rootOriginalPath != null) {
-            Extensions.showMessage(this, "Writing back as root…");
+            Extensions.showMessage(this, getString(R.string.editor_writing_root));
             new Thread(() -> {
                 try {
                     RootStaging.writeBack(this, file, rootOriginalPath);
-                    runOnUiThread(() -> Extensions.showMessage(this, "Saved (root write-back OK)"));
+                    runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.editor_saved_root)));
                 } catch (Exception e) {
                     runOnUiThread(() -> new ErrorUtil(this).showError(e));
                 }
@@ -719,8 +719,8 @@ public class HexEditorActivity extends AppCompatActivity {
     private void revertChanges() {
         if (mods.isEmpty()) return;
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Revert changes")
-                .setMessage("Discard all unsaved changes?")
+                .setTitle(getString(R.string.hex_revert))
+                .setMessage(getString(R.string.hex_revert_msg))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     mods.clear();
@@ -734,10 +734,10 @@ public class HexEditorActivity extends AppCompatActivity {
 
     private void showGotoDialog() {
         EditText input = new EditText(this);
-        input.setHint("Offset in hex (e.g. 1A0)");
+        input.setHint(getString(R.string.hex_offset_hint));
         input.setText(String.format(Locale.US, "%X", cursorPos));
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Go to offset")
+                .setTitle(getString(R.string.hex_go_offset))
                 .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -745,7 +745,7 @@ public class HexEditorActivity extends AppCompatActivity {
                         long target = Long.parseLong(input.getText().toString().trim(), 16);
                         setCursor((int) Math.min(target, Math.max(0, size - 1)), true);
                     } catch (NumberFormatException ignored) {
-                        Extensions.showMessage(this, "Invalid offset");
+                        Extensions.showMessage(this, getString(R.string.hex_invalid_offset));
                     }
                 }).show();
     }
@@ -756,8 +756,8 @@ public class HexEditorActivity extends AppCompatActivity {
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Unsaved changes")
-                .setMessage("Discard unsaved changes?")
+                .setTitle(getString(R.string.hex_unsaved))
+                .setMessage(getString(R.string.hex_discard_unsaved))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.delete, (d, w) -> finish())
                 .show();

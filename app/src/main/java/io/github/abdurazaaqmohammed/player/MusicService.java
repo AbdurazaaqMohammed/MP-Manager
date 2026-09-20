@@ -22,6 +22,7 @@ import androidx.core.app.NotificationCompat;
 
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class MusicService extends Service implements PlayerManager.PlaybackCallback {
 
@@ -104,8 +105,8 @@ public class MusicService extends Service implements PlayerManager.PlaybackCallb
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Music Playback", NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Controls for media playback with seek bar");
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, getString(R.string.notif_channel_music), NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription(getString(R.string.notif_music_desc));
             channel.setShowBadge(false);
             notifManager.createNotificationChannel(channel);
         }
@@ -164,7 +165,7 @@ public class MusicService extends Service implements PlayerManager.PlaybackCallb
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(playing ? android.R.drawable.ic_media_play : android.R.drawable.ic_media_pause)
                 .setContentTitle(item.title)
-                .setContentText(item.artist != null ? item.artist : "Unknown Artist")
+                .setContentText(item.artist != null ? item.artist : getString(R.string.music_unknown_artist))
                 .setSubText(item.album)
                 .setLargeIcon(artwork)
                 .setContentIntent(openIntent)
@@ -173,12 +174,12 @@ public class MusicService extends Service implements PlayerManager.PlaybackCallb
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setStyle(mediaStyle)
                 .addAction(new NotificationCompat.Action(
-                        android.R.drawable.ic_media_previous, "Previous", prevIntent))
+                        android.R.drawable.ic_media_previous, getString(R.string.music_previous), prevIntent))
                 .addAction(new NotificationCompat.Action(
                         playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                        playing ? "Pause" : "Play", playPauseIntent))
+                        playing ? getString(R.string.music_pause) : getString(R.string.music_play), playPauseIntent))
                 .addAction(new NotificationCompat.Action(
-                        android.R.drawable.ic_media_next, "Next", nextIntent));
+                        android.R.drawable.ic_media_next, getString(R.string.music_next), nextIntent));
 
         Notification notification = builder.build();
 

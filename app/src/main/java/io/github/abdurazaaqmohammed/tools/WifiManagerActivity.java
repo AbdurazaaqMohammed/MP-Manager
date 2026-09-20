@@ -103,7 +103,7 @@ public class WifiManagerActivity extends AppCompatActivity {
             if (target != null) {
                 new Thread(() -> {
                     boolean ok = DnsManager.applyProfile(WifiManagerActivity.this, target);
-                    handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? "DNS " + target.name : "DNS switch failed"));
+                    handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.dns_applied, target.name) : getString(R.string.dns_switch_failed)));
                 }).start();
             }
             finish();
@@ -113,8 +113,8 @@ public class WifiManagerActivity extends AppCompatActivity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
         MaterialToolbar toolbar = new MaterialToolbar(this);
-        toolbar.setTitle("Wi-Fi Manager");
-        toolbar.setSubtitle("Connection DNS passwords usage");
+        toolbar.setTitle(getString(R.string.wifi_manager));
+        toolbar.setSubtitle(getString(R.string.wifi_subtitle));
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -174,10 +174,10 @@ public class WifiManagerActivity extends AppCompatActivity {
     }
 
     private void buildConnection(LinearLayout box) {
-        sectionTitle(box, "Current Connection");
+        sectionTitle(box, getString(R.string.wifi_current_connection));
         connText = bodyText(box);
-        connText.setText("Loading");
-        MaterialButton refresh = button(box, "Refresh connection");
+        connText.setText(getString(R.string.loading));
+        MaterialButton refresh = button(box, getString(R.string.wifi_refresh_connection));
         refresh.setOnClickListener(v -> refreshConnection());
     }
 
@@ -234,9 +234,9 @@ public class WifiManagerActivity extends AppCompatActivity {
     }
 
     private void buildDns(LinearLayout box) {
-        sectionTitle(box, "Private DNS");
+        sectionTitle(box, getString(R.string.wifi_private_dns));
         dnsCurrent = bodyText(box);
-        dnsCurrent.setText("Loading");
+        dnsCurrent.setText(getString(R.string.loading));
         dnsList = new LinearLayout(this);
         dnsList.setOrientation(LinearLayout.VERTICAL);
         box.addView(dnsList, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -244,13 +244,13 @@ public class WifiManagerActivity extends AppCompatActivity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         box.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         MaterialButton add = new MaterialButton(this);
-        add.setText("Add profile");
+        add.setText(getString(R.string.wifi_add_profile));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         int m = dp(4);
         p.setMargins(m, m, m, m);
         row.addView(add, p);
         MaterialButton tile = new MaterialButton(this);
-        tile.setText("Quick tile");
+        tile.setText(getString(R.string.wifi_quick_tile));
         row.addView(tile, p);
         add.setOnClickListener(v -> showAddProfile());
         tile.setOnClickListener(v -> showTileHelp());
@@ -311,11 +311,11 @@ public class WifiManagerActivity extends AppCompatActivity {
     }
 
     private void applyDns(DnsManager.DnsProfile profile) {
-        Extensions.showMessage(this, "Applying " + profile.name);
+        Extensions.showMessage(this, getString(R.string.wifi_applying, profile.name));
         new Thread(() -> {
             boolean ok = DnsManager.applyProfile(WifiManagerActivity.this, profile);
             handler.post(() -> {
-                Extensions.showMessage(WifiManagerActivity.this, ok ? "DNS " + profile.name : "Failed, needs root or WRITE_SECURE_SETTINGS");
+                Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.dns_applied, profile.name) : getString(R.string.wifi_needs_root));
                 if (!ok) offerRootGrant();
                 refreshDns();
             });
@@ -327,11 +327,11 @@ public class WifiManagerActivity extends AppCompatActivity {
             boolean rooted = RootManager.getInstance(this).isRootAvailable();
             if (!rooted) return;
             new MaterialAlertDialogBuilder(this)
-                    .setTitle("Grant WRITE_SECURE_SETTINGS")
-                    .setMessage("Root found. Grant this app WRITE_SECURE_SETTINGS so DNS can switch with one tap and no root prompt next time?")
-                    .setPositiveButton("Grant", (d, w) -> new Thread(() -> {
+                    .setTitle(getString(R.string.wifi_grant_title))
+                    .setMessage(getString(R.string.wifi_grant_msg))
+                    .setPositiveButton(getString(R.string.grant), (d, w) -> new Thread(() -> {
                         boolean ok = RootPermissionHelper.grantWriteSecureViaRoot(WifiManagerActivity.this);
-                        handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? "Granted" : "Grant failed"));
+                        handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, ok ? getString(R.string.wifi_granted) : getString(R.string.wifi_grant_failed)));
                     }).start())
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
@@ -344,20 +344,20 @@ public class WifiManagerActivity extends AppCompatActivity {
         form.setOrientation(LinearLayout.VERTICAL);
         int p = dp(16);
         form.setPadding(p, p, p, p);
-        TextInputLayout nameBox = UiFields.box(this, "Name");
+        TextInputLayout nameBox = UiFields.box(this, getString(R.string.wifi_name_hint));
         EditText name = UiFields.field(nameBox, InputType.TYPE_CLASS_TEXT);
         form.addView(nameBox);
-        TextInputLayout hostBox = UiFields.box(this, "Hostname, e.g. one.one.one.one");
+        TextInputLayout hostBox = UiFields.box(this, getString(R.string.wifi_hostname_hint));
         EditText host = UiFields.field(hostBox, InputType.TYPE_CLASS_TEXT);
         form.addView(hostBox);
         new MaterialAlertDialogBuilder(this)
-                .setTitle("New DNS profile")
+                .setTitle(getString(R.string.wifi_new_profile))
                 .setView(form)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(getString(R.string.save), (d, w) -> {
                     String n = name.getText() == null ? "" : name.getText().toString().trim();
                     String h = host.getText() == null ? "" : host.getText().toString().trim();
                     if (n.isEmpty() || h.isEmpty()) {
-                        Extensions.showMessage(this, "Name and hostname needed");
+                        Extensions.showMessage(this, getString(R.string.wifi_name_host_needed));
                         return;
                     }
                     DnsManager.addCustom(this, n, h);
@@ -370,9 +370,9 @@ public class WifiManagerActivity extends AppCompatActivity {
     private void showTileHelp() {
         String msg;
         if (Build.VERSION.SDK_INT >= 33) {
-            msg = "Add the Private DNS tile to switch profiles from Quick Settings.";
+            msg = getString(R.string.wifi_tile_msg);
         } else {
-            msg = "Pull down Quick Settings, tap edit, and drag the Private DNS tile in. Tapping it cycles your profiles.";
+            msg = getString(R.string.wifi_tile_msg_long);
         }
         if (Build.VERSION.SDK_INT >= 33) {
             try {
@@ -380,13 +380,13 @@ public class WifiManagerActivity extends AppCompatActivity {
                 Method m = TileService.class.getMethod("requestAddTileService",
                         ComponentName.class, CharSequence.class, Icon.class,
                         Executor.class, Consumer.class);
-                m.invoke(null, cn, "Private DNS", null, getMainExecutor(), (Consumer<Integer>) result -> {
+                m.invoke(null, cn, getString(R.string.qs_private_dns), null, getMainExecutor(), (Consumer<Integer>) result -> {
                 });
                 return;
             } catch (Exception ignored) {
             }
         }
-        new MaterialAlertDialogBuilder(this).setTitle("Private DNS quick tile").setMessage(msg).setPositiveButton(android.R.string.ok, null).show();
+        new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.wifi_tile_title)).setMessage(msg).setPositiveButton(android.R.string.ok, null).show();
     }
 
     private static class PassHolder {
@@ -397,12 +397,12 @@ public class WifiManagerActivity extends AppCompatActivity {
     }
 
     private void buildPasswords(LinearLayout box) {
-        sectionTitle(box, "Saved Wi-Fi Passwords");
+        sectionTitle(box, getString(R.string.wifi_saved_passwords));
         passCount = new TextView(this);
-        passCount.setText("Root needed, loading");
+        passCount.setText(getString(R.string.wifi_root_loading));
         passCount.setTextSize(13);
         box.addView(passCount);
-        TextInputLayout searchBox = UiFields.box(this, "Search networks");
+        TextInputLayout searchBox = UiFields.box(this, getString(R.string.wifi_search_networks));
         EditText search = UiFields.field(searchBox, InputType.TYPE_CLASS_TEXT);
         search.setSingleLine(true);
         box.addView(searchBox);
@@ -410,15 +410,15 @@ public class WifiManagerActivity extends AppCompatActivity {
         opts.setOrientation(LinearLayout.HORIZONTAL);
         opts.setGravity(Gravity.CENTER_VERTICAL);
         CheckBox hide = new CheckBox(this);
-        hide.setText("Hide passwords");
+        hide.setText(getString(R.string.wifi_hide_passwords));
         hide.setChecked(!showPass);
         hide.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         opts.addView(hide);
         MaterialButton copyAllBtn = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
-        copyAllBtn.setText("Copy all");
+        copyAllBtn.setText(getString(R.string.wifi_copy_all));
         opts.addView(copyAllBtn);
         MaterialButton exportBtn = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
-        exportBtn.setText("Export");
+        exportBtn.setText(getString(R.string.export));
         opts.addView(exportBtn);
         box.addView(opts);
         copyAllBtn.setOnClickListener(v -> {
@@ -483,7 +483,7 @@ public class WifiManagerActivity extends AppCompatActivity {
                     copyBtn.setText(android.R.string.copy);
                     actionRow.addView(copyBtn);
                     MaterialButton shareBtn = new MaterialButton(WifiManagerActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
-                    shareBtn.setText("Share");
+                    shareBtn.setText(getString(R.string.wifi_share));
                     actionRow.addView(shareBtn);
                     inner.addView(actionRow);
                     card.addView(inner);
@@ -498,7 +498,7 @@ public class WifiManagerActivity extends AppCompatActivity {
                     holder = (PassHolder) convertView.getTag();
                 }
                 holder.ssid.setText(e.ssid + "  [" + e.security + "]");
-                holder.pass.setText(e.password.isEmpty() ? "Open network" : (showPass ? e.password : masked(e.password)));
+                holder.pass.setText(e.password.isEmpty() ? getString(R.string.wifi_open_network) : (showPass ? e.password : masked(e.password)));
                 holder.copyBtn.setOnClickListener(v -> showCopyMenu(e, v));
                 holder.shareBtn.setOnClickListener(v -> showShareMenu(e, v));
                 return convertView;
@@ -537,14 +537,14 @@ public class WifiManagerActivity extends AppCompatActivity {
 
     private void showCopyMenu(WifiPasswordUtil.WifiEntry e, View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add("Name + password");
-        menu.getMenu().add("Password only");
-        menu.getMenu().add("Name only");
+        menu.getMenu().add(0, 0, 0, getString(R.string.wifi_name_plus_password));
+        menu.getMenu().add(0, 1, 0, getString(R.string.wifi_password_only));
+        menu.getMenu().add(0, 2, 0, getString(R.string.wifi_name_only));
         menu.setOnMenuItemClickListener(item -> {
-            String title = item.getTitle().toString();
-            if (title.equals("Name + password")) {
+            int id = item.getItemId();
+            if (id == 0) {
                 copyPlain("wifi", e.ssid + " : " + passOrOpen(e));
-            } else if (title.equals("Password only")) {
+            } else if (id == 1) {
                 copyPasswordOnly(e);
             } else {
                 copyPlain("wifi", e.ssid);
@@ -556,18 +556,16 @@ public class WifiManagerActivity extends AppCompatActivity {
 
     private void showShareMenu(WifiPasswordUtil.WifiEntry e, View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add("QR code");
-        menu.getMenu().add("Name + password");
-        menu.getMenu().add("Password only");
-        menu.getMenu().add("Name only");
+        menu.getMenu().add(0, 0, 0, getString(R.string.wifi_qr_code));
+        menu.getMenu().add(0, 1, 0, getString(R.string.wifi_name_plus_password));
+        menu.getMenu().add(0, 2, 0, getString(R.string.wifi_password_only));
+        menu.getMenu().add(0, 3, 0, getString(R.string.wifi_name_only));
         menu.setOnMenuItemClickListener(item -> {
-            String title = item.getTitle().toString();
-            switch (title) {
-                case "QR code" -> showWifiQr(e);
-                case "Name + password" -> shareWifiText(e.ssid + " : " + passOrOpen(e));
-                case "Password only" -> shareWifiText(e.password.isEmpty() ? e.ssid : e.password);
-                default -> shareWifiText(e.ssid);
-            }
+            int id = item.getItemId();
+            if (id == 0) showWifiQr(e);
+            else if (id == 1) shareWifiText(e.ssid + " : " + passOrOpen(e));
+            else if (id == 2) shareWifiText(e.password.isEmpty() ? e.ssid : e.password);
+            else shareWifiText(e.ssid);
             return true;
         });
         menu.show();
@@ -576,9 +574,9 @@ public class WifiManagerActivity extends AppCompatActivity {
     private void shareWifiText(String text) {
         try {
             Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
-            startActivity(Intent.createChooser(share, "Share Wi-Fi"));
+            startActivity(Intent.createChooser(share, getString(R.string.wifi_share_wifi)));
         } catch (Exception e) {
-            Extensions.showMessage(this, "Share failed");
+            Extensions.showMessage(this, getString(R.string.wifi_share_failed));
         }
     }
 
@@ -610,25 +608,25 @@ public class WifiManagerActivity extends AppCompatActivity {
             secView.setGravity(Gravity.CENTER);
             secView.setTextIsSelectable(true);
             qrBox.addView(secView);
-            new MaterialAlertDialogBuilder(this).setTitle("Share Wi-Fi").setView(qrBox)
-                    .setPositiveButton("Share", (d, w) -> shareWifiText(config))
-                    .setNeutralButton("Save image", (d, w) -> new Thread(() -> {
+            new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.wifi_share_wifi)).setView(qrBox)
+                    .setPositiveButton(getString(R.string.wifi_share), (d, w) -> shareWifiText(config))
+                    .setNeutralButton(getString(R.string.wifi_save_image), (d, w) -> new Thread(() -> {
                         try {
                             QrUtil.saveToGallery(WifiManagerActivity.this, qr, e.ssid + "_wifi_qr");
-                            handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, "QR image saved"));
+                            handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_qr_saved)));
                         } catch (Exception ex) {
-                            handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, "Save failed"));
+                            handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_save_failed)));
                         }
                     }).start())
                     .setNegativeButton(android.R.string.cancel, null).show();
         } catch (Exception ex) {
-            Extensions.showMessage(this, "QR failed");
+            Extensions.showMessage(this, getString(R.string.wifi_qr_failed));
         }
     }
 
     private void exportEntries(List<WifiPasswordUtil.WifiEntry> entries) {
         if (entries.isEmpty()) {
-            Extensions.showMessage(this, "Nothing to export");
+            Extensions.showMessage(this, getString(R.string.wifi_nothing_to_export));
             return;
         }
         new Thread(() -> {
@@ -659,9 +657,9 @@ public class WifiManagerActivity extends AppCompatActivity {
                         fos.write(all.toString().getBytes(StandardCharsets.UTF_8));
                     }
                 }
-                handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, "Exported to Download/MP Manager"));
+                handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_exported)));
             } catch (Exception ex) {
-                handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, "Export failed"));
+                handler.post(() -> Extensions.showMessage(WifiManagerActivity.this, getString(R.string.wifi_export_failed)));
             }
         }).start();
     }
@@ -683,7 +681,7 @@ public class WifiManagerActivity extends AppCompatActivity {
             }
         }
         passAdapter.notifyDataSetChanged();
-        passCount.setText(passVisible.size() + " networks");
+        passCount.setText(getString(R.string.wifi_networks_n, passVisible.size()));
     }
 
     private void loadPasswords() {
@@ -696,16 +694,16 @@ public class WifiManagerActivity extends AppCompatActivity {
                 passVisible.clear();
                 passVisible.addAll(entries);
                 passAdapter.notifyDataSetChanged();
-                passCount.setText(rooted ? entries.size() + " networks" : "Root needed for saved passwords");
+                passCount.setText(rooted ? getString(R.string.wifi_networks_n, entries.size()) : getString(R.string.wifi_root_needed_passwords));
             });
         }).start();
     }
 
     private void buildUsage(LinearLayout box) {
-        sectionTitle(box, "Data Usage");
+        sectionTitle(box, getString(R.string.wifi_data_usage));
         usageText = bodyText(box);
-        usageText.setText("Loading");
-        MaterialButton refresh = button(box, "Refresh usage");
+        usageText.setText(getString(R.string.loading));
+        MaterialButton refresh = button(box, getString(R.string.wifi_refresh_usage));
         refresh.setOnClickListener(v -> refreshUsage());
     }
 
@@ -744,9 +742,9 @@ public class WifiManagerActivity extends AppCompatActivity {
         try {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             cm.setPrimaryClip(ClipData.newPlainText(label, value));
-            Extensions.showMessage(this, "Copied");
+            Extensions.showMessage(this, getString(R.string.copied));
         } catch (Exception e) {
-            Extensions.showMessage(this, "Copy failed");
+            Extensions.showMessage(this, getString(R.string.wifi_copy_failed));
         }
     }
 }

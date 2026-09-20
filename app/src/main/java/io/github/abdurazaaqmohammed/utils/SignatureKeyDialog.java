@@ -185,7 +185,7 @@ public class SignatureKeyDialog {
                     if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem") && biometricChecked) {
                         if (!TextUtils.isEmpty(resolvedPassword)) {
                             if (!verifyKeystorePassword(new File(selectedPath), resolvedPassword)) {
-                                Extensions.showMessage(activity, "Invalid password");
+                                Extensions.showMessage(activity, activity.getString(R.string.sig_invalid_password));
                                 return;
                             }
                             prefs.edit().putString("keyPass", PasswordEncryptor.encryptString(resolvedPassword)).apply();
@@ -194,7 +194,7 @@ public class SignatureKeyDialog {
                         } else if (wasUsingBiometrics) {
                             useBiometrics = true;
                         } else {
-                            Extensions.showMessage(activity, "Enter password first to enable biometrics");
+                            Extensions.showMessage(activity, activity.getString(R.string.sig_enter_password_first));
                             return;
                         }
                     } else {
@@ -202,7 +202,7 @@ public class SignatureKeyDialog {
                             prefs.edit().putBoolean("useBiometrics", false).remove("keyPass").apply();
                         }
                         if (!selectedPath.endsWith(".pk8") && !selectedPath.endsWith(".pem") && TextUtils.isEmpty(resolvedPassword)) {
-                            Extensions.showMessage(activity, "No password entered");
+                            Extensions.showMessage(activity, activity.getString(R.string.sig_no_password));
                             return;
                         }
                         useBiometrics = false;
@@ -225,14 +225,14 @@ public class SignatureKeyDialog {
                                 public void onAuthenticationError(int errorCode,
                                                                   @NonNull CharSequence errString) {
                                     super.onAuthenticationError(errorCode, errString);
-                                    Extensions.showMessage(activity, "Authentication error: " + errString);
+                                    Extensions.showMessage(activity, activity.getString(R.string.sig_auth_error, errString));
                                 }
 
                                 @Override
                                 public void onAuthenticationSucceeded(
                                         @NonNull BiometricPrompt.AuthenticationResult result) {
                                     super.onAuthenticationSucceeded(result);
-                                    Extensions.showMessage(activity, "Authentication succeeded!");
+                                    Extensions.showMessage(activity, activity.getString(R.string.sig_auth_ok));
                                     new Thread(() -> {
                                         try {
                                             String storedPass = PasswordEncryptor.decryptString(prefs.getString("keyPass", "android"));
@@ -274,7 +274,7 @@ public class SignatureKeyDialog {
                                 @Override
                                 public void onAuthenticationFailed() {
                                     super.onAuthenticationFailed();
-                                    Extensions.showMessage(activity, "Authentication failed");
+                                    Extensions.showMessage(activity, activity.getString(R.string.sig_auth_failed));
                                 }
                             });
                             BiometricPrompt.PromptInfo.Builder auth = new BiometricPrompt.PromptInfo.Builder()
@@ -341,7 +341,7 @@ public class SignatureKeyDialog {
                     else path = keyPath;
                     actv.setText(path);
                     prefs.edit().putString("keyPath", path).apply();
-                    Extensions.showMessage(activity, "Keys generated: " + path);
+                    Extensions.showMessage(activity, activity.getString(R.string.sig_keys_generated, path));
                 }
 
                 @Override

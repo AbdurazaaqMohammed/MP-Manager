@@ -111,11 +111,56 @@ public class ProgressManager {
         } catch (IOException ignored) {}
         FileWriter logFw = fw;
         return new APKLogger() {
-            @Override public void logMessage(String s) { setText(s); if (logFw != null) try { logFw.write(s + "\n"); } catch (IOException ignored) {} }
+            @Override public void   logMessage(String s) { setText(resolveDisplay(s)); if (logFw != null) try { logFw.write(s + "\n"); } catch (IOException ignored) {} }
             @Override public void logError(String s, Throwable t) { new ErrorUtil(activity).showError(t); if (logFw != null) try { logFw.write(s + "\n"); for (StackTraceElement e : t.getStackTrace()) logFw.write(e.toString() + "\n"); } catch (IOException ignored) {} }
-            @Override public void logVerbose(String s) { setText(s); if (logFw != null) try { logFw.write(s + "\n"); } catch (IOException ignored) {} }
+            @Override public void logVerbose(String s) { setText(resolveDisplay(s)); if (logFw != null) try { logFw.write(s + "\n"); } catch (IOException ignored) {} }
             @Override public void close() { if (logFw != null) try { logFw.close(); } catch (IOException ignored) {} }
         };
+    }
+
+    private String resolveDisplay(String s) {
+        if (s == null) return null;
+        try {
+            if (s.startsWith("Saved to: ")) return activity.getString(R.string.logger_saved_to, s.substring("Saved to: ".length()));
+            if (s.startsWith("Writing apk")) return activity.getString(R.string.logger_writing_apk);
+            if (s.startsWith("Decompiling to ")) return activity.getString(R.string.reandroid_decompiling_to, s.substring("Decompiling to ".length()).replace(" ...", "").trim());
+            if (s.startsWith("Decoding assets/dexopt")) return activity.getString(R.string.reandroid_decoding_dexopt);
+            if (s.startsWith("Encoding assets/dexopt")) return activity.getString(R.string.reandroid_encoding_dexopt);
+            if (s.startsWith("Scanning dex files for profile")) return activity.getString(R.string.reandroid_scanning_dex);
+            if (s.startsWith("Scanning: ")) return activity.getString(R.string.reandroid_scanning_x, s.substring("Scanning: ".length()));
+            if (s.startsWith("Searching files: ")) return activity.getString(R.string.reandroid_searching_x, s.substring("Searching files: ".length()));
+            if (s.startsWith("Refreshing resource table")) return activity.getString(R.string.reandroid_refreshing_table);
+            if (s.startsWith("Sorting files")) return activity.getString(R.string.reandroid_sorting);
+            if (s.startsWith("Building dex")) return activity.getString(R.string.reandroid_building_dex);
+            if (s.startsWith("Optimizing table")) return activity.getString(R.string.reandroid_optimizing_table);
+            if (s.startsWith("Optimizing")) return activity.getString(R.string.reandroid_optimizing);
+            if (s.startsWith("Sanitizing paths")) return activity.getString(R.string.reandroid_sanitizing);
+            if (s.startsWith("Merging: ")) return activity.getString(R.string.reandroid_merging_x, s.substring("Merging: ".length()));
+            if (s.startsWith("Validating resource names")) return activity.getString(R.string.reandroid_validating_names);
+            if (s.startsWith("All resource names are valid")) return activity.getString(R.string.reandroid_names_valid);
+            if (s.startsWith("Extracting root files")) return activity.getString(R.string.reandroid_extracting_root);
+            if (s.startsWith("Dumping signatures")) return activity.getString(R.string.reandroid_dumping_sigs);
+            if (s.startsWith("Don't have signature block")) return activity.getString(R.string.reandroid_no_sig_block);
+            if (s.startsWith("Signatures dumped to: ")) return activity.getString(R.string.reandroid_signatures_dumped, s.substring("Signatures dumped to: ".length()));
+            if (s.startsWith("Confusing zip structure")) return activity.getString(R.string.reandroid_confusing_zip);
+            if (s.startsWith("Restoring signatures")) return activity.getString(R.string.reandroid_restoring_sigs);
+            if (s.startsWith("Scanning JSON directory")) return activity.getString(R.string.reandroid_scanning_json);
+            if (s.startsWith("Scanning XML directory")) return activity.getString(R.string.reandroid_scanning_xml);
+            if (s.startsWith("Scanning Raw directory")) return activity.getString(R.string.reandroid_scanning_raw);
+            if (s.startsWith("Loading signatures")) return activity.getString(R.string.reandroid_loading_sigs);
+            if (s.startsWith("Writing signature block")) return activity.getString(R.string.reandroid_writing_sig_block);
+            if (s.startsWith("Decoding res files")) return activity.getString(R.string.reandroid_decoding_res);
+            if (s.startsWith("Found apk files: ")) return activity.getString(R.string.reandroid_found_apks, Integer.parseInt(s.substring("Found apk files: ".length()).trim()));
+            if (s.startsWith("Initializing android framework")) return activity.getString(R.string.reandroid_init_framework);
+            if (s.startsWith("Can not read framework version")) return activity.getString(R.string.reandroid_no_framework_version);
+            if (s.startsWith("Removed empty: ")) return activity.getString(R.string.reandroid_removed_empty, s.substring("Removed empty: ".length()));
+            if (s.startsWith("Decoding: ")) return activity.getString(R.string.reandroid_decoding_x, s.substring("Decoding: ".length()));
+            if (s.startsWith("Decode: ")) return activity.getString(R.string.reandroid_decoding_x, s.substring("Decode: ".length()));
+            if (s.startsWith("Loading framework: ")) return activity.getString(R.string.reandroid_loading_framework_x, s.substring("Loading framework: ".length()));
+            if (s.startsWith("Loading: ")) return activity.getString(R.string.reandroid_loading_x, s.substring("Loading: ".length()));
+            if (s.equals("Loading ...")) return activity.getString(R.string.reandroid_loading);
+        } catch (Exception ignored) {}
+        return s;
     }
 
     private void hide() {
@@ -126,7 +171,7 @@ public class ProgressManager {
 
     private void initChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel c = new NotificationChannel(CHANNEL_ID, "Task Progress", NotificationManager.IMPORTANCE_LOW);
+            NotificationChannel c = new NotificationChannel(CHANNEL_ID, activity.getString(R.string.notif_channel_progress), NotificationManager.IMPORTANCE_LOW);
             NotificationManager m = activity.getSystemService(NotificationManager.class);
             if (m != null) m.createNotificationChannel(c);
         }
@@ -143,8 +188,8 @@ public class ProgressManager {
 
     private NotificationCompat.Builder buildNotif() {
         NotificationCompat.Builder b = new NotificationCompat.Builder(activity, CHANNEL_ID)
-                .setContentTitle("MP Manager")
-                .setContentText(currentText != null ? currentText : "Working...")
+                .setContentTitle(activity.getString(R.string.app_name))
+                .setContentText(currentText != null ? currentText : activity.getString(R.string.progress_working))
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)
                 .setContentIntent(PendingIntent.getActivity(activity, 0, new Intent(activity, activity.getClass()), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));

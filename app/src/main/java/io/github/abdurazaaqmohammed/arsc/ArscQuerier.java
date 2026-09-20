@@ -166,7 +166,7 @@ public final class ArscQuerier {
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = new TextView(activity);
-        title.setText("Resource querier");
+        title.setText(activity.getString(R.string.querier_title));
         title.setTextSize(18);
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         ImageButton settingsBtn = new ImageButton(activity);
@@ -205,9 +205,9 @@ public final class ArscQuerier {
         AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setCustomTitle(titleRow)
                 .setView(root)
-                .setNeutralButton("SEARCH STRING", null)
-                .setNegativeButton("CLOSE", null)
-                .setPositiveButton("QUERY", null)
+                .setNeutralButton(activity.getString(R.string.querier_search_string), null)
+                .setNegativeButton(activity.getString(R.string.querier_close), null)
+                .setPositiveButton(activity.getString(R.string.querier_query), null)
                 .create();
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
@@ -230,19 +230,19 @@ public final class ArscQuerier {
         root.setPadding(pad, 0, pad, 0);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         CheckBox snapBox = new CheckBox(activity);
-        snapBox.setText("Stick to the screen edge after 3s idle");
+        snapBox.setText(activity.getString(R.string.querier_snap));
         snapBox.setChecked(prefs.getBoolean("arsc_querier_snap", true));
         CheckBox binBox = new CheckBox(activity);
-        binBox.setText("Show binary numbers in results");
+        binBox.setText(activity.getString(R.string.querier_show_bin));
         binBox.setChecked(prefs.getBoolean("arsc_querier_bin", false));
         CheckBox octBox = new CheckBox(activity);
-        octBox.setText("Show octal numbers in results");
+        octBox.setText(activity.getString(R.string.querier_show_oct));
         octBox.setChecked(prefs.getBoolean("arsc_querier_oct", false));
         root.addView(snapBox);
         root.addView(binBox);
         root.addView(octBox);
         TextView helpTitle = new TextView(activity);
-        helpTitle.setText("Help");
+        helpTitle.setText(activity.getString(R.string.querier_help_title));
         helpTitle.setTextSize(18);
         helpTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -250,15 +250,12 @@ public final class ArscQuerier {
         root.addView(helpTitle, helpParams);
         TextView help = new TextView(activity);
         help.setTextSize(13);
-        help.setText("Look up a resource: type @ followed by type and name like @string/app_name, or ? plus attr name like ?attr/colorPrimary. A raw id works too, such as @0x7f080001.\n\n"
-                + "Check a color: start with # and add the hex digits. #RGB, #ARGB, #RRGGBB and #AARRGGBB are all accepted, for example #F00.\n\n"
-                + "Convert a number: just type it. A leading 0b means binary like 0b1101, a leading 0 means octal like 0701, a leading 0x means hex like 0x1234, anything else is decimal like 1234. Only decimal may be negative. Underscores and spaces are ignored, so 0b1000_0000 is fine. Binary and octal rows appear when enabled above.\n\n"
-                + "If a number also looks like a resource id, the matching resource is shown as well.");
+        help.setText(activity.getString(R.string.querier_help_body));
         root.addView(help);
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(root);
         new MaterialAlertDialogBuilder(activity)
-                .setTitle("Resource querier")
+                .setTitle(activity.getString(R.string.querier_title))
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -275,15 +272,15 @@ public final class ArscQuerier {
 
     static String runQuery(ArscEditorActivity activity, String input) {
         ArscData data = activity.data;
-        if (data == null || data.table == null) return "No file loaded";
+        if (data == null || data.table == null) return activity.getString(R.string.querier_no_file);
         String t = input == null ? "" : input.trim();
-        if (t.isEmpty()) return "Enter a query";
-        if (t.startsWith("@") || t.startsWith("?")) return queryReference(data, t);
-        if (t.startsWith("#")) return queryColor(t);
+        if (t.isEmpty()) return activity.getString(R.string.querier_enter_query);
+        if (t.startsWith("@") || t.startsWith("?")) return queryReference(activity, data, t);
+        if (t.startsWith("#")) return queryColor(activity, t);
         return queryNumber(activity, data, t);
     }
 
-    private static String queryReference(ArscData data, String t) {
+    private static String queryReference(ArscEditorActivity activity, ArscData data, String t) {
         String ref = t.substring(1);
         if (ref.startsWith("0x") || ref.startsWith("0X") || ref.matches("(?i)[0-9a-f]{1,8}")) {
             String hex = ref.startsWith("0x") || ref.startsWith("0X") ? ref.substring(2) : ref;
@@ -291,13 +288,13 @@ public final class ArscQuerier {
                 int id = (int) (Long.parseLong(hex, 16) & 0xFFFFFFFFL);
                 ResourceEntry found = data.table.getResource(id);
                 if (found != null) return resourceInfo(data, found);
-                return "No resource with id 0x" + hex.toUpperCase(Locale.US);
+                return activity.getString(R.string.querier_no_res_id, hex.toUpperCase(Locale.US));
             } catch (Exception e) {
-                return "Bad id: " + ref;
+                return activity.getString(R.string.querier_bad_id, ref);
             }
         }
         int slash = ref.indexOf('/');
-        if (slash <= 0) return "Use @type/name or @id";
+        if (slash <= 0) return activity.getString(R.string.querier_use_format);
         String type = ref.substring(0, slash);
         String name = ref.substring(slash + 1);
         if (type.startsWith("?")) type = type.substring(1);
@@ -315,7 +312,7 @@ public final class ArscQuerier {
             } catch (Exception ignored) {
             }
         }
-        return "Not found: " + ref;
+        return activity.getString(R.string.querier_not_found, ref);
     }
 
     static String resourceInfo(ArscData data, ResourceEntry re) {
@@ -326,7 +323,7 @@ public final class ArscQuerier {
         return sb.toString();
     }
 
-    private static String queryColor(String t) {
+    private static String queryColor(ArscEditorActivity activity, String t) {
         try {
             int argb = ArscData.parseColor(t);
             int a = (argb >> 24) & 0xFF;
@@ -336,7 +333,7 @@ public final class ArscQuerier {
             return "A=" + a + " R=" + r + " G=" + g + " B=" + b + "\n"
                     + String.format(Locale.US, "#%08X", argb) + "\nint: " + argb;
         } catch (Exception e) {
-            return "Bad color, use #RGB, #ARGB, #RRGGBB or #AARRGGBB";
+            return activity.getString(R.string.querier_bad_color);
         }
     }
 
@@ -363,13 +360,13 @@ public final class ArscQuerier {
                 format = "hex";
                 value = Long.parseLong(body, 16);
             } else {
-                return "Not a number";
+                return activity.getString(R.string.querier_not_number);
             }
         } catch (Exception e) {
-            return "Number out of range";
+            return activity.getString(R.string.querier_out_of_range);
         }
         if (negative) {
-            if (!format.equals("decimal")) return "Only decimal can be negative";
+            if (!format.equals("decimal")) return activity.getString(R.string.querier_only_decimal_negative);
             value = -value;
         }
         int intValue = (int) (value & 0xFFFFFFFFL);

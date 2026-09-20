@@ -126,8 +126,8 @@ public class MiniPlayerDialog {
     }
 
     private void updateUI(MediaItem item) {
-        titleView.setText(item.title != null ? item.title : "Unknown");
-        artistView.setText(item.artist != null ? item.artist : "Unknown Artist");
+        titleView.setText(item.title != null ? item.title : activity.getString(R.string.media_unknown));
+        artistView.setText(item.artist != null ? item.artist : activity.getString(R.string.music_unknown_artist));
 
         if (item.path != null) try (MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {
             mmr.setDataSource(activity, item.uri);

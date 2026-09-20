@@ -147,7 +147,7 @@ public class OverlayInjectorUtil {
         debug("input=" + inputApk.getAbsolutePath());
         debug("activities=" + activityClassNames);
         try {
-            Set<String> targetEntries = findDexEntriesForClasses(inputApk, activityClassNames, logger);
+            Set<String> targetEntries = findDexEntriesForClasses(context, inputApk, activityClassNames, logger);
             if (targetEntries.isEmpty()) {
                 throw new IOException("Could not locate the selected activities in any dex file");
             }
@@ -157,7 +157,7 @@ public class OverlayInjectorUtil {
             int fi = 0;
             for (String path : fontBytes.keySet()) fontAssets.put(path, "mpfont_" + (fi++) + ".ttf");
             if (!fontAssets.isEmpty() && logger != null) {
-                logger.logMessage("Embedding " + fontAssets.size() + " font(s) as APK assets");
+                logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_embedding_fonts, fontAssets.size()));
             }
             Set<String> descriptors = new LinkedHashSet<>();
             for (String className : activityClassNames) {
@@ -188,14 +188,14 @@ public class OverlayInjectorUtil {
                     int api = detectDexApi(inputApk, entry);
                     File patchDir = new File(workDir, "patch_" + entry.replace('/', '_').replace('.', '_'));
                     Map<String, File> smaliFiles =
-                            FastDexPatch.disassembleClasses(dex, descriptors, patchDir, baksmaliOptions, logger);
+                            FastDexPatch.disassembleClasses(context, dex, descriptors, patchDir, baksmaliOptions, logger);
                     if (smaliFiles.isEmpty()) continue;
                     List<File> touched = new ArrayList<>();
                     boolean changed = false;
                     for (Map.Entry<String, File> se : smaliFiles.entrySet()) {
                         String className = FastDexPatch.descriptorToClassName(se.getKey());
                         try {
-                            if (patchOneSmali(se.getValue(), className, toast, dialog, fontAssets, logger, touched)) {
+                            if (patchOneSmali(context, se.getValue(), className, toast, dialog, fontAssets, logger, touched)) {
                                 changed = true;
                             } else {
                                 se.getValue().delete();
@@ -205,14 +205,14 @@ public class OverlayInjectorUtil {
                         }
                     }
                     if (!changed) continue;
-                    File miniDex = FastDexPatch.assembleMiniDex(patchDir, api, logger);
+                    File miniDex = FastDexPatch.assembleMiniDex(context, patchDir, api, logger);
                     byte[] merged = FastDexPatch.mergeDex(dex, miniDex, api);
                     File mergedFile = new File(workDir, entry + ".merged");
                     try (FileOutputStream fos = new FileOutputStream(mergedFile)) {
                         fos.write(merged);
                     }
                     replacements.put(entry, mergedFile);
-                    if (logger != null) logger.logMessage("Injected overlay into " + entry);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_injected_overlay, entry));
                 }
                 if (replacements.isEmpty()) {
                     throw new IOException("Could not patch any dex file (activities may already be patched)");
@@ -220,7 +220,7 @@ public class OverlayInjectorUtil {
                 File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
                         FilenameUtils.getBaseName(inputApk.getName()) + "_overlay.apk"));
                 ApkZipAlignUtil.rebuildApk(inputApk, outputFile, replacements, null, additions, null);
-                if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
+                if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_saved_to, outputFile.getName()));
                 return outputFile;
             } finally {
                 deleteDirectory(workDir);
@@ -1471,7 +1471,7 @@ public class OverlayInjectorUtil {
         }
     }
 
-    private static boolean patchOneSmali(File smaliFile, String className,
+    private static boolean patchOneSmali(android.content.Context context, File smaliFile, String className,
                                          ToastOptions toast, DialogOptions dialog,
                                          Map<String, String> fontAssets,
                                          APKLogger logger, List<File> patchedFiles) throws IOException {
@@ -1479,19 +1479,19 @@ public class OverlayInjectorUtil {
         debug("patching " + smaliFile.getAbsolutePath() + " (" + content.length() + " chars)");
         if (content.isEmpty()) throw new IOException("Empty smali file: " + smaliFile.getName());
         if (content.contains("onCreate$mpmanager")) {
-            if (logger != null) logger.logMessage("Skipped (already patched) " + className);
+            if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_skipped_patched, className));
             return false;
         }
             Pattern methodPattern = Pattern.compile("(?m)^(\\s*\\.method\\s+)(.*)\\bonCreate\\(Landroid/os/Bundle;\\)V\\s*$");
             Matcher matcher = methodPattern.matcher(content);
             if (!matcher.find()) {
-                if (logger != null) logger.logMessage("No onCreate found in " + className);
+                if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_no_oncreate, className));
                 debug("no onCreate(Bundle) in " + smaliFile.getName());
                 return false;
             }
             String flags = matcher.group(2).trim();
             if (flags.contains("abstract")) {
-                if (logger != null) logger.logMessage("Skipped abstract onCreate in " + className);
+                if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_skipped_abstract, className));
                 return false;
             }
             String classDescriptor = "L" + className.replace('.', '/') + ";";
@@ -1510,7 +1510,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpUrl.smali"));
                     writeFile(listenerFile, urlListenerSmali(urlListener));
                     patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage("Generated " + urlListener);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, urlListener));
                 }
                 if (hasAdvButtonUrl(dialog)) {
                     urlViewListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpUrlView;";
@@ -1518,7 +1518,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpUrlView.smali"));
                     writeFile(listenerFile, urlViewListenerSmali(urlViewListener));
                     patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage("Generated " + urlViewListener);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, urlViewListener));
                 }
                 if (needsFontWalk(dialog)) {
                     String fontWalk = fontWalkType(classDescriptor);
@@ -1526,7 +1526,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpFontWalk.smali"));
                     writeFile(walkFile, fontWalkSmali(fontWalk));
                     patchedFiles.add(walkFile);
-                    if (logger != null) logger.logMessage("Generated " + fontWalk);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, fontWalk));
                 }
                 if (dialog.dontShowAgain) {
                     noshowListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpNoShow;";
@@ -1534,7 +1534,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpNoShow.smali"));
                     writeFile(listenerFile, noshowListenerSmali(noshowListener));
                     patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage("Generated " + noshowListener);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, noshowListener));
                 }
                 float animBorderDp = dialog.borderWidthDp;
                 if (dialog.animBorder && animBorderDp <= 0) animBorderDp = 2f;
@@ -1544,7 +1544,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpBlink.smali"));
                     writeFile(listenerFile, blinkSmali(blinkListener));
                     patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage("Generated " + blinkListener);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, blinkListener));
                 }
                 if (needsWave(dialog, animBorderDp)) {
                     String base = classDescriptor.substring(0, classDescriptor.length() - 1);
@@ -1558,7 +1558,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpRgbTick.smali"));
                     writeFile(tickFile, waveTickSmali(waveTick, waveRgb));
                     patchedFiles.add(tickFile);
-                    if (logger != null) logger.logMessage("Generated " + waveRgb);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, waveRgb));
                 }
                 if (needsDismiss(dialog)) {
                     dismissListener = classDescriptor.substring(0, classDescriptor.length() - 1) + "$mpDismiss;";
@@ -1566,7 +1566,7 @@ public class OverlayInjectorUtil {
                             smaliFile.getName().replace(".smali", "$mpDismiss.smali"));
                     writeFile(listenerFile, dismissSmali(dismissListener));
                     patchedFiles.add(listenerFile);
-                    if (logger != null) logger.logMessage("Generated " + dismissListener);
+                    if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_generated, dismissListener));
                 }
                 insert.append(dialogHelperSmali(classDescriptor, dialog, urlListener, urlViewListener, noshowListener, blinkListener, dismissListener, fontAssets, waveRgb)).append("\n");
             }
@@ -1579,8 +1579,8 @@ public class OverlayInjectorUtil {
             writeFile(smaliFile, patched);
             patchedFiles.add(smaliFile);
             debug("patched " + smaliFile.getName() + ", generated smali:\n" + shorten(insert.toString()));
-            if (logger != null) {
-                logger.logMessage("Injected overlay into " + className);
+            if (logger != null && context != null) {
+                logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_injected_overlay, className));
             }
             return true;
     }
@@ -1630,7 +1630,7 @@ public class OverlayInjectorUtil {
         return s != null && !s.trim().isEmpty();
     }
 
-    private static Set<String> findDexEntriesForClasses(File inputApk,
+    private static Set<String> findDexEntriesForClasses(android.content.Context context, File inputApk,
                                                         List<String> classNames, APKLogger logger) throws IOException {
         Set<String> result = new LinkedHashSet<>();
         if (classNames == null || classNames.isEmpty()) return result;
@@ -1648,7 +1648,7 @@ public class OverlayInjectorUtil {
                 }
             }
         }
-        if (logger != null) logger.logMessage("Target classes are in " + result.size() + " dex file(s)");
+        if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_target_dex, result.size()));
         return result;
     }
 

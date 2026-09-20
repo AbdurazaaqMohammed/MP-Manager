@@ -409,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 0) {
-            if (doesNotHaveStoragePerm(this)) Extensions.showMessage(this, "Storage perm needed as file manager");
+            if (doesNotHaveStoragePerm(this)) Extensions.showMessage(this, R.string.storage_perm_needed);
             else recreate();
         }
     }
@@ -425,7 +425,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (resultCode == 0) if (doesNotHaveStoragePerm(this)) {
-            Extensions.showMessage(this, "Storage perm needed as file manager");
+            Extensions.showMessage(this, R.string.storage_perm_needed);
         } else {
             // Editor was closed without returning a modified file (back press /
             // discard in ARSC, text or dex editors). Refresh the listing in place;
@@ -457,7 +457,7 @@ public class MainActivity extends AppCompatActivity {
         File zipFile = pane1 ? pane1Folder : pane2Folder;
         if (path == null || !path.startsWith(getCacheDir().getPath())) return;
         if (zipFile == null || !zipFile.isFile()) {
-            Extensions.showMessage(this, "Archive no longer open");
+            Extensions.showMessage(this, R.string.archive_no_longer_open);
             return;
         }
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
@@ -479,7 +479,7 @@ public class MainActivity extends AppCompatActivity {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doWork = () -> {
                                 if (!zipFile.isFile() || !new File(path).isFile()) {
-                                    Extensions.showMessage(this, "File no longer available");
+                                    Extensions.showMessage(this, R.string.file_no_longer_available);
                                     return;
                                 }
                                 ProgressManager pm = new ProgressManager(this, true).show();
@@ -617,7 +617,7 @@ public class MainActivity extends AppCompatActivity {
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectSameType(); },
                 v -> new MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.multi_select)
-                        .setMessage("You can swipe two files in the list to select all files between them")
+                        .setMessage(getString(R.string.multiselect_hint))
                         .setPositiveButton(android.R.string.ok, null)
                         .show()
         };
@@ -828,7 +828,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         AlertDialog heightDialog = new MaterialAlertDialogBuilder(this)
-                .setTitle("Adjust height")
+                .setTitle(getString(R.string.adjust_height))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, which) -> {
@@ -907,7 +907,7 @@ public class MainActivity extends AppCompatActivity {
     private void showMoveBookmarkDialog(BookmarkListController controller, int position) {
         List<String> targets = bookmarkTargetTabs(controller);
         if (targets.isEmpty()) {
-            Extensions.showMessage(this, "No other groups");
+            Extensions.showMessage(this, R.string.no_other_groups);
             return;
         }
         List<Integer> indices = bookmarkTargetIndices(controller);
@@ -991,7 +991,7 @@ public class MainActivity extends AppCompatActivity {
         List<String> targets = bookmarkTargetTabs(source);
         List<Integer> indices = bookmarkTargetIndices(source);
         if (targets.isEmpty()) {
-            Extensions.showMessage(this, "No other groups");
+            Extensions.showMessage(this, R.string.no_other_groups);
             return;
         }
         List<Integer> positions = new ArrayList<>(batchSelected);
@@ -1468,7 +1468,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.sidebarTitle).setOnClickListener(v -> uiHelper.showAboutDialog());
         LinearLayout container = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
-        ArrayList<String> sidebarOptions = new ArrayList<>(Arrays.asList("Extract APK", "FTP Server", "FTP Client", "Color Picker", "Layout Inspector", "Wi-Fi Manager", "Tools Kit", "Settings"));
+        ArrayList<String> sidebarOptions = new ArrayList<>(Arrays.asList(getString(R.string.sidebar_extract), getString(R.string.ftp_server), getString(R.string.ftp_client), getString(R.string.color_picker), getString(R.string.sidebar_layout_inspector), getString(R.string.sidebar_wifi), getString(R.string.sidebar_tools), getString(R.string.settings)));
         ArrayList<Integer> sidebarIcons = new ArrayList<>(Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.wifi_24px, R.drawable.tools_24px, R.drawable.baseline_settings_24));
         SwipeRefreshLayout sidebarRefresh = findViewById(R.id.sidebarRefresh);
         if (sidebarRefresh != null) {
@@ -1494,29 +1494,28 @@ public class MainActivity extends AppCompatActivity {
 
                 convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
                 convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-                if (options[position].equals("Color Picker") && Build.VERSION.SDK_INT < 24)
+                if (position == 3 && Build.VERSION.SDK_INT < 24)
                     convertView.setVisibility(View.GONE);
-                if (options[position].equals("Layout Inspector") && Build.VERSION.SDK_INT < 20)
+                if (position == 4 && Build.VERSION.SDK_INT < 20)
                     convertView.setVisibility(View.GONE);
                 return convertView;
             }
         });
         sidebar.setOnItemClickListener((parent, view, position, id) -> {
-            String selected = options[position];
-            switch (selected) {
-                case "Extract APK":
+            switch (position) {
+                case 0:
                     startActivityForResult(new Intent(this, APKExtractorActivity.class), 11);
                     break;
-                case "FTP Server":
+                case 1:
                     showFtpServerDialog();
                     break;
-                case "FTP Client":
+                case 2:
                     showFtpClientDialog();
                     break;
-                case "Wi-Fi Manager":
+                case 5:
                     startActivity(new Intent(this, WifiManagerActivity.class));
                     break;
-                case "Color Picker":
+                case 3:
                     if(Build.VERSION.SDK_INT < 24) return;
                     PreferencesDialogFragment dialogFragment = new PreferencesDialogFragment();
                     dialogFragment.show(getSupportFragmentManager(), "preferences_dialog");
@@ -1531,7 +1530,7 @@ public class MainActivity extends AppCompatActivity {
                         });
                         boolean isRunning = ServiceState.getInstance().isRunning();
                         TextView button = ad.getButton(DialogInterface.BUTTON_POSITIVE);
-                        button.setText(isRunning ? "Stop" : "Start");
+                        button.setText(isRunning ? getString(R.string.color_stop) : getString(R.string.color_start));
                         button.setOnClickListener(v -> {
                             ad.dismiss();
                             if (isRunning) ServiceState.getInstance().stopColorPickerService(MainActivity.this);
@@ -1551,7 +1550,7 @@ public class MainActivity extends AppCompatActivity {
                         });
                     });
                     break;
-                case "Layout Inspector":
+                case 4:
                     if(Build.VERSION.SDK_INT < 20) return;
                     if (DataRepository.getInstance().getAppState().isRunning()) {
                         DataRepository.getInstance().updateStatus(false);
@@ -1571,10 +1570,10 @@ public class MainActivity extends AppCompatActivity {
                     new ServiceManager(this).show();
                     DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                     break;
-                case "Tools Kit":
+                case 6:
                     startActivity(new Intent(this, ToolsHubActivity.class));
                     break;
-                case "Settings":
+                case 7:
                     showSettingsDialog();
                     break;
             }
@@ -1687,7 +1686,7 @@ public class MainActivity extends AppCompatActivity {
                                     pane2Folder = inputPath;
                                 loadFolderInPane(inputPath, isPane1);
                             } else {
-                                Extensions.showMessage(MainActivity.this, "Failed to navigate to or create path " + inputPath);
+                                Extensions.showMessage(MainActivity.this, getString(R.string.navigate_create_failed, inputPath));
                             }
                         }).show();
                 ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
@@ -1771,42 +1770,41 @@ public class MainActivity extends AppCompatActivity {
             moreOptionsMenu.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(MainActivity.this, v);
                 Menu menu = popup.getMenu();
-                menu.add(0, 0, 0, "Refresh").setIcon(R.drawable.baseline_refresh_24);
-                menu.add(0, 1, 0, "Filter").setIcon(R.drawable.baseline_filter_list_24);
-                menu.add(0, 2, 0, "Search").setIcon(R.drawable.baseline_search_24);
-                menu.add(0, 15, 0, "Find in files").setIcon(R.drawable.ic_search_replace);
-                menu.add(0, 3, 0, "Select all").setIcon(R.drawable.baseline_select_all_24);
-                menu.add(0, 4, 0, "Sort").setIcon(R.drawable.baseline_sort_24);
+                menu.add(0, 0, 0, getString(R.string.menu_refresh)).setIcon(R.drawable.baseline_refresh_24);
+                menu.add(0, 1, 0, getString(R.string.filter)).setIcon(R.drawable.baseline_filter_list_24);
+                menu.add(0, 2, 0, getString(R.string.search)).setIcon(R.drawable.baseline_search_24);
+                menu.add(0, 15, 0, getString(R.string.find_in_files)).setIcon(R.drawable.ic_search_replace);
+                menu.add(0, 3, 0, getString(R.string.menu_select_all)).setIcon(R.drawable.baseline_select_all_24);
+                menu.add(0, 4, 0, getString(R.string.sort)).setIcon(R.drawable.baseline_sort_24);
 
-                SubMenu hiddenMenu = menu.addSubMenu(0, 5, 0, "Hidden files");
+                SubMenu hiddenMenu = menu.addSubMenu(0, 5, 0, getString(R.string.menu_hidden_files));
                 hiddenMenu.setIcon(R.drawable.visibility_off_24px);
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-                MenuItem sysItem = hiddenMenu.add(0, 6, 0, "Show system hidden files");
+                MenuItem sysItem = hiddenMenu.add(0, 6, 0, getString(R.string.menu_show_system_hidden));
                 sysItem.setCheckable(true).setChecked(prefs.getBoolean("show_system_hidden", false));
-                MenuItem manItem = hiddenMenu.add(0, 7, 0, "Show manually hidden files");
+                MenuItem manItem = hiddenMenu.add(0, 7, 0, getString(R.string.menu_show_manual_hidden));
                 manItem.setCheckable(true).setChecked(prefs.getBoolean("show_manually_hidden", false));
 
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if ((a instanceof MainFilesArrayAdapter)) {
                     MainFilesArrayAdapter adapter = (MainFilesArrayAdapter) getCurrentPane().getAdapter();
-                    MenuItem hideSel = hiddenMenu.add(0, 8, 0, "Hide selected files");
+                    MenuItem hideSel = hiddenMenu.add(0, 8, 0, getString(R.string.menu_hide_selected));
                     hideSel.setEnabled(adapter != null && adapter.isMultiSelectMode());
-                    hiddenMenu.add(0, 9, 0, "Edit hidden files").setIcon(R.drawable.baseline_drive_file_rename_outline_24);
+                    hiddenMenu.add(0, 9, 0, getString(R.string.edit_hidden_files)).setIcon(R.drawable.baseline_drive_file_rename_outline_24);
                 }
 
-                menu.add(0, 10, 0, "Add to bookmarks").setIcon(R.drawable.baseline_bookmark_24);
-                menu.add(0, 11, 0, "Set as home folder").setIcon(R.drawable.baseline_home_24);
-                menu.add(0, 12, 0, "Swap panes").setIcon(R.drawable.baseline_swap_horiz_24);
-                menu.add(0, 13, 0, "Preferences").setIcon(R.drawable.baseline_settings_24);
-                menu.add(0, 14, 0, "Exit").setIcon(R.drawable.baseline_exit_to_app_24);
+                menu.add(0, 10, 0, getString(R.string.menu_add_bookmark)).setIcon(R.drawable.baseline_bookmark_24);
+                menu.add(0, 11, 0, getString(R.string.set_as_home)).setIcon(R.drawable.baseline_home_24);
+                menu.add(0, 12, 0, getString(R.string.menu_swap_panes)).setIcon(R.drawable.baseline_swap_horiz_24);
+                menu.add(0, 13, 0, getString(R.string.preferences)).setIcon(R.drawable.baseline_settings_24);
+                menu.add(0, 14, 0, getString(R.string.exit)).setIcon(R.drawable.baseline_exit_to_app_24);
 
                 popup.setOnMenuItemClickListener(item -> {
-                    String title = item.getTitle().toString();
-                    switch (title) {
-                        case "Refresh":
+                    switch (item.getItemId()) {
+                        case 0:
                             reloadCurrentFolder();
                             break;
-                        case "Filter":
+                        case 1:
                             LinearLayout topBar = findViewById(R.id.topBar);
                             LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
                             TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
@@ -1821,33 +1819,33 @@ public class MainActivity extends AppCompatActivity {
                                 if (filterBar != null) filterBar.setText("");
                             }
                             break;
-                        case "Search":
+                        case 2:
                             showSearchDialog();
                             break;
-                        case "Find in files":
+                        case 15:
                             showFindInFilesDialog();
                             break;
-                        case "Select all":
+                        case 3:
                             if (a instanceof MainFilesArrayAdapter) ((MainFilesArrayAdapter) a).selectAll();
                             break;
-                        case "Sort":
+                        case 4:
                             showSortDialog();
                             break;
-                        case "Show system hidden files": {
+                        case 6: {
                             boolean isChecked = !item.isChecked();
                             item.setChecked(isChecked);
                             prefs.edit().putBoolean("show_system_hidden", isChecked).apply();
                             reloadCurrentFolder();
                             break;
                         }
-                        case "Show manually hidden files": {
+                        case 7: {
                             boolean isChecked = !item.isChecked();
                             item.setChecked(isChecked);
                             prefs.edit().putBoolean("show_manually_hidden", isChecked).apply();
                             reloadCurrentFolder();
                             break;
                         }
-                        case "Hide selected files":
+                        case 8:
                             Set<String> manualHidden = new HashSet<>(prefs.getStringSet("manually_hidden_files", new HashSet<>()));
                             for (Object obj : ((MainFilesArrayAdapter) a).getSelectedFiles()) {
                                 if (obj instanceof File)
@@ -1859,34 +1857,34 @@ public class MainActivity extends AppCompatActivity {
                             ((MainFilesArrayAdapter) a).clearSelection();
                             reloadCurrentFolder();
                             break;
-                        case "Edit hidden files":
+                        case 9:
                             showEditHiddenFilesDialog();
                             break;
-                        case "Add to bookmarks": {
+                        case 10: {
                             boolean isPane1 = lastPaneSelected == 1;
                             File toBookmark = isPane1 ? pane1Folder : pane2Folder;
                             addBookmark(toBookmark);
                             Extensions.showMessage(MainActivity.this, rss.getString(R.string.added_to_bookmarks, toBookmark.getName()));
                             break;
                         }
-                        case "Set as home folder": {
+                        case 11: {
                             boolean isPane1 = lastPaneSelected == 1;
                             prefs.edit().putString(isPane1 ? "home1" : "home2", (isPane1 ? pane1Folder : pane2Folder).getPath())
                                     .apply();
-                            Extensions.showMessage(MainActivity.this, "Set as home folder");
+                            Extensions.showMessage(MainActivity.this, R.string.set_as_home);
                             break;
                         }
-                        case "Swap panes":
+                        case 12:
                             File temp = pane1Folder;
                             pane1Folder = pane2Folder;
                             pane2Folder = temp;
                             loadFolderInPane(pane1Folder, true);
                             loadFolderInPane(pane2Folder, false);
                             break;
-                        case "Preferences":
+                        case 13:
                             showSettingsDialog();
                             break;
-                        case "Exit":
+                        case 14:
                             finishAffinity();
                             break;
                     }
@@ -1951,7 +1949,7 @@ public class MainActivity extends AppCompatActivity {
                     if (rm.autoEnableRootIfAvailable()) {
                         handler.post(() -> {
                             try {
-                                Extensions.showMessage(MainActivity.this, "Root detected, root access enabled");
+                                Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
                                 LinearLayout storageBox = findViewById(R.id.storageContainer);
                                 if (storageBox != null) StorageUtil.populateStorageUI(MainActivity.this, storageBox);
                             } catch (Exception ignored) {
@@ -2125,7 +2123,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             if (files == null) {
-                Extensions.showMessage(this, "Could not open folder " + folder.getName());
+                Extensions.showMessage(this, getString(R.string.open_folder_failed, folder.getName()));
                 return;
             }
         }
@@ -2627,7 +2625,7 @@ public class MainActivity extends AppCompatActivity {
             positiveButton.setOnClickListener(v -> {
                 CharSequence q = searchQuery.getText();
                 if (TextUtils.isEmpty(q)) {
-                    Extensions.showMessage(this, "Enter a search query");
+                    Extensions.showMessage(this, R.string.search_query_needed);
                     return;
                 }
                 String query = q.toString();
@@ -2667,11 +2665,11 @@ public class MainActivity extends AppCompatActivity {
 
         RecyclerView.Adapter a = getCurrentPane().getAdapter();
         if (!(a instanceof MainFilesArrayAdapter adapter)) {
-            Extensions.showMessage(this, "Search in FTP not supported yet");
+            Extensions.showMessage(this, R.string.search_ftp_unsupported);
             return;
         }
         if(adapter.isInZip) {
-            Extensions.showMessage(this, "Search in ZIP not supported yet");
+            Extensions.showMessage(this, R.string.search_zip_unsupported);
             return;
         }
 
@@ -2687,7 +2685,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 handler.post(() -> {
                     pm.dismiss();
-                    Extensions.showMessage(this, "Invalid Regex");
+                    Extensions.showMessage(this, R.string.invalid_regex);
                 });
                 return;
             }
@@ -2700,7 +2698,7 @@ public class MainActivity extends AppCompatActivity {
 
             pm.dismiss();
             handler.post(() -> {
-                if (results.isEmpty()) Extensions.showMessage(this, "No files found");
+                if (results.isEmpty()) Extensions.showMessage(this, R.string.no_files_found);
                 else {
                     File[] resArray = results.toArray(new File[0]);
                     setCurrentFolder(startDir.getPath() + " (Search Results)", Arrays.asList(resArray));
@@ -2781,11 +2779,11 @@ public class MainActivity extends AppCompatActivity {
         boolean isPane1 = lastPaneSelected == 1;
         RecyclerView.Adapter a = getCurrentPane().getAdapter();
         if (!(a instanceof MainFilesArrayAdapter)) {
-            Extensions.showMessage(this, "Find in files needs a local folder");
+            Extensions.showMessage(this, R.string.find_needs_folder);
             return;
         }
         if (((MainFilesArrayAdapter) a).isInZip) {
-            Extensions.showMessage(this, "Find in files needs a local folder");
+            Extensions.showMessage(this, R.string.find_needs_folder);
             return;
         }
         File startDir = isPane1 ? pane1Folder : pane2Folder;
@@ -2798,9 +2796,9 @@ public class MainActivity extends AppCompatActivity {
         EditText queryInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
         root.addView(box);
         CheckBox cbCase = new CheckBox(this);
-        cbCase.setText("Match case");
+        cbCase.setText(getString(R.string.match_case));
         CheckBox cbRegex = new CheckBox(this);
-        cbRegex.setText("Regex");
+        cbRegex.setText(getString(R.string.regex));
         root.addView(cbCase);
         root.addView(cbRegex);
         TextView scope = new TextView(this);
@@ -2808,13 +2806,13 @@ public class MainActivity extends AppCompatActivity {
         scope.setTextSize(12);
         root.addView(scope);
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Find in files")
+                .setTitle(getString(R.string.find_in_files))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.search_go, (d, w) -> {
                     String q = queryInput.getText() == null ? "" : queryInput.getText().toString();
                     if (q.isEmpty()) {
-                        Extensions.showMessage(this, "Enter a search query");
+                        Extensions.showMessage(this, R.string.search_query_needed);
                         return;
                     }
                     runFindInFiles(startDir, q, cbCase.isChecked(), cbRegex.isChecked());
@@ -2827,7 +2825,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 pattern = Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
             } catch (Exception e) {
-                Extensions.showMessage(this, "Invalid Regex");
+                Extensions.showMessage(this, R.string.invalid_regex);
                 return;
             }
         }
@@ -2842,7 +2840,7 @@ public class MainActivity extends AppCompatActivity {
             pm.dismiss();
             handler.post(() -> {
                 if (hits.isEmpty()) {
-                    Extensions.showMessage(this, "No files found");
+                    Extensions.showMessage(this, R.string.no_files_found);
                     return;
                 }
                 showContentHitsDialog(hits, query, regex, matchCase);
@@ -2890,7 +2888,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView list = new RecyclerView(this);
         list.setLayoutManager(new LinearLayoutManager(this));
         AlertDialog dialog = dialogUtil.getDialogBuilder()
-                .setTitle(hits.size() + " matches")
+                .setTitle(getString(R.string.matches_x, hits.size()))
                 .setView(list)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();

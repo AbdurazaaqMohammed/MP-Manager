@@ -79,7 +79,7 @@ public class MergeUtil {
                 return;
             }
             if (splits.isEmpty()) {
-                context.handler.post(() -> Extensions.showMessage(context, "No APK splits found"));
+                context.handler.post(() -> Extensions.showMessage(context, context.getString(R.string.antisplit_no_splits)));
                 return;
             }
             String baseName = findBaseSplit(splits);
@@ -141,7 +141,7 @@ public class MergeUtil {
         root.setPadding(pad, pad, pad, 0);
 
         TextView splitsTitle = new TextView(context);
-        splitsTitle.setText("Splits (" + splits.size() + ")");
+        splitsTitle.setText(context.getString(R.string.antisplit_splits, splits.size()));
         splitsTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         root.addView(splitsTitle);
 
@@ -155,7 +155,7 @@ public class MergeUtil {
             names.add(fullName);
             CheckBox cb = new MaterialCheckBox(context);
             boolean isBase = fullName.equals(baseName);
-            cb.setText(isBase ? shortName + " (base)" : shortName);
+            cb.setText(isBase ? context.getString(R.string.antisplit_base_suffix, shortName) : shortName);
             cb.setChecked(true);
             cb.setEnabled(!isBase);
             cb.setTag(fullName);
@@ -189,7 +189,7 @@ public class MergeUtil {
         };
 
         MaterialSwitch deviceOnlySwitch = new MaterialSwitch(context);
-        deviceOnlySwitch.setText("Device specs only");
+        deviceOnlySwitch.setText(context.getString(R.string.antisplit_device_only));
         deviceOnlySwitch.setChecked(deviceOnlySaved);
         root.addView(deviceOnlySwitch);
 
@@ -218,10 +218,10 @@ public class MergeUtil {
         });
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle("AntiSplit")
+                .setTitle(context.getString(R.string.antisplit_title))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Merge", (d, w) -> {
+                .setPositiveButton(context.getString(R.string.antisplit_merge), (d, w) -> {
                     boolean deviceOnly = deviceOnlySwitch.isChecked();
                     boolean extractLibs = extractSwitch.isChecked();
                     boolean autosign = autosignBox.isChecked();
@@ -265,7 +265,7 @@ public class MergeUtil {
                 bundle.setAPKLogger(logger);
                 if (options.splitNames != null && !options.splitNames.isEmpty()) {
                     if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
-                        logger.logMessage("Cannot create temp dir");
+                        logger.logMessage(context.getString(R.string.logger_cannot_create_tmp));
                         return false;
                     }
                     try (ZipFile zf = new ZipFile(file)) {
@@ -274,7 +274,7 @@ public class MergeUtil {
                                 net.lingala.zip4j.model.FileHeader fh = zf.getFileHeader(name);
                                 if (fh != null) zf.extractFile(fh, dir.getAbsolutePath());
                             } catch (Exception e) {
-                                logger.logMessage("Skip " + name + ": " + e.getMessage());
+                                logger.logMessage(context.getString(R.string.logger_skip_entry, name, String.valueOf(e.getMessage())));
                             }
                         }
                     }
@@ -299,26 +299,26 @@ public class MergeUtil {
                         try {
                             mergedModule.setExtractNativeLibs(true);
                         } catch (Exception e) {
-                            logger.logMessage("extractNativeLibs: " + e.getMessage());
+                            logger.logMessage(context.getString(R.string.logger_extract_native_libs, String.valueOf(e.getMessage())));
                         }
                     }
                     mergedModule.refreshTable();
                     mergedModule.refreshManifest();
-                    logger.logMessage("Writing apk ...");
+                    logger.logMessage(context.getString(R.string.logger_writing_apk));
                     File outputFile = io.github.abdurazaaqmohammed.utils.FileUtils.getUnusedFile(new File(file.getParentFile(), file.getName().replaceFirst("\\.(?:xapk|aspk|apk[sm])", "_antisplit.apk")));
                     mergedModule.writeApk(outputFile);
                     pm.dismiss();
                     if (options.autosign) {
                         context.handler.post(() -> SignWrapper.requireAuth(context, sw -> {
                             ProgressManager signPm = new ProgressManager(context, true);
-                            signPm.setText("Signing " + outputFile.getName());
+                            signPm.setText(R.string.signing, outputFile.getName());
                             signPm.show();
                             new Thread(() -> {
                                 try {
                                     sw.signApk(outputFile);
                                     signPm.dismiss();
                                     context.handler.post(() -> {
-                                        Extensions.showMessage(context, "Saved to: " + outputFile.getName());
+                                        Extensions.showMessage(context, context.getString(R.string.logger_saved_to, outputFile.getName()));
                                         context.reloadCurrentFolder();
                                     });
                                 } catch (Exception e) {
@@ -329,7 +329,7 @@ public class MergeUtil {
                         }));
                     } else {
                         context.handler.post(() -> {
-                            Extensions.showMessage(context, "Saved to: " + outputFile.getName());
+                            Extensions.showMessage(context, context.getString(R.string.logger_saved_to, outputFile.getName()));
                             context.reloadCurrentFolder();
                         });
                     }

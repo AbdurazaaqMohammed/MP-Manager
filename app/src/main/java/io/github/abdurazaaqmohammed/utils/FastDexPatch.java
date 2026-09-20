@@ -72,6 +72,12 @@ public final class FastDexPatch {
     public static Map<String, File> disassembleClasses(DexBackedDexFile dex, Set<String> descriptors,
                                                        File outDir, BaksmaliOptions options,
                                                        APKLogger logger) throws IOException {
+        return disassembleClasses(null, dex, descriptors, outDir, options, logger);
+    }
+
+    public static Map<String, File> disassembleClasses(android.content.Context context, DexBackedDexFile dex, Set<String> descriptors,
+                                                       File outDir, BaksmaliOptions options,
+                                                       APKLogger logger) throws IOException {
         Map<String, File> result = new LinkedHashMap<>();
         for (ClassDef classDef : dex.getClasses()) {
             if (!descriptors.contains(classDef.getType())) continue;
@@ -87,18 +93,28 @@ public final class FastDexPatch {
                 bw.close();
             }
             result.put(classDef.getType(), out);
-            if (logger != null) logger.logMessage("Disassembled " + classDef.getType());
+            if (logger != null) {
+                if (context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_disassembled, classDef.getType()));
+                else logger.logMessage("Disassembled " + classDef.getType());
+            }
         }
         return result;
     }
 
     public static File assembleMiniDex(File smaliDir, int api, APKLogger logger) throws IOException {
+        return assembleMiniDex(null, smaliDir, api, logger);
+    }
+
+    public static File assembleMiniDex(android.content.Context context, File smaliDir, int api, APKLogger logger) throws IOException {
         File outDex = new File(smaliDir.getParentFile(), smaliDir.getName() + ".mini.dex");
         SmaliOptions options = new SmaliOptions();
         options.outputDexFile = outDex.getPath();
         options.jobs = 1;
         options.apiLevel = api;
-        if (logger != null) logger.logMessage("Assembling patched classes ...");
+        if (logger != null) {
+            if (context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_assembling));
+            else logger.logMessage("Assembling patched classes ...");
+        }
         String errOut = assembleWithErrCapture(options, smaliDir.getPath());
         if (errOut == null) {
             throw new IOException("Failed to assemble patched classes"

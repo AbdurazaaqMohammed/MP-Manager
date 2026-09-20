@@ -71,14 +71,14 @@ public class ToastInjectorUtil {
     public static File addToastToActivities(Context context, File inputApk,
                                             List<String> activityClassNames, String toastMessage,
                                             APKLogger logger) throws Exception {
-        Set<String> targetEntries = findDexEntriesForClasses(inputApk, activityClassNames, logger);
+        Set<String> targetEntries = findDexEntriesForClasses(context, inputApk, activityClassNames, logger);
         if (targetEntries.isEmpty()) {
             throw new IOException("Could not locate the selected activities in any dex file");
         }
         Map<String, byte[]> patchedDexBytes = new LinkedHashMap<>();
         for (String entryName : targetEntries) {
-            if (logger != null) logger.logMessage("Patching " + entryName + " ...");
-            byte[] patched = patchDexEntryForToast(inputApk, entryName, activityClassNames, toastMessage, logger);
+            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_patching, entryName));
+            byte[] patched = patchDexEntryForToast(context, inputApk, entryName, activityClassNames, toastMessage, logger);
             if (patched != null) patchedDexBytes.put(entryName, patched);
         }
         if (patchedDexBytes.isEmpty()) {
@@ -96,15 +96,14 @@ public class ToastInjectorUtil {
             }
             File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
                     FilenameUtils.getBaseName(inputApk.getName()) + "_toast.apk"));
-            ApkZipAlignUtil.rebuildApk(inputApk, outputFile, replacements, null, null, null);
-            if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
+            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_saved_to, outputFile.getName()));
             return outputFile;
         } finally {
             deleteDirectory(workDir);
         }
     }
 
-    private static byte[] patchDexEntryForToast(File inputApk, String entryName,
+    private static byte[] patchDexEntryForToast(Context context, File inputApk, String entryName,
                                                 List<String> classNames, String toastMessage,
                                                 APKLogger logger) throws Exception {
         byte[] dexBytes = readZipEntry(inputApk, entryName);
@@ -120,7 +119,7 @@ public class ToastInjectorUtil {
             if (classDescriptors.contains(classDef.getType())) {
                 classDef = patchActivityClass(classDef, toastMessage);
                 modified = true;
-                if (logger != null) logger.logMessage("Injected toast into " + classDef.getType());
+                if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_injected_toast, classDef.getType()));
             }
             newClasses.add(classDef);
         }
@@ -292,7 +291,7 @@ public class ToastInjectorUtil {
                 File patchDir = new File(workDir,
                         "notoast_" + entryName.replaceAll("[^A-Za-z0-9]", "_"));
                 Map<String, File> smaliFiles = FastDexPatch.disassembleClasses(
-                        dex, candidates, patchDir, baksmaliOptions, logger);
+                        context, dex, candidates, patchDir, baksmaliOptions, logger);
                 boolean changed = false;
                 for (File smaliFile : smaliFiles.values()) {
                     String content = readFile(smaliFile);
@@ -300,13 +299,13 @@ public class ToastInjectorUtil {
                     if (!edited.equals(content)) {
                         writeFile(smaliFile, edited);
                         changed = true;
-                        if (logger != null) logger.logMessage("Removed Toast calls from " + smaliFile.getName());
+                        if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_removed_toast, smaliFile.getName()));
                     } else {
                         smaliFile.delete();
                     }
                 }
                 if (!changed) continue;
-                File miniDex = FastDexPatch.assembleMiniDex(patchDir, api, logger);
+                File miniDex = FastDexPatch.assembleMiniDex(context, patchDir, api, logger);
                 byte[] merged = FastDexPatch.mergeDex(dex, miniDex, api);
                 File mergedFile = new File(workDir, entryName + ".merged");
                 try (FileOutputStream fos = new FileOutputStream(mergedFile)) {
@@ -317,11 +316,11 @@ public class ToastInjectorUtil {
             if (replacements.isEmpty()) {
                 throw new IOException("No Toast calls found");
             }
-            if (logger != null) logger.logMessage("Modified " + replacements.size() + " dex file(s)");
+            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_modified_dex, replacements.size()));
             File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
                     FilenameUtils.getBaseName(inputApk.getName()) + "_no_toast.apk"));
             ApkZipAlignUtil.rebuildApk(inputApk, outputFile, replacements, null, null, null);
-            if (logger != null) logger.logMessage("Saved to: " + outputFile.getName());
+            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_saved_to, outputFile.getName()));
             return outputFile;
         } finally {
             deleteDirectory(workDir);
@@ -348,7 +347,7 @@ public class ToastInjectorUtil {
         return dir;
     }
 
-    private static Set<String> findDexEntriesForClasses(File inputApk,
+    private static Set<String> findDexEntriesForClasses(Context context, File inputApk,
                                                         List<String> classNames, APKLogger logger) throws IOException {
         Set<String> result = new LinkedHashSet<>();
         if (classNames == null || classNames.isEmpty()) return result;
@@ -368,7 +367,7 @@ public class ToastInjectorUtil {
                 }
             }
         }
-        if (logger != null) logger.logMessage("Target classes are in " + result.size() + " dex file(s)");
+        if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_target_dex, result.size()));
         return result;
     }
 

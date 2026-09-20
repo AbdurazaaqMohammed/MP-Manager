@@ -7,6 +7,7 @@ import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.widget.Toast;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.DnsManager;
 
 public class PrivateDnsTileService extends TileService {
@@ -45,9 +46,9 @@ public class PrivateDnsTileService extends TileService {
             final DnsManager.DnsProfile result = applied;
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 if (result != null) {
-                    Toast.makeText(this, "DNS " + result.name, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.dns_applied, result.name), Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(this, "DNS switch failed", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.dns_switch_failed), Toast.LENGTH_SHORT).show();
                 }
                 refresh();
             });
@@ -68,11 +69,11 @@ public class PrivateDnsTileService extends TileService {
                 match = DnsManager.findProfile(this, active);
             }
             if (match != null) {
-                tile.setLabel("DNS " + match.name);
-                tile.setContentDescription("Private DNS " + match.name);
+                tile.setLabel(getString(R.string.dns_applied, match.name));
+                tile.setContentDescription(getString(R.string.qs_private_dns_x, match.name));
                 tile.setState("off".equals(match.mode) ? Tile.STATE_INACTIVE : Tile.STATE_ACTIVE);
             } else {
-                tile.setLabel("Private DNS");
+                tile.setLabel(getString(R.string.qs_private_dns));
                 tile.setState(Tile.STATE_INACTIVE);
             }
             tile.updateTile();
