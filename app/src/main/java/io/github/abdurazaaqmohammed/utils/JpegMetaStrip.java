@@ -42,8 +42,8 @@ public class JpegMetaStrip {
         while (pos < data.length) {
             if (data[pos] != (byte) 0xFF) throw new IOException("Bad JPEG structure at " + pos);
             int markerPos = pos;
-            pos++;
-            while (pos < data.length && data[pos] == (byte) 0xFF) pos++;
+            do pos++;
+            while (pos < data.length && data[pos] == (byte) 0xFF);
             if (pos >= data.length) throw new IOException("Truncated marker");
             int marker = data[pos] & 0xFF;
             pos++;

@@ -209,10 +209,9 @@ public class SmaliMethod extends SmaliMember implements MethodProgram, Registers
             throw new IOException(reader.getCurrentOrigin(false) + " Method "
                     + getKey() + " has already been interned");
         }
-        reader.skipWhitespacesOrComment();
-        while (parseNoneCode(reader)) {
+        do {
             reader.skipWhitespacesOrComment();
-        }
+        } while (parseNoneCode(reader));
         getCodeSet().parse(reader);
         SmaliParseException.expect(reader, getSmaliDirective(), true);
         runFixes(reader);

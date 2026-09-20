@@ -388,8 +388,8 @@ public class OverlaySmaliAuditTest {
                 out.add(T_REF);
                 while (i + 1 < params.length() && params.charAt(i + 1) == '[') i++;
                 if (i + 1 < params.length() && params.charAt(i + 1) == 'L') {
-                    i++;
-                    while (i < params.length() && params.charAt(i) != ';') i++;
+                    do i++;
+                    while (i < params.length() && params.charAt(i) != ';');
                 } else {
                     i++;
                 }
@@ -952,8 +952,8 @@ public class OverlaySmaliAuditTest {
                 slots += 1;
                 while (i + 1 < params.length() && params.charAt(i + 1) == '[') i++;
                 if (i + 1 < params.length() && params.charAt(i + 1) == 'L') {
-                    i++;
-                    while (i < params.length() && params.charAt(i) != ';') i++;
+                    do i++;
+                    while (i < params.length() && params.charAt(i) != ';');
                 } else {
                     i++;
                 }

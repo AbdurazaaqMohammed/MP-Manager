@@ -513,10 +513,9 @@ public class ResXmlEventParser implements XmlPullParser {
         if (event != START_TAG) {
             throw new XmlPullParserException("precondition: START_TAG", this, null);
         }
-        event = next();
-        while (event != START_TAG && event != END_DOCUMENT){
+        do {
             event = next();
-        }
+        } while (event != START_TAG && event != END_DOCUMENT);
         return event;
     }
 }

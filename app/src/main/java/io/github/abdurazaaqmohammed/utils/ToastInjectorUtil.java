@@ -383,8 +383,8 @@ public class ToastInjectorUtil {
                 int moveResultLine = -1;
                 if (j < lines.length && lines[j].trim().startsWith("move-result-object")) {
                     moveResultLine = j;
-                    j++;
-                    while (j < lines.length && isNonInstruction(lines[j])) j++;
+                    do j++;
+                    while (j < lines.length && isNonInstruction(lines[j]));
                 }
                 if (j < lines.length && lines[j].trim().startsWith("invoke-")
                         && lines[j].trim().contains("Landroid/widget/Toast;->show")) {
