@@ -75,10 +75,9 @@ public class BootstrapMethodKey implements Key {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof BootstrapMethodKey)) {
+        if (!(obj instanceof BootstrapMethodKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        BootstrapMethodKey key = (BootstrapMethodKey) obj;
         int i = CompareUtil.compare(this.getMethodHandle(), key.getMethodHandle());
         if (i == 0) {
             i = CompareUtil.compare(this.getArguments(), key.getArguments());
@@ -91,10 +90,9 @@ public class BootstrapMethodKey implements Key {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof BootstrapMethodKey)) {
+        if (!(obj instanceof BootstrapMethodKey other)) {
             return false;
         }
-        BootstrapMethodKey other = (BootstrapMethodKey) obj;
         return ObjectsUtil.equals(getMethodHandle(), other.getMethodHandle()) &&
                 ObjectsUtil.equals(getArguments(), other.getArguments());
     }

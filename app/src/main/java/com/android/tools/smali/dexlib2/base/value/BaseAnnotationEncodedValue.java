@@ -48,8 +48,7 @@ public abstract class BaseAnnotationEncodedValue implements AnnotationEncodedVal
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o instanceof AnnotationEncodedValue) {
-            AnnotationEncodedValue other = (AnnotationEncodedValue)o;
+        if (o instanceof AnnotationEncodedValue other) {
             return getType().equals(other.getType()) &&
                     getElements().equals(other.getElements());
         }

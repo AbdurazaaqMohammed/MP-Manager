@@ -55,7 +55,7 @@ public class Ule128IdItemReference<T extends IdItem> extends Ule128Item implemen
     public Key getKey(){
         T item = getItem();
         if(item != null){
-            return ((KeyItem) item).getKey();
+            return item.getKey();
         }
         return null;
     }

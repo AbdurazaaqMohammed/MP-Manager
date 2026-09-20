@@ -169,10 +169,9 @@ public class ParameterisedProtoKey extends ArrayKey<ParameterisedTypeKey> implem
         if (obj == null) {
             return -1;
         }
-        if (!(obj instanceof ParameterisedProtoKey)) {
+        if (!(obj instanceof ParameterisedProtoKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        ParameterisedProtoKey key = (ParameterisedProtoKey) obj;
         int i = CompareUtil.compare(getReturnType(), key.getReturnType());
         if (i == 0) {
             i = super.compareElements(key);
@@ -185,10 +184,9 @@ public class ParameterisedProtoKey extends ArrayKey<ParameterisedTypeKey> implem
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ParameterisedProtoKey)) {
+        if (!(obj instanceof ParameterisedProtoKey key)) {
             return false;
         }
-        ParameterisedProtoKey key = (ParameterisedProtoKey) obj;
         return ObjectsUtil.equals(getReturnType(), key.getReturnType()) &&
                 equalsElements(key);
     }

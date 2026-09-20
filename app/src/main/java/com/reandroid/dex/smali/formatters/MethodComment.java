@@ -55,10 +55,9 @@ public interface MethodComment extends SmaliComment{
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof MethodOverrideComment)) {
+            if (!(obj instanceof MethodOverrideComment that)) {
                 return false;
             }
-            MethodOverrideComment that = (MethodOverrideComment) obj;
             return classRepository == that.classRepository;
         }
         @Override
@@ -89,10 +88,9 @@ public interface MethodComment extends SmaliComment{
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof MethodImplementComment)) {
+            if (!(obj instanceof MethodImplementComment that)) {
                 return false;
             }
-            MethodImplementComment that = (MethodImplementComment) obj;
             return classRepository == that.classRepository;
         }
         @Override

@@ -127,9 +127,8 @@ public class PolicyInformation {
      * @return true iff the PolicyInformation objects match
      */
     public boolean equals(Object other) {
-        if (!(other instanceof PolicyInformation))
+        if (!(other instanceof PolicyInformation piOther))
             return false;
-        PolicyInformation piOther = (PolicyInformation)other;
 
         if (!policyIdentifier.equals(piOther.getPolicyIdentifier()))
             return false;

@@ -220,10 +220,9 @@ public class ParameterisedTypeKey implements ParameterisedKey {
         if (obj == null) {
             return -1;
         }
-        if (!(obj instanceof ParameterisedTypeKey)) {
+        if (!(obj instanceof ParameterisedTypeKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        ParameterisedTypeKey key = (ParameterisedTypeKey) obj;
         int i = CompareUtil.compare(getParameterName(), key.getParameterName());
         if (i == 0) {
             i = CompareUtil.compare(getProtoKey(), key.getProtoKey());
@@ -236,10 +235,9 @@ public class ParameterisedTypeKey implements ParameterisedKey {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ParameterisedTypeKey)) {
+        if (!(obj instanceof ParameterisedTypeKey key)) {
             return false;
         }
-        ParameterisedTypeKey key = (ParameterisedTypeKey) obj;
         return ObjectsUtil.equals(getParameterName(), key.getParameterName()) &&
                 ObjectsUtil.equals(getProtoKey(), key.getProtoKey());
     }

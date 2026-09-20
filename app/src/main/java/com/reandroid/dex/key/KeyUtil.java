@@ -119,8 +119,7 @@ public class KeyUtil {
         if (value instanceof AnnotationItemKey) {
             return ((AnnotationItemKey) value).getType().setArrayDimension(arrayDimension);
         }
-        if (value instanceof KeyList<?>) {
-            KeyList<?> keyList = (KeyList<?>) value;
+        if (value instanceof KeyList<?> keyList) {
             return getReturnTypeForValue(keyList.get(0), arrayDimension + 1);
         }
         return null;

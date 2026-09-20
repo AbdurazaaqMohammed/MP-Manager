@@ -520,8 +520,7 @@ public class XMLElement extends XMLNodeTree implements Element<XMLNode> {
     protected void onEndParse(XmlPullParser parser) throws XmlPullParserException, IOException {
         int event = parser.getEventType();
         if (event == XmlPullParser.END_TAG) {
-            if (parser instanceof KXmlParser && size() == 0) {
-                KXmlParser kXmlParser = (KXmlParser) parser;
+            if (parser instanceof KXmlParser kXmlParser && size() == 0) {
                 if (kXmlParser.isClosedWithTag()) {
                     newText("");
                 }

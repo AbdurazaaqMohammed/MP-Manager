@@ -85,10 +85,9 @@ public class RegistersIterator implements SizedSupplier<RegisterReference>, Iter
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof RegistersIterator)) {
+        if (!(obj instanceof RegistersIterator iterator)) {
             return false;
         }
-        RegistersIterator iterator = (RegistersIterator) obj;
         int size = size();
         if(size != iterator.size()){
             return false;

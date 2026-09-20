@@ -30,19 +30,15 @@ public class patchLaunchMethod {
             Instruction inst = o_ins.get(i);
             n_ins.add(inst);
             int u = inst.getCodeUnits();
-            if (inst instanceof ReferenceInstruction) {
-                ReferenceInstruction r_i = (ReferenceInstruction) inst;
-                if (r_i.getReference() instanceof MethodReference) {
-                    MethodReference m_r = (MethodReference) r_i.getReference();
+            if (inst instanceof ReferenceInstruction r_i) {
+                if (r_i.getReference() instanceof MethodReference m_r) {
                     if ("Lcom/pairip/VMRunner;".equals(m_r.getDefiningClass()) && "invoke".equals(m_r.getName())) {
 
                         boolean a_p = false;
                         if (i + 1 < o_ins.size()) {
                             Instruction nx = o_ins.get(i + 1);
-                            if (nx instanceof ReferenceInstruction) {
-                                ReferenceInstruction n_r = (ReferenceInstruction) nx;
-                                if (n_r.getReference() instanceof MethodReference) {
-                                    MethodReference n_m = (MethodReference) n_r.getReference();
+                            if (nx instanceof ReferenceInstruction n_r) {
+                                if (n_r.getReference() instanceof MethodReference n_m) {
                                     if ("pairip".equals(n_m.getName())) {
                                         a_p = true;
                                     }

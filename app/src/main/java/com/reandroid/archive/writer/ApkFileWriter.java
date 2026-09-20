@@ -53,8 +53,7 @@ public class ApkFileWriter extends ApkWriter<ZipFileOutput, FileOutputSource> {
         if(inputSource instanceof ArchiveFileEntrySource){
             return new ArchiveOutputSource(inputSource);
         }
-        if(inputSource instanceof RenamedInputSource){
-            RenamedInputSource<?> renamedInputSource = ((RenamedInputSource<?>) inputSource);
+        if(inputSource instanceof RenamedInputSource<?> renamedInputSource){
             if(renamedInputSource.getParentInputSource(ArchiveFileEntrySource.class) != null){
                 return new RenamedArchiveSource(renamedInputSource);
             }

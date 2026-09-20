@@ -49,10 +49,9 @@ public abstract class SmaliSwitchPayload<T extends SmaliSwitchEntry> extends Sma
             Iterator<SmaliCode> iterator = codeSet.reversedIterator(index);
             while (iterator.hasNext()) {
                 SmaliCode smaliCode = iterator.next();
-                if(!(smaliCode instanceof SmaliLabel)) {
+                if(!(smaliCode instanceof SmaliLabel label)) {
                     return null;
                 }
-                SmaliLabel label = (SmaliLabel) smaliCode;
                 if(address == label.getAddress()) {
                     Iterator<SmaliInstruction> instructions = codeSet.getInstructions(label);
                     while (instructions.hasNext()) {

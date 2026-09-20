@@ -591,10 +591,9 @@ public class AVA implements DerEncoder {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof AVA)) {
+        if (!(obj instanceof AVA other)) {
             return false;
         }
-        AVA other = (AVA) obj;
         return this.toRFC2253CanonicalString().equals(other.toRFC2253CanonicalString());
     }
 

@@ -252,10 +252,9 @@ import java.util.zip.ZipEntry;
         if(tableEntry instanceof CompoundEntry){
             return false;
         }
-        if(!(tableEntry instanceof ResTableEntry)){
+        if(!(tableEntry instanceof ResTableEntry resTableEntry)){
             return false;
         }
-        ResTableEntry resTableEntry = (ResTableEntry) tableEntry;
         ResValue resValue = resTableEntry.getValue();
 
         ValueType valueType = resValue.getValueType();

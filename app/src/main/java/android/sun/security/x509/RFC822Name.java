@@ -137,10 +137,8 @@ public class RFC822Name implements android.sun.security.x509.GeneralNameInterfac
         if (this == obj)
             return true;
 
-        if (!(obj instanceof RFC822Name))
+        if (!(obj instanceof RFC822Name other))
             return false;
-
-        RFC822Name other = (RFC822Name)obj;
 
         // RFC2459 mandates that these names are
         // not case-sensitive

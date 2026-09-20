@@ -514,8 +514,7 @@ public class CodeItem {
                 }
             }
 
-            if (instruction instanceof ReferenceInstruction) {
-                ReferenceInstruction referenceInstruction = ((ReferenceInstruction)instruction);
+            if (instruction instanceof ReferenceInstruction referenceInstruction) {
                 Reference reference = ((ReferenceInstruction)instruction).getReference();
 
                 String referenceString;

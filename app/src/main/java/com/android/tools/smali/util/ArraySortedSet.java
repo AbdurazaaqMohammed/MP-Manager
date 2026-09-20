@@ -86,7 +86,7 @@ public class ArraySortedSet<T> implements SortedSet<T> {
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
         if (a.length <= arr.length) {
-            System.arraycopy(arr, 0, (Object[])a, 0, arr.length);
+            System.arraycopy(arr, 0, a, 0, arr.length);
             return a;
         }
         return Arrays.copyOf((T[])arr, arr.length);
@@ -184,15 +184,13 @@ public class ArraySortedSet<T> implements SortedSet<T> {
         if (o == null) {
             return false;
         }
-        if (o instanceof SortedSet) {
-            SortedSet other = (SortedSet)o;
+        if (o instanceof SortedSet other) {
             if (arr.length != other.size()) {
                 return false;
             }
             return Iterators.elementsEqual(iterator(), other.iterator());
         }
-        if (o instanceof Set) {
-            Set other = (Set)o;
+        if (o instanceof Set other) {
             if (arr.length != other.size()) {
                 return false;
             }

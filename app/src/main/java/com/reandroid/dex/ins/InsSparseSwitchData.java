@@ -76,10 +76,9 @@ public class InsSparseSwitchData extends InsSwitchPayload<SparseSwitchEntry> {
         releaseLock(lock);
     }
     public boolean remove(SwitchEntry entry) {
-        if (!(entry instanceof SparseSwitchEntry)) {
+        if (!(entry instanceof SparseSwitchEntry switchEntry)) {
             return false;
         }
-        SparseSwitchEntry switchEntry = (SparseSwitchEntry) entry;
         Object lock = requestLock();
         boolean removed = this.elements.remove((IntegerItem) switchEntry.getElement());
         if (removed) {

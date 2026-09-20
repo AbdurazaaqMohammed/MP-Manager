@@ -95,8 +95,7 @@ public final class ECKeyFactory extends KeyFactorySpi {
      * To be used by future Java ECDSA and ECDH implementations.
      */
     public static ECKey toECKey(Key key) throws InvalidKeyException {
-        if (key instanceof ECKey) {
-            ECKey ecKey = (ECKey)key;
+        if (key instanceof ECKey ecKey) {
             checkKey(ecKey);
             return ecKey;
         } else {
@@ -178,11 +177,10 @@ public final class ECKeyFactory extends KeyFactorySpi {
     // internal implementation of translateKey() for public keys. See JCA doc
     private PublicKey implTranslatePublicKey(PublicKey key)
             throws InvalidKeyException {
-        if (key instanceof ECPublicKey) {
+        if (key instanceof ECPublicKey ecKey) {
             if (key instanceof ECPublicKeyImpl) {
                 return key;
             }
-            ECPublicKey ecKey = (ECPublicKey)key;
             return new ECPublicKeyImpl(
                 ecKey.getW(),
                 ecKey.getParams()
@@ -199,11 +197,10 @@ public final class ECKeyFactory extends KeyFactorySpi {
     // internal implementation of translateKey() for private keys. See JCA doc
     private PrivateKey implTranslatePrivateKey(PrivateKey key)
             throws InvalidKeyException {
-        if (key instanceof ECPrivateKey) {
+        if (key instanceof ECPrivateKey ecKey) {
             if (key instanceof ECPrivateKeyImpl) {
                 return key;
             }
-            ECPrivateKey ecKey = (ECPrivateKey)key;
             return new ECPrivateKeyImpl(
                 ecKey.getS(),
                 ecKey.getParams()
@@ -219,11 +216,9 @@ public final class ECKeyFactory extends KeyFactorySpi {
     // internal implementation of generatePublic. See JCA doc
     private PublicKey implGeneratePublic(KeySpec keySpec)
             throws GeneralSecurityException {
-        if (keySpec instanceof X509EncodedKeySpec) {
-            X509EncodedKeySpec x509Spec = (X509EncodedKeySpec)keySpec;
+        if (keySpec instanceof X509EncodedKeySpec x509Spec) {
             return new ECPublicKeyImpl(x509Spec.getEncoded());
-        } else if (keySpec instanceof ECPublicKeySpec) {
-            ECPublicKeySpec ecSpec = (ECPublicKeySpec)keySpec;
+        } else if (keySpec instanceof ECPublicKeySpec ecSpec) {
             return new ECPublicKeyImpl(
                 ecSpec.getW(),
                 ecSpec.getParams()
@@ -237,11 +232,9 @@ public final class ECKeyFactory extends KeyFactorySpi {
     // internal implementation of generatePrivate. See JCA doc
     private PrivateKey implGeneratePrivate(KeySpec keySpec)
             throws GeneralSecurityException {
-        if (keySpec instanceof PKCS8EncodedKeySpec) {
-            PKCS8EncodedKeySpec pkcsSpec = (PKCS8EncodedKeySpec)keySpec;
+        if (keySpec instanceof PKCS8EncodedKeySpec pkcsSpec) {
             return new ECPrivateKeyImpl(pkcsSpec.getEncoded());
-        } else if (keySpec instanceof ECPrivateKeySpec) {
-            ECPrivateKeySpec ecSpec = (ECPrivateKeySpec)keySpec;
+        } else if (keySpec instanceof ECPrivateKeySpec ecSpec) {
             return new ECPrivateKeyImpl(ecSpec.getS(), ecSpec.getParams());
         } else {
             throw new InvalidKeySpecException("Only ECPrivateKeySpec "
@@ -259,8 +252,7 @@ public final class ECKeyFactory extends KeyFactorySpi {
         } catch (InvalidKeyException e) {
             throw new InvalidKeySpecException(e);
         }
-        if (key instanceof ECPublicKey) {
-            ECPublicKey ecKey = (ECPublicKey)key;
+        if (key instanceof ECPublicKey ecKey) {
             if (ECPublicKeySpec.class.isAssignableFrom(keySpec)) {
                 return (T) new ECPublicKeySpec(
                     ecKey.getW(),
@@ -273,11 +265,10 @@ public final class ECKeyFactory extends KeyFactorySpi {
                         ("KeySpec must be ECPublicKeySpec or "
                         + "X509EncodedKeySpec for EC public keys");
             }
-        } else if (key instanceof ECPrivateKey) {
+        } else if (key instanceof ECPrivateKey ecKey) {
             if (PKCS8EncodedKeySpec.class.isAssignableFrom(keySpec)) {
                 return (T) new PKCS8EncodedKeySpec(key.getEncoded());
             } else if (ECPrivateKeySpec.class.isAssignableFrom(keySpec)) {
-                ECPrivateKey ecKey = (ECPrivateKey)key;
                 return (T) new ECPrivateKeySpec(
                     ecKey.getS(),
                     ecKey.getParams()

@@ -144,10 +144,9 @@ public class SmaliInstruction extends SmaliCode{
     }
     public boolean hasLabelOperand(SmaliLabel label) {
         SmaliInstructionOperand operand = getOperand();
-        if (!(operand instanceof SmaliInstructionOperand.SmaliLabelOperand)) {
+        if (!(operand instanceof SmaliInstructionOperand.SmaliLabelOperand smaliLabelOperand)) {
             return false;
         }
-        SmaliInstructionOperand.SmaliLabelOperand smaliLabelOperand = (SmaliInstructionOperand.SmaliLabelOperand) operand;
         return label.equals(smaliLabelOperand.getLabel());
     }
 

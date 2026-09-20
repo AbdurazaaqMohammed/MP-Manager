@@ -103,10 +103,9 @@ public class AnnotationElementKey implements Key {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof AnnotationElementKey)) {
+        if (!(obj instanceof AnnotationElementKey elementKey)) {
             return StringsUtil.compareToString(this, obj);
         }
-        AnnotationElementKey elementKey = (AnnotationElementKey) obj;
         int i = CompareUtil.compare(getNameKey(), elementKey.getNameKey());
         if (i == 0) {
             i = CompareUtil.compare(getValue(), elementKey.getValue());
@@ -122,10 +121,9 @@ public class AnnotationElementKey implements Key {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof AnnotationElementKey)) {
+        if (!(obj instanceof AnnotationElementKey other)) {
             return false;
         }
-        AnnotationElementKey other = (AnnotationElementKey) obj;
         return ObjectsUtil.equals(getName(), other.getName()) &&
                 ObjectsUtil.equals(getValue(), other.getValue());
     }

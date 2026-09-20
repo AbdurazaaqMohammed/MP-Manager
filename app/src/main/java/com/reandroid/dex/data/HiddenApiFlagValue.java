@@ -150,10 +150,9 @@ public class HiddenApiFlagValue extends Ule128Item implements
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof HiddenApiFlagValue)) {
+        if (!(obj instanceof HiddenApiFlagValue flagValue)) {
             return false;
         }
-        HiddenApiFlagValue flagValue = (HiddenApiFlagValue) obj;
         return get() == flagValue.get();
     }
 

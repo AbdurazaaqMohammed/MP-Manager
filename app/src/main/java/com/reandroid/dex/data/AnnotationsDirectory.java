@@ -110,8 +110,7 @@ public class AnnotationsDirectory extends DataItem implements KeyReference {
     public void link(Def<?> def) {
         if (def instanceof FieldDef) {
             fieldsAnnotationMap.link((FieldDef) def);
-        } else if (def instanceof MethodDef) {
-            MethodDef methodDef = (MethodDef) def;
+        } else if (def instanceof MethodDef methodDef) {
             methodsAnnotationMap.link(methodDef);
             parametersAnnotationMap.link(methodDef);
         }
@@ -121,8 +120,7 @@ public class AnnotationsDirectory extends DataItem implements KeyReference {
             header.classAnnotation.setKey(null);
         } else if (defIndex instanceof FieldDef) {
             fieldsAnnotationMap.remove((FieldDef) defIndex);
-        } else if (defIndex instanceof MethodDef) {
-            MethodDef methodDef = (MethodDef) defIndex;
+        } else if (defIndex instanceof MethodDef methodDef) {
             methodsAnnotationMap.remove(methodDef);
             parametersAnnotationMap.remove(methodDef);
         }
@@ -194,8 +192,7 @@ public class AnnotationsDirectory extends DataItem implements KeyReference {
             iterator = fieldsAnnotationMap.getValues((FieldDef) defIndex);
         } else if (defIndex instanceof MethodDef) {
             iterator = methodsAnnotationMap.getValues((MethodDef) defIndex);
-        } else if (defIndex instanceof MethodParameterDef) {
-            MethodParameterDef parameter = (MethodParameterDef) defIndex;
+        } else if (defIndex instanceof MethodParameterDef parameter) {
             int index = parameter.getDefinitionIndex();
             iterator = ComputeIterator.of(
                     parametersAnnotationMap.getValues(parameter.getMethodDef()),

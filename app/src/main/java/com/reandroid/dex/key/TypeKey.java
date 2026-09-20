@@ -503,10 +503,9 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof TypeKey)) {
+        if (!(obj instanceof TypeKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        TypeKey key = (TypeKey) obj;
         return CompareUtil.compare(getTypeName(), key.getTypeName());
     }
     public boolean equalsName(String typeName) {
@@ -517,10 +516,9 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof TypeKey)) {
+        if (!(obj instanceof TypeKey key)) {
             return false;
         }
-        TypeKey key = (TypeKey) obj;
         return getTypeName().equals(key.getTypeName());
     }
     @Override

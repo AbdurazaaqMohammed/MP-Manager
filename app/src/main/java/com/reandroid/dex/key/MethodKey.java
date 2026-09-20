@@ -162,10 +162,9 @@ public class MethodKey extends NamedTypeKey implements MemberKey {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof MethodKey)) {
+        if (!(obj instanceof MethodKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        MethodKey key = (MethodKey) obj;
         int i = CompareUtil.compare(getDeclaring(), key.getDeclaring());
         if (i != 0) {
             return i;
@@ -296,10 +295,9 @@ public class MethodKey extends NamedTypeKey implements MemberKey {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof MethodKey)) {
+        if (!(obj instanceof MethodKey methodKey)) {
             return false;
         }
-        MethodKey methodKey = (MethodKey) obj;
         if (!ObjectsUtil.equals(getNameKey(), methodKey.getNameKey())){
             return false;
         }
@@ -326,10 +324,9 @@ public class MethodKey extends NamedTypeKey implements MemberKey {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof MethodKey)) {
+        if (!(obj instanceof MethodKey methodKey)) {
             return false;
         }
-        MethodKey methodKey = (MethodKey) obj;
         return ObjectsUtil.equals(getNameKey(), methodKey.getNameKey()) &&
                 ObjectsUtil.equals(getDeclaring(), methodKey.getDeclaring()) &&
                 ObjectsUtil.equals(getType(), methodKey.getType());

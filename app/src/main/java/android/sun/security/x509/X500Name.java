@@ -390,10 +390,9 @@ public class X500Name implements GeneralNameInterface, Principal {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof X500Name)) {
+        if (!(obj instanceof X500Name other)) {
             return false;
         }
-        X500Name other = (X500Name) obj;
         // if we already have the canonical forms, compare now
         if ((this.canonicalDn != null) && (other.canonicalDn != null)) {
             return this.canonicalDn.equals(other.canonicalDn);

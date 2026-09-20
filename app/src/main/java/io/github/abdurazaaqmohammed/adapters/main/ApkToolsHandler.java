@@ -2663,7 +2663,7 @@ public class ApkToolsHandler {
         MaterialSwitch toastHtmlSwitch = view.findViewById(R.id.overlayToastHtml);
         MaterialSwitch toastB64Switch = view.findViewById(R.id.overlayToastB64);
         TextView toastPreview = view.findViewById(R.id.overlayToastPreview);
-        addFormatRow((LinearLayout) view.findViewById(R.id.toastFormatRow), messageInput);
+        addFormatRow(view.findViewById(R.id.toastFormatRow), messageInput);
 
         LinearLayout dialogSection = view.findViewById(R.id.overlayDialogSection);
         final LinearLayout dialogSection2 = view.findViewById(R.id.overlayDialogSection2);
@@ -2691,7 +2691,7 @@ public class ApkToolsHandler {
         dlgPosAction.setAdapter(actionAdapter);
         dlgNegAction.setAdapter(actionAdapter);
         dlgNeuAction.setAdapter(actionAdapter);
-        addFormatRow((LinearLayout) view.findViewById(R.id.dlgFormatRow), dlgMsgInput);
+        addFormatRow(view.findViewById(R.id.dlgFormatRow), dlgMsgInput);
         attachFormatMenu(messageInput);
         attachFormatMenu(dlgMsgInput);
         attachFormatMenu(dlgTitleInput);

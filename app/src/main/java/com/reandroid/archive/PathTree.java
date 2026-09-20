@@ -289,10 +289,9 @@ public class PathTree<T> implements Comparable<PathTree<?>>, Iterable<PathTree<T
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof PathTree)) {
+        if (!(obj instanceof PathTree<?> pathTree)) {
             return false;
         }
-        PathTree<?> pathTree = (PathTree<?>) obj;
         return Objects.equals(getName(), pathTree.getName());
     }
 

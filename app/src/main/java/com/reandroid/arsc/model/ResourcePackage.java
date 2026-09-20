@@ -50,10 +50,9 @@ public class ResourcePackage implements Iterable<ResourceType> {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ResourcePackage)) {
+        if (!(obj instanceof ResourcePackage other)) {
             return false;
         }
-        ResourcePackage other = (ResourcePackage) obj;
         return this.getId() == other.getId();
     }
     @Override

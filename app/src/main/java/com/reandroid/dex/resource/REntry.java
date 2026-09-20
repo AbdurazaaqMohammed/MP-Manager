@@ -79,10 +79,9 @@ public class REntry implements IntegerReference {
         if(obj == this) {
             return true;
         }
-        if(!(obj instanceof REntry)) {
+        if(!(obj instanceof REntry other)) {
             return false;
         }
-        REntry other = (REntry) obj;
         return getKey().equals(other.getKey());
     }
     @Override

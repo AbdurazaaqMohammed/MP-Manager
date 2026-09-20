@@ -215,10 +215,9 @@ public class PackageKey implements Key {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof PackageKey)) {
+        if (!(obj instanceof PackageKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        PackageKey key = (PackageKey) obj;
         return CompareUtil.compare(getName(), key.getName());
     }
     @Override
@@ -226,10 +225,9 @@ public class PackageKey implements Key {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof PackageKey)) {
+        if (!(obj instanceof PackageKey key)) {
             return false;
         }
-        PackageKey key = (PackageKey) obj;
         return getName().equals(key.getName());
     }
     @Override

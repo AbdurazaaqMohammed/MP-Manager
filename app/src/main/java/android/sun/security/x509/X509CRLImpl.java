@@ -543,10 +543,9 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
      * false otherwise.
      */
     public boolean isRevoked(Certificate cert) {
-        if (revokedCerts.isEmpty() || (!(cert instanceof X509Certificate))) {
+        if (revokedCerts.isEmpty() || (!(cert instanceof X509Certificate xcert))) {
             return false;
         }
-        X509Certificate xcert = (X509Certificate) cert;
         X509IssuerSerial issuerSerial = new X509IssuerSerial(xcert);
         return revokedCerts.containsKey(issuerSerial);
     }
@@ -594,7 +593,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
      * @return the issuer name.
      */
     public Principal getIssuerDN() {
-        return (Principal)issuer;
+        return issuer;
     }
 
     /**
@@ -1261,11 +1260,10 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
                 return true;
             }
 
-            if (!(o instanceof X509IssuerSerial)) {
+            if (!(o instanceof X509IssuerSerial other)) {
                 return false;
             }
 
-            X509IssuerSerial other = (X509IssuerSerial) o;
             if (serial.equals(other.getSerial()) &&
                 issuer.equals(other.getIssuer())) {
                 return true;

@@ -230,10 +230,9 @@ public class R implements Iterable<RTypeItem> {
         if(obj == this) {
             return true;
         }
-        if(!(obj instanceof R)) {
+        if(!(obj instanceof R other)) {
             return false;
         }
-        R other = (R) obj;
         return getKey().equals(other.getKey());
     }
     @Override

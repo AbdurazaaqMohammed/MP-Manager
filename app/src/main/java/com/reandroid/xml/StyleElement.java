@@ -148,11 +148,9 @@ public class StyleElement extends XMLElement implements Span {
         Iterator<XMLNode> iterator = iterator();
         while (iterator.hasNext()) {
             XMLNode xmlNode = iterator.next();
-            if (xmlNode instanceof StyleText) {
-                StyleText styleText = (StyleText) xmlNode;
+            if (xmlNode instanceof StyleText styleText) {
                 styleText.writeStyledText(appendable);
-            } else if (xmlNode instanceof StyleElement) {
-                StyleElement element = (StyleElement) xmlNode;
+            } else if (xmlNode instanceof StyleElement element) {
                 element.writeStyledText(appendable);
             }
         }
@@ -234,11 +232,9 @@ public class StyleElement extends XMLElement implements Span {
             XMLNode xmlNode = iterator.next();
             if (xmlNode instanceof XMLElement) {
                 newElement().copyFrom((XMLElement) xmlNode);
-            } else if (xmlNode instanceof XMLText) {
-                XMLText xmlText = (XMLText)xmlNode;
+            } else if (xmlNode instanceof XMLText xmlText) {
                 getOrCreateLastText().appendText(xmlText.getText());
-            } else if (xmlNode instanceof XMLCDSect) {
-                XMLCDSect xmlcdSect = (XMLCDSect)xmlNode;
+            } else if (xmlNode instanceof XMLCDSect xmlcdSect) {
                 getOrCreateLastText().appendText(xmlcdSect.getText());
             }
         }

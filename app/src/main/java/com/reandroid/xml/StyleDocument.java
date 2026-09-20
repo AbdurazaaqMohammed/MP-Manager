@@ -74,11 +74,9 @@ public class StyleDocument extends XMLDocument implements
         Iterator<XMLNode> iterator = iterator();
         while (iterator.hasNext()){
             XMLNode xmlNode = iterator.next();
-            if(xmlNode instanceof StyleText){
-                StyleText styleText = (StyleText) xmlNode;
+            if(xmlNode instanceof StyleText styleText){
                 styleText.writeStyledText(appendable);
-            } else if(xmlNode instanceof StyleElement){
-                StyleElement element = (StyleElement) xmlNode;
+            } else if(xmlNode instanceof StyleElement element){
                 element.writeStyledText(appendable);
             }
         }
@@ -151,8 +149,7 @@ public class StyleDocument extends XMLDocument implements
             XMLNode xmlNode = iterator.next();
             if (xmlNode instanceof XMLElement) {
                 styleDocument.newElement().copyFrom((XMLElement) xmlNode);
-            } else if(xmlNode instanceof XMLText) {
-                XMLText xmlText = (XMLText)xmlNode;
+            } else if(xmlNode instanceof XMLText xmlText) {
                 styleDocument.newText(xmlText.getText());
             }
         }

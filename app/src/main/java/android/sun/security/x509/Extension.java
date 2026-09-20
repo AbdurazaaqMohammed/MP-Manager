@@ -267,9 +267,8 @@ public class Extension /* implements java.security.cert.Extension */ {
     public boolean equals(Object other) {
         if (this == other)
             return true;
-        if (!(other instanceof Extension))
+        if (!(other instanceof Extension otherExt))
             return false;
-        Extension otherExt = (Extension) other;
         if (critical != otherExt.critical)
             return false;
         if (!extensionId.equals(otherExt.extensionId))

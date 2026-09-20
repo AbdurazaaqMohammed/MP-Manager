@@ -53,8 +53,7 @@ public final class ResourceRootScanner {
                             String resourceType = resourceType(((FieldReference) ref).getDefiningClass());
                             if (resourceType != null)
                                 nameRefKeys.add(resourceType + ":" + ((FieldReference) ref).getName());
-                        } else if (ref instanceof MethodReference) {
-                            MethodReference methodRef = (MethodReference) ref;
+                        } else if (ref instanceof MethodReference methodRef) {
                             if ("Landroid/content/res/Resources;".equals(methodRef.getDefiningClass())
                                     && DexIndex.RESOURCES_METHOD_NAMES.contains(methodRef.getName()))
                                 allKeep = true;

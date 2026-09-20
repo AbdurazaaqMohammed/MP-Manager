@@ -206,8 +206,7 @@ public class XMLAttribute extends XMLNode implements Attribute {
         if (obj == this) {
             return true;
         }
-        if (obj instanceof XMLAttribute) {
-            XMLAttribute attribute = (XMLAttribute)obj;
+        if (obj instanceof XMLAttribute attribute) {
             return ObjectsUtil.equals(getName(false), attribute.getName(false));
         }
         return false;

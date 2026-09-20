@@ -221,11 +221,10 @@ public class AnnotationElement extends FixedBlockContainer implements
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof AnnotationElement)) {
+        if (!(obj instanceof AnnotationElement element)) {
             return false;
         }
-        AnnotationElement element = (AnnotationElement) obj;
-        return ObjectsUtil.equals(getNameKey(), element.getNameKey()) && 
+        return ObjectsUtil.equals(getNameKey(), element.getNameKey()) &&
                 ObjectsUtil.equals(getValueBlock(), element.getValueBlock());
     }
 

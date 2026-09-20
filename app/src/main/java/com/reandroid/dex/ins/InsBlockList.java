@@ -120,8 +120,7 @@ public class InsBlockList extends BlockList<Ins> {
                 if (element instanceof InstructionLabelSet) {
                     iterator = ObjectsUtil.cast(((InstructionLabelSet) element).getLabels());
                 }
-                if (element instanceof InstructionLabel) {
-                    InstructionLabel label = (InstructionLabel) element;
+                if (element instanceof InstructionLabel label) {
                     if (iterator == null) {
                         iterator = SingleIterator.of(label);
                     } else {

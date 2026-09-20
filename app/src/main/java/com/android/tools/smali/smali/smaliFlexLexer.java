@@ -3196,8 +3196,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
     public Token nextToken() {
         try {
             Token token = yylex();
-            if (token instanceof InvalidToken) {
-                InvalidToken invalidToken = (InvalidToken)token;
+            if (token instanceof InvalidToken invalidToken) {
                 if (!suppressErrors) {
                     System.err.println(getErrorHeader(invalidToken) + " Error for input '" +
                         invalidToken.getText() + "': " + invalidToken.getMessage());

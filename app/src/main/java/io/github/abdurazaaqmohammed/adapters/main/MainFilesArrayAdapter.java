@@ -553,8 +553,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         List<File> out = new ArrayList<>();
         for (int p : selectedPositions) {
             Object o = values[p];
-            if (o instanceof File) {
-                File f = (File) o;
+            if (o instanceof File f) {
                 if (f.isFile() && FileUtils.isImageFile(f.getName())) out.add(f);
             }
         }

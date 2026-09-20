@@ -56,16 +56,14 @@ public abstract class ResXmlNode extends WrappedBlock implements
 
     public ResXmlNode getPrevious() {
         ResXmlNode parent = getParentNode();
-        if (parent instanceof ResXmlNodeTree) {
-            ResXmlNodeTree nodeTree = (ResXmlNodeTree)parent;
+        if (parent instanceof ResXmlNodeTree nodeTree) {
             return nodeTree.get(getIndex() - 1);
         }
         return null;
     }
     public ResXmlNode getNext() {
         ResXmlNode parent = getParentNode();
-        if (parent instanceof ResXmlNodeTree) {
-            ResXmlNodeTree nodeTree = (ResXmlNodeTree)parent;
+        if (parent instanceof ResXmlNodeTree nodeTree) {
             return nodeTree.get(getIndex() + 1);
         }
         return null;

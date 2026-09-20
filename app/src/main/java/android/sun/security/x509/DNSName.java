@@ -143,10 +143,8 @@ public class DNSName implements android.sun.security.x509.GeneralNameInterface {
         if (this == obj)
             return true;
 
-        if (!(obj instanceof DNSName))
+        if (!(obj instanceof DNSName other))
             return false;
-
-        DNSName other = (DNSName)obj;
 
         // RFC2459 mandates that these names are
         // not case-sensitive

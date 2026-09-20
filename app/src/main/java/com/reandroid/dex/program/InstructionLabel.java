@@ -174,7 +174,7 @@ public interface InstructionLabel extends InstructionStatement {
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof InstructionLabel)) {
+            if (!(obj instanceof InstructionLabel label)) {
                 return false;
             }
             if (obj instanceof LabelWrapper) {
@@ -182,7 +182,6 @@ public interface InstructionLabel extends InstructionStatement {
                     return true;
                 }
             }
-            InstructionLabel label = (InstructionLabel) obj;
             return this.getTargetAddress() == label.getTargetAddress() &&
                     ObjectsUtil.equals(this.getLabelType(), label.getLabelType()) &&
                     ObjectsUtil.equals(this.getLabelName(), label.getLabelName());

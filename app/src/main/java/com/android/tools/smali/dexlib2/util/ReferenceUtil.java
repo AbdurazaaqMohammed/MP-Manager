@@ -224,26 +224,21 @@ public final class ReferenceUtil {
         if (reference instanceof TypeReference) {
             return ((TypeReference)reference).getType();
         }
-        if (reference instanceof FieldReference) {
-            FieldReference fieldReference = (FieldReference)reference;
+        if (reference instanceof FieldReference fieldReference) {
             boolean useImplicitReference = fieldReference.getDefiningClass().equals(containingClass);
             return getFieldDescriptor(fieldReference, useImplicitReference);
         }
-        if (reference instanceof MethodReference) {
-            MethodReference methodReference = (MethodReference)reference;
+        if (reference instanceof MethodReference methodReference) {
             boolean useImplicitReference = methodReference.getDefiningClass().equals(containingClass);
             return getMethodDescriptor(methodReference, useImplicitReference);
         }
-        if (reference instanceof MethodProtoReference) {
-            MethodProtoReference methodProtoReference = (MethodProtoReference)reference;
+        if (reference instanceof MethodProtoReference methodProtoReference) {
             return getMethodProtoDescriptor(methodProtoReference);
         }
-        if (reference instanceof MethodHandleReference) {
-            MethodHandleReference methodHandleReference = (MethodHandleReference)reference;
+        if (reference instanceof MethodHandleReference methodHandleReference) {
             return getMethodHandleString(methodHandleReference);
         }
-        if (reference instanceof CallSiteReference) {
-            CallSiteReference callSiteReference = (CallSiteReference)reference;
+        if (reference instanceof CallSiteReference callSiteReference) {
             return getCallSiteString(callSiteReference);
         }
         return null;

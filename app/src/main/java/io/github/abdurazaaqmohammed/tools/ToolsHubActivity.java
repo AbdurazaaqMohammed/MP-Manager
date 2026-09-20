@@ -202,9 +202,8 @@ public class ToolsHubActivity extends AppCompatActivity {
                 int count = 0;
                 for (int i = position + 1; i < rows.size() && rows.get(i) instanceof ToolRegistry.ToolItem; i++) count++;
                 ((HeaderHolder) holder).label.setText(cat + "  (" + count + ")");
-            } else if (holder instanceof ToolViewHolder) {
+            } else if (holder instanceof ToolViewHolder h) {
                 ToolRegistry.ToolItem item = (ToolRegistry.ToolItem) row;
-                ToolViewHolder h = (ToolViewHolder) holder;
                 h.icon.setImageResource(item.iconRes());
                 ImageViewCompat.setImageTintList(h.icon, android.content.res.ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), com.google.android.material.R.attr.colorPrimary, Color.BLACK)));
                 h.title.setText(item.title());

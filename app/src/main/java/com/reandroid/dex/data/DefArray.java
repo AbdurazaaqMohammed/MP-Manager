@@ -238,7 +238,7 @@ public abstract class DefArray<T extends Def<?>> extends CountedBlockList<T> imp
             T def = this.get(i);
             T source = defArray.get(i);
             def.merge(source);
-            onMerged(def, (T) source);
+            onMerged(def, source);
         }
         updateCountReference();
         linkAnnotation();

@@ -112,8 +112,7 @@ public final class ReferenceExtractor {
     /** Recursive walk over an encoded value (annotation/array/type/enum/method/field/handle/proto). */
     public static void extractEncodedValue(EncodedValue value, ReferenceBatch batch) {
         if (value == null) return;
-        if (value instanceof AnnotationEncodedValue) {
-            AnnotationEncodedValue annotation = (AnnotationEncodedValue) value;
+        if (value instanceof AnnotationEncodedValue annotation) {
             batch.types.add(annotation.getType());
             for (AnnotationElement element : annotation.getElements())
                 extractEncodedValue(element.getValue(), batch);
@@ -146,8 +145,7 @@ public final class ReferenceExtractor {
             batch.fields.add((FieldReference) reference);
         } else if (reference instanceof TypeReference) {
             batch.types.add(((TypeReference) reference).getType());
-        } else if (reference instanceof CallSiteReference) {
-            CallSiteReference callSite = (CallSiteReference) reference;
+        } else if (reference instanceof CallSiteReference callSite) {
             addMemberReference(callSite.getMethodHandle().getMemberReference(), batch);
             for (EncodedValue argument : callSite.getExtraArguments())
                 extractEncodedValue(argument, batch);

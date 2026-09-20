@@ -196,10 +196,9 @@ public class RenameTypes extends Rename<TypeKey> {
     @Override
     public Key replaceKey(Key key, Key search, Key replace) {
         key = super.replaceKey(key, search, replace);
-        if (!(key instanceof TypeKey)) {
+        if (!(key instanceof TypeKey result)) {
             return key;
         }
-        TypeKey result = (TypeKey) key;
         PackageKey packageKey = result.getPackage();
         for (KeyPair<PackageKey, PackageKey> keyPair : packageKeyList) {
             PackageKey searchPackage = keyPair.getFirst();
@@ -289,8 +288,7 @@ public class RenameTypes extends Rename<TypeKey> {
             return replaceKey;
         }
         Map<String, String> map = this.stringMap;
-        if (search instanceof TypeKey) {
-            TypeKey typeKey = (TypeKey) search;
+        if (search instanceof TypeKey typeKey) {
             String replace = map.get(typeKey.getSourceName());
             if (replace != null) {
                 return TypeKey.parse(replace);
@@ -299,8 +297,7 @@ public class RenameTypes extends Rename<TypeKey> {
             if (replace != null) {
                 return TypeKey.create(replace);
             }
-        } else if (search instanceof StringKey) {
-            StringKey stringKey = (StringKey) search;
+        } else if (search instanceof StringKey stringKey) {
             String replace = map.get(stringKey.getString());
             if (replace != null) {
                 return StringKey.create(replace);

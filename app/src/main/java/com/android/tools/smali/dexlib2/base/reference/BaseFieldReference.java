@@ -46,8 +46,7 @@ public abstract class BaseFieldReference extends BaseReference implements FieldR
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o instanceof FieldReference) {
-            FieldReference other = (FieldReference)o;
+        if (o instanceof FieldReference other) {
             return getDefiningClass().equals(other.getDefiningClass()) &&
                    getName().equals(other.getName()) &&
                    getType().equals(other.getType());

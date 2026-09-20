@@ -40,10 +40,9 @@ public interface DebugLineNumber extends DebugElement {
         if (lineNumber == obj) {
             return true;
         }
-        if (!(obj instanceof DebugLineNumber) || lineNumber == null) {
+        if (!(obj instanceof DebugLineNumber other) || lineNumber == null) {
             return false;
         }
-        DebugLineNumber other = (DebugLineNumber) obj;
         return lineNumber.getLineNumber() == other.getLineNumber() &&
                 lineNumber.getTargetAddress() == other.getTargetAddress();
     }

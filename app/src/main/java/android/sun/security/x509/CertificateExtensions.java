@@ -356,7 +356,7 @@ class UnparseableExtension extends android.sun.security.x509.Extension {
             Class extClass = android.sun.security.x509.OIDMap.getClass(ext.getExtensionId());
             if (extClass != null) {
                 Field field = extClass.getDeclaredField("NAME");
-                name = (String)(field.get(null)) + " ";
+                name = field.get(null) + " ";
             }
         } catch (Exception e) {
             // If we cannot find the name, just ignore it

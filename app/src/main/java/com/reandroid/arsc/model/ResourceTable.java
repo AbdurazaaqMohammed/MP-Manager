@@ -124,10 +124,9 @@ public class ResourceTable implements Iterable<ResourcePackage> {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ResourceTable)) {
+        if (!(obj instanceof ResourceTable table)) {
             return false;
         }
-        ResourceTable table = (ResourceTable) obj;
         if(size() != table.size()) {
             return false;
         }

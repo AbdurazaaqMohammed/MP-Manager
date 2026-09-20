@@ -136,8 +136,7 @@ public class CollectionUtils {
     }
 
     public static <T> boolean isNaturalSortedSet(@Nonnull Iterable<? extends T> it) {
-        if (it instanceof SortedSet) {
-            SortedSet<? extends T> sortedSet = (SortedSet<? extends T>)it;
+        if (it instanceof SortedSet<? extends T> sortedSet) {
             Comparator<?> comparator = sortedSet.comparator();
             return (comparator == null) || comparator.equals(NaturalOrdering.INSTANCE);
         }
@@ -146,8 +145,7 @@ public class CollectionUtils {
 
     public static <T> boolean isSortedSet(@Nonnull Comparator<? extends T> elementComparator,
                                           @Nonnull Iterable<? extends T> it) {
-        if (it instanceof SortedSet) {
-            SortedSet<? extends T> sortedSet = (SortedSet<? extends T>)it;
+        if (it instanceof SortedSet<? extends T> sortedSet) {
             Comparator<?> comparator = sortedSet.comparator();
             if (comparator == null) {
                 return elementComparator.equals(NaturalOrdering.INSTANCE);
@@ -169,8 +167,7 @@ public class CollectionUtils {
     @Nonnull
     private static <T> SortedSet<? extends T> toSortedSet(@Nonnull Comparator<? super T> elementComparator,
                                                           @Nonnull Collection<? extends T> collection) {
-        if (collection instanceof SortedSet) {
-            SortedSet<? extends T> sortedSet = (SortedSet<? extends T>)collection;
+        if (collection instanceof SortedSet<? extends T> sortedSet) {
             Comparator<?> comparator = sortedSet.comparator();
             if (comparator != null && comparator.equals(elementComparator)) {
                 return sortedSet;

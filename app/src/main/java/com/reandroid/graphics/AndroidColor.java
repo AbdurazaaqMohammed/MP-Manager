@@ -273,10 +273,9 @@ public class AndroidColor {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof AndroidColor)) {
+        if (!(obj instanceof AndroidColor other)) {
             return false;
         }
-        AndroidColor other = (AndroidColor) obj;
         AndroidColor color = this;
         if(color.isEightBit() != other.isEightBit()){
             if(color.isEightBit()){
@@ -313,10 +312,9 @@ public class AndroidColor {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof AndroidColor)) {
+        if (!(obj instanceof AndroidColor other)) {
             return false;
         }
-        AndroidColor other = (AndroidColor) obj;
         AndroidColor color = this;
         if(color.isEightBit() != other.isEightBit()){
             if(color.isEightBit()){

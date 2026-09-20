@@ -48,22 +48,20 @@ public class EntryHeaderMap extends ValueHeader {
 
     @Override
     public void merge(ValueHeader valueHeader){
-        if(valueHeader == this || !(valueHeader instanceof EntryHeaderMap)){
+        if(valueHeader == this || !(valueHeader instanceof EntryHeaderMap entryHeaderMap)){
             return;
         }
         super.merge(valueHeader);
-        EntryHeaderMap entryHeaderMap = (EntryHeaderMap) valueHeader;
         setParentId(entryHeaderMap.getParentId());
         setValuesCount(entryHeaderMap.getValuesCount());
     }
 
     @Override
     public void mergeWithName(ResourceMergeOption mergeOption, ValueHeader valueHeader) {
-        if(valueHeader == this || !(valueHeader instanceof EntryHeaderMap)){
+        if(valueHeader == this || !(valueHeader instanceof EntryHeaderMap entryHeaderMap)){
             return;
         }
         super.merge(valueHeader);
-        EntryHeaderMap entryHeaderMap = (EntryHeaderMap) valueHeader;
         setValuesCount(entryHeaderMap.getValuesCount());
 
         ResourceEntry parentId = entryHeaderMap.resolveParentId();

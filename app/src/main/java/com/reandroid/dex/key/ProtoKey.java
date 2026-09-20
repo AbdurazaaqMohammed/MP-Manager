@@ -154,10 +154,9 @@ public class ProtoKey implements ProtoDescriptorKey {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof ProtoKey)) {
+        if (!(obj instanceof ProtoKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        ProtoKey key = (ProtoKey) obj;
         int i = CompareUtil.compare(getReturnType(), key.getReturnType());
         if(i != 0) {
             return i;
@@ -204,10 +203,9 @@ public class ProtoKey implements ProtoDescriptorKey {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ProtoKey)) {
+        if (!(obj instanceof ProtoKey protoKey)) {
             return false;
         }
-        ProtoKey protoKey = (ProtoKey) obj;
         return ObjectsUtil.equals(getReturnType(), protoKey.getReturnType()) &&
                 ObjectsUtil.equals(getParameters(), protoKey.getParameters());
     }

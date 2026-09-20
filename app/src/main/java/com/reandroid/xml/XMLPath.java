@@ -68,9 +68,8 @@ public class XMLPath implements Predicate<NamedNode> {
         int type = TYPE_UNKNOWN;
         int nameId = 0;
         Element<?> parentElement = null;
-        if (node instanceof Attribute) {
+        if (node instanceof Attribute attribute) {
             type = TYPE_ATTRIBUTE;
-            Attribute attribute = (Attribute) node;
             parentElement = attribute.getParentNode();
             nameId = attribute.getNameId();
         } else if (node instanceof Element) {
@@ -445,10 +444,9 @@ public class XMLPath implements Predicate<NamedNode> {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof XMLPath)) {
+        if (!(obj instanceof XMLPath xmlPath)) {
             return false;
         }
-        XMLPath xmlPath = (XMLPath) obj;
         return this.getNameId() == xmlPath.getNameId() &&
                 this.type() == xmlPath.type() &&
                 ObjectsUtil.equals(this.getParent(), xmlPath.getParent()) &&

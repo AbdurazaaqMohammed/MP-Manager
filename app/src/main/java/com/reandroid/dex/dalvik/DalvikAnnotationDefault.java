@@ -85,10 +85,9 @@ public class DalvikAnnotationDefault extends DalvikAnnotation {
     }
     public static DalvikAnnotationDefault getOrCreate(AnnotatedProgram annotatedProgram) {
         if (!annotatedProgram.hasAnnotation(TypeKey.DALVIK_AnnotationDefault)) {
-            if (!(annotatedProgram instanceof ClassProgram)) {
+            if (!(annotatedProgram instanceof ClassProgram classProgram)) {
                 return null;
             }
-            ClassProgram classProgram = (ClassProgram) annotatedProgram;
             annotatedProgram.addAnnotation(AnnotationItemKey.create(
                     AnnotationVisibility.SYSTEM,
                     TypeKey.DALVIK_AnnotationDefault,

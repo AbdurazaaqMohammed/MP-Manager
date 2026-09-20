@@ -542,8 +542,7 @@ public class MethodAnalyzer {
                 addPredecessorSuccessor(instruction, nextInstruction, exceptionHandlers, instructionsToProcess);
             }
 
-            if (instruction.instruction instanceof OffsetInstruction) {
-                OffsetInstruction offsetInstruction = (OffsetInstruction)instruction.instruction;
+            if (instruction.instruction instanceof OffsetInstruction offsetInstruction) {
 
                 if (instructionOpcode == Opcode.PACKED_SWITCH || instructionOpcode == Opcode.SPARSE_SWITCH) {
                     AnalyzedInstruction analyzedSwitchPayload = analyzedInstructions.get(
@@ -1366,10 +1365,9 @@ public class MethodAnalyzer {
         RegisterType arrayRegisterType = analyzedInstruction.getPreInstructionRegisterType(instruction.getRegisterB());
         if (arrayRegisterType.category != RegisterType.NULL) {
             if (arrayRegisterType.category != RegisterType.REFERENCE ||
-                    !(arrayRegisterType.type instanceof ArrayProto)) {
+                    !(arrayRegisterType.type instanceof ArrayProto arrayProto)) {
                 throw new AnalysisException("aget-wide used with non-array register: %s", arrayRegisterType.toString());
             }
-            ArrayProto arrayProto = (ArrayProto)arrayRegisterType.type;
 
             if (arrayProto.dimensions != 1) {
                 throw new AnalysisException("aget-wide used with multi-dimensional array: %s",
@@ -1397,12 +1395,10 @@ public class MethodAnalyzer {
         RegisterType arrayRegisterType = analyzedInstruction.getPreInstructionRegisterType(instruction.getRegisterB());
         if (arrayRegisterType.category != RegisterType.NULL) {
             if (arrayRegisterType.category != RegisterType.REFERENCE ||
-                    !(arrayRegisterType.type instanceof ArrayProto)) {
+                    !(arrayRegisterType.type instanceof ArrayProto arrayProto)) {
                 throw new AnalysisException("aget-object used with non-array register: %s",
                         arrayRegisterType.toString());
             }
-
-            ArrayProto arrayProto = (ArrayProto)arrayRegisterType.type;
 
             String elementType = arrayProto.getImmediateElementType();
 

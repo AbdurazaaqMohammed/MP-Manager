@@ -87,11 +87,9 @@ public abstract class JSONItem {
             ((JSONObject) value).write(writer, indentFactor, indent);
         } else if (value instanceof JSONArray) {
             ((JSONArray) value).write(writer, indentFactor, indent);
-        } else if (value instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) value;
+        } else if (value instanceof Map<?, ?> map) {
             new JSONObject(map).write(writer, indentFactor, indent);
-        } else if (value instanceof Collection) {
-            Collection<?> coll = (Collection<?>) value;
+        } else if (value instanceof Collection<?> coll) {
             new JSONArray(coll).write(writer, indentFactor, indent);
         } else if (value.getClass() == byte[].class) {
             writeBase64(writer, (byte[]) value);
@@ -224,15 +222,13 @@ public abstract class JSONItem {
                 return object;
             }
 
-            if (object instanceof Collection) {
-                Collection<?> coll = (Collection<?>) object;
+            if (object instanceof Collection<?> coll) {
                 return new JSONArray(coll);
             }
             if (object.getClass().isArray()) {
                 return new JSONArray(object);
             }
-            if (object instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) object;
+            if (object instanceof Map<?, ?> map) {
                 return new JSONObject(map);
             }
             Package objectPackage = object.getClass().getPackage();

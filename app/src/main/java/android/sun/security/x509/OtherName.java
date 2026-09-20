@@ -172,10 +172,9 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
         if (this == other) {
             return true;
         }
-        if (!(other instanceof OtherName)) {
+        if (!(other instanceof OtherName otherOther)) {
             return false;
         }
-        OtherName otherOther = (OtherName)other;
         if (!(otherOther.oid.equals(oid))) {
             return false;
         }

@@ -85,8 +85,7 @@ public class ParallelIntegerPair implements IntegerPair, BlockRefresh {
         if (pair2 == null) {
             return pair1;
         }
-        if (pair1 instanceof ParallelIntegerPair) {
-            ParallelIntegerPair p = (ParallelIntegerPair) pair1;
+        if (pair1 instanceof ParallelIntegerPair p) {
             p.add(pair2);
             return p;
         }

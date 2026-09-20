@@ -402,12 +402,11 @@ public final class Optional<T> {
 			return true;
 		}
 		
-		if (!(obj instanceof Optional)) {
+		if (!(obj instanceof Optional<?> other)) {
 			return false;
 		}
-		
-		Optional<?> other = (Optional<?>) obj;
-		return Objects.equals(value, other.value);
+
+        return Objects.equals(value, other.value);
 	}
 	
 	/**

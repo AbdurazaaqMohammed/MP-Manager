@@ -96,9 +96,7 @@ public class TypeListPool extends BaseNullableOffsetPool<Key<? extends Collectio
 
         @Override
         public boolean equals(Object o) {
-            if (o instanceof Key) {
-                Key<? extends Collection<? extends CharSequence>> other =
-                        (Key<? extends Collection<? extends CharSequence>>)o;
+            if (o instanceof Key<? extends Collection<? extends CharSequence>> other) {
                 if (types.size() != other.types.size()) {
                     return false;
                 }

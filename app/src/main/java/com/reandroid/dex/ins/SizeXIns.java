@@ -356,8 +356,7 @@ public class SizeXIns extends Ins {
         int hash = 1;
         hash = hash + getIndex();
         hash = hash * 31 + getOpcode().getValue();
-        if(this instanceof RegistersSet){
-            RegistersSet set = (RegistersSet) this;
+        if(this instanceof RegistersSet set){
             int count = set.getRegistersCount();
             hash = hash * 31 + count;
             for(int i = 0; i < count; i++){
@@ -382,14 +381,13 @@ public class SizeXIns extends Ins {
         fromSmaliData(smaliInstruction);
     }
     private void fromSmaliRegisters(SmaliInstruction smaliInstruction){
-        if(!(this instanceof RegistersSet)){
+        if(!(this instanceof RegistersSet registersSet)){
             return;
         }
         if(smaliInstruction.getRegistersTable() == null){
             smaliInstruction.setRegistersTable(getRegistersTable());
         }
         int count = smaliInstruction.getRegistersCount();
-        RegistersSet registersSet = (RegistersSet) this;
         registersSet.setRegistersCount(count);
         for(int i = 0; i < count; i++){
             Register register = smaliInstruction.getRegister(i);

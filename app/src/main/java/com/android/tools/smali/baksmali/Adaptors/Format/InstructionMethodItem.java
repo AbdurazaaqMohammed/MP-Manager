@@ -110,8 +110,7 @@ public class InstructionMethodItem<T extends Instruction> extends MethodItem {
             }
         }
 
-        if (instruction instanceof ReferenceInstruction) {
-            ReferenceInstruction referenceInstruction = (ReferenceInstruction)instruction;
+        if (instruction instanceof ReferenceInstruction referenceInstruction) {
             Reference reference = referenceInstruction.getReference();
 
             try {
@@ -125,9 +124,7 @@ public class InstructionMethodItem<T extends Instruction> extends MethodItem {
                 referenceWritable = () -> writer.write(ex.getInvalidReferenceRepresentation());
             }
 
-            if (instruction instanceof DualReferenceInstruction) {
-                DualReferenceInstruction dualReferenceInstruction =
-                        (DualReferenceInstruction) instruction;
+            if (instruction instanceof DualReferenceInstruction dualReferenceInstruction) {
                 try {
                     Reference reference2 = dualReferenceInstruction.getReference2();
                     reference2.validateReference();

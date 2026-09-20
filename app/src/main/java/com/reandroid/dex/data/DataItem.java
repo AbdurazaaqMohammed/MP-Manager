@@ -60,9 +60,8 @@ public class DataItem extends SectionItemContainer
         if(item == null){
             return;
         }
-        if(this instanceof KeyReference){
-            KeyReference self = (KeyReference) this;
-            self.setKey(((KeyReference)item).getKey());
+        if(this instanceof KeyReference self){
+            self.setKey(item.getKey());
             return;
         }
         BlockReader reader = new BlockReader(item.getBytes());

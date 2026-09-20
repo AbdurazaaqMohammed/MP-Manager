@@ -100,8 +100,7 @@ public abstract class InsSwitchPayload<T extends SwitchEntry> extends PayloadDat
         Iterator<InstructionLabel> iterator = getReferencingLabels();
         while (iterator.hasNext()) {
             Instruction instruction = iterator.next().getOwnerInstruction();
-            if (instruction instanceof InsSwitch) {
-                InsSwitch insSwitch = (InsSwitch) instruction;
+            if (instruction instanceof InsSwitch insSwitch) {
                 if (insSwitch.getOpcode() == getSwitchOpcode()) {
                     return insSwitch;
                 }

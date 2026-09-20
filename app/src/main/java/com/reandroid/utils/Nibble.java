@@ -63,10 +63,9 @@ public class Nibble extends Number {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof Number)) {
+        if (!(obj instanceof Number number)) {
             return false;
         }
-        Number number = (Number) obj;
         return value == number.intValue();
     }
 

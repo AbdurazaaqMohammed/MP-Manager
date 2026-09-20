@@ -91,8 +91,7 @@ public class WrappedBlock extends Block implements BlockRefresh {
             return true;
         }
         Block base = getBaseBlock();
-        if (obj instanceof WrappedBlock) {
-            WrappedBlock wrappedBlock = (WrappedBlock) obj;
+        if (obj instanceof WrappedBlock wrappedBlock) {
             return base.equals(wrappedBlock.getBaseBlock());
         }
         return base.equals(obj);

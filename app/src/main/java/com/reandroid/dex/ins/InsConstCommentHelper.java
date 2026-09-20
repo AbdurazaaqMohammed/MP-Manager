@@ -68,7 +68,7 @@ class InsConstCommentHelper {
             return null;
         }
         Ins next = instructionList.get(constNumberIns.getIndex() + 1);
-        if (!(next instanceof RegistersSet) || !(next instanceof SizeXIns)) {
+        if (!(next instanceof RegistersSet) || !(next instanceof SizeXIns nextSizeXIns)) {
             return null;
         }
         int register = ((RegistersSet) constNumberIns).getRegister();
@@ -83,7 +83,6 @@ class InsConstCommentHelper {
         if (opcodeName.contains("double")) {
             return TypeKey.TYPE_D;
         }
-        SizeXIns nextSizeXIns = (SizeXIns) next;
         TypeKey typeKey = findDataTypeFromFieldInsLazy(nextSizeXIns);
         if (typeKey == null) {
             typeKey = findDataTypeFromInvokeInsLazy(register, nextSizeXIns);
@@ -120,10 +119,9 @@ class InsConstCommentHelper {
     }
     private static TypeKey findDataTypeFromInvokeInsLazy(int register, SizeXIns sizeXIns) {
         Key key = sizeXIns.getKey();
-        if (!(key instanceof MethodKey)) {
+        if (!(key instanceof MethodKey methodKey)) {
             return null;
         }
-        MethodKey methodKey = (MethodKey) key;
         int registerIndex = indexOfRegister(register, (RegistersSet) sizeXIns);
         int index = methodKey.getParameterIndex(registerIndex);
         return methodKey.getParameter(index);

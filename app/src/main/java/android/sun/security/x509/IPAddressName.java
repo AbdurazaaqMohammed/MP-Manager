@@ -397,7 +397,7 @@ public class IPAddressName implements android.sun.security.x509.GeneralNameInter
             constraintType = NAME_DIFF_TYPE;
         else if (inputName.getType() != NAME_IP)
             constraintType = NAME_DIFF_TYPE;
-        else if (((IPAddressName)inputName).equals(this))
+        else if (inputName.equals(this))
             constraintType = NAME_MATCH;
         else {
             byte[] otherAddress = ((IPAddressName)inputName).getBytes();

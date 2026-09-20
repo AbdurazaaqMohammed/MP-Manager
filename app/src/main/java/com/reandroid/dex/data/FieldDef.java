@@ -117,8 +117,7 @@ public class FieldDef extends Def<FieldId> implements FieldProgram {
         }
     }
     private boolean isNonDefaultValue(Key key) {
-        if (key instanceof PrimitiveKey) {
-            PrimitiveKey primitiveKey = (PrimitiveKey) key;
+        if (key instanceof PrimitiveKey primitiveKey) {
             return primitiveKey.getValueAsLong() != 0;
         }
         return !(key instanceof NullValueKey);

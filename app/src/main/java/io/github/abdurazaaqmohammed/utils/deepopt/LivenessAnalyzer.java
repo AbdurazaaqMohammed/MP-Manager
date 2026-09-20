@@ -285,27 +285,22 @@ public final class LivenessAnalyzer {
     private static Set<Integer> readRegs(Instruction ins) {
         Set<Integer> out = new HashSet<>();
         String op = ins.getOpcode().name;
-        if (ins instanceof FiveRegisterInstruction) {
-            FiveRegisterInstruction f = (FiveRegisterInstruction) ins;
+        if (ins instanceof FiveRegisterInstruction f) {
             out.add(f.getRegisterC());
             out.add(f.getRegisterD());
             out.add(f.getRegisterE());
             out.add(f.getRegisterF());
             out.add(f.getRegisterG());
-        } else if (ins instanceof RegisterRangeInstruction) {
-            RegisterRangeInstruction r = (RegisterRangeInstruction) ins;
+        } else if (ins instanceof RegisterRangeInstruction r) {
             for (int i = 0; i < r.getRegisterCount(); i++) out.add(r.getStartRegister() + i);
-        } else if (ins instanceof ThreeRegisterInstruction) {
-            ThreeRegisterInstruction t = (ThreeRegisterInstruction) ins;
+        } else if (ins instanceof ThreeRegisterInstruction t) {
             if (op.startsWith("aput")) out.add(t.getRegisterA());
             out.add(t.getRegisterB());
             out.add(t.getRegisterC());
-        } else if (ins instanceof TwoRegisterInstruction) {
-            TwoRegisterInstruction t = (TwoRegisterInstruction) ins;
+        } else if (ins instanceof TwoRegisterInstruction t) {
             if (op.startsWith("if-")) out.add(t.getRegisterA());
             out.add(t.getRegisterB());
-        } else if (ins instanceof OneRegisterInstruction) {
-            OneRegisterInstruction o = (OneRegisterInstruction) ins;
+        } else if (ins instanceof OneRegisterInstruction o) {
             if (op.startsWith("if-") || op.equals("return") || op.equals("return-wide") || op.equals("return-object")
                     || op.equals("throw") || op.equals("monitor-enter") || op.equals("monitor-exit")
                     || op.equals("packed-switch") || op.equals("sparse-switch") || op.equals("fill-array-data")

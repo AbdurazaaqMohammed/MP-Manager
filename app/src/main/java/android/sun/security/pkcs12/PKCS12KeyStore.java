@@ -1472,8 +1472,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
              * certificate. If we get a bagItem of type KeyEntry with a
              * null keyId, we should skip it entirely.
              */
-            if (bagItem instanceof KeyEntry) {
-                KeyEntry entry = (KeyEntry)bagItem;
+            if (bagItem instanceof KeyEntry entry) {
                 if (keyId == null) {
                    // Insert a localKeyID for the privateKey
                    // Note: This is a workaround to allow null localKeyID
@@ -1506,8 +1505,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                    alias = getUnfriendlyName();
                 entry.alias = alias;
                 entries.put(alias.toLowerCase(), entry);
-            } else if (bagItem instanceof X509Certificate) {
-                X509Certificate cert = (X509Certificate)bagItem;
+            } else if (bagItem instanceof X509Certificate cert) {
                 // Insert a localKeyID for the corresponding cert
                 // Note: This is a workaround to allow null localKeyID
                 // attribute in pkcs12 with one private key entry and

@@ -34,7 +34,7 @@ public class SourceFile extends IndirectStringReference implements SmaliRegion {
 
     @Override
     public StringKey getKey() {
-        return (StringKey) super.getKey();
+        return super.getKey();
     }
     @Override
     public void setKey(Key key) {

@@ -195,20 +195,18 @@ public class PackageIdentifier extends IdentifierMap<TypeIdentifier> {
         closeParser(parser);
     }
     private void closeParser(XmlPullParser parser) {
-        if (!(parser instanceof Closeable)) {
+        if (!(parser instanceof Closeable closeable)) {
             return;
         }
-        Closeable closeable = (Closeable)parser;
         try {
             closeable.close();
         } catch (IOException ignored) {
         }
     }
     private void closeSerializer(XmlSerializer serializer) {
-        if (!(serializer instanceof Closeable)) {
+        if (!(serializer instanceof Closeable closeable)) {
             return;
         }
-        Closeable closeable = (Closeable)serializer;
         try {
             closeable.close();
         } catch (IOException ignored) {

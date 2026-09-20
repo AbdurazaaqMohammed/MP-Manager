@@ -130,8 +130,7 @@ public class SmaliValueFactory {
         SmaliValue smaliValue;
         if (key == null) {
             smaliValue = null;
-        } else if (key instanceof PrimitiveKey) {
-            PrimitiveKey primitiveKey = (PrimitiveKey) key;
+        } else if (key instanceof PrimitiveKey primitiveKey) {
             if (primitiveKey.isX()) {
                 smaliValue = new SmaliValueX();
             }else if (primitiveKey.isBoolean()) {

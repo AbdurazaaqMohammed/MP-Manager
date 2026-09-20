@@ -169,10 +169,9 @@ public class CallSiteId extends IdItem implements Comparable<CallSiteId> {
             return null;
         }
         DexValueBlock<?> value = encodedArray.get(index);
-        if (!(value instanceof SectionValue)) {
+        if (!(value instanceof SectionValue<?> sectionValue)) {
             return null;
         }
-        SectionValue<?> sectionValue = (SectionValue<?>) value;
         if (sectionType != null && sectionType != sectionValue.getSectionType()) {
             return null;
         }

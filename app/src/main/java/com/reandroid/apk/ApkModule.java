@@ -258,10 +258,9 @@ public class ApkModule implements ApkFile, Closeable {
     }
     public FrameworkApk getLoadedFramework(Integer version, boolean onlyAndroid) {
         for (TableBlock tableBlock : getLoadedFrameworks()) {
-            if (!(tableBlock instanceof FrameworkTable)) {
+            if (!(tableBlock instanceof FrameworkTable frame)) {
                 continue;
             }
-            FrameworkTable frame = (FrameworkTable) tableBlock;
             if (onlyAndroid && !isAndroid(frame)) {
                 continue;
             }
@@ -310,8 +309,7 @@ public class ApkModule implements ApkFile, Closeable {
         return initializeAndroidFramework(version);
     }
     private boolean isAndroid(TableBlock tableBlock) {
-        if (tableBlock instanceof FrameworkTable) {
-            FrameworkTable frameworkTable = (FrameworkTable) tableBlock;
+        if (tableBlock instanceof FrameworkTable frameworkTable) {
             return frameworkTable.isAndroid();
         }
         return false;

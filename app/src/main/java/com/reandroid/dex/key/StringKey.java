@@ -96,10 +96,9 @@ public class StringKey implements Key{
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof StringKey)) {
+        if (!(obj instanceof StringKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        StringKey key = (StringKey) obj;
         return CompareUtil.compare(getString(), key.getString());
     }
     @Override
@@ -107,10 +106,9 @@ public class StringKey implements Key{
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof StringKey)) {
+        if (!(obj instanceof StringKey stringKey)) {
             return false;
         }
-        StringKey stringKey = (StringKey) obj;
         return ObjectsUtil.equals(getString(), stringKey.getString());
     }
     @Override

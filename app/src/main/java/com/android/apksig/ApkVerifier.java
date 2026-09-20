@@ -3129,10 +3129,9 @@ public class ApkVerifier {
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof ByteArray)) {
+            if (!(obj instanceof ByteArray other)) {
                 return false;
             }
-            ByteArray other = (ByteArray) obj;
             if (hashCode() != other.hashCode()) {
                 return false;
             }

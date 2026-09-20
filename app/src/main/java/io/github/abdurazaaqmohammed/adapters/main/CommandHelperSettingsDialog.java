@@ -200,7 +200,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
                 copyBtn.setText(android.R.string.copy);
                 copyBtn.setOnClickListener(view -> {
                     ((android.content.ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("placeholder", token));
-                    Extensions.showMessage((AppCompatActivity) getActivity(), getString(R.string.copied_to_clipboard, token));
+                    Extensions.showMessage(getActivity(), getString(R.string.copied_to_clipboard, token));
                 });
 
                 row.addView(tv);

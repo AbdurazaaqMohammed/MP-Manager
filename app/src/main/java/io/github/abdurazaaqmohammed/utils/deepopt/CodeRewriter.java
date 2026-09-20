@@ -37,8 +37,7 @@ public final class CodeRewriter {
             Instruction ins = list.get(i);
             if (!ins.getOpcode().name.startsWith("invoke-")) continue;
             if (!(ins instanceof ReferenceInstruction)) continue;
-            if (!(((ReferenceInstruction) ins).getReference() instanceof MethodReference)) continue;
-            MethodReference ref = (MethodReference) ((ReferenceInstruction) ins).getReference();
+            if (!(((ReferenceInstruction) ins).getReference() instanceof MethodReference ref)) continue;
             String resolvedKey = index.resolveMethodKey(ref);
             if (resolvedKey == null || !removedKeys.contains(resolvedKey)) continue;
             removed[i] = true;

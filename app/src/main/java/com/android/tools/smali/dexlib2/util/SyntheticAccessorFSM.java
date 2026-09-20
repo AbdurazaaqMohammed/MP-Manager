@@ -319,7 +319,7 @@ case 1:
 
 	if ( _SyntheticAccessorFSM_trans_actions[_trans] != 0 ) {
 		_acts = _SyntheticAccessorFSM_trans_actions[_trans];
-		_nacts = (int) _SyntheticAccessorFSM_actions[_acts++];
+		_nacts = _SyntheticAccessorFSM_actions[_acts++];
 		while ( _nacts-- > 0 )
 	{
 			switch ( _SyntheticAccessorFSM_actions[_acts++] )

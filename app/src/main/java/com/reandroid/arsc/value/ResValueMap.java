@@ -218,10 +218,9 @@ public class ResValueMap extends AttributeValue implements Comparable<ResValueMa
     }
     @Override
     public void merge(ValueItem valueItem){
-        if(valueItem==this || !(valueItem instanceof ResValueMap)){
+        if(valueItem==this || !(valueItem instanceof ResValueMap resValueMap)){
             return;
         }
-        ResValueMap resValueMap = (ResValueMap) valueItem;
         super.merge(resValueMap);
         setNameId(resValueMap.getNameId());
     }

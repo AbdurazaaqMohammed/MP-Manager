@@ -341,10 +341,9 @@ public abstract class DebugElementBlock extends FixedDexContainerWithTool implem
         if (other == this) {
             return 0;
         }
-        if (!(other instanceof DebugElementBlock)) {
+        if (!(other instanceof DebugElementBlock element)) {
             return InstructionLabel.compareLabels(this, other);
         }
-        DebugElementBlock element = (DebugElementBlock) other;
         return CompareUtil.compare(getIndex(), element.getIndex());
     }
 

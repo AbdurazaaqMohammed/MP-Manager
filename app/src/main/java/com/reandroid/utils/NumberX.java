@@ -73,10 +73,9 @@ public class NumberX extends Number implements Comparable<Number> {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof Number)) {
+        if (!(obj instanceof Number number)) {
             return false;
         }
-        Number number = (Number) obj;
         return this.longValue() == number.longValue();
     }
     @Override

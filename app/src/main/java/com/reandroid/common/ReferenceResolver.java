@@ -57,7 +57,7 @@ public class ReferenceResolver{
         return results;
     }
     public List<Entry> resolveAll(int referenceId){
-        return resolveAll(referenceId, (Predicate<Entry>)null);
+        return resolveAll(referenceId, null);
     }
     public synchronized List<Entry> resolveAll(int referenceId, Predicate<Entry> filter){
         resolveReference(referenceId, filter);

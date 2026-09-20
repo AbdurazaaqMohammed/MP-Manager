@@ -91,10 +91,9 @@ public class DebugLineNumberBlock extends DebugElementBlock implements DebugLine
         }
         for(int i = index - 1; i >=0; i--){
             DebugElementBlock element = debugSequence.get(i);
-            if(!(element instanceof DebugLineNumberBlock)){
+            if(!(element instanceof DebugLineNumberBlock lineNumber)){
                 continue;
             }
-            DebugLineNumberBlock lineNumber = (DebugLineNumberBlock) element;
             return lineNumber.getLineNumber();
         }
         return 0;
@@ -152,10 +151,9 @@ public class DebugLineNumberBlock extends DebugElementBlock implements DebugLine
         if(obj == this){
             return true;
         }
-        if(!(obj instanceof DebugLineNumberBlock)){
+        if(!(obj instanceof DebugLineNumberBlock debugLineNumberBlock)){
             return false;
         }
-        DebugLineNumberBlock debugLineNumberBlock = (DebugLineNumberBlock) obj;
         return getTargetAddress() == debugLineNumberBlock.getTargetAddress();
     }
 

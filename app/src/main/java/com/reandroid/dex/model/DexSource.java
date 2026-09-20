@@ -109,10 +109,9 @@ public interface DexSource<T> extends Comparable<DexSource<?>>, Closeable{
             if(this == obj) {
                 return true;
             }
-            if(!(obj instanceof DexSource)) {
+            if(!(obj instanceof DexSource<?> dexSource)) {
                 return false;
             }
-            DexSource<?> dexSource = (DexSource<?>) obj;
             return getDexFileNumber() == dexSource.getDexFileNumber();
         }
         @Override

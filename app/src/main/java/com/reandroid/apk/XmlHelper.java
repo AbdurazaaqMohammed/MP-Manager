@@ -68,10 +68,9 @@ public class XmlHelper {
     }
 
     public static void closeSilent(Object obj){
-        if(!(obj instanceof Closeable)){
+        if(!(obj instanceof Closeable closeable)){
             return;
         }
-        Closeable closeable = (Closeable) obj;
         try {
             closeable.close();
         } catch (IOException ignored) {

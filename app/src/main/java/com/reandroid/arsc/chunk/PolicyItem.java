@@ -102,10 +102,9 @@ public class PolicyItem extends IntegerItem {
         if (obj == this) {
             return true;
         }
-        if (!(obj instanceof PolicyItem)) {
+        if (!(obj instanceof PolicyItem reference)) {
             return false;
         }
-        PolicyItem reference = (PolicyItem) obj;
         return get() == reference.get();
     }
 

@@ -71,8 +71,7 @@ public class ParallelReference implements IntegerReference, BlockRefresh {
     private void removeRoot(IntegerReference ref) {
         if (ref == reference2) {
             this.reference2 = null;
-        } else if (reference2 instanceof ParallelReference) {
-            ParallelReference p = (ParallelReference) reference2;
+        } else if (reference2 instanceof ParallelReference p) {
             if (p.reference1 == ref) {
                 if (p.reference2 == null) {
                     this.reference2 = null;
@@ -101,8 +100,7 @@ public class ParallelReference implements IntegerReference, BlockRefresh {
     }
     private boolean putOnNull(IntegerReference ref) {
         IntegerReference current = this.reference1;
-        if (current instanceof ParallelReference) {
-            ParallelReference p = (ParallelReference) current;
+        if (current instanceof ParallelReference p) {
             if (p.putOnNull(ref)) {
                 return true;
             }
@@ -192,15 +190,13 @@ public class ParallelReference implements IntegerReference, BlockRefresh {
         if (reference2 == null) {
             return reference1;
         }
-        if (reference1 instanceof ParallelReference) {
-            ParallelReference ref = (ParallelReference) reference1;
+        if (reference1 instanceof ParallelReference ref) {
             if (ref.getReference2() == null) {
                 ref.setReference2(reference2);
                 return ref;
             }
         }
-        if (reference2 instanceof ParallelReference) {
-            ParallelReference ref = (ParallelReference) reference2;
+        if (reference2 instanceof ParallelReference ref) {
             if (ref.getReference2() == null) {
                 ref.setReference2(reference1);
                 return ref;

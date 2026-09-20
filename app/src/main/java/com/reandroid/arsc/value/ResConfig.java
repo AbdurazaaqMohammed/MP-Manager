@@ -509,8 +509,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
         if(obj== null){
             return false;
         }
-        if(obj instanceof ResConfig){
-            ResConfig other = (ResConfig)obj;
+        if(obj instanceof ResConfig other){
             byte[] bts1 = getValueBytes();
             byte[] bts2 = other.getValueBytes();
             return ByteArray.equalsIgnoreTrailZero(bts1, bts2);

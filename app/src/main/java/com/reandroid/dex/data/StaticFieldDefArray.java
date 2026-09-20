@@ -69,8 +69,7 @@ public class StaticFieldDefArray extends FieldDefArray {
         Iterator<Ins> iterator = instructionList.iterator();
         while (iterator.hasNext()) {
             Ins ins = iterator.next();
-            if (ins instanceof SizeXIns) {
-                SizeXIns sizeXIns = (SizeXIns) ins;
+            if (ins instanceof SizeXIns sizeXIns) {
                 if (sizeXIns.getOpcode().isFieldPut() &&
                         fieldKey.equals(sizeXIns.getKey())) {
                     return true;

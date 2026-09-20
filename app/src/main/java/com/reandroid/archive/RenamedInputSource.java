@@ -35,8 +35,7 @@ public class RenamedInputSource<T extends InputSource> extends InputSource {
         if(instance.isInstance(inputSource)){
             return (T1) inputSource;
         }
-        if(inputSource instanceof RenamedInputSource){
-            RenamedInputSource<?> parent = (RenamedInputSource<?>) inputSource;
+        if(inputSource instanceof RenamedInputSource<?> parent){
             return parent.getParentInputSource(instance);
         }
         return null;

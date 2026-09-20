@@ -175,10 +175,9 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
         }
     }
     private boolean skipReading(Block block, BlockReader reader){
-        if(!(block instanceof OffsetSupplier)){
+        if(!(block instanceof OffsetSupplier offsetSupplier)){
             return false;
         }
-        OffsetSupplier offsetSupplier = (OffsetSupplier) block;
         IntegerReference reference = offsetSupplier.getOffsetReference();
         if(reference != null){
             int offset = reference.get();

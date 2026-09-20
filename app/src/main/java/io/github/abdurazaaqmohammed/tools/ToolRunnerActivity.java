@@ -2725,9 +2725,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             try {
                 Object parsed = parseJsonValue(input.getText().toString().trim());
                 if (parsed instanceof JSONObject) {
-                    output.setText(((JSONObject) parsed).toString());
+                    output.setText(parsed.toString());
                 } else if (parsed instanceof org.json.JSONArray) {
-                    output.setText(((org.json.JSONArray) parsed).toString());
+                    output.setText(parsed.toString());
                 } else {
                     output.setText(String.valueOf(parsed));
                 }

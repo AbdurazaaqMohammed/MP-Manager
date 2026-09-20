@@ -84,8 +84,7 @@ public class DalvikInnerClass extends DalvikAnnotation implements AccessibleItem
         if (!annotatedProgram.hasAnnotation(TypeKey.DALVIK_InnerClass)) {
             Key name = null;
             int accessFlags = 0;
-            if (annotatedProgram instanceof ClassProgram) {
-                ClassProgram classProgram = (ClassProgram) annotatedProgram;
+            if (annotatedProgram instanceof ClassProgram classProgram) {
                 name = StringKey.create(classProgram.getKey().getSimpleInnerName());
                 accessFlags = classProgram.getAccessFlagsValue();
             }

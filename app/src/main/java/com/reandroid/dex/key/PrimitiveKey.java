@@ -51,10 +51,9 @@ public abstract class PrimitiveKey implements Key {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof PrimitiveKey)) {
+        if (!(obj instanceof PrimitiveKey other)) {
             return StringsUtil.compareToString(this, obj);
         }
-        PrimitiveKey other = (PrimitiveKey) obj;
         return Long.compare(this.getValueAsLong(), other.getValueAsLong());
     }
     @Override

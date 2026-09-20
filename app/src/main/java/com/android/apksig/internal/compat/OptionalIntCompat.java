@@ -176,11 +176,10 @@ public final class OptionalIntCompat {
             return true;
         }
 
-        if (!(obj instanceof OptionalIntCompat)) {
+        if (!(obj instanceof OptionalIntCompat other)) {
             return false;
         }
 
-        OptionalIntCompat other = (OptionalIntCompat) obj;
         return (isPresent && other.isPresent)
                 ? value == other.value
                 : isPresent == other.isPresent;

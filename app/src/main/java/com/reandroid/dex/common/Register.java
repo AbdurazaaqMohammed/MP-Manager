@@ -80,10 +80,9 @@ public class Register implements SmaliFormat, Comparable<Register> {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof Register)) {
+        if (!(obj instanceof Register register)) {
             return false;
         }
-        Register register = (Register) obj;
         return getNumber() == register.getNumber() && isParameter() == register.isParameter();
     }
 

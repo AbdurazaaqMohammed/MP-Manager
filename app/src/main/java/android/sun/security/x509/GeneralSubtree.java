@@ -145,9 +145,8 @@ public class GeneralSubtree {
      * @returns true if match
      */
     public boolean equals(Object other) {
-        if (!(other instanceof GeneralSubtree))
+        if (!(other instanceof GeneralSubtree otherGS))
             return false;
-        GeneralSubtree otherGS = (GeneralSubtree)other;
         if (this.name == null) {
             if (otherGS.name != null) {
                 return false;

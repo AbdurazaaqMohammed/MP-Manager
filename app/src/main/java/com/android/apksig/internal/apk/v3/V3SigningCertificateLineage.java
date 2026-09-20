@@ -262,9 +262,8 @@ public class V3SigningCertificateLineage {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof SigningCertificateNode)) return false;
+            if (!(o instanceof SigningCertificateNode that)) return false;
 
-            SigningCertificateNode that = (SigningCertificateNode) o;
             if (!signingCert.equals(that.signingCert)) return false;
             if (parentSigAlgorithm != that.parentSigAlgorithm) return false;
             if (sigAlgorithm != that.sigAlgorithm) return false;

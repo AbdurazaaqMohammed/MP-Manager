@@ -127,10 +127,9 @@ public class ResourceType implements Comparable<ResourceType>, Iterable<Resource
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ResourceType)) {
+        if (!(obj instanceof ResourceType other)) {
             return false;
         }
-        ResourceType other = (ResourceType) obj;
         return this.getPackageBlock() == other.getPackageBlock();
     }
     @Override

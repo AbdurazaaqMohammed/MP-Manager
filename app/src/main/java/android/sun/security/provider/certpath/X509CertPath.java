@@ -105,7 +105,7 @@ public class X509CertPath extends CertPath {
         super("X.509");
 
         // Ensure that the List contains only X509Certificates
-        for (Object obj : (List<?>)certs) {
+        for (Object obj : certs) {
             if (obj instanceof X509Certificate == false) {
                 throw new CertificateException
                     ("List is not all X509Certificates: "

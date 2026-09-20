@@ -116,8 +116,7 @@ public class RField extends DexField implements Comparable<RField> {
     }
 
     static boolean isResourceIdValue(Key key) {
-        if(key instanceof PrimitiveKey){
-            PrimitiveKey primitiveKey = (PrimitiveKey) key;
+        if(key instanceof PrimitiveKey primitiveKey){
             if (primitiveKey.isInteger()) {
                 return PackageBlock.isResourceId(((PrimitiveKey.IntegerKey)primitiveKey).value());
             }

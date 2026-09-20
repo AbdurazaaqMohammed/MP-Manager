@@ -157,12 +157,10 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
         if (methodImpl != null) {
             for (Instruction instruction: methodImpl.getInstructions()) {
                 hasInstruction = true;
-                if (instruction instanceof ReferenceInstruction) {
-                    ReferenceInstruction refInst = (ReferenceInstruction)instruction;
+                if (instruction instanceof ReferenceInstruction refInst) {
                     internReference(refInst.getReference(), refInst.getReferenceType());
                 }
-                if (instruction instanceof DualReferenceInstruction) {
-                    DualReferenceInstruction dualRefInst = (DualReferenceInstruction) instruction;
+                if (instruction instanceof DualReferenceInstruction dualRefInst) {
                     internReference(dualRefInst.getReference2(), dualRefInst.getReferenceType2());
                 }
             }

@@ -491,7 +491,7 @@ public class MainActivity extends AppCompatActivity {
                                         if(modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
                                             File modifiedFile = new File(path);
                                             File folder = modifiedFile.getParentFile();
-                                            File[] dexFiles = folder == null ? null : folder.listFiles((FilenameFilter) (dir, name1) -> name1.endsWith(".dex"));
+                                            File[] dexFiles = folder == null ? null : folder.listFiles((dir, name1) -> name1.endsWith(".dex"));
                                             if (dexFiles == null || dexFiles.length == 0) throw new IOException("No dex files found");
                                             zf.addFiles(Arrays.asList(dexFiles));
                                         } else {
@@ -976,7 +976,7 @@ public class MainActivity extends AppCompatActivity {
         List<Integer> positions = new ArrayList<>(batchSelected);
         positions.sort(Collections.reverseOrder());
         for (int position : positions) {
-            File removed = source.items.remove((int) position);
+            File removed = source.items.remove(position);
             bookmarkLabels.remove(removed.getPath());
         }
         saveBookmarkLabels();
@@ -1808,7 +1808,7 @@ public class MainActivity extends AppCompatActivity {
                             LinearLayout topBar = findViewById(R.id.topBar);
                             LinearLayout pathLayout = (LinearLayout) topBar.getChildAt(1);
                             TextInputLayout filterBox = (TextInputLayout) topBar.getChildAt(2);
-                            EditText filterBar = (EditText) filterBox.getEditText();
+                            EditText filterBar = filterBox.getEditText();
                             if (pathLayout.getVisibility() == View.VISIBLE) {
                                 pathLayout.setVisibility(View.GONE);
                                 filterBox.setVisibility(View.VISIBLE);

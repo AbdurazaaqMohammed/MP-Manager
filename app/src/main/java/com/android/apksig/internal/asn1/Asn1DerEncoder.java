@@ -519,8 +519,7 @@ public final class Asn1DerEncoder {
                 case OCTET_STRING:
                 case BIT_STRING:
                     byte[] value = null;
-                    if (source instanceof ByteBuffer) {
-                        ByteBuffer buf = (ByteBuffer) source;
+                    if (source instanceof ByteBuffer buf) {
                         value = new byte[buf.remaining()];
                         buf.slice().get(value);
                     } else if (source instanceof byte[]) {

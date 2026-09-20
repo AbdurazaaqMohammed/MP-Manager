@@ -126,10 +126,9 @@ public class SmaliLabel extends SmaliCode {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof SmaliLabel)) {
+        if (!(obj instanceof SmaliLabel other)) {
             return false;
         }
-        SmaliLabel other = (SmaliLabel) obj;
         return ObjectsUtil.equals(getLabelName(), other.getLabelName());
     }
     @Override

@@ -115,10 +115,8 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
         if (this == obj)
             return true;
 
-        if (!(obj instanceof OIDName))
+        if (!(obj instanceof OIDName other))
             return false;
-
-        OIDName other = (OIDName)obj;
 
         return oid.equals(other.oid);
     }
@@ -153,7 +151,7 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
             constraintType = NAME_DIFF_TYPE;
         else if (inputName.getType() != NAME_OID)
             constraintType = NAME_DIFF_TYPE;
-        else if (this.equals((OIDName)inputName))
+        else if (this.equals(inputName))
             constraintType = NAME_MATCH;
         else
             //widens and narrows not defined in RFC2459 for OIDName (aka registeredID)

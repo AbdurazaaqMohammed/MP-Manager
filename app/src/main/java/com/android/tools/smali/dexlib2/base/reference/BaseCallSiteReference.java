@@ -46,8 +46,7 @@ public abstract class BaseCallSiteReference extends BaseReference implements Cal
 
     @Override
     public boolean equals(Object o) {
-        if (o != null && o instanceof CallSiteReference) {
-            CallSiteReference other = (CallSiteReference) o;
+        if (o != null && o instanceof CallSiteReference other) {
             return getMethodHandle().equals(other.getMethodHandle()) &&
                     getMethodName().equals(other.getMethodName()) &&
                     getMethodProto().equals(other.getMethodProto()) &&

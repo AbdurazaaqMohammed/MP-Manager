@@ -149,10 +149,9 @@ public class KeyPair<T1 extends Key, T2 extends Key>
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof KeyPair)) {
+        if (!(obj instanceof KeyPair<?, ?> keyPair)) {
             return false;
         }
-        KeyPair<?, ?> keyPair = (KeyPair<?, ?>) obj;
         return ObjectsUtil.equals(getFirst(), keyPair.getFirst());
     }
 
@@ -240,9 +239,8 @@ public class KeyPair<T1 extends Key, T2 extends Key>
             throw new SmaliParseException(
                     "Finished reading", reader);
         }
-        if (firstKey instanceof NamedTypeKey && reader.get() == '"') {
+        if (firstKey instanceof NamedTypeKey namedTypeKey && reader.get() == '"') {
             StringKey name = StringKey.read(reader);
-            NamedTypeKey namedTypeKey = (NamedTypeKey) firstKey;
             return namedTypeKey.changeName(name);
         }
         return readKey(directive, reader);
@@ -321,10 +319,9 @@ public class KeyPair<T1 extends Key, T2 extends Key>
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof KeyPair)) {
+            if (!(obj instanceof KeyPair<?, ?> keyPair)) {
                 return false;
             }
-            KeyPair<?, ?> keyPair = (KeyPair<?, ?>) obj;
             return ObjectsUtil.equals(getFirst(), keyPair.getFirst()) &&
                     ObjectsUtil.equals(getFirst(), keyPair.getFirst());
         }

@@ -223,11 +223,9 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
             return true;
         }
 
-        if (!(obj instanceof URIName)) {
+        if (!(obj instanceof URIName other)) {
             return false;
         }
-
-        URIName other = (URIName) obj;
 
         return uri.equals(other.getURI());
     }
@@ -338,14 +336,13 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
                 Object otherHostObject = ((URIName)inputName).getHostObject();
 
                 if ((hostDNS == null) ||
-                    !(otherHostObject instanceof android.sun.security.x509.DNSName)) {
+                    !(otherHostObject instanceof DNSName otherDNS)) {
                     // If one (or both) is an IP address, only same type
                     constraintType = NAME_SAME_TYPE;
                 } else {
                     // Both host portions are DNS names. Are they domains?
                     boolean thisDomain = (host.charAt(0) == '.');
                     boolean otherDomain = (otherHost.charAt(0) == '.');
-                    android.sun.security.x509.DNSName otherDNS = (android.sun.security.x509.DNSName) otherHostObject;
 
                     // Run DNSName.constrains.
                     constraintType = hostDNS.constrains(otherDNS);

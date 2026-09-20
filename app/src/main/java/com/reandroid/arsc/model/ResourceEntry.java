@@ -416,10 +416,9 @@ public class ResourceEntry implements Iterable<Entry> {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ResourceEntry)) {
+        if (!(obj instanceof ResourceEntry other)) {
             return false;
         }
-        ResourceEntry other = (ResourceEntry) obj;
         return this.getResourceId() == other.getResourceId();
     }
 

@@ -67,8 +67,7 @@ public class InsIdSectionReference extends IdSectionReference<IdItem> {
     }
     private IdItem validateType(IdItem idItem){
         Key key = idItem.getKey();
-        if(key instanceof TypeKey){
-            TypeKey typeKey = (TypeKey) key;
+        if(key instanceof TypeKey typeKey){
             if(this.getItem() != null && !typeKey.isTypeObject() &&
                     !getSectionTool().is(Opcode.CONST_CLASS)) {
                 throw new DexException("Unexpected type '" + key + "', " + buildTrace(idItem));

@@ -261,8 +261,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             adapter.setRows(typeRows(((Types) s).pkg, filter));
         } else if (s instanceof Configs) {
             adapter.setRows(configRows((Configs) s, filter));
-        } else if (s instanceof Entries) {
-            Entries es = (Entries) s;
+        } else if (s instanceof Entries es) {
             Extensions.showMessage(this, getString(R.string.arsc_loading_short));
             new Thread(() -> {
                 List<Row> rows = entryRows(es, filter);
@@ -278,8 +277,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                     if (current() == s) adapter.setRows(rows);
                 });
             }).start();
-        } else if (s instanceof Results) {
-            Results rs = (Results) s;
+        } else if (s instanceof Results rs) {
             adapter.setRows(resultRows(rs, filter));
         }
     }
@@ -392,23 +390,19 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             return;
         }
         if (s instanceof Types) {
-            if (row.tag instanceof SpecTypePair) {
-                SpecTypePair spec = (SpecTypePair) row.tag;
+            if (row.tag instanceof SpecTypePair spec) {
                 push(new Configs(((Types) s).pkg, spec.getTypeName()));
             }
             return;
         }
-        if (s instanceof Configs) {
-            if (row.tag instanceof TypeBlock) {
-                TypeBlock tb = (TypeBlock) row.tag;
-                Configs cs = (Configs) s;
+        if (s instanceof Configs cs) {
+            if (row.tag instanceof TypeBlock tb) {
                 push(new Entries(cs.pkg, cs.type, tb, ArscData.configLabel(tb)));
             }
             return;
         }
         if (s instanceof Entries) {
-            if (row.tag instanceof Entry) {
-                Entry e = (Entry) row.tag;
+            if (row.tag instanceof Entry e) {
                 ResourceEntry re = null;
                 try {
                     re = e.getResourceEntry();
@@ -425,8 +419,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             return;
         }
         if (s instanceof Results) {
-            if (row.tag instanceof ArscData.SimpleHit) {
-                ArscData.SimpleHit h = (ArscData.SimpleHit) row.tag;
+            if (row.tag instanceof ArscData.SimpleHit h) {
                 showEntryDetail(h.entry, h.re);
             }
         }

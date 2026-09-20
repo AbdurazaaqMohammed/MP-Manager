@@ -88,10 +88,9 @@ public class MethodHandleKey implements Key{
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof MethodHandleKey)) {
+        if (!(obj instanceof MethodHandleKey other)) {
             return StringsUtil.compareToString(this, obj);
         }
-        MethodHandleKey other = (MethodHandleKey) obj;
         int i = CompareUtil.compare(getHandleType(), other.getHandleType());
         if(i != 0){
             return i;
@@ -104,10 +103,9 @@ public class MethodHandleKey implements Key{
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof MethodHandleKey)) {
+        if (!(obj instanceof MethodHandleKey other)) {
             return false;
         }
-        MethodHandleKey other = (MethodHandleKey) obj;
         return ObjectsUtil.equals(getHandleType(), other.getHandleType()) &&
                 ObjectsUtil.equals(getMember(), other.getMember());
     }

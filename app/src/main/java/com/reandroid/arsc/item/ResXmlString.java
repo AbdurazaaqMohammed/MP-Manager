@@ -178,13 +178,12 @@ public class ResXmlString extends StringItem {
     }
     @Override
     public int compareTo(StringItem stringItem){
-        if(!(stringItem instanceof ResXmlString)){
+        if(!(stringItem instanceof ResXmlString xmlString)){
             return -1;
         }
         if(stringItem == this) {
             return 0;
         }
-        ResXmlString xmlString = (ResXmlString) stringItem;
         int id1 = getResourceId();
         int id2 = xmlString.getResourceId();
         int i = CompareUtil.compare(id1 == 0, id2 == 0);

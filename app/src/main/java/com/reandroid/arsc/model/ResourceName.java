@@ -106,10 +106,9 @@ public class ResourceName implements Comparable<ResourceName> {
         if (this == obj) {
             return true;
         }
-        if(!(obj instanceof ResourceName)) {
+        if(!(obj instanceof ResourceName that)) {
             return false;
         }
-        ResourceName that = (ResourceName) obj;
         String p1 = this.getPackageName();
         String p2 = that.getPackageName();
         if(p1 != null && p2 != null && !p1.equals(p2)) {

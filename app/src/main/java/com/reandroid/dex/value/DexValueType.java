@@ -226,8 +226,7 @@ public class DexValueType<T extends DexValueBlock<?>> implements BlockCreator<T>
         if(key instanceof NullValueKey) {
             return NULL;
         }
-        if(key instanceof PrimitiveKey) {
-            PrimitiveKey primitiveKey = (PrimitiveKey) key;
+        if(key instanceof PrimitiveKey primitiveKey) {
             if(primitiveKey.isBoolean()) {
                 return BOOLEAN;
             }

@@ -237,8 +237,7 @@ public class Marker {
     }
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Marker) {
-            Marker other = (Marker) obj;
+        if (obj instanceof Marker other) {
             return (tool == other.tool) && jsonObject.equals(other.jsonObject);
         }
         return false;

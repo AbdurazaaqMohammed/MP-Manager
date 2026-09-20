@@ -123,10 +123,9 @@ public class CallSiteKey implements Key {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof CallSiteKey)) {
+        if (!(obj instanceof CallSiteKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        CallSiteKey key = (CallSiteKey) obj;
         int i = CompareUtil.compare(this.getBootstrap(), key.getBootstrap());
         if (i == 0) {
             i = CompareUtil.compare(this.getNameAndType(), key.getNameAndType());
@@ -143,10 +142,9 @@ public class CallSiteKey implements Key {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof CallSiteKey)) {
+        if (!(obj instanceof CallSiteKey other)) {
             return false;
         }
-        CallSiteKey other = (CallSiteKey) obj;
         return ObjectsUtil.equals(getBootstrap(), other.getBootstrap()) &&
                 ObjectsUtil.equals(getNameAndType(), other.getNameAndType());
     }

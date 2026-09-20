@@ -49,8 +49,7 @@ public abstract class BaseMethodProtoReference extends BaseReference implements
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o instanceof MethodProtoReference) {
-            MethodProtoReference other = (MethodProtoReference)o;
+        if (o instanceof MethodProtoReference other) {
             return getReturnType().equals(other.getReturnType()) &&
                     CharSequenceUtils.listEquals(getParameterTypes(), other.getParameterTypes());
         }

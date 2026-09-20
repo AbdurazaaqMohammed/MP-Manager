@@ -251,10 +251,9 @@ public class AnnotationItemKey extends KeyList<AnnotationElementKey> implements 
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof AnnotationItemKey)) {
+        if (!(obj instanceof AnnotationItemKey itemKey)) {
             return -1;
         }
-        AnnotationItemKey itemKey = (AnnotationItemKey) obj;
         return CompareUtil.compare(getType(), itemKey.getType());
     }
 
@@ -278,10 +277,9 @@ public class AnnotationItemKey extends KeyList<AnnotationElementKey> implements 
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof AnnotationItemKey)) {
+        if (!(obj instanceof AnnotationItemKey other)) {
             return false;
         }
-        AnnotationItemKey other = (AnnotationItemKey) obj;
         return this.hashCode() == other.hashCode() &&
                 ObjectsUtil.equals(this.getVisibility(), other.getVisibility()) &&
                 ObjectsUtil.equals(this.getType(), other.getType()) &&

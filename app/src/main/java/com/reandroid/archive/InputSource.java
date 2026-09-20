@@ -160,10 +160,9 @@ public abstract class InputSource {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof InputSource)) {
+        if (!(o instanceof InputSource that)) {
             return false;
         }
-        InputSource that = (InputSource) o;
         return getName().equals(that.getName());
     }
     @Override

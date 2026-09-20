@@ -401,11 +401,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void loadSmaliInBackground() {
         Activity activity = getActivity();
-        if (!(activity instanceof DexEditorActivity)) return;
+        if (!(activity instanceof DexEditorActivity dexActivity)) return;
         if (loadingProgress != null) loadingProgress.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
-                DexEditorActivity dexActivity = (DexEditorActivity) activity;
                 String smaliCode = DexEditorActivity.classTree.getSmaliByType(
                         Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
                 activity.runOnUiThread(() -> {

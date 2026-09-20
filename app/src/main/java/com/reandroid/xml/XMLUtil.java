@@ -239,8 +239,7 @@ public class XMLUtil {
         if (serializer instanceof KXmlSerializer) {
             return (KXmlSerializer) serializer;
         }
-        if (serializer instanceof XmlSerializerWrapper) {
-            XmlSerializerWrapper wrapper = (XmlSerializerWrapper) serializer;
+        if (serializer instanceof XmlSerializerWrapper wrapper) {
             return getKXmlSerializer(wrapper.getBaseSerializer());
         }
         return null;

@@ -45,8 +45,7 @@ public abstract class BaseAnnotation implements Annotation {
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof Annotation) {
-            Annotation other = (Annotation)o;
+        if (o instanceof Annotation other) {
             return (getVisibility() == other.getVisibility()) &&
                    getType().equals(other.getType()) &&
                    getElements().equals(other.getElements());

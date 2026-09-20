@@ -91,10 +91,9 @@ public class BlockListArray<T extends Block> extends BlockArray<T>
         onChanged();
     }
     private void positionItem(Block block, BlockReader reader){
-        if(!(block instanceof PositionedItem)){
+        if(!(block instanceof PositionedItem positionedItem)){
             return;
         }
-        PositionedItem positionedItem = (PositionedItem) block;
         positionedItem.setPosition(reader.getPosition());
     }
     protected boolean isValidOffset(int offset){

@@ -197,7 +197,7 @@ public class KXmlSerializer implements XmlSerializer {
         }
     }
     private static void reportInvalidCharacter(char ch){
-        throw new IllegalArgumentException("Illegal character (U+" + Integer.toHexString((int) ch) + ")");
+        throw new IllegalArgumentException("Illegal character (U+" + Integer.toHexString(ch) + ")");
     }
     @Override
     public void docdecl(String dd) throws IOException {
@@ -586,8 +586,8 @@ public class KXmlSerializer implements XmlSerializer {
 
     private void writeSurrogate(char high, char low) throws IOException {
         if(!Character.isLowSurrogate(low)){
-            throw new IllegalArgumentException("Bad surrogate pair (U+" + Integer.toHexString((int) high) +
-                    " U+" + Integer.toHexString((int) low) + ")");
+            throw new IllegalArgumentException("Bad surrogate pair (U+" + Integer.toHexString(high) +
+                    " U+" + Integer.toHexString(low) + ")");
         }
         int codePoint = Character.toCodePoint(high, low);
         append("&#" + codePoint + ";");

@@ -106,8 +106,7 @@ public class ResFile implements Iterable<Entry> {
     }
     public ResXmlDocument readAsXmlDocument() throws IOException {
         InputSource inputSource = getInputSource();
-        if(inputSource instanceof BlockInputSource){
-            BlockInputSource<?> bis = (BlockInputSource<?>) inputSource;
+        if(inputSource instanceof BlockInputSource<?> bis){
             Block block = bis.getBlock();
             if(block instanceof ResXmlDocument){
                 return (ResXmlDocument) block;
@@ -164,8 +163,7 @@ public class ResFile implements Iterable<Entry> {
         if((inputSource instanceof XMLEncodeSource)
                 || (inputSource instanceof JsonXmlInputSource)){
             mBinXml = true;
-        }else if (inputSource instanceof BlockInputSource){
-            BlockInputSource<?> bis = (BlockInputSource<?>) inputSource;
+        }else if (inputSource instanceof BlockInputSource<?> bis){
             Block block = bis.getBlock();
             if(block instanceof ResXmlDocument){
                 mBinXml = true;
@@ -355,10 +353,9 @@ public class ResFile implements Iterable<Entry> {
         if(obj == this) {
             return true;
         }
-        if(!(obj instanceof ResFile)) {
+        if(!(obj instanceof ResFile resFile)) {
             return false;
         }
-        ResFile resFile = (ResFile) obj;
         return getFilePath().equals(resFile.getFilePath());
     }
     @Override

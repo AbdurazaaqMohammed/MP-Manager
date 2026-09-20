@@ -712,10 +712,9 @@ public class DexInstruction extends DexCode implements Instruction {
     // for switch payload instruction
     public Iterator<DexInstruction> getTargetSwitchCases() {
         Ins ins = getIns();
-        if (!(ins instanceof InsSwitchPayload)) {
+        if (!(ins instanceof InsSwitchPayload<? extends SwitchEntry> payload)) {
             return EmptyIterator.of();
         }
-        InsSwitchPayload<? extends SwitchEntry> payload = (InsSwitchPayload<? extends SwitchEntry>) ins;
         Iterator<? extends SwitchEntry> switchEntryIterator = payload.iterator();
         if (!switchEntryIterator.hasNext()) {
             return EmptyIterator.of();

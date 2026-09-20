@@ -120,10 +120,9 @@ public class NamedTypeKey implements Key {
         if (obj == this) {
             return 0;
         }
-        if (!(obj instanceof NamedTypeKey)) {
+        if (!(obj instanceof NamedTypeKey namedTypeKey)) {
             return StringsUtil.compareToString(this, obj);
         }
-        NamedTypeKey namedTypeKey = (NamedTypeKey) obj;
         int i = getNameKey().compareTo(namedTypeKey.getNameKey());
         if (i == 0) {
             i = getType().compareTo(namedTypeKey.getType());
@@ -155,10 +154,9 @@ public class NamedTypeKey implements Key {
         if (obj == this) {
             return true;
         }
-        if (!(obj instanceof NamedTypeKey)) {
+        if (!(obj instanceof NamedTypeKey namedTypeKey)) {
             return false;
         }
-        NamedTypeKey namedTypeKey = (NamedTypeKey) obj;
         return getNameKey().equals(namedTypeKey.getNameKey()) &&
                 getType().equals(namedTypeKey.getType());
     }

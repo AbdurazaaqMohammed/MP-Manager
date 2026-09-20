@@ -114,10 +114,9 @@ public class FieldKey extends NamedTypeKey implements MemberKey {
         if (obj == null) {
             return -1;
         }
-        if (!(obj instanceof FieldKey)) {
+        if (!(obj instanceof FieldKey key)) {
             return StringsUtil.compareToString(this, obj);
         }
-        FieldKey key = (FieldKey) obj;
         int i = CompareUtil.compare(getDeclaring(), key.getDeclaring());
         if (i != 0) {
             return i;
@@ -201,10 +200,9 @@ public class FieldKey extends NamedTypeKey implements MemberKey {
         if (obj == this) {
             return true;
         }
-        if (!(obj instanceof FieldKey)) {
+        if (!(obj instanceof FieldKey other)) {
             return false;
         }
-        FieldKey other = (FieldKey) obj;
         return getDeclaring().equals(other.getDeclaring()) &&
                 getNameKey().equals(other.getNameKey()) &&
                 getType().equals(other.getType());

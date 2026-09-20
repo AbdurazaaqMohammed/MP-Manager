@@ -47,7 +47,7 @@ public class EocdRecord {
     }
 
     public static ByteBuffer createWithPaddedComment(ByteBuffer original, int padding) {
-        ByteBuffer result = ByteBuffer.allocate((int) original.remaining() + padding);
+        ByteBuffer result = ByteBuffer.allocate(original.remaining() + padding);
         result.order(ByteOrder.LITTLE_ENDIAN);
         result.put(original.slice());
         result.rewind();

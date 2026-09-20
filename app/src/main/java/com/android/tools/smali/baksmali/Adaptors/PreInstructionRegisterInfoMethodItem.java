@@ -108,13 +108,11 @@ public class PreInstructionRegisterInfoMethodItem extends MethodItem {
     }
 
     private void addArgsRegs(BitSet registers) {
-        if (analyzedInstruction.getInstruction() instanceof RegisterRangeInstruction) {
-            RegisterRangeInstruction instruction = (RegisterRangeInstruction)analyzedInstruction.getInstruction();
+        if (analyzedInstruction.getInstruction() instanceof RegisterRangeInstruction instruction) {
 
             registers.set(instruction.getStartRegister(),
                     instruction.getStartRegister() + instruction.getRegisterCount());
-        } else if (analyzedInstruction.getInstruction() instanceof FiveRegisterInstruction) {
-            FiveRegisterInstruction instruction = (FiveRegisterInstruction)analyzedInstruction.getInstruction();
+        } else if (analyzedInstruction.getInstruction() instanceof FiveRegisterInstruction instruction) {
             int regCount = instruction.getRegisterCount();
             switch (regCount) {
                 case 5:
@@ -132,17 +130,14 @@ public class PreInstructionRegisterInfoMethodItem extends MethodItem {
                 case 1:
                     registers.set(instruction.getRegisterC());
             }
-        } else if (analyzedInstruction.getInstruction() instanceof ThreeRegisterInstruction) {
-            ThreeRegisterInstruction instruction = (ThreeRegisterInstruction)analyzedInstruction.getInstruction();
+        } else if (analyzedInstruction.getInstruction() instanceof ThreeRegisterInstruction instruction) {
             registers.set(instruction.getRegisterA());
             registers.set(instruction.getRegisterB());
             registers.set(instruction.getRegisterC());
-        } else if (analyzedInstruction.getInstruction() instanceof TwoRegisterInstruction) {
-            TwoRegisterInstruction instruction = (TwoRegisterInstruction)analyzedInstruction.getInstruction();
+        } else if (analyzedInstruction.getInstruction() instanceof TwoRegisterInstruction instruction) {
             registers.set(instruction.getRegisterA());
             registers.set(instruction.getRegisterB());
-        } else if (analyzedInstruction.getInstruction() instanceof OneRegisterInstruction) {
-            OneRegisterInstruction instruction = (OneRegisterInstruction)analyzedInstruction.getInstruction();
+        } else if (analyzedInstruction.getInstruction() instanceof OneRegisterInstruction instruction) {
             registers.set(instruction.getRegisterA());
         }
     }

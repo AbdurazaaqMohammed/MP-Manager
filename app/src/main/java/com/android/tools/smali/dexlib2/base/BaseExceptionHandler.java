@@ -62,8 +62,7 @@ public abstract class BaseExceptionHandler implements ExceptionHandler {
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o instanceof ExceptionHandler) {
-            ExceptionHandler other = (ExceptionHandler)o;
+        if (o instanceof ExceptionHandler other) {
             return Objects.equals(getExceptionType(), other.getExceptionType()) &&
                    (getHandlerCodeAddress() == other.getHandlerCodeAddress());
         }
