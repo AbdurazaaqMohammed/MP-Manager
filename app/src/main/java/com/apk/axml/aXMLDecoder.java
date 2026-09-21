@@ -42,7 +42,6 @@ public class aXMLDecoder {
 		this.resourceEntries = resourceEntries;
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public List<XMLEntry> decode() throws XmlPullParserException, IOException {
 		byte[] bytes = Utils.toByteArray(inputStream);
 		Set<String> usedPrefixes = collectUsedPrefixes(bytes);

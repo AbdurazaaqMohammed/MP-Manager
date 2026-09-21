@@ -252,14 +252,7 @@ public class ManifestParser {
         if (newlineStartOffset == startOffset) {
             return EMPTY_BYTE_ARRAY;
         }
-        if(Build.VERSION.SDK_INT > 8) return Arrays.copyOfRange(mManifest, startOffset, newlineStartOffset);
-        else {
-            int newLength = startOffset - newlineStartOffset;
-            byte[] copy = new byte[newLength];
-            System.arraycopy(mManifest, startOffset, copy, 0,
-                    Math.min(mManifest.length - startOffset, newLength));
-            return copy;
-        }
+        return Arrays.copyOfRange(mManifest, startOffset, newlineStartOffset);
     }
 
 

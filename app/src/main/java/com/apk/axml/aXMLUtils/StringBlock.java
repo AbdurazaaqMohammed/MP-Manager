@@ -47,7 +47,6 @@ public class StringBlock {
         return block;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public String getString(int index) {
         if (index < 0 || m_stringOffsets == null || index >= m_stringOffsets.length) {
             return null;

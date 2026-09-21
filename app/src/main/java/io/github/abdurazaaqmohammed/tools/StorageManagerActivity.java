@@ -1055,7 +1055,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                 long cache = -1;
                 if (rootSizes.containsKey(app.packageName)) {
                     cache = rootSizes.get(app.packageName);
-                } else if (statsReady && Build.VERSION.SDK_INT >= 26) {
+                } else if (statsReady) {
                     cache = queryCacheBytes26(app);
                 }
                 if (cache < 0) continue;

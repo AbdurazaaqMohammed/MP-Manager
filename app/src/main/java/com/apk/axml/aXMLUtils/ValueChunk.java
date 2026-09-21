@@ -22,7 +22,6 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
         final int pos;
         final String val;
 
-        @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
         public ValPair(Matcher m) {
             int c = m.groupCount();
             for (int i = 1; i <= c; ++i) {
@@ -58,7 +57,6 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
         this.attrChunk = parent;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
     @Override
     public void preWrite() {
         evaluate();

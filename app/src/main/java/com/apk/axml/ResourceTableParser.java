@@ -33,7 +33,6 @@ public class ResourceTableParser {
         this.data = Utils.toByteArray(resStream);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public List<ResEntry> parse() {
         LE le = new LE(data);
         List<ResEntry> out = new ArrayList<>();
@@ -70,7 +69,6 @@ public class ResourceTableParser {
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void parsePackage(LE le, List<ResEntry> out, StringPool globalPool) {
         ChunkHeader pkgHdr = ChunkHeader.read(le);
         int pkgStart = pkgHdr.start, pkgEnd = pkgHdr.start + pkgHdr.size;
@@ -120,7 +118,6 @@ public class ResourceTableParser {
         le.seek(pkgEnd);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
     private void parseTypeChunk(LE le, int packageId, @SuppressWarnings("unused") String _packageName,
                                 StringPool typePool, StringPool keyPool,
                                 StringPool globalPool,
@@ -240,7 +237,6 @@ public class ResourceTableParser {
         le.seek(typeHdr.start + typeHdr.size);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
     private static String sanitizePackage(String pkg) {
         if (pkg == null) return "app";
         int nul = pkg.indexOf('\0');
@@ -284,7 +280,6 @@ public class ResourceTableParser {
         private StringPool(List<String> strings) {
             this.strings=strings;
         }
-        @RequiresApi(api = Build.VERSION_CODES.KITKAT)
         static StringPool read(LE le) {
             ChunkHeader hdr = ChunkHeader.read(le);
             if (hdr.type != RES_STRING_POOL_TYPE) throw new IllegalStateException("Expected STRING_POOL");
@@ -313,7 +308,6 @@ public class ResourceTableParser {
             le.seek(hdr.start + hdr.size);
             return new StringPool(out);
         }
-        @RequiresApi(api = Build.VERSION_CODES.KITKAT)
         private static String readUtf8(LE le) {
             int _utf16len = readLength8Safe(le); // length in utf16 chars (not always used)
             int utf8len = readLength8Safe(le);
@@ -327,7 +321,6 @@ public class ResourceTableParser {
             if ((a & 0x80) == 0) return a;
             return ((a & 0x7F) << 7) | (le.u8() & 0x7F);
         }
-        @RequiresApi(api = Build.VERSION_CODES.KITKAT)
         private static String readUtf16(LE le) {
             int u16len = readLength16Safe(le);
             if (!le.hasRemaining(u16len * 2 + 2)) return "";

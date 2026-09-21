@@ -247,7 +247,6 @@ public class APKParser {
         return String.format("%0" + (bytes.length << 1) + "X", bi);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.FROYO)
     public static String getCertificateDetails(X509Certificate cert) {
         try {
             StringBuilder sb = new StringBuilder();
@@ -268,7 +267,6 @@ public class APKParser {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.FROYO)
     public static String getCertificateDetails(InputStream certStream) {
         try {
             CertificateFactory certificateFactory = CertificateFactory.getInstance("x509");
@@ -280,7 +278,6 @@ public class APKParser {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.FROYO)
     public static String getCertificateDetails(String rsaCertificatePath) {
         try {
             FileInputStream fileInputStream = new FileInputStream(rsaCertificatePath);
@@ -290,7 +287,6 @@ public class APKParser {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.FROYO)
     public static String getCertificateDetails(String apkPath, Context context) {
         try {
             X509Certificate[] certs = getX509Certificates(new File(apkPath), context);
@@ -401,7 +397,6 @@ public class APKParser {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public void parse(String apkPath, Context context) {
         clean();
 
