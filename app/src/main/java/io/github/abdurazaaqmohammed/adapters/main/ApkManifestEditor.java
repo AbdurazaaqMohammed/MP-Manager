@@ -61,15 +61,16 @@ public class ApkManifestEditor {
     private final MainActivity context;
     private final DialogUtil dialogUtil;
     private final UIHelper uiHelper;
+    final android.content.res.Resources rss;
 
     public ApkManifestEditor(MainActivity context, DialogUtil dialogUtil, UIHelper uiHelper) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.uiHelper = uiHelper;
+        rss = context.rss;
     }
 
     public void showEditManifestDialog(File apkFile) {
-        final android.content.res.Resources rss = context.rss;
         View quickEditDialog = LayoutInflater.from(context).inflate(R.layout.quick_edit_dialog, null, false);
         quickEditDialog.findViewById(R.id.app_lancer_icon).setOnClickListener(v -> editLauncherIcon(apkFile));
 
