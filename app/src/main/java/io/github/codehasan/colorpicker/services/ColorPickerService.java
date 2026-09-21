@@ -526,7 +526,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
 
     @SuppressLint("WrongConstant")
     private void processImage(Image image) {
-        try {
+        try (image) {
             Image.Plane[] planes = image.getPlanes();
             ByteBuffer buffer = planes[0].getBuffer();
             int pixelStride = planes[0].getPixelStride();
@@ -539,7 +539,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
             Bitmap bitmap = screenBitmap;
             if (bitmap == null || bitmap.getWidth() != requiredWidth
                     || bitmap.getHeight() != requiredHeight) {
-                bitmap = BitmapKt.createBitmap(requiredWidth, requiredHeight, Bitmap.Config.ARGB_8888 );
+                bitmap = BitmapKt.createBitmap(requiredWidth, requiredHeight, Bitmap.Config.ARGB_8888);
                 if (screenBitmap != null) {
                     screenBitmap.recycle();
                 }
@@ -571,8 +571,6 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
             int finalX = safeX;
             int finalY = safeY;
             handler.post(() -> magnifierView.updateContent(finalCrop, finalHex, finalX, finalY));
-        } finally {
-            image.close();
         }
     }
 

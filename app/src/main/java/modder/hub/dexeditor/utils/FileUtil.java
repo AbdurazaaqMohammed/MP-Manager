@@ -58,9 +58,7 @@ public class FileUtil {
         createNewFile(path);
 
         StringBuilder sb = new StringBuilder();
-        FileReader fr = null;
-        try {
-            fr = new FileReader(new File(path));
+        try (FileReader fr = new FileReader(new File(path))) {
 
             char[] buff = new char[1024];
             int length = 0;
@@ -70,14 +68,6 @@ public class FileUtil {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (fr != null) {
-                try {
-                    fr.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
         }
 
         return sb.toString();
@@ -85,21 +75,16 @@ public class FileUtil {
 
     public static void writeFile(String path, String str) {
         createNewFile(path);
-        FileWriter fileWriter = null;
 
-        try {
-            fileWriter = new FileWriter(new File(path), false);
-            fileWriter.write(str);
-            fileWriter.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
+        try (FileWriter fileWriter = new FileWriter(new File(path), false)) {
             try {
-                if (fileWriter != null)
-                    fileWriter.close();
+                fileWriter.write(str);
+                fileWriter.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -107,12 +92,7 @@ public class FileUtil {
         if (!isExistFile(sourcePath)) return;
         createNewFile(destPath);
 
-        FileInputStream fis = null;
-        FileOutputStream fos = null;
-
-        try {
-            fis = new FileInputStream(sourcePath);
-            fos = new FileOutputStream(destPath, false);
+        try (FileInputStream fis = new FileInputStream(sourcePath); FileOutputStream fos = new FileOutputStream(destPath, false)) {
 
             byte[] buff = new byte[1024];
             int length = 0;
@@ -122,21 +102,6 @@ public class FileUtil {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
 
