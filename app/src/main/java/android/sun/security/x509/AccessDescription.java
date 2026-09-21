@@ -37,9 +37,9 @@ public final class AccessDescription {
 
     private int myhash = -1;
 
-    private android.sun.security.util.ObjectIdentifier accessMethod;
+    private final android.sun.security.util.ObjectIdentifier accessMethod;
 
-    private android.sun.security.x509.GeneralName accessLocation;
+    private final android.sun.security.x509.GeneralName accessLocation;
 
     public static final android.sun.security.util.ObjectIdentifier Ad_OCSP_Id =
         android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 1});

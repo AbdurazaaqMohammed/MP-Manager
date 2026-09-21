@@ -69,7 +69,7 @@ public class X509CertPath extends CertPath {
     /**
      * List of certificates in this chain
      */
-    private List<X509Certificate> certs;
+    private final List<X509Certificate> certs;
 
     /**
      * The names of our encodings.  PkiPath is the default.
@@ -106,7 +106,7 @@ public class X509CertPath extends CertPath {
 
         // Ensure that the List contains only X509Certificates
         for (Object obj : certs) {
-            if (obj instanceof X509Certificate == false) {
+            if (!(obj instanceof X509Certificate)) {
                 throw new CertificateException
                     ("List is not all X509Certificates: "
                     + obj.getClass().getName());
@@ -216,7 +216,7 @@ public class X509CertPath extends CertPath {
         }
 
         try {
-            if (is.markSupported() == false) {
+            if (!is.markSupported()) {
                 // Copy the entire input stream into an InputStream that does
                 // support mark
                 is = new ByteArrayInputStream(readAllBytes(is));

@@ -429,7 +429,7 @@ public class X509Key implements PublicKey {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof Key == false) {
+        if (!(obj instanceof Key)) {
             return false;
         }
         try {

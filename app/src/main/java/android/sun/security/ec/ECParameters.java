@@ -153,13 +153,13 @@ public final class ECParameters extends AlgorithmParametersSpi {
             if (namedCurve.getCurve().getField().getFieldSize() != fieldSize) {
                 continue;
             }
-            if (namedCurve.getCurve().equals(params.getCurve()) == false) {
+            if (!namedCurve.getCurve().equals(params.getCurve())) {
                 continue;
             }
-            if (namedCurve.getGenerator().equals(params.getGenerator()) == false) {
+            if (!namedCurve.getGenerator().equals(params.getGenerator())) {
                 continue;
             }
-            if (namedCurve.getOrder().equals(params.getOrder()) == false) {
+            if (!namedCurve.getOrder().equals(params.getOrder())) {
                 continue;
             }
             if (namedCurve.getCofactor() != params.getCofactor()) {

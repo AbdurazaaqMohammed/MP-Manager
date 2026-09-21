@@ -54,11 +54,11 @@ public enum AccessFlags
     CONSTRUCTOR(0x10000, "constructor", false, true, false),
     DECLARED_SYNCHRONIZED(0x20000, "declared-synchronized", false, true, false);
 
-    private int value;
-    private String accessFlagName;
-    private boolean validForClass;
-    private boolean validForMethod;
-    private boolean validForField;
+    private final int value;
+    private final String accessFlagName;
+    private final boolean validForClass;
+    private final boolean validForMethod;
+    private final boolean validForField;
 
     //cache the array of all AccessFlags, because .values() allocates a new array for every call
     private final static AccessFlags[] allFlags;

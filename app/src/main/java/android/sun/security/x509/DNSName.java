@@ -49,7 +49,7 @@ import java.util.Locale;
  * @author Hemma Prafullchandra
  */
 public class DNSName implements android.sun.security.x509.GeneralNameInterface {
-    private String name;
+    private final String name;
 
     private static final String alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final String digitsAndHyphen = "0123456789-";

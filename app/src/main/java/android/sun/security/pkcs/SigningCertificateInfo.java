@@ -83,7 +83,7 @@ import android.sun.security.x509.SerialNumber;
  */
 public class SigningCertificateInfo {
 
-    private byte[] ber = null;
+    private final byte[] ber = null;
 
     private ESSCertId[] certId = null;
 
@@ -132,7 +132,7 @@ class ESSCertId {
 
     private static volatile HexDumpEncoder hexDumper;
 
-    private byte[] certHash;
+    private final byte[] certHash;
     private GeneralNames issuer;
     private SerialNumber serialNumber;
 

@@ -461,7 +461,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         verifiedPublicKey = key;
         verifiedProvider = sigProvider;
 
-        if (verificationResult == false) {
+        if (!verificationResult) {
             throw new SignatureException("Signature does not match.");
         }
     }
@@ -1458,8 +1458,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             if (certExt == null)
                 return -1;
 
-            if (((Boolean)certExt.get(android.sun.security.x509.BasicConstraintsExtension.IS_CA)
-                 ).booleanValue() == true)
+            if (((Boolean) certExt.get(BasicConstraintsExtension.IS_CA)
+            ).booleanValue())
                 return ((Integer)certExt.get(
                         BasicConstraintsExtension.PATH_LEN)).intValue();
             else
@@ -1778,7 +1778,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         // tmp always contains serial number now
         tmp = tbsIn.getDerValue();              // skip signature
         tmp = tbsIn.getDerValue();              // issuer
-        if (getIssuer == false) {
+        if (!getIssuer) {
             tmp = tbsIn.getDerValue();          // skip validity
             tmp = tbsIn.getDerValue();          // subject
         }

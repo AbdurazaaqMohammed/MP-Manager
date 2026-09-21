@@ -335,7 +335,7 @@ public class DistributionPoint {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof DistributionPoint == false) {
+        if (!(obj instanceof DistributionPoint)) {
             return false;
         }
         DistributionPoint other = (DistributionPoint)obj;

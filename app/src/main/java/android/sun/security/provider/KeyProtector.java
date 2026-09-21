@@ -113,7 +113,7 @@ final class KeyProtector {
     // key protector. We store it as a byte array, so that we can digest it.
     private byte[] passwdBytes;
 
-    private MessageDigest md;
+    private final MessageDigest md;
 
 
     /**

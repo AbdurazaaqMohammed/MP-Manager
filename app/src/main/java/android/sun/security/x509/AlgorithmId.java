@@ -161,7 +161,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
 
         bytes.putOID(algid);
         // Setup params from algParams since no DER encoding is given
-        if (constructedFromDer == false) {
+        if (!constructedFromDer) {
             if (algParams != null) {
                 params = new android.sun.security.util.DerValue(algParams.getEncoded());
             } else {

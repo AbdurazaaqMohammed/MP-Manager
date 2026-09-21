@@ -43,11 +43,11 @@ import android.sun.security.pkcs.ParsingException;
 
 class MacData {
 
-    private String digestAlgorithmName;
-    private AlgorithmParameters digestAlgorithmParams;
-    private byte[] digest;
-    private byte[] macSalt;
-    private int iterations;
+    private final String digestAlgorithmName;
+    private final AlgorithmParameters digestAlgorithmParams;
+    private final byte[] digest;
+    private final byte[] macSalt;
+    private final int iterations;
 
     // the ASN.1 encoded contents of this class
     private byte[] encoded = null;

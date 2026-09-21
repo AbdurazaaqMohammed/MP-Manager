@@ -114,7 +114,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
                     }
         } catch (InvocationTargetException invk) {
             Throwable e = invk.getTargetException();
-            if (ext.isCritical() == false) {
+            if (!ext.isCritical()) {
                 // ignore errors parsing non-critical extensions
                 if (unparseableExtensions == null) {
                     unparseableExtensions = new HashMap<String, android.sun.security.x509.Extension>();

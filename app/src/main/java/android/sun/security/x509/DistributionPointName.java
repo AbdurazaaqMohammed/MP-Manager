@@ -194,7 +194,7 @@ public class DistributionPointName {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof DistributionPointName == false) {
+        if (!(obj instanceof DistributionPointName)) {
             return false;
         }
         DistributionPointName other = (DistributionPointName)obj;

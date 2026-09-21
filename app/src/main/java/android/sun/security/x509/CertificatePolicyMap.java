@@ -36,8 +36,8 @@ import java.io.IOException;
  * @author Hemma Prafullchandra
  */
 public class CertificatePolicyMap {
-    private android.sun.security.x509.CertificatePolicyId issuerDomain;
-    private android.sun.security.x509.CertificatePolicyId subjectDomain;
+    private final android.sun.security.x509.CertificatePolicyId issuerDomain;
+    private final android.sun.security.x509.CertificatePolicyId subjectDomain;
 
     /**
      * Create a CertificatePolicyMap with the passed CertificatePolicyId's.

@@ -41,7 +41,7 @@ import android.sun.misc.HexDumpEncoder;
  * @author Hemma Prafullchandra
  */
 public class KeyIdentifier {
-    private byte[] octetString;
+    private final byte[] octetString;
 
     /**
      * Create a KeyIdentifier with the passed bit settings.

@@ -81,8 +81,8 @@ import java.net.URISyntaxException;
 public class URIName implements android.sun.security.x509.GeneralNameInterface {
 
     // private attributes
-    private URI uri;
-    private String host;
+    private final URI uri;
+    private final String host;
     private android.sun.security.x509.DNSName hostDNS;
     private android.sun.security.x509.IPAddressName hostIP;
 

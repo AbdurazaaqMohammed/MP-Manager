@@ -346,7 +346,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                 }
             }
             Map<String, android.sun.security.x509.Extension> invalid = extensions.getUnparseableExtensions();
-            if (invalid.isEmpty() == false) {
+            if (!invalid.isEmpty()) {
                 sb.append("\nUnparseable certificate extensions: " + invalid.size());
                 int i = 1;
                 for (Extension ext : invalid.values()) {
@@ -780,7 +780,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                 throw new CertificateParsingException("X.509 Certificate is " +
                         "incomplete: subject field is empty, and " +
                         "SubjectAlternativeName extension is empty");
-            } else if (subjectAltNameExt.isCritical() == false) {
+            } else if (!subjectAltNameExt.isCritical()) {
                 throw new CertificateParsingException("X.509 Certificate is " +
                         "incomplete: SubjectAlternativeName extension MUST " +
                         "be marked critical when subject field is empty");

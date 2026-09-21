@@ -177,7 +177,7 @@ public class RDN {
      */
     RDN(String name, String format, Map<String, String> keywordMap)
         throws IOException {
-        if (format.equalsIgnoreCase("RFC2253") == false) {
+        if (!format.equalsIgnoreCase("RFC2253")) {
             throw new IOException("Unsupported format " + format);
         }
         int searchOffset = 0;
@@ -291,7 +291,7 @@ public class RDN {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof RDN == false) {
+        if (!(obj instanceof RDN)) {
             return false;
         }
         RDN other = (RDN)obj;
@@ -411,7 +411,7 @@ public class RDN {
      * documented in X500Principal.getName are performed.
      */
     public String toRFC2253String(boolean canonical) {
-        if (canonical == false) {
+        if (!canonical) {
             return toRFC2253StringInternal
                 (false, Collections.<String, String>emptyMap());
         }

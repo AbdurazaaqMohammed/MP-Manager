@@ -185,7 +185,7 @@ public abstract class Cache {
             if (this == obj) {
                 return true;
             }
-            if (obj instanceof EqualByteArray == false) {
+            if (!(obj instanceof EqualByteArray)) {
                 return false;
             }
             EqualByteArray other = (EqualByteArray)obj;
@@ -317,7 +317,7 @@ class MemoryCache extends Cache {
         for (Iterator<CacheEntry> t = cacheMap.values().iterator();
                 t.hasNext(); ) {
             CacheEntry entry = t.next();
-            if (entry.isValid(time) == false) {
+            if (!entry.isValid(time)) {
                 t.remove();
                 cnt++;
             }
@@ -381,7 +381,7 @@ class MemoryCache extends Cache {
             return null;
         }
         long time = (lifetime == 0) ? 0 : System.currentTimeMillis();
-        if (entry.isValid(time) == false) {
+        if (!entry.isValid(time)) {
             if (DEBUG) {
                 System.out.println("Ignoring expired entry");
             }
@@ -490,7 +490,7 @@ class MemoryCache extends Cache {
 
         public boolean isValid(long currentTime) {
             boolean valid = (currentTime <= expirationTime);
-            if (valid == false) {
+            if (!valid) {
                 invalidate();
             }
             return valid;
@@ -526,7 +526,7 @@ class MemoryCache extends Cache {
 
         public boolean isValid(long currentTime) {
             boolean valid = (currentTime <= expirationTime) && (get() != null);
-            if (valid == false) {
+            if (!valid) {
                 invalidate();
             }
             return valid;

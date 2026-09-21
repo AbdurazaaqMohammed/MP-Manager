@@ -40,7 +40,7 @@ import java.io.IOException;
  * @see android.sun.security.x509.GeneralNameInterface
  */
 public class OIDName implements android.sun.security.x509.GeneralNameInterface {
-     private android.sun.security.util.ObjectIdentifier oid;
+     private final android.sun.security.util.ObjectIdentifier oid;
 
     /**
      * Create the OIDName object from the passed encoded Der value.

@@ -47,7 +47,7 @@ public class GeneralSubtree {
     private static final byte TAG_MAX = 1;
     private static final int  MIN_DEFAULT = 0;
 
-    private android.sun.security.x509.GeneralName name;
+    private final android.sun.security.x509.GeneralName name;
     private int         minimum = MIN_DEFAULT;
     private int         maximum = -1;
 

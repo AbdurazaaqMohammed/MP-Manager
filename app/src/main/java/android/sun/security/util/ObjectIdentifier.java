@@ -336,7 +336,7 @@ class ObjectIdentifier implements Serializable
         if (this == obj) {
             return true;
         }
-        if (obj instanceof ObjectIdentifier == false) {
+        if (!(obj instanceof ObjectIdentifier)) {
             return false;
         }
         ObjectIdentifier other = (ObjectIdentifier)obj;

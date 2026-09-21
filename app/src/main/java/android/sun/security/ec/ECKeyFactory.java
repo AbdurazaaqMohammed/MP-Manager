@@ -121,7 +121,7 @@ public final class ECKeyFactory extends KeyFactorySpi {
         }
         // ECKey does not extend Key, so we need to do a cast
         String keyAlg = ((Key)key).getAlgorithm();
-        if (keyAlg.equals("EC") == false) {
+        if (!keyAlg.equals("EC")) {
             throw new InvalidKeyException("Not an EC key: " + keyAlg);
         }
         // XXX further sanity checks about whether this key uses supported
@@ -138,7 +138,7 @@ public final class ECKeyFactory extends KeyFactorySpi {
             throw new InvalidKeyException("Key must not be null");
         }
         String keyAlg = key.getAlgorithm();
-        if (keyAlg.equals("EC") == false) {
+        if (!keyAlg.equals("EC")) {
             throw new InvalidKeyException("Not an EC key: " + keyAlg);
         }
         if (key instanceof PublicKey) {

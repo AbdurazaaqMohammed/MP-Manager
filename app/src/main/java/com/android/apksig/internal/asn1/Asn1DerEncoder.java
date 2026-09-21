@@ -260,7 +260,7 @@ public final class Asn1DerEncoder {
         // A boolean should be encoded in a single byte with a value of 0 for false and any non-zero
         // value for true.
         byte[] result = new byte[1];
-        if (value == false) {
+        if (!value) {
             result[0] = 0;
         } else {
             result[0] = 1;

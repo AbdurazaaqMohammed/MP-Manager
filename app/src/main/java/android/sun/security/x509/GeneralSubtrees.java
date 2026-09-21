@@ -154,7 +154,7 @@ public class GeneralSubtrees implements Cloneable {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof GeneralSubtrees == false) {
+        if (!(obj instanceof GeneralSubtrees)) {
             return false;
         }
         GeneralSubtrees other = (GeneralSubtrees)obj;
@@ -412,7 +412,7 @@ public class GeneralSubtrees implements Cloneable {
                         }
                     }
                 }
-                if (intersection == false) {
+                if (!intersection) {
                     if (newExcluded == null) {
                         newExcluded = new GeneralSubtrees();
                     }

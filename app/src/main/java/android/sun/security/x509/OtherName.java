@@ -48,8 +48,8 @@ import java.util.Arrays;
  */
 public class OtherName implements android.sun.security.x509.GeneralNameInterface {
 
-    private String name;
-    private android.sun.security.util.ObjectIdentifier oid;
+    private final String name;
+    private final android.sun.security.util.ObjectIdentifier oid;
     private byte[] nameValue = null;
     private android.sun.security.x509.GeneralNameInterface gni = null;
 
