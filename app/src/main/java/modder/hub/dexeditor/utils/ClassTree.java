@@ -545,77 +545,74 @@ public class ClassTree {
             for (String rawType : classNames) {
                 if (threadException[0] != null) break;
                 
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            final String type = rawType.substring(1, rawType.length() - 1);
+                executor.execute(() -> {
+                    try {
+                        final String type = rawType.substring(1, rawType.length() - 1);
 
-                            if (deletedClassJson.containsKey(fileName) && Objects.requireNonNull(deletedClassJson.get(fileName)).contains(type)) {
-                                int p = processed.incrementAndGet();
-                                if (p % 100 == 0 || p == classCount) {
-                                    dexSaveProgress.onProgress(p, classCount);
-                                }
-                                return;
-                            }
-
-                            if (pendingSmaliMap.containsKey(type)) {
-                                // Message update is tricky in parallel, but we can do it occasionally
-                                if (processed.get() % 50 == 0) {
-                                    dexSaveProgress.onMessage("Assembling " + type + "...");
-                                }
-                                
-                                try {
-                                    final ClassDef assembledDef = Smali.assemble(pendingSmaliMap.get(type), new SmaliOptions(), finalTargetDexVersion);
-                                    synchronized (Collections.unmodifiableMap(classMap)) {
-                                        classMap.put(type, assembledDef);
-                                    }
-                                    synchronized (pendingSmaliMap) {
-                                        pendingSmaliMap.remove(type);
-                                    }
-                                    
-                                    // Update classDefList (sequential or atomic)
-                                    synchronized (classDefList) {
-                                        for (int j = 0; j < classDefList.size(); j++) {
-                                            if (classDefList.get(j).getType().equals(rawType)) {
-                                                classDefList.set(j, assembledDef);
-                                                break;
-                                            }
-                                        }
-                                    }
-                                } catch (final Exception e) {
-                                    synchronized (threadException) {
-                                        threadException[0] = new Exception("COMPILE_ERROR:" + type + ":" + e.getMessage()); }
-                                }
-                            }
-
-                            if (threadException[0] != null) return;
-
-                            final ClassDef classDef;
-                            synchronized (Collections.unmodifiableMap(classMap)) {
-                                classDef = classMap.get(type);
-                            }
-                            
-                            if (classDef != null) {
-                                // Apply compilation options
-                                ClassDef strippedDef = classDef;
-                                if (compilationOptions.removeAllDebug || compilationOptions.removeDebugSource || 
-                                    compilationOptions.removeDebugLine || compilationOptions.removeDebugParam || 
-                                    compilationOptions.removeDebugPrologue || compilationOptions.removeDebugLocal) {
-                                    strippedDef = new DebugInfoStripper(classDef, compilationOptions);
-                                }
-                                
-                                dexBuilder.internClassDef(strippedDef);
-                            }
-                            
+                        if (deletedClassJson.containsKey(fileName) && Objects.requireNonNull(deletedClassJson.get(fileName)).contains(type)) {
                             int p = processed.incrementAndGet();
-                            dexSaveProgress.onMessage("Compiling...");
                             if (p % 100 == 0 || p == classCount) {
                                 dexSaveProgress.onProgress(p, classCount);
                             }
-                        } catch (final Exception e) {
-                            synchronized (threadException) { threadException[0] = e; }
+                            return;
                         }
+
+                        if (pendingSmaliMap.containsKey(type)) {
+                            // Message update is tricky in parallel, but we can do it occasionally
+                            if (processed.get() % 50 == 0) {
+                                dexSaveProgress.onMessage("Assembling " + type + "...");
+                            }
+
+                            try {
+                                final ClassDef assembledDef = Smali.assemble(pendingSmaliMap.get(type), new SmaliOptions(), finalTargetDexVersion);
+                                synchronized (Collections.unmodifiableMap(classMap)) {
+                                    classMap.put(type, assembledDef);
+                                }
+                                synchronized (pendingSmaliMap) {
+                                    pendingSmaliMap.remove(type);
+                                }
+
+                                // Update classDefList (sequential or atomic)
+                                synchronized (classDefList) {
+                                    for (int j = 0; j < classDefList.size(); j++) {
+                                        if (classDefList.get(j).getType().equals(rawType)) {
+                                            classDefList.set(j, assembledDef);
+                                            break;
+                                        }
+                                    }
+                                }
+                            } catch (final Exception e) {
+                                synchronized (threadException) {
+                                    threadException[0] = new Exception("COMPILE_ERROR:" + type + ":" + e.getMessage()); }
+                            }
+                        }
+
+                        if (threadException[0] != null) return;
+
+                        final ClassDef classDef;
+                        synchronized (Collections.unmodifiableMap(classMap)) {
+                            classDef = classMap.get(type);
+                        }
+
+                        if (classDef != null) {
+                            // Apply compilation options
+                            ClassDef strippedDef = classDef;
+                            if (compilationOptions.removeAllDebug || compilationOptions.removeDebugSource ||
+                                compilationOptions.removeDebugLine || compilationOptions.removeDebugParam ||
+                                compilationOptions.removeDebugPrologue || compilationOptions.removeDebugLocal) {
+                                strippedDef = new DebugInfoStripper(classDef, compilationOptions);
+                            }
+
+                            dexBuilder.internClassDef(strippedDef);
+                        }
+
+                        int p = processed.incrementAndGet();
+                        dexSaveProgress.onMessage("Compiling...");
+                        if (p % 100 == 0 || p == classCount) {
+                            dexSaveProgress.onProgress(p, classCount);
+                        }
+                    } catch (final Exception e) {
+                        synchronized (threadException) { threadException[0] = e; }
                     }
                 });
             }
@@ -910,13 +907,10 @@ public class ClassTree {
 
     public class Tree {
         private final List<Map<String, String>> node;
-        private final Comparator<String> sortByType = new Comparator<>() {
-            @Override
-            public int compare(String a, String b) {
-                if (isDirectory(a) && !isDirectory(b)) return -1;
-                if (!isDirectory(a) && isDirectory(b)) return 1;
-                return a.toLowerCase().compareTo(b.toLowerCase());
-            }
+        private final Comparator<String> sortByType = (a, b) -> {
+            if (isDirectory(a) && !isDirectory(b)) return -1;
+            if (!isDirectory(a) && isDirectory(b)) return 1;
+            return a.toLowerCase().compareTo(b.toLowerCase());
         };
 
         @SuppressLint("SuspiciousIndentation")

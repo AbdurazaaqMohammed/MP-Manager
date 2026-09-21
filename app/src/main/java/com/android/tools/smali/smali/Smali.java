@@ -103,12 +103,7 @@ public class Smali {
         List<Future<Boolean>> tasks = Lists.newArrayList();
 
         for (final File file: filesToProcessSet) {
-            tasks.add(executor.submit(new Callable<>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return assembleSmaliFile(file, dexBuilder, options);
-                }
-            }));
+            tasks.add(executor.submit(() -> assembleSmaliFile(file, dexBuilder, options)));
         }
 
         for (Future<Boolean> task: tasks) {

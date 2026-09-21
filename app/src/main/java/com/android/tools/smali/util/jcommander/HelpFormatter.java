@@ -98,27 +98,24 @@ public class HelpFormatter {
 
         final Pattern pattern = Pattern.compile("^-*(.*)$");
 
-        Collections.sort(parameters, new Comparator<>() {
-            @Override
-            public int compare(ParameterDescription o1, ParameterDescription o2) {
-                String s1;
-                Matcher matcher = pattern.matcher(o1.getParameter().names()[0]);
-                if (matcher.matches()) {
-                    s1 = matcher.group(1);
-                } else {
-                    throw new IllegalStateException();
-                }
-
-                String s2;
-                matcher = pattern.matcher(o2.getParameter().names()[0]);
-                if (matcher.matches()) {
-                    s2 = matcher.group(1);
-                } else {
-                    throw new IllegalStateException();
-                }
-
-                return s1.compareTo(s2);
+        Collections.sort(parameters, (o1, o2) -> {
+            String s1;
+            Matcher matcher = pattern.matcher(o1.getParameter().names()[0]);
+            if (matcher.matches()) {
+                s1 = matcher.group(1);
+            } else {
+                throw new IllegalStateException();
             }
+
+            String s2;
+            matcher = pattern.matcher(o2.getParameter().names()[0]);
+            if (matcher.matches()) {
+                s2 = matcher.group(1);
+            } else {
+                throw new IllegalStateException();
+            }
+
+            return s1.compareTo(s2);
         });
         return parameters;
     }
@@ -266,12 +263,7 @@ public class HelpFormatter {
 
 
                 List<Entry<String, JCommander>> entryList = Lists.newArrayList(leafJc.getCommands().entrySet());
-                Collections.sort(entryList, new Comparator<>() {
-                    @Override
-                    public int compare(Entry<String, JCommander> o1, Entry<String, JCommander> o2) {
-                        return o1.getKey().compareTo(o2.getKey());
-                    }
-                });
+                Collections.sort(entryList, (o1, o2) -> o1.getKey().compareTo(o2.getKey()));
 
                 for (Entry<String, JCommander> entry : entryList) {
                     String commandName = entry.getKey();

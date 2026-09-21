@@ -85,24 +85,21 @@ public class AlertCircularProgress {
     }
 
     private void setupBackPressCancellation() {
-        alertDialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
-            @Override
-            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
-                        if (cancelListener != null) {
-                            cancelListener.onCancel();
-                        }
-                        dismiss();
-                    } else {
-                        lastBackPressTime = currentTime;
-                        Extensions.showMessage(activity, activity.getString(R.string.press_again_msg));
+        alertDialog.setOnKeyListener((dialog, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
+                    if (cancelListener != null) {
+                        cancelListener.onCancel();
                     }
-                    return true;
+                    dismiss();
+                } else {
+                    lastBackPressTime = currentTime;
+                    Extensions.showMessage(activity, activity.getString(R.string.press_again_msg));
                 }
-                return false;
+                return true;
             }
+            return false;
         });
     }
 

@@ -21,12 +21,9 @@ final class EZFtpTransferCallbackWrapper implements OnEZFtpDataTransferCallback 
     @Override
     public void onStateChanged(final int state) {
         synchronized (lock) {
-            mainHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (callback != null) {
-                        callback.onStateChanged(state);
-                    }
+            mainHandler.post(() -> {
+                if (callback != null) {
+                    callback.onStateChanged(state);
                 }
             });
         }
@@ -35,12 +32,9 @@ final class EZFtpTransferCallbackWrapper implements OnEZFtpDataTransferCallback 
     @Override
     public void onTransferred(final long fileSize, final int transferredSize) {
         synchronized (lock) {
-            mainHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (callback != null) {
-                        callback.onTransferred(fileSize,transferredSize);
-                    }
+            mainHandler.post(() -> {
+                if (callback != null) {
+                    callback.onTransferred(fileSize,transferredSize);
                 }
             });
         }
@@ -49,12 +43,9 @@ final class EZFtpTransferCallbackWrapper implements OnEZFtpDataTransferCallback 
     @Override
     public void onErr(final int code, final String msg) {
         synchronized (lock) {
-            mainHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (callback != null) {
-                        callback.onErr(code, msg);
-                    }
+            mainHandler.post(() -> {
+                if (callback != null) {
+                    callback.onErr(code, msg);
                 }
             });
         }

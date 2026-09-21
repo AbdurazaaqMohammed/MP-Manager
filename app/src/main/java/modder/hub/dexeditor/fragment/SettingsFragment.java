@@ -94,12 +94,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 		// API Key preference
 		EditTextPreference apiKeyPref = findPreference(KEY_GEMINI_API);
 		if (apiKeyPref != null) {
-			apiKeyPref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-				@Override
-				public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
-					return validateAndSetApiKey(preference, (String) newValue);
-				}
-			});
+			apiKeyPref.setOnPreferenceChangeListener((preference, newValue) -> validateAndSetApiKey(preference, (String) newValue));
 			
 			// Set initial summary
 			String currentApiKey = apiKeyPref.getText();
@@ -111,13 +106,10 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 		// Website preference
 		Preference websitePref = findPreference(KEY_GEMINI_WEBSITE);
 		if (websitePref != null) {
-			websitePref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-				@Override
-				public boolean onPreferenceClick(@NonNull Preference preference) {
-					openChatGptWebsite();
-					return true;
-				}
-			});
+			websitePref.setOnPreferenceClickListener(preference -> {
+                openChatGptWebsite();
+                return true;
+            });
 		}
 	}
 	

@@ -127,12 +127,7 @@ public class CollectionUtils {
     @Nonnull
     public static <T> Comparator<Collection<? extends T>> listComparator(
             @Nonnull final Comparator<? super T> elementComparator) {
-        return new Comparator<>() {
-            @Override
-            public int compare(Collection<? extends T> list1, Collection<? extends T> list2) {
-                return compareAsList(elementComparator, list1, list2);
-            }
-        };
+        return (list1, list2) -> compareAsList(elementComparator, list1, list2);
     }
 
     public static <T> boolean isNaturalSortedSet(@Nonnull Iterable<? extends T> it) {
@@ -180,12 +175,7 @@ public class CollectionUtils {
     @Nonnull
     public static <T> Comparator<Collection<? extends T>> setComparator(
             @Nonnull final Comparator<? super T> elementComparator) {
-        return new Comparator<>() {
-            @Override
-            public int compare(Collection<? extends T> list1, Collection<? extends T> list2) {
-                return compareAsSet(elementComparator, list1, list2);
-            }
-        };
+        return (list1, list2) -> compareAsSet(elementComparator, list1, list2);
     }
 
     public static <T extends Comparable<T>> int compareAsSet(@Nonnull Collection<? extends T> set1,

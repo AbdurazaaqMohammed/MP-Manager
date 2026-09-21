@@ -62,10 +62,5 @@ public abstract class BaseAnnotation implements Annotation {
         return CollectionUtils.compareAsSet(getElements(), o.getElements());
     }
 
-    public static final Comparator<? super Annotation> BY_TYPE = new Comparator<>() {
-        @Override
-        public int compare(Annotation annotation1, Annotation annotation2) {
-            return annotation1.getType().compareTo(annotation2.getType());
-        }
-    };
+    public static final Comparator<? super Annotation> BY_TYPE = (Comparator<Annotation>) (annotation1, annotation2) -> annotation1.getType().compareTo(annotation2.getType());
 }

@@ -783,20 +783,17 @@ public class ClassProto implements TypeProto {
                 @Nonnull
                 private ArrayList<Field> getSortedInstanceFields(@Nonnull ClassDef classDef) {
                     ArrayList<Field> fields = (ArrayList<Field>) IteratorUtils.toList(classDef.getInstanceFields());
-                    Collections.sort(fields, new Comparator<>() {
-                        @Override
-                        public int compare(Field field1, Field field2) {
-                            int result = Integer.compare(getFieldSortOrder(field1), getFieldSortOrder(field2));
-                            if (result != 0) {
-                                return result;
-                            }
-
-                            result = field1.getName().compareTo(field2.getName());
-                            if (result != 0) {
-                                return result;
-                            }
-                            return field1.getType().compareTo(field2.getType());
+                    Collections.sort(fields, (field1, field2) -> {
+                        int result = Integer.compare(getFieldSortOrder(field1), getFieldSortOrder(field2));
+                        if (result != 0) {
+                            return result;
                         }
+
+                        result = field1.getName().compareTo(field2.getName());
+                        if (result != 0) {
+                            return result;
+                        }
+                        return field1.getType().compareTo(field2.getType());
                     });
                     return fields;
                 }
@@ -1050,12 +1047,7 @@ public class ClassProto implements TypeProto {
                     }
                 }
 
-                Comparator<MethodReference> comparator = new Comparator<>() {
-                    @Override
-                    public int compare(MethodReference o1, MethodReference o2) {
-                        return Integer.compare(methodOrder.get(o1), methodOrder.get(o2));
-                    }
-                };
+                Comparator<MethodReference> comparator = (o1, o2) -> Integer.compare(methodOrder.get(o1), methodOrder.get(o2));
 
                 // The methods should be in the same order within each list as they were iterated over.
                 // They can be misordered if, e.g. a method was originally added to the default list, but then moved
@@ -1173,12 +1165,7 @@ public class ClassProto implements TypeProto {
                     }
                 }
 
-                Comparator<MethodReference> comparator = new Comparator<>() {
-                    @Override
-                    public int compare(MethodReference o1, MethodReference o2) {
-                        return Integer.compare(methodOrder.get(o1), methodOrder.get(o2));
-                    }
-                };
+                Comparator<MethodReference> comparator = (o1, o2) -> Integer.compare(methodOrder.get(o1), methodOrder.get(o2));
 
                 // The methods should be in the same order within each list as they were iterated over.
                 // They can be misordered if, e.g. a method was originally added to the default list, but then moved

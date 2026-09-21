@@ -99,14 +99,11 @@ public class SmaliLabelDialog extends Dialog {
 				textView = itemView.findViewById(R.id.result_item_label);
 				container = itemView.findViewById(R.id.item_container);
 				
-				container.setOnClickListener(new View.OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						if (labelClickListener != null) {
-							labelClickListener.onLabelClick(filteredItems.get(getAdapterPosition()));
-						}
-					}
-				});
+				container.setOnClickListener(v -> {
+                    if (labelClickListener != null) {
+                        labelClickListener.onLabelClick(filteredItems.get(getAdapterPosition()));
+                    }
+                });
 			}
 		}
 		

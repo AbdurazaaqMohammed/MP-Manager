@@ -3121,20 +3121,18 @@ public class ApkToolsHandler {
         root.addView(presetRow);
 
         final boolean[] syncing = new boolean[1];
-        Runnable syncFromWheel = new Runnable() {
-            public void run() {
-                if (syncing[0]) return;
-                syncing[0] = true;
-                try {
-                    int color = wheel.getColor(alphaBar.getProgress());
-                    previewSwatch.setBackgroundColor(color);
-                    String hex = String.format(alphaBar.getProgress() == 255 ? "#%06X" : "#%08X",
-                            alphaBar.getProgress() == 255 ? (color & 0xFFFFFF) : color);
-                    String cur = hexInput.getText() == null ? "" : hexInput.getText().toString();
-                    if (!hex.equalsIgnoreCase(cur)) hexInput.setText(hex);
-                } finally {
-                    syncing[0] = false;
-                }
+        Runnable syncFromWheel = () -> {
+            if (syncing[0]) return;
+            syncing[0] = true;
+            try {
+                int color = wheel.getColor(alphaBar.getProgress());
+                previewSwatch.setBackgroundColor(color);
+                String hex = String.format(alphaBar.getProgress() == 255 ? "#%06X" : "#%08X",
+                        alphaBar.getProgress() == 255 ? (color & 0xFFFFFF) : color);
+                String cur = hexInput.getText() == null ? "" : hexInput.getText().toString();
+                if (!hex.equalsIgnoreCase(cur)) hexInput.setText(hex);
+            } finally {
+                syncing[0] = false;
             }
         };
         wheel.setListener(syncFromWheel);

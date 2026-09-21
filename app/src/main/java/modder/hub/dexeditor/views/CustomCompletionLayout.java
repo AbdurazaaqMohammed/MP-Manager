@@ -128,17 +128,14 @@ public class CustomCompletionLayout implements CompletionLayout {
 		listView.setDividerHeight(2);
 		
 		// Traditional click listener instead of lambda
-		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-				try {
-					editorAutoCompletion.select(position);
-				} catch (Exception e) {
-					e.printStackTrace(System.err);
-					Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT).show();
-				}
-			}
-		});
+		listView.setOnItemClickListener((parent, view, position, id) -> {
+            try {
+                editorAutoCompletion.select(position);
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
+                Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT).show();
+            }
+        });
 		
 		return rootLayout;
 	}
@@ -196,16 +193,13 @@ public class CustomCompletionLayout implements CompletionLayout {
 	
 	@Override
 	public void ensureListPositionVisible(int position, int increment) {
-		listView.post(new Runnable() {
-			@Override
-			public void run() {
-				while (listView.getFirstVisiblePosition() + 1 > position && listView.canScrollList(-1)) {
-					performScrollList(increment / 2);
-				}
-				while (listView.getLastVisiblePosition() - 1 < position && listView.canScrollList(1)) {
-					performScrollList(-increment / 2);
-				}
-			}
-		});
+		listView.post(() -> {
+            while (listView.getFirstVisiblePosition() + 1 > position && listView.canScrollList(-1)) {
+                performScrollList(increment / 2);
+            }
+            while (listView.getLastVisiblePosition() - 1 < position && listView.canScrollList(1)) {
+                performScrollList(-increment / 2);
+            }
+        });
 	}
 }

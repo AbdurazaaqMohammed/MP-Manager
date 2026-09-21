@@ -80,27 +80,22 @@ public class DexBackedMethodImplementation implements MethodImplementation {
 
         final int instructionsStartOffset = getInstructionsStartOffset();
         final int endOffset = instructionsStartOffset + (instructionsSize*2);
-        return new Iterable<>() {
+        return (Iterable<Instruction>) () -> new VariableSizeLookaheadIterator<>(
+                dexFile.getDataBuffer(), instructionsStartOffset) {
             @Override
-            public Iterator<Instruction> iterator() {
-                return new VariableSizeLookaheadIterator<>(
-                        dexFile.getDataBuffer(), instructionsStartOffset) {
-                    @Override
-                    protected Instruction readNextItem(@Nonnull DexReader<? extends DexBuffer> reader) {
-                        if (reader.getOffset() >= endOffset) {
-                            return endOfData();
-                        }
+            protected Instruction readNextItem(@Nonnull DexReader<? extends DexBuffer> reader) {
+                if (reader.getOffset() >= endOffset) {
+                    return endOfData();
+                }
 
-                        Instruction instruction = DexBackedInstruction.readFrom(dexFile, reader);
+                Instruction instruction = DexBackedInstruction.readFrom(dexFile, reader);
 
-                        // Does the instruction extend past the end of the method?
-                        int offset = reader.getOffset();
-                        if (offset > endOffset || offset < 0) {
-                            throw new ExceptionWithContext("The last instruction in method %s is truncated", method);
-                        }
-                        return instruction;
-                    }
-                };
+                // Does the instruction extend past the end of the method?
+                int offset = reader.getOffset();
+                if (offset > endOffset || offset < 0) {
+                    throw new ExceptionWithContext("The last instruction in method %s is truncated", method);
+                }
+                return instruction;
             }
         };
     }

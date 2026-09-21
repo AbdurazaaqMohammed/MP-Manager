@@ -82,25 +82,22 @@ public class AlertProgress {
     }
 
     private void setupBackPressCancellation() {
-        alert.setOnKeyListener(new DialogInterface.OnKeyListener() {
-            @Override
-            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
-                        if (cancelListener != null) {
-                            cancelListener.onCancel();
-                        }
-                        dismiss();
-                    } else {
-                        lastBackPressTime = currentTime;
-                        String _s = activity.getString(R.string.press_again_msg);
-                        Extensions.showMessage(activity, _s);
+        alert.setOnKeyListener((dialog, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
+                    if (cancelListener != null) {
+                        cancelListener.onCancel();
                     }
-                    return true;
+                    dismiss();
+                } else {
+                    lastBackPressTime = currentTime;
+                    String _s = activity.getString(R.string.press_again_msg);
+                    Extensions.showMessage(activity, _s);
                 }
-                return false;
+                return true;
             }
+            return false;
         });
     }
 
@@ -117,22 +114,14 @@ public class AlertProgress {
     }
 
     public void setProgress(final int value) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                progress.setVisibility(View.VISIBLE);
-                progress.setProgress(value);
-            }
+        activity.runOnUiThread(() -> {
+            progress.setVisibility(View.VISIBLE);
+            progress.setProgress(value);
         });
     }
 
     public void setMax(final int max) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                progress.setMax(max);
-            }
-        });
+        activity.runOnUiThread(() -> progress.setMax(max));
     }
 
     public boolean isShowing() {
@@ -140,72 +129,48 @@ public class AlertProgress {
     }
 
     public void setTitle(final String title) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (title == null || title.isEmpty()) {
-                    textview_title.setVisibility(View.GONE);
-                } else {
-                    textview_title.setVisibility(View.VISIBLE);
-                    textview_title.setText(title);
-                }
+        activity.runOnUiThread(() -> {
+            if (title == null || title.isEmpty()) {
+                textview_title.setVisibility(View.GONE);
+            } else {
+                textview_title.setVisibility(View.VISIBLE);
+                textview_title.setText(title);
             }
         });
     }
 
     public void setMessage(final String message) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (message == null || message.isEmpty()) {
-                    textview_mesage.setVisibility(View.GONE);
-                } else {
-                    textview_mesage.setVisibility(View.VISIBLE);
-                    textview_mesage.setText(message);
-                }
+        activity.runOnUiThread(() -> {
+            if (message == null || message.isEmpty()) {
+                textview_mesage.setVisibility(View.GONE);
+            } else {
+                textview_mesage.setVisibility(View.VISIBLE);
+                textview_mesage.setText(message);
             }
         });
     }
 
     public void setProgress(final int value, final int max) {
 
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                progress.setVisibility(View.VISIBLE);
-                progress.setProgress(value);
-                progress.setMax(max);
-            }
+        activity.runOnUiThread(() -> {
+            progress.setVisibility(View.VISIBLE);
+            progress.setProgress(value);
+            progress.setMax(max);
         });
     }
 
     public void setIndeterminate(final boolean bool) {
 
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                progress.setIndeterminate(bool);
-            }
-        });
+        activity.runOnUiThread(() -> progress.setIndeterminate(bool));
 
     }
 
     public void show() {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                alert.show();
-            }
-        });
+        activity.runOnUiThread(() -> alert.show());
     }
 
     public void dismiss() {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                alert.dismiss();
-            }
-        });
+        activity.runOnUiThread(() -> alert.dismiss());
     }
 
     public void setButton(int whichButton, CharSequence text, DialogInterface.OnClickListener listener) {

@@ -78,23 +78,17 @@ public class StaticInitializerUtil {
         return null;
     }
 
-    private static final Predicate<Field> HAS_INITIALIZER = new Predicate<>() {
-        @Override
-        public boolean apply(Field input) {
-            EncodedValue encodedValue = input.getInitialValue();
-            return encodedValue != null && !EncodedValueUtils.isDefaultValue(encodedValue);
-        }
+    private static final Predicate<Field> HAS_INITIALIZER = input -> {
+        EncodedValue encodedValue = input.getInitialValue();
+        return encodedValue != null && !EncodedValueUtils.isDefaultValue(encodedValue);
     };
 
-    private static final Function<Field, EncodedValue> GET_INITIAL_VALUE = new Function<>() {
-        @Override
-        public EncodedValue apply(Field input) {
-            EncodedValue initialValue = input.getInitialValue();
-            if (initialValue == null) {
-                return ImmutableEncodedValueFactory.defaultValueForType(input.getType());
-            }
-            return initialValue;
+    private static final Function<Field, EncodedValue> GET_INITIAL_VALUE = input -> {
+        EncodedValue initialValue = input.getInitialValue();
+        if (initialValue == null) {
+            return ImmutableEncodedValueFactory.defaultValueForType(input.getType());
         }
+        return initialValue;
     };
 
 }

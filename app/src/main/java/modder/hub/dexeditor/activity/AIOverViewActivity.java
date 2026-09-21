@@ -103,12 +103,7 @@ public class AIOverViewActivity extends AppCompatActivity {
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
-        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onBackPressed();
-            }
-        });
+        toolbar.setNavigationOnClickListener(view -> onBackPressed());
 
         markdownText = findViewById(R.id.markdownText);
         scrollView = findViewById(R.id.scrollView);
@@ -161,12 +156,7 @@ public class AIOverViewActivity extends AppCompatActivity {
                     }
                     startAnalysis(customPrompt);
                 })
-                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        finish();
-                    }
-                })
+                .setNegativeButton(android.R.string.cancel, (dialogInterface, i) -> finish())
                 .create();
 
         dialog.show();

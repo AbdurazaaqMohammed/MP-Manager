@@ -85,12 +85,7 @@ public class EditFloatingMenusActivity extends AppCompatActivity implements Star
         setSupportActionBar(_toolbar);
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
-        _toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View _v) {
-                onBackPressed();
-            }
-        });
+        _toolbar.setNavigationOnClickListener(_v -> onBackPressed());
 
         recyclerView = findViewById(R.id.recyclerView);
     }

@@ -43,12 +43,7 @@ public class DexFileInputSource extends RenamedInputSource<InputSource> implemen
     }
 
     public static void sortDexFiles(List<File> fileList){
-        Collections.sort(fileList, new Comparator<>() {
-            @Override
-            public int compare(File file1, File file2) {
-                return InputSource.compareDex(file1.getName(), file2.getName());
-            }
-        });
+        Collections.sort(fileList, (file1, file2) -> InputSource.compareDex(file1.getName(), file2.getName()));
     }
     public static List<File> listDexFiles(File dir){
         List<File> results = new ArrayList<>();

@@ -90,22 +90,19 @@ public abstract class BaseExceptionHandler implements ExceptionHandler {
 
 
 
-    public static final Comparator<ExceptionHandler> BY_EXCEPTION = new Comparator<>() {
-        @Override
-        public int compare(ExceptionHandler o1, ExceptionHandler o2) {
-            String exceptionType1 = o1.getExceptionType();
-            if (exceptionType1 == null) {
-                if (o2.getExceptionType() != null) {
-                    return 1;
-                }
-                return 0;
-            } else {
-                String exceptionType2 = o2.getExceptionType();
-                if (exceptionType2 == null) {
-                    return -1;
-                }
-                return exceptionType1.compareTo(o2.getExceptionType());
+    public static final Comparator<ExceptionHandler> BY_EXCEPTION = (o1, o2) -> {
+        String exceptionType1 = o1.getExceptionType();
+        if (exceptionType1 == null) {
+            if (o2.getExceptionType() != null) {
+                return 1;
             }
+            return 0;
+        } else {
+            String exceptionType2 = o2.getExceptionType();
+            if (exceptionType2 == null) {
+                return -1;
+            }
+            return exceptionType1.compareTo(o2.getExceptionType());
         }
     };
 }

@@ -164,12 +164,7 @@ public class ClassPath {
     }
 
     private final Supplier<OdexedFieldInstructionMapper> fieldInstructionMapperSupplier = MemoizingSupplier.memoize(
-            new Supplier<>() {
-                @Override
-                public OdexedFieldInstructionMapper get() {
-                    return new OdexedFieldInstructionMapper(isArt());
-                }
-            });
+            () -> new OdexedFieldInstructionMapper(isArt()));
 
     @Nonnull
     public OdexedFieldInstructionMapper getFieldInstructionMapper() {

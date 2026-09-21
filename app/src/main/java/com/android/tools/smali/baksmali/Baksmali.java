@@ -79,12 +79,7 @@ public class Baksmali {
             if (classSet != null && !classSet.contains(classDef.getType())) {
                 continue;
             }
-            tasks.add(executor.submit(new Callable<>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return disassembleClass(classDef, fileNameHandler, options);
-                }
-            }));
+            tasks.add(executor.submit(() -> disassembleClass(classDef, fileNameHandler, options)));
         }
 
         boolean errorOccurred = false;

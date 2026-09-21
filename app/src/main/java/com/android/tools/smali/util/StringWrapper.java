@@ -50,69 +50,64 @@ public class StringWrapper {
         final BreakIterator breakIterator = BreakIterator.getLineInstance();
         breakIterator.setText(string);
 
-        return new Iterable<>() {
-            @Override
-            public Iterator<String> iterator() {
-                return new Iterator<>() {
-                    private int currentLineStart = 0;
-                    private boolean nextLineSet = false;
-                    private String nextLine;
+        return () -> new Iterator<>() {
+            private int currentLineStart = 0;
+            private boolean nextLineSet = false;
+            private String nextLine;
 
-                    @Override
-                    public boolean hasNext() {
-                        if (!nextLineSet) {
-                            calculateNext();
+            @Override
+            public boolean hasNext() {
+                if (!nextLineSet) {
+                    calculateNext();
+                }
+                return nextLine != null;
+            }
+
+            private void calculateNext() {
+                int lineEnd = currentLineStart;
+                while (true) {
+                    lineEnd = breakIterator.following(lineEnd);
+                    if (lineEnd == BreakIterator.DONE) {
+                        lineEnd = breakIterator.last();
+                        if (lineEnd <= currentLineStart) {
+                            nextLine = null;
+                            nextLineSet = true;
+                            return;
                         }
-                        return nextLine != null;
+                        break;
                     }
 
-                    private void calculateNext() {
-                        int lineEnd = currentLineStart;
-                        while (true) {
-                            lineEnd = breakIterator.following(lineEnd);
-                            if (lineEnd == BreakIterator.DONE) {
-                                lineEnd = breakIterator.last();
-                                if (lineEnd <= currentLineStart) {
-                                    nextLine = null;
-                                    nextLineSet = true;
-                                    return;
-                                }
-                                break;
-                            }
-
-                            if (lineEnd - currentLineStart > maxWidth) {
-                                lineEnd = breakIterator.preceding(lineEnd);
-                                if (lineEnd <= currentLineStart) {
-                                    lineEnd = currentLineStart + maxWidth;
-                                }
-                                break;
-                            }
-
-                            if (string.charAt(lineEnd - 1) == '\n') {
-                                nextLine = string.substring(currentLineStart, lineEnd - 1);
-                                nextLineSet = true;
-                                currentLineStart = lineEnd;
-                                return;
-                            }
+                    if (lineEnd - currentLineStart > maxWidth) {
+                        lineEnd = breakIterator.preceding(lineEnd);
+                        if (lineEnd <= currentLineStart) {
+                            lineEnd = currentLineStart + maxWidth;
                         }
-                        nextLine = string.substring(currentLineStart, lineEnd);
+                        break;
+                    }
+
+                    if (string.charAt(lineEnd - 1) == '\n') {
+                        nextLine = string.substring(currentLineStart, lineEnd - 1);
                         nextLineSet = true;
                         currentLineStart = lineEnd;
+                        return;
                     }
+                }
+                nextLine = string.substring(currentLineStart, lineEnd);
+                nextLineSet = true;
+                currentLineStart = lineEnd;
+            }
 
-                    @Override
-                    public String next() {
-                        String ret = nextLine;
-                        nextLine = null;
-                        nextLineSet = false;
-                        return ret;
-                    }
+            @Override
+            public String next() {
+                String ret = nextLine;
+                nextLine = null;
+                nextLineSet = false;
+                return ret;
+            }
 
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException();
-                    }
-                };
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
             }
         };
     }

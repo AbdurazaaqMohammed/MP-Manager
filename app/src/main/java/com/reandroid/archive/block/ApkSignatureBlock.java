@@ -119,15 +119,12 @@ public class ApkSignatureBlock extends LengthPrefixedList<SignatureInfo>
         if(!dir.isDirectory()){
             throw new IOException("No such directory");
         }
-        FileFilter filter = new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                if(!file.isFile()){
-                    return false;
-                }
-                String name = file.getName().toLowerCase();
-                return name.endsWith(SignatureId.FILE_EXT_RAW);
+        FileFilter filter = file -> {
+            if(!file.isFile()){
+                return false;
             }
+            String name = file.getName().toLowerCase();
+            return name.endsWith(SignatureId.FILE_EXT_RAW);
         };
         File[] files = dir.listFiles(filter);
         if(files == null){

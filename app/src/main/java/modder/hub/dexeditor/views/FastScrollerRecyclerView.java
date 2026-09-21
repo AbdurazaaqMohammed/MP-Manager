@@ -30,12 +30,7 @@ public class FastScrollerRecyclerView extends RecyclerView {
     private final Paint scrollerPaint;
     private final RectF thumbRect;
     private final float thumbHeight;
-    private final Runnable hideScrollerRunnable = new Runnable() {
-        @Override
-        public void run() {
-            invalidate();
-        }
-    };
+    private final Runnable hideScrollerRunnable = () -> invalidate();
     private boolean isDragging = false;
     private int lastScrollPosition = -1;
     private boolean isScrollerCurrentlyVisible = false;
@@ -46,18 +41,15 @@ public class FastScrollerRecyclerView extends RecyclerView {
     private boolean isTrackVisible = true;
     private ItemAnimator savedAnimator;
     private int pendingScrollPosition = -1;
-    private final Runnable scrollRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (pendingScrollPosition != -1) {
-                LayoutManager lm = getLayoutManager();
-                if (lm instanceof LinearLayoutManager) {
-                    ((LinearLayoutManager) lm).scrollToPositionWithOffset(pendingScrollPosition, 0);
-                } else {
-                    scrollToPosition(pendingScrollPosition);
-                }
-                pendingScrollPosition = -1;
+    private final Runnable scrollRunnable = () -> {
+        if (pendingScrollPosition != -1) {
+            LayoutManager lm = getLayoutManager();
+            if (lm instanceof LinearLayoutManager) {
+                ((LinearLayoutManager) lm).scrollToPositionWithOffset(pendingScrollPosition, 0);
+            } else {
+                scrollToPosition(pendingScrollPosition);
             }
+            pendingScrollPosition = -1;
         }
     };
 

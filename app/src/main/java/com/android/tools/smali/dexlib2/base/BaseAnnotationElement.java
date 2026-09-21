@@ -58,10 +58,5 @@ public abstract class BaseAnnotationElement implements AnnotationElement {
         return getValue().compareTo(o.getValue());
     }
 
-    public static final Comparator<AnnotationElement> BY_NAME = new Comparator<>() {
-        @Override
-        public int compare(@Nonnull AnnotationElement element1, @Nonnull AnnotationElement element2) {
-            return element1.getName().compareTo(element2.getName());
-        }
-    };
+    public static final Comparator<AnnotationElement> BY_NAME = (element1, element2) -> element1.getName().compareTo(element2.getName());
 }

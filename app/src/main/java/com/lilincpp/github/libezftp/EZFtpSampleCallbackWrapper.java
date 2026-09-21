@@ -23,12 +23,9 @@ final class EZFtpSampleCallbackWrapper<E> implements OnEZFtpCallBack<E> {
     @Override
     public void onSuccess(final E response) {
         synchronized (lock) {
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (onEZFtpCallBack != null) {
-                        onEZFtpCallBack.onSuccess(response);
-                    }
+            handler.post(() -> {
+                if (onEZFtpCallBack != null) {
+                    onEZFtpCallBack.onSuccess(response);
                 }
             });
         }
@@ -37,12 +34,9 @@ final class EZFtpSampleCallbackWrapper<E> implements OnEZFtpCallBack<E> {
     @Override
     public void onFail(final int code, final String msg) {
         synchronized (lock) {
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (onEZFtpCallBack != null) {
-                        onEZFtpCallBack.onFail(code, msg);
-                    }
+            handler.post(() -> {
+                if (onEZFtpCallBack != null) {
+                    onEZFtpCallBack.onFail(code, msg);
                 }
             });
         }

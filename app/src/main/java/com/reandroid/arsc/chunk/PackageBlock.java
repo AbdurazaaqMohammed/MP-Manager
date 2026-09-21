@@ -576,12 +576,7 @@ public class PackageBlock extends Chunk<PackageHeader>
     }
 
     private Iterator<SpecTypePair> getAttrSpecs(){
-        return getSpecTypePairArray().iterator(new Predicate<>() {
-            @Override
-            public boolean evaluate(SpecTypePair specTypePair) {
-                return specTypePair != null && specTypePair.isTypeAttr();
-            }
-        });
+        return getSpecTypePairArray().iterator(specTypePair -> specTypePair != null && specTypePair.isTypeAttr());
     }
     private Iterator<SpecTypePair> getIdSpecs(){
         return getSpecTypePairArray().iterator(

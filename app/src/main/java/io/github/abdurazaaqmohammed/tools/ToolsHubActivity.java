@@ -57,11 +57,7 @@ public class ToolsHubActivity extends AppCompatActivity {
         toolbar.setTitle("Tools Kit");
         toolbar.setSubtitle("Loading");
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextInputLayout searchBox =
                 UiFields.box(this, "Search tools");
@@ -214,11 +210,7 @@ public class ToolsHubActivity extends AppCompatActivity {
                 ImageViewCompat.setImageTintList(h.icon, ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), com.google.android.material.R.attr.colorPrimary, Color.BLACK)));
                 h.title.setText(item.title());
                 h.subtitle.setText(item.subtitle());
-                h.card.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        openTool(item);
-                    }
-                });
+                h.card.setOnClickListener(v -> openTool(item));
             }
         }
         public int getItemCount() {

@@ -66,12 +66,9 @@ public class DexBackedInstruction20bc extends DexBackedInstruction implements In
             int referenceType = getReferenceType();
             return DexBackedReference.makeReference(dexFile, referenceType, referenceIndex);
         } catch (final ReferenceType.InvalidReferenceTypeException ex) {
-            return new Reference() {
-                @Override
-                public void validateReference() throws InvalidReferenceException {
-                    throw new InvalidReferenceException(String.format("%d@%d", ex.getReferenceType(), referenceIndex),
-														ex);
-                }
+            return () -> {
+                throw new Reference.InvalidReferenceException(String.format("%d@%d", ex.getReferenceType(), referenceIndex),
+                                                    ex);
             };
         }
     }

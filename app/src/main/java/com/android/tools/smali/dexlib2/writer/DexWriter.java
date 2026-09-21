@@ -268,29 +268,14 @@ public abstract class DexWriter<
             };
 
     private static final Comparator<Map.Entry> toStringKeyComparator =
-            new Comparator<>() {
-                @Override
-                public int compare(Entry o1, Entry o2) {
-                    return o1.getKey().toString().compareTo(o2.getKey().toString());
-                }
-            };
+            (o1, o2) -> o1.getKey().toString().compareTo(o2.getKey().toString());
 
     private static <T extends Comparable<? super T>> Comparator<Map.Entry<? extends T, ?>> comparableKeyComparator() {
-        return new Comparator<>() {
-            @Override
-            public int compare(Entry<? extends T, ?> o1, Entry<? extends T, ?> o2) {
-                return o1.getKey().compareTo(o2.getKey());
-            }
-        };
+        return (o1, o2) -> o1.getKey().compareTo(o2.getKey());
     }
 
     private static <T extends Comparable<? super T>> Comparator<Entry<?, ? extends T>> comparableValueComparator() {
-        return new Comparator<>() {
-            @Override
-            public int compare(Entry<?, ? extends T> o1, Entry<?, ? extends T> o2) {
-                return o1.getValue().compareTo(o2.getValue());
-            }
-        };
+        return (o1, o2) -> o1.getValue().compareTo(o2.getValue());
     }
 
     protected class InternalEncodedValueWriter extends EncodedValueWriter<StringKey, TypeKey, FieldRefKey, MethodRefKey,

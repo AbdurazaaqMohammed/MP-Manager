@@ -95,11 +95,8 @@
             holder.stringText.setText(displayText);
             holder.stringText.setTextColor(isModified ? COLOR_MODIFIED : COLOR_NORMAL);
 
-            holder.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (listener != null) listener.onStringClick(original);
-                }
+            holder.itemView.setOnClickListener(v -> {
+                if (listener != null) listener.onStringClick(original);
             });
         }
 

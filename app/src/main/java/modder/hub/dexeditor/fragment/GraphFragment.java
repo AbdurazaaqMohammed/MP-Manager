@@ -111,12 +111,9 @@ public class GraphFragment extends Fragment {
             activity.setToolbarSubtitle(subtitle);
         }
 
-        menuBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (GraphFragment.this.getActivity() instanceof DexEditorActivity) {
-                    ((DexEditorActivity) GraphFragment.this.getActivity()).toggleDrawer();
-                }
+        menuBtn.setOnClickListener(v -> {
+            if (GraphFragment.this.getActivity() instanceof DexEditorActivity) {
+                ((DexEditorActivity) GraphFragment.this.getActivity()).toggleDrawer();
             }
         });
 

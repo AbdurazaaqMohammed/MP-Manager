@@ -60,12 +60,9 @@ public class Notify_MT {
 			final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 			builder.setTitle(title_mt);
 			builder.setMessage(message_mt);
-			builder.setPositiveButton(cancel_mt, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dia, int which) {
-					// nothing
-				}
-			});
+			builder.setPositiveButton(cancel_mt, (dia, which) -> {
+                // nothing
+            });
 			
 			final AlertDialog alert = builder.show();
 			final TextView message = alert.findViewById(R.id.message);

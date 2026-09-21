@@ -62,13 +62,11 @@ public final class ECKeyFactory extends KeyFactorySpi {
 
     static {
         final Provider p = new Provider("SunEC-Internal", 1.0d, null) {};
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                p.put("KeyFactory.EC", "android.sun.security.ec.ECKeyFactory");
-                p.put("AlgorithmParameters.EC", "android.sun.security.ec.ECParameters");
-                p.put("Alg.Alias.AlgorithmParameters.1.2.840.10045.2.1", "EC");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            p.put("KeyFactory.EC", "android.sun.security.ec.ECKeyFactory");
+            p.put("AlgorithmParameters.EC", "android.sun.security.ec.ECParameters");
+            p.put("Alg.Alias.AlgorithmParameters.1.2.840.10045.2.1", "EC");
+            return null;
         });
         try {
             INSTANCE = KeyFactory.getInstance("EC", p);

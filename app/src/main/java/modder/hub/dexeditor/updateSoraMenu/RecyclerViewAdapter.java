@@ -130,24 +130,18 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 		
 		holder.disableSwitch.setChecked(!disabled);
 		
-		holder.disableSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				item.put("disabled", !isChecked);
-				updateJson();
-			}
-		});
+		holder.disableSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            item.put("disabled", !isChecked);
+            updateJson();
+        });
 		
 		// Drag handling
-		holder.imageView.setOnTouchListener(new View.OnTouchListener() {
-			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				if (event.getAction() == MotionEvent.ACTION_DOWN) {
-					mStartDragListener.requestDrag(holder);
-				}
-				return false;
-			}
-		});
+		holder.imageView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                mStartDragListener.requestDrag(holder);
+            }
+            return false;
+        });
 	}
 	
 	@Override
