@@ -98,7 +98,7 @@ public class DeltaCRLIndicatorExtension extends CRLNumberExtension {
      */
     public DeltaCRLIndicatorExtension(Boolean critical, Object value)
     throws IOException {
-        super(android.sun.security.x509.PKIXExtensions.DeltaCRLIndicator_Id, critical.booleanValue(),
+        super(android.sun.security.x509.PKIXExtensions.DeltaCRLIndicator_Id, critical,
             value, NAME, LABEL);
     }
 

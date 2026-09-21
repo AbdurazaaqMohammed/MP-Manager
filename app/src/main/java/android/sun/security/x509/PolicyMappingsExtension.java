@@ -116,7 +116,7 @@ implements CertAttrSet<String> {
     public PolicyMappingsExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyMappings_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);

@@ -190,7 +190,7 @@ implements CertAttrSet<String> {
     public NetscapeCertTypeExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = NetscapeCertType_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
         this.bitString = val.getUnalignedBitString().toBooleanArray();
@@ -212,7 +212,7 @@ implements CertAttrSet<String> {
         if (!(obj instanceof Boolean))
             throw new IOException("Attribute must be of type Boolean.");
 
-        boolean val = ((Boolean)obj).booleanValue();
+        boolean val = (Boolean) obj;
         set(getPosition(name), val);
         encodeThis();
     }

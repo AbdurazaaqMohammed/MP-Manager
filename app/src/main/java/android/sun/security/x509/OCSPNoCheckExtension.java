@@ -82,7 +82,7 @@ public class OCSPNoCheckExtension extends Extension
         throws IOException {
 
         this.extensionId = PKIXExtensions.OCSPNoCheck_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         // the value should be null, just ignore it here.
         this.extensionValue = new byte[0];

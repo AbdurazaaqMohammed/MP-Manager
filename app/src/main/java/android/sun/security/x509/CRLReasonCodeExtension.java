@@ -131,7 +131,7 @@ public class CRLReasonCodeExtension extends Extension
     public CRLReasonCodeExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.ReasonCode_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
         this.reasonCode = val.getEnumerated();
@@ -145,7 +145,7 @@ public class CRLReasonCodeExtension extends Extension
             throw new IOException("Attribute must be of type Integer.");
         }
         if (name.equalsIgnoreCase(REASON)) {
-            reasonCode = ((Integer)obj).intValue();
+            reasonCode = (Integer) obj;
         } else {
             throw new IOException
                 ("Name not supported by CRLReasonCodeExtension");

@@ -844,7 +844,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         if (num == null) {
             return 0;
         }
-        return num.intValue();
+        return num;
     }
 
     /**

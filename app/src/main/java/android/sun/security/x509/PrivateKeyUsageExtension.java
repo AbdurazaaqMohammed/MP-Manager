@@ -134,7 +134,7 @@ implements CertAttrSet<String> {
     public PrivateKeyUsageExtension(Boolean critical, Object value)
     throws CertificateException, IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.PrivateKeyUsage_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerInputStream str = new android.sun.security.util.DerInputStream(this.extensionValue);

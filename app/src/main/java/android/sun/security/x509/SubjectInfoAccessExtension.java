@@ -113,7 +113,7 @@ public class SubjectInfoAccessExtension extends Extension
     public SubjectInfoAccessExtension(Boolean critical, Object value)
             throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectInfoAccess_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         if (!(value instanceof byte[])) {
             throw new IOException("Illegal argument type");

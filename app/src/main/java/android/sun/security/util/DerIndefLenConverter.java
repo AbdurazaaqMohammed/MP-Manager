@@ -110,7 +110,7 @@ class DerIndefLenConverter {
                 throw new IOException("EOC does not have matching " +
                                       "indefinite-length tag");
             }
-            int sectionLen = dataPos - ((Integer)elem).intValue() +
+            int sectionLen = dataPos - (Integer) elem +
                              numOfEncapsulatedLenBytes;
             byte[] sectionLenBytes = getLengthBytes(sectionLen);
             ndefsList.set(index, sectionLenBytes);

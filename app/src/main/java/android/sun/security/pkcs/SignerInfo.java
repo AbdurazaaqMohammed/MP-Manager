@@ -371,11 +371,11 @@ public class SignerInfo implements DerEncoder {
                                                  + "extension");
                 }
 
-                boolean digSigAllowed = ((Boolean)keyUsage.get(
-                        KeyUsageExtension.DIGITAL_SIGNATURE)).booleanValue();
+                boolean digSigAllowed = (Boolean) keyUsage.get(
+                        KeyUsageExtension.DIGITAL_SIGNATURE);
 
-                boolean nonRepuAllowed = ((Boolean)keyUsage.get(
-                        KeyUsageExtension.NON_REPUDIATION)).booleanValue();
+                boolean nonRepuAllowed = (Boolean) keyUsage.get(
+                        KeyUsageExtension.NON_REPUDIATION);
 
                 if (!digSigAllowed && !nonRepuAllowed) {
                     throw new SignatureException("Key usage restricted: "

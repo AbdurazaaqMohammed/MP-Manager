@@ -167,7 +167,7 @@ implements CertAttrSet<String> {
     throws IOException {
         this.keyUsages = keyUsages;
         this.extensionId = android.sun.security.x509.PKIXExtensions.ExtendedKeyUsage_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         encodeThis();
     }
 
@@ -182,7 +182,7 @@ implements CertAttrSet<String> {
     public ExtendedKeyUsageExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.ExtendedKeyUsage_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);
         if (val.tag != DerValue.tag_Sequence) {

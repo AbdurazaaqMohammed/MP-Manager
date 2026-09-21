@@ -123,7 +123,7 @@ implements CertAttrSet<String> {
             List<android.sun.security.x509.PolicyInformation> certPolicies) throws IOException {
         this.certPolicies = certPolicies;
         this.extensionId = android.sun.security.x509.PKIXExtensions.CertificatePolicies_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         encodeThis();
     }
 
@@ -138,7 +138,7 @@ implements CertAttrSet<String> {
     public CertificatePoliciesExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.CertificatePolicies_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);
         if (val.tag != DerValue.tag_Sequence) {

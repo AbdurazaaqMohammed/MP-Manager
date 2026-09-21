@@ -132,10 +132,10 @@ implements CertAttrSet<String> {
 
         this.extensionId = android.sun.security.x509.PKIXExtensions.InhibitAnyPolicy_Id;
 
-        if (!critical.booleanValue())
+        if (!critical)
             throw new IOException("Criticality cannot be false for " +
                                   "InhibitAnyPolicy");
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);
@@ -193,7 +193,7 @@ implements CertAttrSet<String> {
         if (name.equalsIgnoreCase(SKIP_CERTS)) {
             if (!(obj instanceof Integer))
                 throw new IOException("Attribute value should be of type Integer.");
-            int skipCertsValue = ((Integer)obj).intValue();
+            int skipCertsValue = (Integer) obj;
             if (skipCertsValue < -1)
                 throw new IOException("Invalid value for skipCerts");
             if (skipCertsValue == -1) {

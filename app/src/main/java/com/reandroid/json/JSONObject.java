@@ -416,15 +416,15 @@ public class JSONObject extends JSONItem {
         if (value == null) {
             this.put(key, 1);
         } else if (value instanceof Integer) {
-            this.put(key, ((Integer) value).intValue() + 1);
+            this.put(key, (Integer) value + 1);
         } else if (value instanceof Long) {
-            this.put(key, ((Long) value).longValue() + 1L);
+            this.put(key, (Long) value + 1L);
         } else if (value instanceof BigInteger) {
             this.put(key, ((BigInteger)value).add(BigInteger.ONE));
         } else if (value instanceof Float) {
-            this.put(key, ((Float) value).floatValue() + 1.0f);
+            this.put(key, (Float) value + 1.0f);
         } else if (value instanceof Double) {
-            this.put(key, ((Double) value).doubleValue() + 1.0d);
+            this.put(key, (Double) value + 1.0d);
         } else if (value instanceof BigDecimal) {
             this.put(key, ((BigDecimal)value).add(BigDecimal.ONE));
         } else {
@@ -502,7 +502,7 @@ public class JSONObject extends JSONItem {
             return defaultValue;
         }
         if (val instanceof Boolean){
-            return ((Boolean) val).booleanValue();
+            return (Boolean) val;
         }
         try {
             // we'll use the get anyway because it does string conversion.

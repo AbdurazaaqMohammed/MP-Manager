@@ -113,7 +113,7 @@ public class InvalidityDateExtension extends Extension
     public InvalidityDateExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.InvalidityDate_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
         this.date = val.getGeneralizedTime();

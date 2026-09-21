@@ -164,7 +164,7 @@ public class CRLDistributionPointsExtension extends Extension
             throws IOException {
 
         this.extensionId = extensionId;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         if (!(value instanceof byte[])) {
             throw new IOException("Illegal argument type");

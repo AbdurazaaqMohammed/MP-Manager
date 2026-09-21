@@ -800,8 +800,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return -1;
         try {
-            int vers = ((Integer)info.get(android.sun.security.x509.CertificateVersion.NAME
-                        + DOT + CertificateVersion.VERSION)).intValue();
+            int vers = (Integer) info.get(CertificateVersion.NAME
+                    + DOT + CertificateVersion.VERSION);
             return vers+1;
         } catch (Exception e) {
             return -1;
@@ -1458,10 +1458,9 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             if (certExt == null)
                 return -1;
 
-            if (((Boolean) certExt.get(BasicConstraintsExtension.IS_CA)
-            ).booleanValue())
-                return ((Integer)certExt.get(
-                        BasicConstraintsExtension.PATH_LEN)).intValue();
+            if ((Boolean) certExt.get(BasicConstraintsExtension.IS_CA))
+                return (Integer) certExt.get(
+                        BasicConstraintsExtension.PATH_LEN);
             else
                 return -1;
         } catch (Exception e) {

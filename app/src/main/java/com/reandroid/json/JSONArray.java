@@ -183,7 +183,7 @@ public class JSONArray extends JSONItem implements Iterable<Object> {
     public float getFloat(int index) throws JSONException {
         final Object object = this.get(index);
         if(object instanceof Number) {
-            return ((Float)object).floatValue();
+            return (Float) object;
         }
         try {
             return Float.parseFloat(object.toString());

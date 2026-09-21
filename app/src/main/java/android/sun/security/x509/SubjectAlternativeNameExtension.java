@@ -104,7 +104,7 @@ implements CertAttrSet<String> {
     throws IOException {
         this.names = names;
         this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectAlternativeName_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         encodeThis();
     }
 
@@ -129,7 +129,7 @@ implements CertAttrSet<String> {
     public SubjectAlternativeNameExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectAlternativeName_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);

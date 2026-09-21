@@ -168,7 +168,7 @@ public class IssuingDistributionPointExtension extends Extension
     public IssuingDistributionPointExtension(Boolean critical, Object value)
             throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.IssuingDistributionPoint_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         if (!(value instanceof byte[])) {
             throw new IOException("Illegal argument type");
@@ -267,28 +267,28 @@ public class IssuingDistributionPointExtension extends Extension
                 throw new IOException(
                     "Attribute value should be of type Boolean.");
             }
-            isIndirectCRL = ((Boolean)obj).booleanValue();
+            isIndirectCRL = (Boolean) obj;
 
         } else if (name.equalsIgnoreCase(ONLY_USER_CERTS)) {
             if (!(obj instanceof Boolean)) {
                 throw new IOException(
                     "Attribute value should be of type Boolean.");
             }
-            hasOnlyUserCerts = ((Boolean)obj).booleanValue();
+            hasOnlyUserCerts = (Boolean) obj;
 
         } else if (name.equalsIgnoreCase(ONLY_CA_CERTS)) {
             if (!(obj instanceof Boolean)) {
                 throw new IOException(
                     "Attribute value should be of type Boolean.");
             }
-            hasOnlyCACerts = ((Boolean)obj).booleanValue();
+            hasOnlyCACerts = (Boolean) obj;
 
         } else if (name.equalsIgnoreCase(ONLY_ATTRIBUTE_CERTS)) {
             if (!(obj instanceof Boolean)) {
                 throw new IOException(
                     "Attribute value should be of type Boolean.");
             }
-            hasOnlyAttributeCerts = ((Boolean)obj).booleanValue();
+            hasOnlyAttributeCerts = (Boolean) obj;
 
 
         } else {

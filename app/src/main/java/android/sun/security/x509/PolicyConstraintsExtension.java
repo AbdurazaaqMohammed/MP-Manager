@@ -126,7 +126,7 @@ implements CertAttrSet<String> {
         this.require = require;
         this.inhibit = inhibit;
         this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyConstraints_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         encodeThis();
     }
 
@@ -141,7 +141,7 @@ implements CertAttrSet<String> {
     public PolicyConstraintsExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyConstraints_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
@@ -215,9 +215,9 @@ implements CertAttrSet<String> {
             throw new IOException("Attribute value should be of type Integer.");
         }
         if (name.equalsIgnoreCase(REQUIRE)) {
-            require = ((Integer)obj).intValue();
+            require = (Integer) obj;
         } else if (name.equalsIgnoreCase(INHIBIT)) {
-            inhibit = ((Integer)obj).intValue();
+            inhibit = (Integer) obj;
         } else {
           throw new IOException("Attribute name " + "[" + name + "]" +
                                 " not recognized by " +

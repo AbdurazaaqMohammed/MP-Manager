@@ -109,7 +109,7 @@ public class AuthorityInfoAccessExtension extends Extension
     public AuthorityInfoAccessExtension(Boolean critical, Object value)
             throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.AuthInfoAccess_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         if (!(value instanceof byte[])) {
             throw new IOException("Illegal argument type");

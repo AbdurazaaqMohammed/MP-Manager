@@ -128,7 +128,7 @@ implements CertAttrSet<String> {
                                  String extensionLabel) throws IOException {
 
         this.extensionId = extensionId;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
         this.crlNumber = val.getBigInteger();

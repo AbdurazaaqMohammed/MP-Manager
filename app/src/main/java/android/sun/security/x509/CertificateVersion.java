@@ -181,7 +181,7 @@ public class CertificateVersion implements CertAttrSet<String> {
             throw new IOException("Attribute must be of type Integer.");
         }
         if (name.equalsIgnoreCase(VERSION)) {
-            version = ((Integer)obj).intValue();
+            version = (Integer) obj;
         } else {
             throw new IOException("Attribute name not recognized by " +
                                   "CertAttrSet: CertificateVersion.");

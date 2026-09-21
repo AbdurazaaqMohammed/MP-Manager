@@ -152,7 +152,7 @@ implements CertAttrSet<String> {
     public KeyUsageExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         /*
          * The following check should be activated again after
          * the PKIX profiling work becomes standard and the check
@@ -188,7 +188,7 @@ implements CertAttrSet<String> {
         if (!(obj instanceof Boolean)) {
             throw new IOException("Attribute must be of type Boolean.");
         }
-        boolean val = ((Boolean)obj).booleanValue();
+        boolean val = (Boolean) obj;
         if (name.equalsIgnoreCase(DIGITAL_SIGNATURE)) {
             set(0,val);
         } else if (name.equalsIgnoreCase(NON_REPUDIATION)) {

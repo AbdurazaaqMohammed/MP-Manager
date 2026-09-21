@@ -79,7 +79,7 @@ public class FreshestCRLExtension extends CRLDistributionPointsExtension {
      */
     public FreshestCRLExtension(Boolean critical, Object value)
     throws IOException {
-        super(android.sun.security.x509.PKIXExtensions.FreshestCRL_Id, critical.booleanValue(), value,
+        super(android.sun.security.x509.PKIXExtensions.FreshestCRL_Id, critical, value,
             NAME);
     }
 

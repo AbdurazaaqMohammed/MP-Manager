@@ -107,7 +107,7 @@ implements CertAttrSet<String> {
         this.ca = ca;
         this.pathLen = len;
         this.extensionId = android.sun.security.x509.PKIXExtensions.BasicConstraints_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         encodeThis();
     }
 
@@ -123,7 +123,7 @@ implements CertAttrSet<String> {
          throws IOException
     {
          this.extensionId = android.sun.security.x509.PKIXExtensions.BasicConstraints_Id;
-         this.critical = critical.booleanValue();
+         this.critical = critical;
 
          this.extensionValue = (byte[]) value;
          android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
@@ -211,12 +211,12 @@ implements CertAttrSet<String> {
             if (!(obj instanceof Boolean)) {
               throw new IOException("Attribute value should be of type Boolean.");
             }
-            ca = ((Boolean)obj).booleanValue();
+            ca = (Boolean) obj;
         } else if (name.equalsIgnoreCase(PATH_LEN)) {
             if (!(obj instanceof Integer)) {
               throw new IOException("Attribute value should be of type Integer.");
             }
-            pathLen = ((Integer)obj).intValue();
+            pathLen = (Integer) obj;
         } else {
           throw new IOException("Attribute name not recognized by " +
                                 "CertAttrSet:BasicConstraints.");

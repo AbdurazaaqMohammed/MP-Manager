@@ -110,7 +110,7 @@ public class CertificateIssuerExtension extends Extension
     public CertificateIssuerExtension(Boolean critical, Object value)
         throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.CertificateIssuer_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);

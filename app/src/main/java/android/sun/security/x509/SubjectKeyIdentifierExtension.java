@@ -105,7 +105,7 @@ implements CertAttrSet<String> {
     public SubjectKeyIdentifierExtension(Boolean critical, Object value)
     throws IOException {
         this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectKey_Id;
-        this.critical = critical.booleanValue();
+        this.critical = critical;
         this.extensionValue = (byte[]) value;
         android.sun.security.util.DerValue val = new DerValue(this.extensionValue);
         this.id = new android.sun.security.x509.KeyIdentifier(val);

@@ -175,7 +175,7 @@ public class ReasonFlags {
         if (!(obj instanceof Boolean)) {
             throw new IOException("Attribute must be of type Boolean.");
         }
-        boolean val = ((Boolean)obj).booleanValue();
+        boolean val = (Boolean) obj;
         set(name2Index(name), val);
     }
 
