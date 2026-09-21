@@ -216,7 +216,7 @@ public class HeaderBlock extends ExpandableBlockContainer implements BlockLoad {
         ChunkType type = ChunkType.get(t);
         StringBuilder builder = new StringBuilder();
         if(type!=null){
-            builder.append(type.toString());
+            builder.append(type);
         }else {
             builder.append("Unknown type=");
             builder.append(HexUtil.toHex4(t));

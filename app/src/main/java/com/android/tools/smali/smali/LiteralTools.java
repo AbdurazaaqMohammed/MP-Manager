@@ -393,25 +393,25 @@ public class LiteralTools
 	
 	public static void checkInt(long value) {
 		if (value > 0xFFFFFFFF || value < -0x80000000) {
-			throw new NumberFormatException(Long.toString(value) + " cannot fit into an int");
+			throw new NumberFormatException(value + " cannot fit into an int");
 		}
 	}
 	
 	public static void checkShort(long value) {
 		if (value > 0xFFFF | value < -0x8000) {
-			throw new NumberFormatException(Long.toString(value) + " cannot fit into a short");
+			throw new NumberFormatException(value + " cannot fit into a short");
 		}
 	}
 	
 	public static void checkByte(long value) {
 		if (value > 0xFF | value < -0x80) {
-			throw new NumberFormatException(Long.toString(value) + " cannot fit into a byte");
+			throw new NumberFormatException(value + " cannot fit into a byte");
 		}
 	}
 	
 	public static void checkNibble(long value) {
 		if (value > 0x0F | value < -0x08) {
-			throw new NumberFormatException(Long.toString(value) + " cannot fit into a nibble");
+			throw new NumberFormatException(value + " cannot fit into a nibble");
 		}
 	}
 }

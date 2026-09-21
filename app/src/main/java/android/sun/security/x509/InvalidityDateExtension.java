@@ -168,7 +168,7 @@ public class InvalidityDateExtension extends Extension
      * Returns a printable representation of the Invalidity Date.
      */
     public String toString() {
-        return super.toString() + "    Invalidity Date: " + String.valueOf(date);
+        return super.toString() + "    Invalidity Date: " + date;
     }
 
     /**

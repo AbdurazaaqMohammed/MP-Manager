@@ -194,7 +194,7 @@ public class StringData extends DataItem
         }
         StringKey key = getKey();
         if (key == null) {
-            throw new IOException("Null string key: " + this.toString());
+            throw new IOException("Null string key: " + this);
         }
         key.append(writer, writer.isCommentUnicodeStrings());
     }

@@ -476,12 +476,12 @@ public final class Asn1BerParser {
         long secondNode = firstComponent - firstNode * 40;
         StringBuilder result = new StringBuilder();
         result.append(Long.toString(firstNode)).append('.')
-                .append(Long.toString(secondNode));
+                .append(secondNode);
 
         // Each consecutive node is encoded as a separate component
         while (encodedOid.hasRemaining()) {
             long node = decodeBase128UnsignedLong(encodedOid);
-            result.append('.').append(Long.toString(node));
+            result.append('.').append(node);
         }
 
         return result.toString();

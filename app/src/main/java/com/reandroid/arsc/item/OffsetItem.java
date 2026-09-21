@@ -107,7 +107,7 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
             try {
                 target.readBytes(reader);
             }catch (Exception ex) {
-                throw new IOException("Error at:" + toString() + ex.getMessage() , ex);
+                throw new IOException("Error at:" + this + ex.getMessage() , ex);
             }
             int current = reader.getPosition();
             if (current < position) {

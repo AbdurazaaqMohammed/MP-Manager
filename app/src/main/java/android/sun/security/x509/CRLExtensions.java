@@ -99,7 +99,7 @@ public class CRLExtensions {
                 parseExtension(ext);
             }
         } catch (IOException e) {
-            throw new CRLException("Parsing error: " + e.toString());
+            throw new CRLException("Parsing error: " + e);
         }
     }
 
@@ -166,9 +166,9 @@ public class CRLExtensions {
 
             out.write(tmp.toByteArray());
         } catch (IOException e) {
-            throw new CRLException("Encoding error: " + e.toString());
+            throw new CRLException("Encoding error: " + e);
         } catch (CertificateException e) {
-            throw new CRLException("Encoding error: " + e.toString());
+            throw new CRLException("Encoding error: " + e);
         }
     }
 

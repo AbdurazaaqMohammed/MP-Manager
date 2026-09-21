@@ -56,7 +56,7 @@ public class ParamUtil {
                 return findTypeEnd(str, index);
             default:
                 throw new IllegalArgumentException(String.format("Param string \"%s\" contains invalid type prefix: %s",
-                        str, Character.toString(c)));
+                        str, c));
         }
     }
 

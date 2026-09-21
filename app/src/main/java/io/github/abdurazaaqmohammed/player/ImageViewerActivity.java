@@ -471,7 +471,7 @@ public class ImageViewerActivity extends AppCompatActivity {
                     System.load(jpegtran.getAbsolutePath());
                     sb.append("System.load probe: LOADED\n");
                 } catch (Throwable t) {
-                    sb.append("System.load probe: FAILED ").append(String.valueOf(t.getMessage())).append("\n");
+                    sb.append("System.load probe: FAILED ").append(t.getMessage()).append("\n");
                 }
             }
             if (jpegtran.isFile()) {
@@ -503,7 +503,7 @@ public class ImageViewerActivity extends AppCompatActivity {
                         sb.append("JNI load probe: FAILED\n");
                     }
                 } catch (Throwable t) {
-                    sb.append("JNI load probe: FAILED ").append(String.valueOf(t.getMessage())).append("\n");
+                    sb.append("JNI load probe: FAILED ").append(t.getMessage()).append("\n");
                 }
             }
             pm.dismiss();

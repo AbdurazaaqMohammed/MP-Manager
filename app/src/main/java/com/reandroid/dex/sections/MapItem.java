@@ -59,7 +59,7 @@ public class MapItem extends DexBlockItem implements Comparable<MapItem> {
     public<T1 extends SectionItem> Section<T1> createNewSection(){
         SectionType<T1> sectionType = getSectionType();
         if(sectionType == null){
-            System.err.println("Unknown section: " + toString());
+            System.err.println("Unknown section: " + this);
             return null;
         }
         Block parent = getParent(SectionList.class);

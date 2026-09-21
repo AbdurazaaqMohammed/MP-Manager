@@ -49,7 +49,7 @@ public class Register implements SmaliFormat, Comparable<Register> {
     public int getValue() throws NullPointerException{
         RegistersTable registersTable = getRegistersTable();
         if(registersTable == null){
-            throw new NullPointerException("Missing register table for: " + toString());
+            throw new NullPointerException("Missing register table for: " + this);
         }
         int value = registersTable.getRegisterValue(this);
         if(!isParameter()){

@@ -201,10 +201,10 @@ implements CertAttrSet<String> {
             s += id.toString();     // id already has a newline
         }
         if (names != null) {
-            s += names.toString() + "\n";
+            s += names + "\n";
         }
         if (serialNum != null) {
-            s += serialNum.toString() + "\n";
+            s += serialNum + "\n";
         }
         return (s + "]\n");
     }

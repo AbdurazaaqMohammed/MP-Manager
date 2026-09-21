@@ -85,11 +85,11 @@ public class SmaliRegister extends Smali{
         int number = getNumber();
         if (number < 0) {
             throw new IOException(reader.getOrigin(position)
-                    + " Negative register " + this.toString());
+                    + " Negative register " + this);
         }
         if (number > 0xffff) {
             throw new IOException(reader.getOrigin(position)
-                    + " Register " + this.toString() + " out of range");
+                    + " Register " + this + " out of range");
         }
         int registersCount = registersTable.getRegistersCount();
         int localRegistersCount = registersTable.getLocalRegistersCount();
@@ -100,17 +100,17 @@ public class SmaliRegister extends Smali{
         }
         if (r >= registersCount) {
             throw new IOException(reader.getOrigin(position)
-                    + " Register " + this.toString() + "(r" + r
+                    + " Register " + this + "(r" + r
                     + ") is out of bounds (check .local/.registers definition)");
         }
         if (r < localRegistersCount && is_parameter) {
             throw new IOException(reader.getOrigin(position)
-                    + " Register " + this.toString() + "(r" + r
+                    + " Register " + this + "(r" + r
                     + ") is NOT parameter (p) (check .locals definition)");
         }
         if (r >= localRegistersCount && !is_parameter) {
             throw new IOException(reader.getOrigin(position)
-                    + " Register " + this.toString() + "(r" + r
+                    + " Register " + this + "(r" + r
                     + ") is NOT local register (v) (check .locals definition)");
         }
         RegisterFormat registerFormat = registerSet.getFormat();
@@ -123,14 +123,14 @@ public class SmaliRegister extends Smali{
         int limit = registerFormat.limit(index);
         if (r > limit) {
             throw new IOException(reader.getOrigin(position)
-                    + " Invalid register: " + this.toString() +
+                    + " Invalid register: " + this +
                     ". Must be between v0 and v" + limit + ", inclusive.");
         }
         if (registerFormat.isWide(index)) {
             int rHigh = r + 1;
             if (rHigh >= registersCount) {
                 throw new IOException(reader.getOrigin(position)
-                        + " Wide high register " + this.toString() + "(r" + r + ", r" + rHigh
+                        + " Wide high register " + this + "(r" + r + ", r" + rHigh
                         + ") is out of bounds (check .local/.registers definition)");
             }
         }

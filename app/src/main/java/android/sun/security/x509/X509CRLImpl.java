@@ -482,14 +482,14 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
         StringBuffer sb = new StringBuffer();
         sb.append("X.509 CRL v" + (version+1) + "\n");
         if (sigAlgId != null)
-            sb.append("Signature Algorithm: " + sigAlgId.toString() +
+            sb.append("Signature Algorithm: " + sigAlgId +
                   ", OID=" + (sigAlgId.getOID()).toString() + "\n");
         if (issuer != null)
-            sb.append("Issuer: " + issuer.toString() + "\n");
+            sb.append("Issuer: " + issuer + "\n");
         if (thisUpdate != null)
-            sb.append("\nThis Update: " + thisUpdate.toString() + "\n");
+            sb.append("\nThis Update: " + thisUpdate + "\n");
         if (nextUpdate != null)
-            sb.append("Next Update: " + nextUpdate.toString() + "\n");
+            sb.append("Next Update: " + nextUpdate + "\n");
         if (revokedCerts.isEmpty())
             sb.append("\nNO certificates have been revoked\n");
         else {
@@ -508,7 +508,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
                 android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
                 try {
                    if (android.sun.security.x509.OIDMap.getClass(ext.getExtensionId()) == null) {
-                       sb.append(ext.toString());
+                       sb.append(ext);
                        byte[] extValue = ext.getExtensionValue();
                        if (extValue != null) {
                            android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
@@ -520,7 +520,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
                                      + enc.encodeBuffer(extValue) + "\n");
                       }
                    } else
-                       sb.append(ext.toString()); // sub-class exists
+                       sb.append(ext); // sub-class exists
                 } catch (Exception e) {
                     sb.append(", Error parsing this extension");
                 }

@@ -213,7 +213,7 @@ public class PKCS10Attributes implements DerEncoder {
      * @return  a string representation of this PKCS10Attributes.
      */
     public String toString() {
-        String s = map.size() + "\n" + map.toString();
+        String s = map.size() + "\n" + map;
         return s;
     }
 }

@@ -125,7 +125,7 @@ public class ArrayKey<T extends Key> extends KeyList<T> {
             writer.close();
             return stringWriter.toString();
         } catch (IOException exception) {
-            return "# " + exception.toString();
+            return "# " + exception;
         }
     }
 

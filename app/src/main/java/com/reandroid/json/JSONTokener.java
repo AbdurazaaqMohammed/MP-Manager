@@ -334,11 +334,11 @@ public class JSONTokener {
     }
 
     public JSONException syntaxError(String message) {
-        return new JSONException(message + this.toString());
+        return new JSONException(message + this);
     }
 
     public JSONException syntaxError(String message, Throwable causedBy) {
-        return new JSONException(message + this.toString(), causedBy);
+        return new JSONException(message + this, causedBy);
     }
 
     @Override

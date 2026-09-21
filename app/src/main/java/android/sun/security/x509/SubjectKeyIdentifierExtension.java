@@ -116,7 +116,7 @@ implements CertAttrSet<String> {
      */
     public String toString() {
         return super.toString() + "SubjectKeyIdentifier [\n"
-                + String.valueOf(id) + "]\n";
+                + id + "]\n";
     }
 
     /**

@@ -437,7 +437,7 @@ public abstract class V1SchemeSigner {
                 if (attrValue.length() > 0) {
                     attrValue.append(", ");
                 }
-                attrValue.append(String.valueOf(id));
+                attrValue.append(id);
             }
             mainAttrs.put(
                     SF_ATTRIBUTE_NAME_ANDROID_APK_SIGNED_NAME,

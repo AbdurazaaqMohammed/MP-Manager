@@ -1978,7 +1978,7 @@ public class MethodAnalyzer {
     private static void checkRegister(RegisterType registerType, int registerNumber, BitSet validCategories) {
         if (!validCategories.get(registerType.category)) {
             throw new AnalysisException(String.format("Invalid register type %s for register v%d.",
-                    registerType.toString(), registerNumber));
+                    registerType, registerNumber));
         }
     }
 

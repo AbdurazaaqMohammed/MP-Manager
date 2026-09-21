@@ -74,11 +74,11 @@ public class HandlerOffset extends BlockItem implements Comparable<HandlerOffset
         }
         TryItem tryItem = getTryItem();
         if(tryItem == null){
-            throw new NullPointerException("Unlinked handler offset: " + this.toString());
+            throw new NullPointerException("Unlinked handler offset: " + this);
         }
         TryItem other = handlerOffset.getTryItem();
         if(other == null){
-            throw new NullPointerException("Unlinked handler offset: " + handlerOffset.toString());
+            throw new NullPointerException("Unlinked handler offset: " + handlerOffset);
         }
         return CompareUtil.compare(tryItem.getIndex(), other.getIndex());
     }

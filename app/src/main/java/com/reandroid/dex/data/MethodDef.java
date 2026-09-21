@@ -471,7 +471,7 @@ public class MethodDef extends Def<MethodId> implements MethodProgram {
         if (methodId != null) {
             return getSmaliDirective() + " " +
                     Modifier.toString(getModifiers()) +
-                    methodId.toString();
+                    methodId;
         }
         return getSmaliDirective() + " " +
                 Modifier.toString(getAccessFlags()) +

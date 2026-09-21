@@ -629,7 +629,7 @@ public abstract class V1SchemeVerifier {
                         apiLevelsUserFriendly.append(", ");
                     }
                     if (range.getMin() == range.getMax()) {
-                        apiLevelsUserFriendly.append(String.valueOf(range.getMin()));
+                        apiLevelsUserFriendly.append(range.getMin());
                     } else if (range.getMax() == Integer.MAX_VALUE) {
                         apiLevelsUserFriendly.append(range.getMin() + "+");
                     } else {

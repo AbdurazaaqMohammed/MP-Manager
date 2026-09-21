@@ -314,10 +314,10 @@ public class X509CertInfo implements CertAttrSet<String> {
 
         // optional v2, v3 extras
         if (issuerUniqueId != null) {
-            sb.append("  Issuer Id:\n" + issuerUniqueId.toString() + "\n");
+            sb.append("  Issuer Id:\n" + issuerUniqueId + "\n");
         }
         if (subjectUniqueId != null) {
-            sb.append("  Subject Id:\n" + subjectUniqueId.toString() + "\n");
+            sb.append("  Subject Id:\n" + subjectUniqueId + "\n");
         }
         if (extensions != null) {
             Collection allExts = extensions.getAllExtensions();
@@ -328,7 +328,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                 android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
                 try {
                     if (OIDMap.getClass(ext.getExtensionId()) == null) {
-                        sb.append(ext.toString());
+                        sb.append(ext);
                         byte[] extValue = ext.getExtensionValue();
                         if (extValue != null) {
                             android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
@@ -340,7 +340,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                                       + enc.encodeBuffer(extValue) + "\n");
                         }
                     } else
-                        sb.append(ext.toString()); //sub-class exists
+                        sb.append(ext); //sub-class exists
                 } catch (Exception e) {
                     sb.append(", Error parsing this extension");
                 }

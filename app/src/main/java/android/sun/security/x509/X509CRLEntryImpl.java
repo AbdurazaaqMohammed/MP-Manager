@@ -125,7 +125,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             parse(new android.sun.security.util.DerValue(revokedCert));
         } catch (IOException e) {
             this.revokedCert = null;
-            throw new CRLException("Parsing error: " + e.toString());
+            throw new CRLException("Parsing error: " + e);
         }
     }
 
@@ -140,7 +140,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             parse(derValue);
         } catch (IOException e) {
             revokedCert = null;
-            throw new CRLException("Parsing error: " + e.toString());
+            throw new CRLException("Parsing error: " + e);
         }
     }
 
@@ -185,7 +185,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             }
             outStrm.write(revokedCert);
         } catch (IOException e) {
-             throw new CRLException("Encoding error: " + e.toString());
+             throw new CRLException("Encoding error: " + e);
         }
     }
 
@@ -308,7 +308,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
                 android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
                 try {
                     if (android.sun.security.x509.OIDMap.getClass(ext.getExtensionId()) == null) {
-                        sb.append(ext.toString());
+                        sb.append(ext);
                         byte[] extValue = ext.getExtensionValue();
                         if (extValue != null) {
                             android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
@@ -320,7 +320,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
                                       + enc.encodeBuffer(extValue) + "\n");
                         }
                     } else
-                        sb.append(ext.toString()); //sub-class exists
+                        sb.append(ext); //sub-class exists
                 } catch (Exception e) {
                     sb.append(", Error parsing this extension");
                 }

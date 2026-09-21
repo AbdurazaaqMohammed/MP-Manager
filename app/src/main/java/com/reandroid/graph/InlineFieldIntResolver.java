@@ -104,7 +104,7 @@ public class InlineFieldIntResolver extends BaseDexClassProcessor {
         replace.setAsInteger(id);
         this.mResolvedCount ++;
         if(isDebugEnabled()) {
-            debug(key + " WITH " + replace.toString());
+            debug(key + " WITH " + replace);
         }
     }
 

@@ -341,7 +341,7 @@ public class PKCS9Attributes {
             else
                 buf.append(";\n\t");
 
-            buf.append(value.toString());
+            buf.append(value);
         }
 
         buf.append("\n\t] (end PKCS9 Attributes)");

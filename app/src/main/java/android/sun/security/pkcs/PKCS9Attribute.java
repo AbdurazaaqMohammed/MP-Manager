@@ -447,7 +447,7 @@ public class PKCS9Attribute implements DerEncoder {
                            "Wrong value class " +
                            " for attribute " + oid +
                            " constructing PKCS9Attribute; was " +
-                           value.getClass().toString() + ", should be " +
+                                   value.getClass() + ", should be " +
                            VALUE_CLASSES[index].toString());
 
         this.value = value;

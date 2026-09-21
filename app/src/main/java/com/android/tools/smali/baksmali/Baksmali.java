@@ -147,7 +147,7 @@ public class Baksmali {
                 if (!smaliParent.mkdirs()) {
                     // check again, it's likely it was created in a different thread
                     if (!smaliParent.exists()) {
-                        System.err.println("Unable to create directory " + smaliParent.toString() + " - skipping class");
+                        System.err.println("Unable to create directory " + smaliParent + " - skipping class");
                         return false;
                     }
                 }
@@ -155,7 +155,7 @@ public class Baksmali {
 
             if (!smaliFile.exists()){
                 if (!smaliFile.createNewFile()) {
-                    System.err.println("Unable to create file " + smaliFile.toString() + " - skipping class");
+                    System.err.println("Unable to create file " + smaliFile + " - skipping class");
                     return false;
                 }
             }
@@ -180,7 +180,7 @@ public class Baksmali {
                 try {
                     writer.close();
                 } catch (Throwable ex) {
-                    System.err.println("\n\nError occurred while closing file " + smaliFile.toString());
+                    System.err.println("\n\nError occurred while closing file " + smaliFile);
                     ex.printStackTrace();
                 }
             }

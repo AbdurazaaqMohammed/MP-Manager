@@ -92,7 +92,7 @@ public class ProfileVersion extends BlockItem {
         super.onReadBytes(reader);
         if (!isSupported(get())) {
             throw new IOException("Unsupported version: " + get()
-                    + " (" + this.toString() + ")");
+                    + " (" + this + ")");
         }
     }
 

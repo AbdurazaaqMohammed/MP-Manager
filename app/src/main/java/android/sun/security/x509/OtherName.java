@@ -75,7 +75,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
         if (gni != null) {
             name = gni.toString();
         } else {
-            name = "Unrecognized ObjectIdentifier: " + oid.toString();
+            name = "Unrecognized ObjectIdentifier: " + oid;
         }
     }
 

@@ -53,7 +53,7 @@ public class XMLDebugStringBuilder {
 
         XMLDocDeclaration declaration = document.getDeclaration();
         if (declaration.isValid()) {
-            builder.append(declaration.toString());
+            builder.append(declaration);
         }
         boolean hasChildes = false;
         Iterator<XMLNode> iterator = document.iterator();

@@ -183,7 +183,7 @@ public class IntegerDataReference<T extends DataItem> extends IntegerItem
     public String toString() {
         T item = this.item;
         if(item != null) {
-            return get() + ":" + item.toString();
+            return get() + ":" + item;
         }
         return getSectionType().getName() + ": " + get();
     }

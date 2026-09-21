@@ -810,7 +810,7 @@ public class AVA implements DerEncoder {
                 }
                 sbuffer.append(c);
             }
-            typeAndValue.append(sbuffer.toString());
+            typeAndValue.append(sbuffer);
         }
         return typeAndValue.toString();
     }
@@ -1064,9 +1064,9 @@ public class AVA implements DerEncoder {
 
                 // Emit the string ... quote it if needed
                 if (quoteNeeded) {
-                    retval.append("\"").append(sbuffer.toString()).append("\"");
+                    retval.append("\"").append(sbuffer).append("\"");
                 } else {
-                    retval.append(sbuffer.toString());
+                    retval.append(sbuffer);
                 }
             }
         } catch (IOException e) {

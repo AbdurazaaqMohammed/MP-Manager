@@ -176,8 +176,8 @@ public class NameConstraintsExtension extends Extension implements CertAttrSet<S
     @NonNull
     public String toString() {
         return (super.toString() + "NameConstraints: [" +
-                ((permitted == null) ? "" : ("\n    Permitted:" + permitted.toString())) +
-                ((excluded == null) ? "" : ("\n    Excluded:" + excluded.toString())) +
+                ((permitted == null) ? "" : ("\n    Permitted:" + permitted)) +
+                ((excluded == null) ? "" : ("\n    Excluded:" + excluded)) +
                 "   ]\n");
     }
 

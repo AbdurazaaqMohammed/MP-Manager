@@ -170,7 +170,7 @@ public class CertificateIssuerExtension extends Extension
      */
     public String toString() {
         return super.toString() + "Certificate Issuer [\n" +
-            String.valueOf(names) + "]\n";
+                names + "]\n";
     }
 
     /**

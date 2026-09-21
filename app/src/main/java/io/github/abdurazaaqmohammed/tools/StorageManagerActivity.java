@@ -1214,7 +1214,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                             }
                             new MaterialAlertDialogBuilder(StorageManagerActivity.this)
                                     .setTitle(getString(R.string.storage_some_not_cleared))
-                                    .setMessage(getString(R.string.storage_apps_failed, failedPkgs.size(), names.length() == 0 ? "" : ": " + names.toString(), errText.isEmpty() ? "" : "\n\n" + errText))
+                                    .setMessage(getString(R.string.storage_apps_failed, failedPkgs.size(), names.length() == 0 ? "" : ": " + names, errText.isEmpty() ? "" : "\n\n" + errText))
                                     .setPositiveButton(android.R.string.ok, null)
                                     .show();
                         }

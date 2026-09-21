@@ -1575,7 +1575,7 @@ public class OverlayInjectorUtil {
             String renamed = matcher.group(1) + "private onCreate$mpmanager(Landroid/os/Bundle;)V";
             String patched = matcher.replaceFirst(Matcher.quoteReplacement( renamed));
             if (!patched.endsWith("\n")) patched += "\n";
-            patched = patched + insert.toString();
+            patched = patched + insert;
             writeFile(smaliFile, patched);
             patchedFiles.add(smaliFile);
             debug("patched " + smaliFile.getName() + ", generated smali:\n" + shorten(insert.toString()));

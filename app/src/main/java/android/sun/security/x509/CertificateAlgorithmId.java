@@ -95,7 +95,7 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      */
     public String toString() {
         if (algId == null) return "";
-        return (algId.toString() +
+        return (algId +
                 ", OID = " + (algId.getOID()).toString() + "\n");
     }
 

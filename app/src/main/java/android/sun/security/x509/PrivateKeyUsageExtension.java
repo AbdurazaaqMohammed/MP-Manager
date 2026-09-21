@@ -177,8 +177,8 @@ implements CertAttrSet<String> {
     public String toString() {
         return(super.toString() +
                 "PrivateKeyUsage: [\n" +
-                ((notBefore == null) ? "" : "From: " + notBefore.toString() + ", ")
-                + ((notAfter == null) ? "" : "To: " + notAfter.toString())
+                ((notBefore == null) ? "" : "From: " + notBefore + ", ")
+                + ((notAfter == null) ? "" : "To: " + notAfter)
                 + "]\n");
     }
 
@@ -213,11 +213,11 @@ implements CertAttrSet<String> {
          */
         if (notBefore.after(now)) {
             throw new CertificateNotYetValidException("NotBefore: " +
-                                                      notBefore.toString());
+                    notBefore);
         }
         if (notAfter.before(now)) {
             throw new CertificateExpiredException("NotAfter: " +
-                                                  notAfter.toString());
+                    notAfter);
         }
     }
 

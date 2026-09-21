@@ -102,7 +102,7 @@ public class X509Factory extends CertificateFactorySpi {
             }
         } catch (IOException ioe) {
             throw (CertificateException)new CertificateException
-            ("Could not parse certificate: " + ioe.toString()).initCause(ioe);
+            ("Could not parse certificate: " + ioe).initCause(ioe);
         }
     }
 
