@@ -24,5 +24,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Asn1Class {
-    public Asn1Type type();
+    Asn1Type type();
 }

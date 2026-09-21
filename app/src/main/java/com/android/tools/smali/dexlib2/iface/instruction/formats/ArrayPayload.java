@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public interface ArrayPayload extends PayloadInstruction {
-    public int getElementWidth();
-    @Nonnull public List<Number> getArrayElements();
+    int getElementWidth();
+    @Nonnull
+    List<Number> getArrayElements();
 }

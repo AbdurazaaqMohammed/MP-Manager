@@ -30,7 +30,7 @@ public enum DigestAlgorithm {
 
     private final String mJcaMessageDigestAlgorithm;
 
-    private DigestAlgorithm(String jcaMessageDigestAlgoritm) {
+    DigestAlgorithm(String jcaMessageDigestAlgoritm) {
         mJcaMessageDigestAlgorithm = jcaMessageDigestAlgoritm;
     }
 

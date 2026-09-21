@@ -71,7 +71,7 @@ public abstract class AnnotationsDirectory {
      * that field/method/parameter is stored.
      */
     public interface AnnotationIterator {
-        public static final AnnotationIterator EMPTY = new AnnotationIterator() {
+        AnnotationIterator EMPTY = new AnnotationIterator() {
             @Override public int seekTo(int key) { return 0; }
             @Override public void reset() {}
         };
@@ -86,12 +86,12 @@ public abstract class AnnotationsDirectory {
          * @param key The method/field index to search for
          * @return The annotation offset associated with the requested key, or 0 if not found.
          */
-        public int seekTo(int key);
+        int seekTo(int key);
 
         /**
          * Resets the iterator to the beginning of its list.
          */
-        public void reset();
+        void reset();
     }
 
     @Nonnull

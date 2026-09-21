@@ -34,7 +34,7 @@ public enum ContentDigestAlgorithm {
     private final String mJcaMessageDigestAlgorithm;
     private final int mChunkDigestOutputSizeBytes;
 
-    private ContentDigestAlgorithm(
+    ContentDigestAlgorithm(
             int id, String jcaMessageDigestAlgorithm, int chunkDigestOutputSizeBytes) {
         mId = id;
         mJcaMessageDigestAlgorithm = jcaMessageDigestAlgorithm;

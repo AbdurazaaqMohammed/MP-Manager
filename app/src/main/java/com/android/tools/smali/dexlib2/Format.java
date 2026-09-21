@@ -72,11 +72,11 @@ public enum Format {
     public final int size;
     public final boolean isPayloadFormat;
 
-    private Format(int size) {
+    Format(int size) {
         this(size, false);
     }
 
-    private Format(int size, boolean isPayloadFormat) {
+    Format(int size, boolean isPayloadFormat) {
         this.size = size;
         this.isPayloadFormat = isPayloadFormat;
     }

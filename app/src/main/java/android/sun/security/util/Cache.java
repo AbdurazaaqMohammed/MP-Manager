@@ -194,7 +194,7 @@ public abstract class Cache {
     }
 
     public interface CacheVisitor {
-        public void visit(Map<Object, Object> map);
+        void visit(Map<Object, Object> map);
     }
 
 }
@@ -457,7 +457,7 @@ class MemoryCache extends Cache {
         }
     }
 
-    private static interface CacheEntry {
+    private interface CacheEntry {
 
         boolean isValid(long currentTime);
 

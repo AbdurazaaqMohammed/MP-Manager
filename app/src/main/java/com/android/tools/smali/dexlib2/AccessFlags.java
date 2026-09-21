@@ -74,8 +74,8 @@ public enum AccessFlags
         }
     }
 
-    private AccessFlags(int value, String accessFlagName, boolean validForClass, boolean validForMethod,
-                        boolean validForField) {
+    AccessFlags(int value, String accessFlagName, boolean validForClass, boolean validForMethod,
+                boolean validForField) {
         this.value = value;
         this.accessFlagName = accessFlagName;
         this.validForClass = validForClass;

@@ -27,9 +27,9 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public interface RunnablesExecutor {
-    static final RunnablesExecutor SINGLE_THREADED = p -> p.createRunnable().run();
+    RunnablesExecutor SINGLE_THREADED = p -> p.createRunnable().run();
 
-    static final RunnablesExecutor MULTI_THREADED = new RunnablesExecutor() {
+    RunnablesExecutor MULTI_THREADED = new RunnablesExecutor() {
         private final int PARALLELISM = Math.min(32, Runtime.getRuntime().availableProcessors());
         private final int QUEUE_SIZE = 4;
 

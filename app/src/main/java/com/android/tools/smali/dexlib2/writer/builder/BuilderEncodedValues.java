@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Set;
 
 public abstract class BuilderEncodedValues {
-    public static interface BuilderEncodedValue extends EncodedValue {
+    public interface BuilderEncodedValue extends EncodedValue {
     }
 
     public static class BuilderAnnotationEncodedValue extends BaseAnnotationEncodedValue

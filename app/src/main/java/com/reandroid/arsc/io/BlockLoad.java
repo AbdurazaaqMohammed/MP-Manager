@@ -20,5 +20,5 @@ import com.reandroid.arsc.base.Block;
 import java.io.IOException;
 
 public interface BlockLoad {
-    public void onBlockLoaded(BlockReader reader, Block sender) throws IOException;
+    void onBlockLoaded(BlockReader reader, Block sender) throws IOException;
 }

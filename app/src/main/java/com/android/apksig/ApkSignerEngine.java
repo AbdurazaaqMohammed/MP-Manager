@@ -355,7 +355,7 @@ public interface ApkSignerEngine extends Closeable {
      * which case the request must be fulfilled before {@link ApkSignerEngine#outputJarEntries()} is
      * invoked.
      */
-    public static class InputJarEntryInstructions {
+    class InputJarEntryInstructions {
         private final OutputPolicy mOutputPolicy;
         private final InspectJarEntryRequest mInspectJarEntryRequest;
 
@@ -399,7 +399,7 @@ public interface ApkSignerEngine extends Closeable {
         /**
          * Output policy for an input APK's JAR entry.
          */
-        public static enum OutputPolicy {
+        public enum OutputPolicy {
             /** Entry must not be output. */
             SKIP,
 
@@ -457,7 +457,7 @@ public interface ApkSignerEngine extends Closeable {
         /**
          * JAR entry.
          */
-        public static class JarEntry {
+        class JarEntry {
             private final String mName;
             private final byte[] mData;
 
