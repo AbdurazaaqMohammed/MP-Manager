@@ -33,6 +33,8 @@ import com.reandroid.utils.collection.ComputeIterator;
 
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Objects;
+
 import org.apache.commons.collections4.Predicate;
 
 public class ShortIdList<T extends IdItem> extends DataItem
@@ -156,7 +158,7 @@ public class ShortIdList<T extends IdItem> extends DataItem
         return referenceList.removeIf(reference -> filter.evaluate(reference.getItem()));
     }
     void removeNulls() {
-        removeIf(item -> item == null);
+        removeIf(Objects::isNull);
     }
 
     public Iterator<T> iterator() {

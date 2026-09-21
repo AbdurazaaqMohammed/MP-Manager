@@ -165,14 +165,14 @@ public class FileOperationsHelper {
             if (adapter.isInZip) {
                 if (!copyFromZip(itemsToMove)) return;
                 for (Object o : itemsToMove) deleteZipEntry((ZipEntryInfo) o);
-                context.handler.post(() -> adapter.clearSelection());
+                context.handler.post(adapter::clearSelection);
             } else {
                 moveToDestination(itemsToMove);
             }
         } else if (adapter.isInZip) {
             if (!copyToDestination(Collections.singletonList(item))) return;
             deleteZipEntry((ZipEntryInfo) item);
-            context.handler.post(() -> adapter.clearSelection());
+            context.handler.post(adapter::clearSelection);
         } else {
             moveToDestination(Collections.singletonList(item));
         }

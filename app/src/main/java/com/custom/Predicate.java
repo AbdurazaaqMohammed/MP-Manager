@@ -114,6 +114,6 @@ public interface Predicate<T> {
     static <T> Predicate<T> isEqual(Object targetRef) {
         return (null == targetRef)
                 ? Objects::isNull
-                : object -> targetRef.equals(object);
+                : targetRef::equals;
     }
 }

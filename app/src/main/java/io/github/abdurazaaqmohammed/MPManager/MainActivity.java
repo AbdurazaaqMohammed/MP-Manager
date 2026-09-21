@@ -1450,7 +1450,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        findViewById(R.id.bookmarksMenuButton).setOnClickListener(v -> showBookmarksBarMenu(v));
+        findViewById(R.id.bookmarksMenuButton).setOnClickListener(this::showBookmarksBarMenu);
         findViewById(R.id.bookmarksCloseButton).setOnClickListener(v -> closeBookmarksDrawer());
         findViewById(R.id.batchCopy).setOnClickListener(v -> batchCopyOrMove(true));
         findViewById(R.id.batchMove).setOnClickListener(v -> batchCopyOrMove(false));

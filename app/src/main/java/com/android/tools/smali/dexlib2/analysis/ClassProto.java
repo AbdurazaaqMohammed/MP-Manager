@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -303,7 +304,7 @@ public class ClassProto implements TypeProto {
      */
     @Nonnull
     protected Iterable<ClassDef> getDirectInterfaces() {
-        Iterable<ClassDef> directInterfaces = IteratorUtils.filter(getInterfaces().values(), input -> input != null);
+        Iterable<ClassDef> directInterfaces = IteratorUtils.filter(getInterfaces().values(), Objects::nonNull);
 
         if (!interfacesFullyResolved) {
             throw new UnresolvedClassException("Interfaces for class %s not fully resolved: %s", getType(),

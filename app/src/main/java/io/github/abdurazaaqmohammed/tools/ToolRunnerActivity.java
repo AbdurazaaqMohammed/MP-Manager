@@ -1809,7 +1809,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         } else {
             rulerInfo.setText("Screen width: " + new DecimalFormat("0.00").format(inches) + " inch");
         }
-        rulerView.post(() -> updateRulerInfoText());
+        rulerView.post(this::updateRulerInfoText);
     }
     private void updateRulerInfoText() {
         try {
