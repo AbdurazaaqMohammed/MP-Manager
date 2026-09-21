@@ -63,7 +63,7 @@ public class MemoizingSupplier<T> implements Supplier<T> {
         return value;
     }
 
-    public static <T extends Object> MemoizingSupplier<T> memoize(Supplier<T> delegate) {
+    public static <T> MemoizingSupplier<T> memoize(Supplier<T> delegate) {
         if (delegate instanceof MemoizingSupplier) {
             return (MemoizingSupplier<T>) delegate;
         }

@@ -39,7 +39,7 @@ import com.google.common.base.Function;
  * <p>
  * The returned iterator supports {@code remove()} if {@code backingIterator} does.
  */
-public class TransformedIterator<F extends Object, T extends Object>
+public class TransformedIterator<F, T>
         implements Iterator<T> {
     final Iterator<? extends F> backingIterator;
     final Function<F, T> transformFunction;

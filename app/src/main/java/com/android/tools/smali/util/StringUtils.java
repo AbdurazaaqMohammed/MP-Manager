@@ -146,9 +146,9 @@ public class StringUtils {
         return sb.toString();
     }
 
-    public static String join(Collection<? extends Object> parts, String separator) {
+    public static String join(Collection<?> parts, String separator) {
         StringBuilder builder = new StringBuilder();
-        Iterator<? extends Object> it = parts.iterator();
+        Iterator<?> it = parts.iterator();
         if (it.hasNext()) {
             builder.append(it.hasNext());
         }

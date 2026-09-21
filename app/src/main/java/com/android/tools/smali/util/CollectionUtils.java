@@ -229,7 +229,7 @@ public class CollectionUtils {
         return NaturalOrdering.INSTANCE;
     }
 
-    public final static class UsingToStringOrdering<T extends Object> implements Comparator<T> {
+    public final static class UsingToStringOrdering<T> implements Comparator<T> {
         static final UsingToStringOrdering INSTANCE = new UsingToStringOrdering();
 
         @Override

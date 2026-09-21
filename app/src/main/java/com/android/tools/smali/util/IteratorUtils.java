@@ -38,7 +38,7 @@ import com.google.common.base.Predicate;
 
 public final class IteratorUtils {
 
-    public static <T extends Object> T getLast(Iterator<T> iterator) {
+    public static <T> T getLast(Iterator<T> iterator) {
         while (true) {
             T current = iterator.next();
             if (!iterator.hasNext()) {
@@ -47,12 +47,12 @@ public final class IteratorUtils {
         }
     }
 
-    public static <T extends Object> AbstractIterator<T> filter(
+    public static <T> AbstractIterator<T> filter(
                 Iterable<T> unfiltered, Predicate<? super T> retainIfTrue) {
         return filter(unfiltered.iterator(), retainIfTrue);
     }
     
-    public static <T extends Object> AbstractIterator<T> filter(
+    public static <T> AbstractIterator<T> filter(
                 final Iterator<T> unfiltered, final Predicate<? super T> retainIfTrue) {
         return new AbstractIterator<T>() {
             @Override
@@ -68,11 +68,11 @@ public final class IteratorUtils {
         };
     }
 
-    public static <T extends Object> List<T> toList(Iterable<T> iterable) {
+    public static <T> List<T> toList(Iterable<T> iterable) {
         return toList(iterable.iterator());
     }
 
-    public static <T extends Object> List<T> toList(Iterator<T> iterator) {
+    public static <T> List<T> toList(Iterator<T> iterator) {
         ArrayList<T> list = new ArrayList<T>();
         while (iterator.hasNext()) {
             list.add(iterator.next());
@@ -80,7 +80,7 @@ public final class IteratorUtils {
         return list;
     }
 
-    public static <T extends Object> void addAll(Collection<T> collection, Iterator<T> iterator) {
+    public static <T> void addAll(Collection<T> collection, Iterator<T> iterator) {
         while (iterator.hasNext()) {
             collection.add(iterator.next());
         }

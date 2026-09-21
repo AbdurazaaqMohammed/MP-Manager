@@ -40,7 +40,7 @@ import java.util.Iterator;
  * <p>
  * The returned iterator does not support {@code remove()}.
  */
-public class ChainedIterator<T extends Object> implements Iterator<T>, Iterable<T> {
+public class ChainedIterator<T> implements Iterator<T>, Iterable<T> {
     Iterator<T> iteratorA;
     Iterator<T> iteratorB;
 
