@@ -295,13 +295,7 @@ public class CentralDirectoryRecord {
         public int compare(CentralDirectoryRecord r1, CentralDirectoryRecord r2) {
             long offset1 = r1.getLocalFileHeaderOffset();
             long offset2 = r2.getLocalFileHeaderOffset();
-            if (offset1 > offset2) {
-                return 1;
-            } else if (offset1 < offset2) {
-                return -1;
-            } else {
-                return 0;
-            }
+            return Long.compare(offset1, offset2);
         }
     }
 }

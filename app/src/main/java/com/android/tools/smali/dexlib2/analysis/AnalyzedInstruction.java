@@ -645,13 +645,7 @@ public class AnalyzedInstruction implements Comparable<AnalyzedInstruction> {
     }
 
     public int compareTo(@Nonnull AnalyzedInstruction analyzedInstruction) {
-        if (instructionIndex < analyzedInstruction.instructionIndex) {
-            return -1;
-        } else if (instructionIndex == analyzedInstruction.instructionIndex) {
-            return 0;
-        } else {
-            return 1;
-        }
+        return Integer.compare(instructionIndex, analyzedInstruction.instructionIndex);
     }
 
     private static class PredecessorOverrideKey {

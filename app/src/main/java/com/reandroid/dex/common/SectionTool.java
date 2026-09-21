@@ -116,13 +116,7 @@ public interface SectionTool {
         }
         int i1 = item1.getIdx();
         int i2 = item2.getIdx();
-        if(i1 == i2){
-            return 0;
-        }
-        if(i1 > i2){
-            return 1;
-        }
-        return -1;
+        return Integer.compare(i1, i2);
     }
     static<T extends Block> int compareIndex(T item1, T item2){
         if(item1 == item2){
@@ -136,12 +130,6 @@ public interface SectionTool {
         }
         int i1 = item1.getIndex();
         int i2 = item2.getIndex();
-        if(i1 == i2){
-            return 0;
-        }
-        if(i1 > i2){
-            return 1;
-        }
-        return -1;
+        return Integer.compare(i1, i2);
     }
 }

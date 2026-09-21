@@ -46,10 +46,10 @@ public abstract class MethodItem implements Comparable<MethodItem> {
     public abstract double getSortOrder();
 
     public int compareTo(MethodItem methodItem) {
-        int result = ((Integer) codeAddress).compareTo(methodItem.codeAddress);
+        int result = Integer.compare(codeAddress, methodItem.codeAddress);
 
         if (result == 0){
-            return ((Double)getSortOrder()).compareTo(methodItem.getSortOrder());
+            return Double.compare(getSortOrder(), methodItem.getSortOrder());
         }
         return result;
     }

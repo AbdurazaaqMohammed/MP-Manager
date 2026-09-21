@@ -66,13 +66,7 @@ public class ArraySort {
         public int compareToMid(int i) {
             int data = elementData[i];
             int mid = this.mid;
-            if(data == mid){
-                return 0;
-            }
-            if(data < mid){
-                return -1;
-            }
-            return 1;
+            return Integer.compare(data, mid);
         }
         @Override
         public void onSwap(int i, int j) {
