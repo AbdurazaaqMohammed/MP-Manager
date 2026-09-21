@@ -419,8 +419,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             entries.put(alias.toLowerCase(), entry);
         } catch (Exception nsae) {
             KeyStoreException ke = new KeyStoreException("Key protection " +
-                                        " algorithm not found: " + nsae);
-            ke.initCause(nsae);
+                                        " algorithm not found: " + nsae, nsae);
             throw ke;
         }
     }
@@ -458,8 +457,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             new EncryptedPrivateKeyInfo(key);
         } catch (IOException ioe) {
             KeyStoreException ke = new KeyStoreException("Private key is not"
-                        + " stored as PKCS#8 EncryptedPrivateKeyInfo: " + ioe);
-            ke.initCause(ioe);
+                        + " stored as PKCS#8 EncryptedPrivateKeyInfo: " + ioe, ioe);
             throw ke;
         }
 
@@ -512,9 +510,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         } catch (Exception e) {
            IOException ioe =
                 new IOException("getAlgorithmParameters failed: " +
-                                e.getMessage());
-           ioe.initCause(e);
-           throw ioe;
+                                e.getMessage(), e);
+            throw ioe;
         }
         return algParams;
     }
@@ -543,9 +540,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         } catch (Exception e) {
            IOException ioe =
                 new IOException("parseAlgParameters failed: " +
-                                e.getMessage());
-           ioe.initCause(e);
-           throw ioe;
+                                e.getMessage(), e);
+            throw ioe;
         }
         return algParams;
     }
@@ -563,9 +559,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             skey = skFac.generateSecret(keySpec);
         } catch (Exception e) {
            IOException ioe = new IOException("getSecretKey failed: " +
-                                        e.getMessage());
-           ioe.initCause(e);
-           throw ioe;
+                                        e.getMessage(), e);
+            throw ioe;
         }
         return skey;
     }
@@ -823,8 +818,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             md.update(data);
             digest = md.digest();
         } catch (Exception e) {
-            IOException ioe = new IOException("generateHash failed: " + e);
-            ioe.initCause(e);
+            IOException ioe = new IOException("generateHash failed: " + e, e);
             throw ioe;
         }
         return digest;
@@ -863,8 +857,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             bytes.write(macData.getEncoded());
             mData = bytes.toByteArray();
         } catch (Exception e) {
-            IOException ioe = new IOException("calculateMac failed: " + e);
-            ioe.initCause(e);
+            IOException ioe = new IOException("calculateMac failed: " + e, e);
             throw ioe;
         }
         return mData;
@@ -1147,8 +1140,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
 
         } catch (Exception e) {
             IOException ioe = new IOException("Failed to encrypt" +
-                                " safe contents entry: " + e);
-            ioe.initCause(e);
+                                " safe contents entry: " + e, e);
             throw ioe;
         }
 
@@ -1278,8 +1270,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
 
                 } catch (Exception e) {
                     IOException ioe = new IOException("failed to decrypt safe"
-                            + " contents entry: " + e);
-                    ioe.initCause(e);
+                            + " contents entry: " + e, e);
                     throw ioe;
                 }
             } else {
@@ -1317,9 +1308,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                 }
            } catch (Exception e) {
                 IOException ioe =
-                        new IOException("Integrity check failed: " + e);
-                ioe.initCause(e);
-                throw ioe;
+                        new IOException("Integrity check failed: " + e, e);
+               throw ioe;
            }
         }
 

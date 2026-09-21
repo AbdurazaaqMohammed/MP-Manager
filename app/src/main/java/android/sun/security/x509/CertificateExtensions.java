@@ -132,12 +132,12 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
             if (e instanceof IOException) {
                 throw (IOException)e;
             } else {
-                throw (IOException)new IOException(e.toString()).initCause(e);
+                throw (IOException) new IOException(e.toString(), e);
             }
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
-            throw (IOException)new IOException(e.toString()).initCause(e);
+            throw (IOException) new IOException(e.toString(), e);
         }
     }
 

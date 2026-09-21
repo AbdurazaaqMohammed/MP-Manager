@@ -201,8 +201,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         } catch (IOException e) {
             signedCert = null;
             CertificateException ce = new
-                CertificateException("Unable to initialize, " + e);
-            ce.initCause(e);
+                CertificateException("Unable to initialize, " + e, e);
             throw ce;
         }
     }
@@ -240,8 +239,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                                          "either DER-encoded bytes " +
                                          "or RFC1421 hex-encoded " +
                                          "DER-encoded bytes: " +
-                                         ioe1.getMessage());
-                ce.initCause(ioe1);
+                                         ioe1.getMessage(), ioe1);
                 throw ce;
             }
         }
@@ -251,8 +249,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             signedCert = null;
             CertificateException ce = new
                 CertificateException("Unable to parse DER value of " +
-                                     "certificate, " + ioe);
-            ce.initCause(ioe);
+                                     "certificate, " + ioe, ioe);
             throw ce;
         }
     }
@@ -325,8 +322,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         } catch (IOException e) {
             signedCert = null;
             CertificateException ce = new
-                CertificateException("Unable to initialize, " + e);
-            ce.initCause(e);
+                CertificateException("Unable to initialize, " + e, e);
             throw ce;
         }
     }
@@ -1434,8 +1430,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             return Collections.unmodifiableList(ekuExt.getExtendedKeyUsage());
         } catch (IOException ioe) {
             CertificateParsingException cpe =
-                new CertificateParsingException();
-            cpe.initCause(ioe);
+                new CertificateParsingException(ioe);
             throw cpe;
         }
     }
@@ -1617,8 +1612,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             return makeAltNames(names);
         } catch (IOException ioe) {
             CertificateParsingException cpe =
-                new CertificateParsingException();
-            cpe.initCause(ioe);
+                new CertificateParsingException(ioe);
             throw cpe;
         }
     }
@@ -1683,8 +1677,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             return makeAltNames(names);
         } catch (IOException ioe) {
             CertificateParsingException cpe =
-                new CertificateParsingException();
-            cpe.initCause(ioe);
+                new CertificateParsingException(ioe);
             throw cpe;
         }
     }

@@ -721,7 +721,7 @@ abstract class JavaKeyStore extends KeyStoreSpi {
                     if (computed[i] != actual[i]) {
                         Throwable t = new UnrecoverableKeyException("Password verification failed");
                         throw (IOException) new IOException("Keystore was tampered with, or "
-                                + "password was incorrect").initCause(t);
+                                + "password was incorrect", t);
                     }
                 }
             }

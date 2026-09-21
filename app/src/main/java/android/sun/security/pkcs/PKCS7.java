@@ -465,8 +465,7 @@ public class PKCS7 {
                         byte[] encoded = certificates[i].getEncoded();
                         implCerts[i] = new X509CertImpl(encoded);
                     } catch (CertificateException ce) {
-                        IOException ie = new IOException(ce.getMessage());
-                        ie.initCause(ce);
+                        IOException ie = new IOException(ce.getMessage(), ce);
                         throw ie;
                     }
                 }
@@ -489,8 +488,7 @@ public class PKCS7 {
                         byte[] encoded = crl.getEncoded();
                         implCRLs.add(new X509CRLImpl(encoded));
                     } catch (CRLException ce) {
-                        IOException ie = new IOException(ce.getMessage());
-                        ie.initCause(ce);
+                        IOException ie = new IOException(ce.getMessage(), ce);
                         throw ie;
                     }
                 }

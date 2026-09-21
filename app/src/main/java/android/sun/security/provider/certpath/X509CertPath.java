@@ -195,8 +195,7 @@ public class X509CertPath extends CertPath {
 
         } catch (IOException ioe) {
             CertificateException ce = new CertificateException("IOException" +
-                " parsing PkiPath data: " + ioe);
-            ce.initCause(ioe);
+                " parsing PkiPath data: " + ioe, ioe);
             throw ce;
         }
     }
@@ -304,9 +303,8 @@ public class X509CertPath extends CertPath {
 
         } catch (IOException ioe) {
            CertificateEncodingException ce = new CertificateEncodingException
-                ("IOException encoding PkiPath data: " + ioe);
-           ce.initCause(ioe);
-           throw ce;
+                ("IOException encoding PkiPath data: " + ioe, ioe);
+            throw ce;
         }
     }
 

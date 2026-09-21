@@ -101,8 +101,8 @@ public class X509Factory extends CertificateFactorySpi {
                 throw new IOException("Empty input");
             }
         } catch (IOException ioe) {
-            throw (CertificateException)new CertificateException
-            ("Could not parse certificate: " + ioe).initCause(ioe);
+            throw (CertificateException) new CertificateException
+            ("Could not parse certificate: " + ioe, ioe);
         }
     }
 

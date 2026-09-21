@@ -132,7 +132,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
                        (android.sun.security.x509.GeneralNameInterface)cons.newInstance(passed);
             return gni;
         } catch (Exception e) {
-            throw (IOException)new IOException("Instantiation error: " + e).initCause(e);
+            throw (IOException) new IOException("Instantiation error: " + e, e);
         }
     }
 

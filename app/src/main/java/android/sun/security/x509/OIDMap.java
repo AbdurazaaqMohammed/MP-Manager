@@ -212,8 +212,8 @@ public class OIDMap {
                 }
                 return c;
             } catch (ClassNotFoundException e) {
-                throw (CertificateException)new CertificateException
-                                ("Could not load class: " + e).initCause(e);
+                throw (CertificateException) new CertificateException
+                                ("Could not load class: " + e, e);
             }
         }
     }

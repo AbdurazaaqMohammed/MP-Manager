@@ -107,7 +107,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
             uri = new URI(name);
         } catch (URISyntaxException use) {
             throw (IOException) new IOException
-                ("invalid URI name:" + name).initCause(use);
+                ("invalid URI name:" + name, use);
         }
         if (uri.getScheme() == null) {
             throw new IOException("URI name must include scheme:" + name);
@@ -161,7 +161,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
             uri = new URI(name);
         } catch (URISyntaxException use) {
             throw (IOException) new IOException
-                ("invalid URI name constraint:" + name).initCause(use);
+                ("invalid URI name constraint:" + name, use);
         }
         if (uri.getScheme() == null) {
             String host = uri.getSchemeSpecificPart();
@@ -175,7 +175,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
                 return new URIName(uri, host, hostDNS);
             } catch (IOException ioe) {
                 throw (IOException) new IOException
-                    ("invalid URI name constraint:" + name).initCause(ioe);
+                    ("invalid URI name constraint:" + name, ioe);
             }
         } else {
             throw new IOException("invalid URI name constraint (should not " +
