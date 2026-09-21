@@ -554,6 +554,21 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/ask_bookmark_tab" />
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Search history limit">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/searchHistoryLimitEt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:inputType="number"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

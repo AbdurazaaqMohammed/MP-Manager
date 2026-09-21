@@ -51,6 +51,7 @@ import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.github.paul035.LocaleHelper;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.reandroid.apk.APKLogger;
@@ -221,7 +222,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         antisplit = settings.getBoolean("antisplit", false);
         sortMode = settings.getInt("sortMode", 0);
         lang = settings.getString("lang", "en");
-        if (Objects.equals(lang, Locale.getDefault().getLanguage()))
+        //if (Objects.equals(lang, Locale.getDefault().getLanguage()))
             rss = getResources();
 
         userAppInfoList = Collections.synchronizedList(new ArrayList<>());

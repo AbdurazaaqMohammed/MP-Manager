@@ -11,19 +11,25 @@ import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -66,6 +72,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ArscEditorPlusActivity extends AppCompatActivity {
@@ -97,6 +105,9 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
     private String lastSearchQuery = "";
     private String lastSearchType = "xml";
     private String lastSearchPath = "";
+    private boolean lastSearchSubfolders = true;
+    private boolean lastMatchCase = false;
+    private boolean lastIsRegex = false;
     private RecyclerView stringsRv;
     private StringsAdapter stringsAdapter;
     private TextView stringsApplyBtn;
@@ -271,61 +282,107 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
     }
 
     void openSearchDialog(String initialPath) {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(16);
-        root.setPadding(pad, pad / 2, pad, 0);
-        TextInputLayout queryBox = UiFields.box(this, "Search");
-        EditText query = UiFields.field(queryBox, InputType.TYPE_CLASS_TEXT);
-        query.setText(lastSearchQuery == null ? "" : lastSearchQuery);
-        root.addView(queryBox);
-        TextInputLayout typeBox = UiFields.box(this, "Search type");
-        MaterialAutoCompleteTextView typeTv = new MaterialAutoCompleteTextView(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, SEARCH_TYPES);
-        typeTv.setAdapter(adapter);
-        typeTv.setText(lastSearchType == null ? SEARCH_TYPES[0] : lastSearchType, false);
-        adapter.getFilter().filter(null);
-        typeTv.setTextSize(16);
-        typeTv.setThreshold(0);
-        typeTv.setInputType(InputType.TYPE_NULL);
-        typeTv.setCursorVisible(false);
-        typeTv.setOnClickListener(v -> {
-            adapter.getFilter().filter(null);
-            typeTv.showDropDown();
-        });
-        typeTv.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                adapter.getFilter().filter(null);
-                typeTv.showDropDown();
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_search_dex, null);
+        AutoCompleteTextView etFind = dialogView.findViewById(R.id.et_find);
+        ImageView historyBtn = dialogView.findViewById(R.id.btn_history_dropdown);
+        EditText etPath = dialogView.findViewById(R.id.et_path);
+        Spinner spinnerSearchType = dialogView.findViewById(R.id.spinner_search_type);
+        CheckBox cbSearchSubfolders = dialogView.findViewById(R.id.cb_search_subfolders);
+        CheckBox cbMatchCase = dialogView.findViewById(R.id.cb_match_case);
+        CheckBox cbRegex = dialogView.findViewById(R.id.cb_regex);
+        CheckBox cbExactlyMatch = dialogView.findViewById(R.id.cb_exactly_match);
+        CheckBox cbHex = dialogView.findViewById(R.id.cb_hex);
+        View layoutExcludeList = dialogView.findViewById(R.id.layout_exclude_list);
+        layoutExcludeList.setVisibility(View.GONE);
+        cbExactlyMatch.setVisibility(View.GONE);
+        cbHex.setVisibility(View.GONE);
+        etFind.setText(lastSearchQuery == null ? "" : lastSearchQuery);
+        etPath.setText(initialPath != null ? initialPath : (lastSearchPath == null ? "" : lastSearchPath));
+        cbSearchSubfolders.setVisibility(View.VISIBLE);
+        cbSearchSubfolders.setChecked(lastSearchSubfolders);
+        cbMatchCase.setChecked(lastMatchCase);
+        cbRegex.setChecked(lastIsRegex);
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, SEARCH_TYPES);
+        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerSearchType.setAdapter(typeAdapter);
+        int typePos = 0;
+        for (int i = 0; i < SEARCH_TYPES.length; i++) {
+            if (SEARCH_TYPES[i].equals(lastSearchType)) {
+                typePos = i;
+                break;
+            }
+        }
+        spinnerSearchType.setSelection(typePos);
+        spinnerSearchType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selected = SEARCH_TYPES[position];
+                boolean textType = selected.equals("xml") || selected.equals("string");
+                cbMatchCase.setVisibility(textType ? View.VISIBLE : View.GONE);
+                cbRegex.setVisibility(textType ? View.VISIBLE : View.GONE);
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
-        typeBox.addView(typeTv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        typeBox.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
-        LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        typeParams.topMargin = dp(8);
-        root.addView(typeBox, typeParams);
-        TextInputLayout pathBox = UiFields.box(this, "Path (pkg/type, empty = all)");
-        EditText path = UiFields.field(pathBox, InputType.TYPE_CLASS_TEXT);
-        path.setText(initialPath != null ? initialPath : (lastSearchPath == null ? "" : lastSearchPath));
-        LinearLayout.LayoutParams pathParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pathParams.topMargin = dp(8);
-        root.addView(pathBox, pathParams);
-        new MaterialAlertDialogBuilder(this)
+        String sel = SEARCH_TYPES[typePos];
+        boolean textType = sel.equals("xml") || sel.equals("string");
+        cbMatchCase.setVisibility(textType ? View.VISIBLE : View.GONE);
+        cbRegex.setVisibility(textType ? View.VISIBLE : View.GONE);
+        historyBtn.setOnClickListener(v -> {
+            java.util.List<SearchHistoryHelper.Item> hist = SearchHistoryHelper.load(this, SearchHistoryHelper.KEY_ARSC_PLUS);
+            if (hist.isEmpty()) {
+                Extensions.showMessage(this, "No history");
+                return;
+            }
+            SearchHistoryDropdown.show(this, etFind, hist, new SearchHistoryDropdown.Listener() {
+                @Override
+                public void onSelect(String query) {
+                    etFind.setText(query);
+                    etFind.setSelection(query.length());
+                }
+                @Override
+                public void onChanged(java.util.List<SearchHistoryHelper.Item> items) {
+                    SearchHistoryHelper.save(ArscEditorPlusActivity.this, SearchHistoryHelper.KEY_ARSC_PLUS, items);
+                }
+            });
+        });
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Search resources")
-                .setView(root)
+                .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    lastSearchQuery = query.getText() == null ? "" : query.getText().toString();
-                    String picked = typeTv.getText() == null ? "" : typeTv.getText().toString();
-                    if (!Arrays.asList(SEARCH_TYPES).contains(picked)) {
-                        Extensions.showMessage(this, "Pick a search type");
-                        return;
-                    }
-                    lastSearchType = picked;
-                    lastSearchPath = path.getText() == null ? "" : path.getText().toString();
-                    selectPage(2);
-                    runSearch();
-                }).show();
+                .setPositiveButton(android.R.string.ok, null)
+                .create();
+        dialog.show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String q = etFind.getText() == null ? "" : etFind.getText().toString();
+            String picked = spinnerSearchType.getSelectedItem() == null ? SEARCH_TYPES[0] : spinnerSearchType.getSelectedItem().toString();
+            if (!Arrays.asList(SEARCH_TYPES).contains(picked)) {
+                Extensions.showMessage(this, "Pick a search type");
+                return;
+            }
+            boolean matchCase = cbMatchCase.isChecked();
+            boolean regex = cbRegex.isChecked();
+            if (regex && !q.isEmpty() && (picked.equals("xml") || picked.equals("string"))) {
+                try {
+                    if (matchCase) java.util.regex.Pattern.compile(q);
+                    else java.util.regex.Pattern.compile(q, java.util.regex.Pattern.CASE_INSENSITIVE);
+                } catch (Exception e) {
+                    Extensions.showMessage(this, "Bad regex");
+                    return;
+                }
+            }
+            lastSearchQuery = q;
+            lastSearchType = picked;
+            lastSearchPath = etPath.getText() == null ? "" : etPath.getText().toString();
+            lastSearchSubfolders = cbSearchSubfolders.isChecked();
+            lastMatchCase = matchCase;
+            lastIsRegex = regex;
+            if (!q.trim().isEmpty()) SearchHistoryHelper.push(this, SearchHistoryHelper.KEY_ARSC_PLUS, q);
+            selectPage(2);
+            runSearch();
+            dialog.dismiss();
+        });
     }
 
     private TextView stringsActionRow(String text, int icon, boolean bold) {
@@ -1291,9 +1348,12 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
         final String query = lastSearchQuery == null ? "" : lastSearchQuery;
         final String type = lastSearchType == null ? SEARCH_TYPES[0] : lastSearchType;
         final String path = lastSearchPath == null ? "" : lastSearchPath;
+        final boolean subfolders = lastSearchSubfolders;
+        final boolean matchCase = lastMatchCase;
+        final boolean regex = lastIsRegex;
         Extensions.showMessage(this, "Searching…");
         new Thread(() -> {
-            List<ArscData.SearchHit> hits = data.search(query, type, path);
+            List<ArscData.SearchHit> hits = data.search(query, type, path, subfolders, matchCase, regex);
             runOnUiThread(() -> {
                 searchAdapter.setHits(hits);
                 updateSearchInfo();

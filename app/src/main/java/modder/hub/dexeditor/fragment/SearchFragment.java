@@ -425,6 +425,7 @@ public class SearchFragment extends Fragment {
     private void showSearchDialog(boolean searchInResults, String initialPath) {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_search_dex, null);
         AutoCompleteTextView etFind = dialogView.findViewById(R.id.et_find);
+        ImageView historyBtn = dialogView.findViewById(R.id.btn_history_dropdown);
         EditText etPath = dialogView.findViewById(R.id.et_path);
         Spinner spinnerSearchType = dialogView.findViewById(R.id.spinner_search_type);
         CheckBox cbSearchSubfolders = dialogView.findViewById(R.id.cb_search_subfolders);
@@ -462,6 +463,26 @@ public class SearchFragment extends Fragment {
         cbUseExcludeList.setChecked(lastUseExcludeList);
 
         tvExcludeList.setOnClickListener(v -> showExcludeListDialog());
+        historyBtn.setOnClickListener(v -> {
+            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
+                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX);
+            if (hist.isEmpty()) {
+                Extensions.showMessage(requireActivity(), "No history");
+                return;
+            }
+            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(requireContext(), etFind, hist,
+                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+                        @Override
+                        public void onSelect(String query) {
+                            etFind.setText(query);
+                            etFind.setSelection(query.length());
+                        }
+                        @Override
+                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
+                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, items);
+                        }
+                    });
+        });
 
         String[] searchTypes = {"Smali", "Class name", "Field name", "Method name", "String", "Integer"};
         ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, searchTypes);
@@ -525,6 +546,7 @@ public class SearchFragment extends Fragment {
                     return; }
             }
             lastSearchQuery = query; lastSearchType = type;
+            if (!query.trim().isEmpty()) io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, query);
             if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
             lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
             List<String> scopeClasses = null;
@@ -539,6 +561,7 @@ public class SearchFragment extends Fragment {
     private void showReplaceDialog() {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_search_dex, null);
         AutoCompleteTextView etFind = dialogView.findViewById(R.id.et_find);
+        ImageView historyBtn = dialogView.findViewById(R.id.btn_history_dropdown);
         EditText etReplaceWith = dialogView.findViewById(R.id.et_path);
         Spinner spinnerSearchType = dialogView.findViewById(R.id.spinner_search_type);
         CheckBox cbSearchSubfolders = dialogView.findViewById(R.id.cb_search_subfolders);
@@ -559,6 +582,26 @@ public class SearchFragment extends Fragment {
         cbMatchCase.setChecked(lastMatchCase);
         cbRegex.setChecked(lastIsRegex);
         cbExactlyMatch.setChecked(lastExactlyMatch);
+        historyBtn.setOnClickListener(v -> {
+            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
+                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX);
+            if (hist.isEmpty()) {
+                Extensions.showMessage(requireActivity(), "No history");
+                return;
+            }
+            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(requireContext(), etFind, hist,
+                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+                        @Override
+                        public void onSelect(String query) {
+                            etFind.setText(query);
+                            etFind.setSelection(query.length());
+                        }
+                        @Override
+                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
+                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, items);
+                        }
+                    });
+        });
 
         String[] replaceTypes = {"Smali", "String"};
         ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, replaceTypes);
@@ -585,6 +628,7 @@ public class SearchFragment extends Fragment {
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
                     lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked();
+                    if (!find.trim().isEmpty()) io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, find);
                     List<String> scopeClasses = new ArrayList<>();
                     collectClassFullNames(searchResults, scopeClasses);
                     new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();

@@ -23,6 +23,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ArscData {
 
@@ -603,11 +605,23 @@ public class ArscData {
     }
 
     public List<SearchHit> search(String query, String searchType, String pathFilter) {
+        return search(query, searchType, pathFilter, true, false, false);
+    }
+
+    public List<SearchHit> search(String query, String searchType, String pathFilter, boolean searchSubfolders, boolean matchCase, boolean regex) {
         List<SearchHit> out = new ArrayList<>();
         if (query == null) query = "";
         String q = query.trim();
         String type = searchType == null ? "xml" : searchType;
         String path = pathFilter == null ? "" : pathFilter.trim();
+        Pattern pattern = null;
+        if (regex && !q.isEmpty() && (type.equals("xml") || type.equals("string"))) {
+            try {
+                pattern = matchCase ? Pattern.compile(q) : Pattern.compile(q, Pattern.CASE_INSENSITIVE);
+            } catch (Exception e) {
+                return out;
+            }
+        }
         try {
             if (type.equals("resource id")) {
                 ResourceEntry found = null;
@@ -658,10 +672,10 @@ public class ArscData {
                 } catch (Exception e) {
                     continue;
                 }
-                if (re == null || !matchPath(re, path)) continue;
+                if (re == null || !matchPath(re, path, searchSubfolders)) continue;
                 switch (type) {
                     case "xml" -> {
-                        if (q.isEmpty() || re.getName().toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US))) {
+                        if (q.isEmpty() || matchText(re.getName(), q, matchCase, pattern)) {
                             SearchHit hit = new SearchHit();
                             hit.entry = re;
                             hit.line = re.getType() + "/" + re.getName();
@@ -683,7 +697,7 @@ public class ArscData {
                                 v = e.getValueAsString();
                             } catch (Exception ignored) {
                             }
-                            if (v != null && (q.isEmpty() || v.toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US)))) {
+                            if (v != null && (q.isEmpty() || matchText(v, q, matchCase, pattern))) {
                                 SearchHit hit = new SearchHit();
                                 hit.entry = re;
                                 hit.sample = e;
@@ -765,21 +779,42 @@ public class ArscData {
     }
 
     public static boolean matchPath(ResourceEntry re, String path) {
+        return matchPath(re, path, true);
+    }
+
+    public static boolean matchPath(ResourceEntry re, String path, boolean searchSubfolders) {
         if (path == null || path.isEmpty()) return true;
         String p = path.trim().replace("\\", "/");
         while (p.startsWith("/")) p = p.substring(1);
         while (p.endsWith("/")) p = p.substring(0, p.length() - 1);
         if (p.isEmpty()) return true;
         String full = re.getPackageName() + "/" + re.getType() + "/" + re.getName();
+        if (!searchSubfolders) return full.equals(p);
         String[] parts = p.split("/");
         if (parts.length == 1) {
             String s = parts[0];
-            return re.getPackageName().equals(s) || re.getType().equals(s) || re.getName().equals(s);
+            if (re.getPackageName().equals(s) || re.getType().equals(s) || re.getName().equals(s)) return true;
+            return full.contains(p) || re.getName().contains(s) || re.getType().contains(s);
         }
         if (parts.length == 2) {
-            return re.getPackageName().equals(parts[0]) && re.getType().equals(parts[1]);
+            if (re.getPackageName().equals(parts[0]) && re.getType().equals(parts[1])) return true;
+            return full.startsWith(p);
         }
-        return full.equals(p);
+        return full.equals(p) || full.startsWith(p + "/") || full.contains(p);
+    }
+
+    private static boolean matchText(String text, String query, boolean matchCase, Pattern pattern) {
+        if (text == null || query == null) return false;
+        if (pattern != null) {
+            try {
+                Matcher m = pattern.matcher(text);
+                return m.find();
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        if (matchCase) return text.contains(query);
+        return text.toLowerCase(Locale.US).contains(query.toLowerCase(Locale.US));
     }
 
     public static int parseColor(String text) {

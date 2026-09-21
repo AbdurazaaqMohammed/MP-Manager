@@ -1320,7 +1320,7 @@ public class MainActivity extends AppCompatActivity {
 
         lang = settings.getString("lang", supportedLang ? deviceLang : "en");
         boolean useDeviceRss = lang.equals(deviceLang);
-        rss = /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, Locale.getDefault().getLanguage()).getResources();
+        rss = getResources();// /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, Locale.getDefault().getLanguage()).getResources();
 
         new Thread(() -> {
             Security.addProvider(new BouncyCastleProvider());
@@ -2598,17 +2598,33 @@ public class MainActivity extends AppCompatActivity {
         });
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String historyStr = prefs.getString("search_history", "");
-        List<String> historyList = new ArrayList<>(Arrays.asList(historyStr.split("\n")));
-        if (historyList.size() == 1 && historyList.get(0).isEmpty()) {
-            historyList.clear();
-        }
+        java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> historyItems =
+                io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line,
-                historyList);
+                new ArrayList<>());
         searchQuery.setAdapter(adapter);
 
-        searchHistoryDropdown.setOnClickListener(v -> searchQuery.showDropDown());
+        searchHistoryDropdown.setOnClickListener(v -> {
+            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
+                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN);
+            if (hist.isEmpty()) {
+                Extensions.showMessage(this, R.string.no_files_found);
+                return;
+            }
+            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(this, searchQuery, hist,
+                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+                        @Override
+                        public void onSelect(String query) {
+                            searchQuery.setText(query);
+                            searchQuery.setSelection(query.length());
+                        }
+                        @Override
+                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
+                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(MainActivity.this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN, items);
+                        }
+                    });
+        });
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(getString(android.R.string.search_go))
@@ -2626,12 +2642,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 String query = q.toString();
-                historyList.remove(query);
-                historyList.add(0, query);
-                if (historyList.size() > 20) {
-                    historyList.remove(historyList.size() - 1);
-                }
-                prefs.edit().putString("search_history", TextUtils.join("\n", historyList)).apply();
+                io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN, query);
 
                 boolean subfolders = searchSubfolders.isChecked();
                 boolean mCase = matchCase.isChecked();
@@ -3013,6 +3024,12 @@ public class MainActivity extends AppCompatActivity {
         askBookmarkTabToggle.setChecked(settings.getBoolean("ask_bookmark_tab", false));
         askBookmarkTabToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ask_bookmark_tab", isChecked).apply());
 
+        android.widget.EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
+        if (searchHistoryLimitEt != null) {
+            int limit = settings.getInt("search_history_limit", 50);
+            searchHistoryLimitEt.setText(String.valueOf(limit));
+        }
+
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
@@ -3027,6 +3044,7 @@ public class MainActivity extends AppCompatActivity {
         settingsAlert.setOnDismissListener(d -> {
             saveSuCommand(settingsDialog);
             saveDateFormat(settingsDialog);
+            saveSearchHistoryLimit(settingsDialog);
             refreshFileLists();
         });
         settingsAlert.show();
@@ -3142,6 +3160,20 @@ public class MainActivity extends AppCompatActivity {
             new SimpleDateFormat(pattern, Locale.getDefault());
             PreferenceManager.getDefaultSharedPreferences(this).edit()
                     .putString("date_format", pattern).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void saveSearchHistoryLimit(ScrollView root) {
+        try {
+            android.widget.EditText et = root.findViewById(R.id.searchHistoryLimitEt);
+            if (et == null || et.getText() == null) return;
+            String s = et.getText().toString().trim();
+            if (s.isEmpty()) return;
+            int v = Integer.parseInt(s);
+            if (v < 5) v = 5;
+            if (v > 500) v = 500;
+            PreferenceManager.getDefaultSharedPreferences(this).edit().putInt("search_history_limit", v).apply();
         } catch (Exception ignored) {
         }
     }
