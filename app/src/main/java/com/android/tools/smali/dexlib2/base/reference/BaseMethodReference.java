@@ -49,7 +49,7 @@ public abstract class BaseMethodReference extends BaseReference implements Metho
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o != null && o instanceof MethodReference other) {
+        if (o instanceof MethodReference other) {
             return getDefiningClass().equals(other.getDefiningClass()) &&
                    getName().equals(other.getName()) &&
                    getReturnType().equals(other.getReturnType()) &&

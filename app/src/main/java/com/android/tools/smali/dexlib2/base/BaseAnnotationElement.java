@@ -44,7 +44,7 @@ public abstract class BaseAnnotationElement implements AnnotationElement {
 
     @Override
     public boolean equals(Object o) {
-        if (o != null && o instanceof AnnotationElement other) {
+        if (o instanceof AnnotationElement other) {
             return getName().equals(other.getName()) &&
                    getValue().equals(other.getValue());
         }

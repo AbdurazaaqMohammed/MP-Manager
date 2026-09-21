@@ -113,7 +113,7 @@ public class CompareUtil {
     private static final Comparator<?> TO_STRING_COMPARATOR = StringsUtil::compareToString;
 
     @SuppressWarnings("unchecked")
-    private static final Comparator<Comparable<?>> COMPARATOR = (comparable1, comparable2) -> CompareUtil.compare(comparable1, comparable2);
+    private static final Comparator<Comparable<?>> COMPARATOR = (comparable1, comparable2) -> CompareUtil.compare((Comparable) comparable1, (Comparable) comparable2);
     @SuppressWarnings("unchecked")
-    private static final Comparator<Comparable<?>> INVERSE_COMPARATOR = (comparable1, comparable2) -> CompareUtil.compare(comparable2, comparable1);
+    private static final Comparator<Comparable<?>> INVERSE_COMPARATOR = (comparable1, comparable2) -> CompareUtil.compare((Comparable) comparable2, (Comparable) comparable1);
 }

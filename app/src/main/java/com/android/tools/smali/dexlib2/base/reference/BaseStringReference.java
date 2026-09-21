@@ -43,7 +43,7 @@ public abstract class BaseStringReference extends BaseReference implements Strin
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o != null && o instanceof StringReference) {
+        if (o instanceof StringReference) {
             return getString().equals(((StringReference)o).getString());
         }
         return false;

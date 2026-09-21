@@ -49,7 +49,7 @@ public abstract class BaseMethodHandleReference extends BaseReference implements
 
     @Override
     public boolean equals(Object o) {
-        if (o != null && o instanceof MethodHandleReference other) {
+        if (o instanceof MethodHandleReference other) {
             return getMethodHandleType() == other.getMethodHandleType() &&
                     getMemberReference().equals(other.getMemberReference());
         }

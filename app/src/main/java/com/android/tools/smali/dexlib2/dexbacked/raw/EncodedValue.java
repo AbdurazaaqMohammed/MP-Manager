@@ -182,17 +182,13 @@ public class EncodedValue {
                 int typeIndex = reader.readSizedSmallUint(valueArg + 1);
                 yield TypeIdItem.getReferenceAnnotation(dexFile, typeIndex);
             }
-            case ValueType.FIELD -> {
+            case ValueType.FIELD, ValueType.ENUM -> {
                 int fieldIndex = reader.readSizedSmallUint(valueArg + 1);
                 yield FieldIdItem.getReferenceAnnotation(dexFile, fieldIndex);
             }
             case ValueType.METHOD -> {
                 int methodIndex = reader.readSizedSmallUint(valueArg + 1);
                 yield MethodIdItem.getReferenceAnnotation(dexFile, methodIndex);
-            }
-            case ValueType.ENUM -> {
-                fieldIndex = reader.readSizedSmallUint(valueArg + 1);
-                yield FieldIdItem.getReferenceAnnotation(dexFile, fieldIndex);
             }
             case ValueType.ARRAY, ValueType.ANNOTATION, ValueType.METHOD_HANDLE -> {
                 reader.setOffset(reader.getOffset() - 1);

@@ -87,7 +87,7 @@ public final class AccessDescription {
     }
 
     public boolean equals(Object obj) {
-        if (obj == null || (!(obj instanceof AccessDescription that))) {
+        if ((!(obj instanceof AccessDescription that))) {
             return false;
         }
 

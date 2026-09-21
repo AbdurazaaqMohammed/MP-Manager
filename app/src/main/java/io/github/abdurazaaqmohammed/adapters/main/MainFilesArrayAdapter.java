@@ -542,7 +542,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             };
             context.handler.post(() -> {
                 int currentPos = bindHolder.getBindingAdapterPosition();
-                if (currentPos == RecyclerView.NO_POSITION || currentPos < 0 || currentPos >= values.length) return;
+                if (currentPos < 0 || currentPos >= values.length) return;
                 if (values[currentPos] != boundItem) return;
                 convertView.setOnTouchListener(new SwipeTouchListener(
                         context,

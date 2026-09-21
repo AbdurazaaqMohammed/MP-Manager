@@ -172,7 +172,7 @@ public class BitArray {
 
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj == null || !(obj instanceof BitArray ba)) return false;
+        if (!(obj instanceof BitArray ba)) return false;
 
         if (ba.length != length) return false;
 

@@ -46,7 +46,7 @@ public abstract class BaseFloatEncodedValue implements FloatEncodedValue {
 
     @Override
     public boolean equals(@Nullable Object o) {
-        if (o != null && o instanceof FloatEncodedValue) {
+        if (o instanceof FloatEncodedValue) {
             return Float.floatToRawIntBits(getValue()) == Float.floatToRawIntBits(((FloatEncodedValue)o).getValue());
         }
         return false;

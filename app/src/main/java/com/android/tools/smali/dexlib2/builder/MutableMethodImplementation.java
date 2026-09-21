@@ -457,7 +457,7 @@ public class MutableMethodImplementation implements MethodImplementation {
                         if (targetInstruction.getOpcode() == Opcode.NOP) {
                             targetInstruction = getFirstNonNop(targetLocation.index+1);
                         }
-                        if (targetInstruction == null || !(targetInstruction instanceof BuilderSwitchPayload)) {
+                        if (!(targetInstruction instanceof BuilderSwitchPayload)) {
                             throw new IllegalStateException(String.format("Switch instruction at address/index " +
                                     "0x%x/%d does not refer to a payload instruction.",
                                     location.codeAddress, location.index));

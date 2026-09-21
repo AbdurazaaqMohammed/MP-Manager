@@ -139,9 +139,8 @@ public class IssuingDistributionPointExtension extends Extension
             boolean hasOnlyAttributeCerts, boolean isIndirectCRL)
             throws IOException {
 
-        if ((hasOnlyUserCerts && (hasOnlyCACerts || hasOnlyAttributeCerts)) ||
-            (hasOnlyCACerts && (hasOnlyUserCerts || hasOnlyAttributeCerts)) ||
-            (hasOnlyAttributeCerts && (hasOnlyUserCerts || hasOnlyCACerts))) {
+        if ((hasOnlyCACerts && (hasOnlyUserCerts || hasOnlyAttributeCerts)) ||
+                (hasOnlyAttributeCerts && (hasOnlyUserCerts || hasOnlyCACerts))) {
             throw new IllegalArgumentException(
                 "Only one of hasOnlyUserCerts, hasOnlyCACerts, " +
                 "hasOnlyAttributeCerts may be set to true");
