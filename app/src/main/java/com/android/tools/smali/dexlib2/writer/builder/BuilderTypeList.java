@@ -38,7 +38,7 @@ import java.util.AbstractList;
 import java.util.List;
 
 public class BuilderTypeList extends AbstractList<BuilderTypeReference> {
-    static final BuilderTypeList EMPTY = new BuilderTypeList(ImmutableList.<BuilderTypeReference>of());
+    static final BuilderTypeList EMPTY = new BuilderTypeList(ImmutableList.of());
 
     @Nonnull final List<? extends BuilderTypeReference> types;
     int offset = DexWriter.NO_OFFSET;

@@ -307,7 +307,7 @@ public class FileUtil {
 
     private static void saveBitmap(Bitmap bitmap, String destPath) {
         FileUtil.createNewFile(destPath);
-        try (FileOutputStream out = new FileOutputStream(new File(destPath))) {
+        try (FileOutputStream out = new FileOutputStream(destPath)) {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
         } catch (Exception e) {
             e.printStackTrace();

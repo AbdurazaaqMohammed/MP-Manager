@@ -942,7 +942,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 content.delete(i, idx, i, idx + 1);
             } else {
                 int indent = lt.length() - lt.trim().length();
-                content.insert(i, indent > 0 ? indent : 0, "#");
+                content.insert(i, Math.max(indent, 0), "#");
             }
         }
     }

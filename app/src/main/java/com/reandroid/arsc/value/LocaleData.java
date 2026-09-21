@@ -184,7 +184,6 @@ public class LocaleData {
             }
             // We don't know anything about the locale
             LocaleUtil.memset(out, '\0', SCRIPT_LENGTH);
-            return;
         } else {
             // We found the locale.
             LocaleUtil.memcpy(out, LocaleDataTables.SCRIPT_CODES[lookup_result[1]], SCRIPT_LENGTH);

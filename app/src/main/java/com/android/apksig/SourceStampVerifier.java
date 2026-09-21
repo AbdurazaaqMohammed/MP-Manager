@@ -412,7 +412,6 @@ public class SourceStampVerifier {
             signerInfo.addVerificationWarning(
                     isV2Signer ? ApkVerificationIssue.V2_SIG_NO_CERTIFICATES
                             : ApkVerificationIssue.V3_SIG_NO_CERTIFICATES);
-            return;
         }
     }
 

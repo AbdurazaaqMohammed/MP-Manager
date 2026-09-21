@@ -3339,8 +3339,7 @@ public class ApkToolsHandler {
         try {
             int v = Integer.parseInt(text.trim());
             if (v > 9999) return 9999;
-            if (v < -9999) return -9999;
-            return v;
+            return Math.max(v, -9999);
         } catch (Exception e) {
             return 0;
         }

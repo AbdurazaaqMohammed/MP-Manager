@@ -98,7 +98,8 @@ public class JpegMetaStrip {
             if (m == 0x00) continue;
             if (m >= 0xD0 && m <= 0xD7) continue;
             if (m == 0xD9) break;
-            if (m == 0x01) continue;
+            if (m == 0x01) {
+            }
         }
         return pos;
     }

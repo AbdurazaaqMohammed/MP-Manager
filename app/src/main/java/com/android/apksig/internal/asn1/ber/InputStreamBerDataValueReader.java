@@ -194,7 +194,6 @@ public class InputStreamBerDataValueReader implements BerDataValueReader {
                     return bytesRead - 2;
                 }
                 prevZeroByte = true;
-                continue;
             } else {
                 prevZeroByte = false;
             }
@@ -284,7 +283,7 @@ public class InputStreamBerDataValueReader implements BerDataValueReader {
             if (len > 0) {
                 mBuf.write(buf, 0, len);
             }
-            return (len < 0) ? 0 : len;
+            return Math.max(len, 0);
         }
 
         @Override

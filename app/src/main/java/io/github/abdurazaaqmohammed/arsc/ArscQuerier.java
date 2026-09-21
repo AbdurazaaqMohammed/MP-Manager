@@ -316,11 +316,10 @@ public final class ArscQuerier {
     }
 
     static String resourceInfo(ArscData data, ResourceEntry re) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format(Locale.US, "0x%08X", re.getResourceId())).append('\n');
-        sb.append(re.getPackageName()).append('/').append(re.getType()).append('/').append(re.getName()).append('\n');
-        sb.append(data.entryDisplay(re));
-        return sb.toString();
+        String sb = String.format(Locale.US, "0x%08X", re.getResourceId()) + '\n' +
+                re.getPackageName() + '/' + re.getType() + '/' + re.getName() + '\n' +
+                data.entryDisplay(re);
+        return sb;
     }
 
     private static String queryColor(ArscEditorActivity activity, String t) {

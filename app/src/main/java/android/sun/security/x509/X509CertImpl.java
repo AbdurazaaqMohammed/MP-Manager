@@ -759,17 +759,14 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null || algId == null || signature == null)
             return "";
 
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("[\n");
-        sb.append(info.toString() + "\n");
-        sb.append("  Algorithm: [" + algId.toString() + "]\n");
-
         HexDumpEncoder encoder = new HexDumpEncoder();
-        sb.append("  Signature:\n" + encoder.encodeBuffer(signature));
-        sb.append("\n]");
+        String sb = "[\n" +
+                info.toString() + "\n" +
+                "  Algorithm: [" + algId.toString() + "]\n" +
+                "  Signature:\n" + encoder.encodeBuffer(signature) +
+                "\n]";
 
-        return sb.toString();
+        return sb;
     }
 
     // the strongly typed gets, as per java.security.cert.X509Certificate
@@ -1479,7 +1476,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
      */
     private static Collection<List<?>> makeAltNames(android.sun.security.x509.GeneralNames names) {
         if (names.isEmpty()) {
-            return Collections.<List<?>>emptySet();
+            return Collections.emptySet();
         }
         Set<List<?>> newNames = new HashSet<>();
         for (GeneralName gname : names.names()) {
@@ -1583,7 +1580,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                 (android.sun.security.x509.SubjectAlternativeNameExtension.SUBJECT_NAME);
         } catch (IOException ioe) {
             // should not occur
-            return Collections.<List<?>>emptySet();
+            return Collections.emptySet();
         }
         subjectAlternativeNames = makeAltNames(names);
         return subjectAlternativeNames;
@@ -1615,7 +1612,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                     (SubjectAlternativeNameExtension.SUBJECT_NAME);
             }  catch (IOException ioe) {
                 // should not occur
-                return Collections.<List<?>>emptySet();
+                return Collections.emptySet();
             }
             return makeAltNames(names);
         } catch (IOException ioe) {
@@ -1649,7 +1646,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                 (android.sun.security.x509.IssuerAlternativeNameExtension.ISSUER_NAME);
         } catch (IOException ioe) {
             // should not occur
-            return Collections.<List<?>>emptySet();
+            return Collections.emptySet();
         }
         issuerAlternativeNames = makeAltNames(names);
         return issuerAlternativeNames;
@@ -1681,7 +1678,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                     (IssuerAlternativeNameExtension.ISSUER_NAME);
             }  catch (IOException ioe) {
                 // should not occur
-                return Collections.<List<?>>emptySet();
+                return Collections.emptySet();
             }
             return makeAltNames(names);
         } catch (IOException ioe) {

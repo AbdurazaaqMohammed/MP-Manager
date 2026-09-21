@@ -179,7 +179,7 @@ public class X509CertPath extends CertPath {
             DerInputStream dis = new DerInputStream(readAllBytes(is));
             DerValue[] seq = dis.getSequence(3);
             if (seq.length == 0) {
-                return Collections.<X509Certificate>emptyList();
+                return Collections.emptyList();
             }
 
             certFac = CertificateFactory.getInstance("X.509");

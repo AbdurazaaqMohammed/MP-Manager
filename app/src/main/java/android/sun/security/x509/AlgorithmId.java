@@ -311,10 +311,9 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * @return a hashcode for this AlgorithmId.
      */
     public int hashCode() {
-        StringBuilder sbuf = new StringBuilder();
-        sbuf.append(algid.toString());
-        sbuf.append(paramsToString());
-        return sbuf.toString().hashCode();
+        String sbuf = algid.toString() +
+                paramsToString();
+        return sbuf.hashCode();
     }
 
     /**

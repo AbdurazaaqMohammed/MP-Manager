@@ -40,7 +40,7 @@ import java.util.Set;
 
 public class BuilderAnnotationSet extends AbstractSet<BuilderAnnotation> {
     public static final BuilderAnnotationSet EMPTY =
-            new BuilderAnnotationSet(ImmutableSet.<BuilderAnnotation>of());
+            new BuilderAnnotationSet(ImmutableSet.of());
 
     @Nonnull final Set<BuilderAnnotation> annotations;
     int offset = DexWriter.NO_OFFSET;

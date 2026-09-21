@@ -43,7 +43,6 @@ public class BlockLocator extends BlockCounter{
         this.current = current;
         if(getCountValue() > bytePosition){
             FOUND = true;
-            return;
         }
     }
 

@@ -153,7 +153,6 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
         if (gni != null) {
             // This OtherName has a supported class
             gni.encode(out);
-            return;
         } else {
             // This OtherName has no supporting class
             android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();

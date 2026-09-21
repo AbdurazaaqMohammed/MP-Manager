@@ -61,7 +61,7 @@ public class Main extends Command {
     private JCommander jc;
 
     public Main() {
-        super(Lists.<JCommander>newArrayList());
+        super(Lists.newArrayList());
     }
 
     @Override public void run() {

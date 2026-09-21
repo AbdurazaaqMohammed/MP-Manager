@@ -200,7 +200,6 @@ public abstract class V1SchemeVerifier {
             if (!cdEntryNames.contains(entryName)) {
                 result.addError(
                         Issue.JAR_SIG_MISSING_ZIP_ENTRY_REFERENCED_IN_MANIFEST, entryName);
-                continue;
             }
         }
         return Pair.of(manifestMainSection, entryNameToManifestSection);
@@ -249,7 +248,6 @@ public abstract class V1SchemeVerifier {
                         || (entryName.endsWith(".DSA"))
                         || (entryName.endsWith(".EC"))) {
                     sigBlockEntries.add(cdRecord);
-                    continue;
                 }
             }
             if (manifestEntry == null) {

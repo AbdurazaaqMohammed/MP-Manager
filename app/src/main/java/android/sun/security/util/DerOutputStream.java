@@ -385,7 +385,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
         for (int i = 0; i < streams.length; i++) {
             bufs[i] = streams[i].toByteArray();
         }
-        Arrays.<byte[]>sort(bufs, order);
+        Arrays.sort(bufs, order);
 
         DerOutputStream bytes = new DerOutputStream();
         for (int i = 0; i < streams.length; i++) {

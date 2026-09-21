@@ -134,7 +134,7 @@ public class AnalysisArguments {
         }  else if (bootClassPath.size() == 1 && bootClassPath.get(0).length() == 0) {
             // --bootclasspath "" is a special case, denoting that no bootclasspath should be used
             resolver = new ClassPathResolver(
-                    ImmutableList.<String>of(), ImmutableList.<String>of(), classPath, dexEntry);
+                    ImmutableList.of(), ImmutableList.of(), classPath, dexEntry);
         } else {
             resolver = new ClassPathResolver(filteredClassPathDirectories, bootClassPath, classPath, dexEntry);
         }

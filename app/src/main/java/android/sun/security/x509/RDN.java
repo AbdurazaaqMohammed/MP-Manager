@@ -83,7 +83,7 @@ public class RDN {
      * @throws IOException on parsing error
      */
     public RDN(String name) throws IOException {
-        this(name, Collections.<String, String>emptyMap());
+        this(name, Collections.emptyMap());
     }
 
     /**
@@ -160,7 +160,7 @@ public class RDN {
      * @throws IOException on parsing error
      */
     RDN(String name, String format) throws IOException {
-        this(name, format, Collections.<String, String>emptyMap());
+        this(name, format, Collections.emptyMap());
     }
 
     /*
@@ -363,7 +363,7 @@ public class RDN {
      * RFC 1779. Only RFC 1779 attribute type keywords are emitted.
      */
     public String toRFC1779String() {
-        return toRFC1779String(Collections.<String, String>emptyMap());
+        return toRFC1779String(Collections.emptyMap());
     }
 
     /*
@@ -392,7 +392,7 @@ public class RDN {
      */
     public String toRFC2253String() {
         return toRFC2253StringInternal
-            (false, Collections.<String, String>emptyMap());
+            (false, Collections.emptyMap());
     }
 
     /*
@@ -413,12 +413,12 @@ public class RDN {
     public String toRFC2253String(boolean canonical) {
         if (!canonical) {
             return toRFC2253StringInternal
-                (false, Collections.<String, String>emptyMap());
+                (false, Collections.emptyMap());
         }
         String c = canonicalString;
         if (c == null) {
             c = toRFC2253StringInternal
-                (true, Collections.<String, String>emptyMap());
+                (true, Collections.emptyMap());
             canonicalString = c;
         }
         return c;

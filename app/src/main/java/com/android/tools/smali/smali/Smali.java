@@ -193,9 +193,9 @@ public class Smali {
         try (FileInputStream fis = new FileInputStream(smaliFile)) {
             InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
 
-            LexerErrorInterface lexer = new smaliFlexLexer(reader, options.apiLevel);
-            ((smaliFlexLexer) lexer).setSourceFile(smaliFile);
-            CommonTokenStream tokens = new CommonTokenStream((TokenSource) lexer);
+            smaliFlexLexer lexer = new smaliFlexLexer(reader, options.apiLevel);
+            lexer.setSourceFile(smaliFile);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
 
             if (options.printTokens) {
                 tokens.getTokens();
@@ -254,9 +254,9 @@ public class Smali {
         try (FileInputStream fis = new FileInputStream(smaliFile)) {
             InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
 
-            LexerErrorInterface lexer = new smaliFlexLexer(reader, options.apiLevel);
-            ((smaliFlexLexer) lexer).setSourceFile(smaliFile);
-            CommonTokenStream tokens = new CommonTokenStream((TokenSource) lexer);
+            smaliFlexLexer lexer = new smaliFlexLexer(reader, options.apiLevel);
+            lexer.setSourceFile(smaliFile);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
             tokens.fill();
 
             for (int i = 0; i < tokens.size(); i++) {

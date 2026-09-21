@@ -50,7 +50,7 @@ public class BuilderArrayPayload extends BuilderInstruction implements ArrayPayl
                                @Nullable List<Number> arrayElements) {
         super(OPCODE);
         this.elementWidth = elementWidth;
-        this.arrayElements = arrayElements==null?ImmutableList.<Number>of():arrayElements;
+        this.arrayElements = arrayElements==null?ImmutableList.of():arrayElements;
     }
 
     @Override public int getElementWidth() { return elementWidth; }

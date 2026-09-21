@@ -111,7 +111,6 @@ public class TypeNameRefactor {
         }
         boolean renameOk = checkBag(resourceEntry);
         if(renameOk){
-            return;
         }
     }
     private boolean checkBag(ResourceEntry resourceEntry){

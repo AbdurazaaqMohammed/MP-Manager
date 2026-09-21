@@ -197,7 +197,7 @@ public class ValueCoder {
         return encodeAny(text);
     }
     private static boolean isEmpty(Object[] objects){
-        if(objects == null || objects.length == 0){
+        if(objects == null){
             return true;
         }
         for(Object obj : objects){

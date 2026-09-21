@@ -132,14 +132,14 @@ public class JSONObject extends JSONItem {
 
         Enumeration<String> keys = bundle.getKeys();
         while (keys.hasMoreElements()) {
-            Object key = keys.nextElement();
+            String key = keys.nextElement();
             if (key != null) {
 
 // Go through the path, ensuring that there is a nested JSONObject for each
 // segment except the last. Add the value using the last segment's name into
 // the deepest nested JSONObject.
 
-                String[] path = ((String) key).split("\\.");
+                String[] path = key.split("\\.");
                 int last = path.length - 1;
                 JSONObject target = this;
                 for (int i = 0; i < last; i += 1) {
@@ -151,7 +151,7 @@ public class JSONObject extends JSONItem {
                     }
                     target = nextTarget;
                 }
-                target.put(path[last], bundle.getString((String) key));
+                target.put(path[last], bundle.getString(key));
             }
         }
     }
@@ -788,7 +788,6 @@ public class JSONObject extends JSONItem {
                 Method im = i.getMethod(m.getName(), m.getParameterTypes());
                 return getAnnotation(im, annotationClass);
             } catch (final SecurityException | NoSuchMethodException ex) {
-                continue;
             }
         }
 
@@ -827,7 +826,6 @@ public class JSONObject extends JSONItem {
                     return d + 1;
                 }
             } catch (final SecurityException | NoSuchMethodException ex) {
-                continue;
             }
         }
 

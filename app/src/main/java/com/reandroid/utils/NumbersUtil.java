@@ -131,16 +131,10 @@ public class NumbersUtil {
         return i;
     }
     public static int max(int i1, int i2){
-        if(i1 > i2){
-            return i1;
-        }
-        return i2;
+        return Math.max(i1, i2);
     }
     public static int min(int i1, int i2){
-        if(i1 < i2){
-            return i1;
-        }
-        return i2;
+        return Math.min(i1, i2);
     }
     public static String toBinaryString(int i) {
         StringBuilder builder = new StringBuilder(34);

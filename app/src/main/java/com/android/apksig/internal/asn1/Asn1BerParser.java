@@ -267,7 +267,6 @@ public final class Asn1BerParser {
                         } catch (Asn1UnexpectedTagException e) {
                             // This field is not present, attempt to use this data value for the
                             // next / iteration of the loop
-                            continue;
                         }
                     } else {
                         // Mandatory field -- if we can't set its value from this data value, then

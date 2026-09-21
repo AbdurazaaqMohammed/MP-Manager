@@ -544,7 +544,6 @@ public class AVA implements DerEncoder {
                     trailing = true;
                     break;
                 } else if (nextChar == ' ') {
-                    continue;
                 } else if (nextChar == '\\') {
                     int followingChar = in.read();
                     if (followingChar != ' ') {
@@ -901,7 +900,6 @@ public class AVA implements DerEncoder {
                             sbuffer.append(c);
                         } else {
                             // ignore subsequent consecutive whitespace
-                            continue;
                         }
                     }
                 } else if (debug != null && Debug.isOn("ava")) {

@@ -115,7 +115,7 @@ public class X509Factory extends CertificateFactorySpi {
         int read = 0;
         byte[] buffer = new byte[2048];
         while (length > 0) {
-            int n = in.read(buffer, 0, length<2048?length:2048);
+            int n = in.read(buffer, 0, Math.min(length, 2048));
             if (n <= 0) {
                 break;
             }

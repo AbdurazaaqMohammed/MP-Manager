@@ -2697,12 +2697,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
         goBtn.setOnClickListener(v -> {
             String s = input.getText().toString();
             try {
-                StringBuilder b = new StringBuilder();
-                b.append("MD5: ").append(hashString(s, "MD5")).append("\n\n");
-                b.append("SHA-1: ").append(hashString(s, "SHA-1")).append("\n\n");
-                b.append("SHA-256: ").append(hashString(s, "SHA-256")).append("\n\n");
-                b.append("SHA-512: ").append(hashString(s, "SHA-512"));
-                output.setText(b.toString());
+                String b = "MD5: " + hashString(s, "MD5") + "\n\n" +
+                        "SHA-1: " + hashString(s, "SHA-1") + "\n\n" +
+                        "SHA-256: " + hashString(s, "SHA-256") + "\n\n" +
+                        "SHA-512: " + hashString(s, "SHA-512");
+                output.setText(b);
             } catch (Exception e) {
                 output.setText("Error: " + e.getMessage());
             }
@@ -3254,11 +3253,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
             long mTx = TrafficStats.getMobileTxBytes();
             long tRx = TrafficStats.getTotalRxBytes();
             long tTx = TrafficStats.getTotalTxBytes();
-            StringBuilder b = new StringBuilder();
-            b.append("Mobile ↓ ").append(mRx < 0 ? "-" : formatBytes(mRx)).append("  ↑ ").append(mTx < 0 ? "-" : formatBytes(mTx)).append("\n");
-            b.append("Total ↓ ").append(tRx < 0 ? "-" : formatBytes(tRx)).append("  ↑ ").append(tTx < 0 ? "-" : formatBytes(tTx)).append("\n");
-            b.append("Counters reset on reboot");
-            return b.toString();
+            String b = "Mobile ↓ " + (mRx < 0 ? "-" : formatBytes(mRx)) + "  ↑ " + (mTx < 0 ? "-" : formatBytes(mTx)) + "\n" +
+                    "Total ↓ " + (tRx < 0 ? "-" : formatBytes(tRx)) + "  ↑ " + (tTx < 0 ? "-" : formatBytes(tTx)) + "\n" +
+                    "Counters reset on reboot";
+            return b;
         } catch (Exception e) {
             return "Unavailable";
         }
@@ -3288,11 +3286,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final Runnable refreshAll = () -> {
             try {
                 DisplayMetrics dm = getResources().getDisplayMetrics();
-                StringBuilder o = new StringBuilder();
-                o.append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\n");
-                o.append("Android ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
-                o.append(Build.BRAND).append(" ").append(Build.DEVICE).append("  •  ").append(Build.PRODUCT).append("  •  ").append(Build.HARDWARE);
-                overText.setText(o.toString());
+                String o = Build.MANUFACTURER + " " + Build.MODEL + "\n" +
+                        "Android " + Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + ")\n" +
+                        Build.BRAND + " " + Build.DEVICE + "  •  " + Build.PRODUCT + "  •  " + Build.HARDWARE;
+                overText.setText(o);
                 String bs = readBatterySummary();
                 powerText.setText(bs);
                 try {
@@ -4171,13 +4168,12 @@ public class ToolRunnerActivity extends AppCompatActivity {
             try {
                 String s = input.getText().toString().trim().replace("0x", "").replace("0X", "");
                 long v = Long.parseLong(s, radix[fromBase.getSelectedItemPosition()]);
-                StringBuilder b = new StringBuilder();
-                b.append("Bin: ").append(Long.toBinaryString(v)).append("\n");
-                b.append("Oct: ").append(Long.toOctalString(v)).append("\n");
-                b.append("Dec: ").append(v).append("\n");
-                b.append("Hex: ").append(Long.toHexString(v).toUpperCase(Locale.US)).append("\n");
-                b.append("Bits: ").append(v == 0 ? 1 : (64 - Long.numberOfLeadingZeros(v)));
-                output.setText(b.toString());
+                String b = "Bin: " + Long.toBinaryString(v) + "\n" +
+                        "Oct: " + Long.toOctalString(v) + "\n" +
+                        "Dec: " + v + "\n" +
+                        "Hex: " + Long.toHexString(v).toUpperCase(Locale.US) + "\n" +
+                        "Bits: " + (v == 0 ? 1 : (64 - Long.numberOfLeadingZeros(v)));
+                output.setText(b);
             } catch (Exception e) {
                 output.setText("Invalid for selected base");
             }
@@ -6059,11 +6055,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 long pm = totalPaceSecs / 60;
                 long ps = totalPaceSecs % 60;
                 double kmh = dist / (secs / 3600.0);
-                StringBuilder b = new StringBuilder();
-                b.append("Pace ").append(pm).append(":").append(String.format(Locale.US, "%02d", ps)).append(" per km\n");
-                b.append("Speed ").append(new DecimalFormat("0.0").format(kmh)).append(" km/h\n");
-                b.append("10K in ").append(formatDuration(Math.round(secPerKm * 10))).append("  Marathon in ").append(formatDuration(Math.round(secPerKm * 42.195)));
-                output.setText(b.toString());
+                String b = "Pace " + pm + ":" + String.format(Locale.US, "%02d", ps) + " per km\n" +
+                        "Speed " + new DecimalFormat("0.0").format(kmh) + " km/h\n" +
+                        "10K in " + formatDuration(Math.round(secPerKm * 10)) + "  Marathon in " + formatDuration(Math.round(secPerKm * 42.195));
+                output.setText(b);
             } catch (Exception e) {
                 output.setText("Check inputs");
             }
@@ -6342,11 +6337,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 float[] hsv = new float[3];
                 Color.RGBToHSV(r, g, b, hsv);
                 swatch.setBackgroundColor(color);
-                StringBuilder sb = new StringBuilder();
-                sb.append("RGB ").append(r).append(", ").append(g).append(", ").append(b).append("\n");
-                sb.append("HSL ").append(Math.round(hsv[0])).append(", ").append(Math.round(hsv[1] * 100)).append("%, ").append(Math.round(hsv[2] * 100)).append("%\n");
-                sb.append("HEX #").append(String.format(Locale.US, "%02X%02X%02X", r, g, b));
-                output.setText(sb.toString());
+                String sb = "RGB " + r + ", " + g + ", " + b + "\n" +
+                        "HSL " + Math.round(hsv[0]) + ", " + Math.round(hsv[1] * 100) + "%, " + Math.round(hsv[2] * 100) + "%\n" +
+                        "HEX #" + String.format(Locale.US, "%02X%02X%02X", r, g, b);
+                output.setText(sb);
             } catch (Exception e) {
                 output.setText("Enter a valid HEX color");
             }

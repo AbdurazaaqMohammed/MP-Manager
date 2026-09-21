@@ -414,7 +414,7 @@ class MemoryCache extends Cache {
             }
         }
 
-        maxSize = size > 0 ? size : 0;
+        maxSize = Math.max(size, 0);
 
         if (DEBUG) {
             System.out.println("** capacity reset to " + size);

@@ -61,10 +61,7 @@ public class WrappedIndentingWriter extends FilterWriter {
         if (currentIndent < 0) {
             return 0;
         }
-        if (currentIndent > maxIndent) {
-            return maxIndent;
-        }
-        return currentIndent;
+        return Math.min(currentIndent, maxIndent);
     }
 
     public void indent(int indent) {

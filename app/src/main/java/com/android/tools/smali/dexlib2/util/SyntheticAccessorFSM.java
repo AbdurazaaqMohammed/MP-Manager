@@ -258,11 +258,11 @@ static final int SyntheticAccessorFSM_en_main = 1;
 	case 0:
 	if ( p == pe ) {
 		_goto_targ = 4;
-		continue _goto;
+		continue;
 	}
 	if ( cs == 0 ) {
 		_goto_targ = 5;
-		continue _goto;
+		continue;
 	}
 case 1:
 	_match: do {
@@ -492,11 +492,11 @@ case 1:
 case 2:
 	if ( cs == 0 ) {
 		_goto_targ = 5;
-		continue _goto;
+		continue;
 	}
 	if ( ++p != pe ) {
 		_goto_targ = 1;
-		continue _goto;
+		continue;
 	}
 case 4:
 case 5:

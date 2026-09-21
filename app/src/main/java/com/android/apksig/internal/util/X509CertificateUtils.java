@@ -245,7 +245,6 @@ public class X509CertificateUtils {
             if (encodedChar == '-') {
                 break;
             } else if (Character.isWhitespace(encodedChar)) {
-                continue;
             } else {
                 pemEncoding.append(encodedChar);
             }

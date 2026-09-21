@@ -85,12 +85,7 @@ public class SmaliAnnotationElement extends Smali implements KeyReference {
         reader.skipWhitespaces();
         int i1 = reader.indexOfWhiteSpace();
         int i2 = reader.indexOf('=');
-        int i;
-        if(i1 < i2){
-            i = i1;
-        }else {
-            i = i2;
-        }
+        int i = Math.min(i1, i2);
         int length = i - reader.position();
         setName(reader.readString(length));
         reader.skipWhitespaces();

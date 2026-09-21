@@ -45,8 +45,7 @@ public class TypeRewriter implements Rewriter<String> {
 
             // instance equality, to avoid a value comparison in the common case of the type being unmodified
             if (unwrappedType != rewrittenType) {
-                return new StringBuilder(dimensions + rewrittenType.length())
-                        .append(value, 0, dimensions).append(rewrittenType).toString();
+                return value.substring(0, dimensions) + rewrittenType;
             }
             return value;
         } else {

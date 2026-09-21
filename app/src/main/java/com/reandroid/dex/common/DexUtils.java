@@ -373,10 +373,9 @@ public class DexUtils {
             }
             return type;
         }
-        StringBuilder builder = new StringBuilder(length - i);
-        builder.append(type, i, length);
-        builder.append('<');
-        return builder.toString();
+        String builder = type.substring(i, length) +
+                '<';
+        return builder;
     }
     public static String toDeclaringType(String type){
         if(type == null){
@@ -397,10 +396,9 @@ public class DexUtils {
             }
             return type;
         }
-        StringBuilder builder = new StringBuilder(length - i);
-        builder.append(type, i, length);
-        builder.append(';');
-        return builder.toString();
+        String builder = type.substring(i, length) +
+                ';';
+        return builder;
     }
     public static String makeArrayType(String type, int dimension){
         if(type == null){

@@ -339,13 +339,12 @@ public class OverlayInjectorUtil {
     }
 
     static String toastHelperSmali(ToastOptions opts) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(".method private ").append(TOAST_HELPER).append("()V\n");
-        sb.append("    .locals 5\n");
-        sb.append(loadTextSmali(opts.message == null ? "" : opts.message, opts.base64, opts.html, 1, 2));
-        sb.append(buildToastSmali(opts.longDuration, opts.gravity, opts.xOffset, opts.yOffset));
-        sb.append(".end method\n");
-        return sb.toString();
+        String sb = ".method private " + TOAST_HELPER + "()V\n" +
+                "    .locals 5\n" +
+                loadTextSmali(opts.message == null ? "" : opts.message, opts.base64, opts.html, 1, 2) +
+                buildToastSmali(opts.longDuration, opts.gravity, opts.xOffset, opts.yOffset) +
+                ".end method\n";
+        return sb;
     }
 
     private static void appendDpToPx(StringBuilder sb, int dpFloatBits, int valueReg, int metricsReg, int unitReg) {
@@ -1353,38 +1352,37 @@ public class OverlayInjectorUtil {
     }
 
     static String waveTickSmali(String tickType, String rgbType) {
-        StringBuilder s = new StringBuilder();
-        s.append(".class public ").append(tickType).append("\n");
-        s.append(".super Ljava/lang/Object;\n");
-        s.append(".source \"mpRgbTick.java\"\n");
-        s.append(".implements Landroid/animation/ValueAnimator$AnimatorUpdateListener;\n\n");
-        s.append(".field private ref:Ljava/lang/ref/WeakReference;\n\n");
-        s.append(".method public constructor <init>(Ljava/lang/ref/WeakReference;)V\n");
-        s.append("    .locals 0\n");
-        s.append("    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n");
-        s.append("    iput-object p1, p0, ").append(tickType).append("->ref:Ljava/lang/ref/WeakReference;\n");
-        s.append("    return-void\n");
-        s.append(".end method\n\n");
-        s.append(".method public onAnimationUpdate(Landroid/animation/ValueAnimator;)V\n");
-        s.append("    .locals 2\n");
-        s.append("    iget-object v0, p0, ").append(tickType).append("->ref:Ljava/lang/ref/WeakReference;\n");
-        s.append("    invoke-virtual {v0}, Ljava/lang/ref/WeakReference;->get()Ljava/lang/Object;\n");
-        s.append("    move-result-object v0\n");
-        s.append("    if-nez v0, :mp_tick_go\n");
-        s.append("    invoke-virtual {p1}, Landroid/animation/ValueAnimator;->cancel()V\n");
-        s.append("    return-void\n");
-        s.append("    :mp_tick_go\n");
-        s.append("    check-cast v0, ").append(rgbType).append("\n");
-        s.append("    invoke-virtual {p1}, Landroid/animation/ValueAnimator;->getAnimatedValue()Ljava/lang/Object;\n");
-        s.append("    move-result-object v1\n");
-        s.append("    check-cast v1, Ljava/lang/Float;\n");
-        s.append("    invoke-virtual {v1}, Ljava/lang/Float;->floatValue()F\n");
-        s.append("    move-result v1\n");
-        s.append("    iput v1, v0, ").append(rgbType).append("->offset:F\n");
-        s.append("    invoke-virtual {v0}, ").append(rgbType).append("->invalidateSelf()V\n");
-        s.append("    return-void\n");
-        s.append(".end method\n");
-        return s.toString();
+        String s = ".class public " + tickType + "\n" +
+                ".super Ljava/lang/Object;\n" +
+                ".source \"mpRgbTick.java\"\n" +
+                ".implements Landroid/animation/ValueAnimator$AnimatorUpdateListener;\n\n" +
+                ".field private ref:Ljava/lang/ref/WeakReference;\n\n" +
+                ".method public constructor <init>(Ljava/lang/ref/WeakReference;)V\n" +
+                "    .locals 0\n" +
+                "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n" +
+                "    iput-object p1, p0, " + tickType + "->ref:Ljava/lang/ref/WeakReference;\n" +
+                "    return-void\n" +
+                ".end method\n\n" +
+                ".method public onAnimationUpdate(Landroid/animation/ValueAnimator;)V\n" +
+                "    .locals 2\n" +
+                "    iget-object v0, p0, " + tickType + "->ref:Ljava/lang/ref/WeakReference;\n" +
+                "    invoke-virtual {v0}, Ljava/lang/ref/WeakReference;->get()Ljava/lang/Object;\n" +
+                "    move-result-object v0\n" +
+                "    if-nez v0, :mp_tick_go\n" +
+                "    invoke-virtual {p1}, Landroid/animation/ValueAnimator;->cancel()V\n" +
+                "    return-void\n" +
+                "    :mp_tick_go\n" +
+                "    check-cast v0, " + rgbType + "\n" +
+                "    invoke-virtual {p1}, Landroid/animation/ValueAnimator;->getAnimatedValue()Ljava/lang/Object;\n" +
+                "    move-result-object v1\n" +
+                "    check-cast v1, Ljava/lang/Float;\n" +
+                "    invoke-virtual {v1}, Ljava/lang/Float;->floatValue()F\n" +
+                "    move-result v1\n" +
+                "    iput v1, v0, " + rgbType + "->offset:F\n" +
+                "    invoke-virtual {v0}, " + rgbType + "->invalidateSelf()V\n" +
+                "    return-void\n" +
+                ".end method\n";
+        return s;
     }
 
     static String fontWalkType(String classDescriptor) {
@@ -1398,42 +1396,41 @@ public class OverlayInjectorUtil {
     }
 
     static String fontWalkSmali(String walkType) {
-        StringBuilder s = new StringBuilder();
-        s.append(".class public ").append(walkType).append("\n");
-        s.append(".super Ljava/lang/Object;\n");
-        s.append(".source \"mpFontWalk.java\"\n\n");
-        s.append(".method public constructor <init>()V\n");
-        s.append("    .locals 0\n");
-        s.append("    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n");
-        s.append("    return-void\n");
-        s.append(".end method\n\n");
-        s.append(".method public static applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
-        s.append("    .locals 3\n");
-        s.append("    instance-of v0, p0, Landroid/widget/TextView;\n");
-        s.append("    if-eqz v0, :mp_fw_kids\n");
-        s.append("    check-cast p0, Landroid/widget/TextView;\n");
-        s.append("    invoke-virtual {p0, p1}, Landroid/widget/TextView;->setTypeface(Landroid/graphics/Typeface;)V\n");
-        s.append("    return-void\n");
-        s.append("    :mp_fw_kids\n");
-        s.append("    instance-of v0, p0, Landroid/view/ViewGroup;\n");
-        s.append("    if-eqz v0, :mp_fw_end\n");
-        s.append("    check-cast p0, Landroid/view/ViewGroup;\n");
-        s.append("    invoke-virtual {p0}, Landroid/view/ViewGroup;->getChildCount()I\n");
-        s.append("    move-result v0\n");
-        s.append("    const/4 v1, 0x0\n");
-        s.append("    :mp_fw_loop\n");
-        s.append("    if-ge v1, v0, :mp_fw_end\n");
-        s.append("    invoke-virtual {p0, v1}, Landroid/view/ViewGroup;->getChildAt(I)Landroid/view/View;\n");
-        s.append("    move-result-object v2\n");
-        s.append("    if-eqz v2, :mp_fw_next\n");
-        s.append("    invoke-static {v2, p1}, ").append(walkType).append("->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n");
-        s.append("    :mp_fw_next\n");
-        s.append("    add-int/lit8 v1, v1, 0x1\n");
-        s.append("    goto :mp_fw_loop\n");
-        s.append("    :mp_fw_end\n");
-        s.append("    return-void\n");
-        s.append(".end method\n");
-        return s.toString();
+        String s = ".class public " + walkType + "\n" +
+                ".super Ljava/lang/Object;\n" +
+                ".source \"mpFontWalk.java\"\n\n" +
+                ".method public constructor <init>()V\n" +
+                "    .locals 0\n" +
+                "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n" +
+                "    return-void\n" +
+                ".end method\n\n" +
+                ".method public static applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n" +
+                "    .locals 3\n" +
+                "    instance-of v0, p0, Landroid/widget/TextView;\n" +
+                "    if-eqz v0, :mp_fw_kids\n" +
+                "    check-cast p0, Landroid/widget/TextView;\n" +
+                "    invoke-virtual {p0, p1}, Landroid/widget/TextView;->setTypeface(Landroid/graphics/Typeface;)V\n" +
+                "    return-void\n" +
+                "    :mp_fw_kids\n" +
+                "    instance-of v0, p0, Landroid/view/ViewGroup;\n" +
+                "    if-eqz v0, :mp_fw_end\n" +
+                "    check-cast p0, Landroid/view/ViewGroup;\n" +
+                "    invoke-virtual {p0}, Landroid/view/ViewGroup;->getChildCount()I\n" +
+                "    move-result v0\n" +
+                "    const/4 v1, 0x0\n" +
+                "    :mp_fw_loop\n" +
+                "    if-ge v1, v0, :mp_fw_end\n" +
+                "    invoke-virtual {p0, v1}, Landroid/view/ViewGroup;->getChildAt(I)Landroid/view/View;\n" +
+                "    move-result-object v2\n" +
+                "    if-eqz v2, :mp_fw_next\n" +
+                "    invoke-static {v2, p1}, " + walkType + "->applyAll(Landroid/view/View;Landroid/graphics/Typeface;)V\n" +
+                "    :mp_fw_next\n" +
+                "    add-int/lit8 v1, v1, 0x1\n" +
+                "    goto :mp_fw_loop\n" +
+                "    :mp_fw_end\n" +
+                "    return-void\n" +
+                ".end method\n";
+        return s;
     }
 
     static Map<String, byte[]> collectFontAssets(DialogOptions dialog) {

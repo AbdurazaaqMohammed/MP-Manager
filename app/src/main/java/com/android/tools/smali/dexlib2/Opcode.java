@@ -416,15 +416,15 @@ public enum Opcode
     }
 
     private static List<VersionConstraint> allVersions(int opcodeValue) {
-        return Lists.newArrayList(new VersionConstraint(Range.<Integer>all(), Range.<Integer>all(), opcodeValue));
+        return Lists.newArrayList(new VersionConstraint(Range.all(), Range.all(), opcodeValue));
     }
 
     private static List<VersionConstraint> allApis(int opcodeValue) {
-        return Lists.newArrayList(new VersionConstraint(Range.<Integer>all(), Range.openClosed(0, 0), opcodeValue));
+        return Lists.newArrayList(new VersionConstraint(Range.all(), Range.openClosed(0, 0), opcodeValue));
     }
 
     private static List<VersionConstraint> allArtVersions(int opcodeValue) {
-        return Lists.newArrayList(new VersionConstraint(Range.openClosed(0, 0), Range.<Integer>all(), opcodeValue));
+        return Lists.newArrayList(new VersionConstraint(Range.openClosed(0, 0), Range.all(), opcodeValue));
     }
 
     @SuppressWarnings("unchecked")
