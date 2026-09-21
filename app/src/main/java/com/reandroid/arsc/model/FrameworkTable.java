@@ -183,9 +183,7 @@ public class FrameworkTable extends TableBlock {
         tableStringPool.getStringsArray().ensureSize(1);
         TableString title=tableStringPool.get(0);
         title.set(ARSCLib.getRepo());
-        Iterator<TableString> iterator = tableStringPool.iterator();
-        while (iterator.hasNext()) {
-            TableString tableString = iterator.next();
+        for (TableString tableString : tableStringPool) {
             if (tableString != title) {
                 shrinkTableString(title, tableString);
             }

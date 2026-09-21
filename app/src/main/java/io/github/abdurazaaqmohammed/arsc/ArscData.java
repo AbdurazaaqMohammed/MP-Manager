@@ -232,9 +232,7 @@ public class ArscData {
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
         try {
-            Iterator<Entry> it = re.iterator();
-            while (it.hasNext()) {
-                Entry e = it.next();
+            for (Entry e : re) {
                 if (e == null || e.isNull()) continue;
                 String tag = "item";
                 try {
@@ -269,9 +267,7 @@ public class ArscData {
         } catch (Exception ignored) {
         }
         try {
-            Iterator<Entry> it = re.iterator();
-            while (it.hasNext()) {
-                Entry e = it.next();
+            for (Entry e : re) {
                 if (e != null && !e.isNull()) return e;
             }
         } catch (Exception ignored) {
@@ -467,9 +463,7 @@ public class ArscData {
                     pushHistory("Add " + pkgName + "/" + type + "/" + name, () -> {
                         try {
                             Entry created = null;
-                            Iterator<Entry> it = re.iterator();
-                            while (it.hasNext()) {
-                                Entry x = it.next();
+                            for (Entry x : re) {
                                 if (x != null && !x.isNull()) {
                                     created = x;
                                     break;
@@ -537,9 +531,7 @@ public class ArscData {
             List<Entry> removed = new ArrayList<>();
             List<ValueType> types = new ArrayList<>();
             List<Integer> datas = new ArrayList<>();
-            Iterator<Entry> it = re.iterator();
-            while (it.hasNext()) {
-                Entry e = it.next();
+            for (Entry e : re) {
                 if (e == null || e.isNull()) continue;
                 removed.add(e);
                 ValueType t = null;
@@ -676,9 +668,7 @@ public class ArscData {
                         out.add(hit);
                     }
                 } else if (type.equals("string")) {
-                    Iterator<Entry> it = re.iterator();
-                    while (it.hasNext()) {
-                        Entry e = it.next();
+                    for (Entry e : re) {
                         if (e == null || e.isNull()) continue;
                         ValueType vt = null;
                         try {
@@ -708,9 +698,7 @@ public class ArscData {
                     } catch (Exception e) {
                         return out;
                     }
-                    Iterator<Entry> it = re.iterator();
-                    while (it.hasNext()) {
-                        Entry e = it.next();
+                    for (Entry e : re) {
                         if (e == null || e.isNull()) continue;
                         ValueType vt = null;
                         try {
@@ -740,9 +728,7 @@ public class ArscData {
                     } catch (Exception e) {
                         return out;
                     }
-                    Iterator<Entry> it = re.iterator();
-                    while (it.hasNext()) {
-                        Entry e = it.next();
+                    for (Entry e : re) {
                         if (e == null || e.isNull()) continue;
                         ValueType vt = null;
                         try {
@@ -884,9 +870,7 @@ public class ArscData {
                         continue;
                     }
                     if (re == null || !"string".equals(re.getType()) || !name.equals(re.getName())) continue;
-                    Iterator<Entry> it = re.iterator();
-                    while (it.hasNext()) {
-                        Entry e = it.next();
+                    for (Entry e : re) {
                         if (e == null || e.isNull()) continue;
                         if (setEntryValue(e, value)) applied++;
                     }
@@ -1053,9 +1037,7 @@ public class ArscData {
                     }
                     if (re == null) continue;
                     try {
-                        Iterator<Entry> it = re.iterator();
-                        while (it.hasNext()) {
-                            Entry e = it.next();
+                        for (Entry e : re) {
                             if (e == null || e.isNull()) continue;
                             ValueType vt = null;
                             try {
@@ -1102,9 +1084,7 @@ public class ArscData {
                 }
                 if (re == null) continue;
                 try {
-                    Iterator<Entry> it = re.iterator();
-                    while (it.hasNext()) {
-                        Entry e = it.next();
+                    for (Entry e : re) {
                         if (e == null || e.isNull()) continue;
                         ValueType vt = null;
                         try {
@@ -1414,9 +1394,7 @@ public class ArscData {
                         if (have != null) {
                             Entry he = null;
                             try {
-                                Iterator<Entry> hit = have.iterator();
-                                while (hit.hasNext()) {
-                                    Entry x = hit.next();
+                                for (Entry x : have) {
                                     if (x != null && !x.isNull()) {
                                         he = x;
                                         break;
@@ -1431,9 +1409,7 @@ public class ArscData {
                     if (exists) continue;
                     Entry s = null;
                     try {
-                        Iterator<Entry> sit = src.iterator();
-                        while (sit.hasNext()) {
-                            Entry x = sit.next();
+                        for (Entry x : src) {
                             if (x != null && !x.isNull()) {
                                 s = x;
                                 break;

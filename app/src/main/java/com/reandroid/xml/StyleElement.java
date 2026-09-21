@@ -137,17 +137,13 @@ public class StyleElement extends XMLElement implements Span {
     @Override
     int getLength() {
         int result = 0;
-        Iterator<XMLNode> itr = iterator();
-        while (itr.hasNext()) {
-            XMLNode child = itr.next();
+        for (XMLNode child : this) {
             result += child.getLength();
         }
         return result;
     }
     void writeStyledText(Appendable appendable) throws IOException {
-        Iterator<XMLNode> iterator = iterator();
-        while (iterator.hasNext()) {
-            XMLNode xmlNode = iterator.next();
+        for (XMLNode xmlNode : this) {
             if (xmlNode instanceof StyleText styleText) {
                 styleText.writeStyledText(appendable);
             } else if (xmlNode instanceof StyleElement element) {
@@ -227,9 +223,7 @@ public class StyleElement extends XMLElement implements Span {
         while (attributes.hasNext()) {
             newAttribute().setFrom(attributes.next());
         }
-        Iterator<XMLNode> iterator = xmlElement.iterator();
-        while (iterator.hasNext()) {
-            XMLNode xmlNode = iterator.next();
+        for (XMLNode xmlNode : xmlElement) {
             if (xmlNode instanceof XMLElement) {
                 newElement().copyFrom((XMLElement) xmlNode);
             } else if (xmlNode instanceof XMLText xmlText) {

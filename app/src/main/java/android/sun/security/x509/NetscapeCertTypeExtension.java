@@ -115,9 +115,9 @@ implements CertAttrSet<String> {
     }
 
     private static int getPosition(String name) throws IOException {
-        for (int i = 0; i < mMapData.length; i++) {
-            if (name.equalsIgnoreCase(mMapData[i].mName))
-                return mMapData[i].mPosition;
+        for (MapEntry mMapDatum : mMapData) {
+            if (name.equalsIgnoreCase(mMapDatum.mName))
+                return mMapDatum.mPosition;
         }
         throw new IOException("Attribute name [" + name
                              + "] not recognized by CertAttrSet:NetscapeCertType.");

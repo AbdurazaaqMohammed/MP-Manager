@@ -555,9 +555,9 @@ public class PKCS7 {
     throws NoSuchAlgorithmException, SignatureException {
 
         Vector<SignerInfo> intResult = new Vector<SignerInfo>();
-        for (int i = 0; i < signerInfos.length; i++) {
+        for (SignerInfo info : signerInfos) {
 
-            SignerInfo signerInfo = verify(signerInfos[i], bytes);
+            SignerInfo signerInfo = verify(info, bytes);
             if (signerInfo != null) {
                 intResult.addElement(signerInfo);
             }
@@ -708,8 +708,8 @@ public class PKCS7 {
             out += "PKCS7 :: version: " + Debug.toHexString(version) + "\n";
         if (digestAlgorithmIds != null) {
             out += "PKCS7 :: digest AlgorithmIds: \n";
-            for (int i = 0; i < digestAlgorithmIds.length; i++)
-                out += "\t" + digestAlgorithmIds[i] + "\n";
+            for (AlgorithmId digestAlgorithmId : digestAlgorithmIds)
+                out += "\t" + digestAlgorithmId + "\n";
         }
         if (certificates != null) {
             out += "PKCS7 :: certificates: \n";

@@ -88,21 +88,21 @@ public class EDIPartyName implements android.sun.security.x509.GeneralNameInterf
         if (len < 1 || len > 2)
             throw new IOException("Invalid encoding of EDIPartyName");
 
-        for (int i = 0; i < len; i++) {
-            android.sun.security.util.DerValue opt = seq[i];
+        for (android.sun.security.util.DerValue value : seq) {
+            android.sun.security.util.DerValue opt = value;
             if (opt.isContextSpecific(TAG_ASSIGNER) &&
-                !opt.isConstructed()) {
+                    !opt.isConstructed()) {
                 if (assigner != null)
                     throw new IOException("Duplicate nameAssigner found in"
-                                          + " EDIPartyName");
+                            + " EDIPartyName");
                 opt = opt.data.getDerValue();
                 assigner = opt.getAsString();
             }
             if (opt.isContextSpecific(TAG_PARTYNAME) &&
-                !opt.isConstructed()) {
+                    !opt.isConstructed()) {
                 if (party != null)
                     throw new IOException("Duplicate partyName found in"
-                                          + " EDIPartyName");
+                            + " EDIPartyName");
                 opt = opt.data.getDerValue();
                 party = opt.getAsString();
             }

@@ -90,9 +90,8 @@ public abstract class XMLNodeTree extends XMLNode implements
         }
     }
     public void addAll(Iterable<? extends XMLNode> iterable) {
-        Iterator<? extends XMLNode> itr = iterable.iterator();
-        while (itr.hasNext()) {
-            add(itr.next());
+        for (XMLNode xmlNode : iterable) {
+            add(xmlNode);
         }
     }
     public boolean add(XMLNode xmlNode) {
@@ -188,9 +187,8 @@ public abstract class XMLNodeTree extends XMLNode implements
     }
     abstract void startSerialize(XmlSerializer serializer) throws IOException;
     private void serializeChildes(XmlSerializer serializer) throws IOException {
-        Iterator<XMLNode> itr = iterator();
-        while (itr.hasNext()) {
-            itr.next().serialize(serializer);
+        for (XMLNode xmlNode : this) {
+            xmlNode.serialize(serializer);
         }
     }
     abstract void endSerialize(XmlSerializer serializer) throws IOException;

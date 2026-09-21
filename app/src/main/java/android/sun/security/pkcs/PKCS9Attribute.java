@@ -489,8 +489,8 @@ public class PKCS9Attribute implements DerEncoder {
 
         // check for illegal element tags
         Byte tag;
-        for (int i=0; i < elems.length; i++) {
-            tag = Byte.valueOf(elems[i].tag);
+        for (DerValue elem : elems) {
+            tag = Byte.valueOf(elem.tag);
 
             if (indexOf(tag, PKCS9_VALUE_TAGS[index], 0) == -1)
                 throwTagException(tag);
@@ -776,13 +776,13 @@ public class PKCS9Attribute implements DerEncoder {
             boolean first = true;
             Object[] values = (Object[]) value;
 
-            for (int j=0; j < values.length; j++) {
+            for (Object o : values) {
                 if (first)
                     first = false;
                 else
                     buf.append(", ");
 
-                buf.append(values[j].toString());
+                buf.append(o.toString());
             }
             return buf.toString();
         }

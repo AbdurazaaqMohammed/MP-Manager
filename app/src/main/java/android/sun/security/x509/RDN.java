@@ -261,8 +261,8 @@ public class RDN {
 
     public RDN(android.sun.security.x509.AVA[] avas) {
         assertion = avas.clone();
-        for (int i = 0; i < assertion.length; i++) {
-            if (assertion[i] == null) {
+        for (AVA ava : assertion) {
+            if (ava == null) {
                 throw new NullPointerException();
             }
         }
@@ -320,9 +320,9 @@ public class RDN {
      * @returns DerValue of attribute value; null if attribute does not exist
      */
     android.sun.security.util.DerValue findAttribute(android.sun.security.util.ObjectIdentifier oid) {
-        for (int i = 0; i < assertion.length; i++) {
-            if (assertion[i].oid.equals(oid)) {
-                return assertion[i].value;
+        for (AVA ava : assertion) {
+            if (ava.oid.equals(oid)) {
+                return ava.value;
             }
         }
         return null;
@@ -454,8 +454,8 @@ public class RDN {
             // order the string type AVA's alphabetically,
             // followed by the oid type AVA's numerically
             List<android.sun.security.x509.AVA> avaList = new ArrayList<android.sun.security.x509.AVA>(assertion.length);
-            for (int i = 0; i < assertion.length; i++) {
-                avaList.add(assertion[i]);
+            for (AVA ava : assertion) {
+                avaList.add(ava);
             }
             java.util.Collections.sort(avaList, AVAComparator.getInstance());
 

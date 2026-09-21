@@ -1233,13 +1233,13 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         /*
          * Spin over the ContentInfos.
          */
-        for (int i = 0; i < count; i++) {
+        for (DerValue derValue : safeContentsArray) {
             byte[] safeContentsData;
             ContentInfo safeContents;
             DerInputStream sci;
             byte[] eAlgId = null;
 
-            sci = new DerInputStream(safeContentsArray[i].toByteArray());
+            sci = new DerInputStream(derValue.toByteArray());
             safeContents = new ContentInfo(sci);
             contentType = safeContents.getContentType();
             safeContentsData = null;
@@ -1247,20 +1247,20 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                 safeContentsData = safeContents.getData();
             } else if (contentType.equals(ContentInfo.ENCRYPTED_DATA_OID)) {
                 if (password == null) {
-                   continue;
+                    continue;
                 }
                 DerInputStream edi =
-                                safeContents.getContent().toDerInputStream();
+                        safeContents.getContent().toDerInputStream();
                 int edVersion = edi.getInteger();
                 DerValue[] seq = edi.getSequence(2);
                 ObjectIdentifier edContentType = seq[0].getOID();
                 eAlgId = seq[1].toByteArray();
-                if (!seq[2].isContextSpecific((byte)0)) {
-                   throw new IOException("encrypted content not present!");
+                if (!seq[2].isContextSpecific((byte) 0)) {
+                    throw new IOException("encrypted content not present!");
                 }
                 byte newTag = DerValue.tag_OctetString;
                 if (seq[2].isConstructed())
-                   newTag |= 0x20;
+                    newTag |= 0x20;
                 seq[2].resetTag(newTag);
                 safeContentsData = seq[2].getOctetString();
 
@@ -1278,13 +1278,13 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
 
                 } catch (Exception e) {
                     IOException ioe = new IOException("failed to decrypt safe"
-                                        + " contents entry: " + e);
+                            + " contents entry: " + e);
                     ioe.initCause(e);
                     throw ioe;
                 }
             } else {
                 throw new IOException("public key protected PKCS12" +
-                                        " not supported");
+                        " not supported");
             }
             DerInputStream sc = new DerInputStream(safeContentsData);
             loadSafeContents(sc, password);
@@ -1327,11 +1327,10 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
          * Match up private keys with certificate chains.
          */
         KeyEntry[] list = keyList.toArray(new KeyEntry[keyList.size()]);
-        for (int m = 0; m < list.length; m++) {
-            KeyEntry entry = list[m];
+        for (KeyEntry entry : list) {
             if (entry.keyId != null) {
                 ArrayList<X509Certificate> chain =
-                                new ArrayList<X509Certificate>();
+                        new ArrayList<X509Certificate>();
                 X509Certificate cert = findMatchedCertificate(entry);
                 while (cert != null) {
                     chain.add(cert);
@@ -1436,13 +1435,13 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             byte[] keyId = null;
 
             if (attrSet != null) {
-                for (int j = 0; j < attrSet.length; j++) {
+                for (DerValue derValue : attrSet) {
                     DerInputStream as =
-                        new DerInputStream(attrSet[j].toByteArray());
+                            new DerInputStream(derValue.toByteArray());
                     DerValue[] attrSeq = as.getSequence(2);
                     ObjectIdentifier attrId = attrSeq[0].getOID();
                     DerInputStream vs =
-                        new DerInputStream(attrSeq[1].toByteArray());
+                            new DerInputStream(attrSeq[1].toByteArray());
                     DerValue[] valSet;
                     try {
                         valSet = vs.getSet(1);

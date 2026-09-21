@@ -99,8 +99,8 @@ public class CdexHeaderItem {
     }
 
     public static boolean isSupportedCdexVersion(int version) {
-        for (int i=0; i<SUPPORTED_CDEX_VERSIONS.length; i++) {
-            if (SUPPORTED_CDEX_VERSIONS[i] == version) {
+        for (int supportedCdexVersion : SUPPORTED_CDEX_VERSIONS) {
+            if (supportedCdexVersion == version) {
                 return true;
             }
         }

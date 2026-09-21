@@ -121,17 +121,17 @@ public class DexValueType<T extends DexValueBlock<?>> implements BlockCreator<T>
         valueTypes[0x1f] = BOOLEAN;
 
         int index = 0;
-        for(int i = 0; i < valueTypes.length; i++){
-            if(valueTypes[i] != null){
-                index ++;
+        for (DexValueType<?> dexValueType : valueTypes) {
+            if (dexValueType != null) {
+                index++;
             }
         }
         VALUES_COPY = new DexValueType[index];
         index = 0;
-        for(int i = 0; i < valueTypes.length; i++){
-            if(valueTypes[i] != null){
-                VALUES_COPY[index] = valueTypes[i];
-                index ++;
+        for (DexValueType<?> valueType : valueTypes) {
+            if (valueType != null) {
+                VALUES_COPY[index] = valueType;
+                index++;
             }
         }
 

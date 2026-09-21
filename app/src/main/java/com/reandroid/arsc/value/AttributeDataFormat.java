@@ -87,8 +87,8 @@ public enum AttributeDataFormat {
     }
     public boolean contains(ValueType valueType){
         ValueType[] valueTypes = this.valueTypes;
-        for(int i = 0; i < valueTypes.length; i++){
-            if(valueType == valueTypes[i]){
+        for (ValueType type : valueTypes) {
+            if (valueType == type) {
                 return true;
             }
         }

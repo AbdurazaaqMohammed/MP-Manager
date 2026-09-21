@@ -200,12 +200,10 @@ public class PolicyInformation {
                     "PolicyQualifierInfo can be set.");
             }
             if (obj instanceof Set) {
-                Iterator<?> i = ((Set<?>)obj).iterator();
-                while (i.hasNext()) {
-                    Object obj1 = i.next();
+                for (Object obj1 : (Set<?>) obj) {
                     if (!(obj1 instanceof PolicyQualifierInfo)) {
                         throw new IOException("Attribute value must be a" +
-                                    "Set of PolicyQualifierInfo objects.");
+                                "Set of PolicyQualifierInfo objects.");
                     }
                 }
                 policyQualifiers = (Set<PolicyQualifierInfo>) obj;

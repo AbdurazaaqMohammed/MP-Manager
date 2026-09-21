@@ -29,8 +29,8 @@ public class LocaleUtil {
     }
     public static boolean contains(long[] locales, long packed_locale){
         int length = locales.length;
-        for(int i = 0; i < length; i++){
-            if(locales[i] == packed_locale){
+        for (long locale : locales) {
+            if (locale == packed_locale) {
                 return true;
             }
         }
@@ -39,8 +39,8 @@ public class LocaleUtil {
     public static int count(long[] locales, long packed_locale){
         int result = 0;
         int length = locales.length;
-        for(int i = 0; i < length; i++){
-            if(locales[i] == packed_locale){
+        for (long locale : locales) {
+            if (locale == packed_locale) {
                 result++;
             }
         }
@@ -48,9 +48,8 @@ public class LocaleUtil {
     }
     public static int[] find(int[][] map, int packed_locale){
         int length = map.length;
-        for(int i = 0; i < length; i++){
-            int[] lookup_result = map[i];
-            if(lookup_result[0] == packed_locale){
+        for (int[] lookup_result : map) {
+            if (lookup_result[0] == packed_locale) {
                 return lookup_result;
             }
         }

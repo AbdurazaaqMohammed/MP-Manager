@@ -102,8 +102,8 @@ public class OdexHeaderItem {
     }
 
     public static boolean isSupportedOdexVersion(int version) {
-        for (int i=0; i<SUPPORTED_ODEX_VERSIONS.length; i++) {
-            if (SUPPORTED_ODEX_VERSIONS[i] == version) {
+        for (int supportedOdexVersion : SUPPORTED_ODEX_VERSIONS) {
+            if (supportedOdexVersion == version) {
                 return true;
             }
         }

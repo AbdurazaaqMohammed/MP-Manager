@@ -409,8 +409,8 @@ class ResConfigBase extends FixedBlockContainer
         if(chars == null){
             return true;
         }
-        for(int i = 0; i < chars.length; i++){
-            if(chars[i] != 0){
+        for (char aChar : chars) {
+            if (aChar != 0) {
                 return false;
             }
         }
@@ -420,8 +420,8 @@ class ResConfigBase extends FixedBlockContainer
         if(bytes == null){
             return true;
         }
-        for(int i = 0; i < bytes.length; i++){
-            if(bytes[i] != 0){
+        for (byte aByte : bytes) {
+            if (aByte != 0) {
                 return false;
             }
         }

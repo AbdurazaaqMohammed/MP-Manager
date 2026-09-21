@@ -232,8 +232,8 @@ public class ReasonFlags {
      */
     public Enumeration<String> getElements () {
         android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
-        for( int i=0; i<NAMES.length; i++ ) {
-            elements.addElement(NAMES[i]);
+        for (String name : NAMES) {
+            elements.addElement(name);
         }
         return (elements.elements());
     }

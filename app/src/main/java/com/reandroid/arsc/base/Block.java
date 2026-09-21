@@ -405,8 +405,8 @@ public abstract class Block {
             return 0;
         }
         int hash = 1;
-        for(int i = 0; i < length; i++){
-            hash = hash * 31 + (bytes[i] & 0xff);
+        for (byte aByte : bytes) {
+            hash = hash * 31 + (aByte & 0xff);
         }
         return hash;
     }
@@ -419,8 +419,8 @@ public abstract class Block {
             return 0;
         }
         long hash = 1;
-        for(int i = 0; i < length; i++){
-            hash = hash * 31 + (bytes[i] & 0xff);
+        for (byte aByte : bytes) {
+            hash = hash * 31 + (aByte & 0xff);
         }
         return hash;
     }

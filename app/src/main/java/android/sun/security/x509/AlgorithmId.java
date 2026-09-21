@@ -549,31 +549,31 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
         String oidString;
         if (!initOidTable) {
             Provider[] provs = Security.getProviders();
-            for (int i=0; i<provs.length; i++) {
-                for (Enumeration<Object> enum_ = provs[i].keys();
+            for (Provider prov : provs) {
+                for (Enumeration<Object> enum_ = prov.keys();
                      enum_.hasMoreElements(); ) {
-                    String alias = (String)enum_.nextElement();
+                    String alias = (String) enum_.nextElement();
                     String upperCaseAlias = alias.toUpperCase(Locale.ENGLISH);
                     int index;
                     if (upperCaseAlias.startsWith("ALG.ALIAS") &&
-                            (index=upperCaseAlias.indexOf("OID.", 0)) != -1) {
+                            (index = upperCaseAlias.indexOf("OID.", 0)) != -1) {
                         index += "OID.".length();
                         if (index == alias.length()) {
                             // invalid alias entry
                             break;
                         }
                         if (oidTable == null) {
-                            oidTable = new HashMap<String, android.sun.security.util.ObjectIdentifier>();
+                            oidTable = new HashMap<String, ObjectIdentifier>();
                         }
                         oidString = alias.substring(index);
-                        String stdAlgName = provs[i].getProperty(alias);
+                        String stdAlgName = prov.getProperty(alias);
                         if (stdAlgName != null) {
                             stdAlgName = stdAlgName.toUpperCase(Locale.ENGLISH);
                         }
                         if (stdAlgName != null &&
                                 oidTable.get(stdAlgName) == null) {
                             oidTable.put(stdAlgName,
-                                         new android.sun.security.util.ObjectIdentifier(oidString));
+                                    new ObjectIdentifier(oidString));
                         }
                     }
                 }

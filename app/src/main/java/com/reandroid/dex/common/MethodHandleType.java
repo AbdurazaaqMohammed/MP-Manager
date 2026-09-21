@@ -66,8 +66,7 @@ public class MethodHandleType implements Comparable<MethodHandleType>, SmaliForm
         int length = values.length;
         Map<String, MethodHandleType> map = new HashMap<>(length);
         nameMap = map;
-        for (int i = 0; i < length; i++) {
-            MethodHandleType type = values[i];
+        for (MethodHandleType type : values) {
             map.put(type.name, type);
         }
     }

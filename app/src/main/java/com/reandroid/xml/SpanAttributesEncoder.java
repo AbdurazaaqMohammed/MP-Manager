@@ -30,8 +30,7 @@ public class SpanAttributesEncoder {
         StringBuilder builder = new StringBuilder();
         int length = attributes.length;
         String rawTagName = Span.RAW_STYLE_TAG_ATTRIBUTE;
-        for (int i = 0; i < length; i++) {
-            StyleAttribute attribute = attributes[i];
+        for (StyleAttribute attribute : attributes) {
             if (!rawTagName.equals(attribute.getName())) {
                 builder.append(';');
                 builder.append(attribute.getName());

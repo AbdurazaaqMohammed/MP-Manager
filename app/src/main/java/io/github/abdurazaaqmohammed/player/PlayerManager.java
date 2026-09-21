@@ -245,12 +245,15 @@ public class PlayerManager {
                     File[] files = dir.listFiles();
                     if (files != null) {
                         boolean found = false;
-                        for (int i = 0; i < files.length; i++) {
-                            if (files[i].equals(currentFile)) { found = true; continue; }
-                            if (found && files[i].isFile()) {
-                                String name = files[i].getName().toLowerCase(Locale.ROOT);
+                        for (File file : files) {
+                            if (file.equals(currentFile)) {
+                                found = true;
+                                continue;
+                            }
+                            if (found && file.isFile()) {
+                                String name = file.getName().toLowerCase(Locale.ROOT);
                                 if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") || name.endsWith(".ogg") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".wma") || name.endsWith(".opus") || name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mov") || name.endsWith(".webm") || name.endsWith(".3gp") || name.endsWith(".ts") || name.endsWith(".flv") || name.endsWith(".wmv")) {
-                                    queue.add(buildMediaItem(appContext, files[i].getAbsolutePath()));
+                                    queue.add(buildMediaItem(appContext, file.getAbsolutePath()));
                                     return currentIndex + 1;
                                 }
                             }

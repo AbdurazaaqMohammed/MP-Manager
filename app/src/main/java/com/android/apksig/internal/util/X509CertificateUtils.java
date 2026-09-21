@@ -232,8 +232,8 @@ public class X509CertificateUtils {
             return certificateBuffer;
         }
         certificateBuffer.mark();
-        for (int i = 0; i < BEGIN_CERT_HEADER.length; i++) {
-            if (certificateBuffer.get() != BEGIN_CERT_HEADER[i]) {
+        for (byte b : BEGIN_CERT_HEADER) {
+            if (certificateBuffer.get() != b) {
                 certificateBuffer.reset();
                 return certificateBuffer;
             }

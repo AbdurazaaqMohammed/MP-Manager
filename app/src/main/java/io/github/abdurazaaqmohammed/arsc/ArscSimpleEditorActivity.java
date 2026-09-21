@@ -633,9 +633,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
                     Entry e = data.defaultEntry(re);
                     if (e == null) {
                         try {
-                            java.util.Iterator<Entry> it = re.iterator();
-                            while (it.hasNext()) {
-                                Entry x = it.next();
+                            for (Entry x : re) {
                                 if (x != null && !x.isNull()) {
                                     e = x;
                                     break;

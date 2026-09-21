@@ -88,9 +88,9 @@ public class PKCS9Attributes {
                 new Hashtable<ObjectIdentifier, ObjectIdentifier>(
                                                 permittedAttributes.length);
 
-            for (int i = 0; i < permittedAttributes.length; i++)
-                this.permittedAttributes.put(permittedAttributes[i],
-                                             permittedAttributes[i]);
+            for (ObjectIdentifier permittedAttribute : permittedAttributes)
+                this.permittedAttributes.put(permittedAttribute,
+                        permittedAttribute);
         } else {
             this.permittedAttributes = null;
         }
@@ -157,15 +157,15 @@ public class PKCS9Attributes {
     public PKCS9Attributes(PKCS9Attribute[] attribs)
     throws IllegalArgumentException, IOException {
         ObjectIdentifier oid;
-        for (int i=0; i < attribs.length; i++) {
-            oid = attribs[i].getOID();
+        for (PKCS9Attribute attrib : attribs) {
+            oid = attrib.getOID();
             if (attributes.containsKey(oid))
                 throw new IllegalArgumentException(
-                          "PKCSAttribute " + attribs[i].getOID() +
-                          " duplicated while constructing " +
-                          "PKCS9Attributes.");
+                        "PKCSAttribute " + attrib.getOID() +
+                                " duplicated while constructing " +
+                                "PKCS9Attributes.");
 
-            attributes.put(oid, attribs[i]);
+            attributes.put(oid, attrib);
         }
         derEncoding = generateDerEncoding();
         permittedAttributes = null;
@@ -198,10 +198,10 @@ public class PKCS9Attributes {
         ObjectIdentifier oid;
         boolean reuseEncoding = true;
 
-        for (int i=0; i < derVals.length; i++) {
+        for (DerValue derVal : derVals) {
 
             try {
-                attrib = new PKCS9Attribute(derVals[i]);
+                attrib = new PKCS9Attribute(derVal);
 
             } catch (ParsingException e) {
                 if (ignoreUnsupportedAttributes) {
@@ -217,9 +217,9 @@ public class PKCS9Attributes {
                 throw new IOException("Duplicate PKCS9 attribute: " + oid);
 
             if (permittedAttributes != null &&
-                !permittedAttributes.containsKey(oid))
+                    !permittedAttributes.containsKey(oid))
                 throw new IOException("Attribute " + oid +
-                                      " not permitted in this attribute set");
+                        " not permitted in this attribute set");
 
             attributes.put(oid, attrib);
         }

@@ -202,8 +202,7 @@ public class BitArray {
     public int hashCode() {
         int hashCode = 0;
 
-        for (int i = 0; i < repn.length; i++)
-            hashCode = 31*hashCode + repn[i];
+        for (byte b : repn) hashCode = 31 * hashCode + b;
 
         return hashCode ^ length;
     }

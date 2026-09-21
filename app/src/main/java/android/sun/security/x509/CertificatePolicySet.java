@@ -61,8 +61,8 @@ public class CertificatePolicySet {
         ids = new Vector<android.sun.security.x509.CertificatePolicyId>();
         android.sun.security.util.DerValue[] seq = in.getSequence(5);
 
-        for (int i = 0; i < seq.length; i++) {
-            android.sun.security.x509.CertificatePolicyId id = new android.sun.security.x509.CertificatePolicyId(seq[i]);
+        for (android.sun.security.util.DerValue derValue : seq) {
+            CertificatePolicyId id = new CertificatePolicyId(derValue);
             ids.addElement(id);
         }
     }

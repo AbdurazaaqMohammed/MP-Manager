@@ -173,8 +173,8 @@ public abstract class Cache {
             int h = hash;
             if (h == 0) {
                 h = b.length + 1;
-                for (int i = 0; i < b.length; i++) {
-                    h += (b[i] & 0xff) * 37;
+                for (byte value : b) {
+                    h += (value & 0xff) * 37;
                 }
                 hash = h;
             }

@@ -114,25 +114,24 @@ public class AttributeBagItem {
         }
         StringBuilder builder = new StringBuilder();
         boolean appendOnce=false;
-        for (int i = 0; i < len; i++) {
-            AttributeBagItem item = bagItems[i];
-            if(item==null){
+        for (AttributeBagItem item : bagItems) {
+            if (item == null) {
                 continue;
             }
-            if(appendOnce){
+            if (appendOnce) {
                 builder.append("|");
             }
             String name;
-            if(use_hex){
+            if (use_hex) {
                 name = item.getNameOrHex();
-            }else {
+            } else {
                 name = item.getName();
             }
-            if(name == null){
+            if (name == null) {
                 return null;
             }
             builder.append(name);
-            appendOnce=true;
+            appendOnce = true;
         }
         if(appendOnce){
             return builder.toString();

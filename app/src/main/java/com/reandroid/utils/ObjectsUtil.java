@@ -83,8 +83,8 @@ public class ObjectsUtil {
         int hash = 31;
         int length = elements.length;
         hash = hash * 31 + length;
-        for (int i = 0; i < length; i ++) {
-            hash = hash * 31 + hash(elements[i]);
+        for (Object element : elements) {
+            hash = hash * 31 + hash(element);
         }
         return hash;
     }

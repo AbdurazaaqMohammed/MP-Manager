@@ -71,12 +71,10 @@ public class StyleDocument extends XMLDocument implements
         return writer.toString();
     }
     void writeStyledText(Appendable appendable) throws IOException {
-        Iterator<XMLNode> iterator = iterator();
-        while (iterator.hasNext()){
-            XMLNode xmlNode = iterator.next();
-            if(xmlNode instanceof StyleText styleText){
+        for (XMLNode xmlNode : this) {
+            if (xmlNode instanceof StyleText styleText) {
                 styleText.writeStyledText(appendable);
-            } else if(xmlNode instanceof StyleElement element){
+            } else if (xmlNode instanceof StyleElement element) {
                 element.writeStyledText(appendable);
             }
         }
@@ -144,12 +142,10 @@ public class StyleDocument extends XMLDocument implements
     }
     public static StyleDocument copyInner(XMLElement xmlElement){
         StyleDocument styleDocument = new StyleDocument();
-        Iterator<XMLNode> iterator = xmlElement.iterator();
-        while (iterator.hasNext()){
-            XMLNode xmlNode = iterator.next();
+        for (XMLNode xmlNode : xmlElement) {
             if (xmlNode instanceof XMLElement) {
                 styleDocument.newElement().copyFrom((XMLElement) xmlNode);
-            } else if(xmlNode instanceof XMLText xmlText) {
+            } else if (xmlNode instanceof XMLText xmlText) {
                 styleDocument.newText(xmlText.getText());
             }
         }

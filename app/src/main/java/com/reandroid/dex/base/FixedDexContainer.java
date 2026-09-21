@@ -37,12 +37,11 @@ public class FixedDexContainer extends FixedBlockContainer {
         if(skipReading(this, reader)){
             return;
         }
-        for(int i = 0; i < length; i++){
-            Block block = childes[i];
-            if(block == null){
+        for (Block block : childes) {
+            if (block == null) {
                 continue;
             }
-            if(skipReading(block, reader)){
+            if (skipReading(block, reader)) {
                 continue;
             }
             block.readBytes(reader);
@@ -54,9 +53,8 @@ public class FixedDexContainer extends FixedBlockContainer {
             return;
         }
         int length = childes.length;
-        for(int i = 0; i < length; i++){
-            Block block = childes[i];
-            if(block != null){
+        for (Block block : childes) {
+            if (block != null) {
                 block.readBytes(reader);
             }
         }

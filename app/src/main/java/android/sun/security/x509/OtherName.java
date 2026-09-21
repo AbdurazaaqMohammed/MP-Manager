@@ -207,8 +207,8 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
     public int hashCode() {
         if (myhash == -1) {
             myhash = 37 + oid.hashCode();
-            for (int i = 0; i < nameValue.length; i++) {
-                myhash = 37 * myhash + nameValue[i];
+            for (byte b : nameValue) {
+                myhash = 37 * myhash + b;
             }
         }
         return myhash;

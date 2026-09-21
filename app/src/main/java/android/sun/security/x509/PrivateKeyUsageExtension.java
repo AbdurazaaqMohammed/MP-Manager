@@ -143,31 +143,29 @@ implements CertAttrSet<String> {
         // NB. this is always encoded with the IMPLICIT tag
         // The checks only make sense if we assume implicit tagging,
         // with explicit tagging the form is always constructed.
-        for (int i = 0; i < seq.length; i++) {
-            android.sun.security.util.DerValue opt = seq[i];
-
+        for (DerValue opt : seq) {
             if (opt.isContextSpecific(TAG_BEFORE) &&
-                !opt.isConstructed()) {
+                    !opt.isConstructed()) {
                 if (notBefore != null) {
                     throw new CertificateParsingException(
-                        "Duplicate notBefore in PrivateKeyUsage.");
+                            "Duplicate notBefore in PrivateKeyUsage.");
                 }
-                opt.resetTag(android.sun.security.util.DerValue.tag_GeneralizedTime);
+                opt.resetTag(DerValue.tag_GeneralizedTime);
                 str = new android.sun.security.util.DerInputStream(opt.toByteArray());
                 notBefore = str.getGeneralizedTime();
 
             } else if (opt.isContextSpecific(TAG_AFTER) &&
-                       !opt.isConstructed()) {
+                    !opt.isConstructed()) {
                 if (notAfter != null) {
                     throw new CertificateParsingException(
-                        "Duplicate notAfter in PrivateKeyUsage.");
+                            "Duplicate notAfter in PrivateKeyUsage.");
                 }
-                opt.resetTag(android.sun.security.util.DerValue.tag_GeneralizedTime);
+                opt.resetTag(DerValue.tag_GeneralizedTime);
                 str = new android.sun.security.util.DerInputStream(opt.toByteArray());
                 notAfter = str.getGeneralizedTime();
             } else
                 throw new IOException("Invalid encoding of " +
-                                      "PrivateKeyUsageExtension");
+                        "PrivateKeyUsageExtension");
         }
     }
 

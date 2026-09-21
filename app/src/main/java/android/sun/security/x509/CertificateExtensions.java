@@ -82,8 +82,8 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
         android.sun.security.util.DerValue[] exts = in.getSequence(5);
 
-        for (int i = 0; i < exts.length; i++) {
-            android.sun.security.x509.Extension ext = new android.sun.security.x509.Extension(exts[i]);
+        for (android.sun.security.util.DerValue derValue : exts) {
+            Extension ext = new Extension(derValue);
             parseExtension(ext);
         }
     }
@@ -168,11 +168,11 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
         Collection<android.sun.security.x509.Extension> allExts = map.values();
         Object[] objs = allExts.toArray();
 
-        for (int i = 0; i < objs.length; i++) {
-            if (objs[i] instanceof android.sun.security.x509.CertAttrSet)
-                ((android.sun.security.x509.CertAttrSet)objs[i]).encode(extOut);
-            else if (objs[i] instanceof android.sun.security.x509.Extension)
-                ((android.sun.security.x509.Extension)objs[i]).encode(extOut);
+        for (Object obj : objs) {
+            if (obj instanceof CertAttrSet)
+                ((CertAttrSet) obj).encode(extOut);
+            else if (obj instanceof Extension)
+                ((Extension) obj).encode(extOut);
             else
                 throw new CertificateException("Illegal extension object");
         }
@@ -305,16 +305,16 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
         android.sun.security.x509.Extension otherExt, thisExt;
         String key = null;
-        for (int i = 0; i < len; i++) {
-            if (objs[i] instanceof android.sun.security.x509.CertAttrSet)
-                key = ((CertAttrSet)objs[i]).getName();
-            otherExt = (Extension)objs[i];
+        for (Object obj : objs) {
+            if (obj instanceof CertAttrSet)
+                key = ((CertAttrSet) obj).getName();
+            otherExt = (Extension) obj;
             if (key == null)
                 key = otherExt.getExtensionId().toString();
             thisExt = map.get(key);
             if (thisExt == null)
                 return false;
-            if (! thisExt.equals(otherExt))
+            if (!thisExt.equals(otherExt))
                 return false;
         }
         return this.getUnparseableExtensions().equals(

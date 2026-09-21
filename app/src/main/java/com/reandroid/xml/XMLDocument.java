@@ -125,9 +125,8 @@ public class XMLDocument extends XMLNodeTree implements Document<XMLElement> {
         if (declaration.isValid()) {
             appendable.append(declaration.toString());
         }
-        Iterator<XMLNode> iterator = iterator();
-        while (iterator.hasNext()) {
-            iterator.next().write(appendable, xml, escapeXmlText);
+        for (XMLNode xmlNode : this) {
+            xmlNode.write(appendable, xml, escapeXmlText);
         }
     }
     public static XMLDocument load(String text) throws XmlPullParserException, IOException {

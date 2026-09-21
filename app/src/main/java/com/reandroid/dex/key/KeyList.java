@@ -80,8 +80,8 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
     public boolean contains(Object item) {
         Key[] elements = this.elements;
         int length = elements.length;
-        for (int i = 0; i < length; i++) {
-            if (ObjectsUtil.equals(elements[i], item)) {
+        for (Key element : elements) {
+            if (ObjectsUtil.equals(element, item)) {
                 return true;
             }
         }
@@ -422,10 +422,9 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
         }
         int length = elements.length;
         int size = 0;
-        for (int i = 0; i < length; i ++) {
-            Key key = elements[i];
+        for (Key key : elements) {
             if (key != null) {
-                size ++;
+                size++;
             }
         }
         if (size == length) {
@@ -436,11 +435,10 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
         }
         Key[] results = new Key[size];
         int j = 0;
-        for (int i = 0; i < length; i ++) {
-            Key key = elements[i];
+        for (Key key : elements) {
             if (key != null) {
                 results[j] = key;
-                j ++;
+                j++;
             }
         }
         return results;

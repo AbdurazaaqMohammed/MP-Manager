@@ -93,9 +93,8 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
         }
         int result = 0;
         int max = childBlocks.length;
-        for(int i = 0; i < max; i++){
-            Block item = childBlocks[i];
-            if(item != null){
+        for (Block item : childBlocks) {
+            if (item != null) {
                 result += item.countBytes();
             }
         }
@@ -112,9 +111,8 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
         }
         byte[] results = null;
         int length = childBlocks.length;
-        for(int i = 0; i < length; i++){
-            Block item = childBlocks[i];
-            if(item != null){
+        for (Block item : childBlocks) {
+            if (item != null) {
                 results = addBytes(results, item.getBytes());
             }
         }
@@ -131,9 +129,8 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
         }
         int result = 0;
         int length = childBlocks.length;
-        for(int i = 0; i < length; i++){
-            Block item = childBlocks[i];
-            if(item != null){
+        for (Block item : childBlocks) {
+            if (item != null) {
                 result += item.writeBytes(stream);
             }
         }
@@ -150,12 +147,11 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
         if(skipReading(this, reader)){
             return;
         }
-        for(int i = 0; i < length; i++){
-            Block block = childBlocks[i];
+        for (Block block : childBlocks) {
             if (block == null) {
                 continue;
             }
-            if(skipReading(block, reader)){
+            if (skipReading(block, reader)) {
                 continue;
             }
             block.readBytes(reader);
@@ -167,9 +163,8 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
             return;
         }
         int length = childBlocks.length;
-        for (int i = 0; i < length; i++) {
-            Block block = childBlocks[i];
-            if(block != null) {
+        for (Block block : childBlocks) {
+            if (block != null) {
                 block.readBytes(reader);
             }
         }
@@ -206,12 +201,12 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
             return;
         }
         int max = childBlocks.length;
-        for(int i = 0; i < max; i++){
-            if(counter.FOUND){
+        for (Block childBlock : childBlocks) {
+            if (counter.FOUND) {
                 return;
             }
-            Block item = childBlocks[i];
-            if(item != null){
+            Block item = childBlock;
+            if (item != null) {
                 item.onCountUpTo(counter);
             }
         }
@@ -241,10 +236,9 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
             return;
         }
         int length = childBlocks.length;
-        for (int i = 0; i < length; i++) {
-            Block item = childBlocks[i];
-            if(item instanceof BlockRefresh){
-                ((BlockRefresh)item).refresh();
+        for (Block item : childBlocks) {
+            if (item instanceof BlockRefresh) {
+                ((BlockRefresh) item).refresh();
             }
         }
     }

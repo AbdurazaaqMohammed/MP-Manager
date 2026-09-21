@@ -163,8 +163,7 @@ public class SectionList extends FixedBlockContainer
     private void readBody(BlockReader reader, Predicate<SectionType<?>> filter) throws IOException {
         MapItem[] mapItemList = mapList.getBodyReaderSorted();
         int length = mapItemList.length;
-        for (int i = 0; i < length; i++) {
-            MapItem mapItem = mapItemList[i];
+        for (MapItem mapItem : mapItemList) {
             SectionType<SectionItem> sectionType = mapItem.getSectionType();
             if (filter == null || filter.evaluate(sectionType)) {
                 loadSection(mapItem, reader);

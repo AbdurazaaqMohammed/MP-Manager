@@ -63,8 +63,8 @@ public class PKCS10Attributes implements DerEncoder {
      * @param attrs the array of PKCS10Attribute objects.
      */
     public PKCS10Attributes(PKCS10Attribute[] attrs) {
-        for (int i = 0; i < attrs.length; i++) {
-            map.put(attrs[i].getAttributeId().toString(), attrs[i]);
+        for (PKCS10Attribute attr : attrs) {
+            map.put(attr.getAttributeId().toString(), attr);
         }
     }
 
@@ -80,8 +80,8 @@ public class PKCS10Attributes implements DerEncoder {
 
         if (attrs == null)
             throw new IOException("Illegal encoding of attributes");
-        for (int i = 0; i < attrs.length; i++) {
-            PKCS10Attribute attr = new PKCS10Attribute(attrs[i]);
+        for (DerValue derValue : attrs) {
+            PKCS10Attribute attr = new PKCS10Attribute(derValue);
             map.put(attr.getAttributeId().toString(), attr);
         }
     }
@@ -180,8 +180,8 @@ public class PKCS10Attributes implements DerEncoder {
             return false;
         PKCS10Attribute thisAttr, otherAttr;
         String key = null;
-        for (int i=0; i < len; i++) {
-            otherAttr = attrs[i];
+        for (PKCS10Attribute attr : attrs) {
+            otherAttr = attr;
             key = otherAttr.getAttributeId().toString();
 
             if (key == null)
@@ -189,7 +189,7 @@ public class PKCS10Attributes implements DerEncoder {
             thisAttr = map.get(key);
             if (thisAttr == null)
                 return false;
-            if (! thisAttr.equals(otherAttr))
+            if (!thisAttr.equals(otherAttr))
                 return false;
         }
         return true;

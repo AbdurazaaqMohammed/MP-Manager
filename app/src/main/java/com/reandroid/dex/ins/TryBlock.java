@@ -441,9 +441,8 @@ public class TryBlock extends FixedDexContainerWithTool implements
 
     @Override
     public boolean uses(Key key) {
-        Iterator<TryItem> iterator = iterator();
-        while (iterator.hasNext()) {
-            if (iterator.next().uses(key)) {
+        for (TryItem instructionLabels : this) {
+            if (instructionLabels.uses(key)) {
                 return true;
             }
         }

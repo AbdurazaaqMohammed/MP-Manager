@@ -176,24 +176,23 @@ public class StringValueNameGenerator {
         String[] allPaths=dom.split("/");
         int max=allPaths.length;
         boolean appendOnce=false;
-        for(int i=0;i<max;i++){
-            String sub=allPaths[i];
-            if(!isAToZName(sub)){
+        for (String sub : allPaths) {
+            if (!isAToZName(sub)) {
                 continue;
             }
-            int subLen=sub.length();
-            if(len+subLen>MAX_NAME_LEN){
-                if(!appendOnce){
+            int subLen = sub.length();
+            if (len + subLen > MAX_NAME_LEN) {
+                if (!appendOnce) {
                     continue;
                 }
                 break;
             }
-            if(appendOnce){
+            if (appendOnce) {
                 builder.append('_');
             }
             builder.append(sub);
-            appendOnce=true;
-            len=len+subLen;
+            appendOnce = true;
+            len = len + subLen;
         }
         if(!appendOnce){
             return null;

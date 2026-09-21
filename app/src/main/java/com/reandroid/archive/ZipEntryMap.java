@@ -78,8 +78,7 @@ public class ZipEntryMap implements Comparator<InputSource>, Iterable<InputSourc
         InputSource[] sources = toArray();
         int length = sources.length;
         LinkedHashMap<String, InputSource> map = new LinkedHashMap<>(length);
-        for(int i = 0; i < length; i++){
-            InputSource inputSource = sources[i];
+        for (InputSource inputSource : sources) {
             map.put(inputSource.getAlias(), inputSource);
         }
         return map;
@@ -192,9 +191,8 @@ public class ZipEntryMap implements Comparator<InputSource>, Iterable<InputSourc
             int length = sources.length;
             LinkedHashMap<String, InputSource> map = this.mSourceMap;
             boolean added = false;
-            for(int i = 0; i < length; i++){
-                InputSource inputSource = sources[i];
-                if(inputSource == null){
+            for (InputSource inputSource : sources) {
+                if (inputSource == null) {
                     continue;
                 }
                 String name = inputSource.getName();
@@ -202,7 +200,7 @@ public class ZipEntryMap implements Comparator<InputSource>, Iterable<InputSourc
                 name = inputSource.getAlias();
                 map.remove(name);
                 map.put(name, inputSource);
-                if(!added){
+                if (!added) {
                     onChanged(true);
                 }
                 added = true;
@@ -252,8 +250,7 @@ public class ZipEntryMap implements Comparator<InputSource>, Iterable<InputSourc
         InputSource[] sources = toArray();
         int length = sources.length;
 
-        for(int i = 0; i < length; i++){
-            InputSource inputSource = sources[i];
+        for (InputSource inputSource : sources) {
             inputSource.setSort(-1);
         }
 

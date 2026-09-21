@@ -213,8 +213,8 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
         if (badCerts != null) {
             X500Principal crlIssuer = getIssuerX500Principal();
             X500Principal badCertIssuer = crlIssuer;
-            for (int i = 0; i < badCerts.length; i++) {
-                android.sun.security.x509.X509CRLEntryImpl badCert = (android.sun.security.x509.X509CRLEntryImpl)badCerts[i];
+            for (X509CRLEntry cert : badCerts) {
+                X509CRLEntryImpl badCert = (X509CRLEntryImpl) cert;
                 try {
                     badCertIssuer = getCertIssuer(badCert, badCertIssuer);
                 } catch (IOException ioe) {
@@ -222,7 +222,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
                 }
                 badCert.setCertificateIssuer(crlIssuer, badCertIssuer);
                 X509IssuerSerial issuerSerial = new X509IssuerSerial
-                    (badCertIssuer, badCert.getSerialNumber());
+                        (badCertIssuer, badCert.getSerialNumber());
                 this.revokedCerts.put(issuerSerial, badCert);
                 if (badCert.hasExtensions()) {
                     this.version = 1;
@@ -1096,12 +1096,12 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
 
             X500Principal crlIssuer = getIssuerX500Principal();
             X500Principal badCertIssuer = crlIssuer;
-            for (int i = 0; i < badCerts.length; i++) {
-                android.sun.security.x509.X509CRLEntryImpl entry = new android.sun.security.x509.X509CRLEntryImpl(badCerts[i]);
+            for (DerValue badCert : badCerts) {
+                X509CRLEntryImpl entry = new X509CRLEntryImpl(badCert);
                 badCertIssuer = getCertIssuer(entry, badCertIssuer);
                 entry.setCertificateIssuer(crlIssuer, badCertIssuer);
                 X509IssuerSerial issuerSerial = new X509IssuerSerial
-                    (badCertIssuer, entry.getSerialNumber());
+                        (badCertIssuer, entry.getSerialNumber());
                 revokedCerts.put(issuerSerial, entry);
             }
         }

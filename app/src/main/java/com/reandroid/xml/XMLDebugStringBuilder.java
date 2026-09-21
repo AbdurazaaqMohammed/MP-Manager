@@ -84,9 +84,7 @@ public class XMLDebugStringBuilder {
         }
         boolean hasChildes = false;
         boolean allText = false;
-        Iterator<XMLNode> iterator = element.iterator();
-        while (iterator.hasNext()) {
-            XMLNode node = iterator.next();
+        for (XMLNode node : element) {
             if (!hasChildes) {
                 builder.append('>');
                 hasChildes = true;

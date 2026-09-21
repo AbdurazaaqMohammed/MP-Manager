@@ -437,9 +437,7 @@ public class XMLElement extends XMLNodeTree implements Element<XMLNode> {
     public String getTextContent(boolean escapeXmlText) {
         StringWriter writer = new StringWriter();
         try {
-            Iterator<XMLNode> iterator = iterator();
-            while (iterator.hasNext()) {
-                XMLNode child = iterator.next();
+            for (XMLNode child : this) {
                 child.write(writer, true, escapeXmlText);
             }
             writer.flush();
@@ -574,12 +572,11 @@ public class XMLElement extends XMLNodeTree implements Element<XMLNode> {
         appendable.append(getName());
         appendAttributes(appendable, xml, escapeXmlText);
         boolean haveChildes = false;
-        Iterator<XMLNode> iterator = iterator();
-        while (iterator.hasNext()) {
+        for (XMLNode xmlNode : this) {
             if (!haveChildes) {
                 appendable.append(">");
             }
-            XMLNode child = iterator.next();
+            XMLNode child = xmlNode;
             child.write(appendable, xml, escapeXmlText);
             haveChildes = true;
         }

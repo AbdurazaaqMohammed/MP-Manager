@@ -454,8 +454,8 @@ public class X509Key implements PublicKey {
         try {
             byte[] b1 = getEncodedInternal();
             int r = b1.length;
-            for (int i = 0; i < b1.length; i++) {
-                r += (b1[i] & 0xff) * 37;
+            for (byte b : b1) {
+                r += (b & 0xff) * 37;
             }
             return r;
         } catch (InvalidKeyException e) {

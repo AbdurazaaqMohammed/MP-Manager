@@ -29,9 +29,9 @@ public class JSONObject extends JSONItem {
 
     public JSONObject(JSONObject jo, String ... names) {
         this(names.length);
-        for (int i = 0; i < names.length; i += 1) {
+        for (String name : names) {
             try {
-                this.putOnce(names[i], jo.opt(names[i]));
+                this.putOnce(name, jo.opt(name));
             } catch (Exception ignore) {
             }
         }

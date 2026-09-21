@@ -322,9 +322,9 @@ public class ApkSigningBlockUtilsLite {
     public static String toHex(byte[] value) {
         StringBuilder sb = new StringBuilder(value.length * 2);
         int len = value.length;
-        for (int i = 0; i < len; i++) {
-            int hi = (value[i] & 0xff) >>> 4;
-            int lo = value[i] & 0x0f;
+        for (byte b : value) {
+            int hi = (b & 0xff) >>> 4;
+            int lo = b & 0x0f;
             sb.append(HEX_DIGITS[hi]).append(HEX_DIGITS[lo]);
         }
         return sb.toString();

@@ -347,8 +347,8 @@ public class ApkSigningBlockUtils {
                 int chunkSize =
                         (int) Math.min(inputRemaining, CONTENT_DIGESTED_CHUNK_MAX_SIZE_BYTES);
                 setUnsignedInt32LittleEndian(chunkSize, chunkContentPrefix, 1);
-                for (int i = 0; i < mds.length; i++) {
-                    mds[i].update(chunkContentPrefix);
+                for (MessageDigest messageDigest : mds) {
+                    messageDigest.update(chunkContentPrefix);
                 }
                 try {
                     input.feed(inputOffset, chunkSize, mdSink);

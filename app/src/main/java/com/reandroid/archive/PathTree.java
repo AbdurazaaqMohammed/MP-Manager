@@ -234,8 +234,8 @@ public class PathTree<T> implements Comparable<PathTree<?>>, Iterable<PathTree<T
     public String getPath(){
         StringBuilder builder = new StringBuilder();
         PathTree<?>[] elements = getParentElements();
-        for(int i = 0; i < elements.length; i++){
-            builder.append(elements[i].getName());
+        for (PathTree<?> element : elements) {
+            builder.append(element.getName());
         }
         return builder.toString();
     }

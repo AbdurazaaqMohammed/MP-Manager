@@ -118,9 +118,9 @@ public class PolicyFlag {
         }
         PolicyFlag[] results = new PolicyFlag[count];
         int j = 0;
-        for (int i = 0; i < tmp.length; i++) {
-            if (tmp[i] != null) {
-                results[j] = tmp[i];
+        for (PolicyFlag policyFlag : tmp) {
+            if (policyFlag != null) {
+                results[j] = policyFlag;
                 j++;
             }
         }
@@ -242,9 +242,9 @@ public class PolicyFlag {
         }
         PolicyFlag[] results = new PolicyFlag[count];
         int j = 0;
-        for (int i = 0; i < tmp.length; i++) {
-            if (tmp[i] != null) {
-                results[j] = tmp[i];
+        for (PolicyFlag policyFlag : tmp) {
+            if (policyFlag != null) {
+                results[j] = policyFlag;
                 j++;
             }
         }

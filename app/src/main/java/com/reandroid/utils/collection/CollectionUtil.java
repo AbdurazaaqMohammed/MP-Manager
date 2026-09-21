@@ -49,8 +49,8 @@ public class CollectionUtil {
         }
         int length = elements.length;
         HashSet<T> results = new HashSet<>(length);
-        for (int i = 0; i < length; i ++) {
-            results.add(elements[i]);
+        for (T element : elements) {
+            results.add(element);
         }
         return results;
     }

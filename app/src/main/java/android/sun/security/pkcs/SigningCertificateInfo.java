@@ -94,8 +94,8 @@ public class SigningCertificateInfo {
     public String toString() {
         StringBuffer buffer = new StringBuffer();
         buffer.append("[\n");
-        for (int i = 0; i < certId.length; i++) {
-            buffer.append(certId[i].toString());
+        for (ESSCertId essCertId : certId) {
+            buffer.append(essCertId.toString());
         }
         // format policies as a string
         buffer.append("\n]");

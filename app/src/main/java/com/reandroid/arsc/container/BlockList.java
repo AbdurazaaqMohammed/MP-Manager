@@ -435,14 +435,13 @@ public class BlockList<T extends Block> extends Block implements BlockRefresh, S
         }
         unlockList();
         mItems.addAll(index, items);
-        for (int i = 0; i < length; i++) {
-            T item = items[i];
+        for (T item : items) {
             if (item == null) {
                 continue;
             }
             item.setIndex(index);
             item.setParent(this);
-            index ++;
+            index++;
         }
         updateIndex(index);
         onChanged();

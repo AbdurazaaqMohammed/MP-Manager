@@ -1846,9 +1846,9 @@ public class ApkToolsHandler {
         int[] xEdges = new int[]{nl, nl + vw, nl + vw / 2};
         int bestDx = 0;
         boolean foundX = false;
-        for (int e = 0; e < xEdges.length; e++) {
+        for (int xEdge : xEdges) {
             for (int gx : xs) {
-                int d = gx - xEdges[e];
+                int d = gx - xEdge;
                 if (Math.abs(d) <= thresh && (!foundX || Math.abs(d) < Math.abs(bestDx))) {
                     bestDx = d;
                     foundX = true;
