@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,7 +211,7 @@ public class ApkSigningBlockUtilsLite {
                 new ArrayList<>(bestSigAlgorithmOnSdkVersion.values());
         Collections.sort(
                 signaturesToVerify,
-                (sig1, sig2) -> Integer.compare(sig1.algorithm.getId(), sig2.algorithm.getId()));
+                Comparator.comparingInt(sig -> sig.algorithm.getId()));
         return signaturesToVerify;
     }
 

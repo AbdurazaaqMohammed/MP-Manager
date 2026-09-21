@@ -37,6 +37,7 @@ import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +87,7 @@ public abstract class V2SourceStampSigner {
                 signatureSchemeDigestInfos,
                 sourceStampSignerConfig,
                 signatureSchemeDigests);
-        Collections.sort(signatureSchemeDigests, (o1, o2) -> o1.getFirst().compareTo(o2.getFirst()));
+        Collections.sort(signatureSchemeDigests, Comparator.comparing(Pair::getFirst));
 
         SourceStampBlock sourceStampBlock = new SourceStampBlock();
 
@@ -148,7 +149,7 @@ public abstract class V2SourceStampSigner {
         for (Map.Entry<ContentDigestAlgorithm, byte[]> digest : digestInfo.entrySet()) {
             digests.add(Pair.of(digest.getKey().getId(), digest.getValue()));
         }
-        Collections.sort(digests, (o1, o2) -> o1.getFirst().compareTo(o2.getFirst()));
+        Collections.sort(digests, Comparator.comparing(Pair::getFirst));
 
         // FORMAT:
         // * length-prefixed sequence of length-prefixed digests:

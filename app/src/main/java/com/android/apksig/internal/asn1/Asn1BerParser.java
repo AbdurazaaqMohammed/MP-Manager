@@ -33,6 +33,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -207,7 +208,7 @@ public final class Asn1BerParser {
             boolean isUnencodedContainer) throws Asn1DecodingException {
         List<AnnotatedField> fields = getAnnotatedFields(containerClass);
         Collections.sort(
-                fields, (f1, f2) -> f1.getAnnotation().index() - f2.getAnnotation().index());
+                fields, Comparator.comparingInt(f -> f.getAnnotation().index()));
         // Check that there are no fields with the same index
         if (fields.size() > 1) {
             AnnotatedField lastField = null;

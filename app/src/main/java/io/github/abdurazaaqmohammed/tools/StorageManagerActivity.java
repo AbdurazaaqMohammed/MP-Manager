@@ -48,6 +48,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -544,7 +545,7 @@ public class StorageManagerActivity extends AppCompatActivity {
             Map<String, Long> buckets = new HashMap<>();
             String[] names = new String[]{"Images", "Videos", "Audio", "Documents", "Archives", "APKs", "Other"};
             for (String n : names) buckets.put(n, 0L);
-            PriorityQueue<FileRow> top = new PriorityQueue<>(40, (a, b) -> Long.compare(a.size, b.size));
+            PriorityQueue<FileRow> top = new PriorityQueue<>(40, Comparator.comparingLong(a -> a.size));
             long totalFiles = 0;
             try {
                 File rootDir = Environment.getExternalStorageDirectory();
