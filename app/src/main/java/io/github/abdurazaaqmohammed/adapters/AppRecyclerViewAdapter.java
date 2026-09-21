@@ -58,7 +58,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         return new ViewHolder(v);
     }
 
-    public HashSet<Integer> selectedItems = new HashSet<>();
+    public final HashSet<Integer> selectedItems = new HashSet<>();
 
     public void toggleSelection(int position) {
         if (selectedItems.contains(position)) selectedItems.remove(position);

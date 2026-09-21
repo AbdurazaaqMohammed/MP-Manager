@@ -52,8 +52,8 @@ public class EditorPositionManager {
     private final Gson gson = new Gson();
 
     public static class Position {
-        public int lineno;
-        public int column;
+        public final int lineno;
+        public final int column;
 
         public Position(int lineno, int column) {
             this.lineno = lineno;

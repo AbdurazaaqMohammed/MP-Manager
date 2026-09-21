@@ -99,7 +99,7 @@ public class TryListBuilder<EH extends ExceptionHandler>
         public MutableTryBlock<EH> prev = null;
         public MutableTryBlock<EH> next = null;
 
-        public int startCodeAddress;
+        public final int startCodeAddress;
         public int endCodeAddress;
         @Nonnull public List<EH> exceptionHandlers = Lists.newArrayList();
 

@@ -88,7 +88,7 @@ public interface DiagnosticMessage {
         VERBOSE("V"),
         DEBUG("D");
 
-        String simpleName;
+        final String simpleName;
 
         Type(String simpleName) {
             this.simpleName = simpleName;

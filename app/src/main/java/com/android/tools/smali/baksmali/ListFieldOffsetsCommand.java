@@ -56,7 +56,7 @@ public class ListFieldOffsetsCommand extends DexInputCommand {
     private boolean help;
 
     @ParametersDelegate
-    private AnalysisArguments analysisArguments = new AnalysisArguments();
+    private final AnalysisArguments analysisArguments = new AnalysisArguments();
 
     public ListFieldOffsetsCommand(@Nonnull List<JCommander> commandAncestors) {
         super(commandAncestors);

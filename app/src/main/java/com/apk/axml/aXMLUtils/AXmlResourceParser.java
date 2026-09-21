@@ -197,9 +197,9 @@ public class AXmlResourceParser implements XmlResourceParser, AutoCloseable {
 	}
 
 	public static final class OldXMLToken {
-		public String name;
-		public String namespace;
-		public int type;
+		public final String name;
+		public final String namespace;
+		public final int type;
 
 		public OldXMLToken(String name, String namespace, int type) {
 			this.name = name;

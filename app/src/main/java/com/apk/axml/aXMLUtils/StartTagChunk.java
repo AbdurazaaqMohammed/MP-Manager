@@ -10,16 +10,16 @@ import java.util.Stack;
 
 public class StartTagChunk extends Chunk<StartTagChunk.H> {
 
-    String name;
-    String prefix;
-    String namespace;
-    short attrStart = 20;
-    short attrSize = 20;
+    final String name;
+    final String prefix;
+    final String namespace;
+    final short attrStart = 20;
+    final short attrSize = 20;
     short idIndex = 0;
     short styleIndex = 0;
     short classIndex = 0;
-    LinkedList<AttrChunk> attrs = new LinkedList<>();
-    List<StartNameSpaceChunk> startNameSpace = new Stack<>();
+    final LinkedList<AttrChunk> attrs = new LinkedList<>();
+    final List<StartNameSpaceChunk> startNameSpace = new Stack<>();
 
     public class H extends Chunk.NodeHeader {
 

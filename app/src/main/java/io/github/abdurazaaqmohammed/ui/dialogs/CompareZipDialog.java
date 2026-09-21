@@ -29,9 +29,9 @@ public class CompareZipDialog {
     private final File zip2;
 
     private static class DiffItem {
-        String text;
-        String fileName;
-        String status;
+        final String text;
+        final String fileName;
+        final String status;
 
         DiffItem(String text, String fileName, String status) {
             this.text = text;

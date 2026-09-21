@@ -1070,7 +1070,7 @@ public class ApkToolsHandler {
         MaterialButton bg2Btn;
         MaterialButton borderColorBtn;
         LinearLayout animColorsRow;
-        java.util.ArrayList<Integer> animColors = new java.util.ArrayList<>(
+        final java.util.ArrayList<Integer> animColors = new java.util.ArrayList<>(
                 java.util.Arrays.asList(-16776961, -65536));
         Runnable renderAnimChips;
         MaterialButton titleColorBtn;

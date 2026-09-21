@@ -13,9 +13,9 @@ public class ProfileManager {
     private static final String PROFILES_KEY = "profiles";
     private static final String DEFAULT_SERVER_PROFILE = "Default Server";
     private static final String DEFAULT_CLIENT_PROFILE = "Default Client";
-    private SharedPreferences prefs;
+    private final SharedPreferences prefs;
     private List<FtpProfile> profiles;
-    private Gson gson;
+    private final Gson gson;
 
     public ProfileManager(Context context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

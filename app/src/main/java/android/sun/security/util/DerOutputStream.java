@@ -357,13 +357,13 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      *  Lexicographical order comparison on byte arrays, for ordering
      *  elements of a SET OF objects in DER encoding.
      */
-    private static android.sun.security.util.ByteArrayLexOrder lexOrder = new ByteArrayLexOrder();
+    private static final android.sun.security.util.ByteArrayLexOrder lexOrder = new ByteArrayLexOrder();
 
     /**
      *  Tag order comparison on byte arrays, for ordering elements of
      *  SET objects in DER encoding.
      */
-    private static android.sun.security.util.ByteArrayTagOrder tagOrder = new ByteArrayTagOrder();
+    private static final android.sun.security.util.ByteArrayTagOrder tagOrder = new ByteArrayTagOrder();
 
     /**
      * Marshals a the contents of a set on the output stream with the

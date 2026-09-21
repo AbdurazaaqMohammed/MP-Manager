@@ -14,9 +14,9 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileViewHolder> {
-    private List<FtpProfile> profiles;
-    private OnProfileClickListener listener;
-    private Runnable onAddClick;
+    private final List<FtpProfile> profiles;
+    private final OnProfileClickListener listener;
+    private final Runnable onAddClick;
 
     public interface OnProfileClickListener {
         void onProfileClick(FtpProfile profile);
@@ -54,8 +54,8 @@ public class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileV
     }
 
     static class ProfileViewHolder extends RecyclerView.ViewHolder {
-        TextView name;
-        TextView details;
+        final TextView name;
+        final TextView details;
 
         public ProfileViewHolder(@NonNull View itemView) {
             super(itemView);

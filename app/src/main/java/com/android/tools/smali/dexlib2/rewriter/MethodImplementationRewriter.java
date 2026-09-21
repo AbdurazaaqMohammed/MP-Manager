@@ -51,7 +51,7 @@ public class MethodImplementationRewriter implements Rewriter<MethodImplementati
     }
 
     protected class RewrittenMethodImplementation implements MethodImplementation {
-        @Nonnull protected MethodImplementation methodImplementation;
+        @Nonnull protected final MethodImplementation methodImplementation;
 
         public RewrittenMethodImplementation(@Nonnull MethodImplementation methodImplementation) {
             this.methodImplementation = methodImplementation;

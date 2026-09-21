@@ -15,10 +15,10 @@ public final class EZFtpFile implements Parcelable {
     public static final int TYPE_DIRECTORY = 1;
     public static final int TYPE_LINK = 2;
 
-    private String name;
-    private String remotePath;
-    private int type;
-    private long size;
+    private final String name;
+    private final String remotePath;
+    private final int type;
+    private final long size;
     private Date modifiedDate = null;
 
 

@@ -32,7 +32,7 @@ import org.antlr.runtime.IntStream;
 import org.antlr.runtime.RecognitionException;
 
 public class OdexedInstructionException extends RecognitionException {
-    private String odexedInstruction;
+    private final String odexedInstruction;
 
     OdexedInstructionException(IntStream input, String odexedInstruction) {
         super(input);

@@ -42,7 +42,7 @@ import javax.annotation.Nonnull;
 
 public class DexBackedInstruction20bc extends DexBackedInstruction implements Instruction20bc , UpdateReference{
 	private Reference reference = null;
-    private int referenceType = -1;
+    private final int referenceType = -1;
 
 
     public DexBackedInstruction20bc(@Nonnull DexBackedDexFile dexFile,

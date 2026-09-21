@@ -23,7 +23,7 @@ import java.io.IOException;
 
 public class NullValueKey implements Key {
 
-    public static NullValueKey INSTANCE = new NullValueKey();
+    public static final NullValueKey INSTANCE = new NullValueKey();
 
     private NullValueKey() {
     }

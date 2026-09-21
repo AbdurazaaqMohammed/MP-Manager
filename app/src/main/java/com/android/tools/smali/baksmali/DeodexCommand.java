@@ -53,7 +53,7 @@ import java.util.List;
 public class DeodexCommand extends DisassembleCommand {
 
     @ParametersDelegate
-    protected CheckPackagePrivateArgument checkPackagePrivateArgument = new CheckPackagePrivateArgument();
+    protected final CheckPackagePrivateArgument checkPackagePrivateArgument = new CheckPackagePrivateArgument();
 
     @Parameter(names = {"--inline-table", "--inline", "--it"},
             description = "Specify a file containing a custom inline method table to use. See the " +

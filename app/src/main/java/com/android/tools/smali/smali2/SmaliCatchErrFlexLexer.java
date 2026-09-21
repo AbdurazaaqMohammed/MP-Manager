@@ -49,8 +49,8 @@ Re-modification done by @developer-krushna
 */
 public class SmaliCatchErrFlexLexer extends smaliFlexLexer {
 
-    private StringBuilder errors = new StringBuilder();
-    private List<SyntaxError> syntaxErrors = new ArrayList<>();
+    private final StringBuilder errors = new StringBuilder();
+    private final List<SyntaxError> syntaxErrors = new ArrayList<>();
 
     public SmaliCatchErrFlexLexer(Reader reader, int apiLevel) {
         super(reader, apiLevel);

@@ -65,19 +65,19 @@ public class AnnotatedBytes {
      * is the exclusive end point. The range annotation for a range is associated with the first key for that range.
      * The point annotations for a point are associated with the key at that point.
      */
-    @Nonnull private TreeMap<Integer, AnnotationEndpoint> annotatations = Maps.newTreeMap();
+    @Nonnull private final TreeMap<Integer, AnnotationEndpoint> annotatations = Maps.newTreeMap();
 
     private int cursor;
     private int indentLevel;
 
     /** &gt;= 40 (if used); the desired maximum output width */
-    private int outputWidth;
+    private final int outputWidth;
 
     /**
      * &gt;= 8 (if used); the number of bytes of hex output to use
      * in annotations
      */
-    private int hexCols = 8;
+    private final int hexCols = 8;
 
     private int startLimit = -1;
     private int endLimit = -1;

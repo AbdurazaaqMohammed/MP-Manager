@@ -55,7 +55,7 @@ public class ClassDefRewriter implements Rewriter<ClassDef> {
     }
 
     protected class RewrittenClassDef extends BaseTypeReference implements ClassDef {
-        @Nonnull protected ClassDef classDef;
+        @Nonnull protected final ClassDef classDef;
 
         public RewrittenClassDef(@Nonnull ClassDef classdef) {
             this.classDef = classdef;

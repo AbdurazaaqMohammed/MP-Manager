@@ -217,7 +217,7 @@ public class SourceStampCertificateLineage {
          * the algorithm used by this node to bless the next node's data.  Its ID value is part
          * of the signed data of the next node. {@code null} for the last node.
          */
-        public SignatureAlgorithm sigAlgorithm;
+        public final SignatureAlgorithm sigAlgorithm;
 
         /**
          * signature over the signed data (above).  The signature is from this node's parent
@@ -229,6 +229,6 @@ public class SourceStampCertificateLineage {
         /**
          * the flags detailing how the platform should treat this signing cert
          */
-        public int flags;
+        public final int flags;
     }
 }

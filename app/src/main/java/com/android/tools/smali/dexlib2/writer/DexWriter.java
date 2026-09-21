@@ -257,7 +257,7 @@ public abstract class DexWriter<
     protected abstract void writeEncodedValue(@Nonnull InternalEncodedValueWriter writer,
                                               @Nonnull EncodedValue encodedValue) throws IOException;
 
-    private Comparator<Map.Entry<? extends CallSiteKey, Integer>> callSiteComparator =
+    private final Comparator<Map.Entry<? extends CallSiteKey, Integer>> callSiteComparator =
             new Comparator<Entry<? extends CallSiteKey, Integer>>() {
                 @Override
                 public int compare(Entry<? extends CallSiteKey, Integer> o1, Entry<? extends CallSiteKey, Integer> o2) {
@@ -267,7 +267,7 @@ public abstract class DexWriter<
                 }
             };
 
-    private static Comparator<Map.Entry> toStringKeyComparator =
+    private static final Comparator<Map.Entry> toStringKeyComparator =
             new Comparator<Map.Entry>() {
                 @Override public int compare(Entry o1, Entry o2) {
                     return o1.getKey().toString().compareTo(o2.getKey().toString());
@@ -1036,8 +1036,9 @@ public abstract class DexWriter<
     }
 
     private static class CodeItemOffset<MethodKey> {
-        @Nonnull MethodKey method;
-        int codeOffset;
+        @Nonnull
+        final MethodKey method;
+        final int codeOffset;
 
         private CodeItemOffset(@Nonnull MethodKey method, int codeOffset) {
             this.codeOffset = codeOffset;

@@ -10,8 +10,8 @@ import com.lilincpp.github.libezftp.callback.OnEZFtpDataTransferCallback;
  */
 final class EZFtpTransferCallbackWrapper implements OnEZFtpDataTransferCallback {
 
-    private OnEZFtpDataTransferCallback callback;
-    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final OnEZFtpDataTransferCallback callback;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Object lock = new Object();
 
     public EZFtpTransferCallbackWrapper(OnEZFtpDataTransferCallback callback) {

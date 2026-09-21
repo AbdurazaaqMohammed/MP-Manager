@@ -39,7 +39,7 @@ public class ManifestParser {
 
     private final byte[] mManifest;
     private int mOffset;
-    private int mEndOffset;
+    private final int mEndOffset;
 
     private byte[] mBufferedLine;
 

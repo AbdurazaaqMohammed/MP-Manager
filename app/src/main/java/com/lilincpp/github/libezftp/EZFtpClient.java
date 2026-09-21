@@ -17,7 +17,7 @@ public final class EZFtpClient implements IEZFtpClient {
 
     private static final String TAG = "EZFtpClient";
 
-    private IEZFtpClient ftpClientIml;
+    private final IEZFtpClient ftpClientIml;
 
     public EZFtpClient() {
         ftpClientIml = new EZFtpClientImpl();

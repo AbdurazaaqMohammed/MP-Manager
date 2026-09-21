@@ -208,11 +208,11 @@ public class LocaleData {
     public static final char[] ENGLISH_CHARS = {'e', 'n'};
     public static final char[] LATIN_CHARS = {'L', 'a', 't', 'n'};
 
-    public static int SCRIPT_LENGTH = 4;
+    public static final int SCRIPT_LENGTH = 4;
 
-    public static int US_SPANISH = 0x65735553; // es-US
-    public static int MEXICAN_SPANISH = 0x65734D58; // es-MX
-    public static int LATIN_AMERICAN_SPANISH = 0x6573A424; // es-419
+    public static final int US_SPANISH = 0x65735553; // es-US
+    public static final int MEXICAN_SPANISH = 0x65734D58; // es-MX
+    public static final int LATIN_AMERICAN_SPANISH = 0x6573A424; // es-419
 
     static final int SCRIPT_PARENTS_COUNT = LocaleDataTables.SCRIPT_PARENTS.length;
     static final int PACKED_ROOT = 0; // to represent the root locale

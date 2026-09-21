@@ -55,13 +55,13 @@ public abstract class DexInputCommand extends Command {
     @Parameter(names = {"-a", "--api"},
             description = "The numeric api level of the file being disassembled.")
     @ExtendedParameter(argumentNames = "api")
-    public int apiLevel = -1;
+    public final int apiLevel = -1;
 
     @Parameter(description = "A dex/apk/oat/odex file. For apk or oat files that contain multiple dex " +
             "files, you can specify the specific entry to use as if the apk/oat file was a directory. " +
             "e.g. \"app.apk/classes2.dex\". For more information, see \"baksmali help input\".")
     @ExtendedParameter(argumentNames = "file")
-    protected List<String> inputList = Lists.newArrayList();
+    protected final List<String> inputList = Lists.newArrayList();
 
     protected File inputFile;
     protected String inputEntry;

@@ -6,7 +6,7 @@ public class FtpProfile {
     private int port;
     private String username;
     private String password;
-    private boolean isServerProfile;
+    private final boolean isServerProfile;
     private int securityType;
 
     public FtpProfile(String name, String ip, int port, String username, String password, boolean isServerProfile) {

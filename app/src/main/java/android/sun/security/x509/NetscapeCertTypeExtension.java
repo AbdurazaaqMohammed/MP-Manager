@@ -87,8 +87,8 @@ implements CertAttrSet<String> {
     private boolean[] bitString;
 
     private static class MapEntry {
-        String mName;
-        int mPosition;
+        final String mName;
+        final int mPosition;
 
         MapEntry(String name, int position) {
             mName = name;
@@ -96,7 +96,7 @@ implements CertAttrSet<String> {
         }
     }
 
-    private static MapEntry[] mMapData = {
+    private static final MapEntry[] mMapData = {
         new MapEntry(SSL_CLIENT, 0),
         new MapEntry(SSL_SERVER, 1),
         new MapEntry(S_MIME, 2),

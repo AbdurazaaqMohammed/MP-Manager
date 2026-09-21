@@ -49,7 +49,7 @@ import com.google.common.base.Supplier;
 
 public class ClassPath {
     @Nonnull private final TypeProto unknownClass;
-    @Nonnull private List<ClassProvider> classProviders;
+    @Nonnull private final List<ClassProvider> classProviders;
     private final boolean checkPackagePrivateAccess;
     public final int oatVersion;
 
@@ -132,7 +132,7 @@ public class ClassPath {
         return loadedClasses.get(type.toString());
     }
 
-    @Nonnull private LruCache<String, TypeProto> loadedClasses = new LruCache<String, TypeProto>(30000) {
+    @Nonnull private final LruCache<String, TypeProto> loadedClasses = new LruCache<String, TypeProto>(30000) {
         @Override protected TypeProto create(String key) {
             if (key.charAt(0) == '[') {
                 return new ArrayProto(ClassPath.this, key);

@@ -90,7 +90,7 @@ public class HeaderItem {
     public static final int CONTAINER_SIZE_OFFSET = 112;
     public static final int CONTAINER_OFF_OFFSET = 116;
 
-    @Nonnull private DexBackedDexFile dexFile;
+    @Nonnull private final DexBackedDexFile dexFile;
 
     public HeaderItem(@Nonnull DexBackedDexFile dexFile) {
         this.dexFile = dexFile;

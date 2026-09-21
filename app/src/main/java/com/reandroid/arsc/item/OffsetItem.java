@@ -28,8 +28,8 @@ import java.io.IOException;
 public abstract class OffsetItem extends BlockItem implements DirectStreamReader,
         Comparable<OffsetItem> {
 
-    public static int NO_ENTRY = ObjectsUtil.of(0xffffffff);
-    public static int NO_ENTRY16 = ObjectsUtil.of(0xffff);
+    public static final int NO_ENTRY = ObjectsUtil.of(0xffffffff);
+    public static final int NO_ENTRY16 = ObjectsUtil.of(0xffff);
 
     public static final Creator<OffsetItem> CREATOR_OFFSET16 = Helper.init16();
     public static final Creator<OffsetItem> CREATOR_OFFSET32 = Helper.init32();

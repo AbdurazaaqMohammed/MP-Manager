@@ -539,7 +539,7 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
         return new AbstractCollection<Entry<PoolClassDef, Integer>>() {
             @Nonnull @Override public Iterator<Entry<PoolClassDef, Integer>> iterator() {
                 return new Iterator<Entry<PoolClassDef, Integer>>() {
-                    Iterator<PoolClassDef> iter = internedItems.values().iterator();
+                    final Iterator<PoolClassDef> iter = internedItems.values().iterator();
 
                     @Override public boolean hasNext() {
                         return iter.hasNext();

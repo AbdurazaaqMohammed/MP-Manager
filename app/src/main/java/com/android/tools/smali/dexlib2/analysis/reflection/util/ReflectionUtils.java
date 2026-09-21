@@ -37,7 +37,7 @@ import java.util.HashMap;
 
 public class ReflectionUtils {
 
-    private static Map<String, String> primitiveMap;
+    private static final Map<String, String> primitiveMap;
     
     static {
         Map<String, String> temp = new HashMap<>();
@@ -53,7 +53,7 @@ public class ReflectionUtils {
             primitiveMap = unmodifiableMap(temp);
     }
 
-    private static Map<String, String> primitiveMapInverse = getInverse();
+    private static final Map<String, String> primitiveMapInverse = getInverse();
 
     private static Map<String, String> getInverse() {
         Map<String, String> temp = new HashMap<>();

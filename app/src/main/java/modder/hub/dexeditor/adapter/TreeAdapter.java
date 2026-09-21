@@ -1046,17 +1046,17 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView name;
-        TextView subtitle;
-        TextView smaliSymbol;
-        ImageView icon;
-        ImageView arrow;
-        CheckBox checkBox;
-        FrameLayout iconBackground;
-        LinearLayout itemContent;
-        View divider;
-        View indentSpacer;
-        Drawable defaultCheckBoxDrawable;
+        final TextView name;
+        final TextView subtitle;
+        final TextView smaliSymbol;
+        final ImageView icon;
+        final ImageView arrow;
+        final CheckBox checkBox;
+        final FrameLayout iconBackground;
+        final LinearLayout itemContent;
+        final View divider;
+        final View indentSpacer;
+        final Drawable defaultCheckBoxDrawable;
 
         // Cache last values to avoid redundant layout triggers
         int lastIndent = -1;

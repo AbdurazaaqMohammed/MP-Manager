@@ -42,11 +42,11 @@ Special thanks to @Timscriptov for enhancing and fixing some parts of the codes
 
 */
 public class Instruction {
-    public String ins;
-    public int lineNum;
-    public String type;
-    public List<Instruction> children = new ArrayList<>();
-    public List<Instruction> parents = new ArrayList<>();
+    public final String ins;
+    public final int lineNum;
+    public final String type;
+    public final List<Instruction> children = new ArrayList<>();
+    public final List<Instruction> parents = new ArrayList<>();
 
     public Instruction(String ins, int lineNum) {
         this.ins = ins;

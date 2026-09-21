@@ -47,7 +47,7 @@ public class FieldReferenceRewriter implements Rewriter<FieldReference> {
     }
 
     protected class RewrittenFieldReference extends BaseFieldReference {
-        @Nonnull protected FieldReference fieldReference;
+        @Nonnull protected final FieldReference fieldReference;
 
         public RewrittenFieldReference(@Nonnull FieldReference fieldReference) {
             this.fieldReference = fieldReference;

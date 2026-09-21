@@ -36,7 +36,7 @@ public class Options {
     public boolean force;
     public String type;
     @OptionArg(name = "-h", alternates = {"-help", "--help"}, description = "help_description", flag = true)
-    public boolean help = false;
+    public final boolean help = false;
 
     private boolean mValidated;
 

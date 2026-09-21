@@ -51,7 +51,7 @@ public class DexDataWriter extends BufferedOutputStream {
     private byte[] tempBuf = new byte[8];
 
     /** A buffer of 0s to use for writing alignment values */
-    private byte[] zeroBuf = new byte[3];
+    private final byte[] zeroBuf = new byte[3];
 
     /**
      * Construct a new DexWriter instance that writes to output.

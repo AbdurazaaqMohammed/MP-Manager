@@ -49,7 +49,7 @@ import android.sun.security.util.*;
  */
 public class PKCS10Attributes implements DerEncoder {
 
-    private Hashtable<String, PKCS10Attribute> map =
+    private final Hashtable<String, PKCS10Attribute> map =
                         new Hashtable<String, PKCS10Attribute>(3);
 
     /**

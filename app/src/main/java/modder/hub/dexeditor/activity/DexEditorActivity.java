@@ -136,7 +136,7 @@ public class DexEditorActivity extends AppCompatActivity {
     public static ClassTree classTree;
     public static boolean isChanged;
     public static boolean isSaved;
-    public static List<EditorTab> tabs = new ArrayList<>();
+    public static final List<EditorTab> tabs = new ArrayList<>();
     // Legacy static fields for SmaliMethodFieldListFragment state
     public static SmaliMethodFieldListFragment smaliMethodsFieldsStringsFragment = null;
     public static android.os.Parcelable methodRecyclerViewState = null;
@@ -152,7 +152,7 @@ public class DexEditorActivity extends AppCompatActivity {
     private final List<TreeNode> modifiedNodes = new ArrayList<>();
     // --- Member Fields ---
     public int dexVersion;
-    public List<TreeNode> searchNodes = new ArrayList<>();
+    public final List<TreeNode> searchNodes = new ArrayList<>();
     public String pendingSearchPath = null;
     public String pendingStringSearchQuery = null;
     public TabsAdapter tabsAdapter;
@@ -1712,13 +1712,13 @@ public class DexEditorActivity extends AppCompatActivity {
 
     public static class EditorTab {
         private static long idCounter = 1;
-        public long id;
-        public String className;
-        public String title;
-        public String subtitle;
+        public final long id;
+        public final String className;
+        public final String title;
+        public final String subtitle;
         public String content;
         public String originalContent;
-        public int type; // 0: Smali, 1: Java, 2: Graph
+        public final int type; // 0: Smali, 1: Java, 2: Graph
         public boolean isModified;
         public boolean isReadOnly;
 
@@ -2758,13 +2758,13 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         public static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView title;
-            TextView path;
-            ImageView icon;
-            View mainView;
-            View menuView;
-            ImageView menuClose;
-            ImageView menuLocate;
+            final TextView title;
+            final TextView path;
+            final ImageView icon;
+            final View mainView;
+            final View menuView;
+            final ImageView menuClose;
+            final ImageView menuLocate;
 
             public ViewHolder(View itemView) {
                 super(itemView);

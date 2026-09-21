@@ -97,7 +97,7 @@ public class BASE64Decoder extends CharacterDecoder {
         }
     }
 
-    byte[] decode_buffer = new byte[4];
+    final byte[] decode_buffer = new byte[4];
 
     /**
      * Decode one BASE64 atom into 1, 2, or 3 bytes of data.

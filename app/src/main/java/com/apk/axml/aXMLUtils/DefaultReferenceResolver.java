@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 public class DefaultReferenceResolver implements ReferenceResolver {
 
-    static Pattern pat = Pattern.compile("^[@?]\\+?(?:(\\w+):)?(?:(\\w+)/)?(\\w+)$");
+    static final Pattern pat = Pattern.compile("^[@?]\\+?(?:(\\w+):)?(?:(\\w+)/)?(\\w+)$");
 
     private final List<ResEntry> resourceEntries;
 

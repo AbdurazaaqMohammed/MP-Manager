@@ -132,7 +132,7 @@ class ObjectIdentifier implements Serializable
 
     static class HugeOidNotSupportedByOldJDK implements Serializable {
         private static final long serialVersionUID = 1L;
-        static HugeOidNotSupportedByOldJDK theOne = new HugeOidNotSupportedByOldJDK();
+        static final HugeOidNotSupportedByOldJDK theOne = new HugeOidNotSupportedByOldJDK();
     }
 
     /**

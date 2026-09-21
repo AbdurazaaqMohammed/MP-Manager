@@ -28,8 +28,8 @@ import java.util.List;
 public class aXMLEncoder {
 
     public static class Config {
-        public static StringPoolChunk.Encoding encoding = StringPoolChunk.Encoding.UNICODE;
-        public static int defaultReferenceRadix = 16;
+        public static final StringPoolChunk.Encoding encoding = StringPoolChunk.Encoding.UNICODE;
+        public static final int defaultReferenceRadix = 16;
     }
 
     public byte[] encodeString(List<XMLEntry> xmlEntries, Context context) throws XmlPullParserException, IOException {

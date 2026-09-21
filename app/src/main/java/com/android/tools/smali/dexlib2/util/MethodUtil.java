@@ -41,12 +41,12 @@ import java.util.Collection;
 import com.google.common.base.Predicate;
 
 public final class MethodUtil {
-    private static int directMask = AccessFlags.STATIC.getValue() | AccessFlags.PRIVATE.getValue() |
+    private static final int directMask = AccessFlags.STATIC.getValue() | AccessFlags.PRIVATE.getValue() |
             AccessFlags.CONSTRUCTOR.getValue();
 
-    public static Predicate<Method> METHOD_IS_DIRECT = input -> input != null && isDirect(input);
+    public static final Predicate<Method> METHOD_IS_DIRECT = input -> input != null && isDirect(input);
 
-    public static Predicate<Method> METHOD_IS_VIRTUAL = input -> input != null && !isDirect(input);
+    public static final Predicate<Method> METHOD_IS_VIRTUAL = input -> input != null && !isDirect(input);
 
     public static boolean isDirect(@Nonnull Method method) {
         return (method.getAccessFlags() & directMask) != 0;

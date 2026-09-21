@@ -86,8 +86,8 @@ public class HeaderAdapter extends RecyclerView.Adapter<HeaderAdapter.ViewHolder
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView title;
-        ImageView menu;
+        final TextView title;
+        final ImageView menu;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);

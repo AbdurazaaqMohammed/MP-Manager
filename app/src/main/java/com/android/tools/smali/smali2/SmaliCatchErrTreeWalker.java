@@ -47,8 +47,8 @@ Re-modification done by @developer-krushna
 */
 public class SmaliCatchErrTreeWalker extends smaliTreeWalker {
 	
-	private StringBuilder errors = new StringBuilder();
-	private List<SyntaxError> syntaxErrors = new ArrayList<>();
+	private final StringBuilder errors = new StringBuilder();
+	private final List<SyntaxError> syntaxErrors = new ArrayList<>();
 	
 	public SmaliCatchErrTreeWalker(CommonTreeNodeStream treeStream) {
 		super(treeStream);

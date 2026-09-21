@@ -45,7 +45,7 @@ Special thanks to @Timscriptov for enhancing and fixing some parts of the codes
 */
 public class ClassInSmali {
     public String className;
-    public Map<String, Method> methodDict = new HashMap<>();
+    public final Map<String, Method> methodDict = new HashMap<>();
 
     public ClassInSmali(String className) {
         this.className = className;

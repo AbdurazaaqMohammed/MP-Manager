@@ -56,21 +56,21 @@ public class AssembleCommand extends Command {
             description = "The number of threads to use. Defaults to the number of cores available.",
             validateWith = PositiveInteger.class)
     @ExtendedParameter(argumentNames = "n")
-    private int jobs = Runtime.getRuntime().availableProcessors();
+    private final int jobs = Runtime.getRuntime().availableProcessors();
 
     @Parameter(names = {"-a", "--api"},
             description = "The numeric api level to use while assembling.")
     @ExtendedParameter(argumentNames = "api")
-    private int apiLevel = 15;
+    private final int apiLevel = 15;
 
     @Parameter(names = {"-o", "--output"},
             description = "The name/path of the dex file to write.")
     @ExtendedParameter(argumentNames = "file")
-    private String output = "out.dex";
+    private final String output = "out.dex";
 
     @Parameter(names = "--verbose",
             description = "Generate verbose error messages.")
-    private boolean verbose = false;
+    private final boolean verbose = false;
 
     @Parameter(names = {"--allow-odex-opcodes", "--allow-odex", "--ao"},
             description = "Allows the odex opcodes that dalvik doesn't reject to be assembled.")

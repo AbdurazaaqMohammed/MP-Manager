@@ -725,8 +725,8 @@ public class ApkSigner {
     }
 
     private static class OutputSizeAndDataOffset {
-        public long outputBytes;
-        public long dataOffsetBytes;
+        public final long outputBytes;
+        public final long dataOffsetBytes;
 
         public OutputSizeAndDataOffset(long outputBytes, long dataOffsetBytes) {
             this.outputBytes = outputBytes;
@@ -1016,7 +1016,7 @@ public class ApkSigner {
         private final String mName;
         private final PrivateKey mPrivateKey;
         private final List<X509Certificate> mCertificates;
-        private boolean mDeterministicDsaSigning;
+        private final boolean mDeterministicDsaSigning;
 
         private SignerConfig(
                 String name,

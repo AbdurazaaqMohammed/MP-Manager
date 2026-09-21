@@ -57,7 +57,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
     private static final Debug debug = android.sun.security.util.Debug.getInstance("x509");
 
-    private Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<String, android.sun.security.x509.Extension>();
+    private final Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<String, android.sun.security.x509.Extension>();
     private boolean unsupportedCritExt = false;
 
     private Map<String, android.sun.security.x509.Extension> unparseableExtensions;
@@ -88,7 +88,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
         }
     }
 
-    private static Class[] PARAMS = {Boolean.class, Object.class};
+    private static final Class[] PARAMS = {Boolean.class, Object.class};
 
     // Parse the encoded extension
     private void parseExtension(android.sun.security.x509.Extension ext) throws IOException {
@@ -346,7 +346,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
 class UnparseableExtension extends android.sun.security.x509.Extension {
     private String name;
-    private Throwable why;
+    private final Throwable why;
 
     public UnparseableExtension(android.sun.security.x509.Extension ext, Throwable why) {
         super(ext);

@@ -197,13 +197,13 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
      * Private keys and certificates are stored in a hashtable.
      * Hash entries are keyed by alias names.
      */
-    private Hashtable<String, KeyEntry> entries =
+    private final Hashtable<String, KeyEntry> entries =
                                 new Hashtable<String, KeyEntry>();
 
-    private ArrayList<KeyEntry> keyList = new ArrayList<KeyEntry>();
-    private LinkedHashMap<X500Principal, X509Certificate> certsMap =
+    private final ArrayList<KeyEntry> keyList = new ArrayList<KeyEntry>();
+    private final LinkedHashMap<X500Principal, X509Certificate> certsMap =
             new LinkedHashMap<X500Principal, X509Certificate>();
-    private ArrayList<CertEntry> certEntries = new ArrayList<CertEntry>();
+    private final ArrayList<CertEntry> certEntries = new ArrayList<CertEntry>();
 
     /**
      * Returns the key associated with the given alias, using the given

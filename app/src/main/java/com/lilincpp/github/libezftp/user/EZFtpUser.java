@@ -4,10 +4,10 @@ package com.lilincpp.github.libezftp.user;
  * FTP User entry
  */
 public final class EZFtpUser {
-    private String name;
-    private String password;
-    private String sharedPath;
-    private EZFtpUserPermission permission;
+    private final String name;
+    private final String password;
+    private final String sharedPath;
+    private final EZFtpUserPermission permission;
 
     public EZFtpUser(String name, String password, String sharedPath, EZFtpUserPermission permission) {
         this.name = name;

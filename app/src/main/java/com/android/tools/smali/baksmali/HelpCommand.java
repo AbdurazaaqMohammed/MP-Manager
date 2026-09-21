@@ -57,7 +57,7 @@ public class HelpCommand extends Command {
 
     @Parameter(description = "If specified, show the detailed usage information for the given commands")
     @ExtendedParameter(argumentNames = "commands")
-    private List<String> commands = Lists.newArrayList();
+    private final List<String> commands = Lists.newArrayList();
 
     public void run() {
         JCommander parentJc = commandAncestors.get(commandAncestors.size() - 1);

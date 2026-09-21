@@ -367,5 +367,5 @@ public class ResFile implements Iterable<Entry> {
         return getFilePath();
     }
 
-    public static String EXT_9_PNG = ObjectsUtil.of(".9.png");
+    public static final String EXT_9_PNG = ObjectsUtil.of(".9.png");
 }

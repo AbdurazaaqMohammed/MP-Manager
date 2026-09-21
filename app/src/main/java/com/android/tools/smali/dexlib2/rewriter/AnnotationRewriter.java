@@ -49,7 +49,7 @@ public class AnnotationRewriter implements Rewriter<Annotation> {
     }
 
     protected class RewrittenAnnotation extends BaseAnnotation {
-        @Nonnull protected Annotation annotation;
+        @Nonnull protected final Annotation annotation;
 
         public RewrittenAnnotation(@Nonnull Annotation annotation) {
             this.annotation = annotation;

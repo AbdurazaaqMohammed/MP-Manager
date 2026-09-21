@@ -307,7 +307,7 @@ public class LiteralTools
 		}
 	}
 	
-	private static Pattern specialFloatRegex = Pattern.compile("((-)?infinityf)|(nanf)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern specialFloatRegex = Pattern.compile("((-)?infinityf)|(nanf)", Pattern.CASE_INSENSITIVE);
 	public static float parseFloat(String floatString) {
 		Matcher m = specialFloatRegex.matcher(floatString);
 		if (m.matches()) {
@@ -325,7 +325,7 @@ public class LiteralTools
 		return Float.parseFloat(floatString);
 	}
 	
-	private static Pattern specialDoubleRegex = Pattern.compile("((-)?infinityd?)|(nand?)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern specialDoubleRegex = Pattern.compile("((-)?infinityd?)|(nand?)", Pattern.CASE_INSENSITIVE);
 	public static double parseDouble(String doubleString) {
 		Matcher m = specialDoubleRegex.matcher(doubleString);
 		if (m.matches()) {

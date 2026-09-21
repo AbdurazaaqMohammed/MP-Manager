@@ -44,7 +44,8 @@ public class BuilderField extends BaseFieldReference implements Field {
     final int accessFlags;
     @Nullable final BuilderEncodedValue initialValue;
     @Nonnull final BuilderAnnotationSet annotations;
-    @Nonnull Set<HiddenApiRestriction> hiddenApiRestrictions;
+    @Nonnull
+    final Set<HiddenApiRestriction> hiddenApiRestrictions;
 
     BuilderField(@Nonnull BuilderFieldReference fieldReference,
                  int accessFlags,

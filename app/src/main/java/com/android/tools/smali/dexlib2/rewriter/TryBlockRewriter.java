@@ -50,7 +50,7 @@ public class TryBlockRewriter implements Rewriter<TryBlock<? extends ExceptionHa
     }
 
     protected class RewrittenTryBlock extends BaseTryBlock<ExceptionHandler> {
-        @Nonnull protected TryBlock<? extends ExceptionHandler> tryBlock;
+        @Nonnull protected final TryBlock<? extends ExceptionHandler> tryBlock;
 
         public RewrittenTryBlock(@Nonnull TryBlock<? extends ExceptionHandler> tryBlock) {
             this.tryBlock = tryBlock;

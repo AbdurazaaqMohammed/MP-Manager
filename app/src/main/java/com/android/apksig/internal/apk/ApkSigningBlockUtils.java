@@ -1330,11 +1330,11 @@ public class ApkSigningBlockUtils {
         }
 
         public static class SignerInfo extends ApkSignerInfo {
-            public List<ContentDigest> contentDigests = new ArrayList<>();
-            public Map<ContentDigestAlgorithm, byte[]> verifiedContentDigests = new HashMap<>();
-            public List<Signature> signatures = new ArrayList<>();
-            public Map<SignatureAlgorithm, byte[]> verifiedSignatures = new HashMap<>();
-            public List<AdditionalAttribute> additionalAttributes = new ArrayList<>();
+            public final List<ContentDigest> contentDigests = new ArrayList<>();
+            public final Map<ContentDigestAlgorithm, byte[]> verifiedContentDigests = new HashMap<>();
+            public final List<Signature> signatures = new ArrayList<>();
+            public final Map<SignatureAlgorithm, byte[]> verifiedSignatures = new HashMap<>();
+            public final List<AdditionalAttribute> additionalAttributes = new ArrayList<>();
             public byte[] signedData;
             public int minSdkVersion;
             public int maxSdkVersion;

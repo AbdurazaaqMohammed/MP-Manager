@@ -37,7 +37,7 @@ import javax.annotation.Nonnull;
 import java.util.Set;
 
 class BuilderAnnotation extends BaseAnnotation {
-    int visibility;
+    final int visibility;
     @Nonnull final BuilderTypeReference type;
     @Nonnull final Set<? extends BuilderAnnotationElement> elements;
     int offset = DexWriter.NO_OFFSET;

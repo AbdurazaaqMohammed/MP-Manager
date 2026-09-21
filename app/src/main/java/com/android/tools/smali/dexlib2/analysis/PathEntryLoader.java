@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.Set;
 
 public class PathEntryLoader {
-    Opcodes opcodes;
+    final Opcodes opcodes;
 
     public Opcodes getOpcodes() {
         return opcodes;

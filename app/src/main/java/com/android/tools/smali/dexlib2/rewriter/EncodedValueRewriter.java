@@ -79,7 +79,7 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     protected class RewrittenTypeEncodedValue extends BaseTypeEncodedValue {
-        @Nonnull protected TypeEncodedValue typeEncodedValue;
+        @Nonnull protected final TypeEncodedValue typeEncodedValue;
 
         public RewrittenTypeEncodedValue(@Nonnull TypeEncodedValue typeEncodedValue) {
             this.typeEncodedValue = typeEncodedValue;
@@ -91,7 +91,7 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     protected class RewrittenFieldEncodedValue extends BaseFieldEncodedValue {
-        @Nonnull protected FieldEncodedValue fieldEncodedValue;
+        @Nonnull protected final FieldEncodedValue fieldEncodedValue;
 
         public RewrittenFieldEncodedValue(@Nonnull FieldEncodedValue fieldEncodedValue) {
             this.fieldEncodedValue = fieldEncodedValue;
@@ -103,7 +103,7 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     protected class RewrittenEnumEncodedValue extends BaseEnumEncodedValue {
-        @Nonnull protected EnumEncodedValue enumEncodedValue;
+        @Nonnull protected final EnumEncodedValue enumEncodedValue;
 
         public RewrittenEnumEncodedValue(@Nonnull EnumEncodedValue enumEncodedValue) {
             this.enumEncodedValue = enumEncodedValue;
@@ -115,7 +115,7 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     protected class RewrittenMethodEncodedValue extends BaseMethodEncodedValue {
-        @Nonnull protected MethodEncodedValue methodEncodedValue;
+        @Nonnull protected final MethodEncodedValue methodEncodedValue;
 
         public RewrittenMethodEncodedValue(@Nonnull MethodEncodedValue methodEncodedValue) {
             this.methodEncodedValue = methodEncodedValue;
@@ -127,7 +127,7 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     protected class RewrittenArrayEncodedValue extends BaseArrayEncodedValue {
-        @Nonnull protected ArrayEncodedValue arrayEncodedValue;
+        @Nonnull protected final ArrayEncodedValue arrayEncodedValue;
 
         public RewrittenArrayEncodedValue(@Nonnull ArrayEncodedValue arrayEncodedValue) {
             this.arrayEncodedValue = arrayEncodedValue;
@@ -139,7 +139,7 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     protected class RewrittenAnnotationEncodedValue extends BaseAnnotationEncodedValue {
-        @Nonnull protected AnnotationEncodedValue annotationEncodedValue;
+        @Nonnull protected final AnnotationEncodedValue annotationEncodedValue;
 
         public RewrittenAnnotationEncodedValue(@Nonnull AnnotationEncodedValue annotationEncodedValue) {
             this.annotationEncodedValue = annotationEncodedValue;

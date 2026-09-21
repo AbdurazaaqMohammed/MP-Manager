@@ -62,7 +62,7 @@ public class ListDependenciesCommand extends Command {
 
     @Parameter(description = "An oat/odex file")
     @ExtendedParameter(argumentNames = "file")
-    private List<String> inputList = Lists.newArrayList();
+    private final List<String> inputList = Lists.newArrayList();
 
     public ListDependenciesCommand(@Nonnull List<JCommander> commandAncestors) {
         super(commandAncestors);

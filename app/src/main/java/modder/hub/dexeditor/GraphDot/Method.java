@@ -44,10 +44,10 @@ Special thanks to @Timscriptov for enhancing and fixing some parts of the codes
 
 */
 public class Method {
-    public String methodName;
-    public List<Instruction> instructions = new ArrayList<>();
-    public Map<String, Instruction> labelDict = new HashMap<>();
-    public Map<String, List<Instruction>> jumpToLabelDict = new HashMap<>();
+    public final String methodName;
+    public final List<Instruction> instructions = new ArrayList<>();
+    public final Map<String, Instruction> labelDict = new HashMap<>();
+    public final Map<String, List<Instruction>> jumpToLabelDict = new HashMap<>();
 
     public Method(String methodName) {
         this.methodName = methodName;

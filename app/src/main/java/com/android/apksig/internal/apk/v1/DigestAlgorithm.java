@@ -42,7 +42,7 @@ public enum DigestAlgorithm {
         return mJcaMessageDigestAlgorithm;
     }
 
-    public static Comparator<DigestAlgorithm> BY_STRENGTH_COMPARATOR = new StrengthComparator();
+    public static final Comparator<DigestAlgorithm> BY_STRENGTH_COMPARATOR = new StrengthComparator();
 
     private static class StrengthComparator implements Comparator<DigestAlgorithm> {
         @Override

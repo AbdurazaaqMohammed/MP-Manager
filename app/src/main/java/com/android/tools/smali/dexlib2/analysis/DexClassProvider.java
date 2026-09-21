@@ -39,7 +39,7 @@ import java.util.Map;
 
 public class DexClassProvider implements ClassProvider {
     private final DexFile dexFile;
-    private Map<String, ClassDef> classMap = new HashMap<>();
+    private final Map<String, ClassDef> classMap = new HashMap<>();
 
     public DexClassProvider(DexFile dexFile) {
         this.dexFile = dexFile;

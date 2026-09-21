@@ -32,7 +32,7 @@ import com.android.tools.smali.baksmali.BaksmaliOptions;
 import javax.annotation.Nonnull;
 
 public class EndTryLabelMethodItem extends LabelMethodItem {
-    private int endTryAddress;
+    private final int endTryAddress;
 
     public EndTryLabelMethodItem(@Nonnull BaksmaliOptions options, int codeAddress, int endTryAddress) {
         super(options, codeAddress, "try_end_");

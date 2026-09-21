@@ -49,7 +49,7 @@ public class HexDumpEncoder extends CharacterEncoder {
     private int offset;
     private int thisLineLength;
     private int currentByte;
-    private byte[] thisLine = new byte[16];
+    private final byte[] thisLine = new byte[16];
 
     static void hexDigit(PrintStream p, byte x) {
         char c;

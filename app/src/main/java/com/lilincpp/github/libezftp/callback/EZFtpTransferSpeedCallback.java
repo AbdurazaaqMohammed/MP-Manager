@@ -13,10 +13,10 @@ public abstract class EZFtpTransferSpeedCallback implements OnEZFtpDataTransferC
 
     private long startTime, endTime;
     private long totalSize, tempTotalSize;
-    private ScheduledExecutorService executors = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService executors = Executors.newSingleThreadScheduledExecutor();
     private boolean isFinish = false;
 
-    private Runnable calcSpeedTask = new Runnable() {
+    private final Runnable calcSpeedTask = new Runnable() {
         @Override
         public void run() {
             //计算一秒钟之内，传输了多少字节，然后转换为KB/S

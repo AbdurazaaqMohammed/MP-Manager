@@ -62,13 +62,13 @@ public class ApkCloner {
 	private String outApk; // Path for the output APK
 	private String srcApk; // Path for the source APK
 	private String tempApk; // Path for the temporary directory
-	private ApkClonerCallBack mCallBack; // Callback interface for progress and messages
-	private String AndroidManifest = "AndroidManifest.xml"; // Name of the AndroidManifest file
-	private String resourcesArsc = "resources.arsc";
-	private String processing = "Processing ";
+	private final ApkClonerCallBack mCallBack; // Callback interface for progress and messages
+	private final String AndroidManifest = "AndroidManifest.xml"; // Name of the AndroidManifest file
+	private final String resourcesArsc = "resources.arsc";
+	private final String processing = "Processing ";
 	private String OldPackageName;
 	private String newPackageName;
-	private Context mContext;
+	private final Context mContext;
 
     public static String changeEndCharacter(final String text) {
         if (!(TextUtils.isEmpty(text))) {

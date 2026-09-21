@@ -48,7 +48,7 @@ public class ExceptionHandlerRewriter implements Rewriter<ExceptionHandler> {
     }
 
     protected class RewrittenExceptionHandler extends BaseExceptionHandler {
-        @Nonnull protected ExceptionHandler exceptionHandler;
+        @Nonnull protected final ExceptionHandler exceptionHandler;
 
         public RewrittenExceptionHandler(@Nonnull ExceptionHandler exceptionHandler) {
             this.exceptionHandler = exceptionHandler;

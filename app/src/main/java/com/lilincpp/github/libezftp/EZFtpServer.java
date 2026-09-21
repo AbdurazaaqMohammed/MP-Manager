@@ -8,7 +8,7 @@ import java.util.List;
 
 public final class EZFtpServer implements IEZFtpServer {
 
-    private IEZFtpServer ftpServerImpl;
+    private final IEZFtpServer ftpServerImpl;
 
     private EZFtpServer(List<EZFtpUser> users, int port, File keystoreFile, String keystorePassword, boolean implicitSsl) {
         ftpServerImpl = new EZFtpServerImpl(users, port, keystoreFile, keystorePassword, implicitSsl);
@@ -30,7 +30,7 @@ public final class EZFtpServer implements IEZFtpServer {
     }
 
     public static final class Builder {
-        private List<EZFtpUser> users = new ArrayList<>();
+        private final List<EZFtpUser> users = new ArrayList<>();
         private int port;
         private File keystoreFile;
         private String keystorePassword;

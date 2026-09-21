@@ -79,7 +79,8 @@ public class TypeListPool extends BaseNullableOffsetPool<Key<? extends Collectio
 
     public static class Key<TypeCollection extends Collection<? extends CharSequence>>
             implements Comparable<Key<? extends Collection<? extends CharSequence>>> {
-        @Nonnull TypeCollection types;
+        @Nonnull
+        final TypeCollection types;
 
         public Key(@Nonnull TypeCollection types) {
             this.types = types;

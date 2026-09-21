@@ -57,12 +57,12 @@ Author @developer-krushna
 public class AlertProgress {
 
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
-    Activity activity;
-    MaterialAlertDialogBuilder process;
+    final Activity activity;
+    final MaterialAlertDialogBuilder process;
     AlertDialog alert;
-    TextView textview_mesage;
-    TextView textview_title;
-    LinearProgressIndicator progress;
+    final TextView textview_mesage;
+    final TextView textview_title;
+    final LinearProgressIndicator progress;
     private OnCancelListener cancelListener;
     private long lastBackPressTime = 0;
 

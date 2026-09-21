@@ -9,7 +9,7 @@ public enum EZFtpUserPermission {
 
     WRITE(new WritePermission());
 
-    private Authority authority;
+    private final Authority authority;
 
     public Authority getAuthority() {
         return authority;

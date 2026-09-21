@@ -3177,7 +3177,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
   private int zzFinalHighSurrogate = 0;
 
   /* user code: */
-    private StringBuffer sb = new StringBuffer();
+    private final StringBuffer sb = new StringBuffer();
     private String tokenError = null;
     private int tokenStartLine;
     private int tokenStartCol;
@@ -3189,9 +3189,9 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
 
     private boolean suppressErrors;
 
-    private int apiLevel;
+    private final int apiLevel;
 
-    private Stack<Integer> stateStack = new Stack<>();
+    private final Stack<Integer> stateStack = new Stack<>();
 
     public Token nextToken() {
         try {

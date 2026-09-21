@@ -97,8 +97,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     private final MainActivity context;
     public final Object[] values;
-    public boolean isInZip;
-    public String currentZipPath;
+    public final boolean isInZip;
+    public final String currentZipPath;
     public final boolean pane1; //THIS IS WHETHER THE ADAPTER IS FOR PANE 1 OR 2 NOT THE LAST CLICKED PANE
     private final DialogUtil dialogUtil;
     private final UIHelper uiHelper;

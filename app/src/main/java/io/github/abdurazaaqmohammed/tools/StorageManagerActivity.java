@@ -107,7 +107,7 @@ public class StorageManagerActivity extends AppCompatActivity {
     private static class CacheRow {
         final String packageName;
         final String label;
-        long cacheBytes;
+        final long cacheBytes;
         boolean checked;
 
         CacheRow(String packageName, String label, long cacheBytes) {

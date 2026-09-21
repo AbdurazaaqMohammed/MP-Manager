@@ -63,7 +63,7 @@ public enum AccessFlags
     //cache the array of all AccessFlags, because .values() allocates a new array for every call
     private final static AccessFlags[] allFlags;
 
-    private static HashMap<String, AccessFlags> accessFlagsByName;
+    private static final HashMap<String, AccessFlags> accessFlagsByName;
 
     static {
         allFlags = AccessFlags.values();

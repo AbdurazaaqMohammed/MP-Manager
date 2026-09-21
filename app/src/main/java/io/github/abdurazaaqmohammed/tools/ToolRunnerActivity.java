@@ -4424,7 +4424,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
     }
     private static class CheckItem {
-        String title;
+        final String title;
         boolean done;
         CheckItem(String t, boolean d) {
             title = t;
@@ -7041,7 +7041,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
     }
     private static class HabitItem {
-        String title;
+        final String title;
         int streak;
         String lastDone;
         HabitItem(String t, int s, String l) {
@@ -7132,8 +7132,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
     }
     private static class ExpenseItem {
-        String label;
-        double amount;
+        final String label;
+        final double amount;
         ExpenseItem(String l, double a) {
             label = l;
             amount = a;

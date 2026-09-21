@@ -10,7 +10,7 @@ import java.util.List;
 public class XmlChunk extends Chunk<XmlChunk.H> {
 
     private final ResourceMapChunk resourceMap = new ResourceMapChunk(this);
-    StringPoolChunk stringPool = new StringPoolChunk(this);
+    final StringPoolChunk stringPool = new StringPoolChunk(this);
     TagChunk content;
     private final List<ResEntry> resourceEntries;
 

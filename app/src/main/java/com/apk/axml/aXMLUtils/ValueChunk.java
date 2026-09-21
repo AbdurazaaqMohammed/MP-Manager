@@ -13,14 +13,14 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
 
     private final AttrChunk attrChunk;
     private String realString;
-    short size = 8;
-    byte res0 = 0;
+    final short size = 8;
+    final byte res0 = 0;
     byte type = -1;
     int data = -1;
 
     static class ValPair {
-        int pos;
-        String val;
+        final int pos;
+        final String val;
 
         @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
         public ValPair(Matcher m) {
@@ -37,8 +37,8 @@ public class ValueChunk extends Chunk<Chunk.EmptyHeader> {
         }
     }
 
-    Pattern explicitType = Pattern.compile("^!(?:(string|str|null|)!)?(.*)");
-    Pattern types = Pattern.compile(("^(?:" +
+    final Pattern explicitType = Pattern.compile("^!(?:(string|str|null|)!)?(.*)");
+    final Pattern types = Pattern.compile(("^(?:" +
             "(@null)" +
             "|(@\\+?(?:\\w+:)?\\w+/\\w+|@(?:\\w+:)?[0-9a-zA-Z]+)" +
             "|(\\?\\+?(?:\\w+:)?\\w+/\\w+|\\?(?:\\w+:)?[0-9a-zA-Z]+)" +

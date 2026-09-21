@@ -1476,7 +1476,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private static class TextLocation {
-        int lineNumber, startColumn, endColumn;
+        final int lineNumber;
+        final int startColumn;
+        final int endColumn;
         TextLocation(int lineNumber, int startColumn, int endColumn) {
             this.lineNumber = lineNumber; this.startColumn = startColumn; this.endColumn = endColumn;
         }

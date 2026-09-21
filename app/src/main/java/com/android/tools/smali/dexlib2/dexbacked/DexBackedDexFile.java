@@ -316,7 +316,7 @@ public class DexBackedDexFile implements DexFile {
         }
     }
 
-    private OptionalIndexedSection<String> stringSection = new OptionalIndexedSection<String>() {
+    private final OptionalIndexedSection<String> stringSection = new OptionalIndexedSection<String>() {
         @Override
         public String get(int index) {
             int stringOffset = getOffset(index);
@@ -354,7 +354,7 @@ public class DexBackedDexFile implements DexFile {
         return stringSection;
     }
 
-    private OptionalIndexedSection<String> typeSection = new OptionalIndexedSection<String>() {
+    private final OptionalIndexedSection<String> typeSection = new OptionalIndexedSection<String>() {
         @Override
         public String get(int index) {
             int typeOffset = getOffset(index);
@@ -390,7 +390,7 @@ public class DexBackedDexFile implements DexFile {
         return typeSection;
     }
 
-    private IndexedSection<DexBackedFieldReference> fieldSection = new IndexedSection<DexBackedFieldReference>() {
+    private final IndexedSection<DexBackedFieldReference> fieldSection = new IndexedSection<DexBackedFieldReference>() {
         @Override
         public DexBackedFieldReference get(int index) {
             return new DexBackedFieldReference(DexBackedDexFile.this, index);
@@ -416,7 +416,7 @@ public class DexBackedDexFile implements DexFile {
         return fieldSection;
     }
 
-    private IndexedSection<DexBackedMethodReference> methodSection = new IndexedSection<DexBackedMethodReference>() {
+    private final IndexedSection<DexBackedMethodReference> methodSection = new IndexedSection<DexBackedMethodReference>() {
         @Override
         public DexBackedMethodReference get(int index) {
             return new DexBackedMethodReference(DexBackedDexFile.this, index);
@@ -442,7 +442,7 @@ public class DexBackedDexFile implements DexFile {
         return methodSection;
     }
 
-    private IndexedSection<DexBackedMethodProtoReference> protoSection =
+    private final IndexedSection<DexBackedMethodProtoReference> protoSection =
             new IndexedSection<DexBackedMethodProtoReference>() {
                 @Override
                 public DexBackedMethodProtoReference get(int index) {
@@ -469,7 +469,7 @@ public class DexBackedDexFile implements DexFile {
         return protoSection;
     }
 
-    private IndexedSection<DexBackedClassDef> classSection = new IndexedSection<DexBackedClassDef>() {
+    private final IndexedSection<DexBackedClassDef> classSection = new IndexedSection<DexBackedClassDef>() {
         @Override
         public DexBackedClassDef get(int index) {
             return new DexBackedClassDef(DexBackedDexFile.this, getOffset(index),
@@ -496,7 +496,7 @@ public class DexBackedDexFile implements DexFile {
         return classSection;
     }
 
-    private IndexedSection<DexBackedCallSiteReference> callSiteSection =
+    private final IndexedSection<DexBackedCallSiteReference> callSiteSection =
             new IndexedSection<DexBackedCallSiteReference>() {
                 @Override
                 public DexBackedCallSiteReference get(int index) {
@@ -527,7 +527,7 @@ public class DexBackedDexFile implements DexFile {
         return callSiteSection;
     }
 
-    private IndexedSection<DexBackedMethodHandleReference> methodHandleSection =
+    private final IndexedSection<DexBackedMethodHandleReference> methodHandleSection =
             new IndexedSection<DexBackedMethodHandleReference>() {
                 @Override
                 public DexBackedMethodHandleReference get(int index) {

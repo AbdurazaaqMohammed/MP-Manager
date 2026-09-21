@@ -257,7 +257,7 @@ public class XMLUtil {
     public static final String FEATURE_RELAXED = ObjectsUtil.of(
             "http://xmlpull.org/v1/doc/features.html#relaxed");
 
-    public static String [] EVENT_TYPES = {
+    public static final String [] EVENT_TYPES = {
             "START_DOCUMENT",
             "END_DOCUMENT",
             "START_TAG",

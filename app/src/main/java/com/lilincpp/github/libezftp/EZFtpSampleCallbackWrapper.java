@@ -13,8 +13,8 @@ import com.lilincpp.github.libezftp.callback.OnEZFtpCallBack;
 final class EZFtpSampleCallbackWrapper<E> implements OnEZFtpCallBack<E> {
 
     private final Object lock = new Object();
-    private OnEZFtpCallBack<E> onEZFtpCallBack;
-    private Handler handler = new Handler(Looper.getMainLooper());
+    private final OnEZFtpCallBack<E> onEZFtpCallBack;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     public EZFtpSampleCallbackWrapper(OnEZFtpCallBack<E> onEZFtpCallBack) {
         this.onEZFtpCallBack = onEZFtpCallBack;

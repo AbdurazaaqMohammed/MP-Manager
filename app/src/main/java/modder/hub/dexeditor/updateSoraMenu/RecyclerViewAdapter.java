@@ -86,11 +86,11 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 		}};
 	
 	public static class MyViewHolder extends RecyclerView.ViewHolder {
-		TextView mTitle;
-		View rowView;
-		ImageView imageView;
-		RelativeLayout relativeLayout;
-		CompoundButton disableSwitch;
+		final TextView mTitle;
+		final View rowView;
+		final ImageView imageView;
+		final RelativeLayout relativeLayout;
+		final CompoundButton disableSwitch;
 		
 		public MyViewHolder(View itemView) {
 			super(itemView);

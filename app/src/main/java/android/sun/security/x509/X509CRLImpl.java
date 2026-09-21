@@ -104,7 +104,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     private X500Principal    issuerPrincipal = null;
     private Date             thisUpdate = null;
     private Date             nextUpdate = null;
-    private Map<X509IssuerSerial,X509CRLEntry> revokedCerts = new LinkedHashMap<X509IssuerSerial,X509CRLEntry>();
+    private final Map<X509IssuerSerial,X509CRLEntry> revokedCerts = new LinkedHashMap<X509IssuerSerial,X509CRLEntry>();
     private android.sun.security.x509.CRLExtensions extensions = null;
     private final static boolean isExplicit = true;
     private static final long YR_2050 = 2524636800000L;

@@ -50,7 +50,7 @@ public class MethodReferenceRewriter implements Rewriter<MethodReference> {
     }
 
     protected class RewrittenMethodReference extends BaseMethodReference {
-        @Nonnull protected MethodReference methodReference;
+        @Nonnull protected final MethodReference methodReference;
 
         public RewrittenMethodReference(@Nonnull MethodReference methodReference) {
             this.methodReference = methodReference;

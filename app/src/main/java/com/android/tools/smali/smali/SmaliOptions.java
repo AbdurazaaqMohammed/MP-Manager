@@ -37,5 +37,5 @@ public class SmaliOptions {
     public int jobs = Runtime.getRuntime().availableProcessors();
     public boolean allowOdexOpcodes = false;
     public boolean verboseErrors = false;
-    public boolean printTokens = false;
+    public final boolean printTokens = false;
 }

@@ -685,7 +685,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     public class MethodListAdapter extends RecyclerView.Adapter<MethodListAdapter.ViewHolder> {
-        List<HashMap<String, Object>> data;
+        final List<HashMap<String, Object>> data;
 
         public MethodListAdapter(List<HashMap<String, Object>> data) {
             this.data = data;
@@ -893,11 +893,11 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         }
 
         public static class ViewHolder extends RecyclerView.ViewHolder {
-            LinearLayout backgroundLayout;
-            LinearLayout indexNameContainer;
-            TextView indexNameTextView;
-            TextView methodNameTextView;
-            TextView returnTypeTextView;
+            final LinearLayout backgroundLayout;
+            final LinearLayout indexNameContainer;
+            final TextView indexNameTextView;
+            final TextView methodNameTextView;
+            final TextView returnTypeTextView;
 
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -1015,7 +1015,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     }
 
     private class StringListAdapter extends RecyclerView.Adapter<StringListAdapter.ViewHolder> {
-        List<HashMap<String, Object>> data;
+        final List<HashMap<String, Object>> data;
 
         public StringListAdapter(List<HashMap<String, Object>> data) {
             this.data = data;
@@ -1080,10 +1080,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         }
 
         public static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView stringTextView;
-            LinearLayout backgroundLayout;
-            LinearLayout indexNameContainer;
-            TextView indexNameTextView;
+            final TextView stringTextView;
+            final LinearLayout backgroundLayout;
+            final LinearLayout indexNameContainer;
+            final TextView indexNameTextView;
 
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);

@@ -54,7 +54,7 @@ public class MethodRewriter implements Rewriter<Method> {
     }
 
     protected class RewrittenMethod extends BaseMethodReference implements Method {
-        @Nonnull protected Method method;
+        @Nonnull protected final Method method;
 
         public RewrittenMethod(@Nonnull Method method) {
             this.method = method;

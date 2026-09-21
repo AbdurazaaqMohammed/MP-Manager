@@ -41,7 +41,7 @@ final class EZFtpClientImpl implements IEZFtpClient {
     private static final String HOME_DIR = "/";
 
     private FTPClient ftpClient;
-    private HandlerThread taskThread = new HandlerThread("ftp-task");
+    private final HandlerThread taskThread = new HandlerThread("ftp-task");
     private Handler taskHandler;
     private final Object lock = new Object();
     private boolean isInit = false;

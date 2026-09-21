@@ -63,7 +63,7 @@ public class DebugItemRewriter implements Rewriter<DebugItem> {
     }
 
     protected class BaseRewrittenLocalInfoDebugItem<T extends DebugItem & LocalInfo> implements DebugItem, LocalInfo {
-        @Nonnull protected T debugItem;
+        @Nonnull protected final T debugItem;
 
         public BaseRewrittenLocalInfoDebugItem (@Nonnull T debugItem) {
             this.debugItem = debugItem;

@@ -82,7 +82,7 @@ public class CRLReasonCodeExtension extends Extension
     public static final int PRIVILEGE_WITHDRAWN = 9;
     public static final int AA_COMPROMISE = 10;
 
-    private static CRLReason[] values = CRLReason.values();
+    private static final CRLReason[] values = CRLReason.values();
 
     private int reasonCode = 0;
 

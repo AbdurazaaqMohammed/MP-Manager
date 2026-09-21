@@ -116,7 +116,7 @@ public class InstructionRewriter implements Rewriter<Instruction> {
 
     protected class BaseRewrittenReferenceInstruction<T extends ReferenceInstruction>
             implements ReferenceInstruction {
-        @Nonnull protected T instruction;
+        @Nonnull protected final T instruction;
 
         protected BaseRewrittenReferenceInstruction(@Nonnull T instruction) {
             this.instruction = instruction;

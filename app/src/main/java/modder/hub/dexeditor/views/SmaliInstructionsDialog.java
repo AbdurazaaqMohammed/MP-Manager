@@ -204,7 +204,8 @@ public class SmaliInstructionsDialog {
 		@Override public int getItemCount() { return items.size(); }
 
 		static class ViewHolder extends RecyclerView.ViewHolder {
-			TextView headerText, contentText;
+			final TextView headerText;
+            final TextView contentText;
 			ViewHolder(View view) {
 				super(view);
 				headerText = view.findViewById(R.id.header_text);

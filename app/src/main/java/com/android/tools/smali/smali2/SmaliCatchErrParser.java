@@ -55,8 +55,8 @@ Re-modification done by @developer-krushna
 */
 public class SmaliCatchErrParser extends smaliParser {
 
-    private StringBuilder errors = new StringBuilder();
-    private List<SyntaxError> syntaxErrors = new ArrayList<>();
+    private final StringBuilder errors = new StringBuilder();
+    private final List<SyntaxError> syntaxErrors = new ArrayList<>();
 
     public SmaliCatchErrParser(CommonTokenStream tokens) {
         super(tokens);

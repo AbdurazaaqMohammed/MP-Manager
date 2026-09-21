@@ -41,8 +41,8 @@ import java.util.Iterator;
  * The returned iterator does not support {@code remove()}.
  */
 public class ChainedIterator<T> implements Iterator<T>, Iterable<T> {
-    Iterator<T> iteratorA;
-    Iterator<T> iteratorB;
+    final Iterator<T> iteratorA;
+    final Iterator<T> iteratorB;
 
     public ChainedIterator(Iterable<T> iterableA, Iterable<T> iterableB) {
         this.iteratorA = iterableA.iterator();

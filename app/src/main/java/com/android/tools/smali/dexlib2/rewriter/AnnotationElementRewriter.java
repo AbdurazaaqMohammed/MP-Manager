@@ -48,7 +48,7 @@ public class AnnotationElementRewriter implements Rewriter<AnnotationElement> {
     }
 
     protected class RewrittenAnnotationElement extends BaseAnnotationElement {
-        @Nonnull protected AnnotationElement annotationElement;
+        @Nonnull protected final AnnotationElement annotationElement;
 
         public RewrittenAnnotationElement(@Nonnull AnnotationElement annotationElement) {
             this.annotationElement = annotationElement;

@@ -15,7 +15,7 @@ public abstract class Chunk<H extends Chunk.Header> {
     public H header;
 
     public abstract static class Header {
-        short type;
+        final short type;
         short headerSize;
         int size;
 
@@ -37,7 +37,7 @@ public abstract class Chunk<H extends Chunk.Header> {
     public abstract static class NodeHeader extends Header{
 
         public int lineNo=1;
-        public int comment=-1;
+        public final int comment=-1;
 
         public NodeHeader(ChunkType ct) {
             super(ct);

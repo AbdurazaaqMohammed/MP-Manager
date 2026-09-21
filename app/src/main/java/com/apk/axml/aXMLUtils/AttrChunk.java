@@ -18,7 +18,7 @@ public class AttrChunk extends Chunk<Chunk.EmptyHeader> {
         header.size=20;
     }
 
-    public ValueChunk value = new ValueChunk(this);
+    public final ValueChunk value = new ValueChunk(this);
 
     @Override
     public void preWrite() {

@@ -32,10 +32,10 @@ public class DnsManager {
     private static final String PREFS_ACTIVE = "dns_active_profile";
 
     public static class DnsProfile {
-        public String id;
-        public String name;
-        public String mode;
-        public String hostname;
+        public final String id;
+        public final String name;
+        public final String mode;
+        public final String hostname;
 
         public DnsProfile(String id, String name, String mode, String hostname) {
             this.id = id;

@@ -5,18 +5,18 @@ import android.graphics.drawable.Drawable;
 import java.io.File;
 
 public class AppInfo {
-    public String filePath;
-    public String name;
-    public String packageName;
+    public final String filePath;
+    public final String name;
+    public final String packageName;
     public Drawable icon;
-    boolean enabled;
-    public boolean isSplit;
-    public String firstInstalled;
-    public String lastUpdated;
+    final boolean enabled;
+    public final boolean isSplit;
+    public final String firstInstalled;
+    public final String lastUpdated;
     public long firstInstall;
     public long lastUpdate;
-    public String versionName;
-    int versionCode;
+    public final String versionName;
+    final int versionCode;
     public android.content.pm.ApplicationInfo appInfo;
     public AppInfo(String f, String name, Drawable icon, String packageName, boolean enabled, boolean isSplit, String firstInstalled, String lastUpdated, int versionCode, String versionName) {
         this.filePath = f;

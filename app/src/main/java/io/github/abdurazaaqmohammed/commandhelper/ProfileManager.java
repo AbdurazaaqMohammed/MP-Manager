@@ -69,8 +69,8 @@ public class ProfileManager {
     }
 
     public static class Profile {
-        public String name;
-        public String command;
+        public final String name;
+        public final String command;
 
         public Profile(String name, String command) {
             this.name = name;

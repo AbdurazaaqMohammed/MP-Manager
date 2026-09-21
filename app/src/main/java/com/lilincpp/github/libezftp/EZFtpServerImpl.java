@@ -25,7 +25,7 @@ final class EZFtpServerImpl implements IEZFtpServer {
 
     private static final String TAG = "EZFtpServerImpl";
 
-    private FtpServer ftpServer;
+    private final FtpServer ftpServer;
     private final Object lock = new Object();
     private boolean isInit = false;
 

@@ -12,7 +12,7 @@ public class EndTagChunk extends Chunk<EndTagChunk.H> {
         }
     }
 
-    public StartTagChunk start;
+    public final StartTagChunk start;
 
     public EndTagChunk(Chunk parent, StartTagChunk start) {
         super(parent);

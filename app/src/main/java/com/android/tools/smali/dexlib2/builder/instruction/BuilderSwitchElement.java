@@ -38,6 +38,7 @@ import javax.annotation.Nonnull;
 
 public class BuilderSwitchElement implements SwitchElement {
     @Nonnull
+    final
     BuilderSwitchPayload parent;
     private final int key;
     @Nonnull private final Label target;

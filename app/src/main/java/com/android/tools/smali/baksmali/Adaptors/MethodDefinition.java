@@ -598,7 +598,7 @@ public class MethodDefinition {
     }
 
     public static class LabelCache {
-        protected HashMap<LabelMethodItem, LabelMethodItem> labels = new HashMap<LabelMethodItem, LabelMethodItem>();
+        protected final HashMap<LabelMethodItem, LabelMethodItem> labels = new HashMap<LabelMethodItem, LabelMethodItem>();
 
         public LabelCache() {
         }

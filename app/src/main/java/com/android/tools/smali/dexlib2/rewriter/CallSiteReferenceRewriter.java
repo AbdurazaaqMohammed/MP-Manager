@@ -53,7 +53,7 @@ public class CallSiteReferenceRewriter implements Rewriter<CallSiteReference> {
     }
 
     protected class RewrittenCallSiteReference extends BaseCallSiteReference {
-        @Nonnull protected CallSiteReference callSiteReference;
+        @Nonnull protected final CallSiteReference callSiteReference;
 
         public RewrittenCallSiteReference(@Nonnull CallSiteReference callSiteReference) {
             this.callSiteReference = callSiteReference;

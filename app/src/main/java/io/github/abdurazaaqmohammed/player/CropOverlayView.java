@@ -27,8 +27,8 @@ public class CropOverlayView extends View {
     private int activeHandle = -1;
     private float lastX;
     private float lastY;
-    private float handleRadius;
-    private float touchSlop;
+    private final float handleRadius;
+    private final float touchSlop;
 
     public CropOverlayView(Context context) {
         super(context);

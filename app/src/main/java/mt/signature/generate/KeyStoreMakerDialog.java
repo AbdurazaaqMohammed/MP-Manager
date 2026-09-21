@@ -109,7 +109,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
 
     private SharedPreferences s;
     private ProgressDialog progress;
-    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // Views
     private LinearLayout linear1;

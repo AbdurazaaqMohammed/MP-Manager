@@ -48,7 +48,7 @@ package android.sun.security.action;
 
 public class GetPropertyAction
         implements java.security.PrivilegedAction<String> {
-    private String theProp;
+    private final String theProp;
     private String defaultVal;
 
     /**

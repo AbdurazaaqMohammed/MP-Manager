@@ -57,21 +57,21 @@ public class ListVtablesCommand extends DexInputCommand {
     private boolean help;
 
     @ParametersDelegate
-    private AnalysisArguments analysisArguments = new AnalysisArguments();
+    private final AnalysisArguments analysisArguments = new AnalysisArguments();
 
     @ParametersDelegate
-    private CheckPackagePrivateArgument checkPackagePrivateArgument = new CheckPackagePrivateArgument();
+    private final CheckPackagePrivateArgument checkPackagePrivateArgument = new CheckPackagePrivateArgument();
 
     @Parameter(names = "--classes",
             description = "A comma separated list of classes. Only print the vtable for these classes")
     @ExtendedParameter(argumentNames = "classes")
-    private List<String> classes = null;
+    private final List<String> classes = null;
 
     @Parameter(names = "--override-oat-version",
             description = "Uses a classpath for the given oat version, regardless of the actual oat version. This " +
                     "can be used, e.g. to list vtables from a dex file, as if they were in an oat file of the given " +
                     "version.")
-    private int oatVersion = 0;
+    private final int oatVersion = 0;
 
     public ListVtablesCommand(@Nonnull List<JCommander> commandAncestors) {
         super(commandAncestors);

@@ -38,7 +38,7 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 public abstract class VariableSizeListIterator<T> implements ListIterator<T> {
-    @Nonnull private DexReader<? extends DexBuffer> reader;
+    @Nonnull private final DexReader<? extends DexBuffer> reader;
     protected final int size;
     private final int startOffset;
 

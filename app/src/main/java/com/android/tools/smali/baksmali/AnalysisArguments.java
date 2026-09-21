@@ -58,14 +58,14 @@ public class AnalysisArguments {
                     "be used. (e.g. --bootclasspath \"\") See baksmali help classpath for more information.",
             splitter = ColonParameterSplitter.class)
     @ExtendedParameter(argumentNames = "classpath")
-    public List<String> bootClassPath = null;
+    public final List<String> bootClassPath = null;
 
     @Parameter(names = {"-c", "--classpath", "--cp"},
             description = "A colon separated list of additional files to include in the classpath when analyzing the " +
                     "dex file. These will be added to the classpath after any bootclasspath entries.",
             splitter = ColonParameterSplitter.class)
     @ExtendedParameter(argumentNames = "classpath")
-    public List<String> classPath = Lists.newArrayList();
+    public final List<String> classPath = Lists.newArrayList();
 
     @Parameter(names = {"-d", "--classpath-dir", "--cpd", "--dir"},
             description = "A directory to search for classpath files. This option can be used multiple times to " +
@@ -78,7 +78,7 @@ public class AnalysisArguments {
                 description = "Use the package-private access check when calculating vtable indexes. This is enabled " +
                         "by default for oat files. For odex files, this is only needed for odexes from 4.2.0. It " +
                         "was reverted in 4.2.1.")
-        public boolean checkPackagePrivateAccess = false;
+        public final boolean checkPackagePrivateAccess = false;
     }
 
     @Nonnull

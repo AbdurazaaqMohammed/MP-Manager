@@ -883,9 +883,9 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
     }
 
     private static class TextLocation {
-        int lineNumber;
-        int startColumn;
-        int endColumn;
+        final int lineNumber;
+        final int startColumn;
+        final int endColumn;
 
         public TextLocation(int lineNumber, int startColumn, int endColumn) {
             this.lineNumber = lineNumber;

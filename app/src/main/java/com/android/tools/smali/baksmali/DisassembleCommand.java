@@ -61,17 +61,17 @@ public class DisassembleCommand extends DexInputCommand {
     private boolean help;
 
     @ParametersDelegate
-    protected AnalysisArguments analysisArguments = new AnalysisArguments();
+    protected final AnalysisArguments analysisArguments = new AnalysisArguments();
 
     @Parameter(names = {"--debug-info", "--di"}, arity = 1,
             description = "Whether to include debug information in the output (.local, .param, .line, etc.). True " +
                     "by default, use --debug-info=false to disable.")
     @ExtendedParameter(argumentNames = "boolean")
-    private boolean debugInfo = true;
+    private final boolean debugInfo = true;
 
     @Parameter(names = {"--code-offsets", "--offsets", "--off"},
             description = "Add a comment before each instruction with it's code offset within the method.")
-    private boolean codeOffsets = false;
+    private final boolean codeOffsets = false;
 
     @Parameter(names = {"--resolve-resources", "--rr"}, arity = 2,
             description = "This will attempt to find any resource id references within the bytecode and add a " +
@@ -80,66 +80,66 @@ public class DisassembleCommand extends DexInputCommand {
                     "--resolve-resources android.R framework/res/values/public.xml. This option can be specified " +
                     "multiple times to provide resources from multiple packages.")
     @ExtendedParameter(argumentNames = {"resource prefix", "public.xml file"})
-    private List<String> resourceIdFiles = Lists.newArrayList();
+    private final List<String> resourceIdFiles = Lists.newArrayList();
 
     @Parameter(names = {"-j", "--jobs"},
             description = "The number of threads to use. Defaults to the number of cores available.",
             validateWith = PositiveInteger.class)
     @ExtendedParameter(argumentNames = "n")
-    private int jobs = Runtime.getRuntime().availableProcessors();
+    private final int jobs = Runtime.getRuntime().availableProcessors();
 
     @Parameter(names = {"-l", "--use-locals"},
             description = "When disassembling, output the .locals directive with the number of non-parameter " +
                     "registers instead of the .registers directive with the total number of registers.")
-    private boolean localsDirective = false;
+    private final boolean localsDirective = false;
 
     @Parameter(names = {"--accessor-comments", "--ac"}, arity = 1,
             description = "Generate helper comments for synthetic accessors. True by default, use " +
                     "--accessor-comments=false to disable.")
     @ExtendedParameter(argumentNames = "boolean")
-    private boolean accessorComments = true;
+    private final boolean accessorComments = true;
 
     @Parameter(names = {"--normalize-virtual-methods", "--norm", "--nvm"},
             description = "Normalize virtual method references to use the base class where the method is " +
                     "originally declared.")
-    private boolean normalizeVirtualMethods = false;
+    private final boolean normalizeVirtualMethods = false;
 
     @Parameter(names = {"-o", "--output"},
             description = "The directory to write the disassembled files to.")
     @ExtendedParameter(argumentNames = "dir")
-    private String outputDir = "out";
+    private final String outputDir = "out";
 
     @Parameter(names = {"--parameter-registers", "--preg", "--pr"}, arity = 1,
             description = "Use the pNN syntax for registers that refer to a method parameter on method entry. True " +
                     "by default, use --parameter-registers=false to disable.")
     @ExtendedParameter(argumentNames = "boolean")
-    private boolean parameterRegisters = true;
+    private final boolean parameterRegisters = true;
 
     @Parameter(names = {"-r", "--register-info"},
             description = "Add comments before/after each instruction with information about register types. " +
                     "The value is a comma-separated list of any of ALL, ALLPRE, ALLPOST, ARGS, DEST, MERGE and " +
                     "FULLMERGE. See \"baksmali help register-info\" for more information.")
     @ExtendedParameter(argumentNames = "register info specifier")
-    private List<String> registerInfoTypes = Lists.newArrayList();
+    private final List<String> registerInfoTypes = Lists.newArrayList();
 
     @Parameter(names = {"--sequential-labels", "--seq", "--sl"},
             description = "Create label names using a sequential numbering scheme per label type, rather than " +
                     "using the bytecode address.")
-    private boolean sequentialLabels = false;
+    private final boolean sequentialLabels = false;
 
     @Parameter(names = {"--implicit-references", "--implicit", "--ir"},
             description = "Use implicit method and field references (without the class name) for methods and " +
                     "fields from the current class.")
-    private boolean implicitReferences = false;
+    private final boolean implicitReferences = false;
 
     @Parameter(names = "--allow-odex-opcodes",
             description = "Allows odex opcodes to be disassembled, even if the result won't be able to be reassembled.")
-    private boolean allowOdex = false;
+    private final boolean allowOdex = false;
 
     @Parameter(names = "--classes",
             description = "A comma separated list of classes. Only disassemble these classes")
     @ExtendedParameter(argumentNames = "classes")
-    private List<String> classes = null;
+    private final List<String> classes = null;
 
     public DisassembleCommand(@Nonnull List<JCommander> commandAncestors) {
         super(commandAncestors);

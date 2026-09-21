@@ -91,8 +91,8 @@ public class SmaliLabelDialog extends Dialog {
 		private List<String> filteredItems = new ArrayList<>();
 		
 		class ViewHolder extends RecyclerView.ViewHolder {
-			TextView textView;
-			LinearLayout container;
+			final TextView textView;
+			final LinearLayout container;
 			
 			ViewHolder(View itemView) {
 				super(itemView);

@@ -38,30 +38,30 @@ import android.sun.security.util.*;
 public class ContentInfo {
 
     // pkcs7 pre-defined content types
-    private static int[]  pkcs7 = {1, 2, 840, 113549, 1, 7};
-    private static int[]   data = {1, 2, 840, 113549, 1, 7, 1};
-    private static int[]  sdata = {1, 2, 840, 113549, 1, 7, 2};
-    private static int[]  edata = {1, 2, 840, 113549, 1, 7, 3};
-    private static int[] sedata = {1, 2, 840, 113549, 1, 7, 4};
-    private static int[]  ddata = {1, 2, 840, 113549, 1, 7, 5};
-    private static int[] crdata = {1, 2, 840, 113549, 1, 7, 6};
-    private static int[] nsdata = {2, 16, 840, 1, 113730, 2, 5};
+    private static final int[]  pkcs7 = {1, 2, 840, 113549, 1, 7};
+    private static final int[]   data = {1, 2, 840, 113549, 1, 7, 1};
+    private static final int[]  sdata = {1, 2, 840, 113549, 1, 7, 2};
+    private static final int[]  edata = {1, 2, 840, 113549, 1, 7, 3};
+    private static final int[] sedata = {1, 2, 840, 113549, 1, 7, 4};
+    private static final int[]  ddata = {1, 2, 840, 113549, 1, 7, 5};
+    private static final int[] crdata = {1, 2, 840, 113549, 1, 7, 6};
+    private static final int[] nsdata = {2, 16, 840, 1, 113730, 2, 5};
     // timestamp token (id-ct-TSTInfo) from RFC 3161
-    private static int[] tstInfo = {1, 2, 840, 113549, 1, 9, 16, 1, 4};
+    private static final int[] tstInfo = {1, 2, 840, 113549, 1, 9, 16, 1, 4};
     // this is for backwards-compatibility with JDK 1.1.x
     private static final int[] OLD_SDATA = {1, 2, 840, 1113549, 1, 7, 2};
     private static final int[] OLD_DATA = {1, 2, 840, 1113549, 1, 7, 1};
-    public static ObjectIdentifier PKCS7_OID;
-    public static ObjectIdentifier DATA_OID;
-    public static ObjectIdentifier SIGNED_DATA_OID;
-    public static ObjectIdentifier ENVELOPED_DATA_OID;
-    public static ObjectIdentifier SIGNED_AND_ENVELOPED_DATA_OID;
-    public static ObjectIdentifier DIGESTED_DATA_OID;
-    public static ObjectIdentifier ENCRYPTED_DATA_OID;
-    public static ObjectIdentifier OLD_SIGNED_DATA_OID;
-    public static ObjectIdentifier OLD_DATA_OID;
-    public static ObjectIdentifier NETSCAPE_CERT_SEQUENCE_OID;
-    public static ObjectIdentifier TIMESTAMP_TOKEN_INFO_OID;
+    public static final ObjectIdentifier PKCS7_OID;
+    public static final ObjectIdentifier DATA_OID;
+    public static final ObjectIdentifier SIGNED_DATA_OID;
+    public static final ObjectIdentifier ENVELOPED_DATA_OID;
+    public static final ObjectIdentifier SIGNED_AND_ENVELOPED_DATA_OID;
+    public static final ObjectIdentifier DIGESTED_DATA_OID;
+    public static final ObjectIdentifier ENCRYPTED_DATA_OID;
+    public static final ObjectIdentifier OLD_SIGNED_DATA_OID;
+    public static final ObjectIdentifier OLD_DATA_OID;
+    public static final ObjectIdentifier NETSCAPE_CERT_SEQUENCE_OID;
+    public static final ObjectIdentifier TIMESTAMP_TOKEN_INFO_OID;
 
     static {
         PKCS7_OID =  ObjectIdentifier.newInternal(pkcs7);

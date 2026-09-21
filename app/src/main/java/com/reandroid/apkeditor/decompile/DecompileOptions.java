@@ -104,7 +104,7 @@ public class DecompileOptions extends OptionsWithFramework {
             },
             description = "comment_level"
     )
-    public String commentLevel = COMMENT_LEVEL_BASIC;
+    public final String commentLevel = COMMENT_LEVEL_BASIC;
 
     @OptionArg(name = "-sig", description = "signatures_path")
     public File signaturesDirectory;

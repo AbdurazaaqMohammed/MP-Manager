@@ -55,7 +55,7 @@ public class PrintTokensCommand extends Command {
     @Parameter(names = {"-a", "--api"},
             description = "The numeric api level to use while assembling.")
     @ExtendedParameter(argumentNames = "api")
-    private int apiLevel = 15;
+    private final int apiLevel = 15;
 
     @Parameter(description = "Assembles the given files. If a directory is specified, it will be " +
             "recursively searched for any files with a .smali prefix")

@@ -171,7 +171,7 @@
         }
 
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView stringText;
+            final TextView stringText;
 
             ViewHolder(View itemView) {
                 super(itemView);

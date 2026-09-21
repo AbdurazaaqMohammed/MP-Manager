@@ -75,7 +75,7 @@ implements Comparable<Duration>, Serializable {
 
     public static final Duration ZERO = new Duration(0, 0);
 	static final long NANOS_PER_SECOND =  1000_000_000L;
-	long NANOS_PER_MILLI = 1000_000L;
+	final long NANOS_PER_MILLI = 1000_000L;
 
     private static class Lazy {
         static final Pattern PATTERN =

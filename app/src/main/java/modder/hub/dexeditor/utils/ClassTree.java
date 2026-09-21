@@ -132,9 +132,9 @@ public class ClassTree {
     public Stack<String> path;
     public String curFile;
     public final List<ClassDef> classDefList = new ArrayList<ClassDef>();
-    public List<String> paths;
+    public final List<String> paths;
     public int dexVersion;
-    Map<String, List<String>> dexClassMap = new LinkedHashMap<>();
+    final Map<String, List<String>> dexClassMap = new LinkedHashMap<>();
     byte[] data;
     byte[] input;
 

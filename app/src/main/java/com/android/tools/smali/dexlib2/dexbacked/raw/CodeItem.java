@@ -78,19 +78,19 @@ public class CodeItem {
     public static final int INSTRUCTION_COUNT_OFFSET = 12;
     public static final int INSTRUCTION_START_OFFSET = 16;
 
-    public static int CDEX_TRIES_SIZE_SHIFT = 0;
-    public static int CDEX_OUTS_COUNT_SHIFT = 4;
-    public static int CDEX_INS_COUNT_SHIFT = 8;
-    public static int CDEX_REGISTER_COUNT_SHIFT = 12;
+    public static final int CDEX_TRIES_SIZE_SHIFT = 0;
+    public static final int CDEX_OUTS_COUNT_SHIFT = 4;
+    public static final int CDEX_INS_COUNT_SHIFT = 8;
+    public static final int CDEX_REGISTER_COUNT_SHIFT = 12;
 
-    public static int CDEX_INSTRUCTIONS_SIZE_AND_PREHEADER_FLAGS_OFFSET = 2;
-    public static int CDEX_INSTRUCTIONS_SIZE_SHIFT = 5;
-    public static int CDEX_PREHEADER_FLAGS_MASK = 0x1f;
-    public static int CDEX_PREHEADER_FLAG_REGISTER_COUNT = 1 << 0;
-    public static int CDEX_PREHEADER_FLAG_INS_COUNT = 1 << 1;
-    public static int CDEX_PREHEADER_FLAG_OUTS_COUNT = 1 << 2;
-    public static int CDEX_PREHEADER_FLAG_TRIES_COUNT = 1 << 3;
-    public static int CDEX_PREHEADER_FLAG_INSTRUCTIONS_SIZE = 1 << 4;
+    public static final int CDEX_INSTRUCTIONS_SIZE_AND_PREHEADER_FLAGS_OFFSET = 2;
+    public static final int CDEX_INSTRUCTIONS_SIZE_SHIFT = 5;
+    public static final int CDEX_PREHEADER_FLAGS_MASK = 0x1f;
+    public static final int CDEX_PREHEADER_FLAG_REGISTER_COUNT = 1 << 0;
+    public static final int CDEX_PREHEADER_FLAG_INS_COUNT = 1 << 1;
+    public static final int CDEX_PREHEADER_FLAG_OUTS_COUNT = 1 << 2;
+    public static final int CDEX_PREHEADER_FLAG_TRIES_COUNT = 1 << 3;
+    public static final int CDEX_PREHEADER_FLAG_INSTRUCTIONS_SIZE = 1 << 4;
 
     public static class TryItem {
         public static final int ITEM_SIZE = 8;
@@ -259,8 +259,8 @@ public class CodeItem {
         }
 
         protected class PreInstructionInfo {
-            public int triesCount;
-            public int instructionSize;
+            public final int triesCount;
+            public final int instructionSize;
 
             public PreInstructionInfo(int triesCount, int instructionSize) {
                 this.triesCount = triesCount;

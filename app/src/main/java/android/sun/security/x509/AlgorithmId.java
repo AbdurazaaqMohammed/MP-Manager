@@ -713,9 +713,9 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
         android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 10});
     public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndRC2_oid =
         android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 11});
-    public static android.sun.security.util.ObjectIdentifier pbeWithSHA1AndDESede_oid =
+    public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndDESede_oid =
         android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 12, 1, 3});
-    public static android.sun.security.util.ObjectIdentifier pbeWithSHA1AndRC2_40_oid =
+    public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndRC2_40_oid =
         android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 12, 1, 6});
 
 

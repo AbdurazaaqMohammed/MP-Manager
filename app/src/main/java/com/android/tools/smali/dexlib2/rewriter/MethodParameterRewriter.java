@@ -50,7 +50,7 @@ public class MethodParameterRewriter implements Rewriter<MethodParameter> {
     }
 
     protected class RewrittenMethodParameter extends BaseMethodParameter {
-        @Nonnull protected MethodParameter methodParameter;
+        @Nonnull protected final MethodParameter methodParameter;
 
         public RewrittenMethodParameter(@Nonnull MethodParameter methodParameter) {
             this.methodParameter = methodParameter;

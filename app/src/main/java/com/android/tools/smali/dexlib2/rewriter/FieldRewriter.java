@@ -52,7 +52,7 @@ public class FieldRewriter implements Rewriter<Field> {
     }
 
     protected class RewrittenField extends BaseFieldReference implements Field {
-        @Nonnull protected Field field;
+        @Nonnull protected final Field field;
 
         public RewrittenField(@Nonnull Field field) {
             this.field = field;

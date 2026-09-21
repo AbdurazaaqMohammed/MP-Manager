@@ -65,9 +65,9 @@ public class ClassFileNameHandler {
     private final int CASE_SENSITIVE = 1;
     private int forcedCaseSensitivity = NO_VALUE;
 
-    private DirectoryEntry top;
-    private String fileExtension;
-    private boolean modifyWindowsReservedFilenames;
+    private final DirectoryEntry top;
+    private final String fileExtension;
+    private final boolean modifyWindowsReservedFilenames;
 
     public ClassFileNameHandler(File path, String fileExtension) {
         this.top = new DirectoryEntry(path);
@@ -237,7 +237,7 @@ public class ClassFileNameHandler {
         return System.getProperty("os.name").startsWith("Windows");
     }
 
-    private static Pattern reservedFileNameRegex = Pattern.compile("^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?$",
+    private static final Pattern reservedFileNameRegex = Pattern.compile("^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?$",
             Pattern.CASE_INSENSITIVE);
     private static boolean isReservedFileName(String className) {
         return reservedFileNameRegex.matcher(className).matches();

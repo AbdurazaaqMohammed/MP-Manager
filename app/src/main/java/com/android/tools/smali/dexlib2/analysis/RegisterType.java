@@ -147,7 +147,7 @@ public class RegisterType {
     //this table is used when merging register types. For example, if a particular register can be either a BYTE
     //or a Char, then the "merged" type of that register would be Integer, because it is the "smallest" type can
     //could hold either type of value.
-    protected static byte[][] mergeTable  =
+    protected static final byte[][] mergeTable  =
     {
             /*              UNKNOWN      UNINIT      NULL        ONE,        BOOLEAN     BYTE        POS_BYTE    SHORT       POS_SHORT   CHAR        INTEGER,    FLOAT,      LONG_LO     LONG_HI     DOUBLE_LO   DOUBLE_HI   UNINIT_REF  UNINIT_THIS REFERENCE   CONFLICTED*/
             /*UNKNOWN*/    {UNKNOWN,     UNINIT,     NULL,       ONE,        BOOLEAN,    BYTE,       POS_BYTE,   SHORT,      POS_SHORT,  CHAR,       INTEGER,    FLOAT,      LONG_LO,    LONG_HI,    DOUBLE_LO,  DOUBLE_HI,  UNINIT_REF, UNINIT_THIS,REFERENCE,  CONFLICTED},

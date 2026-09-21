@@ -51,7 +51,7 @@ public class PlayerManager {
     private int abRepeatA = -1;
     private int abRepeatB = -1;
 
-    private AudioManager audioManager;
+    private final AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
     private boolean hasAudioFocus;
 
