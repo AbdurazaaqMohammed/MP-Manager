@@ -106,7 +106,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
             }
             Constructor cons = ((Class<?>)extClass).getConstructor(PARAMS);
 
-            Object[] passed = new Object[] {Boolean.valueOf(ext.isCritical()),
+            Object[] passed = new Object[] {ext.isCritical(),
                     ext.getExtensionValue()};
                     android.sun.security.x509.CertAttrSet certExt = (android.sun.security.x509.CertAttrSet)cons.newInstance(passed);
                     if (map.put(certExt.getName(), (android.sun.security.x509.Extension)certExt) != null) {

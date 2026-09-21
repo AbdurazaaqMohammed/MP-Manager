@@ -114,16 +114,16 @@ public class X509CertInfo implements CertAttrSet<String> {
     // The certificate attribute name to integer mapping stored here
     private static final Map<String,Integer> map = new HashMap<String,Integer>();
     static {
-        map.put(VERSION, Integer.valueOf(ATTR_VERSION));
-        map.put(SERIAL_NUMBER, Integer.valueOf(ATTR_SERIAL));
-        map.put(ALGORITHM_ID, Integer.valueOf(ATTR_ALGORITHM));
-        map.put(ISSUER, Integer.valueOf(ATTR_ISSUER));
-        map.put(VALIDITY, Integer.valueOf(ATTR_VALIDITY));
-        map.put(SUBJECT, Integer.valueOf(ATTR_SUBJECT));
-        map.put(KEY, Integer.valueOf(ATTR_KEY));
-        map.put(ISSUER_ID, Integer.valueOf(ATTR_ISSUER_ID));
-        map.put(SUBJECT_ID, Integer.valueOf(ATTR_SUBJECT_ID));
-        map.put(EXTENSIONS, Integer.valueOf(ATTR_EXTENSIONS));
+        map.put(VERSION, ATTR_VERSION);
+        map.put(SERIAL_NUMBER, ATTR_SERIAL);
+        map.put(ALGORITHM_ID, ATTR_ALGORITHM);
+        map.put(ISSUER, ATTR_ISSUER);
+        map.put(VALIDITY, ATTR_VALIDITY);
+        map.put(SUBJECT, ATTR_SUBJECT);
+        map.put(KEY, ATTR_KEY);
+        map.put(ISSUER_ID, ATTR_ISSUER_ID);
+        map.put(SUBJECT_ID, ATTR_SUBJECT_ID);
+        map.put(EXTENSIONS, ATTR_EXTENSIONS);
     }
 
     /**

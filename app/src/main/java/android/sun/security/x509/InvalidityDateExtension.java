@@ -214,7 +214,7 @@ public class InvalidityDateExtension extends Extension
             return (InvalidityDateExtension) ext;
         } else {
             return new InvalidityDateExtension
-                (Boolean.valueOf(ext.isCritical()), ext.getValue());
+                (ext.isCritical(), ext.getValue());
         }
     }
 }

@@ -117,7 +117,7 @@ public class CRLExtensions {
                 return;
             }
             Constructor cons = ((Class<?>)extClass).getConstructor(PARAMS);
-            Object[] passed = new Object[] {Boolean.valueOf(ext.isCritical()),
+            Object[] passed = new Object[] {ext.isCritical(),
                                             ext.getExtensionValue()};
             android.sun.security.x509.CertAttrSet crlExt = (android.sun.security.x509.CertAttrSet)cons.newInstance(passed);
             if (map.put(crlExt.getName(), (android.sun.security.x509.Extension)crlExt) != null) {

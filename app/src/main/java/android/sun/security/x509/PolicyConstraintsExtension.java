@@ -233,7 +233,7 @@ implements CertAttrSet<String> {
         if (name.equalsIgnoreCase(REQUIRE)) {
             return Integer.valueOf(require);
         } else if (name.equalsIgnoreCase(INHIBIT)) {
-            return new Integer(inhibit);
+            return inhibit;
         } else {
           throw new IOException("Attribute name not recognized by " +
                                 "CertAttrSet:PolicyConstraints.");

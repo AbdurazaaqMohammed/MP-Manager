@@ -540,7 +540,7 @@ public class InstructionMethodItem<T extends Instruction> extends MethodItem {
 
     protected boolean writeCommentIfResourceId(BaksmaliWriter writer, int val) throws IOException {
         Map<Integer,String> resourceIds = methodDef.classDef.options.resourceIds;
-        String resource = resourceIds.get(Integer.valueOf(val));
+        String resource = resourceIds.get(val);
         if (resource != null) {
             writer.write("    # ");
             writer.write(resource);

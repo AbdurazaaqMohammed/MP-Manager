@@ -1486,7 +1486,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         for (GeneralName gname : names.names()) {
             android.sun.security.x509.GeneralNameInterface name = gname.getName();
             List<Object> nameEntry = new ArrayList<Object>(2);
-            nameEntry.add(Integer.valueOf(name.getType()));
+            nameEntry.add(name.getType());
             switch (name.getType()) {
             case android.sun.security.x509.GeneralNameInterface.NAME_RFC822:
                 nameEntry.add(((RFC822Name) name).getName());

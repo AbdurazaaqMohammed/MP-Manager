@@ -92,7 +92,7 @@ implements CertAttrSet<String> {
      * @param len specifies the depth of the certification path.
      */
     public BasicConstraintsExtension(boolean ca, int len) throws IOException {
-        this(Boolean.valueOf(ca), ca, len);
+        this(ca, ca, len);
     }
 
     /**
@@ -229,9 +229,9 @@ implements CertAttrSet<String> {
      */
     public Object get(String name) throws IOException {
         if (name.equalsIgnoreCase(IS_CA)) {
-            return (Boolean.valueOf(ca));
+            return (ca);
         } else if (name.equalsIgnoreCase(PATH_LEN)) {
-            return (Integer.valueOf(pathLen));
+            return (pathLen);
         } else {
           throw new IOException("Attribute name not recognized by " +
                                 "CertAttrSet:BasicConstraints.");

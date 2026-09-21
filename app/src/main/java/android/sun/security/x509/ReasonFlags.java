@@ -183,7 +183,7 @@ public class ReasonFlags {
      * Get the attribute value.
      */
     public Object get(String name) throws IOException {
-        return Boolean.valueOf(isSet(name2Index(name)));
+        return isSet(name2Index(name));
     }
 
     /**

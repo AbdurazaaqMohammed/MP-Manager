@@ -307,19 +307,19 @@ public class IssuingDistributionPointExtension extends Extension
             return distributionPoint;
 
         } else if (name.equalsIgnoreCase(INDIRECT_CRL)) {
-            return Boolean.valueOf(isIndirectCRL);
+            return isIndirectCRL;
 
         } else if (name.equalsIgnoreCase(REASONS)) {
             return revocationReasons;
 
         } else if (name.equalsIgnoreCase(ONLY_USER_CERTS)) {
-            return Boolean.valueOf(hasOnlyUserCerts);
+            return hasOnlyUserCerts;
 
         } else if (name.equalsIgnoreCase(ONLY_CA_CERTS)) {
-            return Boolean.valueOf(hasOnlyCACerts);
+            return hasOnlyCACerts;
 
         } else if (name.equalsIgnoreCase(ONLY_ATTRIBUTE_CERTS)) {
-            return Boolean.valueOf(hasOnlyAttributeCerts);
+            return hasOnlyAttributeCerts;
 
         } else {
             throw new IOException("Attribute name [" + name +

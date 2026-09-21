@@ -221,7 +221,7 @@ implements CertAttrSet<String> {
      * Get the attribute value.
      */
     public Object get(String name) throws IOException {
-        return Boolean.valueOf(isSet(getPosition(name)));
+        return isSet(getPosition(name));
     }
 
     /**

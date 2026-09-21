@@ -219,23 +219,23 @@ implements CertAttrSet<String> {
      */
     public Object get(String name) throws IOException {
         if (name.equalsIgnoreCase(DIGITAL_SIGNATURE)) {
-            return Boolean.valueOf(isSet(0));
+            return isSet(0);
         } else if (name.equalsIgnoreCase(NON_REPUDIATION)) {
-            return Boolean.valueOf(isSet(1));
+            return isSet(1);
         } else if (name.equalsIgnoreCase(KEY_ENCIPHERMENT)) {
-            return Boolean.valueOf(isSet(2));
+            return isSet(2);
         } else if (name.equalsIgnoreCase(DATA_ENCIPHERMENT)) {
-            return Boolean.valueOf(isSet(3));
+            return isSet(3);
         } else if (name.equalsIgnoreCase(KEY_AGREEMENT)) {
-            return Boolean.valueOf(isSet(4));
+            return isSet(4);
         } else if (name.equalsIgnoreCase(KEY_CERTSIGN)) {
-            return Boolean.valueOf(isSet(5));
+            return isSet(5);
         } else if (name.equalsIgnoreCase(CRL_SIGN)) {
-            return Boolean.valueOf(isSet(6));
+            return isSet(6);
         } else if (name.equalsIgnoreCase(ENCIPHER_ONLY)) {
-            return Boolean.valueOf(isSet(7));
+            return isSet(7);
         } else if (name.equalsIgnoreCase(DECIPHER_ONLY)) {
-            return Boolean.valueOf(isSet(8));
+            return isSet(8);
         } else {
           throw new IOException("Attribute name not recognized by"
                                 + " CertAttrSet:KeyUsage.");

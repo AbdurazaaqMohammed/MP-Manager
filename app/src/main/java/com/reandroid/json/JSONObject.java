@@ -995,7 +995,7 @@ public class JSONObject extends JSONItem {
                 try {
                     BigDecimal bd = new BigDecimal(val);
                     if(initial == '-' && BigDecimal.ZERO.compareTo(bd)==0) {
-                        return Double.valueOf(-0.0);
+                        return -0.0;
                     }
                     return bd;
                 } catch (NumberFormatException retryAsDouble) {
@@ -1034,10 +1034,10 @@ public class JSONObject extends JSONItem {
             // long lived.
             BigInteger bi = new BigInteger(val);
             if(bi.bitLength() <= 31){
-                return Integer.valueOf(bi.intValue());
+                return bi.intValue();
             }
             if(bi.bitLength() <= 63){
-                return Long.valueOf(bi.longValue());
+                return bi.longValue();
             }
             return bi;
         }
