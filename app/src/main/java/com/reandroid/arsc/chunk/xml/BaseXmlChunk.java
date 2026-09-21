@@ -171,7 +171,7 @@ class BaseXmlChunk extends Chunk<XmlNodeHeader> {
         return getString(getCommentReference());
     }
     public void setComment(String comment) {
-        if (comment == null || comment.length() == 0) {
+        if (android.text.TextUtils.isEmpty(comment)) {
             setCommentReference(NULL_REFERENCE);
         } else {
             String old = getComment();

@@ -38,7 +38,7 @@ public class XMLUtil {
         }
     }
     public static String decodeEntityRef(String entityRef) {
-        if (entityRef == null || entityRef.length() == 0) {
+        if (android.text.TextUtils.isEmpty(entityRef)) {
             return entityRef;
         }
         String decode;

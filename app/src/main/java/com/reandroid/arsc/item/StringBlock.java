@@ -35,7 +35,7 @@ public abstract class StringBlock extends BlockItem implements StringReference {
         set(text, true);
     }
     public void set(String text, boolean notify){
-        if(text == null || text.length() == 0){
+        if(android.text.TextUtils.isEmpty(text)){
             text = StringsUtil.EMPTY;
         }
         String old = this.mCache;

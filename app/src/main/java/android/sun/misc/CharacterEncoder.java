@@ -114,14 +114,14 @@ public abstract class CharacterEncoder {
     }
 
     /** Encode one "atom" of information into characters. */
-    abstract protected void encodeAtom(OutputStream aStream, byte someBytes[],
-                int anOffset, int aLength) throws IOException;
+    abstract protected void encodeAtom(OutputStream aStream, byte[] someBytes,
+                                       int anOffset, int aLength) throws IOException;
 
     /**
      * This method works around the bizarre semantics of BufferedInputStream's
      * read method.
      */
-    protected int readFully(InputStream in, byte buffer[])
+    protected int readFully(InputStream in, byte[] buffer)
         throws java.io.IOException {
         for (int i = 0; i < buffer.length; i++) {
             int q = in.read();
@@ -142,7 +142,7 @@ public abstract class CharacterEncoder {
         throws IOException {
         int     j;
         int     numBytes;
-        byte    tmpbuffer[] = new byte[bytesPerLine()];
+        byte[] tmpbuffer = new byte[bytesPerLine()];
 
         encodeBufferPrefix(outStream);
 
@@ -173,7 +173,7 @@ public abstract class CharacterEncoder {
      * Encode the buffer in <i>aBuffer</i> and write the encoded
      * result to the OutputStream <i>aStream</i>.
      */
-    public void encode(byte aBuffer[], OutputStream aStream)
+    public void encode(byte[] aBuffer, OutputStream aStream)
     throws IOException {
         ByteArrayInputStream inStream = new ByteArrayInputStream(aBuffer);
         encode(inStream, aStream);
@@ -183,7 +183,7 @@ public abstract class CharacterEncoder {
      * A 'streamless' version of encode that simply takes a buffer of
      * bytes and returns a string containing the encoded buffer.
      */
-    public String encode(byte aBuffer[]) {
+    public String encode(byte[] aBuffer) {
         ByteArrayOutputStream   outStream = new ByteArrayOutputStream();
         ByteArrayInputStream    inStream = new ByteArrayInputStream(aBuffer);
         String retVal = null;
@@ -277,7 +277,7 @@ public abstract class CharacterEncoder {
         throws IOException {
         int     j;
         int     numBytes;
-        byte    tmpbuffer[] = new byte[bytesPerLine()];
+        byte[] tmpbuffer = new byte[bytesPerLine()];
 
         encodeBufferPrefix(outStream);
 
@@ -306,7 +306,7 @@ public abstract class CharacterEncoder {
      * Encode the buffer in <i>aBuffer</i> and write the encoded
      * result to the OutputStream <i>aStream</i>.
      */
-    public void encodeBuffer(byte aBuffer[], OutputStream aStream)
+    public void encodeBuffer(byte[] aBuffer, OutputStream aStream)
     throws IOException {
         ByteArrayInputStream inStream = new ByteArrayInputStream(aBuffer);
         encodeBuffer(inStream, aStream);
@@ -316,7 +316,7 @@ public abstract class CharacterEncoder {
      * A 'streamless' version of encode that simply takes a buffer of
      * bytes and returns a string containing the encoded buffer.
      */
-    public String encodeBuffer(byte aBuffer[]) {
+    public String encodeBuffer(byte[] aBuffer) {
         ByteArrayOutputStream   outStream = new ByteArrayOutputStream();
         ByteArrayInputStream    inStream = new ByteArrayInputStream(aBuffer);
         try {

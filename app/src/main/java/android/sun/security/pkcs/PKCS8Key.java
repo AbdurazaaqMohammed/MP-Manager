@@ -79,7 +79,7 @@ public class PKCS8Key implements PrivateKey {
      * data is stored and transmitted losslessly, but no knowledge
      * about this particular algorithm is available.
      */
-    private PKCS8Key (android.sun.security.x509.AlgorithmId algid, byte key [])
+    private PKCS8Key (android.sun.security.x509.AlgorithmId algid, byte[] key)
     throws InvalidKeyException {
         this.algid = algid;
         this.key = key;

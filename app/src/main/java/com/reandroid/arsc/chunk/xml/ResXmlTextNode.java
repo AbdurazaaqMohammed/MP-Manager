@@ -132,7 +132,7 @@ public class ResXmlTextNode extends ResXmlNode implements Text {
     }
     public void append(String text) {
         String exist = getText();
-        if (exist == null || exist.length() == 0) {
+        if (android.text.TextUtils.isEmpty(exist)) {
             exist = mIndentText;
         }
         if (exist == null && isIndent(text)) {

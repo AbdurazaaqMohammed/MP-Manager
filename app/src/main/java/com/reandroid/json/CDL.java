@@ -126,7 +126,7 @@ public class CDL {
 
     public static JSONArray toJSONArray(JSONArray names, JSONTokener x)
             throws JSONException {
-        if (names == null || names.length() == 0) {
+        if (android.text.TextUtils.isEmpty(names)) {
             return null;
         }
         JSONArray ja = new JSONArray();
@@ -155,7 +155,7 @@ public class CDL {
 
     public static String toString(JSONArray names, JSONArray ja)
             throws JSONException {
-        if (names == null || names.length() == 0) {
+        if (android.text.TextUtils.isEmpty(names)) {
             return null;
         }
         StringBuilder sb = new StringBuilder();

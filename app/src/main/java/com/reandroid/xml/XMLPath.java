@@ -185,7 +185,7 @@ public class XMLPath implements Predicate<NamedNode> {
         if (isAttribute()) {
             throw new InvalidPathException("Attribute can not have child element");
         }
-        if (name == null || name.length() == 0) {
+        if (android.text.TextUtils.isEmpty(name)) {
             throw new InvalidPathException("Name can not be empty");
         }
         char c = name.charAt(0);

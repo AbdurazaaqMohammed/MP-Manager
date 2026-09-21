@@ -125,7 +125,7 @@ public class IPAddressName implements android.sun.security.x509.GeneralNameInter
      */
     public IPAddressName(String name) throws IOException {
 
-        if (name == null || name.length() == 0) {
+        if (android.text.TextUtils.isEmpty(name)) {
             throw new IOException("IPAddress cannot be null or empty");
         }
         if (name.charAt(name.length() - 1) == '/') {

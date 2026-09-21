@@ -293,7 +293,7 @@ public class SmaliWriter implements Appendable, Closeable {
             } catch (IOException ignored) {}
         }
         StringBuilder comment = this.comment;
-        if (comment == null || comment.length() == 0) {
+        if (android.text.TextUtils.isEmpty(comment)) {
             comment = new StringBuilder();
             this.comment = comment;
             if (this.indent != 0 || this.columnNumber != 0) {

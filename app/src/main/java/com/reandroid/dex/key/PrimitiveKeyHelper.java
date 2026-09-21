@@ -21,7 +21,7 @@ import com.reandroid.utils.HexUtil;
 class PrimitiveKeyHelper {
 
     public static PrimitiveKey parse(String text) {
-        if (text == null || text.length() == 0) {
+        if (android.text.TextUtils.isEmpty(text)) {
             return null;
         }
         char first = text.charAt(0);

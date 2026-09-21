@@ -242,7 +242,7 @@ public class XmlCoder {
             }
             if(valueType == ValueType.STRING){
                 String value = resValue.getValueAsString();
-                return value == null || value.length() == 0;
+                return android.text.TextUtils.isEmpty(value);
             }
             return false;
         }
@@ -777,7 +777,7 @@ public class XmlCoder {
             }
             // TODO: confirm will never reach here
 
-            if(value == null || value.length() == 0){
+            if(android.text.TextUtils.isEmpty(value)){
                 return;
             }
             entry.setName(value);

@@ -97,7 +97,7 @@ public class DocumentSerializer implements XmlSerializer {
 
     @Override
     public String getPrefix(String namespace, boolean generatePrefix) throws IllegalArgumentException {
-        if(namespace == null || namespace.length() == 0){
+        if(android.text.TextUtils.isEmpty(namespace)){
             return null;
         }
         Map<String, String> map = this.namespaceMap;

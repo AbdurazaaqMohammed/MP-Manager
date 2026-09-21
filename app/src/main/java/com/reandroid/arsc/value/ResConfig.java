@@ -336,7 +336,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
         return result;
     }
     public void setUnknownBytes(String hexBytes){
-        if(hexBytes == null || hexBytes.length() == 0){
+        if(android.text.TextUtils.isEmpty(hexBytes)){
             return;
         }
         int length = hexBytes.length();
@@ -1275,7 +1275,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
             return null;
         }
         static<T extends Flag> T valueOf(T[] values, String name){
-            if(name == null || name.length() == 0){
+            if(android.text.TextUtils.isEmpty(name)){
                 return null;
             }
             if(name.charAt(0) == '-'){
@@ -1562,7 +1562,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
             int count = 0;
             for(int i = 0; i < length; i++){
                 String qualifier = qualifiers[i];
-                if(qualifier == null || qualifier.length() == 0){
+                if(android.text.TextUtils.isEmpty(qualifier)){
                     continue;
                 }
                 tmp[count] = qualifier;
@@ -1916,7 +1916,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
             return true;
         }
         private static String[] splitQualifiers(String qualifier){
-            if(qualifier == null || qualifier.length() == 0){
+            if(android.text.TextUtils.isEmpty(qualifier)){
                 return null;
             }
             return qualifier.split("-");

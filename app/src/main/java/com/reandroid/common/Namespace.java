@@ -70,7 +70,7 @@ public interface Namespace {
         return isValidPrefix(prefix);
     }
     static boolean isValidPrefix(String prefix) {
-        if(prefix == null || prefix.length() == 0){
+        if(android.text.TextUtils.isEmpty(prefix)){
             return false;
         }
         char[] chars = prefix.toCharArray();

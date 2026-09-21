@@ -72,7 +72,7 @@ public class StorageUtil {
                             desc = vol.getDescription(ctx);
                         } catch (Exception ignored) {
                         }
-                        si.name = (desc == null || desc.length() == 0) ? "Storage" : desc.toString();
+                        si.name = (android.text.TextUtils.isEmpty(desc)) ? "Storage" : desc.toString();
                     }
 
                     StatFs statFs = new StatFs(si.path);

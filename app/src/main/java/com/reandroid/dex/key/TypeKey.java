@@ -531,7 +531,7 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
     }
 
     public static TypeKey parse(String name) {
-        if (name == null || name.length() == 0) {
+        if (android.text.TextUtils.isEmpty(name)) {
             return null;
         }
         if (name.indexOf('>') > 0 ||
@@ -547,7 +547,7 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
         return parseSourceName(name);
     }
     public static TypeKey fromClassPath(String path) {
-        if (path == null || path.length() == 0) {
+        if (android.text.TextUtils.isEmpty(path)) {
             return null;
         }
         String ext = ".class";

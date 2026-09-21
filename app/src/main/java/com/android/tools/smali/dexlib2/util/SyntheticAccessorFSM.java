@@ -57,7 +57,7 @@ private static byte[] init__SyntheticAccessorFSM_actions_0()
 	};
 }
 
-private static final byte _SyntheticAccessorFSM_actions[] = init__SyntheticAccessorFSM_actions_0();
+private static final byte[] _SyntheticAccessorFSM_actions = init__SyntheticAccessorFSM_actions_0();
 
 
 private static short[] init__SyntheticAccessorFSM_key_offsets_0()
@@ -68,7 +68,7 @@ private static short[] init__SyntheticAccessorFSM_key_offsets_0()
 	};
 }
 
-private static final short _SyntheticAccessorFSM_key_offsets[] = init__SyntheticAccessorFSM_key_offsets_0();
+private static final short[] _SyntheticAccessorFSM_key_offsets = init__SyntheticAccessorFSM_key_offsets_0();
 
 
 private static short[] init__SyntheticAccessorFSM_trans_keys_0()
@@ -94,7 +94,7 @@ private static short[] init__SyntheticAccessorFSM_trans_keys_0()
 	};
 }
 
-private static final short _SyntheticAccessorFSM_trans_keys[] = init__SyntheticAccessorFSM_trans_keys_0();
+private static final short[] _SyntheticAccessorFSM_trans_keys = init__SyntheticAccessorFSM_trans_keys_0();
 
 
 private static byte[] init__SyntheticAccessorFSM_single_lengths_0()
@@ -105,7 +105,7 @@ private static byte[] init__SyntheticAccessorFSM_single_lengths_0()
 	};
 }
 
-private static final byte _SyntheticAccessorFSM_single_lengths[] = init__SyntheticAccessorFSM_single_lengths_0();
+private static final byte[] _SyntheticAccessorFSM_single_lengths = init__SyntheticAccessorFSM_single_lengths_0();
 
 
 private static byte[] init__SyntheticAccessorFSM_range_lengths_0()
@@ -116,7 +116,7 @@ private static byte[] init__SyntheticAccessorFSM_range_lengths_0()
 	};
 }
 
-private static final byte _SyntheticAccessorFSM_range_lengths[] = init__SyntheticAccessorFSM_range_lengths_0();
+private static final byte[] _SyntheticAccessorFSM_range_lengths = init__SyntheticAccessorFSM_range_lengths_0();
 
 
 private static short[] init__SyntheticAccessorFSM_index_offsets_0()
@@ -127,7 +127,7 @@ private static short[] init__SyntheticAccessorFSM_index_offsets_0()
 	};
 }
 
-private static final short _SyntheticAccessorFSM_index_offsets[] = init__SyntheticAccessorFSM_index_offsets_0();
+private static final short[] _SyntheticAccessorFSM_index_offsets = init__SyntheticAccessorFSM_index_offsets_0();
 
 
 private static byte[] init__SyntheticAccessorFSM_indicies_0()
@@ -152,7 +152,7 @@ private static byte[] init__SyntheticAccessorFSM_indicies_0()
 	};
 }
 
-private static final byte _SyntheticAccessorFSM_indicies[] = init__SyntheticAccessorFSM_indicies_0();
+private static final byte[] _SyntheticAccessorFSM_indicies = init__SyntheticAccessorFSM_indicies_0();
 
 
 private static byte[] init__SyntheticAccessorFSM_trans_targs_0()
@@ -165,7 +165,7 @@ private static byte[] init__SyntheticAccessorFSM_trans_targs_0()
 	};
 }
 
-private static final byte _SyntheticAccessorFSM_trans_targs[] = init__SyntheticAccessorFSM_trans_targs_0();
+private static final byte[] _SyntheticAccessorFSM_trans_targs = init__SyntheticAccessorFSM_trans_targs_0();
 
 
 private static byte[] init__SyntheticAccessorFSM_trans_actions_0()
@@ -178,7 +178,7 @@ private static byte[] init__SyntheticAccessorFSM_trans_actions_0()
 	};
 }
 
-private static final byte _SyntheticAccessorFSM_trans_actions[] = init__SyntheticAccessorFSM_trans_actions_0();
+private static final byte[] _SyntheticAccessorFSM_trans_actions = init__SyntheticAccessorFSM_trans_actions_0();
 
 
 static final int SyntheticAccessorFSM_start = 1;

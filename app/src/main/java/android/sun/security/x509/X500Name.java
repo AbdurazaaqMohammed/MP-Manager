@@ -864,7 +864,7 @@ public class X500Name implements GeneralNameInterface, Principal {
      */
     private void parseDN(String dname, Map<String, String> keywordMap)
             throws IOException {
-        if (dname == null || dname.length() == 0) {
+        if (android.text.TextUtils.isEmpty(dname)) {
             names = new RDN[0];
             return;
         }

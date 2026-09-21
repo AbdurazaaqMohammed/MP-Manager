@@ -680,7 +680,7 @@ public class AndroidManifestBlock extends ResXmlDocument implements AndroidManif
         application.refresh();
     }
     public String fullClassName(String name) {
-        if (name == null || name.length() == 0 || name.charAt(0) != '.') {
+        if (android.text.TextUtils.isEmpty(name) || name.charAt(0) != '.') {
             return name;
         }
         String packageName = getPackageName();
@@ -690,7 +690,7 @@ public class AndroidManifestBlock extends ResXmlDocument implements AndroidManif
         return packageName + name;
     }
     public String relativeClassName(String name) {
-        if (name == null || name.length() == 0 || name.charAt(0) == '.') {
+        if (android.text.TextUtils.isEmpty(name) || name.charAt(0) == '.') {
             return name;
         }
         String packageName = getPackageName();

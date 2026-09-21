@@ -122,17 +122,17 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
 
     public static final int VERSION_3 = 3;
 
-    private static final int keyBag[]  = {1, 2, 840, 113549, 1, 12, 10, 1, 2};
-    private static final int certBag[] = {1, 2, 840, 113549, 1, 12, 10, 1, 3};
+    private static final int[] keyBag = {1, 2, 840, 113549, 1, 12, 10, 1, 2};
+    private static final int[] certBag = {1, 2, 840, 113549, 1, 12, 10, 1, 3};
 
-    private static final int pkcs9Name[]  = {1, 2, 840, 113549, 1, 9, 20};
-    private static final int pkcs9KeyId[] = {1, 2, 840, 113549, 1, 9, 21};
+    private static final int[] pkcs9Name = {1, 2, 840, 113549, 1, 9, 20};
+    private static final int[] pkcs9KeyId = {1, 2, 840, 113549, 1, 9, 21};
 
-    private static final int pkcs9certType[] = {1, 2, 840, 113549, 1, 9, 22, 1};
+    private static final int[] pkcs9certType = {1, 2, 840, 113549, 1, 9, 22, 1};
 
-    private static final int pbeWithSHAAnd40BitRC2CBC[] =
+    private static final int[] pbeWithSHAAnd40BitRC2CBC =
                                         {1, 2, 840, 113549, 1, 12, 1, 6};
-    private static final int pbeWithSHAAnd3KeyTripleDESCBC[] =
+    private static final int[] pbeWithSHAAnd3KeyTripleDESCBC =
                                         {1, 2, 840, 113549, 1, 12, 1, 3};
 
     private static ObjectIdentifier PKCS8ShroudedKeyBag_OID;
@@ -175,7 +175,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
     private static class KeyEntry {
         Date date; // the creation date of this entry
         byte[] protectedPrivKey;
-        Certificate chain[];
+        Certificate[] chain;
         byte[] keyId;
         String alias;
     };

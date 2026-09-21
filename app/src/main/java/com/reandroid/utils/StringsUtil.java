@@ -269,7 +269,7 @@ public class StringsUtil {
         return split(text, search, true);
     }
     public static String[] split(String text, char[] search, boolean skipConsecutive) {
-        if(text == null || text.length() == 0){
+        if(android.text.TextUtils.isEmpty(text)){
             return new String[0];
         }
         int count = countChar(text, search, skipConsecutive);
@@ -301,7 +301,7 @@ public class StringsUtil {
         return results;
     }
     public static String[] split(String text, char search, boolean skipConsecutive) {
-        if(text == null || text.length() == 0){
+        if(android.text.TextUtils.isEmpty(text)){
             return new String[0];
         }
         int count = countChar(text, search, skipConsecutive);
@@ -347,7 +347,7 @@ public class StringsUtil {
         return count;
     }
     public static int countChar(String text, char[] search, boolean skipConsecutive) {
-        if(text == null || text.length() == 0){
+        if(android.text.TextUtils.isEmpty(text)){
             return 0;
         }
         int length = text.length();
@@ -367,7 +367,7 @@ public class StringsUtil {
         return result;
     }
     public static int countChar(String text, char search, boolean skipConsecutive) {
-        if(text == null || text.length() == 0){
+        if(android.text.TextUtils.isEmpty(text)){
             return 0;
         }
         int length = text.length();
@@ -472,7 +472,7 @@ public class StringsUtil {
         return text;
     }
     public static boolean isEmpty(String text){
-        return text == null || text.length() == 0;
+        return android.text.TextUtils.isEmpty(text);
     }
     public static boolean isBlank(String text) {
         if (text != null) {
@@ -518,7 +518,7 @@ public class StringsUtil {
         return text.substring(0, end);
     }
     public static String toUpperCase(String str){
-        if(str == null || str.length() == 0){
+        if(android.text.TextUtils.isEmpty(str)){
             return str;
         }
         char[] chars = str.toCharArray();

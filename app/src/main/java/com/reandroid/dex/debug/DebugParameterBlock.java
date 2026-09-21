@@ -43,7 +43,7 @@ public class DebugParameterBlock extends Base1Ule128IdItemReference<StringId> im
         return null;
     }
     public void setName(String name){
-        if(name == null || name.length() == 0){
+        if(android.text.TextUtils.isEmpty(name)){
             setItem(null);
         }else {
             setKey(new StringKey(name));

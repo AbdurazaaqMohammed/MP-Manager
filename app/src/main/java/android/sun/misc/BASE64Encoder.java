@@ -61,7 +61,7 @@ public class BASE64Encoder extends CharacterEncoder {
     }
 
     /** This array maps the characters to their 6 bit values */
-    private final static char pem_array[] = {
+    private final static char[] pem_array = {
         //       0   1   2   3   4   5   6   7
                 'A','B','C','D','E','F','G','H', // 0
                 'I','J','K','L','M','N','O','P', // 1
@@ -79,7 +79,7 @@ public class BASE64Encoder extends CharacterEncoder {
      * than three is encodes either one or two '=' signs to indicate
      * padding characters.
      */
-    protected void encodeAtom(OutputStream outStream, byte data[], int offset, int len)
+    protected void encodeAtom(OutputStream outStream, byte[] data, int offset, int len)
         throws IOException {
         byte a, b, c;
 

@@ -117,7 +117,7 @@ class AlgIdDSA extends AlgorithmId implements DSAParams
      * @param q the DSS/DSA paramter "Q"
      * @param g the DSS/DSA paramter "G"
      */
-    public AlgIdDSA (byte p [], byte q [], byte g [])
+    public AlgIdDSA (byte[] p, byte[] q, byte[] g)
     throws IOException
     {
         this (new BigInteger (1, p),

@@ -1007,7 +1007,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
             throw new CRLException("Invalid DER-encoded CRL data");
 
         signedCRL = val.toByteArray();
-        android.sun.security.util.DerValue seq[] = new android.sun.security.util.DerValue[3];
+        android.sun.security.util.DerValue[] seq = new android.sun.security.util.DerValue[3];
 
         seq[0] = val.data.getDerValue();
         seq[1] = val.data.getDerValue();

@@ -49,7 +49,7 @@ public interface Span {
         return raw.substring(0, i);
     }
     static String splitAttribute(String tagWithAttribute) {
-        if (tagWithAttribute == null || tagWithAttribute.length() == 0) {
+        if (android.text.TextUtils.isEmpty(tagWithAttribute)) {
             return null;
         }
         if (tagWithAttribute.charAt(0) == ' ') {

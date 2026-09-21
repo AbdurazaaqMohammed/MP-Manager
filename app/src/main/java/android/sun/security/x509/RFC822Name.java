@@ -79,7 +79,7 @@ public class RFC822Name implements android.sun.security.x509.GeneralNameInterfac
      * @throws IOException if name is not valid
      */
     public void parseName(String name) throws IOException {
-        if (name == null || name.length() == 0) {
+        if (android.text.TextUtils.isEmpty(name)) {
             throw new IOException("RFC822Name may not be null or empty");
         }
         // See if domain is a valid domain name
