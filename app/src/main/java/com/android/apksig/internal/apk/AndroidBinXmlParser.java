@@ -19,6 +19,7 @@ package com.android.apksig.internal.apk;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -700,11 +701,7 @@ public class AndroidBinXmlParser {
                     || (arr[arrOffset + lengthBytes + 1] != 0)) {
                 throw new XmlParserException("UTF-16 encoded form of string not NULL terminated");
             }
-            try {
-                return new String(arr, arrOffset, lengthBytes, "UTF-16LE");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException("UTF-16LE character encoding not supported", e);
-            }
+            return new String(arr, arrOffset, lengthBytes, StandardCharsets.UTF_16LE);
         }
 
         private static String getLengthPrefixedUtf8EncodedString(ByteBuffer encoded)
@@ -741,11 +738,7 @@ public class AndroidBinXmlParser {
             if (arr[arrOffset + lengthBytes] != 0) {
                 throw new XmlParserException("UTF-8 encoded form of string not NULL terminated");
             }
-            try {
-                return new String(arr, arrOffset, lengthBytes, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException("UTF-8 character encoding not supported", e);
-            }
+            return new String(arr, arrOffset, lengthBytes, StandardCharsets.UTF_8);
         }
     }
 

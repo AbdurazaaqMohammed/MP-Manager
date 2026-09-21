@@ -226,10 +226,7 @@ public class CentralDirectoryRecord {
             long uncompressedSize,
             long localFileHeaderOffset) {
         byte[] nameBytes = null;
-        try {
-            nameBytes = name.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException ignored) {
-        }
+        nameBytes = name.getBytes(StandardCharsets.UTF_8);
         short gpFlags = ZipUtils.GP_FLAG_EFS; // UTF-8 character encoding used for entry name
         short compressionMethod = ZipUtils.COMPRESSION_METHOD_DEFLATED;
         int recordSize = HEADER_SIZE_BYTES + nameBytes.length;
@@ -289,11 +286,7 @@ public class CentralDirectoryRecord {
                 record.position(originalPosition);
             }
         }
-        try {
-            return new String(nameBytes, nameBytesOffset, nameLengthBytes, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        return new String(nameBytes, nameBytesOffset, nameLengthBytes, StandardCharsets.UTF_8);
     }
 
     private static class ByLocalFileHeaderOffsetComparator

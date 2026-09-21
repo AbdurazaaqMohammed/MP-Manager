@@ -42,6 +42,7 @@ import com.android.tools.smali.util.TransformedIterator;
 import com.google.common.base.Function;
 import com.android.tools.smali.dexlib2.dexbacked.OatFile.SymbolTable.Symbol;
 
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -563,7 +564,7 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
                 }
             }
 
-            return new String(buf, start, end-start, Charset.forName("US-ASCII"));
+            return new String(buf, start, end-start, StandardCharsets.US_ASCII);
         }
     }
 
@@ -625,7 +626,7 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
                 offset += 4;
 
                 // TODO: what is the correct character encoding?
-                String filename = new String(buf, offset, filenameLength, Charset.forName("US-ASCII"));
+                String filename = new String(buf, offset, filenameLength, StandardCharsets.US_ASCII);
                 offset += filenameLength;
 
                 offset += 4; // checksum

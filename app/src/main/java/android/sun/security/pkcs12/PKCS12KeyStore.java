@@ -26,6 +26,7 @@
 package android.sun.security.pkcs12;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Key;
@@ -410,7 +411,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             }
 
             // set the keyId to current date
-            entry.keyId = ("Time " + (entry.date).getTime()).getBytes("UTF8");
+            entry.keyId = ("Time " + (entry.date).getTime()).getBytes(StandardCharsets.UTF_8);
             // set the alias
             entry.alias = alias.toLowerCase();
 
@@ -465,12 +466,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         KeyEntry entry = new KeyEntry();
         entry.date = new Date();
 
-        try {
-            // set the keyId to current date
-            entry.keyId = ("Time " + (entry.date).getTime()).getBytes("UTF8");
-        } catch (UnsupportedEncodingException ex) {
-            // Won't happen
-        }
+        // set the keyId to current date
+        entry.keyId = ("Time " + (entry.date).getTime()).getBytes(StandardCharsets.UTF_8);
         // set the alias
         entry.alias = alias.toLowerCase();
 
@@ -1479,14 +1476,14 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                    // attribute in pkcs12 with one private key entry and
                    // associated cert-chain
                    if (privateKeyCount == 1) {
-                        keyId = "01".getBytes("UTF8");
+                        keyId = "01".getBytes(StandardCharsets.UTF_8);
                    } else {
                         continue;
                    }
                 }
                 entry.keyId = keyId;
                 // restore date if it exists
-                String keyIdStr = new String(keyId, "UTF8");
+                String keyIdStr = new String(keyId, StandardCharsets.UTF_8);
                 Date date = null;
                 if (keyIdStr.startsWith("Time ")) {
                     try {
@@ -1513,7 +1510,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                 if ((keyId == null) && (privateKeyCount == 1)) {
                     // insert localKeyID only for EE cert or self-signed cert
                     if (i == 0) {
-                        keyId = "01".getBytes("UTF8");
+                        keyId = "01".getBytes(StandardCharsets.UTF_8);
                     }
                 }
                 certEntries.add(new CertEntry(cert, keyId, alias));

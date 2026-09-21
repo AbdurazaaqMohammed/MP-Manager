@@ -15,6 +15,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -100,7 +101,7 @@ public class ApkSignFlowTest {
         int[] offsets = new int[strings.length];
         for (int i = 0; i < strings.length; i++) {
             offsets[i] = stringData.size();
-            byte[] utf8 = strings[i].getBytes("UTF-8");
+            byte[] utf8 = strings[i].getBytes(StandardCharsets.UTF_8);
             // AAPT UTF-8 form: 1-or-2-byte char count, 1-or-2-byte byte count, data, NUL.
             writeLen8(stringData, strings[i].length());
             writeLen8(stringData, utf8.length);

@@ -6,6 +6,7 @@ import android.security.keystore.KeyProperties;
 import android.util.Base64;
 import android.content.SharedPreferences;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 
@@ -30,7 +31,7 @@ public class PasswordEncryptor {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey);
             byte[] iv = cipher.getIV();
-            byte[] encryption = cipher.doFinal(plainText.getBytes("UTF-8"));
+            byte[] encryption = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
             byte[] combined = new byte[GCM_IV_LENGTH + encryption.length];
             System.arraycopy(iv, 0, combined, 0, GCM_IV_LENGTH);
             System.arraycopy(encryption, 0, combined, GCM_IV_LENGTH, encryption.length);
@@ -53,7 +54,7 @@ public class PasswordEncryptor {
             System.arraycopy(combined, GCM_IV_LENGTH, encryption, 0, encryption.length);
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
-            return new String(cipher.doFinal(encryption), "UTF-8");
+            return new String(cipher.doFinal(encryption), StandardCharsets.UTF_8);
         } catch (Exception e) {
             return cipherText;
         }

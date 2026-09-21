@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class JpegMetaStripTest {
@@ -34,7 +35,7 @@ public class JpegMetaStripTest {
         out.write(segment(0xE0, app0));
         byte[] exif = new byte[]{0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x4D, 0x4D, 0x00, 0x2A};
         out.write(segment(0xE1, exif));
-        out.write(segment(0xFE, "hello".getBytes("US-ASCII")));
+        out.write(segment(0xFE, "hello".getBytes(StandardCharsets.US_ASCII)));
         out.write(segment(0xDB, zeros(65)));
         out.write(segment(0xC0, new byte[]{0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00}));
         out.write(segment(0xC4, zeros(29)));
@@ -61,9 +62,9 @@ public class JpegMetaStripTest {
         assertTrue(JpegMetaStrip.isJpeg(jpeg));
         byte[] stripped = JpegMetaStrip.strip(jpeg);
         assertTrue(JpegMetaStrip.isJpeg(stripped));
-        assertTrue(contains(stripped, "JFIF".getBytes("US-ASCII")));
-        assertFalse(contains(stripped, "Exif".getBytes("US-ASCII")));
-        assertFalse(contains(stripped, "hello".getBytes("US-ASCII")));
+        assertTrue(contains(stripped, "JFIF".getBytes(StandardCharsets.US_ASCII)));
+        assertFalse(contains(stripped, "Exif".getBytes(StandardCharsets.US_ASCII)));
+        assertFalse(contains(stripped, "hello".getBytes(StandardCharsets.US_ASCII)));
         assertTrue(stripped.length < jpeg.length);
         int n = stripped.length;
         assertTrue(stripped[n - 2] == (byte) 0xFF && stripped[n - 1] == (byte) 0xD9);
@@ -76,14 +77,14 @@ public class JpegMetaStripTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(new byte[]{(byte) 0xFF, (byte) 0xD8});
         out.write(segment(0xE0, zeros(14)));
-        out.write(segment(0xED, "Photoshop".getBytes("US-ASCII")));
+        out.write(segment(0xED, "Photoshop".getBytes(StandardCharsets.US_ASCII)));
         out.write(segment(0xDB, zeros(65)));
         out.write(segment(0xC0, new byte[]{0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00}));
         out.write(segment(0xC4, zeros(29)));
         out.write(segment(0xDA, new byte[]{0x01, 0x01, 0x00, 0x00, 0x3F, 0x00}));
         out.write(new byte[]{0x00, (byte) 0xFF, (byte) 0xD9});
         byte[] stripped = JpegMetaStrip.strip(out.toByteArray());
-        assertFalse(contains(stripped, "Photoshop".getBytes("US-ASCII")));
+        assertFalse(contains(stripped, "Photoshop".getBytes(StandardCharsets.US_ASCII)));
         assertTrue(contains(stripped, new byte[]{(byte) 0xFF, (byte) 0xE0}));
         assertTrue(contains(stripped, new byte[]{0x00, (byte) 0xFF, (byte) 0xD9}));
     }

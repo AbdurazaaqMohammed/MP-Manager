@@ -24,6 +24,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
@@ -334,7 +335,7 @@ public class LocalFileRecord {
             long crc32,
             long uncompressedSize,
             DataSink output) throws IOException {
-        byte[] nameBytes = name.getBytes("UTF-8");
+        byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
         int recordSize = HEADER_SIZE_BYTES + nameBytes.length;
         ByteBuffer result = ByteBuffer.allocate(recordSize);
         result.order(ByteOrder.LITTLE_ENDIAN);

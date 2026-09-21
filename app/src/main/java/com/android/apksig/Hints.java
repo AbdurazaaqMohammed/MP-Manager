@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -101,22 +102,18 @@ public final class Hints {
 
     public static ArrayList<PatternWithRange> parsePinPatterns(byte[] patternBlob) {
         ArrayList<PatternWithRange> pinPatterns = new ArrayList<>();
-        try {
-            for (String rawLine : new String(patternBlob, "UTF-8").split("\n")) {
-                String line = rawLine.replaceFirst("#.*", "");  // # starts a comment
-                String[] fields = line.split(" ");
-                if (fields.length == 1) {
-                    pinPatterns.add(new PatternWithRange(fields[0]));
-                } else if (fields.length == 3) {
-                    long start = Long.parseLong(fields[1]);
-                    long end = Long.parseLong(fields[2]);
-                    pinPatterns.add(new PatternWithRange(fields[0], start, end - start));
-                } else {
-                    throw new AssertionError("bad pin pattern line " + line);
-                }
+        for (String rawLine : new String(patternBlob, StandardCharsets.UTF_8).split("\n")) {
+            String line = rawLine.replaceFirst("#.*", "");  // # starts a comment
+            String[] fields = line.split(" ");
+            if (fields.length == 1) {
+                pinPatterns.add(new PatternWithRange(fields[0]));
+            } else if (fields.length == 3) {
+                long start = Long.parseLong(fields[1]);
+                long end = Long.parseLong(fields[2]);
+                pinPatterns.add(new PatternWithRange(fields[0], start, end - start));
+            } else {
+                throw new AssertionError("bad pin pattern line " + line);
             }
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException("UTF-8 must be supported", ex);
         }
         return pinPatterns;
     }

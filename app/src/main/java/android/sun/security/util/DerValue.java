@@ -27,6 +27,7 @@ package android.sun.security.util;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import android.sun.misc.IOUtils;
 
@@ -647,7 +648,7 @@ public class DerValue {
             throw new IOException(
                 "DerValue.getPrintableString, not a string " + tag);
 
-        return new String(getDataBytes(), "ASCII");
+        return new String(getDataBytes(), StandardCharsets.US_ASCII);
     }
 
     /**
@@ -660,7 +661,7 @@ public class DerValue {
             throw new IOException(
                 "DerValue.getT61String, not T61 " + tag);
 
-        return new String(getDataBytes(), "ISO-8859-1");
+        return new String(getDataBytes(), StandardCharsets.ISO_8859_1);
     }
 
     /**
@@ -673,7 +674,7 @@ public class DerValue {
             throw new IOException(
                 "DerValue.getIA5String, not IA5 " + tag);
 
-        return new String(getDataBytes(), "ASCII");
+        return new String(getDataBytes(), StandardCharsets.US_ASCII);
     }
 
     /**
@@ -703,7 +704,7 @@ public class DerValue {
             throw new IOException(
                 "DerValue.getUTF8String, not UTF-8 " + tag);
 
-        return new String(getDataBytes(), "UTF8");
+        return new String(getDataBytes(), StandardCharsets.UTF_8);
     }
 
     /**
@@ -717,7 +718,7 @@ public class DerValue {
             throw new IOException(
                 "DerValue.getGeneralString, not GeneralString " + tag);
 
-        return new String(getDataBytes(), "ASCII");
+        return new String(getDataBytes(), StandardCharsets.US_ASCII);
     }
 
     /**

@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.cert.*;
 import java.security.cert.Certificate;
@@ -266,7 +267,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         android.sun.security.util.DerValue der = null;
         String line = null;
         BufferedReader certBufferedReader =
-            new BufferedReader(new InputStreamReader(in, "ASCII"));
+            new BufferedReader(new InputStreamReader(in, StandardCharsets.US_ASCII));
         try {
             line = certBufferedReader.readLine();
         } catch (IOException ioe1) {

@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -106,7 +107,7 @@ public class ApkRebuildTest {
                 int nl = u16(h, 28), el = u16(h, 30), cl = u16(h, 32);
                 byte[] nm = new byte[nl];
                 raf.readFully(nm);
-                String entryName = new String(nm, "UTF-8");
+                String entryName = new String(nm, StandardCharsets.UTF_8);
                 long localOff = u32(h, 42);
                 if (entryName.equals(name)) {
                     raf.seek(localOff);
@@ -150,7 +151,7 @@ public class ApkRebuildTest {
         File input = writeTestApk(payloads, methods);
 
         byte[] newDex = bytes(21000, 8);
-        byte[] note = "hello".getBytes("UTF-8");
+        byte[] note = "hello".getBytes(StandardCharsets.UTF_8);
         Map<String, File> replacements = new LinkedHashMap<>();
         replacements.put("classes.dex", writeTempBytes(newDex));
         Map<String, File> additions = new LinkedHashMap<>();

@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -97,7 +98,7 @@ public class NativeToolManager {
         try {
             dir.mkdirs();
             try (OutputStream os = new FileOutputStream(new File(dir, "pack.version"))) {
-                os.write(String.valueOf(version).getBytes("UTF-8"));
+                os.write(String.valueOf(version).getBytes(StandardCharsets.UTF_8));
             }
         } catch (Exception ignored) {
         }

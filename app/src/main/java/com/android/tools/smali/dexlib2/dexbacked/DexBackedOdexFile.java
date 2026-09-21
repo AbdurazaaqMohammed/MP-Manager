@@ -40,6 +40,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class DexBackedOdexFile extends DexBackedDexFile {
@@ -71,11 +72,7 @@ public class DexBackedOdexFile extends DexBackedDexFile {
                 int length = reader.readInt();
                 int offset = reader.getOffset();
                 reader.moveRelative(length + 20);
-                try {
-                    return new String(fromStartBuffer.buf, offset, length-1, "US-ASCII");
-                } catch (UnsupportedEncodingException ex) {
-                    throw new RuntimeException(ex);
-                }
+                return new String(fromStartBuffer.buf, offset, length-1, StandardCharsets.US_ASCII);
             }
         };
     }

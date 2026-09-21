@@ -38,6 +38,7 @@ import com.android.tools.smali.dexlib2.util.DexUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 public class CDexBackedDexFile extends DexBackedDexFile {
     public CDexBackedDexFile(@Nullable Opcodes opcodes, @Nonnull byte[] buf, int offset, boolean verifyMagic) {
@@ -62,11 +63,7 @@ public class CDexBackedDexFile extends DexBackedDexFile {
         }
 
         byte[] cdexMagic;
-        try {
-            cdexMagic = "cdex".getBytes("US-ASCII");
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException(ex);
-        }
+        cdexMagic = "cdex".getBytes(StandardCharsets.US_ASCII);
         return buf[offset] == cdexMagic[0] &&
                 buf[offset+1] == cdexMagic[1] &&
                 buf[offset+2] == cdexMagic[2] &&

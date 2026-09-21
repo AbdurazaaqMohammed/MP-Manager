@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -127,7 +128,7 @@ public class FastDexTest {
         assertEquals(1, files.size());
         File bSmali = files.get("Ltest/B;");
         assertNotNull(bSmali);
-        String content = new String(Files.readAllBytes(bSmali.toPath()), "UTF-8");
+        String content = new String(Files.readAllBytes(bSmali.toPath()), StandardCharsets.UTF_8);
         assertTrue(content.contains("onCreate(Landroid/os/Bundle;)V"));
         assertFalse(content.contains("greet()"));
 
@@ -154,8 +155,8 @@ public class FastDexTest {
         assertTrue(hasMethod(a, "greet"));
 
         byte[] origBytes = Files.readAllBytes(origDexFile.toPath());
-        assertEquals(new String(origBytes, 0, 8, "US-ASCII").substring(0, 7),
-                new String(merged, 0, 8, "US-ASCII").substring(0, 7));
+        assertEquals(new String(origBytes, 0, 8, StandardCharsets.US_ASCII).substring(0, 7),
+                new String(merged, 0, 8, StandardCharsets.US_ASCII).substring(0, 7));
     }
 
     @Test

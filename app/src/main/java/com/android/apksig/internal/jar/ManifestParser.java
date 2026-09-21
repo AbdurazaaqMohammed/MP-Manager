@@ -20,6 +20,7 @@ import android.os.Build;
 import android.text.TextUtils;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -129,11 +130,7 @@ public class ManifestParser {
         } else if (bytes.length == 0) {
             return "";
         } else {
-            try {
-                return new String(bytes, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e);
-            }
+            return new String(bytes, StandardCharsets.UTF_8);
         }
     }
 

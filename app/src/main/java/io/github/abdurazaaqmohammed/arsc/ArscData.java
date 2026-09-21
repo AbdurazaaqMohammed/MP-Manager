@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -851,7 +852,7 @@ public class ArscData {
         sb.append("</resources>\n");
         File out = new File(dir, "strings_export_" + count + ".xml");
         try (OutputStream os = new FileOutputStream(out)) {
-            os.write(sb.toString().getBytes("UTF-8"));
+            os.write(sb.toString().getBytes(StandardCharsets.UTF_8));
         }
         return out;
     }
@@ -1377,7 +1378,7 @@ public class ArscData {
             sb.append("</resources>\n");
             File out = new File(dir, baseName + "_" + group.getKey() + ".xml");
             try (OutputStream os = new FileOutputStream(out)) {
-                os.write(sb.toString().getBytes("UTF-8"));
+                os.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             }
         }
     }

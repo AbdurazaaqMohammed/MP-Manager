@@ -28,6 +28,7 @@ package android.sun.security.util;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -502,7 +503,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
 
         SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.US);
         sdf.setTimeZone(tz);
-        byte[] time = (sdf.format(d)).getBytes("ISO-8859-1");
+        byte[] time = (sdf.format(d)).getBytes(StandardCharsets.ISO_8859_1);
 
         /*
          * Write the formatted date.

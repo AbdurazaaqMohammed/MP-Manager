@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -160,7 +161,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             File parent = file.getParentFile();
             if (parent != null && !parent.exists()) parent.mkdirs();
             try (OutputStream os = FileUtils.getOutputStream(file)) {
-                os.write(root.toString().getBytes(Charset.forName("UTF-8")));
+                os.write(root.toString().getBytes(StandardCharsets.UTF_8));
             }
         } catch (Exception ignored) { }
     }
@@ -169,7 +170,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         File file = sessionFile();
         if (!file.exists()) return;
         try (InputStream is = FileUtils.getInputStream(file);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")))) {
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) sb.append(line).append('\n');
@@ -583,7 +584,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         }
         boolean isFromFile = tab.file != null;
         try (InputStream is = isFromFile ? FileUtils.getInputStream(tab.file) : getContentResolver().openInputStream(tab.fileUri);
-             InputStreamReader isr = new InputStreamReader(is, Charset.forName("UTF-8"));
+             InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
              BufferedReader reader = new BufferedReader(isr)) {
 
             StringBuilder sb = new StringBuilder();
@@ -669,7 +670,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         try (OutputStream os = (tab.file == null
                 ? getContentResolver().openOutputStream(tab.fileUri, "wt")
                 : FileUtils.getOutputStream(tab.file))) {
-            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(Charset.forName("UTF-8")));
+            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(StandardCharsets.UTF_8));
             tab.content = text;
             tab.modified = false;
             if (onDone != null) onDone.run();
@@ -686,7 +687,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     private void saveTabTextRoot(EditorTab tab, String text, Runnable onDone) {
         backupForSave(tab.file, tab.rootOriginalPath);
         try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
-            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(Charset.forName("UTF-8")));
+            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             tab.modified = true;
             new ErrorUtil(this).showError(e);
@@ -844,7 +845,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 boolean isFromFile = currentFile != null;
                 if (isFromFile) try (OutputStream os = FileUtils.getOutputStream(
                         new File(getCacheDir(), currentFile.getPath().replace(File.separator, ".")))) {
-                    os.write(f.getEditor().getText().toString().getBytes(Charset.forName("UTF-8")));
+                    os.write(f.getEditor().getText().toString().getBytes(StandardCharsets.UTF_8));
                 } catch (Exception ignored) { }
             }
         }

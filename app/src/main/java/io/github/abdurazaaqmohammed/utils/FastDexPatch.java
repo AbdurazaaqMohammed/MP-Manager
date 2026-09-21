@@ -184,7 +184,7 @@ public final class FastDexPatch {
         java.io.ByteArrayOutputStream errBuf = new java.io.ByteArrayOutputStream();
         java.io.PrintStream capture;
         try {
-            capture = new java.io.PrintStream(errBuf, true, "UTF-8");
+            capture = new java.io.PrintStream(errBuf, true, StandardCharsets.UTF_8);
         } catch (Exception e) {
             capture = new java.io.PrintStream(errBuf);
         }
@@ -201,7 +201,7 @@ public final class FastDexPatch {
         }
         String captured = "";
         try {
-            captured = errBuf.toString("UTF-8");
+            captured = errBuf.toString(StandardCharsets.UTF_8);
         } catch (Exception ignored) {
         }
         return ok ? captured : null;
