@@ -282,11 +282,7 @@ public class HeaderItem {
                 return false;
             }
         }
-        if (buf[offset + 7] != MAGIC_VALUE[7]) {
-            return false;
-        }
-
-        return true;
+        return buf[offset + 7] == MAGIC_VALUE[7];
     }
 
     /**

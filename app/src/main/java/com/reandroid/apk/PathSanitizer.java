@@ -102,7 +102,6 @@ public class PathSanitizer {
             return;
         }
         boolean sanitizeRes = this.sanitizeResourceFiles;
-        Set<String> sanitizedPaths = this.mSanitizedPaths;
         if(sanitizeRes){
             logMessage("Sanitizing resource files ...");
         }
@@ -110,7 +109,7 @@ public class PathSanitizer {
             if(sanitizeRes){
                 sanitize(resFile);
             }else {
-                sanitizedPaths.add(resFile.getFilePath());
+                this.mSanitizedPaths.add(resFile.getFilePath());
             }
         }
     }
@@ -249,11 +248,10 @@ public class PathSanitizer {
         }
         boolean skipNext = true;
         int currentLength = 0;
-        int lengthMax = MAX_NAME_LENGTH;
         int length = name.length();
         StringBuilder builder = new StringBuilder(length);
         for(int i = 0; i < length; i++){
-            if(currentLength >= lengthMax){
+            if(currentLength >= MAX_NAME_LENGTH){
                 break;
             }
             char ch = name.charAt(i);

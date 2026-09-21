@@ -59,9 +59,7 @@ public class AnalyzedMethodUtil {
         if (checkClass) {
             ClassPath classPath = type.getClassPath();
             ClassDef methodClassDef = classPath.getClassDef(virtualMethod.getDefiningClass());
-            if (!TypeUtils.canAccessClass(type.getType(), methodClassDef)) {
-                return false;
-            }
+            return TypeUtils.canAccessClass(type.getType(), methodClassDef);
         }
 
         return true;

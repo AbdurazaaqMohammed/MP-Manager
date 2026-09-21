@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorSurface"
@@ -30,7 +31,7 @@
             android:contentDescription="@string/close"
             android:src="@drawable/close_24px"
             app:tint="?attr/colorOnSurfaceVariant"
-            xmlns:app="http://schemas.android.com/apk/res-auto" />
+            />
     </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -42,7 +43,7 @@
             android:id="@+id/searchValue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Value to find"
+            android:hint="@string/value_to_find"
             android:inputType="text"
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -51,7 +52,7 @@
         android:id="@+id/searchType"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Data type"
+        android:hint="@string/data_type"
         android:inputType="none"
         android:textSize="14sp" />
 
@@ -59,7 +60,7 @@
         android:id="@+id/searchBigEndian"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Big endian"
+        android:text="@string/big_endian"
         android:textColor="?attr/colorOnSurface" />
 
     <LinearLayout
@@ -78,7 +79,8 @@
             android:layout_height="wrap_content"
             android:text="▸"
             android:textColor="?attr/colorPrimary"
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            tools:ignore="HardcodedText" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -105,7 +107,7 @@
                 android:id="@+id/replaceValue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Replace with"
+                android:hint="@string/replace_with"
                 android:inputType="text"
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
@@ -114,7 +116,7 @@
             android:id="@+id/replaceType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Replace data type"
+            android:hint="@string/replace_data_type"
             android:inputType="none"
             android:textSize="14sp" />
 
@@ -122,7 +124,7 @@
             android:id="@+id/replaceBigEndian"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Big endian"
+            android:text="@string/big_endian"
             android:textColor="?attr/colorOnSurface" />
     </LinearLayout>
 
@@ -148,7 +150,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_weight="1"
-            android:text="PREV" />
+            android:text="@string/previous" />
     </LinearLayout>
 
     <Button

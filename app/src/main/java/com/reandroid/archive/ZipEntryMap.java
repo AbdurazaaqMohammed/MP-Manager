@@ -145,11 +145,10 @@ public class ZipEntryMap implements Comparator<InputSource>, Iterable<InputSourc
     public void removeIf(Pattern pattern){
         synchronized (mLock){
             boolean removed = false;
-            LinkedHashMap<String, InputSource> map = this.mSourceMap;
             for(InputSource inputSource : toArray()){
                 String name = inputSource.getAlias();
                 if(pattern.matcher(name).matches()){
-                    if(map.remove(name) != null){
+                    if(this.mSourceMap.remove(name) != null){
                         removed = true;
                     }
                 }

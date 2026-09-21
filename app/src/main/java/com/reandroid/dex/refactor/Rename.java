@@ -89,10 +89,7 @@ public abstract class Rename<T extends Key>
         if (keyPair == null || !keyPair.isValid()) {
             return;
         }
-        boolean bad = false;
-        if (lockedKeys.contains(keyPair) || lockedFlippedKeys.contains(keyPair)) {
-            bad = true;
-        }
+        boolean bad = lockedKeys.contains(keyPair) || lockedFlippedKeys.contains(keyPair);
         KeyPair<T, T> flip = keyPair.flip();
         if (lockedFlippedKeys.contains(flip) || lockedKeys.contains(flip)) {
             if (bad) {

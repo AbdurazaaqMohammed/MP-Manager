@@ -137,16 +137,14 @@ public enum HiddenApiRestriction {
         int value = 0;
 
         for (HiddenApiRestriction flag : flags) {
-            if (flag.isDomainSpecificApiFlag) {
-                value += flag.value;
-            } else {
+            if (!flag.isDomainSpecificApiFlag) {
                 if (gotHiddenApiFlag) {
                     throw new IllegalArgumentException(
                             "Cannot combine multiple flags for hidden api restrictions");
                 }
                 gotHiddenApiFlag = true;
-                value += flag.value;
             }
+            value += flag.value;
         }
 
         return value;

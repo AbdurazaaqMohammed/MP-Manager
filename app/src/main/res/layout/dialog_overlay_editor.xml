@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -14,7 +15,7 @@
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Type">
+            android:hint="@string/type">
 
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/overlayModeTv"
@@ -36,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp"
-                android:hint="Profile">
+                android:hint="@string/profiles">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/overlayProfileTv"
@@ -50,13 +51,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Save" />
+                android:text="@string/save" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/overlayProfileDelete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Del" />
+                android:text="@string/delete" />
         </LinearLayout>
 
         <LinearLayout
@@ -77,14 +78,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="Toast message">
+                android:hint="@string/toast_message">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/overlayToastMessage"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minLines="2"
-                    android:text="Hello from MP Manager" />
+                    android:text="@string/def_msg" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -92,7 +93,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="Duration">
+                android:hint="@string/duration">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/overlayToastDuration"
@@ -107,19 +108,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="Position">
+                android:hint="@string/position">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/overlayToastGravity"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="none"
-                    android:text="Default" />
+                    android:text="@string/def" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:baselineAligned="false"
                 android:orientation="horizontal"
                 android:layout_marginTop="8dp">
 
@@ -129,7 +131,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="X offset">
+                    android:hint="@string/x_offset">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/overlayToastX"
@@ -145,7 +147,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:hint="Y offset">
+                    android:hint="@string/y_offset">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/overlayToastY"
@@ -162,13 +164,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:checked="true"
-                android:text="Rich text (HTML + spans)" />
+                android:text="@string/rich_text_html" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/overlayToastB64"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Hide text with Base64" />
+                android:text="@string/base64_encrypt_text" />
 
             <TextView
                 android:id="@+id/overlayToastPreview"
@@ -191,13 +193,13 @@
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Dialog title">
+                android:hint="@string/dialog_title">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/overlayDlgTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="MP Manager" />
+                    android:text="@string/app_name" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
@@ -212,14 +214,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="Dialog message">
+                android:hint="@string/dialog_message">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/overlayDlgMessage"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minLines="2"
-                    android:text="Hello from MP Manager" />
+                    android:text="@string/def_msg" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -227,7 +229,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Add positive button" />
+                android:text="@string/add_positive_button" />
 
             <LinearLayout
                 android:id="@+id/overlayPosBox"
@@ -239,6 +241,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:baselineAligned="false"
                 android:orientation="horizontal">
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -247,13 +250,13 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="Text">
+                    android:hint="@string/view_text">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/overlayDlgPos"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="OK" />
+                        android:text="@android:string/ok" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -262,14 +265,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:hint="Action">
+                    android:hint="@string/action">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/overlayDlgPosAction"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:text="Dismiss" />
+                        android:text="@string/dismiss" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
@@ -278,21 +281,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="URL (only for Open URL action)">
+                android:hint="@string/url">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/overlayDlgPosUrl"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textUri"
-                    android:text="https://" />
+                    android:text="https://"
+                    tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/overlayPosRemoveBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Remove positive button" />
+                    android:text="@string/remove_positive_button" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -300,7 +304,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Add negative button" />
+                android:text="@string/add_negative_button" />
 
             <LinearLayout
                 android:id="@+id/overlayNegBox"
@@ -312,6 +316,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:baselineAligned="false"
                 android:orientation="horizontal">
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -320,7 +325,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="Text (empty = none)">
+                    android:hint="@string/text_empty_none">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/overlayDlgNeg"
@@ -334,14 +339,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:hint="Action">
+                    android:hint="@string/action">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/overlayDlgNegAction"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:text="Dismiss" />
+                        android:text="@string/dismiss" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
@@ -350,21 +355,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="URL (only for Open URL action)">
+                android:hint="@string/url">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/overlayDlgNegUrl"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textUri"
-                    android:text="https://" />
+                    android:text="https://"
+                    tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/overlayNegRemoveBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Remove negative button" />
+                    android:text="@string/remove_negative_button" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -372,7 +378,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Add neutral button" />
+                android:text="@string/add_neutral_button" />
 
             <LinearLayout
                 android:id="@+id/overlayNeuBox"
@@ -384,6 +390,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:baselineAligned="false"
                 android:orientation="horizontal">
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -392,7 +399,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="Text (empty = none)">
+                    android:hint="@string/text_empty_none">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/overlayDlgNeu"
@@ -406,14 +413,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:hint="Action">
+                    android:hint="@string/action">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/overlayDlgNeuAction"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:text="Dismiss" />
+                        android:text="@string/dismiss" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
@@ -422,21 +429,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="URL (only for Open URL action)">
+                android:hint="@string/url">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/overlayDlgNeuUrl"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textUri"
-                    android:text="https://" />
+                    android:text="https://"
+                    tools:ignore="HardcodedText" />
             </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/overlayNeuRemoveBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Remove neutral button" />
+                    android:text="@string/remove_neutral_button" />
             </LinearLayout>
         </LinearLayout>
 
@@ -452,7 +460,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Style options" />
+                android:text="@string/style_options" />
 
             <LinearLayout
                 android:id="@+id/overlayStyleBox"
@@ -465,7 +473,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Background"
+                    android:text="@string/background"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -474,7 +482,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Custom background" />
+                    android:text="@string/custom_background" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -487,7 +495,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="4dp"
-                        android:text="BG color" />
+                        android:text="@string/bg_color_label" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/overlayBg2Btn"
@@ -495,7 +503,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
-                        android:text="Gradient: none" />
+                        android:text="@string/gradient_none" />
                 </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -503,14 +511,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:hint="Gradient direction">
+                    android:hint="@string/gradient_direction">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/overlayOrientTv"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:text="Top to bottom" />
+                        android:text="@string/top_to_bottom" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <View
@@ -523,13 +531,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Shape"
+                    android:text="@string/shape"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:baselineAligned="false"
                     android:orientation="horizontal"
                     android:layout_marginTop="8dp">
 
@@ -539,14 +548,15 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="4dp"
-                        android:hint="Corner radius dp">
+                        android:hint="@string/corner_radius_dp">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/overlayRadiusInput"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
-                            android:text="16" />
+                            android:text="16"
+                            tools:ignore="HardcodedText" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -555,14 +565,15 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
-                        android:hint="Border width dp">
+                        android:hint="@string/border_width_dp">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/overlayBorderWidthInput"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
-                            android:text="0" />
+                            android:text="0"
+                            tools:ignore="HardcodedText" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -571,7 +582,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Border color" />
+                    android:text="@string/border_color" />
 
                 <View
                     android:layout_width="match_parent"
@@ -583,7 +594,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Animated border"
+                    android:text="@string/animated_border"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -592,7 +603,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Animated border" />
+                    android:text="@string/animated_border" />
 
                 <LinearLayout
                     android:id="@+id/overlayAnimBox"
@@ -605,7 +616,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Animation colors (tap to change, long-press to remove)"
+                        android:text="@string/animation_colors"
                         android:textSize="13sp" />
 
                     <LinearLayout
@@ -620,14 +631,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Animation speed ms">
+                        android:hint="@string/animation_speed_ms">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/overlaySpeedInput"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="number"
-                            android:text="2500" />
+                            android:text="2500"
+                            tools:ignore="HardcodedText" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -635,7 +647,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Rainbow (RGB) mode" />
+                        android:text="@string/rainbow_rgb_mode" />
                 </LinearLayout>
 
                 <View
@@ -648,7 +660,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Title"
+                    android:text="@string/title"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -665,13 +677,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="Title Color">
+                    android:hint="@string/title_color">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/overlayTitleColorHex"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="#FF111111" />
+                        android:text="#FF111111"
+                        tools:ignore="HardcodedText" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
@@ -700,13 +713,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:checked="true"
-                android:text="Cancelable" />
+                android:text="@string/cancelable" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/overlayDlgDontShow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Add 'Don't show again' option" />
+                android:text="@string/add_don_t_show_again_option" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -720,7 +733,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Dialog image" />
+                    android:text="@string/dialog_image" />
 
                 <ImageView
                     android:id="@+id/overlayDlgImagePreview"
@@ -736,7 +749,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:checked="true"
-                android:text="Rich text (HTML + spans)" />
+                android:text="@string/rich_text_html" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/overlayDlgB64"
@@ -794,7 +807,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Add widgets, drag to move, tap a widget to edit it"
+                android:text="@string/widghelp"
                 android:textSize="13sp" />
 
             <FrameLayout
@@ -816,7 +829,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:text="Text" />
+                    android:text="@string/view_text" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/advAddImage"
@@ -825,7 +838,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="4dp"
-                    android:text="Image" />
+                    android:text="@string/image" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/advAddButton"
@@ -833,7 +846,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:text="Button" />
+                    android:text="@string/button" />
             </LinearLayout>
 
             <LinearLayout
@@ -855,7 +868,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="To all" />
+                    android:text="@string/to_all" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -864,7 +877,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:checked="true"
-                android:text="Snap while dragging (grid + edges)" />
+                android:text="@string/snap_while_dragging" />
 
             <LinearLayout
                 android:id="@+id/overlayPropsBox"

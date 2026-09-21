@@ -211,15 +211,12 @@ public abstract class V1SchemeSigner {
         //   SIG-*
         String fileNameLowerCase =
                 entryName.substring("META-INF/".length()).toLowerCase(Locale.US);
-        if (("manifest.mf".equals(fileNameLowerCase))
-                || (fileNameLowerCase.endsWith(".sf"))
-                || (fileNameLowerCase.endsWith(".rsa"))
-                || (fileNameLowerCase.endsWith(".dsa"))
-                || (fileNameLowerCase.endsWith(".ec"))
-                || (fileNameLowerCase.startsWith("sig-"))) {
-            return false;
-        }
-        return true;
+        return (!"manifest.mf".equals(fileNameLowerCase))
+                && (!fileNameLowerCase.endsWith(".sf"))
+                && (!fileNameLowerCase.endsWith(".rsa"))
+                && (!fileNameLowerCase.endsWith(".dsa"))
+                && (!fileNameLowerCase.endsWith(".ec"))
+                && (!fileNameLowerCase.startsWith("sig-"));
     }
 
     /**

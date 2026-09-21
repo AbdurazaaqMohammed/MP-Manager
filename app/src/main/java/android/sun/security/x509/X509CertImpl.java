@@ -200,9 +200,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             parse(new android.sun.security.util.DerValue(certData));
         } catch (IOException e) {
             signedCert = null;
-            CertificateException ce = new
+            throw new
                 CertificateException("Unable to initialize, " + e, e);
-            throw ce;
         }
     }
 
@@ -234,23 +233,21 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                 inBuffered.reset();
                 der = new android.sun.security.util.DerValue(inBuffered);
             } catch (IOException ioe1) {
-                CertificateException ce = new
+                throw new
                     CertificateException("Input stream must be " +
                                          "either DER-encoded bytes " +
                                          "or RFC1421 hex-encoded " +
                                          "DER-encoded bytes: " +
                                          ioe1.getMessage(), ioe1);
-                throw ce;
             }
         }
         try {
             parse(der);
         } catch (IOException ioe) {
             signedCert = null;
-            CertificateException ce = new
+            throw new
                 CertificateException("Unable to parse DER value of " +
                                      "certificate, " + ioe, ioe);
-            throw ce;
         }
     }
 
@@ -321,9 +318,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             parse(derVal);
         } catch (IOException e) {
             signedCert = null;
-            CertificateException ce = new
+            throw new
                 CertificateException("Unable to initialize, " + e, e);
-            throw ce;
         }
     }
 
@@ -665,17 +661,17 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         id = attr.getPrefix();
 
         if (id.equalsIgnoreCase(INFO)) {
+            //reset this as certificate data has changed
             if (attr.getSuffix() == null) {
                 if (!(obj instanceof android.sun.security.x509.X509CertInfo)) {
                     throw new CertificateException("Attribute value should"
                                     + " be of type X509CertInfo.");
                 }
                 info = (android.sun.security.x509.X509CertInfo)obj;
-                signedCert = null;  //reset this as certificate data has changed
             } else {
                 info.set(attr.getSuffix(), obj);
-                signedCert = null;  //reset this as certificate data has changed
             }
+            signedCert = null;  //reset this as certificate data has changed
         } else {
             throw new CertificateException("Attribute name not recognized or " +
                               "set() not allowed for the same: " + id);
@@ -756,13 +752,12 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             return "";
 
         HexDumpEncoder encoder = new HexDumpEncoder();
-        String sb = "[\n" +
+
+        return "[\n" +
                 info.toString() + "\n" +
                 "  Algorithm: [" + algId.toString() + "]\n" +
                 "  Signature:\n" + encoder.encodeBuffer(signature) +
                 "\n]";
-
-        return sb;
     }
 
     // the strongly typed gets, as per java.security.cert.X509Certificate
@@ -776,9 +771,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return null;
         try {
-            PublicKey key = (PublicKey)info.get(android.sun.security.x509.CertificateX509Key.NAME
+            return (PublicKey)info.get(CertificateX509Key.NAME
                                 + DOT + CertificateX509Key.KEY);
-            return key;
         } catch (Exception e) {
             return null;
         }
@@ -822,10 +816,9 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return null;
         try {
-            android.sun.security.x509.SerialNumber ser = (SerialNumber)info.get(
-                              android.sun.security.x509.CertificateSerialNumber.NAME + DOT +
+            return (SerialNumber)info.get(
+                              CertificateSerialNumber.NAME + DOT +
                               CertificateSerialNumber.NUMBER);
-           return ser;
         } catch (Exception e) {
             return null;
         }
@@ -841,10 +834,9 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return null;
         try {
-            Principal subject = (Principal)info.get(
-                                 android.sun.security.x509.CertificateSubjectName.NAME + DOT +
-                                 android.sun.security.x509.CertificateSubjectName.DN_NAME);
-            return subject;
+            return (Principal)info.get(
+                                 CertificateSubjectName.NAME + DOT +
+                                 CertificateSubjectName.DN_NAME);
         } catch (Exception e) {
             return null;
         }
@@ -860,10 +852,9 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             return null;
         }
         try {
-            X500Principal subject = (X500Principal)info.get(
-                                android.sun.security.x509.CertificateSubjectName.NAME + DOT +
+            return (X500Principal)info.get(
+                                CertificateSubjectName.NAME + DOT +
                                 CertificateSubjectName.DN_PRINCIPAL);
-            return subject;
         } catch (Exception e) {
             return null;
         }
@@ -878,10 +869,9 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return null;
         try {
-            Principal issuer = (Principal)info.get(
-                                android.sun.security.x509.CertificateIssuerName.NAME + DOT +
-                                android.sun.security.x509.CertificateIssuerName.DN_NAME);
-            return issuer;
+            return (Principal)info.get(
+                                CertificateIssuerName.NAME + DOT +
+                                CertificateIssuerName.DN_NAME);
         } catch (Exception e) {
             return null;
         }
@@ -897,10 +887,9 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             return null;
         }
         try {
-            X500Principal issuer = (X500Principal)info.get(
-                                android.sun.security.x509.CertificateIssuerName.NAME + DOT +
+            return (X500Principal)info.get(
+                                CertificateIssuerName.NAME + DOT +
                                 CertificateIssuerName.DN_PRINCIPAL);
-            return issuer;
         } catch (Exception e) {
             return null;
         }
@@ -915,9 +904,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return null;
         try {
-            Date d = (Date) info.get(android.sun.security.x509.CertificateValidity.NAME + DOT +
-                                        android.sun.security.x509.CertificateValidity.NOT_BEFORE);
-            return d;
+            return (Date) info.get(CertificateValidity.NAME + DOT +
+                                        CertificateValidity.NOT_BEFORE);
         } catch (Exception e) {
             return null;
         }
@@ -932,9 +920,8 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (info == null)
             return null;
         try {
-            Date d = (Date) info.get(android.sun.security.x509.CertificateValidity.NAME + DOT +
+            return (Date) info.get(CertificateValidity.NAME + DOT +
                                      CertificateValidity.NOT_AFTER);
-            return d;
         } catch (Exception e) {
             return null;
         }
@@ -1270,18 +1257,16 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             } catch (CertificateException ce) {
                 return null;
             }
-            if (extensions == null) {
-                return null;
-            } else {
-                for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
+            if (extensions != null) {
+                for (Extension ex : extensions.getAllExtensions()) {
                     if (ex.getExtensionId().equals(oid)) {
                         //XXXX May want to consider cloning this
                         return ex;
                     }
                 }
                 /* no such extension in this certificate */
-                return null;
             }
+            return null;
         } catch (IOException ioe) {
             return null;
         }
@@ -1397,17 +1382,15 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
      */
     public synchronized List<String> getExtendedKeyUsage()
         throws CertificateParsingException {
-        if (readOnly && extKeyUsage != null) {
-            return extKeyUsage;
-        } else {
-            android.sun.security.x509.ExtendedKeyUsageExtension ext = getExtendedKeyUsageExtension();
+        if (!readOnly || extKeyUsage == null) {
+            ExtendedKeyUsageExtension ext = getExtendedKeyUsageExtension();
             if (ext == null) {
                 return null;
             }
             extKeyUsage =
-                Collections.unmodifiableList(ext.getExtendedKeyUsage());
-            return extKeyUsage;
+                    Collections.unmodifiableList(ext.getExtendedKeyUsage());
         }
+        return extKeyUsage;
     }
 
     /**
@@ -1429,9 +1412,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
                 new ExtendedKeyUsageExtension(Boolean.FALSE, data);
             return Collections.unmodifiableList(ekuExt.getExtendedKeyUsage());
         } catch (IOException ioe) {
-            CertificateParsingException cpe =
-                new CertificateParsingException(ioe);
-            throw cpe;
+            throw new CertificateParsingException(ioe);
         }
     }
 
@@ -1611,9 +1592,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             }
             return makeAltNames(names);
         } catch (IOException ioe) {
-            CertificateParsingException cpe =
-                new CertificateParsingException(ioe);
-            throw cpe;
+            throw new CertificateParsingException(ioe);
         }
     }
 
@@ -1676,9 +1655,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             }
             return makeAltNames(names);
         } catch (IOException ioe) {
-            CertificateParsingException cpe =
-                new CertificateParsingException(ioe);
-            throw cpe;
+            throw new CertificateParsingException(ioe);
         }
     }
 

@@ -18,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -242,7 +243,7 @@ public class NativeToolManager {
                     String pack = packs[idx];
                     final String fZip = zipName;
                     activity.runOnUiThread(() -> {
-                        status.setText("Downloading " + fZip);
+                        status.setText(activity.getString(R.string.downloading_x, fZip));
                         bar.setIndeterminate(true);
                     });
                     File tmp = new File(activity.getCacheDir(), fZip + ".part");
@@ -256,8 +257,8 @@ public class NativeToolManager {
                     if (cancelled[0]) return;
                     String[] meta = manifest.get(zipName);
                     if (meta != null) {
-                        if (tmp.length() != Long.parseLong(meta[1])) throw new java.io.IOException("Size mismatch");
-                        if (!sha256(tmp).equalsIgnoreCase(meta[0])) throw new java.io.IOException("Checksum mismatch");
+                        if (tmp.length() != Long.parseLong(meta[1])) throw new IOException("Size mismatch");
+                        if (!sha256(tmp).equalsIgnoreCase(meta[0])) throw new IOException("Checksum mismatch");
                     }
                     File dest = packDir(activity, pack);
                     deleteRecursive(dest);

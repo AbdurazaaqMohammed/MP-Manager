@@ -261,8 +261,7 @@ public class FrameworkTable extends TableBlock {
             name=name+":";
         }
         TableStringPool tableStringPool=getStringPool();
-        int max=PROP_COUNT;
-        for(int i=0;i<max;i++){
+        for(int i = 0; i< PROP_COUNT; i++){
             TableString tableString=tableStringPool.get(i);
             if(tableString==null){
                 break;

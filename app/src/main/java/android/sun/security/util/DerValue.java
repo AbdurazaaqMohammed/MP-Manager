@@ -421,10 +421,7 @@ public class DerValue {
             throw new IOException("DerValue.getBoolean, invalid length "
                                         + length);
         }
-        if (buffer.read() != 0) {
-            return true;
-        }
-        return false;
+        return buffer.read() != 0;
     }
 
     /**

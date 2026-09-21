@@ -19,7 +19,7 @@ import com.reandroid.utils.StringsUtil;
 
 public enum AttributeDataFormat {
 
-    REFERENCE(1<<0,
+    REFERENCE(1,
             new ValueType[]{
                     ValueType.REFERENCE,
                     ValueType.ATTRIBUTE,

@@ -339,10 +339,7 @@ public class ClassData extends DataItem implements SmaliFormat {
             return true;
         }
         defArray = virtualMethods;
-        if (defArray != null && defArray.uses(key)) {
-            return true;
-        }
-        return false;
+        return defArray != null && defArray.uses(key);
     }
 
     @Override

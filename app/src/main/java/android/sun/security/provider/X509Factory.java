@@ -201,8 +201,7 @@ public class X509Factory extends CertificateFactorySpi {
     private static synchronized Object getFromCache(Cache cache,
             byte[] encoding) {
         Object key = new Cache.EqualByteArray(encoding);
-        Object value = cache.get(key);
-        return value;
+        return cache.get(key);
     }
 
     /**

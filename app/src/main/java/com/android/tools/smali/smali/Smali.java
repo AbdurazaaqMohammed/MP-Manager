@@ -168,11 +168,7 @@ public class Smali {
             }
         }
 
-        if (errors) {
-            return false;
-        }
-
-        return true;
+        return !errors;
     }
 
     private static void getSmaliFilesInDir(@Nonnull File dir, @Nonnull Set<File> smaliFiles) {

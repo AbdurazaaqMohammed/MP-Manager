@@ -771,7 +771,6 @@ public class PKCS9Attribute implements DerEncoder {
                 buf.append(value.toString());
             }
             buf.append("]");
-            return buf.toString();
         } else { // multi-valued
             boolean first = true;
             Object[] values = (Object[]) value;
@@ -784,8 +783,8 @@ public class PKCS9Attribute implements DerEncoder {
 
                 buf.append(o.toString());
             }
-            return buf.toString();
         }
+        return buf.toString();
     }
 
     /**

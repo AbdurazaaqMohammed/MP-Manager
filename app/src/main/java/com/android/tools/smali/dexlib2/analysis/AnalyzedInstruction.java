@@ -475,10 +475,7 @@ public class AnalyzedInstruction implements Comparable<AnalyzedInstruction> {
         if (registerNumber == destinationRegister) {
             return true;
         }
-        if (instruction.getOpcode().setsWideRegister() && registerNumber == (destinationRegister + 1)) {
-            return true;
-        }
-        return false;
+        return instruction.getOpcode().setsWideRegister() && registerNumber == (destinationRegister + 1);
     }
 
     public List<Integer> getSetRegisters() {

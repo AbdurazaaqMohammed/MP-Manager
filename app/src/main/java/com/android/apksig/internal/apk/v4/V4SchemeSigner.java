@@ -366,13 +366,10 @@ public abstract class V4SchemeSigner {
         if (contentDigestAlgorithm == null) {
             return false;
         }
-        if (contentDigestAlgorithm == ContentDigestAlgorithm.CHUNKED_SHA256
+        return contentDigestAlgorithm == ContentDigestAlgorithm.CHUNKED_SHA256
                 || contentDigestAlgorithm == ContentDigestAlgorithm.CHUNKED_SHA512
                 || (forV3Digest
-                     && contentDigestAlgorithm == ContentDigestAlgorithm.VERITY_CHUNKED_SHA256)) {
-            return true;
-        }
-        return false;
+                && contentDigestAlgorithm == ContentDigestAlgorithm.VERITY_CHUNKED_SHA256);
     }
 
     private static Pair<Integer, Byte> convertToV4HashingInfo(ContentDigestAlgorithm algorithm)

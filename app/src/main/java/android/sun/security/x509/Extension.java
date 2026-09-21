@@ -89,11 +89,10 @@ public class Extension /* implements java.security.cert.Extension */ {
 
             // Extension value (DER encoded)
             val = in.getDerValue();
-            extensionValue = val.getOctetString();
         } else {
             critical = false;
-            extensionValue = val.getOctetString();
         }
+        extensionValue = val.getOctetString();
     }
 
     /**

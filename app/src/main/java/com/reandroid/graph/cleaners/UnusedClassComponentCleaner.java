@@ -74,11 +74,8 @@ public abstract class UnusedClassComponentCleaner<T extends Dex> extends UnusedC
             return false;
         }
         Predicate<? super TypeKey> filter = getBuildOption().getKeepClasses();
-        if(filter != null && filter.evaluate(dexClass.getKey())) {
-            return false;
-        }
+        return filter == null || !filter.evaluate(dexClass.getKey());
         // TODO: add user rules here
-        return true;
     }
     protected String getDebugString(T item) {
         if(item instanceof DexDeclaration) {

@@ -297,8 +297,7 @@ public class PKCS9Attributes {
     public Object getAttributeValue(ObjectIdentifier oid)
     throws IOException {
         try {
-            Object value = getAttribute(oid).getValue();
-            return value;
+            return getAttribute(oid).getValue();
         } catch (NullPointerException ex) {
             throw new IOException("No value found for attribute " + oid);
         }

@@ -40,10 +40,9 @@ public class Zip64Locator extends ZipHeader{
         if(countBytes() < getMinByteLength()){
             return "Invalid";
         }
-        String builder = getSignature() +
+        return getSignature() +
                 ", offsetZip64Record=" + getOffsetZip64Record() +
                 ", numberOfDisks=" + getNumberOfDisks();
-        return builder;
     }
     public static Zip64Locator newZip64Locator(){
         Zip64Locator zip64Locator = new Zip64Locator();

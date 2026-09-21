@@ -391,15 +391,14 @@ public class PlayerManager {
         }
         notifyState(PlayState.STOPPED);
 
-        final MediaPlayer currentPlayer = newPlayer;
-        currentPlayer.setAudioAttributes(new AudioAttributes.Builder()
+        newPlayer.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(item.isVideo ? AudioAttributes.CONTENT_TYPE_MOVIE : AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build());
 
-        if (videoSurface != null && isVideo) currentPlayer.setSurface(videoSurface);
+        if (videoSurface != null && isVideo) newPlayer.setSurface(videoSurface);
 
-        currentPlayer.setOnPreparedListener(mp -> {
+        newPlayer.setOnPreparedListener(mp -> {
             if (mp != mediaPlayer) return;
             if (resumePosition > 0 && resumePosition < mp.getDuration()) mp.seekTo(resumePosition);
             resumePosition = 0;
@@ -413,7 +412,7 @@ public class PlayerManager {
             startProgressUpdater();
             try { appContext.startService(new Intent(appContext, MusicService.class)); } catch (Exception ignored) {}
         });
-        currentPlayer.setOnCompletionListener(mp -> {
+        newPlayer.setOnCompletionListener(mp -> {
             if (mp != mediaPlayer) return;
             stopProgressUpdater();
             if (abRepeatA >= 0 && abRepeatB >= 0) {
@@ -428,19 +427,19 @@ public class PlayerManager {
                 notifyState(PlayState.ENDED);
             }
         });
-        currentPlayer.setOnErrorListener((mp, what, extra) -> {
+        newPlayer.setOnErrorListener((mp, what, extra) -> {
             if (mp != mediaPlayer) return true;
             //notifyError("Media error: " + what + " / " + extra);
             notifyState(PlayState.ERROR);
             return true;
         });
-        currentPlayer.setOnInfoListener((mp, what, extra) -> {
+        newPlayer.setOnInfoListener((mp, what, extra) -> {
             if (mp != mediaPlayer) return false;
             if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) notifyBuffer(0);
             else if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) notifyBuffer(100);
             return false;
         });
-        currentPlayer.setOnVideoSizeChangedListener((mp, w, h) -> {
+        newPlayer.setOnVideoSizeChangedListener((mp, w, h) -> {
             if (mp != mediaPlayer) return;
             if (videoSizeChangedListener != null) videoSizeChangedListener.onVideoSizeChanged(w, h);
         });
@@ -448,10 +447,10 @@ public class PlayerManager {
         try {
             notifyState(PlayState.PREPARING);
             notifyMediaItem(item);
-            currentPlayer.setDataSource(appContext, item.uri);
-            currentPlayer.prepareAsync();
+            newPlayer.setDataSource(appContext, item.uri);
+            newPlayer.prepareAsync();
         } catch (IOException | IllegalStateException e) {
-            if (currentPlayer == mediaPlayer) {
+            if (newPlayer == mediaPlayer) {
                 notifyError("Cannot play file: " + e.getMessage());
                 notifyState(PlayState.ERROR);
             }

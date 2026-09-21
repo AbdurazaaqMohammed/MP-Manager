@@ -135,9 +135,7 @@ public class MagnifierView extends View {
         float textSizeLarge = size * 0.16f;
 
         // Radii Configuration - leave ~4% margin to prevent clipping
-        float maxRadius = (size / 2f) * 0.96f;
-        float rOuter = maxRadius;
-        float rInner = rOuter - bezelThickness;
+        float rInner = (size / 2f) * 0.96f - bezelThickness;
         float rCenter = rInner + (bezelThickness / 2f);
 
         // Calculate Adaptive Text Color
@@ -238,11 +236,11 @@ public class MagnifierView extends View {
         // Outer border
         paint.setColor(darkBorderColor);
         paint.setStrokeWidth(borderWidth * 2f);
-        canvas.drawCircle(cx, cy, rOuter + borderWidth, paint);
+        canvas.drawCircle(cx, cy, (size / 2f) * 0.96f + borderWidth, paint);
 
         paint.setColor(lightBorderColor);
         paint.setStrokeWidth(borderWidth);
-        canvas.drawCircle(cx, cy, rOuter + borderWidth * 1.5f, paint);
+        canvas.drawCircle(cx, cy, (size / 2f) * 0.96f + borderWidth * 1.5f, paint);
 
         // Draw Text Buttons
         paint.setStyle(Paint.Style.FILL);

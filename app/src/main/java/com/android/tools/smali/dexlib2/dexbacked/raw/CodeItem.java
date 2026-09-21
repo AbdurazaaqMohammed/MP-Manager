@@ -86,7 +86,7 @@ public class CodeItem {
     public static final int CDEX_INSTRUCTIONS_SIZE_AND_PREHEADER_FLAGS_OFFSET = 2;
     public static final int CDEX_INSTRUCTIONS_SIZE_SHIFT = 5;
     public static final int CDEX_PREHEADER_FLAGS_MASK = 0x1f;
-    public static final int CDEX_PREHEADER_FLAG_REGISTER_COUNT = 1 << 0;
+    public static final int CDEX_PREHEADER_FLAG_REGISTER_COUNT = 1;
     public static final int CDEX_PREHEADER_FLAG_INS_COUNT = 1 << 1;
     public static final int CDEX_PREHEADER_FLAG_OUTS_COUNT = 1 << 2;
     public static final int CDEX_PREHEADER_FLAG_TRIES_COUNT = 1 << 3;
@@ -515,7 +515,7 @@ public class CodeItem {
             }
 
             if (instruction instanceof ReferenceInstruction referenceInstruction) {
-                Reference reference = ((ReferenceInstruction)instruction).getReference();
+                Reference reference = referenceInstruction.getReference();
 
                 String referenceString;
                 if (referenceInstruction.getReferenceType() == ReferenceType.STRING) {

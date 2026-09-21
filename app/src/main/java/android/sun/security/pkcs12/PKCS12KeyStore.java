@@ -416,9 +416,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             // add the entry
             entries.put(alias.toLowerCase(), entry);
         } catch (Exception nsae) {
-            KeyStoreException ke = new KeyStoreException("Key protection " +
+            throw new KeyStoreException("Key protection " +
                                         " algorithm not found: " + nsae, nsae);
-            throw ke;
         }
     }
 
@@ -454,9 +453,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         try {
             new EncryptedPrivateKeyInfo(key);
         } catch (IOException ioe) {
-            KeyStoreException ke = new KeyStoreException("Private key is not"
+            throw new KeyStoreException("Private key is not"
                         + " stored as PKCS#8 EncryptedPrivateKeyInfo: " + ioe, ioe);
-            throw ke;
         }
 
         KeyEntry entry = new KeyEntry();
@@ -506,10 +504,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
            algParams = AlgorithmParameters.getInstance(algorithm);
            algParams.init(paramSpec);
         } catch (Exception e) {
-           IOException ioe =
-                new IOException("getAlgorithmParameters failed: " +
-                                e.getMessage(), e);
-            throw ioe;
+            throw new IOException("getAlgorithmParameters failed: " +
+                            e.getMessage(), e);
         }
         return algParams;
     }
@@ -536,10 +532,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                 algParams.init(params.toByteArray());
             }
         } catch (Exception e) {
-           IOException ioe =
-                new IOException("parseAlgParameters failed: " +
-                                e.getMessage(), e);
-            throw ioe;
+            throw new IOException("parseAlgParameters failed: " +
+                            e.getMessage(), e);
         }
         return algParams;
     }
@@ -556,9 +550,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             SecretKeyFactory skFac = SecretKeyFactory.getInstance("PBE");
             skey = skFac.generateSecret(keySpec);
         } catch (Exception e) {
-           IOException ioe = new IOException("getSecretKey failed: " +
-                                        e.getMessage(), e);
-            throw ioe;
+            throw new IOException("getSecretKey failed: " +
+                                         e.getMessage(), e);
         }
         return skey;
     }
@@ -681,11 +674,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
      */
     public boolean engineIsKeyEntry(String alias) {
         KeyEntry entry = entries.get(alias.toLowerCase());
-        if (entry != null) {
-            return true;
-        } else {
-            return false;
-        }
+        return entry != null;
     }
 
     /**
@@ -816,8 +805,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             md.update(data);
             digest = md.digest();
         } catch (Exception e) {
-            IOException ioe = new IOException("generateHash failed: " + e, e);
-            throw ioe;
+            throw new IOException("generateHash failed: " + e, e);
         }
         return digest;
     }
@@ -855,8 +843,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             bytes.write(macData.getEncoded());
             mData = bytes.toByteArray();
         } catch (Exception e) {
-            IOException ioe = new IOException("calculateMac failed: " + e, e);
-            throw ioe;
+            throw new IOException("calculateMac failed: " + e, e);
         }
         return mData;
     }
@@ -1137,9 +1124,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
             encryptedData = cipher.doFinal(data);
 
         } catch (Exception e) {
-            IOException ioe = new IOException("Failed to encrypt" +
+            throw new IOException("Failed to encrypt" +
                                 " safe contents entry: " + e, e);
-            throw ioe;
         }
 
         // create EncryptedContentInfo
@@ -1267,9 +1253,8 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                     safeContentsData = cipher.doFinal(safeContentsData);
 
                 } catch (Exception e) {
-                    IOException ioe = new IOException("failed to decrypt safe"
+                    throw new IOException("failed to decrypt safe"
                             + " contents entry: " + e, e);
-                    throw ioe;
                 }
             } else {
                 throw new IOException("public key protected PKCS12" +
@@ -1305,9 +1290,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                                         " integrity checking");
                 }
            } catch (Exception e) {
-                IOException ioe =
-                        new IOException("Integrity check failed: " + e, e);
-               throw ioe;
+               throw new IOException("Integrity check failed: " + e, e);
            }
         }
 

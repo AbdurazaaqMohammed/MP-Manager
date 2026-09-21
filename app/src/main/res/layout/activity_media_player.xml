@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:keepScreenOn="true"
@@ -308,7 +309,8 @@
                 android:layout_height="36dp"
                 android:text="A"
                 android:textColor="?attr/colorOnSurface"
-                android:contentDescription="@string/set_point_a" />
+                android:contentDescription="@string/set_point_a"
+                tools:ignore="HardcodedText" />
 
             <SeekBar
                 android:id="@+id/abSeekBar"
@@ -325,7 +327,8 @@
                 android:layout_height="36dp"
                 android:text="B"
                 android:textColor="?attr/colorOnSurface"
-                android:contentDescription="@string/set_point_b" />
+                android:contentDescription="@string/set_point_b"
+                tools:ignore="HardcodedText" />
 
             <ImageButton
                 android:id="@+id/btnClearAB"

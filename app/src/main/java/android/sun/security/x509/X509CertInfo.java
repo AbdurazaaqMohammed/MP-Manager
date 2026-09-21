@@ -150,9 +150,7 @@ public class X509CertInfo implements CertAttrSet<String> {
 
             parse(in);
         } catch (IOException e) {
-            CertificateParsingException parseException =
-                        new CertificateParsingException(e.toString(), e);
-            throw parseException;
+            throw new CertificateParsingException(e.toString(), e);
         }
     }
 
@@ -168,9 +166,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         try {
             parse(derVal);
         } catch (IOException e) {
-            CertificateParsingException parseException =
-                        new CertificateParsingException(e.toString(), e);
-            throw parseException;
+            throw new CertificateParsingException(e.toString(), e);
         }
     }
 

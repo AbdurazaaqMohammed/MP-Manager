@@ -160,8 +160,7 @@ implements CertAttrSet<String> {
       * Return user readable form of extension.
       */
      public String toString() {
-         String s = super.toString() + "InhibitAnyPolicy: " + skipCerts + "\n";
-         return s;
+         return super.toString() + "InhibitAnyPolicy: " + skipCerts + "\n";
      }
 
      /**

@@ -37,10 +37,7 @@ public class RefactorUtil {
         if(isSequentialNames(entryNames)){
             return true;
         }
-        if(!isAllGoodName(entryNames)){
-            return true;
-        }
-        return false;
+        return !isAllGoodName(entryNames);
     }
     private static boolean hasDuplicates(Collection<String> entryNames){
         if(entryNames instanceof HashSet){

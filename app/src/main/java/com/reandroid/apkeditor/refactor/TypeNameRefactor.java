@@ -507,10 +507,7 @@ public class TypeNameRefactor {
         if(isPaths(root)){
             return true;
         }
-        if(isPreferenceScreen(root)){
-            return true;
-        }
-        return false;
+        return isPreferenceScreen(root);
     }
     private boolean isPreferenceScreen(ResXmlElement root){
         if(!"PreferenceScreen".equals(root.getName())){

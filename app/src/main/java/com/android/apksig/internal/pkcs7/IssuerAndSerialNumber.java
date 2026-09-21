@@ -28,7 +28,7 @@ import java.math.BigInteger;
 @Asn1Class(type = Asn1Type.SEQUENCE)
 public class IssuerAndSerialNumber {
 
-    @Asn1Field(index = 0, type = Asn1Type.ANY)
+    @Asn1Field(type = Asn1Type.ANY)
     public Asn1OpaqueObject issuer;
 
     @Asn1Field(index = 1, type = Asn1Type.INTEGER)

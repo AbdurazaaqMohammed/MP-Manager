@@ -185,10 +185,9 @@ public abstract class Cache {
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof EqualByteArray)) {
+            if (!(obj instanceof EqualByteArray other)) {
                 return false;
             }
-            EqualByteArray other = (EqualByteArray)obj;
             return Arrays.equals(this.b, other.b);
         }
     }

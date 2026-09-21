@@ -205,9 +205,8 @@ public class SectionItemContainer extends SectionItem implements BlockRefresh,
             if (counter.FOUND) {
                 return;
             }
-            Block item = childBlock;
-            if (item != null) {
-                item.onCountUpTo(counter);
+            if (childBlock != null) {
+                childBlock.onCountUpTo(counter);
             }
         }
     }

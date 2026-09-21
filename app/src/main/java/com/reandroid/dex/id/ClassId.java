@@ -494,10 +494,7 @@ public class ClassId extends IdItem implements ClassProgram,
             return true;
         }
         ClassData classData = getClassData();
-        if (classData != null && classData.uses(key)) {
-            return true;
-        }
-        return false;
+        return classData != null && classData.uses(key);
     }
 
     @Override

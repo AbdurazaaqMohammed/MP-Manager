@@ -35,7 +35,7 @@ public class IndentingWriter extends Writer {
     protected final char[] buffer = new char[24];
     protected int indentLevel = 0;
     private boolean beginningOfLine = true;
-    private static final String newLine = System.getProperty("line.separator");
+    private static final String newLine = System.lineSeparator();
 
     public IndentingWriter(Writer writer) {
         this.writer = writer;

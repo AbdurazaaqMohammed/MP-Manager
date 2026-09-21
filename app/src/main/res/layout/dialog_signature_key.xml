@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -11,28 +12,32 @@
         android:id="@+id/v1"
         android:textSize="18sp"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        tools:ignore="HardcodedText" />
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:text="V2"
         android:id="@+id/v2"
         android:textSize="18sp"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        tools:ignore="HardcodedText" />
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:text="V3"
         android:id="@+id/v3"
         android:textSize="18sp"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        tools:ignore="HardcodedText" />
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:text="V4"
         android:id="@+id/v4"
         android:textSize="18sp"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        tools:ignore="HardcodedText" />
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/cb_zipalign"
@@ -117,7 +122,8 @@
             android:layout_height="wrap_content"
             android:inputType="text"
             android:text="Android Gradle 8.0.2"
-            android:hint="@string/signed_by" />
+            android:hint="@string/signed_by"
+            tools:ignore="HardcodedText" />
     </com.google.android.material.textfield.TextInputLayout>
 
 </LinearLayout>

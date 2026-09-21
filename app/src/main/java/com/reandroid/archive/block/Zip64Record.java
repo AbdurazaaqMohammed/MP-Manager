@@ -82,7 +82,7 @@ public class Zip64Record  extends ZipHeader{
         if(countBytes() < getMinByteLength()){
             return "Invalid";
         }
-        String builder = getSignature() +
+        return getSignature() +
                 ", EOCDR=" + getSizeOfEOCDR() +
                 ", creator=" + getVersionCreator() +
                 ", viewer=" + getVersionViewer() +
@@ -92,7 +92,6 @@ public class Zip64Record  extends ZipHeader{
                 ", total rec=" + getTotalCDRecords() +
                 ", size of CD=" + getSizeOfCD() +
                 ", offset of CD=" + getOffsetOfCentralDirectory();
-        return builder;
     }
     public static Zip64Record newZip64Record(){
         Zip64Record zip64Record = new Zip64Record();

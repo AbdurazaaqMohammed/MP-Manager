@@ -68,11 +68,10 @@ public class CertificatePolicyId {
      * Returns a printable representation of the CertificatePolicyId.
      */
     public String toString() {
-        String s = "CertificatePolicyId: ["
-                 + id.toString()
-                 + "]\n";
 
-        return (s);
+        return ("CertificatePolicyId: ["
+                 + id.toString()
+                 + "]\n");
     }
 
     /**

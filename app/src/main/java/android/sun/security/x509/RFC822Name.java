@@ -42,7 +42,7 @@ import java.util.Locale;
  */
 public class RFC822Name implements android.sun.security.x509.GeneralNameInterface
 {
-    private String name;
+    private final String name;
 
     /**
      * Create the RFC822Name object from the passed encoded Der value.

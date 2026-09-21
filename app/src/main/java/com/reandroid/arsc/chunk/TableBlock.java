@@ -833,13 +833,12 @@ public class TableBlock extends Chunk<TableHeader>
     }
     @Override
     public String toString(){
-        String builder = getClass().getSimpleName() +
+        return getClass().getSimpleName() +
                 ": packages = " +
                 mPackageArray.size() +
                 ", size = " +
                 getHeaderBlock().getChunkSize() +
                 " bytes";
-        return builder;
     }
 
     public static TableBlock load(File file) throws IOException{

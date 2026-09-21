@@ -1152,11 +1152,8 @@ public class MethodAnalyzer {
             if (commonSuperclass.getType().equals(originalType.type.getType())) {
                 return true;
         }
-            if (commonSuperclass.getType().equals(newType.type.getType())) {
-                return false;
-            }
+            return !commonSuperclass.getType().equals(newType.type.getType());
         }
-        return true;
     }
 
     static boolean canPropagateTypeAfterInstanceOf(AnalyzedInstruction analyzedInstanceOfInstruction,

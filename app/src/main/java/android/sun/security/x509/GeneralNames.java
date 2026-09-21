@@ -132,10 +132,9 @@ public class GeneralNames {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof GeneralNames)) {
+        if (!(obj instanceof GeneralNames other)) {
             return false;
         }
-        GeneralNames other = (GeneralNames)obj;
         return this.names.equals(other.names);
     }
 

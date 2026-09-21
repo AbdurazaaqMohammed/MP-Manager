@@ -134,10 +134,7 @@ class HiddenApiData extends FixedDexContainer
         if (directMethods != null && !directMethods.isAllNoRestrictions()) {
             return false;
         }
-        if (virtualMethods != null && !virtualMethods.isAllNoRestrictions()) {
-            return false;
-        }
-        return true;
+        return virtualMethods == null || virtualMethods.isAllNoRestrictions();
     }
 
     public HiddenApiFlagValueList getStaticFields() {

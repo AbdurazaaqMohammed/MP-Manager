@@ -162,7 +162,7 @@ public class JSONWriter {
         this.top += 1;
     }
     public JSONWriter value(boolean b) throws JSONException {
-        return this.append(b ? "true" : "false");
+        return this.append(Boolean.toString(b));
     }
 
     public JSONWriter value(double d) throws JSONException {

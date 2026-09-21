@@ -133,10 +133,9 @@ public final class ReferenceUtil {
     }
 
     public static String getShortFieldDescriptor(FieldReference fieldReference) {
-        String sb = fieldReference.getName() +
+        return fieldReference.getName() +
                 ':' +
                 fieldReference.getType();
-        return sb;
     }
 
     public static void writeFieldDescriptor(Writer writer, FieldReference fieldReference) throws IOException {

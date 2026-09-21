@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -20,7 +21,8 @@
             android:layout_height="wrap_content"
             android:inputType="text"
             android:text="192.168.1.1"
-            android:hint="@string/ip_address_hint" />
+            android:hint="@string/ip_address_hint"
+            tools:ignore="HardcodedText" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -37,7 +39,8 @@
             android:layout_height="wrap_content"
             android:inputType="number"
             android:text="2121"
-            android:hint="@string/port" />
+            android:hint="@string/port"
+            tools:ignore="HardcodedText" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -54,7 +57,8 @@
             android:layout_height="wrap_content"
             android:inputType="text"
             android:text="admin"
-            android:hint="@string/username" />
+            android:hint="@string/username"
+            tools:ignore="HardcodedText" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -71,7 +75,8 @@
             android:layout_height="wrap_content"
             android:inputType="textPassword"
             android:text="admin"
-            android:hint="@string/enter_password" />
+            android:hint="@string/enter_password"
+            tools:ignore="HardcodedText" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout

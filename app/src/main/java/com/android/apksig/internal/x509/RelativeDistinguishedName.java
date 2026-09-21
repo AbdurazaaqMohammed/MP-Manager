@@ -28,6 +28,6 @@ import java.util.List;
 @Asn1Class(type = Asn1Type.UNENCODED_CONTAINER)
 public class RelativeDistinguishedName {
 
-    @Asn1Field(index = 0, type = Asn1Type.SET_OF)
+    @Asn1Field(type = Asn1Type.SET_OF)
     public List<AttributeTypeAndValue> attributes;
 }

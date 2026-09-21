@@ -777,8 +777,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     public android.sun.security.x509.KeyIdentifier getAuthKeyId() throws IOException {
         android.sun.security.x509.AuthorityKeyIdentifierExtension aki = getAuthKeyIdExtension();
         if (aki != null) {
-            android.sun.security.x509.KeyIdentifier keyId = (KeyIdentifier)aki.get(AuthorityKeyIdentifierExtension.KEY_ID);
-            return keyId;
+            return (KeyIdentifier)aki.get(AuthorityKeyIdentifierExtension.KEY_ID);
         } else {
             return null;
         }
@@ -816,8 +815,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     public BigInteger getCRLNumber() throws IOException {
         CRLNumberExtension numExt = getCRLNumberExtension();
         if (numExt != null) {
-            BigInteger num = (BigInteger)numExt.get(CRLNumberExtension.NUMBER);
-            return num;
+            return (BigInteger)numExt.get(CRLNumberExtension.NUMBER);
         } else {
             return null;
         }
@@ -845,8 +843,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     public BigInteger getBaseCRLNumber() throws IOException {
         DeltaCRLIndicatorExtension dciExt = getDeltaCRLIndicatorExtension();
         if (dciExt != null) {
-            BigInteger num = (BigInteger)dciExt.get(CRLNumberExtension.NUMBER);
-            return num;
+            return (BigInteger)dciExt.get(CRLNumberExtension.NUMBER);
         } else {
             return null;
         }
@@ -1260,11 +1257,8 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
                 return false;
             }
 
-            if (serial.equals(other.getSerial()) &&
-                issuer.equals(other.getIssuer())) {
-                return true;
-            }
-            return false;
+            return serial.equals(other.getSerial()) &&
+                    issuer.equals(other.getIssuer());
         }
 
         /**

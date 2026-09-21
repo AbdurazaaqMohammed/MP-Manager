@@ -28,7 +28,7 @@ import java.util.List;
 @Asn1Class(type = Asn1Type.SEQUENCE)
 public class Attribute {
 
-    @Asn1Field(index = 0, type = Asn1Type.OBJECT_IDENTIFIER)
+    @Asn1Field(type = Asn1Type.OBJECT_IDENTIFIER)
     public String attrType;
 
     @Asn1Field(index = 1, type = Asn1Type.SET_OF)

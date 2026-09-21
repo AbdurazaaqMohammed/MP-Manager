@@ -34,7 +34,6 @@ public class ArscTextActivity extends AppCompatActivity {
     private ArscData data;
     private TypeBlock block;
     private MaterialToolbar toolbar;
-    private TextView infoView;
     private UnifiedEditorFragment fragment;
     private ImageButton btnUndo;
     private ImageButton btnRedo;
@@ -139,12 +138,6 @@ public class ArscTextActivity extends AppCompatActivity {
         toolbar.addView(barButtons, new MaterialToolbar.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END));
         main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        infoView = new TextView(this);
-        infoView.setTextSize(12);
-        infoView.setTypeface(android.graphics.Typeface.MONOSPACE);
-        int pad = dp(12);
-        infoView.setPadding(pad, pad / 2, pad, 0);
-        main.addView(infoView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         FrameLayout holder = new FrameLayout(this);
         holder.setId(R.id.arsc_text_editor_container);
         main.addView(holder, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -180,8 +173,7 @@ public class ArscTextActivity extends AppCompatActivity {
             }
         });
         final TypeBlock tb = block;
-        infoView.setText("Loading…");
-        Extensions.showMessage(this, "Loading…");
+        Extensions.showMessage(this, R.string.loading);
         new Thread(() -> {
             String text = ArscData.typeBlockText(tb, ArscData.TEXT_ENTRY_CAP);
             int count = 0;
@@ -200,7 +192,6 @@ public class ArscTextActivity extends AppCompatActivity {
                 }
                 loadingText = false;
                 bufferDirty = false;
-                infoView.setText(entryCount + " entries. JSON name → value. Complex values are skipped.");
                 if (highlight != null) {
                     String key = "\"" + highlight + "\"";
                     int idx = loaded.indexOf(key);

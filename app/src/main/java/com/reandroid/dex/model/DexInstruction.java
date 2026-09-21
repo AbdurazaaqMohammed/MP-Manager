@@ -443,10 +443,8 @@ public class DexInstruction extends DexCode implements Instruction {
             }
             return getAsConstNumberValue(valueType, value);
         }
-        if (is(Opcode.ARRAY_PAYLOAD)) {
-            // TODO: make for array payloads
-            return null;
-        }
+        // TODO: make for array payloads
+        is(Opcode.ARRAY_PAYLOAD);
         // TODO: confirm this is unreachable
         return null;
     }
@@ -478,10 +476,8 @@ public class DexInstruction extends DexCode implements Instruction {
         if (valueType.isPrimitive()) {
             return value;
         }
-        if (!valueType.isPrimitive() && value == 0) {
-            // TODO: make null value instead
-            return null;
-        }
+        // TODO: make null value instead
+        valueType.isPrimitive();
         // TODO: throw ?
         return null;
     }

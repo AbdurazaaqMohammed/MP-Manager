@@ -69,7 +69,7 @@ import android.sun.security.util.DerValue;
  */
 public class IPAddressName implements android.sun.security.x509.GeneralNameInterface {
     private byte[] address;
-    private boolean isIPv4;
+    private final boolean isIPv4;
     private String name;
 
     /**

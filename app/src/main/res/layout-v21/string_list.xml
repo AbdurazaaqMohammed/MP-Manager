@@ -1,13 +1,10 @@
-<LinearLayout
-		xmlns:android="http://schemas.android.com/apk/res/android"
-		xmlns:app="http://schemas.android.com/apk/res-auto"
-		xmlns:tools="http://schemas.android.com/tools"
-		android:id="@+id/linear_bg"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-	android:background="@drawable/item_background"
-	android:gravity="center_vertical"
-		android:orientation="horizontal">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/linear_bg"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/item_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
 		<LinearLayout
 			android:id="@+id/indexName_container"
 			android:layout_width="25dp"

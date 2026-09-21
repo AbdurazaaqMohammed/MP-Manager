@@ -43,7 +43,7 @@ import javax.security.auth.x500.X500Principal;
  */
 @Asn1Class(type = Asn1Type.SEQUENCE)
 public class Certificate {
-    @Asn1Field(index = 0, type = Asn1Type.SEQUENCE)
+    @Asn1Field(type = Asn1Type.SEQUENCE)
     public TBSCertificate certificate;
 
     @Asn1Field(index = 1, type = Asn1Type.SEQUENCE)

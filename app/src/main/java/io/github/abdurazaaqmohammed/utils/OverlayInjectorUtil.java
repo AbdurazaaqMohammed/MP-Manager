@@ -339,12 +339,11 @@ public class OverlayInjectorUtil {
     }
 
     static String toastHelperSmali(ToastOptions opts) {
-        String sb = ".method private " + TOAST_HELPER + "()V\n" +
+        return ".method private " + TOAST_HELPER + "()V\n" +
                 "    .locals 5\n" +
                 loadTextSmali(opts.message == null ? "" : opts.message, opts.base64, opts.html, 1, 2) +
                 buildToastSmali(opts.longDuration, opts.gravity, opts.xOffset, opts.yOffset) +
                 ".end method\n";
-        return sb;
     }
 
     private static void appendDpToPx(StringBuilder sb, int dpFloatBits, int valueReg, int metricsReg, int unitReg) {
@@ -1352,7 +1351,7 @@ public class OverlayInjectorUtil {
     }
 
     static String waveTickSmali(String tickType, String rgbType) {
-        String s = ".class public " + tickType + "\n" +
+        return ".class public " + tickType + "\n" +
                 ".super Ljava/lang/Object;\n" +
                 ".source \"mpRgbTick.java\"\n" +
                 ".implements Landroid/animation/ValueAnimator$AnimatorUpdateListener;\n\n" +
@@ -1382,7 +1381,6 @@ public class OverlayInjectorUtil {
                 "    invoke-virtual {v0}, " + rgbType + "->invalidateSelf()V\n" +
                 "    return-void\n" +
                 ".end method\n";
-        return s;
     }
 
     static String fontWalkType(String classDescriptor) {
@@ -1396,7 +1394,7 @@ public class OverlayInjectorUtil {
     }
 
     static String fontWalkSmali(String walkType) {
-        String s = ".class public " + walkType + "\n" +
+        return ".class public " + walkType + "\n" +
                 ".super Ljava/lang/Object;\n" +
                 ".source \"mpFontWalk.java\"\n\n" +
                 ".method public constructor <init>()V\n" +
@@ -1430,7 +1428,6 @@ public class OverlayInjectorUtil {
                 "    :mp_fw_end\n" +
                 "    return-void\n" +
                 ".end method\n";
-        return s;
     }
 
     static Map<String, byte[]> collectFontAssets(DialogOptions dialog) {

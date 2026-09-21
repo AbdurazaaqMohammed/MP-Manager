@@ -124,10 +124,9 @@ public class FilePropertiesDialog {
                 }).start();
             }
             if (!multi && file.isDirectory()) {
-                TextView sizeText = sizeValue;
                 new Thread(() -> {
                     long folderSize = getFolderSize(file, null);
-                    context.handler.post(() -> sizeText.setText(FileSize.getHumanReadableFileSize(folderSize)));
+                    context.handler.post(() -> sizeValue.setText(FileSize.getHumanReadableFileSize(folderSize)));
                 }).start();
             }
         } else if (!multi && !entry.isDirectory()) {
@@ -190,7 +189,6 @@ public class FilePropertiesDialog {
                 // Root-only file: hash a staged copy (HashUtil needs FileInputStream).
                 Runnable runStagedChecksum = () -> {
                     TextView hint = new TextView(context);
-                    hint.setText("Checksums via root-staged copy…");
                     checksumRows.addView(hint);
                     new Thread(() -> {
                         try {

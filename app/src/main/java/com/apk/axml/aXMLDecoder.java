@@ -155,7 +155,7 @@ public class aXMLDecoder {
                 }
                 yield String.format("?%08X", data);
             }
-            case TypedValue.TYPE_INT_BOOLEAN -> data != 0 ? "true" : "false";
+            case TypedValue.TYPE_INT_BOOLEAN -> Boolean.toString(data != 0);
             case TypedValue.TYPE_DIMENSION ->
                     trimTrailingZero(complexToFloat(data)) + DIMENSION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
             case TypedValue.TYPE_FRACTION ->

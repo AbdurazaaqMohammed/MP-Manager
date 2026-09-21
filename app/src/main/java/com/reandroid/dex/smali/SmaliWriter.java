@@ -539,7 +539,7 @@ public class SmaliWriter implements Appendable, Closeable {
             writer.close();
             return stringWriter.toString();
         } catch (IOException exception) {
-            return "# " + exception.toString();
+            return "# " + exception;
         }
     }
 

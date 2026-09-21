@@ -211,9 +211,6 @@ public class ResXmlString extends StringItem {
             return i;
         }
         i = CompareUtil.compare(this.getNamespacePrefixString(), xmlString.getNamespacePrefixString());
-        if(i != 0) {
-            return i;
-        }
-        return 0;
+        return i;
     }
 }

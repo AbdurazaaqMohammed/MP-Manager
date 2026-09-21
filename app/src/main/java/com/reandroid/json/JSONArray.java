@@ -332,11 +332,10 @@ public class JSONArray extends JSONItem implements Iterable<Object> {
         if (val == null) {
             return defaultValue;
         }
-        final double doubleValue = val.doubleValue();
         // if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
         // return defaultValue;
         // }
-        return doubleValue;
+        return val.doubleValue();
     }
 
     public float optFloat(int index) {
@@ -348,11 +347,10 @@ public class JSONArray extends JSONItem implements Iterable<Object> {
         if (val == null) {
             return defaultValue;
         }
-        final float floatValue = val.floatValue();
         // if (Float.isNaN(floatValue) || Float.isInfinite(floatValue)) {
         // return floatValue;
         // }
-        return floatValue;
+        return val.floatValue();
     }
 
     public int optInt(int index) {

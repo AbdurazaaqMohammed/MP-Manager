@@ -235,9 +235,7 @@ public class ProfileDirectory implements LinkableProfileItem, Closeable {
             }
         }
         if (metadata != null && metadata.isInitialized()) {
-            if (data == null || data.isInitialized()) {
-                return false;
-            }
+            return data != null && !data.isInitialized();
         }
         return true;
     }

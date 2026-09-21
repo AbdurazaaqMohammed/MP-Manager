@@ -274,8 +274,7 @@ public class X509Key implements PublicKey {
             throw new IOException (classname + " [internal error]");
         }
 
-        X509Key result = new X509Key(algid, key);
-        return result;
+        return new X509Key(algid, key);
     }
 
     /**

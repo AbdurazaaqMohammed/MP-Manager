@@ -593,7 +593,6 @@ public class StorageManagerActivity extends AppCompatActivity {
             List<FileRow> sorted = new ArrayList<>(top);
             sorted.sort((a, b) -> Long.compare(b.size, a.size));
             long files = totalFiles;
-            Map<String, Long> result = buckets;
             scanning = false;
             handler.post(() -> {
                 scanBar.setIndeterminate(false);
@@ -601,9 +600,9 @@ public class StorageManagerActivity extends AppCompatActivity {
                 scanStatus.setText(getString(R.string.storage_files_scanned, files));
                 largeFiles.clear();
                 largeFiles.addAll(sorted);
-                lastBuckets = result;
+                lastBuckets = buckets;
                 lastGrand = 0;
-                for (long v : result.values()) lastGrand += v;
+                for (long v : buckets.values()) lastGrand += v;
                 applyTypeFilter();
                 rebuildTypeRows();
                 updateDeleteSelectedBtn();
@@ -965,8 +964,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                 .setTitle(getString(R.string.delete))
                 .setMessage(file.getAbsolutePath() + "\n" + FileSize.getHumanReadableFileSize(file.length()))
                 .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
-                    boolean ok = deleteOneFile(file);
-                    final boolean done = ok;
+                    final boolean done = deleteOneFile(file);
                     handler.post(() -> {
                         Extensions.showMessage(StorageManagerActivity.this, done ? getString(R.string.storage_deleted) : getString(R.string.storage_delete_failed));
                         if (done) {

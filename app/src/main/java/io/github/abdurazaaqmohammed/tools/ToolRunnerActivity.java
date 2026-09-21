@@ -1099,8 +1099,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         s = s.replace("-DIV-", "/");
         s = s.replace(" ", "");
         ExprParser parser = new ExprParser(s);
-        double v = parser.parse();
-        return v;
+        return parser.parse();
     }
     private static class ExprParser {
         private final String str;
@@ -3253,10 +3252,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             long mTx = TrafficStats.getMobileTxBytes();
             long tRx = TrafficStats.getTotalRxBytes();
             long tTx = TrafficStats.getTotalTxBytes();
-            String b = "Mobile ↓ " + (mRx < 0 ? "-" : formatBytes(mRx)) + "  ↑ " + (mTx < 0 ? "-" : formatBytes(mTx)) + "\n" +
+            return "Mobile ↓ " + (mRx < 0 ? "-" : formatBytes(mRx)) + "  ↑ " + (mTx < 0 ? "-" : formatBytes(mTx)) + "\n" +
                     "Total ↓ " + (tRx < 0 ? "-" : formatBytes(tRx)) + "  ↑ " + (tTx < 0 ? "-" : formatBytes(tTx)) + "\n" +
                     "Counters reset on reboot";
-            return b;
         } catch (Exception e) {
             return "Unavailable";
         }

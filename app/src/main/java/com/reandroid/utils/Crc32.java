@@ -71,10 +71,9 @@ public class Crc32 extends Checksum {
     public void update(byte[] data, int offset, int length) {
         long c = mCrc;
         int end = offset + length;
-        long[] table = CRC_TABLE;
         for (int i = offset; i < end; i++) {
             int b = data[i] & 0xff;
-            c = table[(int)((c ^ b) & 0xff)] ^ (c >> 8);
+            c = CRC_TABLE[(int)((c ^ b) & 0xff)] ^ (c >> 8);
         }
         this.mCrc = c;
         this.mLength += length;

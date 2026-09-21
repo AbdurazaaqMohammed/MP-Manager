@@ -33,7 +33,6 @@ import java.util.List;
 public class TBSCertificate {
 
     @Asn1Field(
-            index = 0,
             type = Asn1Type.INTEGER,
             tagging = Asn1Tagging.EXPLICIT, tagNumber = 0)
     public int version;

@@ -76,7 +76,7 @@ public class PKCS7 {
      * @exception ParsingException on parsing errors.
      * @exception IOException on other errors.
      */
-    public PKCS7(InputStream in) throws ParsingException, IOException {
+    public PKCS7(InputStream in) throws IOException {
         DataInputStream dis = new DataInputStream(in);
         byte[] data = new byte[dis.available()];
         dis.readFully(data);
@@ -197,7 +197,7 @@ public class PKCS7 {
     }
 
     private void parseNetscapeCertChain(DerValue val)
-    throws ParsingException, IOException {
+    throws IOException {
         DerInputStream dis = new DerInputStream(val.toByteArray());
         DerValue[] contents = dis.getSequence(2);
         certificates = new X509Certificate[contents.length];
@@ -234,7 +234,7 @@ public class PKCS7 {
     }
 
     private void parseSignedData(DerValue val)
-        throws ParsingException, IOException {
+        throws IOException {
 
         DerInputStream dis = val.toDerInputStream();
 
@@ -350,7 +350,7 @@ public class PKCS7 {
      * compatibility with JDK1.1.x).
      */
     private void parseOldSignedData(DerValue val)
-        throws ParsingException, IOException
+        throws IOException
     {
         DerInputStream dis = val.toDerInputStream();
 
@@ -465,8 +465,7 @@ public class PKCS7 {
                         byte[] encoded = certificates[i].getEncoded();
                         implCerts[i] = new X509CertImpl(encoded);
                     } catch (CertificateException ce) {
-                        IOException ie = new IOException(ce.getMessage(), ce);
-                        throw ie;
+                        throw new IOException(ce.getMessage(), ce);
                     }
                 }
             }
@@ -488,8 +487,7 @@ public class PKCS7 {
                         byte[] encoded = crl.getEncoded();
                         implCRLs.add(new X509CRLImpl(encoded));
                     } catch (CRLException ce) {
-                        IOException ie = new IOException(ce.getMessage(), ce);
-                        throw ie;
+                        throw new IOException(ce.getMessage(), ce);
                     }
                 }
             }

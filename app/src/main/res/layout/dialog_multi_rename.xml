@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:fillViewport="true"
@@ -67,7 +68,8 @@
                     android:text="{P}"
                     android:textSize="13sp"
                     android:insetBottom="0dp"
-                    android:insetTop="0dp" />
+                    android:insetTop="0dp"
+                    tools:ignore="HardcodedText" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_insert_suffix"
@@ -84,7 +86,8 @@
                     android:text="{S}"
                     android:textSize="13sp"
                     android:insetBottom="0dp"
-                    android:insetTop="0dp" />
+                    android:insetTop="0dp"
+                    tools:ignore="HardcodedText" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_insert_number"
@@ -101,7 +104,8 @@
                     android:text="{N}"
                     android:textSize="13sp"
                     android:insetBottom="0dp"
-                    android:insetTop="0dp" />
+                    android:insetTop="0dp"
+                    tools:ignore="HardcodedText" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_insert_padded_number"
@@ -117,7 +121,8 @@
                     android:text="{zN}"
                     android:textSize="13sp"
                     android:insetBottom="0dp"
-                    android:insetTop="0dp" />
+                    android:insetTop="0dp"
+                    tools:ignore="HardcodedText" />
             </LinearLayout>
         </HorizontalScrollView>
 

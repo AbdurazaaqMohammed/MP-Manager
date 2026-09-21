@@ -29,6 +29,6 @@ import java.util.List;
 public class Name {
 
     // This field is the RDNSequence specified in RFC 5280.
-    @Asn1Field(index = 0, type = Asn1Type.SEQUENCE_OF)
+    @Asn1Field(type = Asn1Type.SEQUENCE_OF)
     public List<RelativeDistinguishedName> relativeDistinguishedNames;
 }

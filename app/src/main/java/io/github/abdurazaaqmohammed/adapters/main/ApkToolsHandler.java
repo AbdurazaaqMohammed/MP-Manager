@@ -187,7 +187,7 @@ public class ApkToolsHandler {
                     .addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), 9021);
         } catch (Exception e) {
             pendingImagePick = null;
-            Extensions.showMessage(context, "Image picker unavailable");
+            Extensions.showMessage(context, context.getString(R.string.image_picker_unavailable));
         }
     }
 
@@ -970,11 +970,11 @@ public class ApkToolsHandler {
         layout.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
 
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle("Kill signature verification")
-                .setMessage("Note: This feature is for security testing purposes only and is strictly forbidden to use it for any illegal activity")
+                .setTitle(context.getString(R.string.kill_signature_verification))
+                .setMessage(context.getString(R.string.kill_signature_warning))
                 .setView(layout)
                 .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                .setPositiveButton("Kill", (dialog2, which3) -> {
+                .setPositiveButton(context.getString(R.string.kill), (dialog2, which3) -> {
                     SignWrapper[] wrapper = new SignWrapper[1];
                     final Runnable doKill;
                     if (selectedMethod[0] == 1) {
@@ -1037,12 +1037,12 @@ public class ApkToolsHandler {
         }
 
         dialogUtil.getDialogBuilder()
-                .setTitle("Select Activity")
+                .setTitle(context.getString(R.string.select_activity))
                 .setMultiChoiceItems(displayItems, checked, (dialog, which, isChecked) -> {
                     if (isChecked) selectedIndices.add(which);
                     else selectedIndices.remove(which);
                 })
-                .setPositiveButton("Next", (dialog, which) -> {
+                .setPositiveButton(context.getString(R.string.next_button), (dialog, which) -> {
                     if (selectedIndices.isEmpty()) return;
                     List<String> selectedActivities = new ArrayList<>();
                     for (int idx : selectedIndices) selectedActivities.add(activities.get(idx).name);
@@ -1477,7 +1477,7 @@ public class ApkToolsHandler {
                     ClipboardManager cm = (ClipboardManager)
                             context.getSystemService(Context.CLIPBOARD_SERVICE);
                     cm.setPrimaryClip(ClipData.newPlainText("text", text));
-                    Extensions.showMessage(context, "Copied");
+                    Extensions.showMessage(context, context.getString(R.string.copied_style));
                 } catch (Exception ignored) {
                 }
             }
@@ -1688,9 +1688,9 @@ public class ApkToolsHandler {
     }
 
     private void refreshStyleLabels(OverlayForm f) {
-        f.bg1Btn.setText("BG: " + shortHex(f.bgC1));
-        f.bg2Btn.setText(f.bgC2set ? "Gradient: " + shortHex(f.bgC2) : "Gradient: none");
-        f.borderColorBtn.setText("Border: " + shortHex(f.borderC));
+        f.bg1Btn.setText(context.getString(R.string.bg_format, shortHex(f.bgC1)));
+        f.bg2Btn.setText(f.bgC2set ? context.getString(R.string.grad_format, shortHex(f.bgC2)) : context.getString(R.string.gradient_none));
+        f.borderColorBtn.setText(context.getString(R.string.border_format, shortHex(f.borderC)));
         if (f.titleColorBtn != null) {
             f.titleColorBtn.setText("");
             try {
@@ -1908,7 +1908,7 @@ public class ApkToolsHandler {
             props.extensions = new String[]{"ttf", "otf"};
             props.preferenceKey = "overlay_font";
             FilePickerDialog dlg = new FilePickerDialog(context, props);
-            dlg.setTitle("Choose font (ttf/otf)");
+            dlg.setTitle(context.getString(R.string.choose_font));
             dlg.setDialogSelectionListener(files -> {
                 if (files == null || files.length == 0 || files[0] == null) return;
                 onFontFilePicked(new File(files[0]), cb);
@@ -2049,11 +2049,11 @@ public class ApkToolsHandler {
                     } else if (which == FONT_LABELS.length) {
                         pickFontFile(path -> {
                             applier.apply("", path);
-                            if (labelBtn != null) labelBtn.setText("Font: " + baseName(path));
+                             if (labelBtn != null) labelBtn.setText(context.getString(R.string.font_label_format, baseName(path)));
                         });
                     } else {
                         applier.apply("", "");
-                        if (labelBtn != null) labelBtn.setText("Font: Default");
+                         if (labelBtn != null) labelBtn.setText(context.getString(R.string.font_default_label));
                     }
                 }).show();
     }
@@ -2092,29 +2092,29 @@ public class ApkToolsHandler {
             OverlayInjectorUtil.AdvWidget w = advSelected[0];
             if (w == null) {
                 TextView hint = new TextView(context);
-                hint.setText("Tap a widget to edit it");
+                hint.setText(context.getString(R.string.tap_widget_hint));
                 hint.setTextSize(13);
                 advProps.addView(hint);
                 return;
             }
             TextView header = new TextView(context);
-            header.setText("Selected: " + w.kind);
+            header.setText(context.getString(R.string.selected_format, w.kind));
             header.setTypeface(null, Typeface.BOLD);
             header.setTextSize(15);
             advProps.addView(header);
             LinearLayout styleRow2 = new LinearLayout(context);
             styleRow2.setOrientation(LinearLayout.HORIZONTAL);
             MaterialButton copyBtn = new MaterialButton(context);
-            copyBtn.setText("Copy style");
+            copyBtn.setText(context.getString(R.string.copy_style));
             copyBtn.setOnClickListener(x -> {
                 styleClipboard = OverlayInjectorUtil.copyWidget(w);
-                Extensions.showMessage(context, "Style copied (" + w.kind + ")");
+                Extensions.showMessage(context, context.getString(R.string.style_copied_format, w.kind));
                 showAdvProps[0].run();
             });
             styleRow2.addView(copyBtn, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             MaterialButton pasteBtn = new MaterialButton(context);
-            pasteBtn.setText("Paste style");
+            pasteBtn.setText(context.getString(R.string.paste_style));
             boolean canPaste = styleClipboard != null && w.kind.equals(styleClipboard.kind);
             pasteBtn.setEnabled(canPaste);
             pasteBtn.setAlpha(canPaste ? 1f : 0.5f);
@@ -2123,13 +2123,13 @@ public class ApkToolsHandler {
                 pasteStyle(w, styleClipboard);
                 renderAdv[0].run();
                 showAdvProps[0].run();
-                Extensions.showMessage(context, "Style pasted");
+                Extensions.showMessage(context, context.getString(R.string.style_pasted));
             });
             styleRow2.addView(pasteBtn, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             advProps.addView(styleRow2);
             MaterialButton delBtn = new MaterialButton(context);
-            delBtn.setText("Delete widget");
+            delBtn.setText(context.getString(R.string.delete_widget));
             delBtn.setOnClickListener(x -> {
                 advWidgets.remove(w);
                 advSelected[0] = null;
@@ -2151,7 +2151,7 @@ public class ApkToolsHandler {
                 advProps.addView(thumb, new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, dp(160)));
                 MaterialButton pickBtn = new MaterialButton(context);
-                pickBtn.setText("Choose image");
+                pickBtn.setText(context.getString(R.string.choose_image));
                 pickBtn.setOnClickListener(x -> pickImage((bmp, b64) -> {
                     w.imageB64 = b64;
                     renderAdv[0].run();
@@ -2236,7 +2236,7 @@ public class ApkToolsHandler {
             styleRow.addView(italicBtn, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             MaterialButton inheritBtn = new MaterialButton(context);
-            inheritBtn.setText("Dialog font");
+            inheritBtn.setText(context.getString(R.string.dialog_font));
             inheritBtn.setOnClickListener(x -> {
                 w.font = "";
                 w.fontPath = "";
@@ -2251,30 +2251,30 @@ public class ApkToolsHandler {
                 LinearLayout btnBgRow = new LinearLayout(context);
                 btnBgRow.setOrientation(LinearLayout.HORIZONTAL);
                 MaterialButton bgBtn = new MaterialButton(context);
-                bgBtn.setText(w.btnBg == 0 ? "BG color" : "BG: " + shortHex(w.btnBg));
+                bgBtn.setText(w.btnBg == 0 ? context.getString(R.string.bg_color_label) : context.getString(R.string.bg_format, shortHex(w.btnBg)));
                 bgBtn.setOnClickListener(x -> showColorWheel(w.btnBg == 0 ? -7829368 : w.btnBg, (argb, hex) -> {
                     w.btnBg = argb;
-                    bgBtn.setText("BG: " + hex);
+                    bgBtn.setText(context.getString(R.string.bg_format, hex));
                     renderAdv[0].run();
                 }));
                 bgBtn.setOnLongClickListener(x -> {
                     w.btnBg = 0;
-                    bgBtn.setText("BG color");
+                    bgBtn.setText(context.getString(R.string.bg_color_label));
                     renderAdv[0].run();
                     return true;
                 });
                 btnBgRow.addView(bgBtn, new LinearLayout.LayoutParams(0,
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 MaterialButton gradBtn = new MaterialButton(context);
-                gradBtn.setText(w.btnBg2 == 0 ? "Gradient" : "Grad: " + shortHex(w.btnBg2));
+                gradBtn.setText(w.btnBg2 == 0 ? context.getString(R.string.gradient_label) : context.getString(R.string.grad_format, shortHex(w.btnBg2)));
                 gradBtn.setOnClickListener(x -> showColorWheel(w.btnBg2 == 0 ? -16776961 : w.btnBg2, (argb, hex) -> {
                     w.btnBg2 = argb;
-                    gradBtn.setText("Grad: " + hex);
+                    gradBtn.setText(context.getString(R.string.grad_format, hex));
                     renderAdv[0].run();
                 }));
                 gradBtn.setOnLongClickListener(x -> {
                     w.btnBg2 = 0;
-                    gradBtn.setText("Gradient");
+                    gradBtn.setText(context.getString(R.string.gradient_label));
                     renderAdv[0].run();
                     Extensions.showMessage(context, "Gradient cleared (long-press clears)");
                     return true;
@@ -2351,16 +2351,16 @@ public class ApkToolsHandler {
                     }
                 });
                 MaterialButton borderBtn = new MaterialButton(context);
-                borderBtn.setText(w.btnBorderColor == -1 ? "Border color" : "Border: " + shortHex(w.btnBorderColor));
+                borderBtn.setText(w.btnBorderColor == -1 ? context.getString(R.string.border_color) : context.getString(R.string.border_format, shortHex(w.btnBorderColor)));
                 borderBtn.setOnClickListener(x -> showColorWheel(
                         w.btnBorderColor == -1 ? -1 : w.btnBorderColor, (argb, hex) -> {
                             w.btnBorderColor = argb;
-                            borderBtn.setText("Border: " + hex);
+                            borderBtn.setText(context.getString(R.string.border_format, hex));
                             renderAdv[0].run();
                         }));
                 borderBtn.setOnLongClickListener(x -> {
                     w.btnBorderColor = -1;
-                    borderBtn.setText("Border color");
+                    borderBtn.setText(context.getString(R.string.border_color));
                     renderAdv[0].run();
                     return true;
                 });
@@ -2368,7 +2368,7 @@ public class ApkToolsHandler {
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 advProps.addView(btnBorderRow);
                 MaterialSwitch animBtnSwitch = new MaterialSwitch(context);
-                animBtnSwitch.setText("Animated border");
+                animBtnSwitch.setText(context.getString(R.string.animated_border));
                 animBtnSwitch.setChecked(w.btnAnim);
                 advProps.addView(animBtnSwitch);
                 LinearLayout animBtnBox = new LinearLayout(context);
@@ -2450,7 +2450,7 @@ public class ApkToolsHandler {
                     });
                     animBtnBox.addView(UiFields.wrap(context, speedInput, "Animation speed ms", 0));
                     MaterialSwitch rainbowBtnSwitch = new MaterialSwitch(context);
-                    rainbowBtnSwitch.setText("Rainbow (RGB) mode");
+                    rainbowBtnSwitch.setText(context.getString(R.string.rainbow_rgb_mode));
                     rainbowBtnSwitch.setChecked(w.btnAnimRainbow);
                     rainbowBtnSwitch.setOnCheckedChangeListener((b, c) -> w.btnAnimRainbow = c);
                     animBtnBox.addView(rainbowBtnSwitch);
@@ -3031,7 +3031,7 @@ public class ApkToolsHandler {
             row.addView(btn, params);
         }
         MaterialButton colorBtn = new MaterialButton(context);
-        colorBtn.setText("Color");
+        colorBtn.setText(R.string.color);
         colorBtn.setFocusable(false);
         colorBtn.setFocusableInTouchMode(false);
         colorBtn.setOnClickListener(v -> showColorWheelDialog(target));

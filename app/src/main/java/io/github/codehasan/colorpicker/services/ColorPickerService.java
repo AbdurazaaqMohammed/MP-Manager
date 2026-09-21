@@ -566,11 +566,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
             bitmap.getPixels(pixels, 0, cropSize, cropX, cropY, cropSize, cropSize);
             crop.setPixels(pixels, 0, cropSize, 0, 0, cropSize, cropSize);
 
-            Bitmap finalCrop = crop;
-            String finalHex = hexColor;
-            int finalX = safeX;
-            int finalY = safeY;
-            handler.post(() -> magnifierView.updateContent(finalCrop, finalHex, finalX, finalY));
+            handler.post(() -> magnifierView.updateContent(crop, hexColor, safeX, safeY));
         }
     }
 

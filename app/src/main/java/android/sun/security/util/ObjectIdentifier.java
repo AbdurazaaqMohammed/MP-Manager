@@ -340,10 +340,9 @@ class ObjectIdentifier implements Serializable
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof ObjectIdentifier)) {
+        if (!(obj instanceof ObjectIdentifier other)) {
             return false;
         }
-        ObjectIdentifier other = (ObjectIdentifier)obj;
         return Arrays.equals(encoding, other.encoding);
     }
 

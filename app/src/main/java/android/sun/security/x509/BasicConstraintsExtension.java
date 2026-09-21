@@ -191,11 +191,7 @@ implements CertAttrSet<String> {
          android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
          if (extensionValue == null) {
              this.extensionId = PKIXExtensions.BasicConstraints_Id;
-             if (ca) {
-                 critical = true;
-             } else {
-                 critical = false;
-             }
+             critical = ca;
              encodeThis();
          }
          super.encode(tmp);

@@ -33,7 +33,7 @@ public class CoderBoolean extends Coder {
     }
     @Override
     public String decode(int data) {
-        return data == 0 ? "false" : "true";
+        return Boolean.toString(data != 0);
     }
 
     @Override

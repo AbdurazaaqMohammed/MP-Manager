@@ -19,15 +19,11 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.model.ResourceEntry;
-import com.reandroid.arsc.value.Entry;
-import com.reandroid.arsc.value.ValueType;
 
-import java.util.Iterator;
 import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -42,7 +38,7 @@ public final class ArscQuerier {
     private ArscQuerier() {
     }
 
-    private static boolean enabled(ArscEditorActivity activity) {
+    private static boolean enabled(ArscEditorPlusActivity activity) {
         try {
             return PreferenceManager.getDefaultSharedPreferences(activity).getBoolean("arsc_querier_enabled", true);
         } catch (Exception e) {
@@ -50,7 +46,7 @@ public final class ArscQuerier {
         }
     }
 
-    public static void toggleFloat(ArscEditorActivity activity) {
+    public static void toggleFloat(ArscEditorPlusActivity activity) {
         if (floatButton != null && floatButton.getVisibility() == View.VISIBLE) {
             hideFloat(activity);
             return;
@@ -64,7 +60,7 @@ public final class ArscQuerier {
         showFloat(activity);
     }
 
-    public static void showFloat(ArscEditorActivity activity) {
+    public static void showFloat(ArscEditorPlusActivity activity) {
         if (!enabled(activity)) return;
         hideFloat(activity);
         float density = activity.getResources().getDisplayMetrics().density;
@@ -124,7 +120,7 @@ public final class ArscQuerier {
         }
     }
 
-    private static void scheduleSnap(ArscEditorActivity activity, View button) {
+    private static void scheduleSnap(ArscEditorPlusActivity activity, View button) {
         cancelSnap();
         boolean snap;
         try {
@@ -148,7 +144,7 @@ public final class ArscQuerier {
         handler.postDelayed(snapTask, 3000);
     }
 
-    public static void hideFloat(ArscEditorActivity activity) {
+    public static void hideFloat(ArscEditorPlusActivity activity) {
         cancelSnap();
         try {
             if (floatButton != null) {
@@ -160,7 +156,7 @@ public final class ArscQuerier {
         floatButton = null;
     }
 
-    public static void showDialog(ArscEditorActivity activity) {
+    public static void showDialog(ArscEditorPlusActivity activity) {
         if (activity.data == null) return;
         LinearLayout titleRow = new LinearLayout(activity);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -223,7 +219,7 @@ public final class ArscQuerier {
         dialog.show();
     }
 
-    private static void showSettings(ArscEditorActivity activity) {
+    private static void showSettings(ArscEditorPlusActivity activity) {
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
@@ -270,7 +266,7 @@ public final class ArscQuerier {
                 }).show();
     }
 
-    static String runQuery(ArscEditorActivity activity, String input) {
+    static String runQuery(ArscEditorPlusActivity activity, String input) {
         ArscData data = activity.data;
         if (data == null || data.table == null) return activity.getString(R.string.querier_no_file);
         String t = input == null ? "" : input.trim();
@@ -280,7 +276,7 @@ public final class ArscQuerier {
         return queryNumber(activity, data, t);
     }
 
-    private static String queryReference(ArscEditorActivity activity, ArscData data, String t) {
+    private static String queryReference(ArscEditorPlusActivity activity, ArscData data, String t) {
         String ref = t.substring(1);
         if (ref.startsWith("0x") || ref.startsWith("0X") || ref.matches("(?i)[0-9a-f]{1,8}")) {
             String hex = ref.startsWith("0x") || ref.startsWith("0X") ? ref.substring(2) : ref;
@@ -316,13 +312,12 @@ public final class ArscQuerier {
     }
 
     static String resourceInfo(ArscData data, ResourceEntry re) {
-        String sb = String.format(Locale.US, "0x%08X", re.getResourceId()) + '\n' +
+        return String.format(Locale.US, "0x%08X", re.getResourceId()) + '\n' +
                 re.getPackageName() + '/' + re.getType() + '/' + re.getName() + '\n' +
                 data.entryDisplay(re);
-        return sb;
     }
 
-    private static String queryColor(ArscEditorActivity activity, String t) {
+    private static String queryColor(ArscEditorPlusActivity activity, String t) {
         try {
             int argb = ArscData.parseColor(t);
             int a = (argb >> 24) & 0xFF;
@@ -336,7 +331,7 @@ public final class ArscQuerier {
         }
     }
 
-    private static String queryNumber(ArscEditorActivity activity, ArscData data, String t) {
+    private static String queryNumber(ArscEditorPlusActivity activity, ArscData data, String t) {
         String clean = t.replace("_", "").replace(" ", "");
         boolean negative = clean.startsWith("-");
         String body = negative ? clean.substring(1) : clean;

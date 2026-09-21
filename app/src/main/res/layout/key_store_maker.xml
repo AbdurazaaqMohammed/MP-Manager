@@ -1,11 +1,9 @@
-<ScrollView
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:app="http://schemas.android.com/apk/res-auto"
-	xmlns:tools="http://schemas.android.com/tools"
-	android:id="@+id/_coordinator"
-	android:orientation="vertical"
-	android:layout_width="match_parent"
-	android:layout_height="match_parent">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/_coordinator"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 	<LinearLayout
 		android:id="@+id/linear2"
 		android:layout_width="match_parent"
@@ -33,7 +31,8 @@
 				android:text="pk8 + pem"
 				android:textSize="16sp"
 				android:textStyle="bold"
-				android:checked="true" />
+				android:checked="true"
+                tools:ignore="HardcodedText" />
 			<com.google.android.material.checkbox.MaterialCheckBox
 				android:id="@+id/checkbox2"
 				android:layout_width="wrap_content"
@@ -45,7 +44,8 @@
 				android:gravity="center_horizontal|center_vertical"
 				android:text="JKS"
 				android:textSize="16sp"
-				android:textStyle="bold" />
+				android:textStyle="bold"
+                tools:ignore="HardcodedText" />
 		</LinearLayout>
 		<com.google.android.material.textfield.TextInputLayout
 			android:id="@+id/textinputlayout1"
@@ -70,7 +70,8 @@
 				android:digits="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_@$¢"
 
 				android:inputType="textFilter"
-				android:focusable="true" />
+				android:focusable="true"
+                tools:ignore="HardcodedText" />
 		</com.google.android.material.textfield.TextInputLayout>
 		<com.google.android.material.textfield.TextInputLayout
 			android:id="@+id/textinput_keyName"
@@ -167,7 +168,8 @@
 				android:textColorHint="?attr/colorSurface"
 				android:inputType="numberDecimal"
 				android:imeOptions="actionDone"
-				android:layout_gravity="center_vertical" />
+				android:layout_gravity="center_vertical"
+                tools:ignore="HardcodedText" />
 		</com.google.android.material.textfield.TextInputLayout>
 		<com.google.android.material.textfield.TextInputLayout
 			android:id="@+id/textinput5"
@@ -190,7 +192,8 @@
 				android:textColorHint="?attr/colorSurface"
 				android:inputType="numberDecimal"
 				android:imeOptions="actionDone"
-				android:layout_gravity="center_vertical" />
+				android:layout_gravity="center_vertical"
+                tools:ignore="HardcodedText" />
 		</com.google.android.material.textfield.TextInputLayout>
 		<com.google.android.material.textfield.TextInputLayout
 			android:id="@+id/textinput6"
@@ -366,6 +369,7 @@
 			android:gravity="center_horizontal|center_vertical"
 			android:text="© Radhe Krushna"
 			android:textSize="12sp"
-			android:layout_gravity="center_horizontal|center_vertical" />
+			android:layout_gravity="center_horizontal|center_vertical"
+            tools:ignore="HardcodedText" />
 	</LinearLayout>
 </ScrollView>

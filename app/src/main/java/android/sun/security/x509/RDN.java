@@ -291,10 +291,9 @@ public class RDN {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof RDN)) {
+        if (!(obj instanceof RDN other)) {
             return false;
         }
-        RDN other = (RDN)obj;
         if (this.assertion.length != other.assertion.length) {
             return false;
         }

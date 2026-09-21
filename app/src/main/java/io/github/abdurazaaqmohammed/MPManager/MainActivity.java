@@ -1130,8 +1130,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void applyBookmarksBarHeight(int percent) {
         View drawer = findViewById(R.id.bookmarks_drawer);
-        int height = (int) (getResources().getDisplayMetrics().heightPixels * (percent / 100.0));
-        drawer.getLayoutParams().height = height;
+        drawer.getLayoutParams().height = (int) (getResources().getDisplayMetrics().heightPixels * (percent / 100.0));
         drawer.requestLayout();
     }
 
@@ -2115,10 +2114,9 @@ public class MainActivity extends AppCompatActivity {
             if (elevated) {
                 files = AccessManager.listWithStat(this, folder.getAbsolutePath());
                 if (files != null) {
-                    File[] filtered = Arrays.stream(files)
+                    files = Arrays.stream(files)
                             .filter(this::isNotHidden)
                             .toArray(File[]::new);
-                    files = filtered;
                 }
             }
             if (files == null) {

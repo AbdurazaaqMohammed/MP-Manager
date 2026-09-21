@@ -138,9 +138,7 @@ public class SpanAttributesDecoder {
         }
         StyleAttribute last = getLastAttribute();
         if (last != null) {
-            if (name.compareTo(last.getName()) < 0) {
-                return false;
-            }
+            return name.compareTo(last.getName()) >= 0;
         }
         return true;
     }

@@ -183,10 +183,9 @@ public class SourceStampCertificateLineage {
             if (parentSigAlgorithm != that.parentSigAlgorithm) return false;
             if (sigAlgorithm != that.sigAlgorithm) return false;
             if (!Arrays.equals(signature, that.signature)) return false;
-            if (flags != that.flags) return false;
+            return flags == that.flags;
 
             // we made it
-            return true;
         }
 
         @Override

@@ -44,7 +44,7 @@ import javax.annotation.Nonnull;
 public class FileDataStore implements DexDataStore {
     private final RandomAccessFile raf;
 
-    public FileDataStore(@Nonnull File file) throws FileNotFoundException, IOException {
+    public FileDataStore(@Nonnull File file) throws IOException {
         this.raf = new RandomAccessFile(file, "rw");
         this.raf.setLength(0);
     }

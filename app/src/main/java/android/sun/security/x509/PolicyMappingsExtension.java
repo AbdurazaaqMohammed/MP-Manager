@@ -137,10 +137,9 @@ implements CertAttrSet<String> {
      */
     public String toString() {
         if (maps == null) return "";
-        String s = super.toString() + "PolicyMappings [\n"
-                 + maps.toString() + "]\n";
 
-        return (s);
+        return (super.toString() + "PolicyMappings [\n"
+                 + maps.toString() + "]\n");
     }
 
     /**

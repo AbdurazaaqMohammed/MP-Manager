@@ -860,7 +860,7 @@ public class ResXmlAttribute extends AttributeValue implements
             }
             return fullName + "[" + valueType + "]=\"" + getData() + "\"";
         }
-        String builder = getClass().getSimpleName() +
+        return getClass().getSimpleName() +
                 ": " +
                 getIndex() +
                 "{NamespaceReference=" + getNamespaceReference() +
@@ -870,7 +870,6 @@ public class ResXmlAttribute extends AttributeValue implements
                 ", ValueTypeByte=" + (getType() & 0xff) +
                 ", Data=" + getData() +
                 "}";
-        return builder;
     }
     @Override
     public void parse(XmlPullParser parser) throws XmlPullParserException, IOException {

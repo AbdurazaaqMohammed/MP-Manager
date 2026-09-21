@@ -63,8 +63,8 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
-import io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
@@ -706,19 +706,19 @@ public class FileOperationsHelper {
     private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
         String[] options = {context.getString(R.string.arsc_plus), context.getString(R.string.arsc_editor), context.getString(R.string.translation_mode), context.getString(R.string.querier_title)};
         String[] modes = {
-                ArscEditorActivity.MODE_PLUS,
-                ArscEditorActivity.MODE_EDITOR,
-                ArscEditorActivity.MODE_TRANSLATE,
-                ArscEditorActivity.MODE_QUERIER};
+                ArscEditorPlusActivity.MODE_PLUS,
+                ArscEditorPlusActivity.MODE_EDITOR,
+                ArscEditorPlusActivity.MODE_TRANSLATE,
+                ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.open_with))
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
                     // Simple MT-style "ARSC Editor" lives in its own activity;
-                    // Plus / Translation / Querier stay in ArscEditorActivity.
-                    Class<?> target = ArscEditorActivity.MODE_EDITOR.equals(modes[which])
-                            ? ArscSimpleEditorActivity.class
-                            : ArscEditorActivity.class;
+                    // Plus / Translation / Querier stay in ArscEditorPlusActivity.
+                    Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
+                            ? ArscEditorActivity.class
+                            : ArscEditorPlusActivity.class;
                     Intent arscIntent = new Intent(context, target)
                             .putExtra("path", arscFile.getAbsolutePath())
                             .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
@@ -1004,8 +1004,7 @@ public class FileOperationsHelper {
                 } else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", tempFile.getPath()));
             } else if (name.equals("resources.arsc")) {
                 FileUtils.copyFile(is, tempFile);
-                File stagedArsc = tempFile;
-                context.handler.post(() -> showArscOpenWith(stagedArsc, zipFile, fullPath));
+                context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
             } else {
                 FileUtils.copyFile(is, tempFile);
                 context.handler.post(() -> adapter.openWithForFile(tempFile, name));

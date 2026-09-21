@@ -70,9 +70,8 @@ public abstract class BlockContainer<T extends Block> extends Block implements B
             if (counter.FOUND) {
                 return;
             }
-            T item = childe;
-            if (item != null) {
-                item.onCountUpTo(counter);
+            if (childe != null) {
+                childe.onCountUpTo(counter);
             }
         }
     }

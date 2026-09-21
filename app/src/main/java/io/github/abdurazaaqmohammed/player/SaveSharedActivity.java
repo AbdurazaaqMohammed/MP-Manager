@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -70,7 +71,7 @@ public class SaveSharedActivity extends AppCompatActivity {
         root.setPadding(pad, pad, pad, pad);
         TextView info = new TextView(this);
         info.setTextSize(15);
-        info.setText(pendingUris.size() + " file(s) to save. Pick a folder.");
+        info.setText(getString(R.string.i_ftsave, pendingUris.size()));
         root.addView(info, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         com.google.android.material.button.MaterialButton cancelBtn =
                 new com.google.android.material.button.MaterialButton(this);
@@ -86,7 +87,7 @@ public class SaveSharedActivity extends AppCompatActivity {
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
         props.selection_type = FilePickerDialog.DIR_SELECT;
         FilePickerDialog picker = new FilePickerDialog(this, props);
-        picker.setTitle("Save to folder");
+        picker.setTitle(getString(R.string.save_to_folder));
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) {
                 finish();
@@ -145,7 +146,7 @@ public class SaveSharedActivity extends AppCompatActivity {
             int doneCount = done;
             int totalCount = uris.size();
             runOnUiThread(() -> {
-                Extensions.showMessage(this, "Saved " + doneCount + " of " + totalCount + " to " + dir.getName());
+                Extensions.showMessage(this, getString(R.string.saved_i_of_i_to_x,doneCount, totalCount, dir.getName()));
                 finish();
             });
         }).start();

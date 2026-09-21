@@ -182,10 +182,9 @@ implements CertAttrSet<String> {
      * Returns a printable representation of the CRLNumberExtension.
      */
     public String toString() {
-        String s = super.toString() + extensionLabel + ": " +
+        return (super.toString() + extensionLabel + ": " +
                    ((crlNumber == null) ? "" : android.sun.security.util.Debug.toHexString(crlNumber))
-                   + "\n";
-        return (s);
+                   + "\n");
     }
 
     /**

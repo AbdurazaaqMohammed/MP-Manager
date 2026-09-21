@@ -70,12 +70,7 @@ public final class Pair<A, B> {
             return false;
         }
         if (mSecond == null) {
-            if (other.mSecond != null) {
-                return false;
-            }
-        } else if (!mSecond.equals(other.mSecond)) {
-            return false;
-        }
-        return true;
+            return other.mSecond == null;
+        } else return mSecond.equals(other.mSecond);
     }
 }

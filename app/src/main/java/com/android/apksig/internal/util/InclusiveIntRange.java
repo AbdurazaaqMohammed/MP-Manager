@@ -61,12 +61,11 @@ public class InclusiveIntRange {
             if (testValue > rangeMax) {
                 continue;
             }
-            int rangeMin = range.min;
             if (testValue < range.min) {
                 if (result == null) {
                     result = new ArrayList<>();
                 }
-                result.add(fromTo(testValue, rangeMin - 1));
+                result.add(fromTo(testValue, range.min - 1));
             }
             if (rangeMax >= max) {
                 return (result != null) ? result : Collections.emptyList();

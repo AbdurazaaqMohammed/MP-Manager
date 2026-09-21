@@ -577,8 +577,7 @@ public class XMLElement extends XMLNodeTree implements Element<XMLNode> {
             if (!haveChildes) {
                 appendable.append(">");
             }
-            XMLNode child = xmlNode;
-            child.write(appendable, xml, escapeXmlText);
+            xmlNode.write(appendable, xml, escapeXmlText);
             haveChildes = true;
         }
         if (!isVoidHtml()) {

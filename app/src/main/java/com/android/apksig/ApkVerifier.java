@@ -1366,9 +1366,7 @@ public class ApkVerifier {
                 if (mSourceStampInfo.containsErrors()) {
                     return true;
                 }
-                if (mWarningsAsErrors && !mSourceStampInfo.getWarnings().isEmpty()) {
-                    return true;
-                }
+                return mWarningsAsErrors && !mSourceStampInfo.getWarnings().isEmpty();
             }
 
             return false;
@@ -3134,10 +3132,7 @@ public class ApkVerifier {
             if (hashCode() != other.hashCode()) {
                 return false;
             }
-            if (!Arrays.equals(mArray, other.mArray)) {
-                return false;
-            }
-            return true;
+            return Arrays.equals(mArray, other.mArray);
         }
     }
 

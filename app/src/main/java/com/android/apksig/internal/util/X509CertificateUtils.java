@@ -135,9 +135,7 @@ public class X509CertificateUtils {
             byte[] originalEncoding = new byte[encodedCertBuffer.position() - startingPos];
             encodedCertBuffer.position(startingPos);
             encodedCertBuffer.get(originalEncoding);
-            GuaranteedEncodedFormX509Certificate guaranteedEncodedCert =
-                    new GuaranteedEncodedFormX509Certificate(certificate, originalEncoding);
-            return guaranteedEncodedCert;
+            return new GuaranteedEncodedFormX509Certificate(certificate, originalEncoding);
         } catch (Asn1DecodingException | Asn1EncodingException | CertificateException e) {
             throw new CertificateException("Failed to parse certificate", e);
         }

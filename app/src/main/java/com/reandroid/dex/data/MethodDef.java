@@ -387,10 +387,7 @@ public class MethodDef extends Def<MethodId> implements MethodProgram {
             return true;
         }
         CodeItem codeItem = getCodeItem();
-        if (codeItem != null && codeItem.uses(key)) {
-            return true;
-        }
-        return false;
+        return codeItem != null && codeItem.uses(key);
     }
 
     @Override

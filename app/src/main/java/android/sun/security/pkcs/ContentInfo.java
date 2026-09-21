@@ -104,8 +104,7 @@ public class ContentInfo {
      * Parses a PKCS#7 content info.
      */
     public ContentInfo(DerInputStream derin)
-        throws IOException, ParsingException
-    {
+        throws IOException {
         this(derin, false);
     }
 
@@ -120,8 +119,7 @@ public class ContentInfo {
      * is encoded according to JDK1.1.x.
      */
     public ContentInfo(DerInputStream derin, boolean oldStyle)
-        throws IOException, ParsingException
-    {
+        throws IOException {
         DerInputStream disType;
         DerInputStream disTaggedContent;
         DerValue type;

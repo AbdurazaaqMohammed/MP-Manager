@@ -56,8 +56,7 @@ class MacData {
      * Parses a PKCS#12 MAC data.
      */
     MacData(DerInputStream derin)
-        throws IOException, ParsingException
-    {
+        throws IOException {
         DerValue[] macData = derin.getSequence(2);
 
         // Parse the digest info

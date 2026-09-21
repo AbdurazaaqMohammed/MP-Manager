@@ -45,7 +45,7 @@ import java.security.SignatureException;
 @Asn1Class(type = Asn1Type.SEQUENCE)
 public class AlgorithmIdentifier {
 
-    @Asn1Field(index = 0, type = Asn1Type.OBJECT_IDENTIFIER)
+    @Asn1Field(type = Asn1Type.OBJECT_IDENTIFIER)
     public String algorithm;
 
     @Asn1Field(index = 1, type = Asn1Type.ANY, optional = true)

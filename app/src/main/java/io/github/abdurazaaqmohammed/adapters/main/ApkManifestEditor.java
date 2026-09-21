@@ -667,7 +667,7 @@ public class ApkManifestEditor {
                                         for (int i = 0; i < attrs.length; i++) {
                                             if (boxes[i].isChecked() == current[i]) continue;
                                             try {
-                                                writeManifestAttrValue(apkFile, attrs[i], boxes[i].isChecked() ? "true" : "false");
+                                                writeManifestAttrValue(apkFile, attrs[i], Boolean.toString(boxes[i].isChecked()));
                                                 changed++;
                                             } catch (Exception ignored) {
                                             }

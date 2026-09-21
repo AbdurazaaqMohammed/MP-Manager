@@ -141,9 +141,6 @@ public class UnusedMethodsCleaner extends UnusedClassComponentCleaner<DexMethod>
         if(!dexMethod.isInternal() && !dexMethod.isStatic()) {
             return false;
         }
-        if(dexMethod.getSuperMethods().hasNext() || dexMethod.getExtending().hasNext()) {
-            return false;
-        }
-        return true;
+        return !dexMethod.getSuperMethods().hasNext() && !dexMethod.getExtending().hasNext();
     }
 }

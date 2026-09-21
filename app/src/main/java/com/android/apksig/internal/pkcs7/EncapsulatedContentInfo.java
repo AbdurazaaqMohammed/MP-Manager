@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 @Asn1Class(type = Asn1Type.SEQUENCE)
 public class EncapsulatedContentInfo {
 
-    @Asn1Field(index = 0, type = Asn1Type.OBJECT_IDENTIFIER)
+    @Asn1Field(type = Asn1Type.OBJECT_IDENTIFIER)
     public String contentType;
 
     @Asn1Field(

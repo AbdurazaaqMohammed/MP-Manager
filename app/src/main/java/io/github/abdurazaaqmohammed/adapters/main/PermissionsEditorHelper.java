@@ -50,7 +50,7 @@ public class PermissionsEditorHelper {
         int[] permBits = parseNumericPerms(currentPerms);
 
         TextView colHeader = new TextView(context);
-        colHeader.setText("        Read    Write   Exec");
+        colHeader.setText(R.string.read_write_exec);
         colHeader.setTypeface(Typeface.MONOSPACE);
         colHeader.setTextSize(12);
         colHeader.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));

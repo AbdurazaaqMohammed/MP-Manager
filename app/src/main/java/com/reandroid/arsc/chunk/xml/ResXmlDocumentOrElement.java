@@ -240,10 +240,7 @@ abstract class ResXmlDocumentOrElement extends ResXmlNodeTree {
         }
     }
     public boolean removeNullElements() {
-        boolean result = false;
-        if (removeElementsIf(ResXmlElement::isUndefined)) {
-            result = true;
-        }
+        boolean result = removeElementsIf(ResXmlElement::isUndefined);
         Iterator<ResXmlElement> iterator = getElements();
         while (iterator.hasNext()) {
             if (iterator.next().removeNullElements()) {

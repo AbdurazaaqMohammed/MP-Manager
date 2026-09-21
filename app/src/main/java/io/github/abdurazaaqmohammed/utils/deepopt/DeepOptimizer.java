@@ -147,9 +147,8 @@ public class DeepOptimizer {
             log("Method removal disabled - keeping all methods");
         }
 
-        boolean allKeep = module.hasTableBlock()
-                ? ResourceRootScanner.scan(index, keptClasses, keptMethodKeys,
-                resourceRoots, nameRefKeys, module.getTableBlock()) : false;
+        boolean allKeep = module.hasTableBlock() && ResourceRootScanner.scan(index, keptClasses, keptMethodKeys,
+                resourceRoots, nameRefKeys, module.getTableBlock());
         if (allKeep) log("getIdentifier/getString in kept code - keeping all resources");
 
         ResourceSweeper.sweep(module, resourceRoots, nameRefKeys, allKeep, report);

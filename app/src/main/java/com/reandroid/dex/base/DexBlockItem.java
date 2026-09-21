@@ -91,17 +91,15 @@ public abstract class DexBlockItem extends BlockItem implements SectionTool {
                 index ++;
                 value >>>= 7;
             }
-            bytes[offset + index] = (byte) (value & 0x7f);
-            index ++;
         } else {
             while (value < -0x40) {
                 bytes[offset + index] = (byte) ((value & 0x7f) | 0x80);
                 index ++;
                 value >>= 7;
             }
-            bytes[offset + index] = (byte) (value & 0x7f);
-            index ++;
         }
+        bytes[offset + index] = (byte) (value & 0x7f);
+        index ++;
         return index;
     }
     protected static long getSignedNumber(byte[] bytes, int offset, int size){

@@ -642,11 +642,7 @@ public final class Asn1BerParser {
                                             + encodedContents.remaining());
                         }
                         boolean result;
-                        if (encodedContents.get() == 0) {
-                            result = false;
-                        } else {
-                            result = true;
-                        }
+                        result = encodedContents.get() != 0;
                         return (T) Boolean.valueOf(result);
                     }
                     break;

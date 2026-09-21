@@ -88,10 +88,8 @@ public class SparseIntArray {
             if (i > 0) {
                 i--;
             }
-            return mValues[i];
-        } else {
-            return mValues[i];
         }
+        return mValues[i];
     }
 
     /**

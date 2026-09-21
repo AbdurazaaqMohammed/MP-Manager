@@ -163,12 +163,12 @@ public abstract class PrimitiveKey implements Key {
 
         @Override
         public void append(SmaliWriter writer) throws IOException {
-            writer.append(value() ? "true" : "false");
+            writer.append(Boolean.toString(value()));
         }
 
         @Override
         public String toString() {
-            return value() ? "true" : "false";
+            return Boolean.toString(value());
         }
     }
 

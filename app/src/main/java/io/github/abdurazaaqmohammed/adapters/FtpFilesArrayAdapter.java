@@ -256,7 +256,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     public void uploadFiles(List<Object> items) {
         for (Object item : items) {
-            if (item instanceof File localFile && !((File) item).isDirectory()) {
+            if (item instanceof File localFile && !localFile.isDirectory()) {
 
                 Extensions.showMessage(context, context.getString(R.string.uploading, localFile.getName()));
                 ftpClient.uploadFile(localFile.getAbsolutePath(), new OnEZFtpDataTransferCallback() {

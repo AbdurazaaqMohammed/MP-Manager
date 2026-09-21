@@ -125,8 +125,7 @@ public class GeneralSubtrees implements Cloneable {
      * Return a printable string of the GeneralSubtree.
      */
     public String toString() {
-        String s = "   GeneralSubtrees:\n" + trees.toString() + "\n";
-        return s;
+        return "   GeneralSubtrees:\n" + trees.toString() + "\n";
     }
 
     /**
@@ -154,10 +153,9 @@ public class GeneralSubtrees implements Cloneable {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof GeneralSubtrees)) {
+        if (!(obj instanceof GeneralSubtrees other)) {
             return false;
         }
-        GeneralSubtrees other = (GeneralSubtrees)obj;
         return this.trees.equals(other.trees);
     }
 
@@ -177,8 +175,7 @@ public class GeneralSubtrees implements Cloneable {
 
     private static android.sun.security.x509.GeneralNameInterface getGeneralNameInterface(android.sun.security.x509.GeneralSubtree gs) {
         android.sun.security.x509.GeneralName gn = gs.getName();
-        android.sun.security.x509.GeneralNameInterface gni = gn.getName();
-        return gni;
+        return gn.getName();
     }
 
     /**

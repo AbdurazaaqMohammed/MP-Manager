@@ -53,8 +53,7 @@ public class MemoizingSupplier<T> implements Supplier<T> {
         if (delegate != null) {
             synchronized (this) {
                 if (delegate != null) {
-                    T t = delegate.get();
-                    value = t;
+                    value = delegate.get();
                     delegate = null;
                 }
             }

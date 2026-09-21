@@ -606,9 +606,7 @@ public class SourceStampVerifier {
                 }
             }
             if (mSourceStampInfo != null) {
-                if (mSourceStampInfo.containsErrors()) {
-                    return true;
-                }
+                return mSourceStampInfo.containsErrors();
             }
             return false;
         }

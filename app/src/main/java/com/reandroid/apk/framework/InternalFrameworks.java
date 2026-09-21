@@ -152,8 +152,7 @@ public class InternalFrameworks extends FrameworkManager {
     }
     private Map<Integer, String> scanAvailableResourcePaths() {
         Map<Integer, String> results = new HashMap<>();
-        int maxSearch = HIGHEST_AVAILABLE_VERSION;
-        for (int version = LOWEST_AVAILABLE_VERSION; version < maxSearch; version ++) {
+        for (int version = LOWEST_AVAILABLE_VERSION; version < HIGHEST_AVAILABLE_VERSION; version ++) {
             String path = toResourcePath(version);
             results.put(version, path);
             //if ((version + 1) == maxSearch) maxSearch++;

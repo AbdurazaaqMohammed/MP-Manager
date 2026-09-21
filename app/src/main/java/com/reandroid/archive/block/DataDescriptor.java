@@ -53,11 +53,10 @@ public class DataDescriptor extends ZipHeader{
 
     @Override
     public String toString(){
-        String builder = getSignature() +
+        return getSignature() +
                 ", crc=" + HexUtil.toHex8(getCrc()) +
                 ", compressed=" + getCompressedSize() +
                 ", size=" + getSize();
-        return builder;
     }
     public static DataDescriptor fromLocalFile(LocalFileHeader lfh){
         DataDescriptor dataDescriptor = new DataDescriptor();

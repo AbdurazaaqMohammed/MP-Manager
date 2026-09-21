@@ -175,7 +175,7 @@ public class CallSiteId extends IdItem implements Comparable<CallSiteId> {
         if (sectionType != null && sectionType != sectionValue.getSectionType()) {
             return null;
         }
-        return ObjectsUtil.cast(((SectionValue<?>)value).getItem());
+        return ObjectsUtil.cast(sectionValue.getItem());
     }
     public EncodedArray getOrCreateEncodedArray() {
         return encodedArrayReference.getOrCreate();

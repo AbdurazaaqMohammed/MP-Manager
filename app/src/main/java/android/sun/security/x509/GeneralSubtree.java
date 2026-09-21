@@ -157,9 +157,7 @@ public class GeneralSubtree {
         }
         if (this.minimum != otherGS.minimum)
             return false;
-        if (this.maximum != otherGS.maximum)
-            return false;
-        return true;
+        return this.maximum == otherGS.maximum;
     }
 
     /**

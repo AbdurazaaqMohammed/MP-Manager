@@ -81,8 +81,8 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
-import io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
@@ -624,10 +624,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
         root.setPadding(pad, pad / 2, pad, 0);
-        TextView hint = new TextView(context);
-        hint.setTextSize(13);
-        hint.setText(images.size() + " images, centered crop. JPEG snaps to 16px.");
-        root.addView(hint);
         EditText wInput = new EditText(context);
         wInput.setHint("Width");
         wInput.setText(String.valueOf(minW));
@@ -793,7 +789,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         root.setPadding(pad, pad / 2, pad, 0);
         TextView hint = new TextView(context);
         hint.setTextSize(13);
-        hint.setText(images.size() + " files. Empty fields are left unchanged.");
+        hint.setText(context.getString(R.string.hintbatchexif, images.size()));
         root.addView(hint);
         List<EditText> inputs = new ArrayList<>();
         for (String tag : tags) {
@@ -809,10 +805,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         ScrollView scroll = new ScrollView(context);
         scroll.addView(root);
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle("Set EXIF tags")
+                .setTitle(R.string.set_exif_tags)
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Apply", (d, w) -> {
+                .setPositiveButton(R.string.apply, (d, w) -> {
                     String[] vals = new String[tags.length];
                     for (int i = 0; i < tags.length; i++) {
                         vals[i] = inputs.get(i).getText() == null ? "" : inputs.get(i).getText().toString();
@@ -841,7 +837,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             }
             pm.dismiss();
             int doneCount = done;
-            context.handler.post(() -> finishBatchOp("Updated " + doneCount + " of " + images.size()));
+            context.handler.post(() -> finishBatchOp( context.rss.getString(R.string.updated_i_of_i, doneCount, images.size())));
         }).start();
     }
 
@@ -1529,17 +1525,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void showArscOpenWith(File arscFile, File apkFile, String entryPath) {
         String[] options = {"ARSC Editor Plus", "ARSC Editor", "Translation mode", "Resource querier"};
         String[] modes = {
-                ArscEditorActivity.MODE_PLUS,
-                ArscEditorActivity.MODE_EDITOR,
-                ArscEditorActivity.MODE_TRANSLATE,
-                ArscEditorActivity.MODE_QUERIER};
+                ArscEditorPlusActivity.MODE_PLUS,
+                ArscEditorPlusActivity.MODE_EDITOR,
+                ArscEditorPlusActivity.MODE_TRANSLATE,
+                ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle("Open with")
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
-                    Class<?> target = ArscEditorActivity.MODE_EDITOR.equals(modes[which])
-                            ? ArscSimpleEditorActivity.class
-                            : ArscEditorActivity.class;
+                    Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
+                            ? ArscEditorActivity.class
+                            : ArscEditorPlusActivity.class;
                     Intent arscIntent = new Intent(context, target)
                             .putExtra("path", arscFile.getAbsolutePath())
                             .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())

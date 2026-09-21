@@ -128,9 +128,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
             Constructor cons = ((Class<?>)extClass).getConstructor(params);
 
             Object[] passed = new Object[] { nameValue };
-            android.sun.security.x509.GeneralNameInterface gni =
-                       (android.sun.security.x509.GeneralNameInterface)cons.newInstance(passed);
-            return gni;
+            return (GeneralNameInterface)cons.newInstance(passed);
         } catch (Exception e) {
             throw (IOException) new IOException("Instantiation error: " + e, e);
         }
