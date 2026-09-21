@@ -26,10 +26,8 @@
 package android.sun.security.pkcs;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 import android.sun.misc.HexDumpEncoder;
-import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerValue;
 import android.sun.security.x509.GeneralNames;
 import android.sun.security.x509.SerialNumber;

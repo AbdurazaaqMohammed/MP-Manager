@@ -3,8 +3,6 @@ package io.github.abdurazaaqmohammed.ApkExtractor;
 import android.content.pm.ApplicationInfo;
 import android.graphics.drawable.Drawable;
 
-import java.io.File;
-
 public class AppInfo {
     public final String filePath;
     public final String name;

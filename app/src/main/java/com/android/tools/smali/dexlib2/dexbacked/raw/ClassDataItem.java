@@ -37,7 +37,6 @@ import com.android.tools.smali.dexlib2.util.AnnotatedBytes;
 import com.android.tools.smali.util.StringUtils;
 
 import java.util.Arrays;
-import java.util.List;
 
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.dexbacked.DexReader;

@@ -16,7 +16,6 @@ package android;
  * limitations under the License.
  */
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
 /**

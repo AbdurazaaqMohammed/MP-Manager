@@ -1,9 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import static io.github.abdurazaaqmohammed.utils.LegacyUtils.aboveSdk20;
-
 import android.graphics.Color;
-import android.graphics.LightingColorFilter;
 import android.graphics.drawable.Drawable;
 import android.widget.TextView;
 

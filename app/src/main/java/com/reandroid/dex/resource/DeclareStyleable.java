@@ -16,7 +16,6 @@
 package com.reandroid.dex.resource;
 
 import com.reandroid.apk.XmlHelper;
-import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.model.ResourceName;
 import com.reandroid.arsc.value.AttributeDataFormat;
 import com.reandroid.utils.CompareUtil;

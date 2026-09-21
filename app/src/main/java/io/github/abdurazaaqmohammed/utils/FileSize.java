@@ -1,7 +1,5 @@
 package io.github.abdurazaaqmohammed.utils;
 
-import java.io.File;
-
 public class FileSize {
     public static String getHumanReadableFileSize(long size) {
         if (size <= 0) {

@@ -49,7 +49,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 

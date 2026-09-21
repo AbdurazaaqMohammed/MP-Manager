@@ -26,7 +26,6 @@
 
 package android.sun.security.pkcs;
 
-import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
 import java.math.BigInteger;

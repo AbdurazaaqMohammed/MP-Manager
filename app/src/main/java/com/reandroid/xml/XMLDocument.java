@@ -22,7 +22,6 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
 
 import java.io.*;
-import java.util.Iterator;
 
 public class XMLDocument extends XMLNodeTree implements Document<XMLElement> {
 

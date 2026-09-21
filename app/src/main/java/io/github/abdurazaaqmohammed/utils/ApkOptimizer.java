@@ -3,8 +3,6 @@ package io.github.abdurazaaqmohammed.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import androidx.preference.PreferenceManager;
-
 import com.reandroid.apk.APKLogger;
 
 import io.github.abdurazaaqmohammed.MPManager.R;

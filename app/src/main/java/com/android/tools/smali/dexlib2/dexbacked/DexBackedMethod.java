@@ -30,8 +30,6 @@
 
 package com.android.tools.smali.dexlib2.dexbacked;
 
-import static java.util.Collections.unmodifiableList;
-
 import com.android.tools.smali.dexlib2.HiddenApiRestriction;
 import com.android.tools.smali.dexlib2.base.reference.BaseMethodReference;
 import com.android.tools.smali.dexlib2.dexbacked.raw.MethodIdItem;

@@ -25,7 +25,6 @@
 
 package android.sun.security.provider.certpath;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

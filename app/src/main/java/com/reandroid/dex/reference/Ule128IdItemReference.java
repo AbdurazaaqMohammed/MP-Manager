@@ -19,7 +19,6 @@ import com.reandroid.arsc.io.BlockReader;
 import com.reandroid.dex.base.Ule128Item;
 import com.reandroid.dex.id.IdItem;
 import com.reandroid.dex.key.Key;
-import com.reandroid.dex.key.KeyItem;
 import com.reandroid.dex.pool.DexSectionPool;
 import com.reandroid.dex.sections.SectionType;
 

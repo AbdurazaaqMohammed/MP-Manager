@@ -36,7 +36,6 @@ import android.sun.security.util.*;
 import android.sun.security.x509.AlgorithmId;
 import android.sun.security.x509.X500Name;
 import android.sun.security.x509.KeyUsageExtension;
-import android.sun.security.x509.PKIXExtensions;
 import android.sun.misc.HexDumpEncoder;
 
 /**

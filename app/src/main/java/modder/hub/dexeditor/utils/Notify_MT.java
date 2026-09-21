@@ -42,7 +42,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import android.R;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.view.WindowManager;
 import android.widget.TextView;
 

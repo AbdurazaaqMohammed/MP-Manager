@@ -10,7 +10,6 @@ import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
-import com.reandroid.apk.APKLogger;
 
 import java.util.ArrayList;
 import java.util.HashSet;

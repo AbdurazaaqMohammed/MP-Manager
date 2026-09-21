@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.text.ClipboardManager;
 
-import io.github.codehasan.colorpicker.extensions.Extensions;
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import io.github.abdurazaaqmohammed.MPManager.R;

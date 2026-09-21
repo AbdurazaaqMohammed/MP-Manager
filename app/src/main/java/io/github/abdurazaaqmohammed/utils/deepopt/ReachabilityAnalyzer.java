@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.utils.deepopt;
 
 import com.android.tools.smali.dexlib2.AccessFlags;
-import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.iface.Method;
@@ -12,10 +11,8 @@ import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.Reference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
-import com.reandroid.apk.APKLogger;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;

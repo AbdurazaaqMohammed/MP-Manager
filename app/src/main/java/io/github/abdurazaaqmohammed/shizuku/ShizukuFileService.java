@@ -2,7 +2,6 @@ package io.github.abdurazaaqmohammed.shizuku;
 
 import android.content.Context;
 import android.os.ParcelFileDescriptor;
-import android.os.RemoteException;
 
 import androidx.annotation.Keep;
 

@@ -18,7 +18,6 @@ package com.android.apksig.internal.zip;
 
 import com.android.apksig.zip.ZipFormatException;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

@@ -25,10 +25,8 @@ import com.google.android.material.color.MaterialColors;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 

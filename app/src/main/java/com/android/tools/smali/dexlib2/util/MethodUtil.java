@@ -36,7 +36,7 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.util.CharSequenceUtils;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+
 import java.util.Collection;
 import com.google.common.base.Predicate;
 

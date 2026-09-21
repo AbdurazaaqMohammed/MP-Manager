@@ -17,7 +17,6 @@ package com.reandroid.dex.value;
 
 import com.reandroid.dex.id.FieldId;
 import com.reandroid.dex.key.FieldKey;
-import com.reandroid.dex.key.Key;
 import com.reandroid.dex.sections.SectionType;
 
 public class FieldIdValue extends SectionIdValue<FieldId> {

@@ -26,7 +26,6 @@ import net.lingala.zip4j.model.FileHeader;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;

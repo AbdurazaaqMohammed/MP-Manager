@@ -26,8 +26,6 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

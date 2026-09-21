@@ -7,12 +7,6 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Build;
-import android.view.ViewGroup;
-import android.widget.ScrollView;
-import android.widget.TextView;
-import io.github.codehasan.colorpicker.extensions.Extensions;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 

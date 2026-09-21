@@ -848,8 +848,8 @@ Layout Inspector
     <string name="storage_scanning">Scanning</string>
     <string name="storage_scanning_n">Scanning %1$d files</string>
     <string name="storage_files_scanned">%1$d files scanned, tap a volume to rescan</string>
-    <string name="storage_largest_n">Largest Files (%1$s)</string>
-    <string name="storage_largest_type_n">Largest %1$s (%2$s), tap type again to clear</string>
+    <string name="storage_largest_n">Largest Files (%1$d)</string>
+    <string name="storage_largest_type_n">Largest %1$s (%2$d), tap type again to clear</string>
     <string name="storage_cannot_open">Cannot open</string>
     <string name="storage_delete_n_files">Delete %1$d files</string>
     <string name="storage_will_be_freed">%1$s will be freed</string>

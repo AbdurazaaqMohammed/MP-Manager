@@ -7,7 +7,6 @@ import com.antik.DexPatcher.DexPatcher;
 import com.antik.manifest.manifestP;
 import com.reandroid.apk.ApkBundle;
 import com.reandroid.apk.ApkModule;
-import com.reandroid.archive.WriteProgress;
 
 import org.apache.commons.io.FilenameUtils;
 

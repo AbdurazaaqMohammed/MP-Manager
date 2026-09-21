@@ -41,7 +41,7 @@ import com.android.tools.smali.dexlib2.immutable.util.ParamUtil;
 import com.android.tools.smali.util.IteratorUtils;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
+
 import java.util.List;
 
 public abstract class InlineMethodResolver {

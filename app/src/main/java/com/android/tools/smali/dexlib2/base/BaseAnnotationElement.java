@@ -32,7 +32,6 @@ package com.android.tools.smali.dexlib2.base;
 
 import com.android.tools.smali.dexlib2.iface.AnnotationElement;
 
-import javax.annotation.Nonnull;
 import java.util.Comparator;
 
 public abstract class BaseAnnotationElement implements AnnotationElement {

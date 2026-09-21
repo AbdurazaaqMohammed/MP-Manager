@@ -37,7 +37,7 @@ import com.android.tools.smali.dexlib2.util.DexUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.UnsupportedEncodingException;
+
 import java.nio.charset.StandardCharsets;
 
 public class CDexBackedDexFile extends DexBackedDexFile {

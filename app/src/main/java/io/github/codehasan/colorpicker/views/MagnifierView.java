@@ -27,10 +27,6 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
-import androidx.core.content.res.ResourcesCompat;
-
-import io.github.abdurazaaqmohammed.MPManager.R;
-
 
 public class MagnifierView extends View {
 

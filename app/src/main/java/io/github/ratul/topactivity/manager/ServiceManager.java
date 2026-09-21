@@ -17,7 +17,6 @@
 package io.github.ratul.topactivity.manager;
 
 import android.app.Activity;
-import android.content.Context;
 
 import io.github.ratul.topactivity.utils.DatabaseUtil;
 

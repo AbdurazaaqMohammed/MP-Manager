@@ -28,7 +28,6 @@ import android.view.WindowManager;
 import android.view.WindowMetrics;
 import android.widget.TextView;
 
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.WindowInsetsCompat;
 

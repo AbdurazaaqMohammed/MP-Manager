@@ -16,8 +16,6 @@
  */
 package io.github.ratul.topactivity.repository;
 
-import java.util.List;
-
 public final class HistoryItem {
     private final String pkg;
     private final String cls;

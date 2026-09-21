@@ -489,7 +489,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends ProtoRefKey, Integer>> protoEntries = Lists.newArrayList(protoSection.getItems());
-        Collections.sort(protoEntries, DexWriter.comparableKeyComparator());
+        Collections.<Entry<? extends ProtoRefKey, Integer>>sort(protoEntries, DexWriter.comparableKeyComparator());
 
         for (Map.Entry<? extends ProtoRefKey, Integer> entry: protoEntries) {
             entry.setValue(index++);
@@ -505,7 +505,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends FieldRefKey, Integer>> fieldEntries = Lists.newArrayList(fieldSection.getItems());
-        Collections.sort(fieldEntries, DexWriter.comparableKeyComparator());
+        Collections.<Entry<? extends FieldRefKey, Integer>>sort(fieldEntries, DexWriter.comparableKeyComparator());
         
         for (Map.Entry<? extends FieldRefKey, Integer> entry: fieldEntries) {
             entry.setValue(index++);
@@ -521,7 +521,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends MethodRefKey, Integer>> methodEntries = Lists.newArrayList(methodSection.getItems());
-        Collections.sort(methodEntries, DexWriter.comparableKeyComparator());
+        Collections.<Entry<? extends MethodRefKey, Integer>>sort(methodEntries, DexWriter.comparableKeyComparator());
         
         for (Map.Entry<? extends MethodRefKey, Integer> entry: methodEntries) {
             entry.setValue(index++);
@@ -538,7 +538,7 @@ public abstract class DexWriter<
         classDataSectionOffset = offsetWriter.getPosition();
 
         List<Map.Entry<? extends ClassKey, Integer>> classEntriesKeySorted = Lists.newArrayList(classSection.getItems());
-        Collections.sort(classEntriesKeySorted, DexWriter.comparableKeyComparator());
+        Collections.<Entry<? extends ClassKey, Integer>>sort(classEntriesKeySorted, DexWriter.comparableKeyComparator());
 
         int index = 0;
         for (Map.Entry<? extends ClassKey, Integer> key: classEntriesKeySorted) {

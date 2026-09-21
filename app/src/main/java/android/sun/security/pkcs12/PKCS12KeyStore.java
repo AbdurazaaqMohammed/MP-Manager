@@ -42,13 +42,11 @@ import java.security.cert.X509Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.*;
-import java.math.*;
 
 import java.security.AlgorithmParameters;
-import java.security.spec.AlgorithmParameterSpec;
+
 import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.SecretKey;
 import javax.crypto.Cipher;

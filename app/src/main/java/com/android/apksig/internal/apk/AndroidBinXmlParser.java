@@ -17,7 +17,6 @@
 package com.android.apksig.internal.apk;
 
 import java.io.Serial;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;

@@ -32,7 +32,6 @@ import java.security.*;
 import java.security.interfaces.*;
 import java.security.spec.*;
 
-import android.sun.security.util.*;
 import android.sun.security.x509.*;
 
 /**

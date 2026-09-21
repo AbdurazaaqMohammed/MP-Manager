@@ -63,7 +63,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map.Entry;
-import com.google.common.base.Predicate;
+
 import com.google.common.base.Supplier;
 
 /**

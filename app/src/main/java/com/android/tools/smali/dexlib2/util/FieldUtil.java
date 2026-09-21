@@ -34,8 +34,7 @@ import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.AccessFlags;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import com.google.common.base.Function;
+
 import com.google.common.base.Predicate;
 
 public final class FieldUtil {
