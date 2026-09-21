@@ -264,7 +264,7 @@ public class PKCS9Attribute implements DerEncoder {
         NAME_OID_TABLE.put("smimecapability", PKCS9_OIDS[15]);
         NAME_OID_TABLE.put("signingcertificate", PKCS9_OIDS[16]);
         NAME_OID_TABLE.put("signaturetimestamptoken", PKCS9_OIDS[17]);
-    };
+    }
 
     /**
      * Hashtable mapping attribute OIDs defined in PKCS9 to the

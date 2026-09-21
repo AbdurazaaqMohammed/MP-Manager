@@ -220,7 +220,7 @@ public class X509CertPath extends CertPath {
                 // Copy the entire input stream into an InputStream that does
                 // support mark
                 is = new ByteArrayInputStream(readAllBytes(is));
-            };
+            }
             PKCS7 pkcs7 = new PKCS7(is);
 
             X509Certificate[] certArray = pkcs7.getCertificates();

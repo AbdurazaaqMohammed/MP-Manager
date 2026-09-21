@@ -178,7 +178,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         Certificate[] chain;
         byte[] keyId;
         String alias;
-    };
+    }
 
     // A certificate with its PKCS #9 attributes
     private static class CertEntry {

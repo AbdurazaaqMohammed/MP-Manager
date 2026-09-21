@@ -104,7 +104,7 @@ public class ZipDexContainer implements MultiDexContainer<DexBackedDexFile> {
 						DexBackedDexFile dex = new DexBackedDexFile(opcodes, buf, 0, true, offset);
 						entries.put(entry.getName() + (i > 1 ? ("/" + i) : ""), dex);
 						offset += dex.getFileSize();
-                    };
+                    }
                 }
             }
 

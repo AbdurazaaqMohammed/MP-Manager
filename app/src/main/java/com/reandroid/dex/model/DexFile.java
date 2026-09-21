@@ -257,7 +257,7 @@ public class DexFile implements Closeable, DexClassRepository, Iterable<DexLayou
         getContainerBlock().readBytes(reader, filter);
     }
     public void write(File file) throws IOException {
-        OutputStream outputStream = FileUtil.outputStream(file);;
+        OutputStream outputStream = FileUtil.outputStream(file);
         write(outputStream);
         outputStream.close();
     }

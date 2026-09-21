@@ -50,7 +50,7 @@ public class BackwardConstValuesFinder {
         if (instruction.isMethodInvoke()) {
             valueType = instruction.getKeyAsMethod().getParameter(parameterIndex);
         } else if (instruction.isFieldOp()) {
-            valueType = instruction.getKeyAsField().getType();;
+            valueType = instruction.getKeyAsField().getType();
         } else if (instruction.is(Opcode.FILLED_NEW_ARRAY) || instruction.is(Opcode.FILLED_NEW_ARRAY_RANGE)) {
             valueType = ((TypeKey) instruction.getKey()).setArrayDimension(0);
         } else if (instruction.isArrayOp()) {

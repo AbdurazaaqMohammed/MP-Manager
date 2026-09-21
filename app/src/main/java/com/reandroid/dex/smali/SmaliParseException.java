@@ -41,7 +41,7 @@ public class SmaliParseException extends IOException {
         if (origin != null) {
             builder.append("\nat ");
             builder.append(origin);
-        };
+        }
         return builder.toString();
     }
 

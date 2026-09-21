@@ -79,7 +79,7 @@ class HtmlColor {
     double getDistance(HtmlColor htmlColor){
         double d1=red-htmlColor.red;
         d1=d1*d1;
-        double d2=green-htmlColor.green;;
+        double d2=green-htmlColor.green;
         d2=d2*d2;
         double d3=blue-htmlColor.blue;
         d3=d3*d3;

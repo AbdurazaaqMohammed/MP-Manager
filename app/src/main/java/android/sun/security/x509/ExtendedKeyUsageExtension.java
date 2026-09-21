@@ -121,7 +121,7 @@ implements CertAttrSet<String> {
         map.put(ObjectIdentifier.newInternal(ipsecUserOidData), "ipsecUser");
         map.put(ObjectIdentifier.newInternal(timeStampingOidData), "timeStamping");
         map.put(ObjectIdentifier.newInternal(OCSPSigningOidData), "OCSPSigning");
-    };
+    }
 
     /**
      * Vector of KeyUsages for this object.
