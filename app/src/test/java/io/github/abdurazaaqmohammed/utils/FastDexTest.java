@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -128,7 +129,7 @@ public class FastDexTest {
 
         File patchDir = Files.createTempDirectory("fastdexpatch").toFile();
         Map<String, File> files = FastDexPatch.disassembleClasses(orig,
-                new LinkedHashSet<>(Arrays.asList("Ltest/B;")),
+                new LinkedHashSet<>(List.of("Ltest/B;")),
                 patchDir, FastDexPatch.defaultBaksmaliOptions(), null);
         assertEquals(1, files.size());
         File bSmali = files.get("Ltest/B;");

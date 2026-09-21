@@ -377,7 +377,7 @@ public class ClassPathResolver {
     private static List<String> bootClassPathForOat(@Nonnull OatFile oatFile) {
         List<String> bcp = oatFile.getBootClassPath();
         if(bcp.isEmpty()) {
-            return Arrays.asList("boot.oat");
+            return List.of("boot.oat");
         } else {
             return replaceElementsSuffix(bcp, ".art", ".oat");
         }
