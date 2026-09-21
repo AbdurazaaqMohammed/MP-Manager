@@ -1,12 +1,14 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.app.Activity;
+
 import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class DialogUtil {
-    private final android.app.Activity context;
+    private final Activity context;
 
-    public DialogUtil(android.app.Activity c) {
+    public DialogUtil(Activity c) {
         this.context = c;
     }
 

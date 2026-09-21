@@ -10,6 +10,7 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -49,11 +50,11 @@ public class CertUtil {
                 if (!name.startsWith("META-INF/")) continue;
                 if (!name.endsWith(".RSA") && !name.endsWith(".DSA") && !name.endsWith(".EC")) continue;
                 try {
-                    Collection<? extends java.security.cert.Certificate> certs =
+                    Collection<? extends Certificate> certs =
                             CertificateFactory.getInstance("X.509").generateCertificates(zf.getInputStream(entry));
                     if (!certs.isEmpty()) {
                         List<X509Certificate> list = new ArrayList<>();
-                        for (java.security.cert.Certificate c : certs) list.add((X509Certificate) c);
+                        for (Certificate c : certs) list.add((X509Certificate) c);
                         return list;
                     }
                 } catch (Exception ignored) {

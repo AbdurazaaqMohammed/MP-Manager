@@ -12,6 +12,7 @@ import com.reandroid.archive.ArchiveFile;
 import com.reandroid.archive.ZipEntryMap;
 import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
+import com.reandroid.arsc.chunk.xml.ResXmlAttribute;
 import com.reandroid.arsc.chunk.xml.ResXmlElement;
 import com.reandroid.arsc.container.SpecTypePair;
 import com.reandroid.arsc.model.ResourceEntry;
@@ -22,7 +23,9 @@ import com.reandroid.arsc.value.ValueType;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 
+import android.graphics.Typeface;
 import android.os.Build;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -142,7 +145,7 @@ public class MergeUtil {
 
         TextView splitsTitle = new TextView(context);
         splitsTitle.setText(context.getString(R.string.antisplit_splits, splits.size()));
-        splitsTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        splitsTitle.setTypeface(null, Typeface.BOLD);
         root.addView(splitsTitle);
 
         LinearLayout checkBoxHolder = new LinearLayout(context);
@@ -200,7 +203,7 @@ public class MergeUtil {
 
         LinearLayout signRow = new LinearLayout(context);
         signRow.setOrientation(LinearLayout.HORIZONTAL);
-        signRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        signRow.setGravity(Gravity.CENTER_VERTICAL);
         CheckBox autosignBox = new MaterialCheckBox(context);
         autosignBox.setText(R.string.auto_sign);
         autosignBox.setChecked(autosignSaved);
@@ -271,7 +274,7 @@ public class MergeUtil {
                     try (ZipFile zf = new ZipFile(file)) {
                         for (String name : options.splitNames) {
                             try {
-                                net.lingala.zip4j.model.FileHeader fh = zf.getFileHeader(name);
+                                FileHeader fh = zf.getFileHeader(name);
                                 if (fh != null) zf.extractFile(fh, dir.getAbsolutePath());
                             } catch (Exception e) {
                                 logger.logMessage(context.getString(R.string.logger_skip_entry, name, String.valueOf(e.getMessage())));
@@ -305,7 +308,7 @@ public class MergeUtil {
                     mergedModule.refreshTable();
                     mergedModule.refreshManifest();
                     logger.logMessage(context.getString(R.string.logger_writing_apk));
-                    File outputFile = io.github.abdurazaaqmohammed.utils.FileUtils.getUnusedFile(new File(file.getParentFile(), file.getName().replaceFirst("\\.(?:xapk|aspk|apk[sm])", "_antisplit.apk")));
+                    File outputFile = FileUtils.getUnusedFile(new File(file.getParentFile(), file.getName().replaceFirst("\\.(?:xapk|aspk|apk[sm])", "_antisplit.apk")));
                     mergedModule.writeApk(outputFile);
                     pm.dismiss();
                     if (options.autosign) {
@@ -352,7 +355,7 @@ public class MergeUtil {
             sanitizeManifest(mergedModule);
             mergedModule.refreshTable();
             mergedModule.refreshManifest();
-            File outputFile = io.github.abdurazaaqmohammed.utils.FileUtils.getUnusedFile(APKExtractorActivity.getAppFolder(), mergedModule.getPackageName() + ".apk");
+            File outputFile = FileUtils.getUnusedFile(APKExtractorActivity.getAppFolder(), mergedModule.getPackageName() + ".apk");
             mergedModule.writeApk(outputFile);
             return outputFile;
         }
@@ -396,14 +399,14 @@ public class MergeUtil {
         manifest.refresh();
     }
     private static boolean removeSplitsTableEntry(ResXmlElement metaElement, ApkModule apkModule) {
-        com.reandroid.arsc.chunk.xml.ResXmlAttribute nameAttribute = metaElement.searchAttributeByResourceId(AndroidManifest.ID_name);
+        ResXmlAttribute nameAttribute = metaElement.searchAttributeByResourceId(AndroidManifest.ID_name);
         if(nameAttribute == null){
             return false;
         }
         if(!"com.android.vending.splits".equals(nameAttribute.getValueAsString())){
             return false;
         }
-        com.reandroid.arsc.chunk.xml.ResXmlAttribute valueAttribute=metaElement.searchAttributeByResourceId(
+        ResXmlAttribute valueAttribute=metaElement.searchAttributeByResourceId(
                 AndroidManifest.ID_value);
         if(valueAttribute==null){
             valueAttribute=metaElement.searchAttributeByResourceId(

@@ -14,6 +14,7 @@ import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.model.ResourceEntry;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,7 +34,7 @@ public final class ResourceRootScanner {
         if (table == null) return false;
         Map<Integer, ResourceEntry> byId = new HashMap<>();
         for (PackageBlock pkg : table.listPackages()) {
-            for (java.util.Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
+            for (Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
                 ResourceEntry entry = it.next();
                 byId.put(entry.getResourceId(), entry);
             }

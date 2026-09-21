@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -30,7 +32,7 @@ public final class ShizukuManager {
     }
 
     public static boolean isRunning() {
-        if (android.os.Build.VERSION.SDK_INT < 23) return false;
+        if (Build.VERSION.SDK_INT < 23) return false;
         try {
             if (Shizuku.isPreV11()) return false;
             return Shizuku.pingBinder();
@@ -112,7 +114,7 @@ public final class ShizukuManager {
     public static String normalize(String path) {
         if (path == null || !path.startsWith("/")) return null;
         String[] parts = path.split("/");
-        java.util.ArrayDeque<String> out = new java.util.ArrayDeque<>();
+        ArrayDeque<String> out = new ArrayDeque<>();
         for (String p : parts) {
             if (p.isEmpty() || p.equals(".")) continue;
             if (p.equals("..")) {
@@ -426,9 +428,9 @@ public final class ShizukuManager {
     public static boolean shellOkFast(Context context, String command, int timeoutSeconds) {
         try {
             if (!ready()) return false;
-            IFileService s = io.github.abdurazaaqmohammed.shizuku.ShizukuConnection.peek();
+            IFileService s = ShizukuConnection.peek();
             if (s == null) {
-                io.github.abdurazaaqmohammed.shizuku.ShizukuConnection.ensureBackground(context);
+                ShizukuConnection.ensureBackground(context);
                 return false;
             }
             String raw = s.shell(command, timeoutSeconds);

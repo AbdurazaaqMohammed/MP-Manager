@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.preference.PreferenceManager;
 
 import java.io.File;
@@ -20,7 +21,7 @@ public final class AccessManager {
         RootManager.WorkingMode mode = RootManager.getInstance(context).getWorkingMode();
         if (mode == RootManager.WorkingMode.ROOT) return Backend.ROOT;
         if (mode == RootManager.WorkingMode.SHIZUKU
-                && android.os.Build.VERSION.SDK_INT >= 23) return Backend.SHIZUKU;
+                && Build.VERSION.SDK_INT >= 23) return Backend.SHIZUKU;
         return Backend.NONE;
     }
 

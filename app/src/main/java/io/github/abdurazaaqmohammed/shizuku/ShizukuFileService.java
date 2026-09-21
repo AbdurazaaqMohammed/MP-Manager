@@ -11,8 +11,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class ShizukuFileService extends IFileService.Stub {
@@ -65,7 +68,7 @@ public class ShizukuFileService extends IFileService.Stub {
     private String norm(String path) {
         if (path == null || !path.startsWith("/")) return null;
         String[] parts = path.split("/");
-        java.util.ArrayDeque<String> out = new java.util.ArrayDeque<>();
+        ArrayDeque<String> out = new ArrayDeque<>();
         for (String p : parts) {
             if (p.isEmpty() || p.equals(".")) continue;
             if (p.equals("..")) {
@@ -386,10 +389,10 @@ public class ShizukuFileService extends IFileService.Stub {
                 try {
                     byte[] buf = new byte[8192];
                     int n;
-                    java.io.InputStream in = p.getInputStream();
+                    InputStream in = p.getInputStream();
                     while ((n = in.read(buf)) != -1) {
                         synchronized (out) {
-                            if (out.length() < 65536) out.append(new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8));
+                            if (out.length() < 65536) out.append(new String(buf, 0, n, StandardCharsets.UTF_8));
                         }
                     }
                 } catch (Exception ignored) {
@@ -398,7 +401,7 @@ public class ShizukuFileService extends IFileService.Stub {
             reader.setDaemon(true);
             reader.start();
             int timeout = timeoutSeconds <= 0 ? 15 : Math.min(timeoutSeconds, 60);
-            boolean done = process.waitFor(timeout, java.util.concurrent.TimeUnit.SECONDS);
+            boolean done = process.waitFor(timeout, TimeUnit.SECONDS);
             if (!done) {
                 try {
                     process.destroyForcibly();

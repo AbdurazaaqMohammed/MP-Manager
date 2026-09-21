@@ -33,15 +33,19 @@ package modder.hub.dexeditor.fragment;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.BackgroundColorSpan;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
@@ -60,6 +64,7 @@ import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.AccessFlags;
@@ -68,12 +73,14 @@ import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,6 +101,7 @@ import com.android.tools.smali.dexlib2.iface.value.*;
 import com.android.tools.smali.dexlib2.dexbacked.*;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
@@ -378,7 +386,7 @@ public class SearchFragment extends Fragment {
     }
 
     private void showExcludeListDialog() {
-        android.content.SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", android.content.Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
         String savedExcludes = prefs.getString("exclude_list", "");
 
         LinearLayout layout = new LinearLayout(requireContext());
@@ -389,13 +397,13 @@ public class SearchFragment extends Fragment {
         etExcludes.setText(savedExcludes);
         etExcludes.setHint("com/gms/\nandroidx/");
         etExcludes.setMinLines(3);
-        etExcludes.setGravity(android.view.Gravity.TOP);
+        etExcludes.setGravity(Gravity.TOP);
         TextView tvExplanation = new TextView(requireContext());
         tvExplanation.setText(R.string.search_ex_paths);
         tvExplanation.setTextSize(14);
         tvExplanation.setPadding(0, 20, 0, 0);
 
-        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(requireContext(), etExcludes, null, 0));
+        layout.addView(UiFields.wrap(requireContext(), etExcludes, null, 0));
         layout.addView(tvExplanation);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
@@ -427,7 +435,7 @@ public class SearchFragment extends Fragment {
         CheckBox cbUseExcludeList = dialogView.findViewById(R.id.cb_use_exclude_list);
         TextView tvExcludeList = dialogView.findViewById(R.id.tv_exclude_list);
 
-        android.content.SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", android.content.Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
         lastUseExcludeList = prefs.getBoolean("use_exclude_list", false);
 
         etFind.setText(lastSearchQuery);
@@ -469,9 +477,9 @@ public class SearchFragment extends Fragment {
         }
         spinnerSearchType.setSelection(typePos);
 
-        spinnerSearchType.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+        spinnerSearchType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selected = searchTypes[position];
                 if (!searchInResults) cbSearchSubfolders.setVisibility(View.VISIBLE);
                 cbMatchCase.setVisibility(View.VISIBLE);
@@ -490,7 +498,7 @@ public class SearchFragment extends Fragment {
             }
 
             @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
 
@@ -557,16 +565,16 @@ public class SearchFragment extends Fragment {
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerSearchType.setAdapter(typeAdapter);
 
-        spinnerSearchType.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+        spinnerSearchType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selected = replaceTypes[position];
                 cbExactlyMatch.setVisibility(selected.equals("String") ? View.VISIBLE : View.GONE);
                 cbRegex.setVisibility(selected.equals("Smali") || selected.equals("String") ? View.VISIBLE : View.GONE);
             }
 
             @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
 
@@ -850,7 +858,7 @@ public class SearchFragment extends Fragment {
             if (DexEditorActivity.classTree != null) return DexEditorActivity.classTree.getSmaliByType(classDef);
             StringWriter sw = new StringWriter();
             BaksmaliWriter bw = new BaksmaliWriter(sw);
-            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(baksmaliOptions, classDef).writeTo(bw);
+            new ClassDefinition(baksmaliOptions, classDef).writeTo(bw);
             bw.close();
             return sw.toString();
         }
@@ -948,7 +956,7 @@ public class SearchFragment extends Fragment {
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
         private final Map<String, String> openEditorsContent = new HashMap<>();
         private final Map<Integer, Boolean> dexMatchCache = new ConcurrentHashMap<>();
-        private final Set<String> smaliKeywords = new java.util.HashSet<>();
+        private final Set<String> smaliKeywords = new HashSet<>();
         private AlertProgress progressDialog;
         private volatile boolean isStopped = false, warningShown = false, hasConfirmedLargeSearch = false;
         private final AtomicBoolean isFinalized = new AtomicBoolean(false);
@@ -991,7 +999,7 @@ public class SearchFragment extends Fragment {
 
             SearchFragment frag = fragmentRef.get();
             if (frag != null && useExcludeList && (this.path.equals("/") || this.path.isEmpty())) {
-                String savedExcludes = frag.requireContext().getSharedPreferences("search_prefs", android.content.Context.MODE_PRIVATE).getString("exclude_list", "");
+                String savedExcludes = frag.requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE).getString("exclude_list", "");
                 if (!savedExcludes.isEmpty()) {
                     for (String s : savedExcludes.split("\n")) {
                         String t = s.trim();
@@ -1512,13 +1520,13 @@ public class SearchFragment extends Fragment {
             return !Character.isLetter(first) && first != 'L';
         }
 
-        private boolean checkDexPool(com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex, String query, boolean matchCase) {
+        private boolean checkDexPool(DexBackedDexFile dex, String query, boolean matchCase) {
             int dexId = System.identityHashCode(dex);
             Boolean cached = dexMatchCache.get(dexId);
             if (cached != null) return cached;
 
             boolean found = false;
-            java.util.List<String> pool = dex.getStringSection();
+            List<String> pool = dex.getStringSection();
             int count = pool.size();
             for (int i = 0; i < count; i++) {
                 if (contains(pool.get(i), query, matchCase)) {
@@ -1546,7 +1554,7 @@ public class SearchFragment extends Fragment {
             }
             sb.append("# ").append(dexFileName).append("\n\n");
 
-            java.io.Writer writer = new java.io.Writer() {
+            Writer writer = new Writer() {
                 @Override public void write(@NonNull char[] c, int o, int l) { sb.append(c, o, l); }
                 @Override public void flush() {}
                 @Override public void close() {}
@@ -1556,7 +1564,7 @@ public class SearchFragment extends Fragment {
             BaksmaliOptions options = OPTIONS_THREAD_LOCAL.get();
             if (options == null) options = new BaksmaliOptions();
 
-            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(options, classDef).writeTo(bw);
+            new ClassDefinition(options, classDef).writeTo(bw);
             bw.close();
             return sb.toString();
         }
@@ -1601,11 +1609,11 @@ public class SearchFragment extends Fragment {
             return countLinesBefore(smali, pos);
         }
 
-        private boolean searchInAnnotations(java.util.Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> annotations, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
+        private boolean searchInAnnotations(Set<? extends Annotation> annotations, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
             if (annotations == null) return false;
             boolean matched = false;
-            for (com.android.tools.smali.dexlib2.iface.Annotation annotation : annotations) {
-                for (com.android.tools.smali.dexlib2.iface.AnnotationElement element : annotation.getElements()) {
+            for (Annotation annotation : annotations) {
+                for (AnnotationElement element : annotation.getElements()) {
                     if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef))
                         matched = true;
                 }
@@ -1613,10 +1621,10 @@ public class SearchFragment extends Fragment {
             return matched;
         }
 
-        private boolean collectAnnotationMatches(String name, com.android.tools.smali.dexlib2.iface.value.EncodedValue value, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
+        private boolean collectAnnotationMatches(String name, EncodedValue value, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
             boolean matched = false;
-            if (value instanceof com.android.tools.smali.dexlib2.iface.value.StringEncodedValue) {
-                String str = ((com.android.tools.smali.dexlib2.iface.value.StringEncodedValue) value).getValue();
+            if (value instanceof StringEncodedValue) {
+                String str = ((StringEncodedValue) value).getValue();
                 if (checkMatch(str)) {
                     if (foundCount.incrementAndGet() >= 250000) return true;
                     String currentSmali = smali;
@@ -1629,13 +1637,13 @@ public class SearchFragment extends Fragment {
                     snippets.add(snippet);
                     matched = true;
                 }
-            } else if (value instanceof com.android.tools.smali.dexlib2.iface.value.AnnotationEncodedValue) {
-                for (com.android.tools.smali.dexlib2.iface.AnnotationElement element : ((com.android.tools.smali.dexlib2.iface.value.AnnotationEncodedValue) value).getElements()) {
+            } else if (value instanceof AnnotationEncodedValue) {
+                for (AnnotationElement element : ((AnnotationEncodedValue) value).getElements()) {
                     if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef))
                         matched = true;
                 }
-            } else if (value instanceof com.android.tools.smali.dexlib2.iface.value.ArrayEncodedValue) {
-                for (com.android.tools.smali.dexlib2.iface.value.EncodedValue subValue : ((com.android.tools.smali.dexlib2.iface.value.ArrayEncodedValue) value).getValue()) {
+            } else if (value instanceof ArrayEncodedValue) {
+                for (EncodedValue subValue : ((ArrayEncodedValue) value).getValue()) {
                     if (collectAnnotationMatches(name, subValue, className, snippets, smali, classDef))
                         matched = true;
                 }

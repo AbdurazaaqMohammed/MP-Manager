@@ -2498,8 +2498,8 @@ public class MainActivity extends AppCompatActivity {
                     getIntent().removeExtra("locatePath");
                 } catch (Exception ignored) {
                 }
-                java.io.File target = new java.io.File(locate);
-                java.io.File folder = target.isFile() ? target.getParentFile() : target;
+                File target = new File(locate);
+                File folder = target.isFile() ? target.getParentFile() : target;
                 if (folder != null && folder.exists()) {
                     loadFolderInPane(folder, true);
                     Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));

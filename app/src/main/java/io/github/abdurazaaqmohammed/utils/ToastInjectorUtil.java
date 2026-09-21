@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.text.TextUtils;
 import android.util.Xml;
 
+import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
@@ -29,6 +30,7 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodRefere
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.pool.DexPool;
+import com.apk.axml.APKParser;
 import com.reandroid.apk.APKLogger;
 
 import net.lingala.zip4j.ZipFile;
@@ -57,16 +59,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
+
 public class ToastInjectorUtil {
 
     private static final String TOAST_METHOD_NAME = "showMPManagerToast";
     private static final String ON_CREATE_SIG = "(Landroid/os/Bundle;)V";
     private static final ImmutableMethodReference TOAST_MAKE_TEXT = new ImmutableMethodReference(
             "Landroid/widget/Toast;", "makeText",
-            java.util.Arrays.asList("Landroid/content/Context;", "Ljava/lang/CharSequence;", "I"),
+            Arrays.asList("Landroid/content/Context;", "Ljava/lang/CharSequence;", "I"),
             "Landroid/widget/Toast;");
     private static final ImmutableMethodReference TOAST_SHOW = new ImmutableMethodReference(
-            "Landroid/widget/Toast;", "show", java.util.Collections.emptyList(), "V");
+            "Landroid/widget/Toast;", "show", Collections.emptyList(), "V");
 
     public static File addToastToActivities(Context context, File inputApk,
                                             List<String> activityClassNames, String toastMessage,
@@ -77,7 +81,7 @@ public class ToastInjectorUtil {
         }
         Map<String, byte[]> patchedDexBytes = new LinkedHashMap<>();
         for (String entryName : targetEntries) {
-            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_patching, entryName));
+            if (logger != null) logger.logMessage(context.getString(R.string.logger_patching, entryName));
             byte[] patched = patchDexEntryForToast(context, inputApk, entryName, activityClassNames, toastMessage, logger);
             if (patched != null) patchedDexBytes.put(entryName, patched);
         }
@@ -96,7 +100,7 @@ public class ToastInjectorUtil {
             }
             File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
                     FilenameUtils.getBaseName(inputApk.getName()) + "_toast.apk"));
-            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_saved_to, outputFile.getName()));
+            if (logger != null) logger.logMessage(context.getString(R.string.logger_saved_to, outputFile.getName()));
             return outputFile;
         } finally {
             deleteDirectory(workDir);
@@ -119,7 +123,7 @@ public class ToastInjectorUtil {
             if (classDescriptors.contains(classDef.getType())) {
                 classDef = patchActivityClass(classDef, toastMessage);
                 modified = true;
-                if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_injected_toast, classDef.getType()));
+                if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_injected_toast, classDef.getType()));
             }
             newClasses.add(classDef);
         }
@@ -277,7 +281,7 @@ public class ToastInjectorUtil {
             MultiDexContainer<? extends DexBackedDexFile> container =
                     DexFileFactory.loadDexContainer(inputApk, opcodes);
             Set<String> toastMethods = new LinkedHashSet<>(Arrays.asList("makeText", "show"));
-            com.android.tools.smali.baksmali.BaksmaliOptions baksmaliOptions =
+            BaksmaliOptions baksmaliOptions =
                     FastDexPatch.defaultBaksmaliOptions();
             Map<String, File> replacements = new LinkedHashMap<>();
             for (String entryName : container.getDexEntryNames()) {
@@ -299,7 +303,7 @@ public class ToastInjectorUtil {
                     if (!edited.equals(content)) {
                         writeFile(smaliFile, edited);
                         changed = true;
-                        if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_removed_toast, smaliFile.getName()));
+                        if (logger != null) logger.logMessage(context.getString(R.string.logger_removed_toast, smaliFile.getName()));
                     } else {
                         smaliFile.delete();
                     }
@@ -316,11 +320,11 @@ public class ToastInjectorUtil {
             if (replacements.isEmpty()) {
                 throw new IOException("No Toast calls found");
             }
-            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_modified_dex, replacements.size()));
+            if (logger != null) logger.logMessage(context.getString(R.string.logger_modified_dex, replacements.size()));
             File outputFile = FileUtils.getUnusedFile(new File(inputApk.getParentFile(),
                     FilenameUtils.getBaseName(inputApk.getName()) + "_no_toast.apk"));
             ApkZipAlignUtil.rebuildApk(inputApk, outputFile, replacements, null, null, null);
-            if (logger != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_saved_to, outputFile.getName()));
+            if (logger != null) logger.logMessage(context.getString(R.string.logger_saved_to, outputFile.getName()));
             return outputFile;
         } finally {
             deleteDirectory(workDir);
@@ -367,7 +371,7 @@ public class ToastInjectorUtil {
                 }
             }
         }
-        if (logger != null && context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_target_dex, result.size()));
+        if (logger != null && context != null) logger.logMessage(context.getString(R.string.logger_target_dex, result.size()));
         return result;
     }
 
@@ -412,7 +416,7 @@ public class ToastInjectorUtil {
     }
 
     private static String readManifestXml(Context context, String apkPath) {
-        com.apk.axml.APKParser parser = new com.apk.axml.APKParser();
+        APKParser parser = new APKParser();
         try {
             parser.parse(apkPath, context);
             return parser.getManifestAsString();

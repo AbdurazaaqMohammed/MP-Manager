@@ -47,6 +47,7 @@ import bin.zip.ZipFile;
 import bin.zip.ZipOutputStream;
 
 import com.apk.axml.aXMLDecoder;
+import com.apk.axml.aXMLEncoder;
 
 import java.util.regex.*;
 import org.xmlpull.v1.*;
@@ -394,7 +395,7 @@ public class ApkCloner {
         }
         activityAliasSB.append(modifiedRelativeClassNameString.substring(lastActivityAliasMatchEnd));
 
-        return new com.apk.axml.aXMLEncoder().encodeString(activityAliasSB.toString(), context);
+        return new aXMLEncoder().encodeString(activityAliasSB.toString(), context);
         //return new AXMLCompiler().axml2Xml(context, activityAliasSB.toString());
     }
 	

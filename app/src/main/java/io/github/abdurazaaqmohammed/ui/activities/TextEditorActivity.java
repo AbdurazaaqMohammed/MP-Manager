@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentManager;
@@ -35,6 +36,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -78,7 +80,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
     private boolean manualFinish;
     private List<ResEntry> resEntries;
 
-    private final List<EditorTab> tabs = new java.util.ArrayList<>();
+    private final List<EditorTab> tabs = new ArrayList<>();
     private int currentIndex = -1;
     private boolean sessionRestored;
 
@@ -230,7 +232,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         tabAdapter = new TabRowAdapter();
         tabsRecyclerView.setAdapter(tabAdapter);
 
-        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
     }
 
@@ -345,7 +347,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
 
     private void updateTitleBar() {
         EditorTab t = getCurrentTab();
-        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setSubtitle(t != null ? t.title : null);
     }
 

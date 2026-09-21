@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.tools;
 
+import android.content.Context;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +24,7 @@ public class ToolRegistry {
                 this.category = category == null ? CAT_DEVICE : category;
             }
         }
-    public static List<ToolItem> getTools(android.content.Context context) {
+    public static List<ToolItem> getTools(Context context) {
         List<ToolItem> tools = new ArrayList<>();
         int pkg = 0;
         try {
@@ -94,7 +96,7 @@ public class ToolRegistry {
     public static String[] categoriesInOrder() {
         return new String[]{CAT_NETWORK, CAT_STORAGE, CAT_DEVICE, CAT_MATH, CAT_TIME, CAT_TEXT, CAT_MEDIA, CAT_RAND};
     }
-    private static int resId(android.content.Context context, String name, int fallback) {
+    private static int resId(Context context, String name, int fallback) {
         try {
             int id = context.getResources().getIdentifier(name, "drawable", context.getPackageName());
             if (id != 0) {
@@ -104,7 +106,7 @@ public class ToolRegistry {
         }
         return fallback;
     }
-    public static ToolItem findById(android.content.Context context, String id) {
+    public static ToolItem findById(Context context, String id) {
         if (id == null) {
             return null;
         }

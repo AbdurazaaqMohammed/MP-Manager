@@ -10,11 +10,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -74,13 +76,13 @@ public final class FileMenuCustomizer {
         });
         helper.attachToRecyclerView(grid);
 
-        androidx.appcompat.app.AlertDialog dialog = dialogUtil.getDialogBuilder()
+        AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.customize_file_menu))
                 .setMessage(context.getString(R.string.customize_file_menu_hint))
                 .setView(grid)
                 .setPositiveButton(android.R.string.ok, null)
                 .setNeutralButton("Reset", (d, w) -> {
-                    FileMenuOrder.save(context, new ArrayList<>(java.util.Arrays.asList(FileMenuOrder.DEFAULT_ORDER)));
+                    FileMenuOrder.save(context, new ArrayList<>(Arrays.asList(FileMenuOrder.DEFAULT_ORDER)));
                     Extensions.showMessage(context, "Menu order reset");
                 })
                 .create();

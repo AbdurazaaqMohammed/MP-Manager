@@ -1,13 +1,31 @@
 package io.github.abdurazaaqmohammed.ui.activities;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.adapters.BottomBarButtonAdapter;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
 public class EditorSettingsActivity extends AppCompatActivity {
@@ -15,10 +33,10 @@ public class EditorSettingsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        android.content.SharedPreferences settings = androidx.preference.PreferenceManager
+        SharedPreferences settings = androidx.preference.PreferenceManager
                 .getDefaultSharedPreferences(this);
         boolean dark = (getResources().getConfiguration().uiMode
-                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         setTheme(settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
 
 
@@ -45,17 +63,17 @@ public class EditorSettingsActivity extends AppCompatActivity {
             getPreferenceManager().setSharedPreferencesName("editor_prefs");
             setPreferencesFromResource(R.xml.editor_preferences, rootKey);
 
-            androidx.preference.Preference floatingMenu = findPreference("edit_floating_menus");
+            Preference floatingMenu = findPreference("edit_floating_menus");
             if (floatingMenu != null) {
                 floatingMenu.setOnPreferenceClickListener(pref -> {
-                    startActivity(new android.content.Intent(getActivity(), EditFloatingMenusActivity.class));
+                    startActivity(new Intent(getActivity(), EditFloatingMenusActivity.class));
                     return true;
                 });
             }
         }
 
         @Override
-        public boolean onPreferenceTreeClick(androidx.preference.Preference preference) {
+        public boolean onPreferenceTreeClick(Preference preference) {
             String key = preference.getKey();
             if ("pref_bottom_bar_buttons".equals(key)) {
                 showBottomBarManagementDialog();
@@ -65,31 +83,31 @@ public class EditorSettingsActivity extends AppCompatActivity {
         }
 
         private void showBottomBarManagementDialog() {
-            android.content.SharedPreferences prefs = android.preference.PreferenceManager
+            SharedPreferences prefs = android.preference.PreferenceManager
                     .getDefaultSharedPreferences(getContext());
             String json = prefs.getString("pref_bottom_bar_buttons", "[]");
-            org.json.JSONArray array;
+            JSONArray array;
             try {
                 if (json.equals("Search,Copy,Cut,Paste")) {
-                    array = new org.json.JSONArray();
-                    array.put(new org.json.JSONObject().put("action", "Search").put("label", "Search"));
-                    array.put(new org.json.JSONObject().put("action", "Copy selection").put("label", "Copy"));
-                    array.put(new org.json.JSONObject().put("action", "Cut selection").put("label", "Cut"));
-                    array.put(new org.json.JSONObject().put("action", "Paste selection").put("label", "Paste"));
+                    array = new JSONArray();
+                    array.put(new JSONObject().put("action", "Search").put("label", "Search"));
+                    array.put(new JSONObject().put("action", "Copy selection").put("label", "Copy"));
+                    array.put(new JSONObject().put("action", "Cut selection").put("label", "Cut"));
+                    array.put(new JSONObject().put("action", "Paste selection").put("label", "Paste"));
                 } else {
-                    array = new org.json.JSONArray(json);
+                    array = new JSONArray(json);
                 }
             } catch (Exception e) {
-                array = new org.json.JSONArray();
+                array = new JSONArray();
             }
 
-            final org.json.JSONArray finalArray = array;
-            android.widget.ListView listView = new android.widget.ListView(getContext());
-            io.github.abdurazaaqmohammed.adapters.BottomBarButtonAdapter adapter = new io.github.abdurazaaqmohammed.adapters.BottomBarButtonAdapter(
+            final JSONArray finalArray = array;
+            ListView listView = new ListView(getContext());
+            BottomBarButtonAdapter adapter = new BottomBarButtonAdapter(
                     getContext(), finalArray,
-                    new io.github.abdurazaaqmohammed.adapters.BottomBarButtonAdapter.OnButtonActionListener() {
+                    new BottomBarButtonAdapter.OnButtonActionListener() {
                         @Override
-                        public void onEdit(int position, org.json.JSONObject button) {
+                        public void onEdit(int position, JSONObject button) {
                             showAddEditButtonDialog(finalArray, position, button, () -> {
                                 prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString()).apply();
                                 showBottomBarManagementDialog(); // Refresh - ideally use a better way but this is simple
@@ -123,64 +141,64 @@ public class EditorSettingsActivity extends AppCompatActivity {
                     .show();
         }
 
-        private void showAddEditButtonDialog(org.json.JSONArray array, int position, org.json.JSONObject existing,
-                Runnable onComplete) {
+        private void showAddEditButtonDialog(JSONArray array, int position, JSONObject existing,
+                                             Runnable onComplete) {
             String[] actions = {
                     "None", "Search", "Insert text", "Regex find and replace", "Copy selection", "Cut selection",
                     "Paste selection", "Copy line", "Cut line", "Delete line", "Empty line", "Replace line"
             };
 
-            android.widget.ScrollView scrollView = new android.widget.ScrollView(getContext());
-            android.widget.LinearLayout layout = new android.widget.LinearLayout(getContext());
-            layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+            ScrollView scrollView = new ScrollView(getContext());
+            LinearLayout layout = new LinearLayout(getContext());
+            layout.setOrientation(LinearLayout.VERTICAL);
             layout.setPadding(48, 16, 48, 16);
             scrollView.addView(layout);
 
-            android.widget.EditText labelInput = new android.widget.EditText(getContext());
+            EditText labelInput = new EditText(getContext());
             labelInput.setHint("Button Label (optional)");
             layout.addView(labelInput);
 
-            android.widget.TextView clickHeader = new android.widget.TextView(getContext());
+            TextView clickHeader = new TextView(getContext());
             clickHeader.setText(getContext().getString(R.string.edsettings_click));
             clickHeader.setPadding(0, 32, 0, 8);
             layout.addView(clickHeader);
 
-            android.widget.Spinner actionSpinner = new android.widget.Spinner(getContext());
-            android.widget.ArrayAdapter<String> actionAdapter = new android.widget.ArrayAdapter<>(getContext(),
+            Spinner actionSpinner = new Spinner(getContext());
+            ArrayAdapter<String> actionAdapter = new ArrayAdapter<>(getContext(),
                     android.R.layout.simple_spinner_item, actions);
             actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             actionSpinner.setAdapter(actionAdapter);
             layout.addView(actionSpinner);
 
-            android.widget.EditText dataInput1 = new android.widget.EditText(getContext());
+            EditText dataInput1 = new EditText(getContext());
             dataInput1.setHint("Data 1");
-            dataInput1.setVisibility(android.view.View.GONE);
+            dataInput1.setVisibility(View.GONE);
             layout.addView(dataInput1);
 
-            android.widget.EditText dataInput2 = new android.widget.EditText(getContext());
+            EditText dataInput2 = new EditText(getContext());
             dataInput2.setHint("Data 2");
-            dataInput2.setVisibility(android.view.View.GONE);
+            dataInput2.setVisibility(View.GONE);
             layout.addView(dataInput2);
 
             setupActionSpinner(actionSpinner, dataInput1, dataInput2, actions);
 
-            android.widget.TextView longHeader = new android.widget.TextView(getContext());
+            TextView longHeader = new TextView(getContext());
             longHeader.setText(getContext().getString(R.string.edsettings_long));
             longHeader.setPadding(0, 32, 0, 8);
             layout.addView(longHeader);
 
-            android.widget.Spinner longActionSpinner = new android.widget.Spinner(getContext());
+            Spinner longActionSpinner = new Spinner(getContext());
             longActionSpinner.setAdapter(actionAdapter);
             layout.addView(longActionSpinner);
 
-            android.widget.EditText longDataInput1 = new android.widget.EditText(getContext());
+            EditText longDataInput1 = new EditText(getContext());
             longDataInput1.setHint("Long Data 1");
-            longDataInput1.setVisibility(android.view.View.GONE);
+            longDataInput1.setVisibility(View.GONE);
             layout.addView(longDataInput1);
 
-            android.widget.EditText longDataInput2 = new android.widget.EditText(getContext());
+            EditText longDataInput2 = new EditText(getContext());
             longDataInput2.setHint("Long Data 2");
-            longDataInput2.setVisibility(android.view.View.GONE);
+            longDataInput2.setVisibility(View.GONE);
             layout.addView(longDataInput2);
 
             setupActionSpinner(longActionSpinner, longDataInput1, longDataInput2, actions);
@@ -203,14 +221,14 @@ public class EditorSettingsActivity extends AppCompatActivity {
                 longDataInput2.setText(existing.optString("longData2", ""));
             }
 
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(getContext())
+            new MaterialAlertDialogBuilder(getContext())
                     .setTitle(existing == null ? getContext().getString(R.string.edsettings_add) : getContext().getString(R.string.edsettings_edit))
                     .setView(scrollView)
                     .setPositiveButton(getContext().getString(R.string.save), (dialog, which) -> {
                         try {
-                            org.json.JSONObject obj = existing != null ? existing : new org.json.JSONObject();
+                            JSONObject obj = existing != null ? existing : new JSONObject();
                             String label = labelInput.getText().toString();
-                            if (!android.text.TextUtils.isEmpty(label))
+                            if (!TextUtils.isEmpty(label))
                                 obj.put("label", label);
                             else
                                 obj.remove("label");
@@ -242,30 +260,30 @@ public class EditorSettingsActivity extends AppCompatActivity {
                     .show();
         }
 
-        private void setupActionSpinner(android.widget.Spinner spinner, android.widget.EditText data1,
-                android.widget.EditText data2, String[] actions) {
-            spinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+        private void setupActionSpinner(Spinner spinner, EditText data1,
+                                        EditText data2, String[] actions) {
+            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
-                public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int pos,
-                        long id) {
+                public void onItemSelected(AdapterView<?> parent, View view, int pos,
+                                           long id) {
                     String action = actions[pos];
                     if (action.equals("Insert text")) {
-                        data1.setVisibility(android.view.View.VISIBLE);
+                        data1.setVisibility(View.VISIBLE);
                         data1.setHint("Text to insert");
-                        data2.setVisibility(android.view.View.GONE);
+                        data2.setVisibility(View.GONE);
                     } else if (action.equals("Regex find and replace")) {
-                        data1.setVisibility(android.view.View.VISIBLE);
+                        data1.setVisibility(View.VISIBLE);
                         data1.setHint("Find Regex");
-                        data2.setVisibility(android.view.View.VISIBLE);
+                        data2.setVisibility(View.VISIBLE);
                         data2.setHint("Replace Regex");
                     } else {
-                        data1.setVisibility(android.view.View.GONE);
-                        data2.setVisibility(android.view.View.GONE);
+                        data1.setVisibility(View.GONE);
+                        data2.setVisibility(View.GONE);
                     }
                 }
 
                 @Override
-                public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                public void onNothingSelected(AdapterView<?> parent) {
                 }
             });
         }

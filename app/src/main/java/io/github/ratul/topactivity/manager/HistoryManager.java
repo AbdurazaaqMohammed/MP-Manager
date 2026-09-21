@@ -17,6 +17,7 @@
 package io.github.ratul.topactivity.manager;
 
 import android.content.Context;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -63,7 +64,7 @@ public class HistoryManager {
         View view = LayoutInflater.from(context).inflate(R.layout.layout_activity_history, null);
         baseView = view;
 
-        android.util.Pair<Integer, Integer> screenSize = GenericExtensions.getScreenSize(windowManager);
+        Pair<Integer, Integer> screenSize = GenericExtensions.getScreenSize(windowManager);
         int displayWidth = screenSize.first;
         double scaleFactor = PopupManager.mapPreferenceToWindowSize(DatabaseUtil.getWindowSize());
         int viewSize = (int) (displayWidth * scaleFactor);

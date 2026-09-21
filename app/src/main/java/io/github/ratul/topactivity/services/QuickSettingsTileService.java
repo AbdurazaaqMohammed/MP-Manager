@@ -21,11 +21,13 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
 import android.service.quicksettings.Tile;
+import android.service.quicksettings.TileService;
 
 import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.repository.ServiceState;
 import io.github.ratul.topactivity.ui.SettingsActivity;
 
-public class QuickSettingsTileService extends android.service.quicksettings.TileService {
+public class QuickSettingsTileService extends TileService {
 
     @Override
     public void onTileAdded() {
@@ -41,7 +43,7 @@ public class QuickSettingsTileService extends android.service.quicksettings.Tile
     @SuppressLint("StartActivityAndCollapseDeprecated")
     @Override
     public void onClick() {
-        io.github.ratul.topactivity.repository.ServiceState serviceState = DataRepository.getInstance().getAppState();
+        ServiceState serviceState = DataRepository.getInstance().getAppState();
         if (serviceState.isRunning()) {
             DataRepository.getInstance().updateStatus(false);
             updateTileState();
@@ -69,7 +71,7 @@ public class QuickSettingsTileService extends android.service.quicksettings.Tile
     private void updateTileState() {
         Tile tile = getQsTile();
         if (tile == null) return;
-        io.github.ratul.topactivity.repository.ServiceState serviceState = DataRepository.getInstance().getAppState();
+        ServiceState serviceState = DataRepository.getInstance().getAppState();
         tile.setState(serviceState.isRunning() ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.updateTile();
     }

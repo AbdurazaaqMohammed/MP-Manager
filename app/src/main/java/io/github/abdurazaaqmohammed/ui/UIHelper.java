@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
@@ -136,23 +137,23 @@ public class UIHelper {
     public static String radioGroupValue(RadioGroup group, String defaultValue) {
         int id = group.getCheckedRadioButtonId();
         if (id == -1) return defaultValue;
-        android.widget.RadioButton rb = group.findViewById(id);
+        RadioButton rb = group.findViewById(id);
         Object tag = rb.getTag();
         return (tag == null) ? defaultValue : tag.toString();
     }
 
-    public android.widget.RadioButton makeRadioButton(String value, String label) {
-        android.widget.RadioButton rb = new android.widget.RadioButton(context);
+    public RadioButton makeRadioButton(String value, String label) {
+        RadioButton rb = new RadioButton(context);
         rb.setText(label);
-        rb.setId(android.view.View.generateViewId());
+        rb.setId(View.generateViewId());
         rb.setTag(value);
         return rb;
     }
 
     public static void selectRadioByValue(RadioGroup group, String valueToSelect) {
         for (int i = 0; i < group.getChildCount(); i++) {
-            android.view.View child = group.getChildAt(i);
-            if (child instanceof android.widget.RadioButton rb) {
+            View child = group.getChildAt(i);
+            if (child instanceof RadioButton rb) {
                 Object tag = rb.getTag();
                 if (tag != null && tag.toString().equals(valueToSelect)) {
                     group.check(rb.getId());
@@ -161,7 +162,7 @@ public class UIHelper {
             }
         }
         if (group.getCheckedRadioButtonId() == -1 && group.getChildCount() > 0) {
-            android.widget.RadioButton first = (android.widget.RadioButton) group.getChildAt(0);
+            RadioButton first = (RadioButton) group.getChildAt(0);
             group.check(first.getId());
         }
     }

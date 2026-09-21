@@ -2,8 +2,13 @@ package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.preference.PreferenceManager;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +21,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
@@ -61,7 +68,7 @@ public class ApkManifestEditor {
     private final MainActivity context;
     private final DialogUtil dialogUtil;
     private final UIHelper uiHelper;
-    final android.content.res.Resources rss;
+    final Resources rss;
 
     public ApkManifestEditor(MainActivity context, DialogUtil dialogUtil, UIHelper uiHelper) {
         this.context = context;
@@ -170,15 +177,15 @@ public class ApkManifestEditor {
                 .setCustomTitle(uiHelper.getTitle(rss.getString(R.string.me_fast_attrs)))
                 .setPositiveButton(rss.getString(R.string.done), (dialog, which) -> {
                     CharSequence appNameInputText = appNameInput.getText();
-                    String appNameSelected = android.text.TextUtils.isEmpty(appNameInputText) ? "" : appNameInputText.toString();
+                    String appNameSelected = TextUtils.isEmpty(appNameInputText) ? "" : appNameInputText.toString();
                     boolean appNameChanged = (!finalAppName.equals(appNameSelected));
 
                     CharSequence verCodeInputText = verCodeInput.getText();
-                    String verCodeSelected = android.text.TextUtils.isEmpty(verCodeInputText) ? "" : verCodeInputText.toString();
+                    String verCodeSelected = TextUtils.isEmpty(verCodeInputText) ? "" : verCodeInputText.toString();
                     boolean verCodeChanged = (!finalVerCode.equals(verCodeSelected));
 
                     CharSequence verNameInputText = verNameInput.getText();
-                    String verNameSelected = android.text.TextUtils.isEmpty(verNameInputText) ? "" : verNameInputText.toString();
+                    String verNameSelected = TextUtils.isEmpty(verNameInputText) ? "" : verNameInputText.toString();
                     boolean verNameChanged = (!finalVerName.equals(verNameSelected));
 
                     boolean minSdkVersionChanged = minSdkVersionSelected[0] != null && (!finalMinSdkVersion.equals(minSdkVersionSelected[0]));
@@ -459,7 +466,7 @@ public class ApkManifestEditor {
         AlertDialog d = dialogUtil.getDialogBuilder()
                 .setCustomTitle(uiHelper.getTitle(
                         rss.getString(R.string.me_edit_prefix, entry.getMiddleTag().trim())))
-                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, input, null, 16))
+                .setView(UiFields.wrap(context, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dlg, w) -> {
                     String newVal = input.getText().toString();
@@ -533,8 +540,8 @@ public class ApkManifestEditor {
         new Thread(() -> {
             String[] perms;
             try {
-                android.content.pm.PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(
-                        apkFile.getPath(), android.content.pm.PackageManager.GET_PERMISSIONS);
+                PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(
+                        apkFile.getPath(), PackageManager.GET_PERMISSIONS);
                 perms = pi == null ? null : pi.requestedPermissions;
                 if (perms == null || perms.length == 0) throw new IOException("No permissions found");
             } catch (Exception e) {
@@ -547,14 +554,14 @@ public class ApkManifestEditor {
                 boolean dangerous = false;
                 try {
                     int level = context.getPackageManager().getPermissionInfo(perms[i], 0).protectionLevel
-                            & android.content.pm.PermissionInfo.PROTECTION_MASK_BASE;
-                    dangerous = level == android.content.pm.PermissionInfo.PROTECTION_DANGEROUS;
+                            & PermissionInfo.PROTECTION_MASK_BASE;
+                    dangerous = level == PermissionInfo.PROTECTION_DANGEROUS;
                 } catch (Exception ignored) {
                 }
                 labels[i] = perms[i] + (dangerous ? " (dangerous)" : "");
             }
             boolean[] keep = new boolean[perms.length];
-            java.util.Arrays.fill(keep, true);
+            Arrays.fill(keep, true);
             pm.dismiss();
             context.handler.post(() -> {
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
@@ -632,16 +639,16 @@ public class ApkManifestEditor {
                 root.setOrientation(LinearLayout.VERTICAL);
                 int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
                 root.setPadding(pad, pad / 2, pad, pad / 2);
-                android.widget.CheckBox[] boxes = new android.widget.CheckBox[attrs.length];
+                CheckBox[] boxes = new CheckBox[attrs.length];
                 for (int i = 0; i < attrs.length; i++) {
-                    boxes[i] = new android.widget.CheckBox(context);
+                    boxes[i] = new CheckBox(context);
                     boxes[i].setText(labels[i]);
                     boxes[i].setChecked(current[i]);
                     root.addView(boxes[i]);
                 }
                 SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                 boolean[] sign = new boolean[1];
-                android.widget.CheckBox autosign = new android.widget.CheckBox(context);
+                CheckBox autosign = new CheckBox(context);
                 autosign.setText(rss.getString(R.string.auto_sign));
                 autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                 autosign.setOnCheckedChangeListener((b, c) -> settings.edit().putBoolean("autosign", sign[0] = c).apply());

@@ -18,9 +18,11 @@ package io.github.ratul.topactivity.manager;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -69,7 +71,7 @@ public class PopupManager {
         View view = LayoutInflater.from(context).inflate(R.layout.layout_activity_info, null);
         baseView = view;
 
-        android.util.Pair<Integer, Integer> screenSize = GenericExtensions.getScreenSize(windowManager);
+        Pair<Integer, Integer> screenSize = GenericExtensions.getScreenSize(windowManager);
         int displayWidth = screenSize.first;
         double scaleFactor = mapPreferenceToWindowSize(DatabaseUtil.getWindowSize());
         int viewSize = (int) (displayWidth * scaleFactor);
@@ -180,7 +182,7 @@ public class PopupManager {
     private String getAppName(String pkg) {
         try {
             PackageManager pm = context.getPackageManager();
-            android.content.pm.ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
+            ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
             return pm.getApplicationLabel(info).toString();
         } catch (PackageManager.NameNotFoundException e) {
             return null;

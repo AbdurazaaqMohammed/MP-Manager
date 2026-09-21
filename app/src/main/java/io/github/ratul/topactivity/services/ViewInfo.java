@@ -17,6 +17,7 @@
 package io.github.ratul.topactivity.services;
 
 import android.graphics.Rect;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 public final class ViewInfo {
     private final String className;
@@ -38,7 +39,7 @@ public final class ViewInfo {
     private final String parentClass;
     private final int childCount;
     private final String packageName;
-    private final android.view.accessibility.AccessibilityNodeInfo parent;
+    private final AccessibilityNodeInfo parent;
     private final int[] path;
 
     public ViewInfo(String className, String resourceId, String text, String contentDescription,
@@ -46,7 +47,7 @@ public final class ViewInfo {
                     boolean isVisible, boolean isEnabled, boolean isFocusable, boolean isClickable,
                     boolean isLongClickable, boolean isFocused, boolean isSelected, boolean isChecked,
                     String parentClass, int childCount, String packageName,
-                    android.view.accessibility.AccessibilityNodeInfo parent,
+                    AccessibilityNodeInfo parent,
                     int[] path) {
         this.className = className;
         this.resourceId = resourceId;
@@ -147,7 +148,7 @@ public final class ViewInfo {
         return packageName;
     }
 
-    public android.view.accessibility.AccessibilityNodeInfo getParent() {
+    public AccessibilityNodeInfo getParent() {
         return parent;
     }
 

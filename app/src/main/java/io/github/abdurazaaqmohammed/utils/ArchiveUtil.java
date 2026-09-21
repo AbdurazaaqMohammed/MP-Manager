@@ -15,6 +15,7 @@ import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 
 import com.github.junrar.Archive;
+import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 
 import java.io.BufferedInputStream;
@@ -125,7 +126,7 @@ public class ArchiveUtil {
                     }
                 }
             }
-        } catch (com.github.junrar.exception.RarException e) {
+        } catch (RarException e) {
             throw new IOException("Failed to extract RAR archive", e);
         }
     }

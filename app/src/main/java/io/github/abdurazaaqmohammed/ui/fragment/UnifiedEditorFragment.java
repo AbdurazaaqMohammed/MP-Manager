@@ -13,6 +13,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -26,6 +27,8 @@ import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -49,9 +52,13 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
@@ -66,6 +73,7 @@ import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry;
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry;
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver;
+import io.github.rosemoe.sora.text.CharPosition;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.text.LineSeparator;
@@ -723,7 +731,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void loadBottomBarFunctions() {
         if (bottomBarLayout == null) return;
         bottomBarLayout.removeAllViews();
-        SharedPreferences prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext());
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
         String json = prefs.getString("pref_bottom_bar_buttons", "[]");
         if (json.equals("[]") || json.equals("Search,Copy,Cut,Paste")) {
             try {
@@ -786,7 +794,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     String replaceStr = obj.optString(data2Key);
                     if (TextUtils.isEmpty(findRegex)) break;
                     String allText = content.toString();
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile(findRegex).matcher(allText);
+                    Matcher m = Pattern.compile(findRegex).matcher(allText);
                     int cursorOffset = Math.min(cursor.getLeft(), allText.length());
                     boolean found = false;
                     while (m.find()) {
@@ -799,9 +807,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     StringBuffer sb = new StringBuffer();
                     m.appendReplacement(sb, replaceStr == null ? "" : replaceStr);
                     String replacement = sb.substring(m.start()); // strip the untouched prefix
-                    io.github.rosemoe.sora.text.CharPosition s =
+                    CharPosition s =
                             content.getIndexer().getCharPosition(m.start());
-                    io.github.rosemoe.sora.text.CharPosition e =
+                    CharPosition e =
                             content.getIndexer().getCharPosition(m.end());
                     content.beginBatchEdit();
                     content.replace(s.line, s.column, e.line, e.column, replacement);
@@ -949,8 +957,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void showFileMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
         forceShowIcons(popupMenu);
-        java.util.List<String> optionsList = new java.util.ArrayList<>();
-        java.util.List<Integer> iconsList = new java.util.ArrayList<>();
+        List<String> optionsList = new ArrayList<>();
+        List<Integer> iconsList = new ArrayList<>();
         optionsList.add("File"); iconsList.add(R.drawable.baseline_insert_drive_file_24);
         optionsList.add("Search"); iconsList.add(R.drawable.baseline_search_24);
         optionsList.add("Syntax"); iconsList.add(R.drawable.baseline_text_snippet_24);
@@ -1015,7 +1023,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     callback.onPreferencesRequested();
                 } else {
                     Activity act = getActivity();
-                    if (act != null) act.startActivity(new Intent(act, io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity.class));
+                    if (act != null) act.startActivity(new Intent(act, EditorSettingsActivity.class));
                 }
             } else if (id == closeIndex) {
                 if (callback != null) callback.onCloseRequested();
@@ -1058,10 +1066,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void showJumpToLineDialog() {
         EditText input = new EditText(requireContext());
-        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.jump_to_line)
-                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(requireContext(), input, getString(R.string.jump_to_line), 16))
+                .setView(UiFields.wrap(requireContext(), input, getString(R.string.jump_to_line), 16))
                 .setPositiveButton(R.string.go, (dialog, which) -> {
                     CharSequence val = input.getText();
                     if (!TextUtils.isEmpty(val)) {
@@ -1247,8 +1255,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void smali2java() {
         Activity act = getActivity();
-        if (act instanceof modder.hub.dexeditor.activity.DexEditorActivity) {
-            ((modder.hub.dexeditor.activity.DexEditorActivity) act).smali2java(UnifiedEditorFragment.this);
+        if (act instanceof DexEditorActivity) {
+            ((DexEditorActivity) act).smali2java(UnifiedEditorFragment.this);
         }
     }
 
@@ -1486,10 +1494,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void forceShowIcons(PopupMenu popupMenu) {
         try {
-            java.lang.reflect.Field field = popupMenu.getClass().getDeclaredField("mPopup");
+            Field field = popupMenu.getClass().getDeclaredField("mPopup");
             field.setAccessible(true);
             Object menuPopupHelper = field.get(popupMenu);
-            java.lang.reflect.Method setForceIcons = menuPopupHelper.getClass().getDeclaredMethod("setForceShowIcon",
+            Method setForceIcons = menuPopupHelper.getClass().getDeclaredMethod("setForceShowIcon",
                     boolean.class);
             setForceIcons.invoke(menuPopupHelper, true);
         } catch (Exception e) {

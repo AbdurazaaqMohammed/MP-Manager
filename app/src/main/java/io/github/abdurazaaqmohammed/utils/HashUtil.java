@@ -9,8 +9,10 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
@@ -36,11 +38,11 @@ public class HashUtil {
         return false;
     }
 
-    public static java.util.Map<String, String> hashAll(File file) throws Exception {
-        java.security.MessageDigest md5 = java.security.MessageDigest.getInstance("MD5");
-        java.security.MessageDigest sha1 = java.security.MessageDigest.getInstance("SHA-1");
-        java.security.MessageDigest sha256 = java.security.MessageDigest.getInstance("SHA-256");
-        java.security.MessageDigest sha512 = java.security.MessageDigest.getInstance("SHA-512");
+    public static Map<String, String> hashAll(File file) throws Exception {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
         CRC32 crc = new CRC32();
         try (InputStream in = new BufferedInputStream(new FileInputStream(file), 8192)) {
             byte[] buffer = new byte[8192];
@@ -53,7 +55,7 @@ public class HashUtil {
                 crc.update(buffer, 0, read);
             }
         }
-        java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+        Map<String, String> result = new LinkedHashMap<>();
         result.put("MD5", toHex(md5.digest()));
         result.put("SHA-1", toHex(sha1.digest()));
         result.put("SHA-256", toHex(sha256.digest()));

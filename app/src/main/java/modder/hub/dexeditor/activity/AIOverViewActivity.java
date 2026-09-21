@@ -56,10 +56,12 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 import modder.hub.dexeditor.fragment.SettingsFragment;
@@ -142,8 +144,8 @@ public class AIOverViewActivity extends AppCompatActivity {
         params.topMargin = padding;
         params.rightMargin = padding;
         params.bottomMargin = padding;
-        com.google.android.material.textfield.TextInputLayout boxed =
-                io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 0);
+        TextInputLayout boxed =
+                UiFields.wrap(this, input, null, 0);
         boxed.setLayoutParams(params);
         container.addView(boxed);
 

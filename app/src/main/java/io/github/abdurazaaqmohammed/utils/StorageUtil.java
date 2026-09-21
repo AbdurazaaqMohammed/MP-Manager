@@ -1,14 +1,17 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -20,6 +23,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
 
 public class StorageUtil {
     public static class StorageInfo {
@@ -72,7 +76,7 @@ public class StorageUtil {
                             desc = vol.getDescription(ctx);
                         } catch (Exception ignored) {
                         }
-                        si.name = (android.text.TextUtils.isEmpty(desc)) ? "Storage" : desc.toString();
+                        si.name = (TextUtils.isEmpty(desc)) ? "Storage" : desc.toString();
                     }
 
                     StatFs statFs = new StatFs(si.path);
@@ -134,12 +138,12 @@ public class StorageUtil {
                 ctx.closeSidebarDrawer();
             });
             row.setOnLongClickListener(v -> {
-                android.widget.PopupMenu menu = new android.widget.PopupMenu(ctx, v);
+                PopupMenu menu = new PopupMenu(ctx, v);
                 menu.getMenu().add("Manage storage");
                 menu.getMenu().add("Open location");
                 menu.setOnMenuItemClickListener(item -> {
                     if ("Manage storage".equals(item.getTitle().toString())) {
-                        ctx.startActivity(new android.content.Intent(ctx, io.github.abdurazaaqmohammed.tools.StorageManagerActivity.class));
+                        ctx.startActivity(new Intent(ctx, StorageManagerActivity.class));
                     } else {
                         ctx.loadFolderInPane(new File(si.path), ctx.lastPaneSelected == 1);
                         ctx.closeSidebarDrawer();

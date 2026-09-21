@@ -1,7 +1,9 @@
 package io.github.abdurazaaqmohammed.tools;
 
+import android.Manifest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -9,23 +11,31 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.ToneGenerator;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
@@ -47,13 +57,17 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.os.StatFs;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.os.VibrationEffect;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.DisplayMetrics;
@@ -61,11 +75,17 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
@@ -73,8 +93,10 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -83,27 +105,60 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.OutputStream;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
+
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+
+import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.ui.views.ColorWheelView;
 import io.github.abdurazaaqmohammed.utils.QrUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -135,9 +190,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private boolean pendingTorchRetry = false;
     private boolean screenLightOn = false;
     private View screenLightView;
-    private androidx.appcompat.app.AlertDialog screenLightDialog = null;
-    private androidx.appcompat.app.AlertDialog fullscreenTestDialog = null;
-    private androidx.appcompat.app.AlertDialog strobeDialog = null;
+    private AlertDialog screenLightDialog = null;
+    private AlertDialog fullscreenTestDialog = null;
+    private AlertDialog strobeDialog = null;
     private boolean sosRunning = false;
     private Runnable sosTick = null;
     private int sosStep = 0;
@@ -165,8 +220,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private boolean recordingNow = false;
     private boolean recordingPaused = false;
     private Runnable pendingAudioAction = null;
-    private java.io.File recCurrentFile = null;
-    private java.io.File recOutFile = null;
+    private File recCurrentFile = null;
+    private File recOutFile = null;
     private long recStartElapsed = 0L;
     private long recPausedTotal = 0L;
     private long recPauseStarted = 0L;
@@ -203,15 +258,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private boolean pendingBtRetry = false;
     private boolean pendingQrScan = false;
     private TextView qrScanOutput = null;
-    private android.widget.ImageView qrGenView = null;
+    private ImageView qrGenView = null;
     private Bitmap qrGenBitmap = null;
-    private java.io.File qrGenFile = null;
-    private java.io.File ttsLastFile = null;
+    private File qrGenFile = null;
+    private File ttsLastFile = null;
     private final Runnable reactionPending = null;
     private final List<Button> memButtons = new ArrayList<>();
     private final String[] tttBoard = new String[9];
 
-    private android.content.ClipboardManager.OnPrimaryClipChangedListener clipListener = null;
+    private ClipboardManager.OnPrimaryClipChangedListener clipListener = null;
     private boolean strobeOn = false;
     private Runnable strobeTick = null;
     private int strobeHz = 4;
@@ -656,7 +711,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
             NdefMessage[] msgs = null;
             try {
-                android.os.Parcelable[] raw = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+                Parcelable[] raw = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
                 if (raw != null) {
                     msgs = new NdefMessage[raw.length];
                     for (int i = 0; i < raw.length; i++) {
@@ -684,12 +739,12 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
     private String decodeNdefText(NdefRecord rec) {
         try {
-            if (rec.getTnf() == NdefRecord.TNF_WELL_KNOWN && java.util.Arrays.equals(rec.getType(), NdefRecord.RTD_TEXT)) {
+            if (rec.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(rec.getType(), NdefRecord.RTD_TEXT)) {
                 byte[] payload = rec.getPayload();
                 boolean utf16 = (payload[0] & 0x80) != 0;
                 int langLen = payload[0] & 0x3F;
                 return new String(payload, 1 + langLen, payload.length - 1 - langLen, utf16 ? "UTF-16" : "UTF-8");
-            } else if (rec.getTnf() == NdefRecord.TNF_WELL_KNOWN && java.util.Arrays.equals(rec.getType(), NdefRecord.RTD_URI)) {
+            } else if (rec.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(rec.getType(), NdefRecord.RTD_URI)) {
                 byte[] payload = rec.getPayload();
                 return new String(payload, 1, payload.length - 1, StandardCharsets.UTF_8);
             }
@@ -706,9 +761,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
         btNames.clear();
         try {
-            if (Build.VERSION.SDK_INT >= 31 && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= 31 && ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 pendingBtRetry = true;
-                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.BLUETOOTH_CONNECT}, 9004);
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 9004);
                 if (btText != null) {
                     btText.setText("Bluetooth permission needed");
                 }
@@ -727,7 +782,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     btText.setText("Bluetooth is off, turn it on and refresh");
                 }
             } else {
-                java.util.Set<BluetoothDevice> bonded = adapter.getBondedDevices();
+                Set<BluetoothDevice> bonded = adapter.getBondedDevices();
                 if (bonded == null || bonded.isEmpty()) {
                     if (btText != null) {
                         btText.setText("No paired devices");
@@ -782,7 +837,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         TextView t = new TextView(this);
         t.setText(text);
         t.setTextSize(18);
-        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTypeface(null, Typeface.BOLD);
         t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, 0, 0, dp(8));
@@ -801,9 +856,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
         return t;
     }
     private EditText makeInput(LinearLayout box, String hint, int inputType) {
-        com.google.android.material.textfield.TextInputLayout layout =
-                io.github.abdurazaaqmohammed.ui.UiFields.box(this, hint);
-        EditText e = io.github.abdurazaaqmohammed.ui.UiFields.field(layout, inputType);
+        TextInputLayout layout =
+                UiFields.box(this, hint);
+        EditText e = UiFields.field(layout, inputType);
         e.setSingleLine(false);
         e.setMinLines(1);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -822,7 +877,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private TextView makeOutput(LinearLayout box) {
         TextView t = new TextView(this);
         t.setTextSize(16);
-        t.setTypeface(android.graphics.Typeface.MONOSPACE);
+        t.setTypeface(Typeface.MONOSPACE);
         t.setPadding(dp(12), dp(12), dp(12), dp(12));
         t.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#14000000")));
         t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
@@ -955,7 +1010,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         addTitle(box, "Calculator");
         final EditText display = makeInput(box, "0", InputType.TYPE_CLASS_TEXT);
         display.setTextSize(24);
-        display.setTypeface(android.graphics.Typeface.MONOSPACE);
+        display.setTypeface(Typeface.MONOSPACE);
         final TextView result = makeOutput(box);
         result.setText("= 0");
         String[][] rows = new String[][]{
@@ -1224,8 +1279,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView output = makeOutput(box);
         output.setText("Result");
         new ArrayList<>();
-        catSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        catSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String[] units = unitsForCategory(categories[position]);
                 ArrayAdapter<String> a1 = new ArrayAdapter<>(ToolRunnerActivity.this, android.R.layout.simple_spinner_item, units);
                 a1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -1238,7 +1293,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 }
                 convertUnits(categories[position], fromSpinner, toSpinner, input, output);
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
         TextWatcher watcher = new TextWatcher() {
@@ -1255,15 +1310,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         };
         input.addTextChangedListener(watcher);
-        android.widget.AdapterView.OnItemSelectedListener convertListener = new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        AdapterView.OnItemSelectedListener convertListener = new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String cat = (String) catSpinner.getSelectedItem();
                 if (cat == null) {
                     cat = categories[0];
                 }
                 convertUnits(cat, fromSpinner, toSpinner, input, output);
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         };
         fromSpinner.setOnItemSelectedListener(convertListener);
@@ -2213,7 +2268,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         laps.clear();
         lapCount = 0;
         lapAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, laps);
-        android.widget.ListView lapList = new android.widget.ListView(this);
+        ListView lapList = new ListView(this);
         lapList.setAdapter(lapAdapter);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220));
         box.addView(lapList, lp);
@@ -2378,17 +2433,17 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
 
     private void showScreenLightOverlay(final MaterialButton screenBtn) {
-        android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+        FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.WHITE);
         final MaterialButton exit = new MaterialButton(this);
         exit.setText("Turn off screen light");
         exit.setBackgroundColor(Color.parseColor("#CC000000"));
         exit.setTextColor(Color.WHITE);
-        android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         int m = dp(24);
         ep.setMargins(m, m, m, dp(48));
         root.addView(exit, ep);
-        final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+        final AlertDialog[] holder = new AlertDialog[1];
         Runnable close = () -> {
             try { holder[0].dismiss(); } catch (Exception ignored) {}
             screenLightOn = false;
@@ -2397,7 +2452,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         };
         root.setOnClickListener(v -> close.run());
         exit.setOnClickListener(v -> close.run());
-        androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+        AlertDialog d = new MaterialAlertDialogBuilder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
         holder[0] = d;
         screenLightDialog = d;
         d.setOnDismissListener(di -> {
@@ -2408,10 +2463,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         d.show();
         if (d.getWindow() != null) {
             d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            android.view.WindowManager.LayoutParams lp = d.getWindow().getAttributes();
+            WindowManager.LayoutParams lp = d.getWindow().getAttributes();
             lp.screenBrightness = 1.0f;
             d.getWindow().setAttributes(lp);
-            d.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            d.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
     }
 
@@ -2425,7 +2480,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     for (String id : cameraManager.getCameraIdList()) {
                         torchCameraId = id;
                         try {
-                            Boolean flash = cameraManager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                            Boolean flash = cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
                             if (flash != null && flash) {
                                 torchCameraId = id;
                                 break;
@@ -2500,9 +2555,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toast("Flash not available");
             return;
         }
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             pendingTorchRetry = true;
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA}, 9001);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 9001);
             toast("Camera permission needed");
             return;
         }
@@ -2712,8 +2767,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 Object parsed = parseJsonValue(input.getText().toString().trim());
                 if (parsed instanceof JSONObject) {
                     output.setText(((JSONObject) parsed).toString(2));
-                } else if (parsed instanceof org.json.JSONArray) {
-                    output.setText(((org.json.JSONArray) parsed).toString(2));
+                } else if (parsed instanceof JSONArray) {
+                    output.setText(((JSONArray) parsed).toString(2));
                 } else {
                     output.setText(String.valueOf(parsed));
                 }
@@ -2726,7 +2781,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 Object parsed = parseJsonValue(input.getText().toString().trim());
                 if (parsed instanceof JSONObject) {
                     output.setText(parsed.toString());
-                } else if (parsed instanceof org.json.JSONArray) {
+                } else if (parsed instanceof JSONArray) {
                     output.setText(parsed.toString());
                 } else {
                     output.setText(String.valueOf(parsed));
@@ -2750,14 +2805,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
             return new JSONObject(t);
         }
         if (t.startsWith("[")) {
-            return new org.json.JSONArray(t);
+            return new JSONArray(t);
         }
-        org.json.JSONTokener tokener = new org.json.JSONTokener(t);
+        JSONTokener tokener = new JSONTokener(t);
         Object v = tokener.nextValue();
         while (tokener.more()) {
             char c = tokener.next();
             if (c != 0 && !Character.isWhitespace(c)) {
-                throw new org.json.JSONException("Trailing data");
+                throw new JSONException("Trailing data");
             }
         }
         return v;
@@ -2808,12 +2863,12 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton calcBtn = makeButton(box, "Calculate difference");
         calcBtn.setOnClickListener(v -> {
             try {
-                java.time.LocalDate a = java.time.LocalDate.parse(d1.getText().toString().trim());
-                java.time.LocalDate b = java.time.LocalDate.parse(d2.getText().toString().trim());
-                java.time.LocalDate from = a.isBefore(b) ? a : b;
-                java.time.LocalDate to = a.isBefore(b) ? b : a;
-                long days = java.time.temporal.ChronoUnit.DAYS.between(from, to);
-                java.time.Period p = java.time.Period.between(from, to);
+                LocalDate a = LocalDate.parse(d1.getText().toString().trim());
+                LocalDate b = LocalDate.parse(d2.getText().toString().trim());
+                LocalDate from = a.isBefore(b) ? a : b;
+                LocalDate to = a.isBefore(b) ? b : a;
+                long days = ChronoUnit.DAYS.between(from, to);
+                Period p = Period.between(from, to);
                 long weeks = days / 7;
                 output.setText(days + " days  (" + weeks + " weeks, " + p.getYears() + "y " + p.getMonths() + "m " + p.getDays() + "d)");
             } catch (Exception e) {
@@ -2823,14 +2878,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton ageBtn = makeButton(box, "Age from start date to today");
         ageBtn.setOnClickListener(v -> {
             try {
-                java.time.LocalDate birth = java.time.LocalDate.parse(d1.getText().toString().trim());
-                java.time.LocalDate today = java.time.LocalDate.now();
+                LocalDate birth = LocalDate.parse(d1.getText().toString().trim());
+                LocalDate today = LocalDate.now();
                 if (birth.isAfter(today)) {
                     output.setText("Birth date is in the future");
                     return;
                 }
-                java.time.Period p = java.time.Period.between(birth, today);
-                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(birth, today);
+                Period p = Period.between(birth, today);
+                long totalDays = ChronoUnit.DAYS.between(birth, today);
                 output.setText(p.getYears() + " years, " + p.getMonths() + " months, " + p.getDays() + " days  (" + totalDays + " days total)");
             } catch (Exception e) {
                 output.setText("Use yyyy-MM-dd");
@@ -3065,7 +3120,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         TextView t = new TextView(this);
         t.setText(title);
         t.setTextSize(16);
-        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTypeface(null, Typeface.BOLD);
         t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLACK));
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tp.setMargins(0, dp(14), 0, dp(6));
@@ -3074,7 +3129,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(14), dp(14), dp(14), dp(14));
         try {
-            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            GradientDrawable gd = new GradientDrawable();
             gd.setCornerRadius(dp(16));
             gd.setColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#14000000")));
             card.setBackground(gd);
@@ -3086,7 +3141,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private TextView addCardOutput(LinearLayout card) {
         TextView t = new TextView(this);
         t.setTextSize(14);
-        t.setTypeface(android.graphics.Typeface.MONOSPACE);
+        t.setTypeface(Typeface.MONOSPACE);
         t.setTextIsSelectable(true);
         t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
         card.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -3132,9 +3187,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
             b.append("Hardware: ").append(Build.HARDWARE).append("  Board: ").append(Build.BOARD).append("\n");
             try {
-                java.io.File f = new java.io.File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
+                File f = new File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
                 if (f.exists()) {
-                    java.util.Scanner s = new java.util.Scanner(f);
+                    Scanner s = new Scanner(f);
                     if (s.hasNext()) b.append("CPU0: ").append(Long.parseLong(s.next().trim()) / 1000).append(" MHz\n");
                     s.close();
                 }
@@ -3218,7 +3273,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView overText = addCardOutput(overview);
         LinearLayout power = addSectionCard(box, "Battery & Power");
         final TextView powerText = addCardOutput(power);
-        final android.widget.ProgressBar levelBar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        final ProgressBar levelBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         levelBar.setMax(100);
         power.addView(levelBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout compute = addSectionCard(box, "Processor & Memory");
@@ -3365,7 +3420,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     SimpleDateFormat d = new SimpleDateFormat("EEE dd MMM", Locale.US);
                     Date now = new Date();
                     for (String z : zones) {
-                        java.util.TimeZone tz = java.util.TimeZone.getTimeZone(z);
+                        TimeZone tz = TimeZone.getTimeZone(z);
                         f.setTimeZone(tz);
                         d.setTimeZone(tz);
                         String shortName = z.substring(z.indexOf(47) + 1).replace("_", " ");
@@ -3397,12 +3452,12 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 String[] parts = timeInput.getText().toString().trim().split(":");
                 int hh = Integer.parseInt(parts[0].trim());
                 int mm = Integer.parseInt(parts[1].trim());
-                Calendar c = Calendar.getInstance(java.util.TimeZone.getTimeZone(fromZone.getSelectedItem().toString()));
+                Calendar c = Calendar.getInstance(TimeZone.getTimeZone(fromZone.getSelectedItem().toString()));
                 c.set(Calendar.HOUR_OF_DAY, hh);
                 c.set(Calendar.MINUTE, mm);
                 c.set(Calendar.SECOND, 0);
                 SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
-                f.setTimeZone(java.util.TimeZone.getTimeZone(toZone.getSelectedItem().toString()));
+                f.setTimeZone(TimeZone.getTimeZone(toZone.getSelectedItem().toString()));
                 convOut.setText(f.format(c.getTime()) + " in " + toZone.getSelectedItem().toString());
             } catch (Exception e) {
                 convOut.setText("Use HH:mm");
@@ -3426,11 +3481,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText amount = makeInput(box, "Amount", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         amount.setText("100");
         final TextView output = makeOutput(box);
-        android.widget.AdapterView.OnItemSelectedListener listener = new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        AdapterView.OnItemSelectedListener listener = new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 convertCurrency(codes, perUsd, fromCur, toCur, amount, output);
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         };
         fromCur.setOnItemSelectedListener(listener);
@@ -3559,11 +3614,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 output.setText("Check credits");
             }
         };
-        final android.widget.AdapterView.OnItemSelectedListener gradeListener = new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        final AdapterView.OnItemSelectedListener gradeListener = new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 compute.run();
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         };
         final Runnable addCourseRow = () -> {
@@ -3847,7 +3902,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             final float target = start + 1080f + (float) (Math.random() * 360f);
             final long begin = SystemClock.elapsedRealtime();
             final long duration = 3200L;
-            final android.os.Handler animHandler = new android.os.Handler(Looper.getMainLooper());
+            final Handler animHandler = new Handler(Looper.getMainLooper());
             Runnable frame = new Runnable() {
                 public void run() {
                     float t = Math.min(1f, (SystemClock.elapsedRealtime() - begin) / (float) duration);
@@ -3886,7 +3941,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             float cx = getWidth() / 2f;
             float cy = getHeight() / 2f;
             float radius = Math.min(cx, cy) - 16f;
-            android.graphics.RectF oval = new android.graphics.RectF(cx - radius, cy - radius, cx + radius, cy + radius);
+            RectF oval = new RectF(cx - radius, cy - radius, cx + radius, cy + radius);
             float sweep = 360f / options.size();
             canvas.save();
             canvas.rotate(rotation, cx, cy);
@@ -3970,8 +4025,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
         return b.toString();
     }
-    private java.util.Map<String, String> morseEncodeMap() {
-        java.util.Map<String, String> m = new java.util.HashMap<>();
+    private Map<String, String> morseEncodeMap() {
+        Map<String, String> m = new HashMap<>();
         m.put("A", ".-");
         m.put("B", "-...");
         m.put("C", "-.-.");
@@ -4030,9 +4085,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
     private void buildMorse(LinearLayout box) {
         addTitle(box, "Morse Code");
-        final java.util.Map<String, String> enc = morseEncodeMap();
-        final java.util.Map<String, String> dec = new java.util.HashMap<>();
-        for (java.util.Map.Entry<String, String> e : enc.entrySet()) {
+        final Map<String, String> enc = morseEncodeMap();
+        final Map<String, String> dec = new HashMap<>();
+        for (Map.Entry<String, String> e : enc.entrySet()) {
             dec.put(e.getValue(), e.getKey());
         }
         final EditText input = makeInput(box, "Text or morse", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -4130,11 +4185,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         };
         final Runnable computeRef = compute;
-        fromBase.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        fromBase.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 computeRef.run();
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
         input.addTextChangedListener(new TextWatcher() {
@@ -4302,11 +4357,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 output.setText("Pick band colors");
             }
         };
-        final android.widget.AdapterView.OnItemSelectedListener bandListener = new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        final AdapterView.OnItemSelectedListener bandListener = new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 computeValue.run();
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         };
         final Runnable rebuild = () -> {
@@ -4357,7 +4412,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         }
         final EditText input = makeInput(box, "Write a note", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(2);
-        final android.widget.ListView listView = new android.widget.ListView(this);
+        final ListView listView = new ListView(this);
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, notes);
         listView.setAdapter(adapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(260)));
@@ -4390,19 +4445,19 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton exportBtn = makeRowButton(exportRow, "Export file", 1f);
         MaterialButton shareNotesBtn = makeRowButton(exportRow, "Share", 1f);
         MaterialButton locateNotesBtn = makeRowButton(exportRow, "Locate file", 1f);
-        final java.io.File[] lastExport = new java.io.File[1];
+        final File[] lastExport = new File[1];
         exportBtn.setOnClickListener(v -> {
             if (notes.isEmpty()) {
                 toast("No notes to export");
                 return;
             }
             try {
-                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_DOCUMENTS) , "Notes");
+                File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_DOCUMENTS) , "Notes");
                 dir.mkdirs();
-                java.io.File out = new java.io.File(dir, "notes_" + System.currentTimeMillis() + ".txt");
+                File out = new File(dir, "notes_" + System.currentTimeMillis() + ".txt");
                 StringBuilder sb = new StringBuilder();
                 for (String n : notes) sb.append(n).append("\n\n");
-                java.io.FileWriter w = new java.io.FileWriter(out);
+                FileWriter w = new FileWriter(out);
                 w.write(sb.toString().trim());
                 w.close();
                 lastExport[0] = out;
@@ -4414,7 +4469,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         shareNotesBtn.setOnClickListener(v -> {
             if (lastExport[0] != null && lastExport[0].exists()) shareToolFile(lastExport[0], "text/plain");
             else if (!notes.isEmpty()) {
-                Intent s = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, android.text.TextUtils.join("\n\n", notes));
+                Intent s = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, TextUtils.join("\n\n", notes));
                 startActivity(Intent.createChooser(s, "Share notes"));
             } else toast("Nothing to share");
         });
@@ -4509,19 +4564,19 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton exportBtn = makeRowButton(exportRow, "Export file", 1f);
         MaterialButton shareBtn = makeRowButton(exportRow, "Share", 1f);
         MaterialButton locateBtn = makeRowButton(exportRow, "Locate file", 1f);
-        final java.io.File[] lastExport = new java.io.File[1];
+        final File[] lastExport = new File[1];
         exportBtn.setOnClickListener(v -> {
             if (items.isEmpty()) {
                 toast("Nothing to export");
                 return;
             }
             try {
-                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_DOCUMENTS), "Notes");
+                File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_DOCUMENTS), "Notes");
                 dir.mkdirs();
-                java.io.File out = new java.io.File(dir, "checklist_" + System.currentTimeMillis() + ".txt");
+                File out = new File(dir, "checklist_" + System.currentTimeMillis() + ".txt");
                 StringBuilder sb = new StringBuilder();
                 for (CheckItem it : items) sb.append(it.done ? "[x] " : "[ ] ").append(it.title).append("\n");
-                java.io.FileWriter w = new java.io.FileWriter(out);
+                FileWriter w = new FileWriter(out);
                 w.write(sb.toString().trim());
                 w.close();
                 lastExport[0] = out;
@@ -4614,12 +4669,12 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton saveToneBtn = makeRowButton(toneRow2, "Save WAV", 1f);
         MaterialButton shareToneBtn = makeRowButton(toneRow2, "Share", 1f);
         MaterialButton locateToneBtn = makeRowButton(toneRow2, "Locate file", 1f);
-        final java.io.File[] lastTone = new java.io.File[1];
+        final File[] lastTone = new File[1];
         saveToneBtn.setOnClickListener(v -> {
             try {
-                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_MUSIC), "Tones");
+                File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_MUSIC), "Tones");
                 dir.mkdirs();
-                java.io.File out = new java.io.File(dir, "tone_" + freq[0] + "hz_" + System.currentTimeMillis() + ".wav");
+                File out = new File(dir, "tone_" + freq[0] + "hz_" + System.currentTimeMillis() + ".wav");
                 writeToneWav(out, freq[0], waveSpinner.getSelectedItemPosition(), toneSecs[0]);
                 lastTone[0] = out;
                 toast("Saved " + out.getName());
@@ -4636,11 +4691,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
             else toast("Save first");
         });
     }
-    private void writeToneWav(java.io.File out, int freqHz, int kind, int seconds) throws Exception {
+    private void writeToneWav(File out, int freqHz, int kind, int seconds) throws Exception {
         int sr = 44100;
         int n = Math.max(1, sr * Math.max(1, seconds));
         int dataSize = n * 2;
-        java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+        FileOutputStream os = new FileOutputStream(out);
         byte[] h = new byte[44];
         h[0] = 'R'; h[1] = 'I'; h[2] = 'F'; h[3] = 'F';
         int chunk = 36 + dataSize;
@@ -4686,7 +4741,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
             final AudioTrack track;
             if (Build.VERSION.SDK_INT >= 23) {
-                track = new AudioTrack.Builder().setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build()).setAudioFormat(new AudioFormat.Builder().setSampleRate(sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()).setBufferSizeInBytes(Math.max(minBuf, sampleRate)).build();
+                track = new AudioTrack.Builder().setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()).setAudioFormat(new AudioFormat.Builder().setSampleRate(sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()).setBufferSizeInBytes(Math.max(minBuf, sampleRate)).build();
             } else {
                 track = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuf, sampleRate), AudioTrack.MODE_STREAM);
             }
@@ -4716,23 +4771,23 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toast("Tone failed");
         }
     }
-    private java.io.File recordingsDir() {
+    private File recordingsDir() {
         try {
-            java.io.File d = new java.io.File(Environment.getExternalStorageDirectory(), "Recordings");
+            File d = new File(Environment.getExternalStorageDirectory(), "Recordings");
             d.mkdirs();
             if (d.isDirectory()) return d;
         } catch (Exception ignored) {
         }
-        java.io.File c = new java.io.File(getCacheDir(), "recordings");
+        File c = new File(getCacheDir(), "recordings");
         try {
             c.mkdirs();
         } catch (Exception ignored) {
         }
         return c;
     }
-    private void shareToolFile(java.io.File f, String mime) {
+    private void shareToolFile(File f, String mime) {
         try {
-            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
             Intent s = new Intent(Intent.ACTION_SEND);
             s.setType(mime);
             s.putExtra(Intent.EXTRA_STREAM, uri);
@@ -4742,9 +4797,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toast("Share failed");
         }
     }
-    private void openToolFile(java.io.File f, String mime) {
+    private void openToolFile(File f, String mime) {
         try {
-            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
             Intent v = new Intent(Intent.ACTION_VIEW);
             v.setDataAndType(uri, mime);
             v.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -4753,9 +4808,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toast("No app found");
         }
     }
-    private void locateToolFile(java.io.File f) {
+    private void locateToolFile(File f) {
         try {
-            Intent i = new Intent(this, io.github.abdurazaaqmohammed.MPManager.MainActivity.class);
+            Intent i = new Intent(this, MainActivity.class);
             i.putExtra("locatePath", f.getPath());
             startActivity(i);
         } catch (Exception e) {
@@ -4766,11 +4821,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
         long s = Math.max(0, ms / 1000);
         return String.format(Locale.US, "%02d:%02d", s / 60, s % 60);
     }
-    private long audioDuration(java.io.File f) {
-        android.media.MediaMetadataRetriever r = new android.media.MediaMetadataRetriever();
+    private long audioDuration(File f) {
+        MediaMetadataRetriever r = new MediaMetadataRetriever();
         try {
             r.setDataSource(f.getAbsolutePath());
-            return Long.parseLong(r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION));
+            return Long.parseLong(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
         } catch (Exception e) {
             return 0;
         } finally {
@@ -4780,20 +4835,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
             }
         }
     }
-    private void saveAmps(java.io.File audio, List<Float> amps) {
+    private void saveAmps(File audio, List<Float> amps) {
         try {
-            java.io.FileOutputStream os = new java.io.FileOutputStream(audio.getAbsolutePath() + ".amp");
+            FileOutputStream os = new FileOutputStream(audio.getAbsolutePath() + ".amp");
             for (Float v : amps) os.write(Math.max(0, Math.min(255, Math.round(v * 255))));
             os.close();
         } catch (Exception ignored) {
         }
     }
-    private List<Float> loadAmps(java.io.File audio) {
+    private List<Float> loadAmps(File audio) {
         List<Float> out = new ArrayList<>();
         try {
-            java.io.File f = new java.io.File(audio.getAbsolutePath() + ".amp");
+            File f = new File(audio.getAbsolutePath() + ".amp");
             if (!f.exists()) return out;
-            java.io.FileInputStream in = new java.io.FileInputStream(f);
+            FileInputStream in = new FileInputStream(f);
             int b;
             while ((b = in.read()) >= 0) out.add(b / 255f);
             in.close();
@@ -4858,7 +4913,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         recTimerText = new TextView(this);
         recTimerText.setText("00:00");
         recTimerText.setTextSize(40);
-        recTimerText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        recTimerText.setTypeface(Typeface.MONOSPACE);
         recTimerText.setGravity(Gravity.CENTER);
         box.addView(recTimerText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         recWaveView = new RecWaveView(this);
@@ -4883,7 +4938,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         box.addView(playWaveView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(90)));
         playTimeText = new TextView(this);
         playTimeText.setText("00:00 / 00:00");
-        playTimeText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        playTimeText.setTypeface(Typeface.MONOSPACE);
         box.addView(playTimeText);
         playSeek = new SeekBar(this);
         playSeek.setMax(0);
@@ -4923,8 +4978,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
             } catch (Exception ignored) {
             }
         });
-        final android.widget.ListView listView = new android.widget.ListView(this);
-        final List<java.io.File> files = new ArrayList<>();
+        final ListView listView = new ListView(this);
+        final List<File> files = new ArrayList<>();
         final List<String> names = new ArrayList<>();
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
         listView.setAdapter(adapter);
@@ -4955,7 +5010,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 File dir = recordingsDir();
                 File[] all = dir.listFiles();
                 if (all != null) {
-                    java.util.Arrays.sort(all, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                    Arrays.sort(all, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
                     for (File f : all) {
                         if (f.isDirectory() || f.getName().endsWith(".amp")) continue;
                         if (!files.contains(f)) files.add(f);
@@ -4972,9 +5027,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
         refreshList.run();
         final Runnable startRecording = new Runnable() {
             public void run() {
-                if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     pendingAudioAction = this;
-                    ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{android.Manifest.permission.RECORD_AUDIO}, 9002);
+                    ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{Manifest.permission.RECORD_AUDIO}, 9002);
                     return;
                 }
                 try {
@@ -4984,9 +5039,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
                         } catch (Exception ignored) {
                         }
                     }
-                    java.io.File dir = recordingsDir();
+                    File dir = recordingsDir();
                     String ext = fmtSpinner.getSelectedItemPosition() == 0 ? ".m4a" : ".3gp";
-                    recOutFile = new java.io.File(dir, "rec_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) + ext);
+                    recOutFile = new File(dir, "rec_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) + ext);
                     voiceRecorder = new MediaRecorder();
                     voiceRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
                     if (fmtSpinner.getSelectedItemPosition() == 0) {
@@ -5209,7 +5264,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
         addLabel(box, "Tap a recording to play it, long-press for rename, share, locate, open or delete.");
     }
-    private void playRecordingFile(java.io.File f, final TextView status, final TextView nowPlaying, final MaterialButton playBtn) {
+    private void playRecordingFile(File f, final TextView status, final TextView nowPlaying, final MaterialButton playBtn) {
         try {
             try {
                 handler.removeCallbacks(playTick);
@@ -5280,9 +5335,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             toast("Location unavailable");
             return;
         }
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             pendingGpsRetry = true;
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 9003);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 9003);
             return;
         }
         try {
@@ -5531,9 +5586,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 return;
             }
             try {
-                java.io.File dir = new java.io.File(Environment.getExternalStorageDirectory(), "Speech");
+                File dir = new File(Environment.getExternalStorageDirectory(), "Speech");
                 dir.mkdirs();
-                final java.io.File out = new java.io.File(dir, "speech_" + System.currentTimeMillis() + ".wav");
+                final File out = new File(dir, "speech_" + System.currentTimeMillis() + ".wav");
                 ttsEngine.setPitch(pitch[0]);
                 ttsEngine.setSpeechRate(rate[0]);
                 int rc;
@@ -5816,20 +5871,20 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton goBtn = makeButton(box, "Calculate");
         goBtn.setOnClickListener(v -> {
             try {
-                java.time.LocalDate birth = java.time.LocalDate.parse(birthInput.getText().toString().trim());
-                java.time.LocalDate today = java.time.LocalDate.now();
+                LocalDate birth = LocalDate.parse(birthInput.getText().toString().trim());
+                LocalDate today = LocalDate.now();
                 if (birth.isAfter(today)) {
                     output.setText("Birth date is in the future");
                     return;
                 }
-                java.time.Period p = java.time.Period.between(birth, today);
-                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(birth, today);
-                java.time.LocalDate next = birth.withYear(today.getYear());
+                Period p = Period.between(birth, today);
+                long totalDays = ChronoUnit.DAYS.between(birth, today);
+                LocalDate next = birth.withYear(today.getYear());
                 if (!next.isAfter(today)) {
                     next = next.plusYears(1);
                 }
-                long toNext = java.time.temporal.ChronoUnit.DAYS.between(today, next);
-                java.time.format.DateTimeFormatter dayFmt = java.time.format.DateTimeFormatter.ofPattern("EEEE", Locale.US);
+                long toNext = ChronoUnit.DAYS.between(today, next);
+                DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("EEEE", Locale.US);
                 output.setText(p.getYears() + " years, " + p.getMonths() + " months, " + p.getDays() + " days\nTotal " + totalDays + " days  (" + totalDays / 7 + " weeks)\nBorn on a " + birth.format(dayFmt) + "\nNext birthday in " + toNext + " days");
             } catch (Exception e) {
                 output.setText("Use yyyy-MM-dd");
@@ -6042,11 +6097,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 output.setText("Enter cups or grams");
             }
         };
-        ingSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        ingSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 compute.run();
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
         cupsInput.addTextChangedListener(new TextWatcher() {
@@ -6246,7 +6301,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             countLabel.setText("Count: " + n);
             StringBuilder b = new StringBuilder();
             for (int i = 0; i < n; i++) {
-                b.append(java.util.UUID.randomUUID().toString());
+                b.append(UUID.randomUUID().toString());
                 if (i < n - 1) {
                     b.append("\n");
                 }
@@ -6335,13 +6390,13 @@ public class ToolRunnerActivity extends AppCompatActivity {
             try {
                 int flags = 0;
                 if (caseBox.isChecked()) {
-                    flags |= java.util.regex.Pattern.CASE_INSENSITIVE;
+                    flags |= Pattern.CASE_INSENSITIVE;
                 }
                 if (multiBox.isChecked()) {
-                    flags |= java.util.regex.Pattern.MULTILINE;
+                    flags |= Pattern.MULTILINE;
                 }
-                java.util.regex.Pattern p = java.util.regex.Pattern.compile(patternInput.getText().toString(), flags);
-                java.util.regex.Matcher m = p.matcher(testInput.getText().toString());
+                Pattern p = Pattern.compile(patternInput.getText().toString(), flags);
+                Matcher m = p.matcher(testInput.getText().toString());
                 int count = 0;
                 StringBuilder b = new StringBuilder();
                 while (m.find() && count < 10) {
@@ -6387,14 +6442,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton decBtn = makeRowButton(row, "Decode", 1f);
         encBtn.setOnClickListener(v -> {
             try {
-                output.setText(java.net.URLEncoder.encode(input.getText().toString(), StandardCharsets.UTF_8));
+                output.setText(URLEncoder.encode(input.getText().toString(), StandardCharsets.UTF_8));
             } catch (Exception e) {
                 output.setText("Error");
             }
         });
         decBtn.setOnClickListener(v -> {
             try {
-                output.setText(java.net.URLDecoder.decode(input.getText().toString(), StandardCharsets.UTF_8));
+                output.setText(URLDecoder.decode(input.getText().toString(), StandardCharsets.UTF_8));
             } catch (Exception e) {
                 output.setText("Invalid encoding");
             }
@@ -6433,7 +6488,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         decBtn.setOnClickListener(v -> {
             try {
                 String[] parts = input.getText().toString().trim().split("\\s+");
-                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 for (String part : parts) {
                     bos.write(Integer.parseInt(part, 2));
                 }
@@ -6532,7 +6587,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             vibrateTick();
         });
         shuffleBtn.setOnClickListener(v -> {
-            java.util.Collections.shuffle(deck);
+            Collections.shuffle(deck);
             toast("Shuffled");
         });
         resetBtn.setOnClickListener(v -> reset.run());
@@ -6574,7 +6629,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     return;
                 }
                 boolean[] sieve = new boolean[n + 1];
-                java.util.Arrays.fill(sieve, true);
+                Arrays.fill(sieve, true);
                 sieve[0] = false;
                 sieve[1] = false;
                 for (int i = 2; i * i <= n; i++) {
@@ -6759,18 +6814,18 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
     }
     private EditText makeRowInput(LinearLayout row, String hint, int inputType, float weight, String def) {
-        com.google.android.material.textfield.TextInputLayout layout =
-                io.github.abdurazaaqmohammed.ui.UiFields.box(this, hint);
-        EditText e = io.github.abdurazaaqmohammed.ui.UiFields.field(layout, inputType);
+        TextInputLayout layout =
+                UiFields.box(this, hint);
+        EditText e = UiFields.field(layout, inputType);
         e.setGravity(Gravity.CENTER);
         if (def != null) e.setText(def);
         row.addView(layout, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight));
         return e;
     }
     private EditText makeNumCell(LinearLayout row, String def) {
-        com.google.android.material.textfield.TextInputLayout layout =
-                io.github.abdurazaaqmohammed.ui.UiFields.box(this, null);
-        EditText e = io.github.abdurazaaqmohammed.ui.UiFields.field(layout,
+        TextInputLayout layout =
+                UiFields.box(this, null);
+        EditText e = UiFields.field(layout,
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         e.setText(def);
         e.setGravity(Gravity.CENTER);
@@ -7156,7 +7211,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final EditText labelInput = makeInput(box, "What for", InputType.TYPE_CLASS_TEXT);
         final EditText amountInput = makeInput(box, "Amount", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         final TextView totalText = makeOutput(box);
-        final android.widget.ListView listView = new android.widget.ListView(this);
+        final ListView listView = new ListView(this);
         final List<String> names = new ArrayList<>();
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
         listView.setAdapter(adapter);
@@ -7248,18 +7303,18 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final String[] names = new String[]{"Red", "Green", "Blue", "White", "Black", "Gray", "Yellow", "Cyan", "Magenta"};
         final int[] current = new int[]{0};
         // Fullscreen runner that supports tap-to-cycle + exit button
-        final java.util.concurrent.atomic.AtomicInteger idx = new java.util.concurrent.atomic.AtomicInteger(0);
+        final AtomicInteger idx = new AtomicInteger(0);
         final Runnable[] openIdx = new Runnable[1];
         openIdx[0] = () -> {
-            final android.widget.FrameLayout root = new android.widget.FrameLayout(ToolRunnerActivity.this);
+            final FrameLayout root = new FrameLayout(ToolRunnerActivity.this);
             root.setBackgroundColor(cycle[idx.get() % cycle.length]);
             final MaterialButton exit = new MaterialButton(ToolRunnerActivity.this);
             exit.setText(names[idx.get() % names.length] + "  •  tap screen for next  •  EXIT");
-            android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             int m = dp(24);
             ep.setMargins(m, m, m, dp(48));
             root.addView(exit, ep);
-            final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+            final AlertDialog[] holder = new AlertDialog[1];
             root.setOnClickListener(v2 -> {
                 idx.set((idx.get() + 1) % cycle.length);
                 root.setBackgroundColor(cycle[idx.get()]);
@@ -7268,7 +7323,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             exit.setOnClickListener(v2 -> {
                 try { holder[0].dismiss(); } catch (Exception ignored) {}
             });
-            androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(ToolRunnerActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+            AlertDialog d = new MaterialAlertDialogBuilder(ToolRunnerActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
             holder[0] = d;
             fullscreenTestDialog = d;
             d.setOnDismissListener(di -> {
@@ -7277,7 +7332,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             d.show();
             if (d.getWindow() != null) {
                 d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                d.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                d.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
         };
         String[] labels = new String[]{"Red", "Green", "Blue", "White", "Black", "Gray", "Yellow", "Cyan", "Magenta"};
@@ -7412,15 +7467,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
 
     private void openFullscreenStrobe() {
-        final android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+        final FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.WHITE);
         final MaterialButton exit = new MaterialButton(this);
         exit.setText("STOP  •  exit strobe");
-        android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         int m = dp(24);
         ep.setMargins(m, m, m, dp(48));
         root.addView(exit, ep);
-        final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+        final AlertDialog[] holder = new AlertDialog[1];
         final boolean[] on = new boolean[]{true};
         final Runnable[] flip = new Runnable[1];
         flip[0] = new Runnable() {
@@ -7439,7 +7494,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             try { handler.removeCallbacks(flip[0]); } catch (Exception ignored) {}
             try { holder[0].dismiss(); } catch (Exception ignored) {}
         });
-        androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+        AlertDialog d = new MaterialAlertDialogBuilder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
         holder[0] = d;
         strobeDialog = d;
         d.setOnDismissListener(di -> {
@@ -7449,10 +7504,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         d.show();
         if (d.getWindow() != null) {
             d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            android.view.WindowManager.LayoutParams lp = d.getWindow().getAttributes();
+            WindowManager.LayoutParams lp = d.getWindow().getAttributes();
             lp.screenBrightness = 1.0f;
             d.getWindow().setAttributes(lp);
-            d.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            d.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
         handler.post(flip[0]);
     }
@@ -7525,7 +7580,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private void buildBluetooth(LinearLayout box) {
         addTitle(box, "Paired Bluetooth");
         btText = makeOutput(box);
-        final android.widget.ListView listView = new android.widget.ListView(this);
+        final ListView listView = new ListView(this);
         btNames.clear();
         btAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, btNames);
         listView.setAdapter(btAdapter);
@@ -7535,7 +7590,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         MaterialButton openBtn = makeButton(box, "Open Bluetooth settings");
         openBtn.setOnClickListener(v -> {
             try {
-                startActivity(new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS));
+                startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
             } catch (Exception e) {
                 toast("Cannot open settings");
             }
@@ -7545,7 +7600,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
 
     private void buildVolume(LinearLayout box) {
         addTitle(box, "Volume Panel");
-        final android.media.AudioManager audio = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        final AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         if (audio == null) {
             TextView t = makeOutput(box);
             t.setText("Audio service unavailable");
@@ -7599,9 +7654,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         typeSpinner.setAdapter(typeAdapter);
         box.addView(typeSpinner);
-        final android.widget.ListView listView = new android.widget.ListView(this);
+        final ListView listView = new ListView(this);
         final List<String> names = new ArrayList<>();
-        final List<android.net.Uri> uris = new ArrayList<>();
+        final List<Uri> uris = new ArrayList<>();
         final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
         listView.setAdapter(adapter);
         box.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(280)));
@@ -7612,7 +7667,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
             try {
                 RingtoneManager manager = new RingtoneManager(ToolRunnerActivity.this);
                 manager.setType(typeVals[typeSpinner.getSelectedItemPosition()]);
-                android.database.Cursor cursor = manager.getCursor();
+                Cursor cursor = manager.getCursor();
                 while (cursor.moveToNext()) {
                     names.add(cursor.getString(RingtoneManager.TITLE_COLUMN_INDEX));
                     uris.add(manager.getRingtoneUri(cursor.getPosition()));
@@ -7626,11 +7681,11 @@ public class ToolRunnerActivity extends AppCompatActivity {
             adapter.notifyDataSetChanged();
         };
         load.run();
-        typeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        typeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 load.run();
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
         listView.setOnItemClickListener((parent, view, position, id) -> {
@@ -7673,7 +7728,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
         final TextView hexLabel = makeOutput(box);
         hexLabel.setText("#1B73E8");
 
-        final io.github.abdurazaaqmohammed.ui.views.ColorWheelView wheel = new io.github.abdurazaaqmohammed.ui.views.ColorWheelView(this);
+        final ColorWheelView wheel = new ColorWheelView(this);
         box.addView(wheel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(300)));
         addLabel(box, "Alpha (transparency)");
         SeekBar alphaBar = new SeekBar(this);
@@ -7749,16 +7804,16 @@ public class ToolRunnerActivity extends AppCompatActivity {
         dirAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         dirSpinner.setAdapter(dirAdapter);
         box.addView(dirSpinner);
-        dirSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        dirSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 direction[0] = dirs[position];
                 renderWallpaperPreview(previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
             }
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        final android.widget.ImageView preview = new android.widget.ImageView(this);
-        preview.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        final ImageView preview = new ImageView(this);
+        preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         box.addView(preview, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(260)));
         previewHolder[0] = preview;
         gradientBox.setOnCheckedChangeListener((b, checked) -> {
@@ -7776,22 +7831,22 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 toast("Nothing to preview");
                 return;
             }
-            android.widget.ImageView full = new android.widget.ImageView(ToolRunnerActivity.this);
+            ImageView full = new ImageView(ToolRunnerActivity.this);
             full.setImageBitmap((Bitmap) tag);
-            full.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-            android.widget.FrameLayout root = new android.widget.FrameLayout(ToolRunnerActivity.this);
+            full.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            FrameLayout root = new FrameLayout(ToolRunnerActivity.this);
             root.setBackgroundColor(Color.BLACK);
-            root.addView(full, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            root.addView(full, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             MaterialButton exit = new MaterialButton(ToolRunnerActivity.this);
             exit.setText("EXIT preview");
-            android.widget.FrameLayout.LayoutParams ep = new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             int m = dp(24);
             ep.setMargins(m, m, m, dp(48));
             root.addView(exit, ep);
-            final androidx.appcompat.app.AlertDialog[] holder = new androidx.appcompat.app.AlertDialog[1];
+            final AlertDialog[] holder = new AlertDialog[1];
             root.setOnClickListener(v2 -> { try { holder[0].dismiss(); } catch (Exception ignored) {} });
             exit.setOnClickListener(v2 -> { try { holder[0].dismiss(); } catch (Exception ignored) {} });
-            androidx.appcompat.app.AlertDialog d = new MaterialAlertDialogBuilder(ToolRunnerActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
+            AlertDialog d = new MaterialAlertDialogBuilder(ToolRunnerActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).setView(root).create();
             holder[0] = d;
             d.show();
             if (d.getWindow() != null) d.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -7836,15 +7891,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     return;
                 }
                 String name = "wallpaper_" + System.currentTimeMillis() + ".png";
-                android.content.ContentValues cv = new android.content.ContentValues();
-                cv.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name);
-                cv.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png");
-                android.net.Uri uri = getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                ContentValues cv = new ContentValues();
+                cv.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+                cv.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+                Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
                 if (uri == null) {
                     toast("Save failed");
                     return;
                 }
-                java.io.OutputStream os = getContentResolver().openOutputStream(uri);
+                OutputStream os = getContentResolver().openOutputStream(uri);
                 ((Bitmap) tag).compress(Bitmap.CompressFormat.PNG, 100, os);
                 os.close();
                 toast("Saved to gallery");
@@ -7861,10 +7916,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
             try {
                 Object tag = preview.getTag();
                 if (!(tag instanceof Bitmap)) return;
-                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES), "Wallpapers");
+                File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_PICTURES), "Wallpapers");
                 dir.mkdirs();
-                java.io.File out = new java.io.File(dir, "wallpaper_" + System.currentTimeMillis() + ".png");
-                java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+                File out = new File(dir, "wallpaper_" + System.currentTimeMillis() + ".png");
+                FileOutputStream os = new FileOutputStream(out);
                 ((Bitmap) tag).compress(Bitmap.CompressFormat.PNG, 100, os);
                 os.close();
                 shareToolFile(out, "image/png");
@@ -7874,14 +7929,14 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
         locateWpBtn.setOnClickListener(v -> {
             try {
-                java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES), "Wallpapers");
-                java.io.File[] all = dir.listFiles();
+                File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_PICTURES), "Wallpapers");
+                File[] all = dir.listFiles();
                 if (all == null || all.length == 0) {
                     toast("Save or share first");
                     return;
                 }
-                java.io.File latest = all[0];
-                for (java.io.File f : all) if (f.lastModified() > latest.lastModified()) latest = f;
+                File latest = all[0];
+                for (File f : all) if (f.lastModified() > latest.lastModified()) latest = f;
                 locateToolFile(latest);
             } catch (Exception e) {
                 toast("Locate failed");
@@ -7889,10 +7944,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         });
     }
 
-    private final android.widget.ImageView[] previewHolder = new android.widget.ImageView[1];
+    private final ImageView[] previewHolder = new ImageView[1];
     private final boolean[] gradientHolder = new boolean[]{true};
 
-    private void renderWallpaperPreview(android.widget.ImageView preview, int first, int second, boolean gradient, String direction) {
+    private void renderWallpaperPreview(ImageView preview, int first, int second, boolean gradient, String direction) {
         if (preview == null) return;
         try {
             DisplayMetrics dm = getResources().getDisplayMetrics();
@@ -7947,7 +8002,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     int g = Math.round(Color.green(first) * (1 - t) + Color.green(second) * t);
                     int b = Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t);
                     int a = Math.round(Color.alpha(first) * (1 - t) + Color.alpha(second) * t);
-                    java.util.Arrays.fill(pixels, y * w, (y + 1) * w, Color.argb(a, r, g, b));
+                    Arrays.fill(pixels, y * w, (y + 1) * w, Color.argb(a, r, g, b));
                 }
                 bmp.setPixels(pixels, 0, w, 0, 0, w, h);
             }
@@ -7967,15 +8022,15 @@ public class ToolRunnerActivity extends AppCompatActivity {
     private void buildQuickSettings(LinearLayout box) {
         addTitle(box, "System Shortcuts");
         String[][] entries = new String[][]{
-                {"Wi-Fi settings", android.provider.Settings.ACTION_WIFI_SETTINGS},
-                {"Bluetooth settings", android.provider.Settings.ACTION_BLUETOOTH_SETTINGS},
-                {"Display settings", android.provider.Settings.ACTION_DISPLAY_SETTINGS},
-                {"Sound settings", android.provider.Settings.ACTION_SOUND_SETTINGS},
-                {"Date and time", android.provider.Settings.ACTION_DATE_SETTINGS},
-                {"Storage", android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS},
-                {"Location", android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS},
-                {"App info (this app)", android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS},
-                {"All apps", android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS}
+                {"Wi-Fi settings", Settings.ACTION_WIFI_SETTINGS},
+                {"Bluetooth settings", Settings.ACTION_BLUETOOTH_SETTINGS},
+                {"Display settings", Settings.ACTION_DISPLAY_SETTINGS},
+                {"Sound settings", Settings.ACTION_SOUND_SETTINGS},
+                {"Date and time", Settings.ACTION_DATE_SETTINGS},
+                {"Storage", Settings.ACTION_INTERNAL_STORAGE_SETTINGS},
+                {"Location", Settings.ACTION_LOCATION_SOURCE_SETTINGS},
+                {"App info (this app)", Settings.ACTION_APPLICATION_DETAILS_SETTINGS},
+                {"All apps", Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS}
         };
         for (String[] entry : entries) {
             final String action = entry[1];
@@ -7985,7 +8040,7 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 try {
                     Intent intent = new Intent(action);
                     if (label.startsWith("App info")) {
-                        intent.setData(android.net.Uri.parse("package:" + getPackageName()));
+                        intent.setData(Uri.parse("package:" + getPackageName()));
                     }
                     startActivity(intent);
                 } catch (Exception e) {
@@ -8205,8 +8260,8 @@ public class ToolRunnerActivity extends AppCompatActivity {
     }
     private void buildQrGen(LinearLayout box) {
         addTitle(box, "QR Generator");
-        final EditText input = makeInput(box, "Text, URL or WIFI config", android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        qrGenView = new android.widget.ImageView(this);
+        final EditText input = makeInput(box, "Text, URL or WIFI config", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        qrGenView = new ImageView(this);
         qrGenView.setAdjustViewBounds(true);
         LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(280));
         vp.gravity = Gravity.CENTER;
@@ -8240,10 +8295,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
                 try {
                     QrUtil.saveToGallery(ToolRunnerActivity.this, qrGenBitmap, "qr_" + System.currentTimeMillis());
                     try {
-                        java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES), "QRCodes");
+                        File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_PICTURES), "QRCodes");
                         dir.mkdirs();
-                        java.io.File out = new java.io.File(dir, "qr_" + System.currentTimeMillis() + ".png");
-                        java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+                        File out = new File(dir, "qr_" + System.currentTimeMillis() + ".png");
+                        FileOutputStream os = new FileOutputStream(out);
                         qrGenBitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
                         os.close();
                         qrGenFile = out;
@@ -8258,10 +8313,10 @@ public class ToolRunnerActivity extends AppCompatActivity {
         shareBtn.setOnClickListener(v -> {
             if (qrGenBitmap != null) {
                 try {
-                    java.io.File dir = new java.io.File(new File(Environment.getExternalStorageDirectory(), android.os.Environment.DIRECTORY_PICTURES),  "QRCodes");
+                    File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_PICTURES),  "QRCodes");
                     dir.mkdirs();
-                    java.io.File out = new java.io.File(dir, "qr_" + System.currentTimeMillis() + ".png");
-                    java.io.FileOutputStream os = new java.io.FileOutputStream(out);
+                    File out = new File(dir, "qr_" + System.currentTimeMillis() + ".png");
+                    FileOutputStream os = new FileOutputStream(out);
                     qrGenBitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
                     os.close();
                     qrGenFile = out;
@@ -8298,9 +8353,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
         addTitle(box, "QR Scanner");
         MaterialButton scanBtn = makeButton(box, "Scan with camera");
         scanBtn.setOnClickListener(v -> {
-            if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(ToolRunnerActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 pendingQrScan = true;
-                ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{android.Manifest.permission.CAMERA}, 9005);
+                ActivityCompat.requestPermissions(ToolRunnerActivity.this, new String[]{Manifest.permission.CAMERA}, 9005);
                 return;
             }
             startQrScan();

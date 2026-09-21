@@ -14,6 +14,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -44,7 +45,7 @@ public final class ResourceSweeper {
         Map<Integer, ResourceEntry> byId = new LinkedHashMap<>();
         Map<String, ResourceEntry> byName = new HashMap<>();
         for (PackageBlock pkg : table.listPackages()) {
-            for (java.util.Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
+            for (Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
                 ResourceEntry entry = it.next();
                 byId.put(entry.getResourceId(), entry);
                 byName.put(entry.getType() + ":" + entry.getName(), entry);

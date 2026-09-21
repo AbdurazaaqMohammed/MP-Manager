@@ -1,6 +1,8 @@
 package io.github.ratul.topactivity.ui;
 
+import android.R;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -26,8 +28,8 @@ public class MaxHeightRecyclerView extends RecyclerView {
 
     private void init(Context context, AttributeSet attrs) {
         if (attrs != null) {
-            int[] attrsArray = new int[]{android.R.attr.maxHeight};
-            android.content.res.TypedArray a = context.obtainStyledAttributes(attrs, attrsArray);
+            int[] attrsArray = new int[]{R.attr.maxHeight};
+            TypedArray a = context.obtainStyledAttributes(attrs, attrsArray);
             maxHeightPx = a.getDimensionPixelSize(0, 0);
             a.recycle();
         }

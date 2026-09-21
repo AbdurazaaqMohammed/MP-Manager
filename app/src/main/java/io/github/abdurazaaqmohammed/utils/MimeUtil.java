@@ -6,6 +6,8 @@ import android.webkit.MimeTypeMap;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
+import org.apache.commons.io.FilenameUtils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -56,7 +58,7 @@ public class MimeUtil {
         }
         if (len <= 0) return null;
 
-        String ext = org.apache.commons.io.FilenameUtils.getExtension(file.getName()).toLowerCase(Locale.ROOT);
+        String ext = FilenameUtils.getExtension(file.getName()).toLowerCase(Locale.ROOT);
 
         if (startsWith(data, ZIP_MAGIC)) return zipFamilyMimeType(ext);
         if (startsWith(data, RAR_MAGIC)) return "application/x-rar-compressed";
@@ -128,7 +130,7 @@ public class MimeUtil {
     private static String guessFromExtension(String fileNameOrExt) {
         try {
             String ext = fileNameOrExt.contains(".")
-                    ? org.apache.commons.io.FilenameUtils.getExtension(fileNameOrExt).toLowerCase(Locale.ROOT)
+                    ? FilenameUtils.getExtension(fileNameOrExt).toLowerCase(Locale.ROOT)
                     : fileNameOrExt;
             if (ext.isEmpty()) return null;
             return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);

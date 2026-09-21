@@ -17,6 +17,7 @@
 package io.github.ratul.topactivity.manager;
 
 import android.annotation.SuppressLint;
+import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -27,6 +28,7 @@ import androidx.core.app.NotificationManagerCompat;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.ratul.topactivity.receivers.NotificationActionReceiver;
 import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.repository.ServiceState;
 
 public class NotificationUiManager {
 
@@ -58,7 +60,7 @@ public class NotificationUiManager {
     public void show() {
         if (!notificationManager.areNotificationsEnabled()) return;
 
-        io.github.ratul.topactivity.repository.ServiceState serviceState = DataRepository.getInstance().getAppState();
+        ServiceState serviceState = DataRepository.getInstance().getAppState();
         updateNotification(serviceState.getPkg(), serviceState.getCls());
 
         DataRepository.getInstance().addListener(state -> {
@@ -90,7 +92,7 @@ public class NotificationUiManager {
                 R.drawable.ic_cancel, stopLabel, actionStopPendingIntent()
         );
 
-        android.app.Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)
+        Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentTitle(pkg)
                 .setSmallIcon(R.drawable.ic_logo)
                 .setContentText(cls)

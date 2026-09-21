@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 
@@ -9,11 +10,16 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -1026,7 +1032,7 @@ public class RootManager {
     private record ListCacheEntry(File[] files, long at) {
     }
 
-    private final java.util.Map<String, ListCacheEntry> listCache = new java.util.HashMap<>();
+    private final Map<String, ListCacheEntry> listCache = new HashMap<>();
     private static final long LIST_CACHE_TTL = 8000L;
 
     private synchronized File[] cachedList(String dirPath) {
@@ -1087,7 +1093,7 @@ public class RootManager {
     }
 
     private static File[] unionRootFiles(File[] a, File[] b) {
-        java.util.LinkedHashMap<String, File> map = new java.util.LinkedHashMap<>();
+        LinkedHashMap<String, File> map = new LinkedHashMap<>();
         if (a != null) {
             for (File f : a) {
                 if (f != null && !map.containsKey(f.getName())) map.put(f.getName(), f);
@@ -1108,10 +1114,10 @@ public class RootManager {
                 ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
         List<String> pkgs = new ArrayList<>();
         try {
-            List<android.content.pm.ApplicationInfo> apps =
+            List<ApplicationInfo> apps =
                     context.getPackageManager().getInstalledApplications(0);
             if (apps != null) {
-                for (android.content.pm.ApplicationInfo app : apps) {
+                for (ApplicationInfo app : apps) {
                     if (app != null && isPackageNameValid(app.packageName)) pkgs.add(app.packageName);
                 }
             }
@@ -1211,7 +1217,7 @@ public class RootManager {
         return files.toArray(new File[0]);
     }
 
-    public long streamFromRoot(String srcPath, java.io.OutputStream out, long maxBytes) throws IOException {
+    public long streamFromRoot(String srcPath, OutputStream out, long maxBytes) throws IOException {
         if (!isRootMode()) throw new IOException("Root mode is disabled");
         if (srcPath == null || !srcPath.startsWith("/")) {
             throw new IOException("Refusing to read non-absolute path");
@@ -1223,7 +1229,7 @@ public class RootManager {
         Process process = null;
         try {
             process = Runtime.getRuntime().exec(suCommandForFs("cat " + escapeShellArg(srcPath)));
-            java.io.InputStream stdout = process.getInputStream();
+            InputStream stdout = process.getInputStream();
             byte[] buf = new byte[65536];
             long total = 0;
             int n;

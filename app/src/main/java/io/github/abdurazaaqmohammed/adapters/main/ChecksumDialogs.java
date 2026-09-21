@@ -6,11 +6,13 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
@@ -19,6 +21,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import net.lingala.zip4j.ZipFile;
@@ -105,13 +108,13 @@ public class ChecksumDialogs {
         title.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
         title.setPadding(0, dp(10), 0, dp(4));
         container.addView(title);
-        android.widget.EditText input = new android.widget.EditText(context);
+        EditText input = new EditText(context);
         input.setHint(R.string.verify_hash_hint);
         input.setTypeface(Typeface.MONOSPACE);
         input.setTextSize(13);
         input.setSingleLine(false);
         container.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        com.google.android.material.button.MaterialButton verifyBtn = new com.google.android.material.button.MaterialButton(
+        MaterialButton verifyBtn = new MaterialButton(
                 context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         verifyBtn.setText(R.string.verify);
         verifyBtn.setTextSize(12);
@@ -125,7 +128,7 @@ public class ChecksumDialogs {
         container.addView(result);
         verifyBtn.setOnClickListener(v -> {
             String pasted = input.getText() == null ? "" : input.getText().toString();
-            String norm = pasted.toLowerCase(java.util.Locale.US).replaceAll("[^0-9a-f]", "");
+            String norm = pasted.toLowerCase(Locale.US).replaceAll("[^0-9a-f]", "");
             Map<String, String> hashes = null;
             try {
                 hashes = provider.getHashes();
@@ -135,7 +138,7 @@ public class ChecksumDialogs {
             if (!norm.isEmpty() && hashes != null) {
                 for (Map.Entry<String, String> e : hashes.entrySet()) {
                     if (e.getValue() == null) continue;
-                    String h = e.getValue().toLowerCase(java.util.Locale.US).replaceAll("[^0-9a-f]", "");
+                    String h = e.getValue().toLowerCase(Locale.US).replaceAll("[^0-9a-f]", "");
                     if (!h.isEmpty() && h.equals(norm)) {
                         match = e.getKey();
                         break;
@@ -283,7 +286,7 @@ public class ChecksumDialogs {
         LinearLayout container = view.findViewById(R.id.checksumContainer);
         addCrc32Row(container, entry.computeCrc32());
         addChecksumFileHeader(container, "Full checksums (on-demand)");
-        com.google.android.material.button.MaterialButton calcBtn = new com.google.android.material.button.MaterialButton(
+        MaterialButton calcBtn = new MaterialButton(
                 context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         calcBtn.setText(context.getString(R.string.compute));
         calcBtn.setTextSize(12);

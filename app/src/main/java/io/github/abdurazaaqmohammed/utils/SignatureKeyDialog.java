@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 
@@ -373,13 +374,13 @@ public class SignatureKeyDialog {
     }
 
     private static List<String> getSavedPaths(SharedPreferences prefs, String key) {
-        java.util.Set<String> set = prefs.getStringSet(key, null);
+        Set<String> set = prefs.getStringSet(key, null);
         if (set == null) return new ArrayList<>();
         return new ArrayList<>(set);
     }
 
-    private static java.util.Set<String> dedupe(List<String> list) {
-        java.util.Set<String> s = new java.util.HashSet<>();
+    private static Set<String> dedupe(List<String> list) {
+        Set<String> s = new HashSet<>();
         if (list == null) return s;
         for (String x : list) if (x != null) s.add(x);
         return s;

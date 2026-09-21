@@ -25,8 +25,10 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Pair;
 
 import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.repository.ServiceState;
 import io.github.ratul.topactivity.utils.DatabaseUtil;
 
 public class PackageMonitoringService extends Service {
@@ -39,7 +41,7 @@ public class PackageMonitoringService extends Service {
     private final Runnable observerTask = new Runnable() {
         @Override
         public void run() {
-            io.github.ratul.topactivity.repository.ServiceState serviceState = DataRepository.getInstance().getAppState();
+            ServiceState serviceState = DataRepository.getInstance().getAppState();
 
             if (!serviceState.isRunning()) {
                 handler.removeCallbacks(this);
@@ -47,7 +49,7 @@ public class PackageMonitoringService extends Service {
                 return;
             }
 
-            android.util.Pair<String, String> foreground = getForegroundApp();
+            Pair<String, String> foreground = getForegroundApp();
 
             String pkg = foreground.first;
             String cls = foreground.second;
@@ -98,7 +100,7 @@ public class PackageMonitoringService extends Service {
         }
     }
 
-    private android.util.Pair<String, String> getForegroundApp() {
+    private Pair<String, String> getForegroundApp() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             long currentTime = System.currentTimeMillis();
             UsageEvents usageEvents = usageStats.queryEvents(currentTime - 5000, currentTime);
@@ -117,8 +119,8 @@ public class PackageMonitoringService extends Service {
                 }
             }
 
-            return new android.util.Pair<>(latestPackage, latestClass);
+            return new Pair<>(latestPackage, latestClass);
         }
-        return new android.util.Pair<>(null, null);
+        return new Pair<>(null, null);
     }
 }

@@ -14,11 +14,13 @@ import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValueMap;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -36,7 +38,7 @@ public final class ApkValidator {
 
             for (DexFileInputSource source : module.listDexFiles()) {
                 byte[] bytes;
-                try (InputStream is = source.getInputSource().openStream(); java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
+                try (InputStream is = source.getInputSource().openStream(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
                     byte[] buf = new byte[8192];
                     int len;
                     while ((len = is.read(buf)) != -1) bos.write(buf, 0, len);
@@ -52,7 +54,7 @@ public final class ApkValidator {
     private static void verifyResources(TableBlock table) throws IOException {
         Map<Integer, ResourceEntry> byId = new HashMap<>();
         for (PackageBlock pkg : table.listPackages()) {
-            for (java.util.Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
+            for (Iterator<ResourceEntry> it = pkg.getResources(); it.hasNext(); ) {
                 ResourceEntry entry = it.next();
                 byId.put(entry.getResourceId(), entry);
             }

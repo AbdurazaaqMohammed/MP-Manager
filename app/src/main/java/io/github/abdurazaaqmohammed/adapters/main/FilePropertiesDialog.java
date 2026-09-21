@@ -27,7 +27,9 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -183,7 +185,7 @@ public class FilePropertiesDialog {
             return;
         }
 
-        java.util.Map<String, String> propHashes = new java.util.HashMap<>();
+        Map<String, String> propHashes = new HashMap<>();
         ChecksumDialogs.HashProvider propSupplier = () -> propHashes;
         if (!isInZip && !multi && file.isFile()) {
             if (RootStaging.needsStaging(context, file)) {
@@ -225,7 +227,7 @@ public class FilePropertiesDialog {
                 checksumDialogs.addVerifySection(checksumRows, propSupplier);
             }
         } else if (isInZip && !multi && !entry.isDirectory()) {
-            java.util.Map<String, String> zipHashes = new java.util.HashMap<>();
+            Map<String, String> zipHashes = new HashMap<>();
             long entryCrc = entry.computeCrc32();
             if (entryCrc >= 0) zipHashes.put("CRC32", HashUtil.crc32Hex(entryCrc));
             checksumDialogs.addCrc32Row(checksumRows, entryCrc);

@@ -12,6 +12,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -40,6 +41,9 @@ import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 
+import org.apache.commons.io.FilenameUtils;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -61,13 +65,18 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
+import io.github.abdurazaaqmohammed.utils.DexStringUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
@@ -257,8 +266,8 @@ public class FileOperationsHelper {
         if (!useElevated) return first;
         try {
             if (!AccessManager.exists(context, first.getAbsolutePath())) return first;
-            String base = org.apache.commons.io.FilenameUtils.getBaseName(name);
-            String ext = org.apache.commons.io.FilenameUtils.getExtension(name);
+            String base = FilenameUtils.getBaseName(name);
+            String ext = FilenameUtils.getExtension(name);
             for (int i = 1; i < 1000; i++) {
                 String candidate = ext.isEmpty() ? base + " (" + i + ")" : base + " (" + i + ")." + ext;
                 File c = new File(destDir, candidate);
@@ -353,8 +362,8 @@ public class FileOperationsHelper {
     }
 
     private String getDuplicateName(String fileName, File destinationFolder) {
-        String base = org.apache.commons.io.FilenameUtils.getBaseName(fileName);
-        String ext = org.apache.commons.io.FilenameUtils.getExtension(fileName);
+        String base = FilenameUtils.getBaseName(fileName);
+        String ext = FilenameUtils.getExtension(fileName);
         boolean useElevated = false;
         try {
             useElevated = AccessManager.fileOpsOn(context);
@@ -376,8 +385,8 @@ public class FileOperationsHelper {
         final String defaultName = getDuplicateName(sourceFile.getName(), destinationFolder);
         dismissActiveProgress();
         context.handler.post(() -> {
-            android.view.View view = android.view.LayoutInflater.from(context).inflate(R.layout.enter_name, null);
-            android.widget.EditText input = view.findViewById(R.id.m_et_edittext);
+            View view = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
+            EditText input = view.findViewById(R.id.m_et_edittext);
             input.setText(defaultName);
             input.setSelection(0, defaultName.length());
             input.requestFocus();
@@ -673,13 +682,13 @@ public class FileOperationsHelper {
                 // stage a copy into cache first (binary-safe).
                 File readable = archive;
                 File staged = null;
-                if (io.github.abdurazaaqmohammed.utils.RootStaging.needsStaging(context, archive)) {
-                    staged = io.github.abdurazaaqmohammed.utils.RootStaging.stageForRead(
+                if (RootStaging.needsStaging(context, archive)) {
+                    staged = RootStaging.stageForRead(
                             context, archive.getAbsolutePath());
                     readable = staged;
                 }
                 try {
-                    boolean keepTime = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
+                    boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
                     ArchiveUtil.extract(readable, destDir, keepTime);
                 } finally {
                     if (staged != null) {
@@ -699,19 +708,19 @@ public class FileOperationsHelper {
     private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
         String[] options = {context.getString(R.string.arsc_plus), context.getString(R.string.arsc_editor), context.getString(R.string.translation_mode), context.getString(R.string.querier_title)};
         String[] modes = {
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_PLUS,
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR,
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_TRANSLATE,
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_QUERIER};
+                ArscEditorActivity.MODE_PLUS,
+                ArscEditorActivity.MODE_EDITOR,
+                ArscEditorActivity.MODE_TRANSLATE,
+                ArscEditorActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.open_with))
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
                     // Simple MT-style "ARSC Editor" lives in its own activity;
                     // Plus / Translation / Querier stay in ArscEditorActivity.
-                    Class<?> target = io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR.equals(modes[which])
-                            ? io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity.class
-                            : io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class;
+                    Class<?> target = ArscEditorActivity.MODE_EDITOR.equals(modes[which])
+                            ? ArscSimpleEditorActivity.class
+                            : ArscEditorActivity.class;
                     Intent arscIntent = new Intent(context, target)
                             .putExtra("path", arscFile.getAbsolutePath())
                             .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
@@ -938,7 +947,7 @@ public class FileOperationsHelper {
             try {
                 byte[] bytes;
                 try (FileInputStream fis = new FileInputStream(dexFile);
-                     java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
+                     ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
                     byte[] buf = new byte[65536];
                     int n;
                     while ((n = fis.read(buf)) != -1) bos.write(buf, 0, n);
@@ -1010,10 +1019,10 @@ public class FileOperationsHelper {
     }
 
     private void showDexStringReplaceDialog(File dexFile, File zipFileOrNull) {
-        android.widget.EditText findInput = new android.widget.EditText(context);
+        EditText findInput = new EditText(context);
         findInput.setHint(context.rss.getString(R.string.find));
         findInput.setSingleLine(true);
-        android.widget.EditText replaceInput = new android.widget.EditText(context);
+        EditText replaceInput = new EditText(context);
         replaceInput.setHint(context.rss.getString(R.string.replace_with));
         replaceInput.setSingleLine(true);
         CheckBox matchCase = new CheckBox(context);
@@ -1049,7 +1058,7 @@ public class FileOperationsHelper {
         new Thread(() -> {
             try {
                 File tmpOut = File.createTempFile("dexstr", ".dex", context.getCacheDir());
-                int count = io.github.abdurazaaqmohammed.utils.DexStringUtil.replaceStrings(dexFile, tmpOut, find, replacement, matchCase);
+                int count = DexStringUtil.replaceStrings(dexFile, tmpOut, find, replacement, matchCase);
                 pm.dismiss();
                 context.handler.post(() -> dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                         .setMessage(context.rss.getString(R.string.fo_replacements_apply, count))
@@ -1129,7 +1138,7 @@ public class FileOperationsHelper {
                     File outDir = new File(context.getCacheDir(), "dexmergeout" + UUID.randomUUID());
                     outDir.mkdirs();
                     File merged = new File(outDir, "classes_merged.dex");
-                    io.github.abdurazaaqmohammed.utils.DexMergeUtil.mergeDexFiles(inputs, merged, api);
+                    DexMergeUtil.mergeDexFiles(inputs, merged, api);
                     pm.dismiss();
                     context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(merged)));
                 } else {
@@ -1149,7 +1158,7 @@ public class FileOperationsHelper {
                     }
                     int api = detectDexApi(inputs.get(0));
                     File merged = FileUtils.getUnusedFile(new File(dir, "classes_merged.dex"));
-                    io.github.abdurazaaqmohammed.utils.DexMergeUtil.mergeDexFiles(inputs, merged, api);
+                    DexMergeUtil.mergeDexFiles(inputs, merged, api);
                     pm.dismiss();
                     context.handler.post(() -> {
                         Extensions.showMessage(context, context.rss.getString(R.string.fo_merged_n, inputs.size()));

@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ApkExtractor;
 
+import android.content.pm.ApplicationInfo;
 import android.graphics.drawable.Drawable;
 
 import java.io.File;
@@ -17,7 +18,7 @@ public class AppInfo {
     public long lastUpdate;
     public final String versionName;
     final int versionCode;
-    public android.content.pm.ApplicationInfo appInfo;
+    public ApplicationInfo appInfo;
     public AppInfo(String f, String name, Drawable icon, String packageName, boolean enabled, boolean isSplit, String firstInstalled, String lastUpdated, int versionCode, String versionName) {
         this.filePath = f;
         this.name = name;

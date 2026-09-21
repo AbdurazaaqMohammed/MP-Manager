@@ -37,6 +37,7 @@ package modder.hub.dexeditor.views;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
@@ -46,13 +47,17 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 
 import android.view.KeyEvent;
 
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 // Author - @developer-krushna
 public class AlertCircularProgress {
     private final Context context;
     private final Activity activity;
-    private final androidx.appcompat.app.AlertDialog alertDialog;
+    private final AlertDialog alertDialog;
     private final TextView progressMessage;
     private final TextView progressTitle;
     private final Handler uiHandler;
@@ -72,7 +77,7 @@ public class AlertCircularProgress {
         View view = View.inflate(context, R.layout.circular_progress, null);
         progressMessage = view.findViewById(R.id.progress_message);
         progressTitle = view.findViewById(R.id.progress_title);
-        alertDialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+        alertDialog = new MaterialAlertDialogBuilder(activity)
                 .setCancelable(false)
                 .setView(view)
                 .create();
@@ -80,9 +85,9 @@ public class AlertCircularProgress {
     }
 
     private void setupBackPressCancellation() {
-        alertDialog.setOnKeyListener(new android.content.DialogInterface.OnKeyListener() {
+        alertDialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
             @Override
-            public boolean onKey(android.content.DialogInterface dialog, int keyCode, KeyEvent event) {
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
                 if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
                     long currentTime = System.currentTimeMillis();
                     if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {

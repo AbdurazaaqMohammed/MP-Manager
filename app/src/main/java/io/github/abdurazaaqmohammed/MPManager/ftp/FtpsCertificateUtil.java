@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.MPManager.ftp;
 
+import android.sun.security.provider.JavaKeyStoreProvider;
 import android.sun.security.x509.CertAndKeyGen;
 import android.sun.security.x509.X500Name;
 
@@ -29,7 +30,7 @@ public class FtpsCertificateUtil {
         if (keystoreFile.exists() && keystoreFile.length() > 0) {
             return keystoreFile;
         }
-        Security.addProvider(new android.sun.security.provider.JavaKeyStoreProvider());
+        Security.addProvider(new JavaKeyStoreProvider());
         File parent = keystoreFile.getParentFile();
         if (parent != null && !parent.exists()) {
             parent.mkdirs();

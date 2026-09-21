@@ -39,6 +39,10 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.BackgroundColorSpan;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,13 +55,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.widget.CompoundButtonCompat;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -96,7 +104,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     private boolean isSearchList = false;
 
     // Caches for performance
-    private final java.util.Map<String, Boolean> deletedStateCache = new java.util.HashMap<>();
+    private final Map<String, Boolean> deletedStateCache = new HashMap<>();
 
     public TreeAdapter(Context context, List<TreeNode> rootNodes, OnNodeClickListener listener, boolean isHistory) {
         this(context, rootNodes, listener, isHistory, false);
@@ -163,7 +171,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         visibleNodes.clear();
         addVisibleNodesRecursive(rootNodes, 0);
 
-        androidx.recyclerview.widget.DiffUtil.calculateDiff(new androidx.recyclerview.widget.DiffUtil.Callback() {
+        DiffUtil.calculateDiff(new DiffUtil.Callback() {
             @Override
             public int getOldListSize() {
                 return oldList.size();
@@ -423,7 +431,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                 holder.lastBackgroundRes = -1;
             } else {
                 if (holder.lastBackgroundRes != 0) {
-                    android.util.TypedValue outValue = new android.util.TypedValue();
+                    TypedValue outValue = new TypedValue();
                     context.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
                     holder.itemContent.setBackgroundResource(outValue.resourceId);
                     holder.lastBackgroundRes = 0;
@@ -547,11 +555,11 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             String suffix = (endLimit < text.length()) ? "..." : "";
             String displayText = prefix + text.substring(startLimit, endLimit).replace("\n", " ").replace("\r", " ") + suffix;
 
-            android.text.SpannableString spannable = new android.text.SpannableString(displayText);
+            SpannableString spannable = new SpannableString(displayText);
             String lowerDisplay = displayText.toLowerCase();
             int s = 0;
             while ((s = lowerDisplay.indexOf(lowerQuery, s)) != -1) {
-                spannable.setSpan(new android.text.style.BackgroundColorSpan(0xFFB3E5FC), s, s + query.length(), android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                spannable.setSpan(new BackgroundColorSpan(0xFFB3E5FC), s, s + query.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                 s += query.length();
             }
             node.setCachedSpannedName(spannable);
@@ -1078,7 +1086,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             iconBackground = itemView.findViewById(R.id.icon_background);
             divider = itemView.findViewById(R.id.divider);
             indentSpacer = itemView.findViewById(R.id.indent_spacer);
-            defaultCheckBoxDrawable = androidx.core.widget.CompoundButtonCompat.getButtonDrawable(checkBox);
+            defaultCheckBoxDrawable = CompoundButtonCompat.getButtonDrawable(checkBox);
         }
     }
 }

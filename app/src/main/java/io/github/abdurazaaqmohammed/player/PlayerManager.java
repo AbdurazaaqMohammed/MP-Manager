@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.media.AudioAttributes;
@@ -16,10 +17,12 @@ import android.view.Surface;
 
 import androidx.preference.PreferenceManager;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 public class PlayerManager {
@@ -236,16 +239,16 @@ public class PlayerManager {
         if (queue.size() == 1 && currentIndex >= 0 && currentIndex < queue.size()) {
             MediaItem current = queue.get(currentIndex);
             if (current != null && current.path != null) {
-                java.io.File currentFile = new java.io.File(current.path);
-                java.io.File dir = currentFile.getParentFile();
+                File currentFile = new File(current.path);
+                File dir = currentFile.getParentFile();
                 if (dir != null && dir.isDirectory()) {
-                    java.io.File[] files = dir.listFiles();
+                    File[] files = dir.listFiles();
                     if (files != null) {
                         boolean found = false;
                         for (int i = 0; i < files.length; i++) {
                             if (files[i].equals(currentFile)) { found = true; continue; }
                             if (found && files[i].isFile()) {
-                                String name = files[i].getName().toLowerCase(java.util.Locale.ROOT);
+                                String name = files[i].getName().toLowerCase(Locale.ROOT);
                                 if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") || name.endsWith(".ogg") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".wma") || name.endsWith(".opus") || name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mov") || name.endsWith(".webm") || name.endsWith(".3gp") || name.endsWith(".ts") || name.endsWith(".flv") || name.endsWith(".wmv")) {
                                     queue.add(buildMediaItem(appContext, files[i].getAbsolutePath()));
                                     return currentIndex + 1;
@@ -406,7 +409,7 @@ public class PlayerManager {
             mp.start();
             notifyState(PlayState.PLAYING);
             startProgressUpdater();
-            try { appContext.startService(new android.content.Intent(appContext, MusicService.class)); } catch (Exception ignored) {}
+            try { appContext.startService(new Intent(appContext, MusicService.class)); } catch (Exception ignored) {}
         });
         currentPlayer.setOnCompletionListener(mp -> {
             if (mp != mediaPlayer) return;
@@ -548,7 +551,7 @@ public class PlayerManager {
     public interface VideoSizeChangedListener { void onVideoSizeChanged(int width, int height); }
 
     public static MediaItem buildMediaItem(Context context, String filePath) {
-        Uri uri = Uri.fromFile(new java.io.File(filePath));
+        Uri uri = Uri.fromFile(new File(filePath));
         String title = null, artist = null, album = null;
         long duration = 0;
         boolean isVideo = false;

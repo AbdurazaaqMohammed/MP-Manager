@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -109,7 +110,7 @@ public class FilePickerDialog {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void afterTextChanged(Editable s) {
-                nameFilter = s.toString().toLowerCase(java.util.Locale.ROOT);
+                nameFilter = s.toString().toLowerCase(Locale.ROOT);
                 reloadCurrent();
             }
         });
@@ -190,7 +191,7 @@ public class FilePickerDialog {
                 if (f == null) continue;
                 if (f.isFile() && !passesExtension(f)) continue;
                 if (!matchesFilter(f)) continue;
-                if (!nameFilter.isEmpty() && !f.getName().toLowerCase(java.util.Locale.ROOT).contains(nameFilter)) continue;
+                if (!nameFilter.isEmpty() && !f.getName().toLowerCase(Locale.ROOT).contains(nameFilter)) continue;
                 list.add(f);
             }
             sortFiles(list);
@@ -366,7 +367,7 @@ public class FilePickerDialog {
 
         static class ViewHolder extends RecyclerView.ViewHolder {
             final TextView fileNameView, fileDateView;
-            final android.widget.ImageView fileIconView;
+            final ImageView fileIconView;
 
             ViewHolder(View v) {
                 super(v);

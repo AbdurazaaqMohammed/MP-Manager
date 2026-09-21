@@ -5,8 +5,13 @@ import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodImplementation;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
+import com.android.tools.smali.dexlib2.iface.reference.Reference;
+import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.reandroid.apk.APKLogger;
 
 import java.util.ArrayDeque;
@@ -243,14 +248,14 @@ public class ReachabilityAnalyzer {
             if (classDef == null) continue;
             for (Method method : classDef.getMethods()) {
                 if (!keptMethodKeys.contains(DexIndex.methodKey(method))) continue;
-                com.android.tools.smali.dexlib2.iface.MethodImplementation impl = method.getImplementation();
+                MethodImplementation impl = method.getImplementation();
                 if (impl == null) continue;
-                for (com.android.tools.smali.dexlib2.iface.instruction.Instruction instruction : impl.getInstructions()) {
-                    if (!(instruction instanceof com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)) continue;
-                    com.android.tools.smali.dexlib2.iface.reference.Reference ref =
-                            ((com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction) instruction).getReference();
-                    if (ref instanceof com.android.tools.smali.dexlib2.iface.reference.StringReference)
-                        strings.add(((com.android.tools.smali.dexlib2.iface.reference.StringReference) ref).getString());
+                for (Instruction instruction : impl.getInstructions()) {
+                    if (!(instruction instanceof ReferenceInstruction)) continue;
+                    Reference ref =
+                            ((ReferenceInstruction) instruction).getReference();
+                    if (ref instanceof StringReference)
+                        strings.add(((StringReference) ref).getString());
                 }
             }
         }

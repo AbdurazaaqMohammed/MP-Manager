@@ -12,6 +12,7 @@ import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.util.Base64;
 import android.view.GestureDetector;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -45,9 +46,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -580,11 +583,11 @@ public class HexEditorActivity extends AppCompatActivity {
         String[] formats = {"hex", "decimal", "binary", "ASCII", "Base64"};
         EditText input = new EditText(this);
         input.setMinLines(3);
-        input.setGravity(android.view.Gravity.TOP);
+        input.setGravity(Gravity.TOP);
         input.setText(getClipboardText());
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.hex_paste_from_x, formats[formatIndex]))
-                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, getString(R.string.hex_paste_bytes), 16))
+                .setView(UiFields.wrap(this, input, getString(R.string.hex_paste_bytes), 16))
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     try {
                         byte[] data = parsePastedBytes(formatIndex, input.getText().toString());
@@ -674,7 +677,7 @@ public class HexEditorActivity extends AppCompatActivity {
     private void saveChangesRoot() {
         backupForSave();
         try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
-            for (java.util.Map.Entry<Integer, Integer> entry : mods.entrySet()) {
+            for (Map.Entry<Integer, Integer> entry : mods.entrySet()) {
                 w.seek(entry.getKey());
                 w.writeByte(entry.getValue());
             }
@@ -738,7 +741,7 @@ public class HexEditorActivity extends AppCompatActivity {
         input.setText(String.format(Locale.US, "%X", cursorPos));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.hex_go_offset))
-                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, input, null, 16))
+                .setView(UiFields.wrap(this, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     try {

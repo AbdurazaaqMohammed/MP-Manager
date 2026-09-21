@@ -54,7 +54,10 @@ import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.TextMateSymbolPairMatch;
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import io.github.rosemoe.sora.text.CharPosition;
 import io.github.rosemoe.sora.text.Content;
@@ -129,8 +132,8 @@ public class CustomAutoComplete extends EmptyLanguage {
 				tm.setCompleterKeywords(ks);
 			}else {
 				// Merge ks and gotoItems
-				java.util.Set<String> allKeywords = new java.util.HashSet<>(java.util.Arrays.asList(ks));
-				allKeywords.addAll(java.util.Arrays.asList(gotoItems));
+				Set<String> allKeywords = new HashSet<>(Arrays.asList(ks));
+				allKeywords.addAll(Arrays.asList(gotoItems));
 				tm.setCompleterKeywords(allKeywords.toArray(new String[0]));
 			}
 		}

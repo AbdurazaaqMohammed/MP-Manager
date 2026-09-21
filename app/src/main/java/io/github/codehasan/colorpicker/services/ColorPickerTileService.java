@@ -16,11 +16,12 @@ package io.github.codehasan.colorpicker.services;
 import android.annotation.SuppressLint;
 import android.os.Build;
 import android.service.quicksettings.Tile;
+import android.service.quicksettings.TileService;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.ServiceState;
 
-public class ColorPickerTileService extends android.service.quicksettings.TileService {
+public class ColorPickerTileService extends TileService {
 
     private final ServiceState.Observer stateObserver = this::updateTile;
 

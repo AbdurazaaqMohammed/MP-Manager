@@ -129,7 +129,7 @@ public class FileUtils {
 
     public static OutputStream getOutputStream(File file) throws IOException {
         return LegacyUtils.supportsFileChannel ?
-        Files.newOutputStream(file.toPath(), java.nio.file.StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+        Files.newOutputStream(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
                 : new FileOutputStream(file);
     }
 

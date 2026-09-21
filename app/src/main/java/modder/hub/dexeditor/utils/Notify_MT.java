@@ -39,6 +39,8 @@ package modder.hub.dexeditor.utils;
 
 import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import android.R;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.view.WindowManager;
@@ -66,7 +68,7 @@ public class Notify_MT {
 			});
 			
 			final AlertDialog alert = builder.show();
-			final TextView message = alert.findViewById(android.R.id.message);
+			final TextView message = alert.findViewById(R.id.message);
 			if (message != null) {
 				message.setTextIsSelectable(true);
 			}

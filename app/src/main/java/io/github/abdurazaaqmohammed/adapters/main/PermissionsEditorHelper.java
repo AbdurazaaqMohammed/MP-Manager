@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.adapters.main;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
@@ -13,9 +14,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.UiFields;
 
 public class PermissionsEditorHelper {
 
@@ -116,7 +119,7 @@ public class PermissionsEditorHelper {
         numericInput.setTypeface(Typeface.MONOSPACE);
         numericInput.setText(String.valueOf(permBits[4]));
         numericInput.setSelectAllOnFocus(true);
-        numericInput.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(4) });
+        numericInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(4) });
         numericInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         numericInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -134,8 +137,8 @@ public class PermissionsEditorHelper {
             }
         });
         numericRow.addView(numLabel);
-        com.google.android.material.textfield.TextInputLayout numericBox =
-                io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, numericInput, null, 0);
+        TextInputLayout numericBox =
+                UiFields.wrap(context, numericInput, null, 0);
         numericBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         numericRow.addView(numericBox);
         root.addView(numericRow);

@@ -2,10 +2,12 @@ package io.github.abdurazaaqmohammed.player;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -37,7 +39,7 @@ public class ZoomableImageView extends ImageView {
         init();
     }
 
-    public ZoomableImageView(Context context, android.util.AttributeSet attrs) {
+    public ZoomableImageView(Context context, AttributeSet attrs) {
         super(context, attrs);
         scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
@@ -50,7 +52,7 @@ public class ZoomableImageView extends ImageView {
         init();
     }
 
-    public ZoomableImageView(Context context, android.util.AttributeSet attrs, int defStyleAttr) {
+    public ZoomableImageView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
@@ -70,7 +72,7 @@ public class ZoomableImageView extends ImageView {
     }
 
     @Override
-    public void setImageBitmap(android.graphics.Bitmap bm) {
+    public void setImageBitmap(Bitmap bm) {
         super.setImageBitmap(bm);
         updateBase();
     }

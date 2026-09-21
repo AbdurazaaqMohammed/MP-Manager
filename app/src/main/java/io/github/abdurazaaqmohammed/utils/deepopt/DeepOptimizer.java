@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.ZipEntry;
 
 /**
  * Orchestrator for the deep APK optimization pipeline:
@@ -202,7 +203,7 @@ public class DeepOptimizer {
     private void compressAll(ApkModule module) {
         try {
             for (InputSource source : module.getInputSources()) {
-                source.setMethod(java.util.zip.ZipEntry.DEFLATED);
+                source.setMethod(ZipEntry.DEFLATED);
             }
         } catch (Exception ignored) {
         }

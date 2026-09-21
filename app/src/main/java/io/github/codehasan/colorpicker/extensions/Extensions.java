@@ -16,6 +16,7 @@ package io.github.codehasan.colorpicker.extensions;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.util.TypedValue;
 import android.view.View;
@@ -53,7 +54,7 @@ public final class Extensions {
         Snackbar.make(d.findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT).show();
     }
 
-    public static int dp2px(android.content.Context context, float dp) {
+    public static int dp2px(Context context, float dp) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.getResources().getDisplayMetrics());
     }
 }

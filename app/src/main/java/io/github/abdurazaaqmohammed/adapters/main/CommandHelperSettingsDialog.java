@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.app.Dialog;
 import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
@@ -199,7 +200,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
                 MaterialButton copyBtn = new MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
                 copyBtn.setText(android.R.string.copy);
                 copyBtn.setOnClickListener(view -> {
-                    ((android.content.ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("placeholder", token));
+                    ((ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("placeholder", token));
                     Extensions.showMessage(getActivity(), getString(R.string.copied_to_clipboard, token));
                 });
 

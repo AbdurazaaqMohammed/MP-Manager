@@ -208,7 +208,7 @@ public class AlertProgress {
         });
     }
 
-    public void setButton(int whichButton, CharSequence text, android.content.DialogInterface.OnClickListener listener) {
+    public void setButton(int whichButton, CharSequence text, DialogInterface.OnClickListener listener) {
         process.setPositiveButton(text, listener);
         // Re-create the alert to apply the button
         alert = process.create();

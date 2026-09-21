@@ -8,6 +8,7 @@ import android.os.Build;
 
 import androidx.core.content.FileProvider;
 import java.io.File;
+import java.util.List;
 
 public class InstallUtil {
     public static void installApk(Context context, File file) {
@@ -47,7 +48,7 @@ public class InstallUtil {
         new ApkInstallDialogHelper(activity).installSingleApk(file);
     }
 
-    public static void installSplitApksWithDialog(Activity activity, java.util.List<File> apkFiles, String archiveName) {
+    public static void installSplitApksWithDialog(Activity activity, List<File> apkFiles, String archiveName) {
         if (activity.isFinishing() || activity.isDestroyed()) return;
         new ApkInstallDialogHelper(activity).installSplitApks(apkFiles, archiveName);
     }

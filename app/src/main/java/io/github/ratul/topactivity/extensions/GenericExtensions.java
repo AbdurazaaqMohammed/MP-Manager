@@ -21,9 +21,11 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.DisplayMetrics;
+import android.util.Pair;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.WindowMetrics;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
@@ -59,18 +61,18 @@ public final class GenericExtensions {
         return dp2px(view.getContext(), dp);
     }
 
-    public static android.util.Pair<Integer, Integer> getScreenSize(WindowManager windowManager) {
+    public static Pair<Integer, Integer> getScreenSize(WindowManager windowManager) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            android.view.WindowMetrics windowMetrics = windowManager.getCurrentWindowMetrics();
+            WindowMetrics windowMetrics = windowManager.getCurrentWindowMetrics();
             Insets insets = WindowInsetsCompat.toWindowInsetsCompat(windowMetrics.getWindowInsets())
                     .getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             int usableWidth = windowMetrics.getBounds().width() - insets.left - insets.right;
             int usableHeight = windowMetrics.getBounds().height() - insets.top - insets.bottom;
-            return new android.util.Pair<>(usableWidth, usableHeight);
+            return new Pair<>(usableWidth, usableHeight);
         } else {
             DisplayMetrics displayMetrics = new DisplayMetrics();
             windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-            return new android.util.Pair<>(displayMetrics.widthPixels, displayMetrics.heightPixels);
+            return new Pair<>(displayMetrics.widthPixels, displayMetrics.heightPixels);
         }
     }
 

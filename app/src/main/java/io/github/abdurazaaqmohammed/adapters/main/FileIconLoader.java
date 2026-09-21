@@ -8,7 +8,10 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.media.ThumbnailUtils;
 import android.provider.MediaStore;
 import android.text.TextUtils;
@@ -179,7 +182,7 @@ public class FileIconLoader {
     }
 
     private static Drawable badge(Resources res, float density, int glyphId, int bgColor, boolean whiteGlyph) {
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(6 * density);
         bg.setColor(bgColor);
         Drawable glyph = ResourcesCompat.getDrawable(res, glyphId, null);
@@ -187,9 +190,9 @@ public class FileIconLoader {
             glyph = glyph.mutate();
             if (whiteGlyph) DrawableCompat.setTint(glyph, Color.WHITE);
         } else {
-            glyph = new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);
+            glyph = new ColorDrawable(Color.TRANSPARENT);
         }
-        android.graphics.drawable.LayerDrawable layer = new android.graphics.drawable.LayerDrawable(
+        LayerDrawable layer = new LayerDrawable(
                 new Drawable[]{bg, glyph});
         int inset = (int) (6 * density + 0.5f);
         layer.setLayerInset(1, inset, inset, inset, inset);

@@ -44,6 +44,7 @@ import android.widget.EditText;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import android.widget.ListView;
@@ -134,9 +135,9 @@ public class APKExtractorActivity extends AppCompatActivity {
         return appFolder.exists() || appFolder.mkdirs() ? appFolder : new File(Environment.getExternalStorageDirectory(), "Download");
     }
 
-    public static File getAppFolder(android.content.Context context) {
+    public static File getAppFolder(Context context) {
         try {
-            String base = io.github.abdurazaaqmohammed.utils.UiPrefs.appPathDir(context,
+            String base = UiPrefs.appPathDir(context,
                     new File(Environment.getExternalStorageDirectory(), "MP Manager").getAbsolutePath());
             File dir = new File(base, "Extracted APKs");
             if (dir.exists() || dir.mkdirs()) return dir;

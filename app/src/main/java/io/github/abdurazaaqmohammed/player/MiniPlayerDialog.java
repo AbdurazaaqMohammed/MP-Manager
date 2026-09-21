@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -62,7 +63,7 @@ public class MiniPlayerDialog {
         playerManager.registerCallback(callback);
 
         LayoutInflater inflater = LayoutInflater.from(activity);
-        android.view.View view = inflater.inflate(R.layout.dialog_mini_player, null);
+        View view = inflater.inflate(R.layout.dialog_mini_player, null);
 
         artworkView = view.findViewById(R.id.artworkView);
         titleView = view.findViewById(R.id.trackTitle);

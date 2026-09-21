@@ -2,8 +2,10 @@ package io.github.abdurazaaqmohammed.tools;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -26,11 +28,15 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import io.github.abdurazaaqmohammed.ui.UiFields;
 
 public class ToolsHubActivity extends AppCompatActivity {
     private RecyclerView grid;
@@ -57,9 +63,9 @@ public class ToolsHubActivity extends AppCompatActivity {
             }
         });
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        com.google.android.material.textfield.TextInputLayout searchBox =
-                io.github.abdurazaaqmohammed.ui.UiFields.box(this, "Search tools");
-        searchInput = new com.google.android.material.textfield.TextInputEditText(searchBox.getContext());
+        TextInputLayout searchBox =
+                UiFields.box(this, "Search tools");
+        searchInput = new TextInputEditText(searchBox.getContext());
         searchInput.setSingleLine(true);
         LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         searchBox.addView(searchInput, searchParams);
@@ -155,7 +161,7 @@ public class ToolsHubActivity extends AppCompatActivity {
             if (viewType == 0) {
                 TextView header = new TextView(parent.getContext());
                 header.setTextSize(15);
-                header.setTypeface(null, android.graphics.Typeface.BOLD);
+                header.setTypeface(null, Typeface.BOLD);
                 header.setTextColor(MaterialColors.getColor(parent.getContext(), com.google.android.material.R.attr.colorPrimary, Color.BLACK));
                 header.setPadding((int) (6 * density), (int) (12 * density), (int) (6 * density), (int) (4 * density));
                 header.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -205,7 +211,7 @@ public class ToolsHubActivity extends AppCompatActivity {
             } else if (holder instanceof ToolViewHolder h) {
                 ToolRegistry.ToolItem item = (ToolRegistry.ToolItem) row;
                 h.icon.setImageResource(item.iconRes());
-                ImageViewCompat.setImageTintList(h.icon, android.content.res.ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), com.google.android.material.R.attr.colorPrimary, Color.BLACK)));
+                ImageViewCompat.setImageTintList(h.icon, ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), com.google.android.material.R.attr.colorPrimary, Color.BLACK)));
                 h.title.setText(item.title());
                 h.subtitle.setText(item.subtitle());
                 h.card.setOnClickListener(new View.OnClickListener() {

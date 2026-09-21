@@ -47,13 +47,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.text.TextUtils;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.ArrayAdapter;
@@ -72,10 +75,12 @@ import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ConcatAdapter;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
@@ -89,12 +94,17 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
@@ -105,9 +115,11 @@ import modder.hub.dexeditor.adapter.HeaderAdapter;
 import modder.hub.dexeditor.adapter.StringAdapter;
 import modder.hub.dexeditor.adapter.TreeAdapter;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
+import modder.hub.dexeditor.fragment.GraphFragment;
 import modder.hub.dexeditor.fragment.SearchFragment;
 import modder.hub.dexeditor.fragment.SmaliMethodFieldListFragment;
 import modder.hub.dexeditor.model.TreeNode;
+import modder.hub.dexeditor.smali.Smali2Java;
 import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.ClassTree;
@@ -121,6 +133,8 @@ import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 import java.util.LinkedHashMap;
+import java.util.Random;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
@@ -139,14 +153,14 @@ public class DexEditorActivity extends AppCompatActivity {
     public static final List<EditorTab> tabs = new ArrayList<>();
     // Legacy static fields for SmaliMethodFieldListFragment state
     public static SmaliMethodFieldListFragment smaliMethodsFieldsStringsFragment = null;
-    public static android.os.Parcelable methodRecyclerViewState = null;
-    public static android.os.Parcelable stringsRecyclerViewState = null;
+    public static Parcelable methodRecyclerViewState = null;
+    public static Parcelable stringsRecyclerViewState = null;
     public static boolean wasStringsVisible = false;
     public static String lastSmaliFilePath = "";
     private static int currentTabIndex = -1;
     private final List<TreeNode> historyNodes = new ArrayList<>();
     private final List<String> stringList = new ArrayList<>();
-    private final java.util.Stack<Integer> tabNavigationHistory = new java.util.Stack<>();
+    private final Stack<Integer> tabNavigationHistory = new Stack<>();
     private final ClassTree.CompilationOptions sessionOptions = new ClassTree.CompilationOptions();
     private final List<TreeNode> treeRoots = new ArrayList<>();
     private final List<TreeNode> modifiedNodes = new ArrayList<>();
@@ -262,7 +276,7 @@ public class DexEditorActivity extends AppCompatActivity {
         drawerToolbar = findViewById(R.id.drawer_toolbar);
         drawerToolbar.setOverflowIcon(ContextCompat.getDrawable(this, R.drawable.ic_more_mt));
         if (drawerToolbar.getOverflowIcon() != null) {
-            androidx.core.graphics.drawable.DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), Color.WHITE);
+            DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), Color.WHITE);
         }
         setupDrawerToolbar();
 
@@ -441,7 +455,7 @@ public class DexEditorActivity extends AppCompatActivity {
         } else fabDelete.setColorFilter(new LightingColorFilter(Color.BLACK, 0xFFFFFFFF));
         fabDelete.hide();
 
-        String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new java.util.Random().nextInt(9000) + 1000);
+        String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new Random().nextInt(9000) + 1000);
         File cacheDir = new File(getCacheDir(), "dex_editor_" + uniqueId);
 
         if (dexPaths != null && !dexPaths.isEmpty()) {
@@ -474,8 +488,8 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     private void setupTabsTouchHelper() {
-        androidx.recyclerview.widget.ItemTouchHelper.Callback callback = new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
-                androidx.recyclerview.widget.ItemTouchHelper.UP | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+        ItemTouchHelper.Callback callback = new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
                 int fromPos = viewHolder.getBindingAdapterPosition();
@@ -506,7 +520,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 return 0;
             }
         };
-        new androidx.recyclerview.widget.ItemTouchHelper(callback).attachToRecyclerView(tabsRecyclerView);
+        new ItemTouchHelper(callback).attachToRecyclerView(tabsRecyclerView);
     }
 
     // ==========================================
@@ -630,7 +644,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 closeTabWithPrompt(currentTabIndex);
                 return true;
             } else if (id == R.id.preference) {
-                startActivity(new Intent(DexEditorActivity.this, io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity.class));
+                startActivity(new Intent(DexEditorActivity.this, EditorSettingsActivity.class));
                 return true;
             }
 
@@ -658,7 +672,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 // testing , i willl add a search bar like my modder hub app have.
                 // but I have plan to replace the sora editor with my custom MH-Texteditor
                 try {
-                    java.lang.reflect.Method method = editor.getSearcher().getClass().getMethod("showSearchPanel");
+                    Method method = editor.getSearcher().getClass().getMethod("showSearchPanel");
                     method.invoke(editor.getSearcher());
                 } catch (Exception ignored) {
                     // ignored
@@ -725,7 +739,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 closeTabWithPrompt(currentTabIndex);
                 return true;
             } else if (id == R.id.preference) {
-                startActivity(new Intent(DexEditorActivity.this, io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity.class));
+                startActivity(new Intent(DexEditorActivity.this, EditorSettingsActivity.class));
                 return true;
             }
         }
@@ -812,7 +826,7 @@ public class DexEditorActivity extends AppCompatActivity {
         pd.show();
         new Thread(() -> {
             try {
-                final String java = modder.hub.dexeditor.smali.Smali2Java.translate(code, dexVersion);
+                final String java = Smali2Java.translate(code, dexVersion);
                 runOnUiThread(() -> {
                     pd.dismiss();
                     addTab(className, title, java, 1); // adding the java item in the recent opened classes list
@@ -896,14 +910,14 @@ public class DexEditorActivity extends AppCompatActivity {
             if (undo != null) {
                 undo.setEnabled(fragment.getEditor().canUndo());
                 if (undo.getIcon() != null) {
-                    androidx.core.graphics.drawable.DrawableCompat.setTint(undo.getIcon(), Color.WHITE);
+                    DrawableCompat.setTint(undo.getIcon(), Color.WHITE);
                     undo.getIcon().setAlpha(undo.isEnabled() ? 255 : 100);
                 }
             }
             if (redo != null) {
                 redo.setEnabled(fragment.getEditor().canRedo());
                 if (redo.getIcon() != null) {
-                    androidx.core.graphics.drawable.DrawableCompat.setTint(redo.getIcon(), Color.WHITE);
+                    DrawableCompat.setTint(redo.getIcon(), Color.WHITE);
                     redo.getIcon().setAlpha(redo.isEnabled() ? 255 : 100);
                 }
             }
@@ -1645,11 +1659,11 @@ public class DexEditorActivity extends AppCompatActivity {
 
     private void reduceDragSensitivity(ViewPager2 viewPager) {
         try {
-            java.lang.reflect.Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
+            Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
             recyclerViewField.setAccessible(true);
             RecyclerView recyclerView = (RecyclerView) recyclerViewField.get(viewPager);
 
-            java.lang.reflect.Field touchSlopField = RecyclerView.class.getDeclaredField("mTouchSlop");
+            Field touchSlopField = RecyclerView.class.getDeclaredField("mTouchSlop");
             touchSlopField.setAccessible(true);
             int touchSlop = (int) touchSlopField.get(recyclerView);
             touchSlopField.set(recyclerView, touchSlop * 2);
@@ -2042,13 +2056,13 @@ public class DexEditorActivity extends AppCompatActivity {
         editText.setSelection(editText.getText().length());
         ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         editText.setLayoutParams(params);
-        editText.setGravity(android.view.Gravity.TOP);
+        editText.setGravity(Gravity.TOP);
 
         int pad = (int) getDip(16);
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(pad, pad, pad, pad);
-        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, editText, getString(R.string.edit_string), 0));
+        container.addView(UiFields.wrap(this, editText, getString(R.string.edit_string), 0));
         container.setLayoutParams(params);
 
         final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
@@ -2084,7 +2098,7 @@ public class DexEditorActivity extends AppCompatActivity {
         LinearLayout container = new LinearLayout(this);
         container.setPadding(pad, pad, pad, pad);
         container.setLayoutParams(params);
-        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, editText, null, 0));
+        container.addView(UiFields.wrap(this, editText, null, 0));
 
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.filter_strings)
@@ -2108,8 +2122,8 @@ public class DexEditorActivity extends AppCompatActivity {
         swMatchCase.setText(R.string.match_case);
         swMatchCase.setChecked(true);
 
-        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, etFind, null, 0));
-        container.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(this, etReplace, null, 0));
+        container.addView(UiFields.wrap(this, etFind, null, 0));
+        container.addView(UiFields.wrap(this, etReplace, null, 0));
         container.addView(swMatchCase);
 
         new MaterialAlertDialogBuilder(this)
@@ -2177,7 +2191,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     private static class StringBatchTask {
-        private final java.lang.ref.WeakReference<DexEditorActivity> activityRef;
+        private final WeakReference<DexEditorActivity> activityRef;
         private final Map<String, String> exactReplacements; // nullable
         private final String findSubstring;                  // nullable
         private final String replaceSubstring;
@@ -2189,7 +2203,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
         StringBatchTask(DexEditorActivity activity, Map<String, String> exactReplacements,
                         String findSubstring, String replaceSubstring, boolean matchCase, Runnable onDone) {
-            this.activityRef = new java.lang.ref.WeakReference<>(activity);
+            this.activityRef = new WeakReference<>(activity);
             this.exactReplacements = exactReplacements;
             this.findSubstring = findSubstring;
             this.replaceSubstring = replaceSubstring;
@@ -2539,7 +2553,7 @@ public class DexEditorActivity extends AppCompatActivity {
         public Fragment createFragment(int position) {
             EditorTab tab = tabs.get(position);
             if (tab.type == 2) {
-                return modder.hub.dexeditor.fragment.GraphFragment.newInstance(tab.className, tab.title, tab.subtitle, tab.content);
+                return GraphFragment.newInstance(tab.className, tab.title, tab.subtitle, tab.content);
             }
             return UnifiedEditorFragment.newInstance(tab.className, tab.title, tab.content, tab.type);
         }
@@ -2642,7 +2656,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 });
 
                 holder.mainView.setOnTouchListener(new View.OnTouchListener() {
-                    private final int touchSlop = android.view.ViewConfiguration.get(getApplicationContext()).getScaledTouchSlop();
+                    private final int touchSlop = ViewConfiguration.get(getApplicationContext()).getScaledTouchSlop();
                     private float startX;
                     private float initialX;
                     private boolean isDragging = false;

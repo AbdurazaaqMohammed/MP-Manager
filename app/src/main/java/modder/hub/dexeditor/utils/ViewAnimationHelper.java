@@ -42,6 +42,7 @@ import android.annotation.SuppressLint;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.animation.AccelerateDecelerateInterpolator;
 
 import androidx.annotation.NonNull;
@@ -110,7 +111,7 @@ public class ViewAnimationHelper {
     
     public static void enableSwipeViewToggle(final View visibleView, final View hiddenView) {
         final boolean[] switched = {false};
-        final int touchSlop = android.view.ViewConfiguration.get(visibleView.getContext()).getScaledTouchSlop();
+        final int touchSlop = ViewConfiguration.get(visibleView.getContext()).getScaledTouchSlop();
 
         final GestureDetector gestureDetector = new GestureDetector(visibleView.getContext(), new GestureDetector.SimpleOnGestureListener() {
             @Override

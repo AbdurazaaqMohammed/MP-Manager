@@ -10,6 +10,8 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import org.apache.commons.io.FilenameUtils;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -101,7 +103,7 @@ public class CompareZipDialog {
         listView.setOnItemClickListener((parent, view, position, id) -> {
             DiffItem item = differences.get(position);
             if ("[Modified]".equals(item.status)) {
-                String ext = org.apache.commons.io.FilenameUtils.getExtension(item.fileName).toLowerCase();
+                String ext = FilenameUtils.getExtension(item.fileName).toLowerCase();
                 boolean isZipInner = ext.equals("zip") || ext.equals("apk") || ext.equals("jar");
                 boolean isArscInner = ext.equals("arsc");
                 boolean isTextInner = !isZipInner && !isArscInner;

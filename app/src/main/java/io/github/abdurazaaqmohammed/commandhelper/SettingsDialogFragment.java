@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.commandhelper;
 
 import android.app.Dialog;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
@@ -14,6 +15,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.appcompat.app.AlertDialog;
@@ -62,7 +65,7 @@ public class SettingsDialogFragment extends DialogFragment {
         TextView profilesTitle = new TextView(getActivity());
         profilesTitle.setText(R.string.profiles);
         profilesTitle.setTextAppearance(getActivity(), android.R.style.TextAppearance_Medium);
-        profilesTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        profilesTitle.setTypeface(null, Typeface.BOLD);
         profilesTitle.setPadding(dp(16), dp(16), dp(16), dp(8));
         root.addView(profilesTitle);
 
@@ -131,13 +134,13 @@ public class SettingsDialogFragment extends DialogFragment {
         EditText nameInput = new EditText(getActivity());
         nameInput.setHint(R.string.profile_name);
         if (existingName != null) nameInput.setText(existingName);
-        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(getActivity(), nameInput, null, 0));
+        layout.addView(UiFields.wrap(getActivity(), nameInput, null, 0));
         EditText cmdInput = new EditText(getActivity());
         cmdInput.setHint(R.string.command_template_hint);
         cmdInput.setSingleLine(false);
         cmdInput.setLines(3);
         if (existingCommand != null) cmdInput.setText(existingCommand);
-        layout.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(getActivity(), cmdInput, null, 0));
+        layout.addView(UiFields.wrap(getActivity(), cmdInput, null, 0));
         builder.setView(layout);
         builder.setPositiveButton(R.string.save, (d, w) -> {
             String name = nameInput.getText().toString().trim();

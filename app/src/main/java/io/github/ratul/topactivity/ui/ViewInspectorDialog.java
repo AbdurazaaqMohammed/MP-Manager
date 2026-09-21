@@ -23,6 +23,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -38,6 +39,7 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.snackbar.Snackbar;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.ratul.topactivity.extensions.GenericExtensions;
 import io.github.ratul.topactivity.manager.InspectOverlayManager;
 import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.services.ViewInfo;
@@ -98,7 +100,7 @@ public class ViewInspectorDialog extends Dialog {
 
             attrs.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
             attrs.gravity = Gravity.TOP | Gravity.START;
-            android.util.Pair<Integer, Integer> size = io.github.ratul.topactivity.extensions.GenericExtensions.getScreenSize(
+            Pair<Integer, Integer> size = GenericExtensions.getScreenSize(
                     (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE));
             if (!positionInitialized) {
                 panelX = 0;

@@ -18,9 +18,14 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.faith.apkinstaller.APKInstallService;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -74,7 +79,7 @@ public class ApkInstallDialogHelper {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             executor.execute(() -> {
                 try {
-                    java.util.List<String> paths = new java.util.ArrayList<>();
+                    List<String> paths = new ArrayList<>();
                     for (File f : apkFiles) paths.add(f.getAbsolutePath());
                     rm.installSplitSilent(paths);
                     activity.runOnUiThread(() -> {
@@ -106,8 +111,8 @@ public class ApkInstallDialogHelper {
 
             int sessionId = pi.createSession(params);
             try (PackageInstaller.Session session = pi.openSession(sessionId);
-                 java.io.OutputStream out = session.openWrite("apk", 0, apkFile.length());
-                 java.io.InputStream in = new java.io.FileInputStream(apkFile)) {
+                 OutputStream out = session.openWrite("apk", 0, apkFile.length());
+                 InputStream in = new FileInputStream(apkFile)) {
                 byte[] buffer = new byte[65536];
                 int bytesRead;
                 while ((bytesRead = in.read(buffer)) != -1) {
@@ -116,7 +121,7 @@ public class ApkInstallDialogHelper {
                 session.fsync(out);
             }
 
-            Intent callbackIntent = new Intent(activity, com.faith.apkinstaller.APKInstallService.class);
+            Intent callbackIntent = new Intent(activity, APKInstallService.class);
             PendingIntent pendingIntent = PendingIntent.getService(
                     activity, 0, callbackIntent, PendingIntent.FLAG_MUTABLE);
 
@@ -146,8 +151,8 @@ public class ApkInstallDialogHelper {
             try (PackageInstaller.Session session = pi.openSession(sessionId)) {
                 int idx = 0;
                 for (File apkFile : apkFiles) {
-                    try (java.io.OutputStream out = session.openWrite("split_" + idx, 0, apkFile.length());
-                         java.io.InputStream in = new java.io.FileInputStream(apkFile)) {
+                    try (OutputStream out = session.openWrite("split_" + idx, 0, apkFile.length());
+                         InputStream in = new FileInputStream(apkFile)) {
                         byte[] buffer = new byte[65536];
                         int bytesRead;
                         while ((bytesRead = in.read(buffer)) != -1) {
@@ -159,7 +164,7 @@ public class ApkInstallDialogHelper {
                 }
             }
 
-            Intent callbackIntent = new Intent(activity, com.faith.apkinstaller.APKInstallService.class);
+            Intent callbackIntent = new Intent(activity, APKInstallService.class);
             PendingIntent pendingIntent = PendingIntent.getService(activity, 0, callbackIntent, PendingIntent.FLAG_MUTABLE);
 
             resultReceiver = new BroadcastReceiver() {

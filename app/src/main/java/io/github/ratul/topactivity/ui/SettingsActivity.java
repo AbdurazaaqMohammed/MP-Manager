@@ -20,6 +20,7 @@ import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -29,6 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
@@ -114,7 +116,7 @@ public class SettingsActivity extends AppCompatActivity {
                 .findFragmentById(R.id.preferences_container);
 
         ViewCompat.setOnApplyWindowInsetsListener(baseView, (v, insets) -> {
-            androidx.core.graphics.Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
@@ -204,7 +206,7 @@ public class SettingsActivity extends AppCompatActivity {
                 getString(R.string.system_overlay_description, getString(R.string.app_name)),
                 () -> startActivity(
                         new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                .setData(android.net.Uri.parse("package:" + getPackageName()))
+                                .setData(Uri.parse("package:" + getPackageName()))
                 )
         );
     }

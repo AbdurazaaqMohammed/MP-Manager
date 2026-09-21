@@ -26,6 +26,8 @@ import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.Image;
@@ -49,6 +51,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.IntentCompat;
+import androidx.core.graphics.BitmapKt;
 import androidx.preference.PreferenceManager;
 import androidx.window.layout.WindowMetricsCalculator;
 
@@ -179,7 +182,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
     @SuppressWarnings("deprecation")
     private void setupWindows() {
         displayMetrics = new DisplayMetrics();
-        android.graphics.Rect bounds =
+        Rect bounds =
                 WindowMetricsCalculator.getOrCreate().computeMaximumWindowMetrics(this).getBounds();
         displayMetrics.widthPixels = bounds.width();
         displayMetrics.heightPixels = bounds.height();
@@ -474,7 +477,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
     }
 
     private void updateScanCoordinates() {
-        android.graphics.PointF offset = targetView.getScanOffset();
+        PointF offset = targetView.getScanOffset();
 
         scanX = (int) offset.x;
         scanY = (int) offset.y;
@@ -536,7 +539,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
             Bitmap bitmap = screenBitmap;
             if (bitmap == null || bitmap.getWidth() != requiredWidth
                     || bitmap.getHeight() != requiredHeight) {
-                bitmap = androidx.core.graphics.BitmapKt.createBitmap(requiredWidth, requiredHeight, Bitmap.Config.ARGB_8888 );
+                bitmap = BitmapKt.createBitmap(requiredWidth, requiredHeight, Bitmap.Config.ARGB_8888 );
                 if (screenBitmap != null) {
                     screenBitmap.recycle();
                 }
@@ -558,7 +561,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
             int cropX = clamp(safeX - cropSize / 2, 0, bitmap.getWidth() - cropSize);
             int cropY = clamp(safeY - cropSize / 2, 0, bitmap.getHeight() - cropSize);
 
-            Bitmap crop = androidx.core.graphics.BitmapKt.createBitmap(cropSize, cropSize, Bitmap.Config.ARGB_8888);
+            Bitmap crop = BitmapKt.createBitmap(cropSize, cropSize, Bitmap.Config.ARGB_8888);
             int[] pixels = new int[cropSize * cropSize];
             bitmap.getPixels(pixels, 0, cropSize, cropX, cropY, cropSize, cropSize);
             crop.setPixels(pixels, 0, cropSize, 0, 0, cropSize, cropSize);

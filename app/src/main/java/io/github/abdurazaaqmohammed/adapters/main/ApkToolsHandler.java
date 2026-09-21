@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -8,9 +10,18 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Shader;
+import android.graphics.SweepGradient;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Environment;
 import android.text.Editable;
@@ -18,7 +29,12 @@ import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
+import android.util.Base64;
+import android.view.ActionMode;
+import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,15 +49,18 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
+import io.github.abdurazaaqmohammed.utils.SignatureStripUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import androidx.core.text.HtmlCompat;
 import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkVerifier;
@@ -52,6 +71,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apkeditor.Util;
@@ -65,6 +85,8 @@ import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
@@ -72,6 +94,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -189,7 +212,7 @@ public class ApkToolsHandler {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
                     bytes = baos.toByteArray();
                 }
-                final String b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP);
+                final String b64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
                 final Bitmap thumb = bitmap;
                 final int kb = bytes.length / 1024;
                 context.handler.post(() -> {
@@ -236,13 +259,13 @@ public class ApkToolsHandler {
         MaterialAutoCompleteTextView decodeTypes = dialogView.findViewById(R.id.decodeTypes);
         MaterialAutoCompleteTextView dexLibrary = dialogView.findViewById(R.id.dexLibrary);
         TextInputEditText loadDex = dialogView.findViewById(R.id.loadDex);
-        android.widget.CompoundButton flagDex = dialogView.findViewById(R.id.flagDex);
-        android.widget.CompoundButton noDexDebug = dialogView.findViewById(R.id.noDexDebug);
-        android.widget.CompoundButton dexMarkers = dialogView.findViewById(R.id.dexMarkers);
-        android.widget.CompoundButton flagForce = dialogView.findViewById(R.id.flagForce);
-        android.widget.CompoundButton keepResPath = dialogView.findViewById(R.id.keepResPath);
-        android.widget.CompoundButton splitJson = dialogView.findViewById(R.id.splitJson);
-        android.widget.CompoundButton vrd = dialogView.findViewById(R.id.vrd);
+        CompoundButton flagDex = dialogView.findViewById(R.id.flagDex);
+        CompoundButton noDexDebug = dialogView.findViewById(R.id.noDexDebug);
+        CompoundButton dexMarkers = dialogView.findViewById(R.id.dexMarkers);
+        CompoundButton flagForce = dialogView.findViewById(R.id.flagForce);
+        CompoundButton keepResPath = dialogView.findViewById(R.id.keepResPath);
+        CompoundButton splitJson = dialogView.findViewById(R.id.splitJson);
+        CompoundButton vrd = dialogView.findViewById(R.id.vrd);
 
         int[] frameworkVersions = context.getResources().getIntArray(R.array.framework_versions);
         int savedFramework = settings.getInt("fwVer", 35);
@@ -463,7 +486,7 @@ public class ApkToolsHandler {
                             passesInput.addTextChangedListener(new TextWatcher() {
                                 @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
                                 @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
-                                @Override public void afterTextChanged(android.text.Editable s) {
+                                @Override public void afterTextChanged(Editable s) {
                                     try {
                                         int value = Integer.parseInt(s.toString());
                                         if (value >= 0) settings.edit().putInt("deep_opt_max_passes", value).apply();
@@ -503,7 +526,7 @@ public class ApkToolsHandler {
                                         .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
                                         .setNeutralButton(context.rss.getString(R.string.add), (dialog9, which6) -> {
                                             EditText et = new EditText(context);
-                                            dialogUtil.getDialogBuilder().setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, et, null, 16)).setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                                            dialogUtil.getDialogBuilder().setView(UiFields.wrap(context, et, null, 16)).setNegativeButton(context.rss.getString(android.R.string.cancel), null)
                                                     .setPositiveButton(context.rss.getString(io.github.rosemoe.sora.R.string.sora_editor_next), (dialog8, which5) -> {
                                                         filesFiDel.add(et.getText().toString());
                                                         adapter.notifyDataSetChanged();
@@ -701,7 +724,7 @@ public class ApkToolsHandler {
                         String pkgNameFromApk = getPackageNameFromApk(filePath);
                         pkgNameView.setText(ApkCloner.changeEndCharacter(pkgNameFromApk));
                         final boolean[] sign = new boolean[1];
-                        SharedPreferences settings = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+                        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                         CheckBox autosign = ll.findViewById(R.id.autosign);
                         autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
@@ -1004,7 +1027,7 @@ public class ApkToolsHandler {
 
         CharSequence[] displayItems = new CharSequence[activities.size()];
         boolean[] checked = new boolean[activities.size()];
-        final java.util.Set<Integer> selectedIndices = new HashSet<>();
+        final Set<Integer> selectedIndices = new HashSet<>();
         if(!TextUtils.isEmpty(mainActivity)) for (int i = 0; i < activities.size(); i++) {
             String name = activities.get(i).name;
             boolean isMain = name.equals(mainActivity);
@@ -1070,8 +1093,8 @@ public class ApkToolsHandler {
         MaterialButton bg2Btn;
         MaterialButton borderColorBtn;
         LinearLayout animColorsRow;
-        final java.util.ArrayList<Integer> animColors = new java.util.ArrayList<>(
-                java.util.Arrays.asList(-16776961, -65536));
+        final ArrayList<Integer> animColors = new ArrayList<>(
+                Arrays.asList(-16776961, -65536));
         Runnable renderAnimChips;
         MaterialButton titleColorBtn;
         TextInputEditText titleColorHex;
@@ -1374,8 +1397,8 @@ public class ApkToolsHandler {
 
     private void attachFormatMenu(EditText target) {
         if (target == null) return;
-        target.setCustomSelectionActionModeCallback(new android.view.ActionMode.Callback() {
-            public boolean onCreateActionMode(android.view.ActionMode mode, android.view.Menu menu) {
+        target.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 menu.add(0, 101, 0, "Bold");
                 menu.add(0, 102, 1, "Italic");
                 menu.add(0, 103, 2, "Underline");
@@ -1388,11 +1411,11 @@ public class ApkToolsHandler {
                 return true;
             }
 
-            public boolean onPrepareActionMode(android.view.ActionMode mode, android.view.Menu menu) {
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
                 return false;
             }
 
-            public boolean onActionItemClicked(android.view.ActionMode mode, android.view.MenuItem item) {
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
                 int start = target.getSelectionStart();
                 int end = target.getSelectionEnd();
                 if (start < 0 || end < 0) return false;
@@ -1443,15 +1466,15 @@ public class ApkToolsHandler {
                 return true;
             }
 
-            public void onDestroyActionMode(android.view.ActionMode mode) {
+            public void onDestroyActionMode(ActionMode mode) {
             }
 
             private void copyRange(int start, int end) {
                 try {
                     String text = target.getText().toString().substring(start, end);
-                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                    ClipboardManager cm = (ClipboardManager)
                             context.getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("text", text));
+                    cm.setPrimaryClip(ClipData.newPlainText("text", text));
                     Extensions.showMessage(context, "Copied");
                 } catch (Exception ignored) {
                 }
@@ -1467,7 +1490,7 @@ public class ApkToolsHandler {
 
             private void pasteAt(int start, int end) {
                 try {
-                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                    ClipboardManager cm = (ClipboardManager)
                             context.getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cm.getPrimaryClip() == null || cm.getPrimaryClip().getItemCount() == 0) return;
                     CharSequence paste = cm.getPrimaryClip().getItemAt(0).coerceToText(context);
@@ -1500,8 +1523,8 @@ public class ApkToolsHandler {
     private void updatePreviewImage(OverlayForm f) {
         try {
             if (overlayImageBase64 != null && !overlayImageBase64.isEmpty()) {
-                byte[] bytes = android.util.Base64.decode(overlayImageBase64, android.util.Base64.DEFAULT);
-                android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                byte[] bytes = Base64.decode(overlayImageBase64, Base64.DEFAULT);
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                 if (bitmap != null) {
                     f.dlgPreviewImage.setImageBitmap(bitmap);
                     f.dlgPreviewImage.setVisibility(View.VISIBLE);
@@ -1563,7 +1586,7 @@ public class ApkToolsHandler {
                 chip.setText("");
                 chip.setCornerRadius(dp(24));
                 try {
-                    chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
+                    chip.setBackgroundTintList(ColorStateList.valueOf(color));
                 } catch (Exception ignored) {
                 }
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
@@ -1615,7 +1638,7 @@ public class ApkToolsHandler {
             return true;
         });
         if (f.titleColorHex != null) {
-            f.titleColorHex.addTextChangedListener(new android.text.TextWatcher() {
+            f.titleColorHex.addTextChangedListener(new TextWatcher() {
                 public void beforeTextChanged(CharSequence s, int a, int b, int c) {
                 }
 
@@ -1641,7 +1664,7 @@ public class ApkToolsHandler {
         if (f.animBox != null) {
             f.animBox.setVisibility(f.animSwitch.isChecked() ? View.VISIBLE : View.GONE);
         }
-        android.text.TextWatcher styleWatcher = new android.text.TextWatcher() {
+        TextWatcher styleWatcher = new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {
             }
 
@@ -1673,7 +1696,7 @@ public class ApkToolsHandler {
                     f.titleColorBtn.setBackgroundTintList(null);
                 } else {
                     f.titleColorBtn.setBackgroundTintList(
-                            android.content.res.ColorStateList.valueOf(f.titleC));
+                            ColorStateList.valueOf(f.titleC));
                 }
             } catch (Exception ignored) {
             }
@@ -1731,16 +1754,16 @@ public class ApkToolsHandler {
                 f.dlgPreviewBox.setBackground(null);
                 return;
             }
-            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            GradientDrawable gd = new GradientDrawable();
             gd.setCornerRadius(f.radiusDp * density);
             if (f.bgSwitch.isChecked()) {
                 if (f.bgC2set) {
                     gd.setColors(new int[]{f.bgC1, f.bgC2});
-                    android.graphics.drawable.GradientDrawable.Orientation[] values = {
-                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                            android.graphics.drawable.GradientDrawable.Orientation.BL_TR};
+                    GradientDrawable.Orientation[] values = {
+                            GradientDrawable.Orientation.TOP_BOTTOM,
+                            GradientDrawable.Orientation.LEFT_RIGHT,
+                            GradientDrawable.Orientation.TL_BR,
+                            GradientDrawable.Orientation.BL_TR};
                     gd.setOrientation(values[Math.max(0, Math.min(3, f.orient))]);
                 } else {
                     gd.setColor(f.bgC1);
@@ -1758,18 +1781,18 @@ public class ApkToolsHandler {
         if (raw == null) raw = "";
         if (!richText) return raw;
         try {
-            return androidx.core.text.HtmlCompat.fromHtml(raw,
-                    androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY);
+            return HtmlCompat.fromHtml(raw,
+                    HtmlCompat.FROM_HTML_MODE_LEGACY);
         } catch (Exception e) {
             return raw;
         }
     }
 
-    private android.graphics.drawable.GradientDrawable buildButtonDrawable(
+    private GradientDrawable buildButtonDrawable(
             OverlayInjectorUtil.AdvWidget w) {
         float density = context.getResources().getDisplayMetrics().density;
-        android.graphics.drawable.GradientDrawable gd =
-                new android.graphics.drawable.GradientDrawable();
+        GradientDrawable gd =
+                new GradientDrawable();
         if (w.btnBg != 0 && w.btnBg2 != 0) {
             gd.setColors(new int[]{w.btnBg, w.btnBg2});
         } else if (w.btnBg != 0) {
@@ -1896,7 +1919,7 @@ public class ApkToolsHandler {
         new Thread(() -> {
             try {
                 if (src == null || !src.isFile()) throw new IOException("Not a file");
-                String lower = src.getName().toLowerCase(java.util.Locale.ROOT);
+                String lower = src.getName().toLowerCase(Locale.ROOT);
                 if (!lower.endsWith(".ttf") && !lower.endsWith(".otf")) {
                     context.handler.post(() -> Extensions.showMessage(context, "Please pick a .ttf or .otf file"));
                     return;
@@ -1906,8 +1929,8 @@ public class ApkToolsHandler {
                 if (!dir.exists()) dir.mkdirs();
                 File dst = new File(dir, "mpfont_" + System.currentTimeMillis()
                         + (lower.endsWith(".otf") ? ".otf" : ".ttf"));
-                try (InputStream is = new java.io.FileInputStream(src);
-                     java.io.FileOutputStream os = new java.io.FileOutputStream(dst)) {
+                try (InputStream is = new FileInputStream(src);
+                     FileOutputStream os = new FileOutputStream(dst)) {
                     byte[] buf = new byte[65536];
                     int n;
                     while ((n = is.read(buf)) != -1) os.write(buf, 0, n);
@@ -1934,14 +1957,14 @@ public class ApkToolsHandler {
         return n.length() > 24 ? "…" + n.substring(n.length() - 23) : n;
     }
 
-    private static android.graphics.Typeface loadTypeface(String font, String fontPath) {
+    private static Typeface loadTypeface(String font, String fontPath) {
         try {
             if (fontPath != null && !fontPath.isEmpty()) {
-                android.graphics.Typeface tf = android.graphics.Typeface.createFromFile(fontPath);
+                Typeface tf = Typeface.createFromFile(fontPath);
                 if (tf != null) return tf;
             }
             if (font != null && !font.isEmpty()) {
-                return android.graphics.Typeface.create(font, android.graphics.Typeface.NORMAL);
+                return Typeface.create(font, Typeface.NORMAL);
             }
         } catch (Exception ignored) {
         }
@@ -1989,7 +2012,7 @@ public class ApkToolsHandler {
     private static void applyWidgetTypeface(TextView tv, OverlayInjectorUtil.AdvWidget w, OverlayForm f) {
         if (tv == null || w == null) return;
         try {
-            android.graphics.Typeface tf = loadTypeface(
+            Typeface tf = loadTypeface(
                     effectivePreviewFont(w, f), effectivePreviewFontPath(w, f));
             if (tf != null) tv.setTypeface(tf, w.fontStyle);
             else if (w.fontStyle != 0) tv.setTypeface(null, w.fontStyle);
@@ -2072,7 +2095,7 @@ public class ApkToolsHandler {
             }
             TextView header = new TextView(context);
             header.setText("Selected: " + w.kind);
-            header.setTypeface(null, android.graphics.Typeface.BOLD);
+            header.setTypeface(null, Typeface.BOLD);
             header.setTextSize(15);
             advProps.addView(header);
             LinearLayout styleRow2 = new LinearLayout(context);
@@ -2115,7 +2138,7 @@ public class ApkToolsHandler {
                 thumb.setAdjustViewBounds(true);
                 if (w.imageB64 != null && !w.imageB64.isEmpty()) {
                     try {
-                        byte[] bytes = android.util.Base64.decode(w.imageB64, android.util.Base64.DEFAULT);
+                        byte[] bytes = Base64.decode(w.imageB64, Base64.DEFAULT);
                         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                         if (bitmap != null) thumb.setImageBitmap(bitmap);
                     } catch (Exception ignored) {
@@ -2367,7 +2390,7 @@ public class ApkToolsHandler {
                         chip.setText("");
                         chip.setCornerRadius(dp(24));
                         try {
-                            chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
+                            chip.setBackgroundTintList(ColorStateList.valueOf(color));
                         } catch (Exception ignored) {
                         }
                         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
@@ -2431,7 +2454,7 @@ public class ApkToolsHandler {
                 animBtnSwitch.setOnCheckedChangeListener((b, c) -> {
                     w.btnAnim = c;
                     if (c && (w.btnAnimColors == null || w.btnAnimColors.isEmpty())) {
-                        w.btnAnimColors = new ArrayList<>(java.util.Arrays.asList(-16776961, -65536));
+                        w.btnAnimColors = new ArrayList<>(Arrays.asList(-16776961, -65536));
                     }
                     renderBtnAnim[0].run();
                     renderAdv[0].run();
@@ -2444,7 +2467,7 @@ public class ApkToolsHandler {
                 actionTv.setInputType(InputType.TYPE_NULL);
                 actionTv.setCursorVisible(false);
                 actionTv.setOnClickListener(vv -> actionTv.showDropDown());
-                com.google.android.material.textfield.TextInputLayout actionBox =
+                TextInputLayout actionBox =
                         UiFields.box(context, "Tap action");
                 actionBox.addView(actionTv);
                 advProps.addView(actionBox);
@@ -2484,7 +2507,7 @@ public class ApkToolsHandler {
                     iv.setAdjustViewBounds(true);
                     if (w.imageB64 != null && !w.imageB64.isEmpty()) {
                         try {
-                            byte[] bytes = android.util.Base64.decode(w.imageB64, android.util.Base64.DEFAULT);
+                            byte[] bytes = Base64.decode(w.imageB64, Base64.DEFAULT);
                             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                             if (bitmap != null) iv.setImageBitmap(bitmap);
                         } catch (Exception ignored) {
@@ -2701,8 +2724,8 @@ public class ApkToolsHandler {
                 if (toastSection.getVisibility() == View.VISIBLE) {
                     String text = messageInput.getText() == null ? "" : messageInput.getText().toString();
                     if (toastHtmlSwitch.isChecked()) {
-                        toastPreview.setText(androidx.core.text.HtmlCompat.fromHtml(text,
-                                androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY));
+                        toastPreview.setText(HtmlCompat.fromHtml(text,
+                                HtmlCompat.FROM_HTML_MODE_LEGACY));
                     } else {
                         toastPreview.setText(text);
                     }
@@ -2710,21 +2733,21 @@ public class ApkToolsHandler {
                     String title = dlgTitleInput.getText() == null ? "" : dlgTitleInput.getText().toString();
                     String msg = dlgMsgInput.getText() == null ? "" : dlgMsgInput.getText().toString();
                     if (dlgHtmlSwitch.isChecked()) {
-                        dlgPreviewTitle.setText(androidx.core.text.HtmlCompat.fromHtml(title,
-                                androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY));
-                        dlgPreviewMsg.setText(androidx.core.text.HtmlCompat.fromHtml(msg,
-                                androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY));
+                        dlgPreviewTitle.setText(HtmlCompat.fromHtml(title,
+                                HtmlCompat.FROM_HTML_MODE_LEGACY));
+                        dlgPreviewMsg.setText(HtmlCompat.fromHtml(msg,
+                                HtmlCompat.FROM_HTML_MODE_LEGACY));
                     } else {
                         dlgPreviewTitle.setText(title);
                         dlgPreviewMsg.setText(msg);
                     }
-                    android.graphics.Typeface dlgTf = loadTypeface(form.dlgFont, form.dlgFontPath);
+                    Typeface dlgTf = loadTypeface(form.dlgFont, form.dlgFontPath);
                     try {
                         if (dlgTf != null) {
-                            dlgPreviewTitle.setTypeface(dlgTf, android.graphics.Typeface.BOLD);
+                            dlgPreviewTitle.setTypeface(dlgTf, Typeface.BOLD);
                             dlgPreviewMsg.setTypeface(dlgTf);
                         } else {
-                            dlgPreviewTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+                            dlgPreviewTitle.setTypeface(null, Typeface.BOLD);
                             dlgPreviewMsg.setTypeface(null);
                         }
                     } catch (Exception ignored) {
@@ -2840,7 +2863,7 @@ public class ApkToolsHandler {
             nameInput.setText(current);
             dialogUtil.getDialogBuilder()
                     .setTitle("Save profile")
-                    .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, nameInput, "Profile name", 16))
+                    .setView(UiFields.wrap(context, nameInput, "Profile name", 16))
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(android.R.string.ok, (d, w) -> {
                         String profileName = nameInput.getText() == null ? ""
@@ -2925,7 +2948,7 @@ public class ApkToolsHandler {
         view.findViewById(R.id.overlaySignSettings).setOnClickListener(uiHelper.showSignSettingsDialog());
         activeOverlayForm = form;
 
-        androidx.appcompat.app.AlertDialog overlayDialog = dialogUtil.getDialogBuilder()
+        AlertDialog overlayDialog = dialogUtil.getDialogBuilder()
                 .setTitle("Toast / Dialog")
                 .setView(view)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -3066,7 +3089,7 @@ public class ApkToolsHandler {
         root.addView(wheel, wheelParams);
         LinearLayout previewRow = new LinearLayout(context);
         previewRow.setOrientation(LinearLayout.HORIZONTAL);
-        previewRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        previewRow.setGravity(Gravity.CENTER_VERTICAL);
         View previewSwatch = new View(context);
         LinearLayout.LayoutParams swatchParams = new LinearLayout.LayoutParams(dp(48), dp(48));
         swatchParams.rightMargin = dp(8);
@@ -3074,10 +3097,10 @@ public class ApkToolsHandler {
         EditText hexInput = new EditText(context);
         hexInput.setHint("#RRGGBB");
         hexInput.setSingleLine(true);
-        previewRow.addView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, hexInput, null, 0),
+        previewRow.addView(UiFields.wrap(context, hexInput, null, 0),
                 new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         root.addView(previewRow);
-        android.widget.SeekBar alphaBar = new android.widget.SeekBar(context);
+        SeekBar alphaBar = new SeekBar(context);
         alphaBar.setMax(255);
         alphaBar.setProgress(255);
         root.addView(alphaBar);
@@ -3115,15 +3138,15 @@ public class ApkToolsHandler {
             }
         };
         wheel.setListener(syncFromWheel);
-        alphaBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(android.widget.SeekBar s, int p, boolean fromUser) {
+        alphaBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
                 syncFromWheel.run();
             }
 
-            public void onStartTrackingTouch(android.widget.SeekBar s) {
+            public void onStartTrackingTouch(SeekBar s) {
             }
 
-            public void onStopTrackingTouch(android.widget.SeekBar s) {
+            public void onStopTrackingTouch(SeekBar s) {
             }
         });
         hexInput.addTextChangedListener(new TextWatcher() {
@@ -3208,7 +3231,7 @@ public class ApkToolsHandler {
         private float sat = 1f;
         private float val = 1f;
         private Runnable listener;
-        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private float cx;
         private float cy;
         private float ringOuter;
@@ -3227,7 +3250,7 @@ public class ApkToolsHandler {
 
         void setColor(int argb) {
             float[] hsv = new float[3];
-            android.graphics.Color.colorToHSV(argb, hsv);
+            Color.colorToHSV(argb, hsv);
             hue = hsv[0];
             sat = hsv[1];
             val = hsv[2];
@@ -3236,7 +3259,7 @@ public class ApkToolsHandler {
         }
 
         int getColor(int alpha) {
-            return android.graphics.Color.HSVToColor(alpha, new float[]{hue, sat, val});
+            return Color.HSVToColor(alpha, new float[]{hue, sat, val});
         }
 
         @Override
@@ -3253,30 +3276,30 @@ public class ApkToolsHandler {
         }
 
         @Override
-        protected void onDraw(android.graphics.Canvas canvas) {
+        protected void onDraw(Canvas canvas) {
             int[] hueColors = new int[361];
-            for (int i = 0; i <= 360; i++) hueColors[i] = android.graphics.Color.HSVToColor(new float[]{i, 1f, 1f});
-            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            for (int i = 0; i <= 360; i++) hueColors[i] = Color.HSVToColor(new float[]{i, 1f, 1f});
+            paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(ringWidth);
-            paint.setShader(new android.graphics.SweepGradient(cx, cy, hueColors, null));
+            paint.setShader(new SweepGradient(cx, cy, hueColors, null));
             canvas.drawCircle(cx, cy, ringOuter - ringWidth / 2f, paint);
             paint.setShader(null);
-            paint.setStyle(android.graphics.Paint.Style.FILL);
-            int hueColor = android.graphics.Color.HSVToColor(new float[]{hue, 1f, 1f});
-            paint.setShader(new android.graphics.LinearGradient(sqLeft, 0, sqLeft + sqSize, 0,
-                    android.graphics.Color.WHITE, hueColor, android.graphics.Shader.TileMode.CLAMP));
+            paint.setStyle(Paint.Style.FILL);
+            int hueColor = Color.HSVToColor(new float[]{hue, 1f, 1f});
+            paint.setShader(new LinearGradient(sqLeft, 0, sqLeft + sqSize, 0,
+                    Color.WHITE, hueColor, Shader.TileMode.CLAMP));
             canvas.drawRect(sqLeft, sqTop, sqLeft + sqSize, sqTop + sqSize, paint);
-            paint.setShader(new android.graphics.LinearGradient(0, sqTop, 0, sqTop + sqSize,
-                    android.graphics.Color.TRANSPARENT, android.graphics.Color.BLACK, android.graphics.Shader.TileMode.CLAMP));
+            paint.setShader(new LinearGradient(0, sqTop, 0, sqTop + sqSize,
+                    Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP));
             canvas.drawRect(sqLeft, sqTop, sqLeft + sqSize, sqTop + sqSize, paint);
             paint.setShader(null);
             double rad = Math.toRadians(hue);
             float hr = ringOuter - ringWidth / 2f;
             float hx = cx + (float) Math.cos(rad) * hr;
             float hy = cy + (float) Math.sin(rad) * hr;
-            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(5);
-            paint.setColor(android.graphics.Color.WHITE);
+            paint.setColor(Color.WHITE);
             canvas.drawCircle(hx, hy, ringWidth / 2f - 2, paint);
             float sx = sqLeft + sat * sqSize;
             float sy = sqTop + (1f - val) * sqSize;
@@ -3452,10 +3475,10 @@ public class ApkToolsHandler {
                     tv.setText(report);
                     tv.setTextIsSelectable(true);
                     tv.setTextSize(13);
-                    tv.setTypeface(android.graphics.Typeface.MONOSPACE);
+                    tv.setTypeface(Typeface.MONOSPACE);
                     int pad = dp(16);
                     tv.setPadding(pad, pad, pad, pad);
-                    android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+                    ScrollView scroll = new ScrollView(context);
                     scroll.addView(tv);
                     dialogUtil.getDialogBuilder()
                             .setTitle(R.string.compare_apks)
@@ -3544,13 +3567,13 @@ public class ApkToolsHandler {
         TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextSize(11);
-        labelView.setTextColor(com.google.android.material.color.MaterialColors.getColor(labelView, com.google.android.material.R.attr.colorOnSurfaceVariant));
+        labelView.setTextColor(MaterialColors.getColor(labelView, com.google.android.material.R.attr.colorOnSurfaceVariant));
         row.addView(labelView);
 
         TextView valueView = new TextView(context);
         valueView.setText(value);
         valueView.setTextSize(12);
-        valueView.setTypeface(android.graphics.Typeface.MONOSPACE);
+        valueView.setTypeface(Typeface.MONOSPACE);
         valueView.setMaxLines(2);
         valueView.setEllipsize(TextUtils.TruncateAt.END);
         row.addView(valueView);
@@ -3560,12 +3583,12 @@ public class ApkToolsHandler {
             row.setFocusable(true);
             row.setOnClickListener(v -> {
                 ad.dismiss();
-                java.io.File dir = new java.io.File(tapPath);
+                File dir = new File(tapPath);
                 if (!dir.exists()) {
                     Extensions.showMessage(context, "Path " + tapPath + "not accessible");
                     return;
                 }
-                java.io.File target = dir.isFile() ? dir.getParentFile() : dir;
+                File target = dir.isFile() ? dir.getParentFile() : dir;
                 if (target != null) {
                     context.loadFolderInPane(target, pane1);
 
@@ -3583,7 +3606,7 @@ public class ApkToolsHandler {
     private void removeSignature(File apk) {
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
-            boolean ok = io.github.abdurazaaqmohammed.utils.SignatureStripUtil.strip(apk);
+            boolean ok = SignatureStripUtil.strip(apk);
             pm.dismiss();
             context.handler.post(() -> {
                 Extensions.showMessage(context, ok ? "Signature removed" : "Failed to remove signature");
@@ -3602,10 +3625,10 @@ public class ApkToolsHandler {
                 tv.setText(report);
                 tv.setTextIsSelectable(true);
                 tv.setTextSize(13);
-                tv.setTypeface(android.graphics.Typeface.MONOSPACE);
+                tv.setTypeface(Typeface.MONOSPACE);
                 int pad = dp(16);
                 tv.setPadding(pad, pad, pad, pad);
-                android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+                ScrollView scroll = new ScrollView(context);
                 scroll.addView(tv);
                 dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                         .setTitle("Signature health")

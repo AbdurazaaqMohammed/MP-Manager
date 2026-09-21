@@ -11,6 +11,7 @@ import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.archive.ByteInputSource;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +34,7 @@ public final class DexRebuilder {
                                Set<String> keptMethodKeys, Set<String> keptFieldKeys,
                                Set<String> modifiedClasses, boolean removeClasses,
                                boolean removeMethods, boolean removeFields,
-                               OptimizerReport report) throws java.io.IOException {
+                               OptimizerReport report) throws IOException {
         int removedClasses = 0;
         int removedMethods = 0;
         int removedFields = 0;
@@ -116,7 +117,7 @@ public final class DexRebuilder {
         report.fieldsRemoved += removedFields;
     }
 
-    private static void writeEmptyDex(ApkModule module, String dexName, DexIndex index) throws java.io.IOException {
+    private static void writeEmptyDex(ApkModule module, String dexName, DexIndex index) throws IOException {
         DexPool pool = new DexPool(index.dexOpcodes.getOrDefault(dexName, Opcodes.forDexVersion(35)));
         MemoryDataStore store = new MemoryDataStore();
         pool.writeTo(store);

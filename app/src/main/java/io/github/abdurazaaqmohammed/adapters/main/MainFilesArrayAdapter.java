@@ -1,13 +1,19 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Environment;
 import android.text.ClipboardManager;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -30,11 +36,14 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import androidx.exifinterface.media.ExifInterface;
 import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
 
@@ -46,9 +55,11 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import net.lingala.zip4j.model.enums.EncryptionMethod;
 
 import org.apache.commons.io.FilenameUtils;
+import org.w3c.dom.Document;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,10 +70,19 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
@@ -203,7 +223,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         int scale = UiPrefs.getScale(context);
         holder.fileNameView.setTextSize(UiPrefs.nameSize(scale));
         holder.fileNameView.setMaxLines(UiPrefs.getMaxLines(context));
-        holder.fileNameView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        holder.fileNameView.setEllipsize(TextUtils.TruncateAt.END);
         int iconPx = UiPrefs.iconDp(context, scale);
         ViewGroup.LayoutParams iconParams = holder.fileIconView.getLayoutParams();
         if (iconParams != null) {
@@ -611,13 +631,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         EditText wInput = new EditText(context);
         wInput.setHint("Width");
         wInput.setText(String.valueOf(minW));
-        wInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        wInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         wInput.setSingleLine(true);
         root.addView(wInput);
         EditText hInput = new EditText(context);
         hInput.setHint("Height");
         hInput.setText(String.valueOf(minH));
-        hInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        hInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         hInput.setSingleLine(true);
         root.addView(hInput);
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
@@ -705,10 +725,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         FileUtils.copyFile(tmp, f);
                         tmp.delete();
                         try {
-                            androidx.exifinterface.media.ExifInterface exif =
-                                    new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
-                            exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
-                                    String.valueOf(androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL));
+                            ExifInterface exif =
+                                    new ExifInterface(f.getAbsolutePath());
+                            exif.setAttribute(ExifInterface.TAG_ORIENTATION,
+                                    String.valueOf(ExifInterface.ORIENTATION_NORMAL));
                             exif.saveAttributes();
                         } catch (Exception ignored) {
                         }
@@ -726,7 +746,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         int cw = Math.max(1, Math.min(w, src.getWidth() - cx));
                         int ch = Math.max(1, Math.min(h, src.getHeight() - cy));
                         Bitmap out = Bitmap.createBitmap(src, cx, cy, cw, ch);
-                        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(f)) {
+                        try (FileOutputStream fos = new FileOutputStream(f)) {
                             out.compress(jpeg ? Bitmap.CompressFormat.JPEG : Bitmap.CompressFormat.PNG,
                                     jpeg ? 95 : 100, fos);
                         } catch (Exception e) {
@@ -738,10 +758,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         }
                         if (jpeg) {
                             try {
-                                androidx.exifinterface.media.ExifInterface exif =
-                                        new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
-                                exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
-                                        String.valueOf(androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL));
+                                ExifInterface exif =
+                                        new ExifInterface(f.getAbsolutePath());
+                                exif.setAttribute(ExifInterface.TAG_ORIENTATION,
+                                        String.valueOf(ExifInterface.ORIENTATION_NORMAL));
                                 exif.saveAttributes();
                             } catch (Exception ignored) {
                             }
@@ -762,11 +782,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     private void showBatchExifDialog(List<File> images) {
         String[] tags = {
-                androidx.exifinterface.media.ExifInterface.TAG_IMAGE_DESCRIPTION,
-                androidx.exifinterface.media.ExifInterface.TAG_ARTIST,
-                androidx.exifinterface.media.ExifInterface.TAG_COPYRIGHT,
-                androidx.exifinterface.media.ExifInterface.TAG_SOFTWARE,
-                androidx.exifinterface.media.ExifInterface.TAG_DATETIME};
+                ExifInterface.TAG_IMAGE_DESCRIPTION,
+                ExifInterface.TAG_ARTIST,
+                ExifInterface.TAG_COPYRIGHT,
+                ExifInterface.TAG_SOFTWARE,
+                ExifInterface.TAG_DATETIME};
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
@@ -809,8 +829,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 pm.setText(context.rss.getString(R.string.processing_x, f.getName()));
                 try {
                     backupImage(f);
-                    androidx.exifinterface.media.ExifInterface exif =
-                            new androidx.exifinterface.media.ExifInterface(f.getAbsolutePath());
+                    ExifInterface exif =
+                            new ExifInterface(f.getAbsolutePath());
                     for (int i = 0; i < tags.length; i++) {
                         if (!vals[i].isEmpty()) exif.setAttribute(tags[i], vals[i]);
                     }
@@ -968,8 +988,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         content.addView(reportedView);
         content.addView(actualView);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-        com.google.android.material.switchmaterial.SwitchMaterial useActualSwitch =
-                new com.google.android.material.switchmaterial.SwitchMaterial(context);
+        SwitchMaterial useActualSwitch =
+                new SwitchMaterial(context);
         useActualSwitch.setText(R.string.use_actual_mime);
         useActualSwitch.setChecked(settings.getBoolean("fix_mime_type", false));
         useActualSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
@@ -1012,7 +1032,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return "openwith_default_" + mime.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "_");
     }
 
-    private void launchAppForMime(android.content.pm.ResolveInfo info, Uri uri, String mime) {
+    private void launchAppForMime(ResolveInfo info, Uri uri, String mime) {
         Intent intent = new Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, mime)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -1034,15 +1054,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         final String chosenMime = mime;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String def = prefs.getString(defaultAppKey(chosenMime), null);
-        android.content.pm.PackageManager pm = context.getPackageManager();
+        PackageManager pm = context.getPackageManager();
         if (def != null) {
-            android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(def);
+            ComponentName cn = ComponentName.unflattenFromString(def);
             if (cn != null) {
                 try {
                     pm.getActivityInfo(cn, 0);
                     Intent probe = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, chosenMime);
                     probe.setComponent(cn);
-                    List<android.content.pm.ResolveInfo> stillThere = pm.queryIntentActivities(probe, 0);
+                    List<ResolveInfo> stillThere = pm.queryIntentActivities(probe, 0);
                     if (!stillThere.isEmpty()) {
                         probe.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         context.startActivity(probe);
@@ -1053,9 +1073,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 prefs.edit().remove(defaultAppKey(chosenMime)).apply();
             }
         }
-        List<android.content.pm.ResolveInfo> apps = pm.queryIntentActivities(
+        List<ResolveInfo> apps = pm.queryIntentActivities(
                 new Intent(Intent.ACTION_VIEW).setDataAndType(uri, chosenMime),
-                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                PackageManager.MATCH_DEFAULT_ONLY);
         if (apps.isEmpty()) {
             Extensions.showMessage(context, R.string.no_apps_found);
             return;
@@ -1063,7 +1083,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         apps.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(
                 String.valueOf(a.loadLabel(pm)), String.valueOf(b.loadLabel(pm))));
         RecyclerView list = new RecyclerView(context);
-        list.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(context));
+        list.setLayoutManager(new LinearLayoutManager(context));
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.rss.getString(R.string.open_with) + ": " + fileName + " (" + chosenMime + ")")
                 .setView(list)
@@ -1099,7 +1119,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
             @Override
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-                android.content.pm.ResolveInfo info = apps.get(position);
+                ResolveInfo info = apps.get(position);
                 LinearLayout row = (LinearLayout) holder.itemView;
                 LinearLayout texts = (LinearLayout) row.getChildAt(1);
                 ImageView icon = (ImageView) row.getChildAt(0);
@@ -1113,7 +1133,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 name.setText(label);
                 String currentDef = prefs.getString(defaultAppKey(chosenMime), null);
                 boolean isDef = currentDef != null && currentDef.equals(
-                        new android.content.ComponentName(info.activityInfo.packageName, info.activityInfo.name).flattenToString());
+                        new ComponentName(info.activityInfo.packageName, info.activityInfo.name).flattenToString());
                 sub.setText(isDef ? context.getString(R.string.default_app, label) : info.activityInfo.packageName);
                 row.setOnClickListener(v -> {
                     dialog.dismiss();
@@ -1125,7 +1145,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 });
                 row.setOnLongClickListener(v -> {
                     PopupMenu popup = new PopupMenu(context, row);
-                    String flat = new android.content.ComponentName(
+                    String flat = new ComponentName(
                             info.activityInfo.packageName, info.activityInfo.name).flattenToString();
                     if (isDef) {
                         popup.getMenu().add(context.getString(R.string.clear_default));
@@ -1154,7 +1174,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void showFontPreview(File file, String fileName) {
         withReadableCopy(file, readable -> {
             try {
-                android.graphics.Typeface tf = android.graphics.Typeface.createFromFile(readable);
+                Typeface tf = Typeface.createFromFile(readable);
                 LinearLayout root = new LinearLayout(context);
                 root.setOrientation(LinearLayout.VERTICAL);
                 int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
@@ -1218,20 +1238,20 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         pm.show();
         new Thread(() -> {
             try {
-                javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+                DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
                 dbf.setNamespaceAware(true);
-                org.w3c.dom.Document doc;
+                Document doc;
                 try (InputStream is = FileUtils.getInputStream(readable)) {
                     doc = dbf.newDocumentBuilder().parse(is);
                 }
-                javax.xml.transform.Transformer transformer =
-                        javax.xml.transform.TransformerFactory.newInstance().newTransformer();
-                transformer.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes");
+                Transformer transformer =
+                        TransformerFactory.newInstance().newTransformer();
+                transformer.setOutputProperty(OutputKeys.INDENT, "yes");
                 transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
                 File out = new File(context.getCacheDir(), System.currentTimeMillis() + "_formatted.xml");
-                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
-                    transformer.transform(new javax.xml.transform.dom.DOMSource(doc),
-                            new javax.xml.transform.stream.StreamResult(fos));
+                try (FileOutputStream fos = new FileOutputStream(out)) {
+                    transformer.transform(new DOMSource(doc),
+                            new StreamResult(fos));
                 }
                 if (!readable.getAbsolutePath().equals(original.getAbsolutePath())) {
                     AccessManager.copyFile(context, out.getAbsolutePath(), original.getAbsolutePath(), true);
@@ -1252,16 +1272,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     private void importSignature(File file, String fileName) {
-        File keysDir = new File(android.os.Environment.getExternalStorageDirectory()
+        File keysDir = new File(Environment.getExternalStorageDirectory()
                 + File.separator + "MT2" + File.separator + "keys");
         new Thread(() -> {
             try {
                 if (!keysDir.isDirectory() && !keysDir.mkdirs() && !keysDir.isDirectory()) {
-                    throw new java.io.IOException("Cannot create keys dir");
+                    throw new IOException("Cannot create keys dir");
                 }
                 File dest = FileUtils.getUnusedFile(new File(keysDir, fileName));
                 try (InputStream is = FileUtils.getInputStream(file);
-                     java.io.FileOutputStream fos = new java.io.FileOutputStream(dest)) {
+                     FileOutputStream fos = new FileOutputStream(dest)) {
                     byte[] buf = new byte[65536];
                     int n;
                     while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
@@ -1509,17 +1529,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void showArscOpenWith(File arscFile, File apkFile, String entryPath) {
         String[] options = {"ARSC Editor Plus", "ARSC Editor", "Translation mode", "Resource querier"};
         String[] modes = {
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_PLUS,
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR,
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_TRANSLATE,
-                io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_QUERIER};
+                ArscEditorActivity.MODE_PLUS,
+                ArscEditorActivity.MODE_EDITOR,
+                ArscEditorActivity.MODE_TRANSLATE,
+                ArscEditorActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle("Open with")
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
-                    Class<?> target = io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.MODE_EDITOR.equals(modes[which])
-                            ? io.github.abdurazaaqmohammed.arsc.ArscSimpleEditorActivity.class
-                            : io.github.abdurazaaqmohammed.arsc.ArscEditorActivity.class;
+                    Class<?> target = ArscEditorActivity.MODE_EDITOR.equals(modes[which])
+                            ? ArscSimpleEditorActivity.class
+                            : ArscEditorActivity.class;
                     Intent arscIntent = new Intent(context, target)
                             .putExtra("path", arscFile.getAbsolutePath())
                             .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())
@@ -1981,7 +2001,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         Object ref = values[selectedPositions.iterator().next()];
         boolean refIsFolder = isInZip ? ((ZipEntryInfo) ref).isDirectory() : ((File) ref).isDirectory();
         String refName = ref instanceof File ? ((File) ref).getName() : ((ZipEntryInfo) ref).getName();
-        String refExt = org.apache.commons.io.FilenameUtils.getExtension(refName).toLowerCase(Locale.ROOT);
+        String refExt = FilenameUtils.getExtension(refName).toLowerCase(Locale.ROOT);
 
         isMultiSelectMode = true;
         selectedPositions.clear();
@@ -1992,7 +2012,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 if (isFolder) selectedPositions.add(i);
             } else if (!isFolder) {
                 String n = o instanceof File ? ((File) o).getName() : ((ZipEntryInfo) o).getName();
-                if (org.apache.commons.io.FilenameUtils.getExtension(n).toLowerCase(Locale.ROOT).equals(refExt))
+                if (FilenameUtils.getExtension(n).toLowerCase(Locale.ROOT).equals(refExt))
                     selectedPositions.add(i);
             }
         }

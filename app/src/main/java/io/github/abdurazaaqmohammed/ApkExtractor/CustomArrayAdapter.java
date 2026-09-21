@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.ApkExtractor;
 
+import android.R;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,7 +14,7 @@ public class CustomArrayAdapter extends ArrayAdapter<CharSequence> {
     private final int textColor;
 
     public CustomArrayAdapter(Context context, CharSequence[] values, int textColor) {
-        super(context, android.R.layout.select_dialog_singlechoice, values);
+        super(context, R.layout.select_dialog_singlechoice, values);
         this.context = context;
         this.values = values;
         this.textColor = textColor;
@@ -22,9 +23,9 @@ public class CustomArrayAdapter extends ArrayAdapter<CharSequence> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(android.R.layout.select_dialog_singlechoice, parent, false);
+            convertView = LayoutInflater.from(context).inflate(R.layout.select_dialog_singlechoice, parent, false);
         }
-        TextView textView = convertView.findViewById(android.R.id.text1);
+        TextView textView = convertView.findViewById(R.id.text1);
         textView.setText(values[position]);
         textView.setTextColor(textColor);
         return convertView;

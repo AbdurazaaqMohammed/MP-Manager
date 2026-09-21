@@ -20,11 +20,13 @@ import java.io.InputStream;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class SignatureKillerUtil {
 
@@ -107,7 +109,7 @@ public class SignatureKillerUtil {
             File tmpDir = new File(context.getCacheDir(), "sigkill_" + System.currentTimeMillis());
             tmpDir.mkdirs();
             try {
-                java.util.Set<String> skip = new java.util.HashSet<>();
+                Set<String> skip = new HashSet<>();
                 for (FileHeader header : zin.getFileHeaders()) {
                     String name = header.getFileName();
                     if (header.isDirectory()) continue;

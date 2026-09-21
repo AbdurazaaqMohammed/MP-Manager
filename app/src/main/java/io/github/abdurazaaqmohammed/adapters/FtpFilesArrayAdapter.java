@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+
+import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
@@ -142,7 +144,7 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
         input.setText(file.getName());
         dialogUtil.getDialogBuilder()
                 .setTitle(context.rss.getString(R.string.rename))
-                .setView(io.github.abdurazaaqmohammed.ui.UiFields.wrap(context, input, null, 16))
+                .setView(UiFields.wrap(context, input, null, 16))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String newName = input.getText().toString();
                     if (!newName.isEmpty() && !newName.equals(file.getName())) {

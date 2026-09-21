@@ -20,7 +20,7 @@ import org.apache.commons.collections4.Transformer;
 
 public class CompareUtil {
 
-    public static<T, E extends Comparable<E>> Comparator<T> computeComparator(org.apache.commons.collections4.Transformer<? super T, E> transformer) {
+    public static<T, E extends Comparable<E>> Comparator<T> computeComparator(Transformer<? super T, E> transformer) {
         return (t1, t2) -> compare(transformer.transform(t1), transformer.transform(t2));
     }
     public static<T extends Comparable<? super T>> int compare(T[] items1, T[] items2) {

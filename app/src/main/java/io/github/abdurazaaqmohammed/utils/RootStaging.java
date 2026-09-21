@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import android.content.Context;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -107,7 +108,7 @@ public final class RootStaging {
     }
 
     /** FileInputStream that deletes its staged backing file on close. */
-    private static class StagedInputStream extends java.io.FileInputStream {
+    private static class StagedInputStream extends FileInputStream {
         private final File staged;
 
         StagedInputStream(File staged) throws IOException {

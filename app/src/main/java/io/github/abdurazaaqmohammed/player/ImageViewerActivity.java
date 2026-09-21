@@ -1,11 +1,15 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 import androidx.exifinterface.media.ExifInterface;
+
+import android.graphics.Matrix;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.format.DateFormat;
@@ -27,8 +31,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -39,8 +46,10 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ImageViewerActivity extends AppCompatActivity {
 
@@ -62,7 +71,7 @@ public class ImageViewerActivity extends AppCompatActivity {
         private RecyclerView attachedPager;
         private PageProvider pageProvider;
 
-        ZoomPagerLayoutManager(android.content.Context context) {
+        ZoomPagerLayoutManager(Context context) {
             super(context, LinearLayoutManager.HORIZONTAL, false);
         }
 
@@ -402,7 +411,7 @@ public class ImageViewerActivity extends AppCompatActivity {
     private boolean isJpegFile(String path) {
         String lower = path.toLowerCase(Locale.US);
         if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return true;
-        try (java.io.FileInputStream fis = new java.io.FileInputStream(path)) {
+        try (FileInputStream fis = new FileInputStream(path)) {
             return fis.read() == 0xFF && fis.read() == 0xD8;
         } catch (Exception e) {
             return false;
@@ -429,11 +438,11 @@ public class ImageViewerActivity extends AppCompatActivity {
             return;
         }
         ImageEditActivity.sessionPath = path;
-        startActivityForResult(new android.content.Intent(this, ImageEditActivity.class), REQ_EDIT_IMAGE);
+        startActivityForResult(new Intent(this, ImageEditActivity.class), REQ_EDIT_IMAGE);
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQ_EDIT_IMAGE && resultCode == RESULT_OK) {
             refreshCurrentImage();
@@ -480,8 +489,8 @@ public class ImageViewerActivity extends AppCompatActivity {
                     cmd.add(jpegtran.getAbsolutePath());
                     Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
                     StringBuilder out = new StringBuilder();
-                    try (java.io.BufferedReader br = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(process.getInputStream()))) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(process.getInputStream()))) {
                         char[] buf = new char[2048];
                         int n;
                         while ((n = br.read(buf)) != -1 && out.length() < 2048) out.append(buf, 0, n);
@@ -497,7 +506,7 @@ public class ImageViewerActivity extends AppCompatActivity {
             sb.append("jni lib: ").append(NativeToolManager.describeFile(jniLib)).append("\n");
             if (jniLib.isFile()) {
                 try {
-                    if (io.github.abdurazaaqmohammed.utils.JpegtranJni.load(jniLib.getAbsolutePath())) {
+                    if (JpegtranJni.load(jniLib.getAbsolutePath())) {
                         sb.append("JNI load probe: LOADED\n");
                     } else {
                         sb.append("JNI load probe: FAILED\n");
@@ -511,7 +520,7 @@ public class ImageViewerActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 TextView text = new TextView(this);
                 text.setTextSize(13);
-                text.setTypeface(android.graphics.Typeface.MONOSPACE);
+                text.setTypeface(Typeface.MONOSPACE);
                 text.setTextIsSelectable(true);
                 int pad = dp(12);
                 text.setPadding(pad, pad, pad, pad);
@@ -530,15 +539,15 @@ public class ImageViewerActivity extends AppCompatActivity {
 
 
     private void showError(String message) {
-        io.github.codehasan.colorpicker.extensions.Extensions.showMessage(this, message);
+        Extensions.showMessage(this, message);
     }
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    private static android.graphics.Matrix orientationMatrix(int orientation) {
-        android.graphics.Matrix matrix = new android.graphics.Matrix();
+    private static Matrix orientationMatrix(int orientation) {
+        Matrix matrix = new Matrix();
         switch (orientation) {
             case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
                 matrix.postScale(-1, 1);
@@ -623,7 +632,7 @@ public class ImageViewerActivity extends AppCompatActivity {
             try {
                 int orientation = new ExifInterface(path).getAttributeInt(
                         ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                android.graphics.Matrix matrix = orientationMatrix(orientation);
+                Matrix matrix = orientationMatrix(orientation);
                 if (matrix != null) {
                     Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0,
                             bitmap.getWidth(), bitmap.getHeight(), matrix, true);
