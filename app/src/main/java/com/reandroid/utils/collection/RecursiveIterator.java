@@ -19,11 +19,12 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.commons.collections4.Predicate;
+import org.apache.commons.collections4.Transformer;
 
 public class RecursiveIterator<T> implements Iterator<T> {
 
     private T item;
-    private final org.apache.commons.collections4.Transformer<T, Iterator<? extends T>> transformer;
+    private final Transformer<T, Iterator<? extends T>> transformer;
     private final Predicate<? super T> filter;
 
     private boolean firstProcessed;
@@ -31,12 +32,12 @@ public class RecursiveIterator<T> implements Iterator<T> {
     private Iterator<? extends T> currentIterator;
     private RecursiveIterator<T> currentRecursiveIterator;
 
-    public RecursiveIterator(T item, org.apache.commons.collections4.Transformer<T, Iterator<? extends T>> transformer, Predicate<? super T> filter){
+    public RecursiveIterator(T item, Transformer<T, Iterator<? extends T>> transformer, Predicate<? super T> filter){
         this.item = item;
         this.transformer = transformer;
         this.filter = filter;
     }
-    public RecursiveIterator(T item, org.apache.commons.collections4.Transformer<T, Iterator<? extends T>> transformer){
+    public RecursiveIterator(T item, Transformer<T, Iterator<? extends T>> transformer){
         this(item, transformer, null);
     }
 
@@ -122,18 +123,18 @@ public class RecursiveIterator<T> implements Iterator<T> {
         return filter == null || filter.evaluate(element);
     }
 
-    public static<T1> Iterator<T1> of(T1 item, org.apache.commons.collections4.Transformer<T1, Iterator<? extends T1>> transformer, Predicate<? super T1> filter){
+    public static<T1> Iterator<T1> of(T1 item, Transformer<T1, Iterator<? extends T1>> transformer, Predicate<? super T1> filter){
         return new RecursiveIterator<>(item, transformer, filter);
     }
-    public static<T1> Iterator<T1> of(T1 item, org.apache.commons.collections4.Transformer<T1, Iterator<? extends T1>> transformer){
+    public static<T1> Iterator<T1> of(T1 item, Transformer<T1, Iterator<? extends T1>> transformer){
         return new RecursiveIterator<>(item, transformer);
     }
 
-    public static<T1, E> Iterator<E> compute(T1 item, org.apache.commons.collections4.Transformer<T1, Iterator<? extends T1>> transformer, org.apache.commons.collections4.Transformer<T1, Iterator<? extends E>> computer){
+    public static<T1, E> Iterator<E> compute(T1 item, Transformer<T1, Iterator<? extends T1>> transformer, Transformer<T1, Iterator<? extends E>> computer){
         return compute(item, transformer, null, computer);
     }
     @SuppressWarnings("unchecked")
-    public static<T1, E> Iterator<E> compute(T1 item, org.apache.commons.collections4.Transformer<T1, Iterator<? extends T1>> transformer, Predicate<? super T1> filter, org.apache.commons.collections4.Transformer<T1, Iterator<? extends E>> computer){
+    public static<T1, E> Iterator<E> compute(T1 item, Transformer<T1, Iterator<? extends T1>> transformer, Predicate<? super T1> filter, Transformer<T1, Iterator<? extends E>> computer){
         return new IterableIterator<T1, E>(new RecursiveIterator<>(item, transformer, filter)) {
             @Override
             public Iterator<E> iterator(T1 element) {

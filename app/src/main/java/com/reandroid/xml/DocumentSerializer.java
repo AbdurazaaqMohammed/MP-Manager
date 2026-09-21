@@ -15,6 +15,8 @@
  */
 package com.reandroid.xml;
 
+import android.text.TextUtils;
+
 import org.xmlpull.v1.XmlSerializer;
 
 import java.io.IOException;
@@ -97,7 +99,7 @@ public class DocumentSerializer implements XmlSerializer {
 
     @Override
     public String getPrefix(String namespace, boolean generatePrefix) throws IllegalArgumentException {
-        if(android.text.TextUtils.isEmpty(namespace)){
+        if(TextUtils.isEmpty(namespace)){
             return null;
         }
         Map<String, String> map = this.namespaceMap;

@@ -33,39 +33,43 @@ import java.util.Set;
 public class FastDexTest {
 
     private static final String A_SMALI =
-            ".class public Ltest/A;\n"
-                    + ".super Ljava/lang/Object;\n"
-                    + ".source \"A.java\"\n"
-                    + ".method public constructor <init>()V\n"
-                    + "    .locals 1\n"
-                    + "    invoke-direct {p0}, Ljava/lang/Object;-><init>()V\n"
-                    + "    return-void\n"
-                    + ".end method\n"
-                    + ".method public greet()Ljava/lang/String;\n"
-                    + "    .locals 1\n"
-                    + "    const-string v0, \"hi\"\n"
-                    + "    return-object v0\n"
-                    + ".end method\n";
+            """
+                    .class public Ltest/A;
+                    .super Ljava/lang/Object;
+                    .source "A.java"
+                    .method public constructor <init>()V
+                        .locals 1
+                        invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+                        return-void
+                    .end method
+                    .method public greet()Ljava/lang/String;
+                        .locals 1
+                        const-string v0, "hi"
+                        return-object v0
+                    .end method
+                    """;
 
     private static final String B_SMALI =
-            ".class public Ltest/B;\n"
-                    + ".super Landroid/app/Activity;\n"
-                    + ".source \"B.java\"\n"
-                    + ".method protected onCreate(Landroid/os/Bundle;)V\n"
-                    + "    .locals 1\n"
-                    + "    invoke-direct {p0, p1}, Landroid/app/Activity;->onCreate(Landroid/os/Bundle;)V\n"
-                    + "    return-void\n"
-                    + ".end method\n"
-                    + ".method public usesToast()V\n"
-                    + "    .locals 3\n"
-                    + "    const/4 v0, 0x0\n"
-                    + "    const-string v1, \"t\"\n"
-                    + "    const/4 v2, 0x0\n"
-                    + "    invoke-static {v0, v1, v2}, Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;\n"
-                    + "    move-result-object v0\n"
-                    + "    invoke-virtual {v0}, Landroid/widget/Toast;->show()V\n"
-                    + "    return-void\n"
-                    + ".end method\n";
+            """
+                    .class public Ltest/B;
+                    .super Landroid/app/Activity;
+                    .source "B.java"
+                    .method protected onCreate(Landroid/os/Bundle;)V
+                        .locals 1
+                        invoke-direct {p0, p1}, Landroid/app/Activity;->onCreate(Landroid/os/Bundle;)V
+                        return-void
+                    .end method
+                    .method public usesToast()V
+                        .locals 3
+                        const/4 v0, 0x0
+                        const-string v1, "t"
+                        const/4 v2, 0x0
+                        invoke-static {v0, v1, v2}, Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;
+                        move-result-object v0
+                        invoke-virtual {v0}, Landroid/widget/Toast;->show()V
+                        return-void
+                    .end method
+                    """;
 
     private File writeSmaliDir(String aSmali, String bSmali) throws Exception {
         File dir = Files.createTempDirectory("fastdex").toFile();

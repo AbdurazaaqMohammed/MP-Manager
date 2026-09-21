@@ -99,7 +99,7 @@ public class GroupMap<K, V> {
         return (V) obj;
     }
 
-    public void putAll(Collection<? extends V> collection, org.apache.commons.collections4.Transformer<? super V, K> transformer){
+    public void putAll(Collection<? extends V> collection, Transformer<? super V, K> transformer){
         if(collection.isEmpty()){
             return;
         }

@@ -15,16 +15,18 @@
  */
 package com.reandroid.utils.collection;
 
+import org.apache.commons.collections4.Transformer;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class LinkedIterator<T> implements Iterator<T> {
     
-    private final org.apache.commons.collections4.Transformer<? super T, T> transformer;
+    private final Transformer<? super T, T> transformer;
     private T mNext;
     private boolean mComputed;
     
-    public LinkedIterator(boolean includeSelf, T item, org.apache.commons.collections4.Transformer<? super T, T> transformer) {
+    public LinkedIterator(boolean includeSelf, T item, Transformer<? super T, T> transformer) {
         this.mNext = item;
         this.transformer = transformer;
         this.mComputed = includeSelf;
@@ -54,13 +56,13 @@ public class LinkedIterator<T> implements Iterator<T> {
         return next;
     }
 
-    public static<T1> Iterator<T1> of(boolean includeSelf, T1 item, org.apache.commons.collections4.Transformer<? super T1, T1> transformer) {
+    public static<T1> Iterator<T1> of(boolean includeSelf, T1 item, Transformer<? super T1, T1> transformer) {
         if (item == null) {
             return EmptyIterator.of();
         }
         return new LinkedIterator<>(includeSelf, item, transformer);
     }
-    public static<T1> Iterator<T1> of(T1 item, org.apache.commons.collections4.Transformer<? super T1, T1> transformer) {
+    public static<T1> Iterator<T1> of(T1 item, Transformer<? super T1, T1> transformer) {
         return of(false, item, transformer);
     }
 }

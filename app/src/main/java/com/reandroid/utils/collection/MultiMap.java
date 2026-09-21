@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.commons.collections4.Closure;
 import org.apache.commons.collections4.Transformer;
 import org.apache.commons.collections4.Predicate;
 
@@ -36,7 +38,7 @@ public class MultiMap<K, V> {
     public MultiMap() {
     }
 
-    public void findDuplicates(Comparator<? super V> comparator, org.apache.commons.collections4.Closure<List<V>> consumer) {
+    public void findDuplicates(Comparator<? super V> comparator, Closure<List<V>> consumer) {
         synchronized (mLock) {
             Map<K, Object> map = this.map;
             if(map == null || map.isEmpty()) {
@@ -59,7 +61,7 @@ public class MultiMap<K, V> {
             }
         }
     }
-    private void processDuplicateValues(Comparator<? super V> comparator, org.apache.commons.collections4.Closure<List<V>> consumer, EntryList<V> entryList) {
+    private void processDuplicateValues(Comparator<? super V> comparator, Closure<List<V>> consumer, EntryList<V> entryList) {
         int size = entryList.size();
         if(size < 2) {
             return;

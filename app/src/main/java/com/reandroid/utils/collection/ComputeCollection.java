@@ -15,6 +15,8 @@
  */
 package com.reandroid.utils.collection;
 
+import org.apache.commons.collections4.Transformer;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Objects;
@@ -22,9 +24,9 @@ import java.util.Objects;
 public class ComputeCollection<T, E> implements Collection<T> {
 
     private final Collection<? extends E> source;
-    private final org.apache.commons.collections4.Transformer<? super E, T> transformer;
+    private final Transformer<? super E, T> transformer;
 
-    public ComputeCollection(Collection<? extends E> collection, org.apache.commons.collections4.Transformer<? super E, T> transformer){
+    public ComputeCollection(Collection<? extends E> collection, Transformer<? super E, T> transformer){
         this.source = collection;
         this.transformer = transformer;
     }

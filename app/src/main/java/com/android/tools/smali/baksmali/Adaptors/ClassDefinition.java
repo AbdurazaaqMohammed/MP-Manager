@@ -239,8 +239,10 @@ public class ClassDefinition {
                         classDef.getType(), fieldString));
                 System.err.println("You will need to rename one of these fields, including all references.");
 
-                writer.write("# There is both a static and instance field with this signature.\n" +
-                             "# You will need to rename one of these fields, including all references.\n");
+                writer.write("""
+                        # There is both a static and instance field with this signature.
+                        # You will need to rename one of these fields, including all references.
+                        """);
             }
             FieldDefinition.writeTo(fieldWriter, field, false);
         }
@@ -313,8 +315,10 @@ public class ClassDefinition {
                 writer.write("# duplicate method ignored\n");
                 methodWriter = getCommentingWriter(writer);
             } else if (directMethods.contains(methodString)) {
-                writer.write("# There is both a direct and virtual method with this signature.\n" +
-                             "# You will need to rename one of these methods, including all references.\n");
+                writer.write("""
+                        # There is both a direct and virtual method with this signature.
+                        # You will need to rename one of these methods, including all references.
+                        """);
                 System.err.println(String.format("Duplicate direct+virtual method found: %s->%s",
                         classDef.getType(), methodString));
                 System.err.println("You will need to rename one of these methods, including all references.");

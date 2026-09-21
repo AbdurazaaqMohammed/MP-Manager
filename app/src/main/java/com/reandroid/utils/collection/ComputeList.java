@@ -20,7 +20,7 @@ import org.apache.commons.collections4.Transformer;
 
 public class ComputeList<T, E> extends ComputeCollection<T, E> implements List<T>{
 
-    public ComputeList(List<? extends E> list, org.apache.commons.collections4.Transformer<? super E, T> transformer) {
+    public ComputeList(List<? extends E> list, Transformer<? super E, T> transformer) {
         super(list, transformer);
     }
 
