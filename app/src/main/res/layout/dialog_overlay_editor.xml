@@ -742,14 +742,14 @@
                 android:id="@+id/overlayDlgB64"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Hide text with Base64" />
+                android:text="@string/base64_encrypt_text" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/overlayDlgFontBtn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Font: Default" />
+                android:text="@string/font_default" />
 
             <LinearLayout
                 android:id="@+id/overlayDlgPreviewBox"

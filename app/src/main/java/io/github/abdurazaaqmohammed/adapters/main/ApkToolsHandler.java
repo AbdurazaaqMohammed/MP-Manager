@@ -1978,7 +1978,7 @@ public class ApkToolsHandler {
     private void refreshFontLabels(OverlayForm f) {
         if (f == null || f.dlgFontBtn == null) return;
         if (f.dlgFontPath != null && !f.dlgFontPath.isEmpty()) {
-            f.dlgFontBtn.setText("Font: " + baseName(f.dlgFontPath));
+            f.dlgFontBtn.setText(context.rss.getString(R.string.font_x, baseName(f.dlgFontPath)));
         } else {
             f.dlgFontBtn.setText(fontLabel(f.dlgFont));
         }
@@ -1987,29 +1987,29 @@ public class ApkToolsHandler {
     private void refreshAdvFontLabels(OverlayForm f) {
         if (f == null || f.advFontBtn == null) return;
         if (f.advFontPath != null && !f.advFontPath.isEmpty()) {
-            f.advFontBtn.setText("Dialog font: " + baseName(f.advFontPath));
+            f.advFontBtn.setText(context.rss.getString(R.string.dialog_font_x, baseName(f.advFontPath)));
         } else {
-            String label = fontLabel(f.advFont).replace("Font:", "Dialog font:");
+            String label = fontLabel(f.advFont).replace(context.rss.getString(R.string.font_x), context.rss.getString(R.string.dialog_font_x));
             f.advFontBtn.setText(label);
         }
     }
 
-    private static String widgetFontLabel(OverlayInjectorUtil.AdvWidget w) {
-        if (w == null) return "Font: Default";
-        if (w.fontPath != null && !w.fontPath.isEmpty()) return "Font: " + baseName(w.fontPath);
-        if ((w.font == null || w.font.isEmpty())) return "Font: Dialog";
+    private String widgetFontLabel(OverlayInjectorUtil.AdvWidget w) {
+        if (w == null) return context.rss.getString(R.string.font_default);
+        if (!TextUtils.isEmpty(w.fontPath)) return context.rss.getString(R.string.dialog_font_x, baseName(w.fontPath));
+        if (TextUtils.isEmpty(w.font)) return context.rss.getString(R.string.font_dialog);
         return fontLabel(w.font);
     }
 
     private static String effectivePreviewFont(OverlayInjectorUtil.AdvWidget w, OverlayForm f) {
-        if (w != null && w.font != null && !w.font.isEmpty()) return w.font;
-        if (f != null && f.advFont != null && !f.advFont.isEmpty()) return f.advFont;
+        if (w != null && !TextUtils.isEmpty(w.font)) return w.font;
+        if (f != null && !TextUtils.isEmpty(f.advFont)) return f.advFont;
         return "";
     }
 
     private static String effectivePreviewFontPath(OverlayInjectorUtil.AdvWidget w, OverlayForm f) {
-        if (w != null && w.fontPath != null && !w.fontPath.isEmpty()) return w.fontPath;
-        if (f != null && f.advFontPath != null && !f.advFontPath.isEmpty()) return f.advFontPath;
+        if (w != null && !TextUtils.isEmpty(w.fontPath)) return w.fontPath;
+        if (f != null && !TextUtils.isEmpty(f.advFontPath)) return f.advFontPath;
         return "";
     }
 

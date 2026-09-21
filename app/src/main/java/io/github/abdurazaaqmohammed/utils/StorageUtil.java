@@ -94,7 +94,7 @@ public class StorageUtil {
         } else {
             // Fallback for older devices (basic)
             StorageInfo internal = new StorageInfo();
-            internal.name = "Internal storage";
+            internal.name = ctx.getString(R.string.internal_storage);
             internal.path = Environment.getExternalStorageDirectory().getPath();
             StatFs s = new StatFs(internal.path);
             long bs = s.getBlockSizeLong();
@@ -105,7 +105,7 @@ public class StorageUtil {
 
             File rootDirectory = Environment.getRootDirectory();
             StorageInfo sys = new StorageInfo();
-            sys.name = "System";
+            sys.name = ctx.getString(R.string.system);
             sys.path = rootDirectory.getPath();
             StatFs s2 = new StatFs(sys.path);
             long bs2 = s2.getBlockSizeLong();
@@ -126,7 +126,7 @@ public class StorageUtil {
 
         if (infos.isEmpty()) {
             TextView tv = new TextView(ctx);
-            tv.setText("No mounted storage found.");
+            tv.setText(R.string.no_mounted_storage_found);
             storageContainer.addView(tv);
             return;
         }
@@ -139,10 +139,11 @@ public class StorageUtil {
             });
             row.setOnLongClickListener(v -> {
                 PopupMenu menu = new PopupMenu(ctx, v);
-                menu.getMenu().add("Manage storage");
-                menu.getMenu().add("Open location");
+                String s = ctx.rss.getString(R.string.manage_storage);
+                menu.getMenu().add(s);
+                menu.getMenu().add(ctx.rss.getString(R.string.open_location));
                 menu.setOnMenuItemClickListener(item -> {
-                    if ("Manage storage".equals(item.getTitle().toString())) {
+                    if (s.equals(item.getTitle().toString())) {
                         ctx.startActivity(new Intent(ctx, StorageManagerActivity.class));
                     } else {
                         ctx.loadFolderInPane(new File(si.path), ctx.lastPaneSelected == 1);

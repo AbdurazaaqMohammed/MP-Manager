@@ -520,7 +520,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                     bar.setProgress(si.usedPercent());
                     inner.addView(bar);
                     TextView detail = new TextView(this);
-                    detail.setText(FileSize.getHumanReadableFileSize(si.usedBytes) + " used of " + FileSize.getHumanReadableFileSize(si.totalBytes) + "  (" + si.usedPercent() + "%)  free " + FileSize.getHumanReadableFileSize(si.freeBytes));
+                    detail.setText(getString(R.string.uff, FileSize.getHumanReadableFileSize(si.usedBytes), FileSize.getHumanReadableFileSize(si.totalBytes), si.usedPercent(), FileSize.getHumanReadableFileSize(si.freeBytes)));
                     detail.setTextSize(13);
                     inner.addView(detail);
                     card.addView(inner);

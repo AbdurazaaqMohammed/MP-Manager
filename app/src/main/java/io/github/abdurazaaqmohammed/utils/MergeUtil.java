@@ -122,7 +122,12 @@ public class MergeUtil {
                 : dpi <= 320 ? "xhdpi" : dpi <= 480 ? "xxhdpi" : "xxxhdpi";
         if (lower.contains(bucket) || lower.contains("nodpi")) return true;
         try {
-            for (String abi : Build.SUPPORTED_ABIS) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                for (String abi : Build.SUPPORTED_ABIS) {
+                    if (abi != null && lower.contains(abi.toLowerCase(Locale.US))) return true;
+                }
+            } else {
+                String abi = Build.CPU_ABI;
                 if (abi != null && lower.contains(abi.toLowerCase(Locale.US))) return true;
             }
         } catch (Exception ignored) {
@@ -220,7 +225,7 @@ public class MergeUtil {
         });
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle(context.getString(R.string.antisplit_title))
+                .setTitle("AntiSplit")
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(context.getString(R.string.antisplit_merge), (d, w) -> {
