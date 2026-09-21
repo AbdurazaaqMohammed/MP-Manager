@@ -1,0 +1,1511 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.7.3" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.3)" variant="fatal" version="8.7.3">
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;bottomsheet_action_collapse&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;bottomsheet_action_collapse&quot;>收起底部页&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="57"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;bottomsheet_action_expand&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;bottomsheet_action_expand&quot;>展开底部页&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="58"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;bottomsheet_action_expand_halfway&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;bottomsheet_action_expand_halfway&quot;>展开至一半&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="59"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;bottomsheet_drag_handle_clicked&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;bottomsheet_drag_handle_clicked&quot;>拖动手柄被双击&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="60"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;bottomsheet_drag_handle_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;bottomsheet_drag_handle_content_description&quot;>拖动手柄&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_answer_action&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_answer_action&quot;>接听&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="66"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_answer_video_action&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_answer_video_action&quot;>视频&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_decline_action&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_decline_action&quot;>拒接&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_hang_up_action&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_hang_up_action&quot;>挂断&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="69"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_incoming_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_incoming_text&quot;>来电&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_ongoing_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_ongoing_text&quot;>正在通话&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;call_notification_screening_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;call_notification_screening_text&quot;>正在筛查来电&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="72"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;character_counter_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;character_counter_content_description&quot;>已输入 %1$d / %2$d 个字符&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="79"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;character_counter_overflowed_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;character_counter_overflowed_content_description&quot;>超过字符限制 %1$d / %2$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="80"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;clear_text_end_icon_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;clear_text_end_icon_content_description&quot;>清除文本&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;confirm_device_credential_password&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;confirm_device_credential_password&quot;>使用密码&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;copy&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;copy&quot;>复制&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="135"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;debug_key_reset&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;debug_key_reset&quot;>已加载默认调试密钥&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="148"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;default_error_msg&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;default_error_msg&quot;>未知错误&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="164"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_a11y_label&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_a11y_label&quot;>错误：无效&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="212"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_dir_access&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_dir_access&quot;>无法访问目录&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="213"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_icon_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_icon_content_description&quot;>错误&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="214"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;expand_button_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;expand_button_title&quot;>高级&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="221"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;exposed_dropdown_menu_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;exposed_dropdown_menu_content_description&quot;>显示下拉菜单&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="223"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_dialog_touch_sensor&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_dialog_touch_sensor&quot;>触摸指纹传感器&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="259"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_error_hw_not_available&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_error_hw_not_available&quot;>指纹硬件不可用。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="260"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_error_hw_not_present&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_error_hw_not_present&quot;>此设备没有指纹传感器&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="261"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_error_lockout&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_error_lockout&quot;>尝试次数过多。请稍后再试。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="262"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_error_no_fingerprints&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_error_no_fingerprints&quot;>未录入指纹。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="263"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_error_user_canceled&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_error_user_canceled&quot;>用户取消了指纹操作。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="264"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;fingerprint_not_recognized&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;fingerprint_not_recognized&quot;>未识别&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="265"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;generic_error_no_device_credential&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;generic_error_no_device_credential&quot;>未设置 PIN、图案或密码。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="304"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;generic_error_no_keyguard&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;generic_error_no_keyguard&quot;>此设备不支持 PIN、图案或密码。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="305"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;generic_error_user_canceled&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;generic_error_user_canceled&quot;>认证已被用户取消。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="306"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hex_editor_coming_soon&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hex_editor_coming_soon&quot;>十六进制编辑器即将推出&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="326"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;icon_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;icon_content_description&quot;>对话框图标&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="333"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;invalid_xml&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;invalid_xml&quot;>无效 XML&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="351"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;item_view_role_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;item_view_role_description&quot;>标签&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="355"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;label_parent_dir&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;label_parent_dir&quot;>…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="363"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;label_parent_directory&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;label_parent_directory&quot;>上级目录&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="364"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;last_edit&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;last_edit&quot;>上次编辑：&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="365"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_clock_display_divider&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_clock_display_divider&quot;>:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="378"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_clock_toggle_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_clock_toggle_content_description&quot;>选择上午或下午&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="379"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_hour_24h_suffix&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_hour_24h_suffix&quot;>%1$s 小时&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="380"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_hour_selection&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_hour_selection&quot;>选择小时&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="381"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_hour_suffix&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_hour_suffix&quot;>“%1$s 点”&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="382"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_minute_selection&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_minute_selection&quot;>选择分钟&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="383"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_minute_suffix&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_minute_suffix&quot;>%1$s 分钟&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="384"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_slider_range_end&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_slider_range_end&quot;>范围结束&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="385"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_slider_range_start&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_slider_range_start&quot;>范围开始&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="386"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_slider_value&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_slider_value&quot;>数值&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="387"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_am&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_am&quot;>上午&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="388"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_clock_mode_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_clock_mode_description&quot;>切换到时钟模式以输入时间。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="389"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_hour&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_hour&quot;>小时&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="390"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_minute&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_minute&quot;>分钟&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="391"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_pm&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_pm&quot;>下午&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="392"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_select_time&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_select_time&quot;>选择时间&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="393"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;material_timepicker_text_input_mode_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;material_timepicker_text_input_mode_description&quot;>切换到文本输入模式以输入时间。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="394"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_badge_numberless_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_badge_numberless_content_description&quot;>新通知&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="408"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_checkbox_state_description_checked&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_checkbox_state_description_checked&quot;>已选中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="409"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_checkbox_state_description_indeterminate&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_checkbox_state_description_indeterminate&quot;>部分选中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="410"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_checkbox_state_description_unchecked&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_checkbox_state_description_unchecked&quot;>未选中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="411"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_chip_close_icon_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_chip_close_icon_content_description&quot;>移除 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="412"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_exceed_max_badge_number_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_exceed_max_badge_number_content_description&quot;>超过 %1$d 个新通知&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="413"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_exceed_max_badge_number_suffix&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_exceed_max_badge_number_suffix&quot;>%1$d%2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="414"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_a11y_next_month&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_a11y_next_month&quot;>切换到下个月&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="415"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_a11y_prev_month&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_a11y_prev_month&quot;>切换到上个月&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="416"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_announce_current_range_selection&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_announce_current_range_selection&quot;>开始日期选择：%1$s – 结束日期选择：%2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="417"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_announce_current_selection&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_announce_current_selection&quot;>当前选择：%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="418"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_announce_current_selection_none&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_announce_current_selection_none&quot;>无&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="419"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_cancel&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_cancel&quot;>取消&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="420"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_confirm&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_confirm&quot;>确定&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="421"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_date_header_selected&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_date_header_selected&quot;>%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="422"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_date_header_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_date_header_title&quot;>选择日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="423"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_date_header_unselected&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_date_header_unselected&quot;>已选日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="424"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_day_of_week_column_header&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_day_of_week_column_header&quot;>%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="425"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_end_date_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_end_date_description&quot;>结束日期 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="426"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_invalid_format&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_invalid_format&quot;>无效格式。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="427"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_invalid_format_example&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_invalid_format_example&quot;>示例：%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="428"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_invalid_format_use&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_invalid_format_use&quot;>使用：%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="429"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_invalid_range&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_invalid_range&quot;>无效范围。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="430"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_navigate_to_current_year_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_navigate_to_current_year_description&quot;>导航到当前年份 %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="431"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_navigate_to_year_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_navigate_to_year_description&quot;>导航到年份 %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="432"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_out_of_range&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_out_of_range&quot;>超出范围：%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="433"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_range_header_only_end_selected&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_range_header_only_end_selected&quot;>开始日期 – %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="434"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_range_header_only_start_selected&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_range_header_only_start_selected&quot;>%1$s – 结束日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="435"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_range_header_selected&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_range_header_selected&quot;>%1$s – %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="436"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_range_header_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_range_header_title&quot;>选择范围&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="437"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_range_header_unselected&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_range_header_unselected&quot;>开始日期 – 结束日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="438"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_save&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_save&quot;>保存&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="439"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_start_date_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_start_date_description&quot;>开始日期 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="440"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_text_input_date_hint&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_text_input_date_hint&quot;>日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="441"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_text_input_date_range_end_hint&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_text_input_date_range_end_hint&quot;>结束日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="442"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_text_input_date_range_start_hint&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_text_input_date_range_start_hint&quot;>开始日期&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="443"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_text_input_day_abbr&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_text_input_day_abbr&quot;>d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="444"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_text_input_month_abbr&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_text_input_month_abbr&quot;>m&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="445"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_text_input_year_abbr&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_text_input_year_abbr&quot;>y&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="446"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_today_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_today_description&quot;>今天 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="447"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_toggle_to_calendar_input_mode&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_toggle_to_calendar_input_mode&quot;>切换到日历输入模式&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="448"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_toggle_to_day_selection&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_toggle_to_day_selection&quot;>点按以切换到日历视图&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="449"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_toggle_to_text_input_mode&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_toggle_to_text_input_mode&quot;>切换到文本输入模式&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="450"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_picker_toggle_to_year_selection&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_picker_toggle_to_year_selection&quot;>点按以切换到年份视图&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="451"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_timepicker_cancel&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_timepicker_cancel&quot;>取消&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="452"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;mtrl_timepicker_confirm&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;mtrl_timepicker_confirm&quot;>确定&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="453"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;not_set&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;not_set&quot;>未设置&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="478"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;password_toggle_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;password_toggle_content_description&quot;>显示密码&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="507"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;preference_copied&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;preference_copied&quot;>“%1$s” 已复制到剪贴板。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="531"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;reverse_order&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;reverse_order&quot;>反向排序&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="595"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;root_access&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;root_access&quot;>Root 访问&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="599"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;search_menu_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;search_menu_title&quot;>搜索&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="624"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;searchview_clear_text_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;searchview_clear_text_content_description&quot;>清除文本&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="629"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;searchview_navigation_content_description&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;searchview_navigation_content_description&quot;>返回&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="630"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;selected_count&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;selected_count&quot;>已选择：%1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="639"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;show_all&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;show_all&quot;>显示全部&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="659"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;show_files&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;show_files&quot;>仅显示文件&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="661"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;show_folders&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;show_folders&quot;>仅显示文件夹&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="663"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;side_sheet_accessibility_pane_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;side_sheet_accessibility_pane_title&quot;>侧边页&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="673"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_clip_text_length_too_large&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_clip_text_length_too_large&quot;>文本过大，无法复制&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="691"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_diagnostics_more_actions&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_diagnostics_more_actions&quot;>更多操作...&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="692"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_editor_formatting&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_editor_formatting&quot;>正在格式化代码…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="693"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_editor_search_busy&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_editor_search_busy&quot;>编辑器仍在准备…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="694"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_editor_search_replacing&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_editor_search_replacing&quot;>正在替换文本…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="695"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_last&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_last&quot;>最后一个&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="696"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_long_select&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_long_select&quot;>长按选择&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="697"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_more&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_more&quot;>更多&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="698"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_next&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_next&quot;>下一个&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="699"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_replace&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_replace&quot;>替换&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="700"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_replaceAll&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_replaceAll&quot;>全部替换&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="701"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_replacement&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_replacement&quot;>替换为&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="702"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;sora_editor_text_to_search&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;sora_editor_text_to_search&quot;>要搜索的文本&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="703"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;status_bar_notification_info_overflow&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;status_bar_notification_info_overflow&quot;>999+&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="719"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;status_unknown&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;status_unknown&quot;>未知（选择一种访问模式以检查）&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="720"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;su_command_hint&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;su_command_hint&quot;>留空 = 自动（su）&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="727"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;summary_collapsed_preference_list&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;summary_collapsed_preference_list&quot;>%1$s, %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="729"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;v7_preference_off&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;v7_preference_off&quot;>关闭&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="772"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;v7_preference_on&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;v7_preference_on&quot;>开启&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="773"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;working_mode&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;working_mode&quot;>工作模式&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="812"
+            column="13"/>
+    </issue>
+
+</issues>

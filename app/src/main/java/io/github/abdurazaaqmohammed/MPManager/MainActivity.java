@@ -1320,7 +1320,7 @@ public class MainActivity extends AppCompatActivity {
 
         lang = settings.getString("lang", supportedLang ? deviceLang : "en");
         boolean useDeviceRss = lang.equals(deviceLang);
-        rss = /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, lang).getResources();
+        rss = /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, Locale.getDefault().getLanguage()).getResources();
 
         new Thread(() -> {
             Security.addProvider(new BouncyCastleProvider());

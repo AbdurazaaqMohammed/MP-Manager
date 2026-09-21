@@ -4,7 +4,9 @@ plugins {
 
 android {
     compileSdk 36
-
+    lint {
+        baseline = file("lint.xml")
+    }
     defaultConfig {
         applicationId "io.github.abdurazaaqmohammed.MPManager"
         minSdk 19
