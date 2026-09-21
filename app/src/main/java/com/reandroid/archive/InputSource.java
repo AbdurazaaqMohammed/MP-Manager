@@ -223,19 +223,13 @@ public abstract class InputSource {
             return LAST_ORDER;
         }
         if(length != 1){
-            if(META_INF.equals(name)){
-                return ORDER_meta_inf;
-            }
-            if(LIB.equals(name)){
-                return ORDER_lib;
-            }
-            if(RES.equals(name)){
-                return ORDER_res;
-            }
-            if(ASSETS.equals(name)){
-                return ORDER_assets;
-            }
-            return LAST_ORDER;
+            return switch (name) {
+                case META_INF -> ORDER_meta_inf;
+                case LIB -> ORDER_lib;
+                case RES -> ORDER_res;
+                case ASSETS -> ORDER_assets;
+                default -> LAST_ORDER;
+            };
         }
         if(ANDROID_MANIFEST.equals(name)){
             return ORDER_android_manifest;

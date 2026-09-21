@@ -1190,9 +1190,11 @@ public class ApkToolsHandler {
         toast.message = textOf(f.messageInput);
         toast.longDuration = f.durationTv.getText() == null || f.durationTv.getText().toString().equals("Long");
         String gravity = f.gravityTv.getText() == null ? "Default" : f.gravityTv.getText().toString();
-        if (gravity.equals("Bottom")) toast.gravity = 80;
-        else if (gravity.equals("Center")) toast.gravity = 17;
-        else if (gravity.equals("Top")) toast.gravity = 48;
+        switch (gravity) {
+            case "Bottom" -> toast.gravity = 80;
+            case "Center" -> toast.gravity = 17;
+            case "Top" -> toast.gravity = 48;
+        }
         toast.xOffset = clampOffset(textOf(f.xInput));
         toast.yOffset = clampOffset(textOf(f.yInput));
         toast.html = f.toastHtml.isChecked();
@@ -1874,14 +1876,16 @@ public class ApkToolsHandler {
 
     private static String fontLabel(String family) {
         if (family == null || family.isEmpty()) return "Font: Default";
-        if ("serif".equals(family)) return "Font: Serif";
-        if ("monospace".equals(family)) return "Font: Mono";
-        if ("sans-serif".equals(family)) return "Font: Sans";
-        if ("sans-serif-light".equals(family)) return "Font: Light";
-        if ("sans-serif-medium".equals(family)) return "Font: Medium";
-        if ("sans-serif-black".equals(family)) return "Font: Black";
-        if ("sans-serif-condensed".equals(family)) return "Font: Condensed";
-        return "Font: Default";
+        return switch (family) {
+            case "serif" -> "Font: Serif";
+            case "monospace" -> "Font: Mono";
+            case "sans-serif" -> "Font: Sans";
+            case "sans-serif-light" -> "Font: Light";
+            case "sans-serif-medium" -> "Font: Medium";
+            case "sans-serif-black" -> "Font: Black";
+            case "sans-serif-condensed" -> "Font: Condensed";
+            default -> "Font: Default";
+        };
     }
 
     private static final String[] FONT_LABELS = {"Default", "Sans", "Serif", "Mono", "Light", "Medium", "Black", "Condensed"};

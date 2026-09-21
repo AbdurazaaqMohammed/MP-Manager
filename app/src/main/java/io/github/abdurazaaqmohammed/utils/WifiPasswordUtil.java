@@ -275,17 +275,15 @@ public class WifiPasswordUtil {
                         try {
                             String text = parser.nextText();
                             if (name != null) {
-                                if (name.equals("SSID")) {
-                                    ssid = text;
-                                } else if (name.equals("PreSharedKey")) {
-                                    psk = text;
-                                } else if (name.equals("SaePassword")) {
-                                    sae = text;
-                                } else if (name.equals("WEP0_Key") || name.equals("WEP0Key") || name.equals("wep_key0")) {
-                                    wep0 = text;
-                                } else if (name.equals("Password") || name.equals("EapPassword")) {
-                                    if (eapPassword == null || eapPassword.isEmpty()) {
-                                        eapPassword = text;
+                                switch (name) {
+                                    case "SSID" -> ssid = text;
+                                    case "PreSharedKey" -> psk = text;
+                                    case "SaePassword" -> sae = text;
+                                    case "WEP0_Key", "WEP0Key", "wep_key0" -> wep0 = text;
+                                    case "Password", "EapPassword" -> {
+                                        if (eapPassword == null || eapPassword.isEmpty()) {
+                                            eapPassword = text;
+                                        }
                                     }
                                 }
                             }
@@ -300,12 +298,10 @@ public class WifiPasswordUtil {
                     if (inNetwork && currentName != null) {
                         String text = parser.getText();
                         if (text != null && !text.trim().isEmpty()) {
-                            if (currentName.equals("SSID")) {
-                                ssid = text;
-                            } else if (currentName.equals("PreSharedKey")) {
-                                psk = text;
-                            } else if (currentName.equals("SaePassword")) {
-                                sae = text;
+                            switch (currentName) {
+                                case "SSID" -> ssid = text;
+                                case "PreSharedKey" -> psk = text;
+                                case "SaePassword" -> sae = text;
                             }
                         }
                     }

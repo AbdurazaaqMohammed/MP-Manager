@@ -133,28 +133,20 @@ public class DecompileOptions extends OptionsWithFramework {
         if (StringsUtil.isEmpty(level)) {
             return COMMENT_LEVEL_OFF.equals(commentLevel);
         }
-        if (COMMENT_LEVEL_OFF.equals(level)) {
-            return commentLevel.equals(level);
-        }
-        if (COMMENT_LEVEL_BASIC.equals(level)) {
-            return commentLevel.equals(level) ||
+        return switch (level) {
+            case COMMENT_LEVEL_OFF -> commentLevel.equals(level);
+            case COMMENT_LEVEL_BASIC -> commentLevel.equals(level) ||
                     COMMENT_LEVEL_DETAIL.equals(commentLevel) ||
                     COMMENT_LEVEL_DETAIL2.equals(commentLevel) ||
                     COMMENT_LEVEL_FULL.equals(commentLevel);
-        }
-        if (COMMENT_LEVEL_DETAIL.equals(level)) {
-            return commentLevel.equals(level) ||
+            case COMMENT_LEVEL_DETAIL -> commentLevel.equals(level) ||
                     COMMENT_LEVEL_DETAIL2.equals(commentLevel) ||
                     COMMENT_LEVEL_FULL.equals(commentLevel);
-        }
-        if (COMMENT_LEVEL_DETAIL2.equals(level)) {
-            return commentLevel.equals(level) ||
+            case COMMENT_LEVEL_DETAIL2 -> commentLevel.equals(level) ||
                     COMMENT_LEVEL_FULL.equals(commentLevel);
-        }
-        if (COMMENT_LEVEL_FULL.equals(level)) {
-            return commentLevel.equals(level);
-        }
-        return false;
+            case COMMENT_LEVEL_FULL -> commentLevel.equals(level);
+            default -> false;
+        };
     }
 
     @Override

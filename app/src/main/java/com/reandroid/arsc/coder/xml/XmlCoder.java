@@ -707,18 +707,17 @@ public class XmlCoder {
                     xmlAttribute.getValueAsString(false), entry);
         }
         public void encode(String name, String value, Entry entry) throws IOException{
-            if(name.equals(ATTR_name)){
-                encodeName(value, entry);
-            }else if(name.equals(ATTR_parent)){
-                encodeParent(value, entry);
-            }else if(name.equals(ATTR_formats)){
-                encodeFormats(value, entry);
-            }else {
-                AttributeType attributeType = AttributeType.fromName(name);
-                if(attributeType != null){
-                    encodeType(attributeType, value, entry);
-                }else{
-                    // TODO: what could be ?
+            switch (name) {
+                case ATTR_name -> encodeName(value, entry);
+                case ATTR_parent -> encodeParent(value, entry);
+                case ATTR_formats -> encodeFormats(value, entry);
+                default -> {
+                    AttributeType attributeType = AttributeType.fromName(name);
+                    if (attributeType != null) {
+                        encodeType(attributeType, value, entry);
+                    } else {
+                        // TODO: what could be ?
+                    }
                 }
             }
         }

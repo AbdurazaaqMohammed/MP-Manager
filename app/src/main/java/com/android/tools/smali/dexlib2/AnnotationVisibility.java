@@ -48,16 +48,13 @@ public final class AnnotationVisibility {
 
     public static int getVisibility(String visibility) {
         visibility = visibility.toLowerCase();
-        if (visibility.equals("build")) {
-            return BUILD;
-        }
-        if (visibility.equals("runtime")) {
-            return RUNTIME;
-        }
-        if (visibility.equals("system")) {
-            return SYSTEM;
-        }
-        throw new ExceptionWithContext("Invalid annotation visibility: %s", visibility);
+        return switch (visibility) {
+            case "build" -> BUILD;
+            case "runtime" -> RUNTIME;
+            case "system" -> SYSTEM;
+            default ->
+                    throw new ExceptionWithContext("Invalid annotation visibility: %s", visibility);
+        };
     }
 
     private AnnotationVisibility() {}

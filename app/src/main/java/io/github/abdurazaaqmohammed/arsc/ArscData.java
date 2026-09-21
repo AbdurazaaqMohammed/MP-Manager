@@ -659,96 +659,101 @@ public class ArscData {
                     continue;
                 }
                 if (re == null || !matchPath(re, path)) continue;
-                if (type.equals("xml")) {
-                    if (q.isEmpty() || re.getName().toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US))) {
-                        SearchHit hit = new SearchHit();
-                        hit.entry = re;
-                        hit.line = re.getType() + "/" + re.getName();
-                        hit.detail = re.getHexId();
-                        out.add(hit);
-                    }
-                } else if (type.equals("string")) {
-                    for (Entry e : re) {
-                        if (e == null || e.isNull()) continue;
-                        ValueType vt = null;
-                        try {
-                            vt = e.getValueType();
-                        } catch (Exception ignored) {
-                        }
-                        if (vt != ValueType.STRING) continue;
-                        String v = null;
-                        try {
-                            v = e.getValueAsString();
-                        } catch (Exception ignored) {
-                        }
-                        if (v != null && (q.isEmpty() || v.toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US)))) {
+                switch (type) {
+                    case "xml" -> {
+                        if (q.isEmpty() || re.getName().toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US))) {
                             SearchHit hit = new SearchHit();
                             hit.entry = re;
-                            hit.sample = e;
-                            hit.line = re.getName();
-                            hit.detail = v;
+                            hit.line = re.getType() + "/" + re.getName();
+                            hit.detail = re.getHexId();
                             out.add(hit);
-                            break;
                         }
                     }
-                } else if (type.equals("integer")) {
-                    int want;
-                    try {
-                        want = parseNumber(q);
-                    } catch (Exception e) {
-                        return out;
-                    }
-                    for (Entry e : re) {
-                        if (e == null || e.isNull()) continue;
-                        ValueType vt = null;
-                        try {
-                            vt = e.getValueType();
-                        } catch (Exception ignored) {
-                        }
-                        if (vt == null || !vt.isInteger()) continue;
-                        int data = 0;
-                        try {
-                            data = e.getResValue().getData();
-                        } catch (Exception ignored) {
-                        }
-                        if (data == want) {
-                            SearchHit hit = new SearchHit();
-                            hit.entry = re;
-                            hit.sample = e;
-                            hit.line = re.getName();
-                            hit.detail = String.valueOf(data);
-                            out.add(hit);
-                            break;
+                    case "string" -> {
+                        for (Entry e : re) {
+                            if (e == null || e.isNull()) continue;
+                            ValueType vt = null;
+                            try {
+                                vt = e.getValueType();
+                            } catch (Exception ignored) {
+                            }
+                            if (vt != ValueType.STRING) continue;
+                            String v = null;
+                            try {
+                                v = e.getValueAsString();
+                            } catch (Exception ignored) {
+                            }
+                            if (v != null && (q.isEmpty() || v.toLowerCase(Locale.US).contains(q.toLowerCase(Locale.US)))) {
+                                SearchHit hit = new SearchHit();
+                                hit.entry = re;
+                                hit.sample = e;
+                                hit.line = re.getName();
+                                hit.detail = v;
+                                out.add(hit);
+                                break;
+                            }
                         }
                     }
-                } else if (type.equals("color")) {
-                    int want;
-                    try {
-                        want = parseColor(q);
-                    } catch (Exception e) {
-                        return out;
+                    case "integer" -> {
+                        int want;
+                        try {
+                            want = parseNumber(q);
+                        } catch (Exception e) {
+                            return out;
+                        }
+                        for (Entry e : re) {
+                            if (e == null || e.isNull()) continue;
+                            ValueType vt = null;
+                            try {
+                                vt = e.getValueType();
+                            } catch (Exception ignored) {
+                            }
+                            if (vt == null || !vt.isInteger()) continue;
+                            int data = 0;
+                            try {
+                                data = e.getResValue().getData();
+                            } catch (Exception ignored) {
+                            }
+                            if (data == want) {
+                                SearchHit hit = new SearchHit();
+                                hit.entry = re;
+                                hit.sample = e;
+                                hit.line = re.getName();
+                                hit.detail = String.valueOf(data);
+                                out.add(hit);
+                                break;
+                            }
+                        }
                     }
-                    for (Entry e : re) {
-                        if (e == null || e.isNull()) continue;
-                        ValueType vt = null;
+                    case "color" -> {
+                        int want;
                         try {
-                            vt = e.getValueType();
-                        } catch (Exception ignored) {
+                            want = parseColor(q);
+                        } catch (Exception e) {
+                            return out;
                         }
-                        if (vt == null || !vt.isColor()) continue;
-                        int data = 0;
-                        try {
-                            data = e.getResValue().getData();
-                        } catch (Exception ignored) {
-                        }
-                        if (data == want) {
-                            SearchHit hit = new SearchHit();
-                            hit.entry = re;
-                            hit.sample = e;
-                            hit.line = re.getName();
-                            hit.detail = String.format(Locale.US, "#%08X", data);
-                            out.add(hit);
-                            break;
+                        for (Entry e : re) {
+                            if (e == null || e.isNull()) continue;
+                            ValueType vt = null;
+                            try {
+                                vt = e.getValueType();
+                            } catch (Exception ignored) {
+                            }
+                            if (vt == null || !vt.isColor()) continue;
+                            int data = 0;
+                            try {
+                                data = e.getResValue().getData();
+                            } catch (Exception ignored) {
+                            }
+                            if (data == want) {
+                                SearchHit hit = new SearchHit();
+                                hit.entry = re;
+                                hit.sample = e;
+                                hit.line = re.getName();
+                                hit.detail = String.format(Locale.US, "#%08X", data);
+                                out.add(hit);
+                                break;
+                            }
                         }
                     }
                 }

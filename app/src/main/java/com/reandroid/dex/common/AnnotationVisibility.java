@@ -56,16 +56,12 @@ public class AnnotationVisibility extends Modifier{
     }
     public static AnnotationVisibility valueOf(String visibility) {
         visibility = StringsUtil.toLowercase(visibility);
-        if (visibility.equals("build")) {
-            return BUILD;
-        }
-        if (visibility.equals("runtime")) {
-            return RUNTIME;
-        }
-        if (visibility.equals("system")) {
-            return SYSTEM;
-        }
-        return null;
+        return switch (visibility) {
+            case "build" -> BUILD;
+            case "runtime" -> RUNTIME;
+            case "system" -> SYSTEM;
+            default -> null;
+        };
     }
     public static AnnotationVisibility parse(SmaliReader reader){
         reader.skipSpaces();

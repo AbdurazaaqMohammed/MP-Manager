@@ -69,126 +69,131 @@ public class HelpCommand extends Command {
         } else {
             boolean printedHelp = false;
             for (String cmd : commands) {
-                if (cmd.equals("register-info")) {
-                    printedHelp = true;
-                    String registerInfoHelp = """
-                            The --register-info parameter will cause baksmali to generate \
-                            comments before and after every instruction containing register type \
-                            information about some subset of registers. This parameter accepts a comma-separated list\
-                            of values specifying which registers and how much information to include.
-                                ALL: all pre- and post-instruction registers
-                                ALLPRE: all pre-instruction registers
-                                ALLPOST: all post-instruction registers
-                                ARGS: any pre-instruction registers used as arguments to the instruction
-                                DEST: the post-instruction register used as the output of the instruction
-                                MERGE: any pre-instruction register that has been merged from multiple \
-                            incoming code paths
-                                FULLMERGE: an extended version of MERGE that also includes a list of all \
-                            the register types from incoming code paths that were merged""";
-
-                    Iterable<String> lines = StringWrapper.wrapStringOnBreaks(registerInfoHelp,
-                            ConsoleUtil.getConsoleWidth());
-                    for (String line : lines) {
-                        System.out.println(line);
-                    }
-                } else if (cmd.equals("input")) {
-                    printedHelp = true;
-                    String registerInfoHelp = """
-                            Apks and oat files can contain multiple dex files. In order to \
-                            specify a particular dex file, the basic syntax is to treat the apk/oat file as a \
-                            directory. For example, to load the "classes2.dex" entry from "app.apk", you can \
-                            use "app.apk/classes2.dex".
-                            
-                            For ease of use, you can also specify a partial path to the dex file to load. For \
-                            example, to load a entry named "/system/framework/framework.jar:classes2.dex" from \
-                            "framework.oat", you can use any of the following:
-                            "framework.oat/classes2.dex"
-                            "framework.oat/framework.jar:classes2.dex"
-                            "framework.oat/framework/framework.jar:classes2.dex"
-                            "framework.oat/system/framework/framework.jar:classes2.dex"
-                            
-                            In some rare cases, an oat file could have entries that can't be differentiated with \
-                            the above syntax. For example "/blah/blah.dex" and "blah/blah.dex". In this case, \
-                            the "blah.oat/blah/blah.dex" would match both entries and generate an error. To get \
-                            around this, you can add double quotes around the entry name to specify an exact entry \
-                            name. E.g. blah.oat/"/blah/blah.dex" or blah.oat/"blah/blah.dex" respectively.""";
-
-                    Iterable<String> lines = StringWrapper.wrapStringOnBreaks(registerInfoHelp,
-                            ConsoleUtil.getConsoleWidth());
-                    for (String line : lines) {
-                        System.out.println(line);
-                    }
-                } else if (cmd.equals("classpath")) {
-                    printedHelp = true;
-                    String registerInfoHelp = """
-                            When deodexing odex/oat files or when using the --register-info \
-                            option, baksmali needs to load all classes from the framework files on the device \
-                            in order to fully understand the class hierarchy. There are several options that \
-                            control how baksmali finds and loads the classpath entries.
-                            
-                            L+ devices (ART):
-                            When deodexing or disassembling a file from an L+ device using ART, you generally \
-                            just need to specify the path to the boot.oat file via the --bootclasspath/-b \
-                            parameter. On pre-N devices, the boot.oat file is self-contained and no other files are \
-                            needed. In N, boot.oat was split into multiple files. In this case, the other \
-                            files should be in the same directory as the boot.oat file, but you still only need to \
-                            specify the boot.oat file in the --bootclasspath/-b option. The other files will be \
-                            automatically loaded from the same directory.
-                            
-                            Pre-L devices (dalvik):
-                            When deodexing odex files from a pre-L device using dalvik, you \
-                            generally just need to specify the path to a directory containing the framework files \
-                            from the device via the --classpath-dir/-d option. odex files contain a list of \
-                            framework files they depend on and baksmali will search for these dependencies in the \
-                            directory that you specify.
-                            
-                            Dex files don't contain a list of dependencies like odex files, so when disassembling a \
-                            dex file using the --register-info option, and using the framework files from a \
-                            pre-L device, baksmali will attempt to use a reasonable default list of classpath files \
-                            based on the api level set via the -a option. If this default list is incorrect, you \
-                            can override the classpath using the --bootclasspath/-b option. This option accepts a \
-                            colon separated list of classpath entries. Each entry can be specified in a few \
-                            different ways.
-                             - A simple filename like "framework.jar"
-                             - A device path like "/system/framework/framework.jar"
-                             - A local relative or absolute path like "/tmp/framework/framework.jar"
-                            When using the first or second formats, you should also specify the directory \
-                            containing the framework files via the --classpath-dir/-d option. When using the third \
-                            format, this option is not needed.
-                            It's worth noting that the second format matches the format used by Android for the \
-                            BOOTCLASSPATH environment variable, so you can simply grab the value of that variable \
-                            from the device and use it as-is.
-                            
-                            Examples:
-                              For an M device:
-                                adb pull /system/framework/arm/boot.oat /tmp/boot.oat
-                                baksmali deodex blah.oat -b /tmp/boot.oat
-                              For an N+ device:
-                                adb pull /system/framework/arm /tmp/framework
-                                baksmali deodex blah.oat -b /tmp/framework/boot.oat
-                              For a pre-L device:
-                                adb pull /system/framework /tmp/framework
-                                baksmali deodex blah.odex -d /tmp/framework
-                              Using the BOOTCLASSPATH on a pre-L device:
-                                adb pull /system/framework /tmp/framework
-                                export BOOTCLASSPATH=`adb shell "echo \\\\$BOOTCLASPATH"`
-                                baksmali disassemble --register-info ARGS,DEST blah.apk -b $BOOTCLASSPATH -d \
-                            /tmp/framework""";
-
-                    Iterable<String> lines = StringWrapper.wrapStringOnBreaks(registerInfoHelp,
-                            ConsoleUtil.getConsoleWidth());
-                    for (String line : lines) {
-                        System.out.println(line);
-                    }
-                } else {
-                    JCommander command = ExtendedCommands.getSubcommand(parentJc, cmd);
-                    if (command == null) {
-                        System.err.println("No such command: " + cmd);
-                    } else {
+                switch (cmd) {
+                    case "register-info" -> {
                         printedHelp = true;
-                        System.out.println(new HelpFormatter()
-                                .width(ConsoleUtil.getConsoleWidth())
-                                .format(((Command)command.getObjects().get(0)).getCommandHierarchy()));
+                        String registerInfoHelp = """
+                                The --register-info parameter will cause baksmali to generate \
+                                comments before and after every instruction containing register type \
+                                information about some subset of registers. This parameter accepts a comma-separated list\
+                                of values specifying which registers and how much information to include.
+                                    ALL: all pre- and post-instruction registers
+                                    ALLPRE: all pre-instruction registers
+                                    ALLPOST: all post-instruction registers
+                                    ARGS: any pre-instruction registers used as arguments to the instruction
+                                    DEST: the post-instruction register used as the output of the instruction
+                                    MERGE: any pre-instruction register that has been merged from multiple \
+                                incoming code paths
+                                    FULLMERGE: an extended version of MERGE that also includes a list of all \
+                                the register types from incoming code paths that were merged""";
+
+                        Iterable<String> lines = StringWrapper.wrapStringOnBreaks(registerInfoHelp,
+                                ConsoleUtil.getConsoleWidth());
+                        for (String line : lines) {
+                            System.out.println(line);
+                        }
+                    }
+                    case "input" -> {
+                        printedHelp = true;
+                        String registerInfoHelp = """
+                                Apks and oat files can contain multiple dex files. In order to \
+                                specify a particular dex file, the basic syntax is to treat the apk/oat file as a \
+                                directory. For example, to load the "classes2.dex" entry from "app.apk", you can \
+                                use "app.apk/classes2.dex".
+                                
+                                For ease of use, you can also specify a partial path to the dex file to load. For \
+                                example, to load a entry named "/system/framework/framework.jar:classes2.dex" from \
+                                "framework.oat", you can use any of the following:
+                                "framework.oat/classes2.dex"
+                                "framework.oat/framework.jar:classes2.dex"
+                                "framework.oat/framework/framework.jar:classes2.dex"
+                                "framework.oat/system/framework/framework.jar:classes2.dex"
+                                
+                                In some rare cases, an oat file could have entries that can't be differentiated with \
+                                the above syntax. For example "/blah/blah.dex" and "blah/blah.dex". In this case, \
+                                the "blah.oat/blah/blah.dex" would match both entries and generate an error. To get \
+                                around this, you can add double quotes around the entry name to specify an exact entry \
+                                name. E.g. blah.oat/"/blah/blah.dex" or blah.oat/"blah/blah.dex" respectively.""";
+
+                        Iterable<String> lines = StringWrapper.wrapStringOnBreaks(registerInfoHelp,
+                                ConsoleUtil.getConsoleWidth());
+                        for (String line : lines) {
+                            System.out.println(line);
+                        }
+                    }
+                    case "classpath" -> {
+                        printedHelp = true;
+                        String registerInfoHelp = """
+                                When deodexing odex/oat files or when using the --register-info \
+                                option, baksmali needs to load all classes from the framework files on the device \
+                                in order to fully understand the class hierarchy. There are several options that \
+                                control how baksmali finds and loads the classpath entries.
+                                
+                                L+ devices (ART):
+                                When deodexing or disassembling a file from an L+ device using ART, you generally \
+                                just need to specify the path to the boot.oat file via the --bootclasspath/-b \
+                                parameter. On pre-N devices, the boot.oat file is self-contained and no other files are \
+                                needed. In N, boot.oat was split into multiple files. In this case, the other \
+                                files should be in the same directory as the boot.oat file, but you still only need to \
+                                specify the boot.oat file in the --bootclasspath/-b option. The other files will be \
+                                automatically loaded from the same directory.
+                                
+                                Pre-L devices (dalvik):
+                                When deodexing odex files from a pre-L device using dalvik, you \
+                                generally just need to specify the path to a directory containing the framework files \
+                                from the device via the --classpath-dir/-d option. odex files contain a list of \
+                                framework files they depend on and baksmali will search for these dependencies in the \
+                                directory that you specify.
+                                
+                                Dex files don't contain a list of dependencies like odex files, so when disassembling a \
+                                dex file using the --register-info option, and using the framework files from a \
+                                pre-L device, baksmali will attempt to use a reasonable default list of classpath files \
+                                based on the api level set via the -a option. If this default list is incorrect, you \
+                                can override the classpath using the --bootclasspath/-b option. This option accepts a \
+                                colon separated list of classpath entries. Each entry can be specified in a few \
+                                different ways.
+                                 - A simple filename like "framework.jar"
+                                 - A device path like "/system/framework/framework.jar"
+                                 - A local relative or absolute path like "/tmp/framework/framework.jar"
+                                When using the first or second formats, you should also specify the directory \
+                                containing the framework files via the --classpath-dir/-d option. When using the third \
+                                format, this option is not needed.
+                                It's worth noting that the second format matches the format used by Android for the \
+                                BOOTCLASSPATH environment variable, so you can simply grab the value of that variable \
+                                from the device and use it as-is.
+                                
+                                Examples:
+                                  For an M device:
+                                    adb pull /system/framework/arm/boot.oat /tmp/boot.oat
+                                    baksmali deodex blah.oat -b /tmp/boot.oat
+                                  For an N+ device:
+                                    adb pull /system/framework/arm /tmp/framework
+                                    baksmali deodex blah.oat -b /tmp/framework/boot.oat
+                                  For a pre-L device:
+                                    adb pull /system/framework /tmp/framework
+                                    baksmali deodex blah.odex -d /tmp/framework
+                                  Using the BOOTCLASSPATH on a pre-L device:
+                                    adb pull /system/framework /tmp/framework
+                                    export BOOTCLASSPATH=`adb shell "echo \\\\$BOOTCLASPATH"`
+                                    baksmali disassemble --register-info ARGS,DEST blah.apk -b $BOOTCLASSPATH -d \
+                                /tmp/framework""";
+
+                        Iterable<String> lines = StringWrapper.wrapStringOnBreaks(registerInfoHelp,
+                                ConsoleUtil.getConsoleWidth());
+                        for (String line : lines) {
+                            System.out.println(line);
+                        }
+                    }
+                    default -> {
+                        JCommander command = ExtendedCommands.getSubcommand(parentJc, cmd);
+                        if (command == null) {
+                            System.err.println("No such command: " + cmd);
+                        } else {
+                            printedHelp = true;
+                            System.out.println(new HelpFormatter()
+                                    .width(ConsoleUtil.getConsoleWidth())
+                                    .format(((Command) command.getObjects().get(0)).getCommandHierarchy()));
+                        }
                     }
                 }
             }

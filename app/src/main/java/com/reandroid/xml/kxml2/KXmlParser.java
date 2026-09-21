@@ -1794,15 +1794,12 @@ public class KXmlParser implements XmlPullParser, Closeable {
     }
 
     public Object getProperty(String property) {
-        if (property.equals(PROPERTY_XMLDECL_VERSION)) {
-            return version;
-        } else if (property.equals(PROPERTY_XMLDECL_STANDALONE)) {
-            return standalone;
-        } else if (property.equals(PROPERTY_LOCATION)) {
-            return location;
-        } else {
-            return null;
-        }
+        return switch (property) {
+            case PROPERTY_XMLDECL_VERSION -> version;
+            case PROPERTY_XMLDECL_STANDALONE -> standalone;
+            case PROPERTY_LOCATION -> location;
+            default -> null;
+        };
     }
 
     /**
