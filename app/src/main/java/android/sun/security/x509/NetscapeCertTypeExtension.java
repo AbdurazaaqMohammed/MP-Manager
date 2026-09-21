@@ -306,15 +306,15 @@ implements CertAttrSet<String> {
             if (isSet(getPosition(SSL_CLIENT)) ||
                 isSet(getPosition(S_MIME)) ||
                 isSet(getPosition(OBJECT_SIGNING)))
-                keyUsage.set(keyUsage.DIGITAL_SIGNATURE, val);
+                keyUsage.set(KeyUsageExtension.DIGITAL_SIGNATURE, val);
 
             if (isSet(getPosition(SSL_SERVER)))
-                keyUsage.set(keyUsage.KEY_ENCIPHERMENT, val);
+                keyUsage.set(KeyUsageExtension.KEY_ENCIPHERMENT, val);
 
             if (isSet(getPosition(SSL_CA)) ||
                 isSet(getPosition(S_MIME_CA)) ||
                 isSet(getPosition(OBJECT_SIGNING_CA)))
-                keyUsage.set(keyUsage.KEY_CERTSIGN, val);
+                keyUsage.set(KeyUsageExtension.KEY_CERTSIGN, val);
         } catch (IOException e) { }
         return keyUsage.getBits();
     }

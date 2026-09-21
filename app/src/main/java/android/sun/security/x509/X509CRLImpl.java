@@ -781,7 +781,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     public android.sun.security.x509.KeyIdentifier getAuthKeyId() throws IOException {
         android.sun.security.x509.AuthorityKeyIdentifierExtension aki = getAuthKeyIdExtension();
         if (aki != null) {
-            android.sun.security.x509.KeyIdentifier keyId = (KeyIdentifier)aki.get(aki.KEY_ID);
+            android.sun.security.x509.KeyIdentifier keyId = (KeyIdentifier)aki.get(AuthorityKeyIdentifierExtension.KEY_ID);
             return keyId;
         } else {
             return null;
@@ -820,7 +820,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     public BigInteger getCRLNumber() throws IOException {
         CRLNumberExtension numExt = getCRLNumberExtension();
         if (numExt != null) {
-            BigInteger num = (BigInteger)numExt.get(numExt.NUMBER);
+            BigInteger num = (BigInteger)numExt.get(CRLNumberExtension.NUMBER);
             return num;
         } else {
             return null;
@@ -849,7 +849,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     public BigInteger getBaseCRLNumber() throws IOException {
         DeltaCRLIndicatorExtension dciExt = getDeltaCRLIndicatorExtension();
         if (dciExt != null) {
-            BigInteger num = (BigInteger)dciExt.get(dciExt.NUMBER);
+            BigInteger num = (BigInteger)dciExt.get(CRLNumberExtension.NUMBER);
             return num;
         } else {
             return null;

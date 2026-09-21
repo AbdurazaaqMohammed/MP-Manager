@@ -343,9 +343,9 @@ public class PKCS8Key implements PrivateKey {
 
 
             BigInteger version = val.data.getBigInteger();
-            if (!version.equals(this.version)) {
+            if (!version.equals(PKCS8Key.version)) {
                 throw new IOException("version mismatch: (supported: " +
-                                      android.sun.security.util.Debug.toHexString(this.version) +
+                                      android.sun.security.util.Debug.toHexString(PKCS8Key.version) +
                                       ", parsed: " +
                                       android.sun.security.util.Debug.toHexString(version));
             }

@@ -281,7 +281,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
         if (obj == null)
             return null;
         android.sun.security.x509.CRLReasonCodeExtension reasonCode = (CRLReasonCodeExtension)obj;
-        return (Integer)(reasonCode.get(reasonCode.REASON));
+        return (Integer)(reasonCode.get(CRLReasonCodeExtension.REASON));
     }
 
     /**
