@@ -88,16 +88,12 @@ public class PackageMonitoringService extends Service {
     }
 
     private long mapPreferenceToScanSpeed(String value) {
-        switch (value) {
-            case "0":
-                return 50;
-            case "1":
-                return 100;
-            case "2":
-                return 200;
-            default:
-                return 500;
-        }
+        return switch (value) {
+            case "0" -> 50;
+            case "1" -> 100;
+            case "2" -> 200;
+            default -> 500;
+        };
     }
 
     private Pair<String, String> getForegroundApp() {

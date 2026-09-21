@@ -58,24 +58,19 @@ public abstract class ImmutableDebugItem implements DebugItem {
         if (debugItem instanceof ImmutableDebugItem) {
             return (ImmutableDebugItem)debugItem;
         }
-        switch (debugItem.getDebugItemType()) {
-            case DebugItemType.START_LOCAL:
-                return ImmutableStartLocal.of((StartLocal)debugItem);
-            case DebugItemType.END_LOCAL:
-                return ImmutableEndLocal.of((EndLocal)debugItem);
-            case DebugItemType.RESTART_LOCAL:
-                return ImmutableRestartLocal.of((RestartLocal)debugItem);
-            case DebugItemType.PROLOGUE_END:
-                return ImmutablePrologueEnd.of((PrologueEnd)debugItem);
-            case DebugItemType.EPILOGUE_BEGIN:
-                return ImmutableEpilogueBegin.of((EpilogueBegin)debugItem);
-            case DebugItemType.SET_SOURCE_FILE:
-                return ImmutableSetSourceFile.of((SetSourceFile)debugItem);
-            case DebugItemType.LINE_NUMBER:
-                return ImmutableLineNumber.of((LineNumber)debugItem);
-            default:
-                throw new ExceptionWithContext("Invalid debug item type: %d", debugItem.getDebugItemType());
-        }
+        return switch (debugItem.getDebugItemType()) {
+            case DebugItemType.START_LOCAL -> ImmutableStartLocal.of((StartLocal) debugItem);
+            case DebugItemType.END_LOCAL -> ImmutableEndLocal.of((EndLocal) debugItem);
+            case DebugItemType.RESTART_LOCAL -> ImmutableRestartLocal.of((RestartLocal) debugItem);
+            case DebugItemType.PROLOGUE_END -> ImmutablePrologueEnd.of((PrologueEnd) debugItem);
+            case DebugItemType.EPILOGUE_BEGIN ->
+                    ImmutableEpilogueBegin.of((EpilogueBegin) debugItem);
+            case DebugItemType.SET_SOURCE_FILE ->
+                    ImmutableSetSourceFile.of((SetSourceFile) debugItem);
+            case DebugItemType.LINE_NUMBER -> ImmutableLineNumber.of((LineNumber) debugItem);
+            default ->
+                    throw new ExceptionWithContext("Invalid debug item type: %d", debugItem.getDebugItemType());
+        };
     }
 
     @Override public int getCodeAddress() { return codeAddress; }

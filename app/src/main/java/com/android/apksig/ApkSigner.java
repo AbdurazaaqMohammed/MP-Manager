@@ -372,19 +372,12 @@ public class ApkSigner {
             }
             ApkSignerEngine.InputJarEntryInstructions entryInstructions =
                     signerEngine.inputJarEntry(entryName);
-            boolean shouldOutput;
-            switch (entryInstructions.getOutputPolicy()) {
-                case OUTPUT:
-                    shouldOutput = true;
-                    break;
-                case OUTPUT_BY_ENGINE:
-                case SKIP:
-                    shouldOutput = false;
-                    break;
-                default:
-                    throw new RuntimeException(
-                            "Unknown output policy: " + entryInstructions.getOutputPolicy());
-            }
+            boolean shouldOutput = switch (entryInstructions.getOutputPolicy()) {
+                case OUTPUT -> true;
+                case OUTPUT_BY_ENGINE, SKIP -> false;
+                default -> throw new RuntimeException(
+                        "Unknown output policy: " + entryInstructions.getOutputPolicy());
+            };
 
             long inputLocalFileHeaderStartOffset = inputCdRecord.getLocalFileHeaderOffset();
             if (inputLocalFileHeaderStartOffset > inputOffset) {

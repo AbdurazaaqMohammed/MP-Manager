@@ -97,23 +97,14 @@ public class SmaliValueChar extends SmaliValueNumber<Integer> {
                     throw new SmaliParseException("Invalid four-char hex encoded char", reader);
                 }
             } else {
-                switch (ch) {
-                    case 'b':
-                        ch = '\b';
-                        break;
-                    case 'f':
-                        ch = '\f';
-                        break;
-                    case 'n':
-                        ch = '\n';
-                        break;
-                    case 'r':
-                        ch = '\r';
-                        break;
-                    case 't':
-                        ch = '\t';
-                        break;
-                }
+                ch = switch (ch) {
+                    case 'b' -> '\b';
+                    case 'f' -> '\f';
+                    case 'n' -> '\n';
+                    case 'r' -> '\r';
+                    case 't' -> '\t';
+                    default -> ch;
+                };
             }
         }
         setValue(ch);

@@ -738,25 +738,24 @@ public class DefaultApkSignerEngine implements ApkSignerEngine {
 
         InputJarEntryInstructions.OutputPolicy outputPolicy =
                 getInputJarEntryOutputPolicy(entryName);
-        switch (outputPolicy) {
-            case SKIP:
-                return new InputJarEntryInstructions(InputJarEntryInstructions.OutputPolicy.SKIP);
-            case OUTPUT:
-                return new InputJarEntryInstructions(InputJarEntryInstructions.OutputPolicy.OUTPUT);
-            case OUTPUT_BY_ENGINE:
+        return switch (outputPolicy) {
+            case SKIP -> new InputJarEntryInstructions(InputJarEntryInstructions.OutputPolicy.SKIP);
+            case OUTPUT ->
+                    new InputJarEntryInstructions(InputJarEntryInstructions.OutputPolicy.OUTPUT);
+            case OUTPUT_BY_ENGINE -> {
                 if (V1SchemeConstants.MANIFEST_ENTRY_NAME.equals(entryName)) {
                     // We copy the main section of the JAR manifest from input to output. Thus, this
                     // invalidates v1 signature and we need to see the entry's data.
                     mInputJarManifestEntryDataRequest = new GetJarEntryDataRequest(entryName);
-                    return new InputJarEntryInstructions(
+                    yield new InputJarEntryInstructions(
                             InputJarEntryInstructions.OutputPolicy.OUTPUT_BY_ENGINE,
                             mInputJarManifestEntryDataRequest);
                 }
-                return new InputJarEntryInstructions(
+                yield new InputJarEntryInstructions(
                         InputJarEntryInstructions.OutputPolicy.OUTPUT_BY_ENGINE);
-            default:
-                throw new RuntimeException("Unsupported output policy: " + outputPolicy);
-        }
+            }
+            default -> throw new RuntimeException("Unsupported output policy: " + outputPolicy);
+        };
     }
 
     @Override

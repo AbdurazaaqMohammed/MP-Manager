@@ -62,27 +62,18 @@ import java.util.Set;
  */
 public final class EncodedValueUtils {
     public static boolean isDefaultValue(EncodedValue encodedValue) {
-        switch (encodedValue.getValueType()) {
-            case ValueType.BOOLEAN:
-                return !((BooleanEncodedValue)encodedValue).getValue();
-            case ValueType.BYTE:
-                return ((ByteEncodedValue)encodedValue).getValue() == 0;
-            case ValueType.CHAR:
-                return ((CharEncodedValue)encodedValue).getValue() == 0;
-            case ValueType.DOUBLE:
-                return ((DoubleEncodedValue)encodedValue).getValue() == 0;
-            case ValueType.FLOAT:
-                return ((FloatEncodedValue)encodedValue).getValue() == 0;
-            case ValueType.INT:
-                return ((IntEncodedValue)encodedValue).getValue() == 0;
-            case ValueType.LONG:
-                return ((LongEncodedValue)encodedValue).getValue() == 0;
-            case ValueType.NULL:
-                return true;
-            case ValueType.SHORT:
-                return ((ShortEncodedValue)encodedValue).getValue() == 0;
-        }
-        return false;
+        return switch (encodedValue.getValueType()) {
+            case ValueType.BOOLEAN -> !((BooleanEncodedValue) encodedValue).getValue();
+            case ValueType.BYTE -> ((ByteEncodedValue) encodedValue).getValue() == 0;
+            case ValueType.CHAR -> ((CharEncodedValue) encodedValue).getValue() == 0;
+            case ValueType.DOUBLE -> ((DoubleEncodedValue) encodedValue).getValue() == 0;
+            case ValueType.FLOAT -> ((FloatEncodedValue) encodedValue).getValue() == 0;
+            case ValueType.INT -> ((IntEncodedValue) encodedValue).getValue() == 0;
+            case ValueType.LONG -> ((LongEncodedValue) encodedValue).getValue() == 0;
+            case ValueType.NULL -> true;
+            case ValueType.SHORT -> ((ShortEncodedValue) encodedValue).getValue() == 0;
+            default -> false;
+        };
     }
 
     /**

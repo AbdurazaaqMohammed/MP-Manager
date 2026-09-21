@@ -200,19 +200,13 @@ public class AndroidBinXmlParser {
      */
     public int getAttributeValueType(int index) throws XmlParserException {
         int type = getAttribute(index).getValueType();
-        switch (type) {
-            case Attribute.TYPE_STRING:
-                return VALUE_TYPE_STRING;
-            case Attribute.TYPE_INT_DEC:
-            case Attribute.TYPE_INT_HEX:
-                return VALUE_TYPE_INT;
-            case Attribute.TYPE_REFERENCE:
-                return VALUE_TYPE_REFERENCE;
-            case Attribute.TYPE_INT_BOOLEAN:
-                return VALUE_TYPE_BOOLEAN;
-            default:
-                return VALUE_TYPE_UNSUPPORTED;
-        }
+        return switch (type) {
+            case Attribute.TYPE_STRING -> VALUE_TYPE_STRING;
+            case Attribute.TYPE_INT_DEC, Attribute.TYPE_INT_HEX -> VALUE_TYPE_INT;
+            case Attribute.TYPE_REFERENCE -> VALUE_TYPE_REFERENCE;
+            case Attribute.TYPE_INT_BOOLEAN -> VALUE_TYPE_BOOLEAN;
+            default -> VALUE_TYPE_UNSUPPORTED;
+        };
     }
 
     /**
@@ -446,43 +440,31 @@ public class AndroidBinXmlParser {
         }
 
         public int getIntValue() throws XmlParserException {
-            switch (mValueType) {
-                case TYPE_REFERENCE:
-                case TYPE_INT_DEC:
-                case TYPE_INT_HEX:
-                case TYPE_INT_BOOLEAN:
-                    return mValueData;
-                default:
-                    throw new XmlParserException("Cannot coerce to int: value type " + mValueType);
-            }
+            return switch (mValueType) {
+                case TYPE_REFERENCE, TYPE_INT_DEC, TYPE_INT_HEX, TYPE_INT_BOOLEAN -> mValueData;
+                default ->
+                        throw new XmlParserException("Cannot coerce to int: value type " + mValueType);
+            };
         }
 
         public boolean getBooleanValue() throws XmlParserException {
-            switch (mValueType) {
-                case TYPE_INT_BOOLEAN:
-                    return mValueData != 0;
-                default:
-                    throw new XmlParserException(
-                            "Cannot coerce to boolean: value type " + mValueType);
-            }
+            return switch (mValueType) {
+                case TYPE_INT_BOOLEAN -> mValueData != 0;
+                default -> throw new XmlParserException(
+                        "Cannot coerce to boolean: value type " + mValueType);
+            };
         }
 
         public String getStringValue() throws XmlParserException {
-            switch (mValueType) {
-                case TYPE_STRING:
-                    return mStringPool.getString(mValueData & 0xffffffffL);
-                case TYPE_INT_DEC:
-                    return Integer.toString(mValueData);
-                case TYPE_INT_HEX:
-                    return "0x" + Integer.toHexString(mValueData);
-                case TYPE_INT_BOOLEAN:
-                    return Boolean.toString(mValueData != 0);
-                case TYPE_REFERENCE:
-                    return "@" + Integer.toHexString(mValueData);
-                default:
-                    throw new XmlParserException(
-                            "Cannot coerce to string: value type " + mValueType);
-            }
+            return switch (mValueType) {
+                case TYPE_STRING -> mStringPool.getString(mValueData & 0xffffffffL);
+                case TYPE_INT_DEC -> Integer.toString(mValueData);
+                case TYPE_INT_HEX -> "0x" + Integer.toHexString(mValueData);
+                case TYPE_INT_BOOLEAN -> Boolean.toString(mValueData != 0);
+                case TYPE_REFERENCE -> "@" + Integer.toHexString(mValueData);
+                default -> throw new XmlParserException(
+                        "Cannot coerce to string: value type " + mValueType);
+            };
         }
     }
 

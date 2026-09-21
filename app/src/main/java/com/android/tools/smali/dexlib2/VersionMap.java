@@ -34,48 +34,38 @@ public class VersionMap {
     public static final int NO_VERSION = -1;
 
     public static int mapDexVersionToApi(int dexVersion) {
-        switch (dexVersion) {
-            case 35:
-                return 23;
-            case 37:
-                return 25;
-            case 38:
-                return 27;
-            case 39:
-                return 28;
-            case 40:
-                return 34;
-            case 41:
-                return 35;
-            default:
-                return NO_VERSION;
-        }
+        return switch (dexVersion) {
+            case 35 -> 23;
+            case 37 -> 25;
+            case 38 -> 27;
+            case 39 -> 28;
+            case 40 -> 34;
+            case 41 -> 35;
+            default -> NO_VERSION;
+        };
     }
 
     public static int mapApiToDexVersion(int api) {
         if (api <= 23) {  // Android M/6
             return 35;
         }
-        switch (api) {
-            case 24:  // Android N/7
-            case 25:  // Android N/7.1
-                return 37;
-            case 26:  // Android O/8
-            case 27:  // Android O/8.1
-                return 38;
-            case 28:  // Android P/9
-                return 39;
-            case 29:  // Android Q/10
-            case 30:  // Android R/11
-            case 31:  // Android S/12
-            case 32:  // Android S/12.1
-            case 33:  // Android T/13
-            case 34:  // Android U/14
-                return 40;
-            case 35:  // Android V/15
-                return 41;
-        }
-        return NO_VERSION;
+        return switch (api) {  // Android N/7
+            case 24, 25 ->  // Android N/7.1
+                    37;  // Android O/8
+            case 26, 27 ->  // Android O/8.1
+                    38;
+            case 28 ->  // Android P/9
+                    39;  // Android Q/10
+            // Android R/11
+            // Android S/12
+            // Android S/12.1
+            // Android T/13
+            case 29, 30, 31, 32, 33, 34 ->  // Android U/14
+                    40;
+            case 35 ->  // Android V/15
+                    41;
+            default -> NO_VERSION;
+        };
     }
 
     public static int mapArtVersionToApi(int artVersion) {
@@ -111,30 +101,19 @@ public class VersionMap {
             return NO_VERSION;
         }
 
-        switch (api) {
-            case 19:
-            case 20:
-                return 7;
-            case 21:
-                return 39;
-            case 22:
-                return 45;
-            case 23:
-                return 64;
-            case 24:
-            case 25:
-                return 79;
-            case 26:
-                return 124;
-            case 27:
-                return 131;
-            case 28:
-                return 138;
-            case 29:
-                return 170;
-            default:
+        return switch (api) {
+            case 19, 20 -> 7;
+            case 21 -> 39;
+            case 22 -> 45;
+            case 23 -> 64;
+            case 24, 25 -> 79;
+            case 26 -> 124;
+            case 27 -> 131;
+            case 28 -> 138;
+            case 29 -> 170;
+            default ->
                 // 178 is the current version in the master branch of AOSP as of 2020-02-02
-                return 178;
-        }
+                    178;
+        };
     }
 }

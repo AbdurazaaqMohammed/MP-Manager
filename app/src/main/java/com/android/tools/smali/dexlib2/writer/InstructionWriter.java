@@ -589,23 +589,16 @@ public class InstructionWriter<StringRef extends StringReference, TypeRef extend
     }
 
     private int getReferenceIndex(int referenceType, Reference reference) {
-        switch (referenceType) {
-            case ReferenceType.FIELD:
-                return fieldSection.getItemIndex((FieldRefKey) reference);
-            case ReferenceType.METHOD:
-                return methodSection.getItemIndex((MethodRefKey) reference);
-            case ReferenceType.STRING:
-                return stringSection.getItemIndex((StringRef) reference);
-            case ReferenceType.TYPE:
-                return typeSection.getItemIndex((TypeRef) reference);
-            case ReferenceType.METHOD_PROTO:
-                return protoSection.getItemIndex((ProtoRefKey) reference);
-            case ReferenceType.METHOD_HANDLE:
-                return methodHandleSection.getItemIndex((MethodHandleKey) reference);
-            case ReferenceType.CALL_SITE:
-                return callSiteSection.getItemIndex((CallSiteKey) reference);
-            default:
-                throw new ExceptionWithContext("Unknown reference type: %d",  referenceType);
-        }
+        return switch (referenceType) {
+            case ReferenceType.FIELD -> fieldSection.getItemIndex((FieldRefKey) reference);
+            case ReferenceType.METHOD -> methodSection.getItemIndex((MethodRefKey) reference);
+            case ReferenceType.STRING -> stringSection.getItemIndex((StringRef) reference);
+            case ReferenceType.TYPE -> typeSection.getItemIndex((TypeRef) reference);
+            case ReferenceType.METHOD_PROTO -> protoSection.getItemIndex((ProtoRefKey) reference);
+            case ReferenceType.METHOD_HANDLE ->
+                    methodHandleSection.getItemIndex((MethodHandleKey) reference);
+            case ReferenceType.CALL_SITE -> callSiteSection.getItemIndex((CallSiteKey) reference);
+            default -> throw new ExceptionWithContext("Unknown reference type: %d", referenceType);
+        };
     }
 }

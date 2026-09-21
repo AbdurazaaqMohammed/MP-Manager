@@ -67,14 +67,11 @@ public abstract class VariableSizeLookaheadIterator<T> implements Iterator<T> {
 
     @Override
     public final boolean hasNext() {
-        switch (state) {
-            case STATE_DONE:
-                return false;
-            case STATE_READY:
-                return true;
-            default:
-        }
-        return tryToComputeNext();
+        return switch (state) {
+            case STATE_DONE -> false;
+            case STATE_READY -> true;
+            default -> tryToComputeNext();
+        };
     }
 
     private boolean tryToComputeNext() {

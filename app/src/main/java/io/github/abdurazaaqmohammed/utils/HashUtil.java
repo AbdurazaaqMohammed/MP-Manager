@@ -97,27 +97,26 @@ public class HashUtil {
 
     public static String algorithmForChecksumFile(String fileName) {
         String ext = getExtension(fileName);
-        switch (ext) {
-            case "md5": return "MD5";
-            case "sha1": return "SHA-1";
-            case "sha256": return "SHA-256";
-            case "sha512": return "SHA-512";
-            case "sfv":
-            case "crc32": return "CRC32";
-            default: return null;
-        }
+        return switch (ext) {
+            case "md5" -> "MD5";
+            case "sha1" -> "SHA-1";
+            case "sha256" -> "SHA-256";
+            case "sha512" -> "SHA-512";
+            case "sfv", "crc32" -> "CRC32";
+            default -> null;
+        };
     }
 
     private static int hashLength(String algorithm) {
         if (algorithm == null) return 0;
-        switch (algorithm) {
-            case "MD5": return 32;
-            case "SHA-1": return 40;
-            case "SHA-256": return 64;
-            case "SHA-512": return 128;
-            case "CRC32": return 8;
-            default: return 0;
-        }
+        return switch (algorithm) {
+            case "MD5" -> 32;
+            case "SHA-1" -> 40;
+            case "SHA-256" -> 64;
+            case "SHA-512" -> 128;
+            case "CRC32" -> 8;
+            default -> 0;
+        };
     }
 
     public static List<CheckResult> verifyChecksumFile(File checksumFile) throws IOException {

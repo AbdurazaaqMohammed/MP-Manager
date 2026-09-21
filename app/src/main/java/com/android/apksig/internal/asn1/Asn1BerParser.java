@@ -325,16 +325,12 @@ public final class Asn1BerParser {
                             + Asn1Class.class.getName());
         }
 
-        switch (containerAnnotation.type()) {
-            case CHOICE:
-            case SEQUENCE:
-            case UNENCODED_CONTAINER:
-                return containerAnnotation.type();
-            default:
-                throw new Asn1DecodingException(
-                        "Unsupported ASN.1 container annotation type: "
-                                + containerAnnotation.type());
-        }
+        return switch (containerAnnotation.type()) {
+            case CHOICE, SEQUENCE, UNENCODED_CONTAINER -> containerAnnotation.type();
+            default -> throw new Asn1DecodingException(
+                    "Unsupported ASN.1 container annotation type: "
+                            + containerAnnotation.type());
+        };
     }
 
     private static Class<?> getElementType(Field field)

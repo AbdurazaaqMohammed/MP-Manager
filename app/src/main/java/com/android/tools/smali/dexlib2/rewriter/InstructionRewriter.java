@@ -63,55 +63,42 @@ public class InstructionRewriter implements Rewriter<Instruction> {
 
     @Nonnull @Override public Instruction rewrite(@Nonnull Instruction instruction) {
         if (instruction instanceof ReferenceInstruction) {
-            switch (instruction.getOpcode().format) {
-                case Format20bc:
-                    return new RewrittenInstruction20bc((Instruction20bc)instruction);
-                case Format21c:
-                    return new RewrittenInstruction21c((Instruction21c)instruction);
-                case Format22c:
-                    return new RewrittenInstruction22c((Instruction22c)instruction);
-                case Format31c:
-                    return new RewrittenInstruction31c((Instruction31c)instruction);
-                case Format35c:
-                    return new RewrittenInstruction35c((Instruction35c)instruction);
-                case Format3rc:
-                    return new RewrittenInstruction3rc((Instruction3rc)instruction);
-                case Format45cc:
-                    return new RewrittenInstruction45cc((Instruction45cc) instruction);
-                case Format4rcc:
-                    return new RewrittenInstruction4rcc((Instruction4rcc) instruction);
-                default:
-                    throw new IllegalArgumentException();
-            }
+            return switch (instruction.getOpcode().format) {
+                case Format20bc -> new RewrittenInstruction20bc((Instruction20bc) instruction);
+                case Format21c -> new RewrittenInstruction21c((Instruction21c) instruction);
+                case Format22c -> new RewrittenInstruction22c((Instruction22c) instruction);
+                case Format31c -> new RewrittenInstruction31c((Instruction31c) instruction);
+                case Format35c -> new RewrittenInstruction35c((Instruction35c) instruction);
+                case Format3rc -> new RewrittenInstruction3rc((Instruction3rc) instruction);
+                case Format45cc -> new RewrittenInstruction45cc((Instruction45cc) instruction);
+                case Format4rcc -> new RewrittenInstruction4rcc((Instruction4rcc) instruction);
+                default -> throw new IllegalArgumentException();
+            };
         }
         return instruction;
     }
 
     @Nonnull private Reference rewriteReference(int type,
                                                 @Nonnull Reference reference) {
-        switch (type) {
-            case ReferenceType.TYPE:
-                return RewriterUtils.rewriteTypeReference(rewriters.getTypeRewriter(),
-                        (TypeReference)reference);
-            case ReferenceType.FIELD:
-                return rewriters.getFieldReferenceRewriter().rewrite((FieldReference)reference);
-            case ReferenceType.METHOD:
-                return rewriters.getMethodReferenceRewriter().rewrite((MethodReference)reference);
-            case ReferenceType.STRING:
-                return reference;
-            case ReferenceType.METHOD_PROTO:
-                return RewriterUtils.rewriteMethodProtoReference(
-                        rewriters.getTypeRewriter(),
-                        (MethodProtoReference)reference);
-            case ReferenceType.METHOD_HANDLE:
-                return RewriterUtils.rewriteMethodHandleReference(
-                        rewriters, (MethodHandleReference)reference);
-            case ReferenceType.CALL_SITE:
-                return rewriters.getCallSiteReferenceRewriter().rewrite((CallSiteReference)reference);
-            default:
-                throw new ExceptionWithContext("Invalid reference type: %d",
-                                type);
-        }
+        return switch (type) {
+            case ReferenceType.TYPE ->
+                    RewriterUtils.rewriteTypeReference(rewriters.getTypeRewriter(),
+                            (TypeReference) reference);
+            case ReferenceType.FIELD ->
+                    rewriters.getFieldReferenceRewriter().rewrite((FieldReference) reference);
+            case ReferenceType.METHOD ->
+                    rewriters.getMethodReferenceRewriter().rewrite((MethodReference) reference);
+            case ReferenceType.STRING -> reference;
+            case ReferenceType.METHOD_PROTO -> RewriterUtils.rewriteMethodProtoReference(
+                    rewriters.getTypeRewriter(),
+                    (MethodProtoReference) reference);
+            case ReferenceType.METHOD_HANDLE -> RewriterUtils.rewriteMethodHandleReference(
+                    rewriters, (MethodHandleReference) reference);
+            case ReferenceType.CALL_SITE ->
+                    rewriters.getCallSiteReferenceRewriter().rewrite((CallSiteReference) reference);
+            default -> throw new ExceptionWithContext("Invalid reference type: %d",
+                    type);
+        };
     }
 
     protected class BaseRewrittenReferenceInstruction<T extends ReferenceInstruction>

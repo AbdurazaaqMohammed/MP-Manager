@@ -95,29 +95,18 @@ public abstract class BuilderEncodedValues {
 
     @Nonnull
     public static BuilderEncodedValue defaultValueForType(String type) {
-        switch (type.charAt(0)) {
-            case 'Z':
-                return BuilderBooleanEncodedValue.FALSE_VALUE;
-            case 'B':
-                return new BuilderByteEncodedValue((byte)0);
-            case 'S':
-                return new BuilderShortEncodedValue((short)0);
-            case 'C':
-                return new BuilderCharEncodedValue((char)0);
-            case 'I':
-                return new BuilderIntEncodedValue(0);
-            case 'J':
-                return new BuilderLongEncodedValue(0);
-            case 'F':
-                return new BuilderFloatEncodedValue(0);
-            case 'D':
-                return new BuilderDoubleEncodedValue(0);
-            case 'L':
-            case '[':
-                return BuilderNullEncodedValue.INSTANCE;
-            default:
-                throw new ExceptionWithContext("Unrecognized type: %s", type);
-        }
+        return switch (type.charAt(0)) {
+            case 'Z' -> BuilderBooleanEncodedValue.FALSE_VALUE;
+            case 'B' -> new BuilderByteEncodedValue((byte) 0);
+            case 'S' -> new BuilderShortEncodedValue((short) 0);
+            case 'C' -> new BuilderCharEncodedValue((char) 0);
+            case 'I' -> new BuilderIntEncodedValue(0);
+            case 'J' -> new BuilderLongEncodedValue(0);
+            case 'F' -> new BuilderFloatEncodedValue(0);
+            case 'D' -> new BuilderDoubleEncodedValue(0);
+            case 'L', '[' -> BuilderNullEncodedValue.INSTANCE;
+            default -> throw new ExceptionWithContext("Unrecognized type: %s", type);
+        };
     }
 
     public static class BuilderBooleanEncodedValue extends BaseBooleanEncodedValue

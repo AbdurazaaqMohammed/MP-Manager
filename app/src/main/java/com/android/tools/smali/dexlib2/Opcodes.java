@@ -129,19 +129,17 @@ public class Opcodes {
 
     @Nullable
     public Opcode getOpcodeByValue(int opcodeValue) {
-        switch (opcodeValue) {
-            case 0x100:
-                return Opcode.PACKED_SWITCH_PAYLOAD;
-            case 0x200:
-                return Opcode.SPARSE_SWITCH_PAYLOAD;
-            case 0x300:
-                return Opcode.ARRAY_PAYLOAD;
-            default:
+        return switch (opcodeValue) {
+            case 0x100 -> Opcode.PACKED_SWITCH_PAYLOAD;
+            case 0x200 -> Opcode.SPARSE_SWITCH_PAYLOAD;
+            case 0x300 -> Opcode.ARRAY_PAYLOAD;
+            default -> {
                 if (opcodeValue >= 0 && opcodeValue < opcodesByValue.length) {
-                    return opcodesByValue[opcodeValue];
+                    yield opcodesByValue[opcodeValue];
                 }
-                return null;
-        }
+                yield null;
+            }
+        };
     }
 
     @Nullable

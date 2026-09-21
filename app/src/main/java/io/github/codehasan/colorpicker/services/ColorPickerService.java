@@ -640,31 +640,23 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
     private int getMagnifierSizeDp() {
         String size = sharedPreferences.getString(PREF_MAGNIFIER_SIZE, "small");
         if (size == null) size = "small";
-        switch (size) {
-            case "small":
-                return 150;
-            case "medium":
-                return 200;
-            case "large":
-                return 250;
-            default:
-                return 150;
-        }
+        return switch (size) {
+            case "small" -> 150;
+            case "medium" -> 200;
+            case "large" -> 250;
+            default -> 150;
+        };
     }
 
     private long getCaptureDelayMs() {
         String speed = sharedPreferences.getString(PREF_CAPTURE_SPEED, "normal");
         if (speed == null) speed = "normal";
-        switch (speed) {
-            case "fast":
-                return 25L;
-            case "normal":
-                return 50L;
-            case "slow":
-                return 100L;
-            default:
-                return 50L;
-        }
+        return switch (speed) {
+            case "fast" -> 25L;
+            case "normal" -> 50L;
+            case "slow" -> 100L;
+            default -> 50L;
+        };
     }
 
     private boolean getShowGridLines() {

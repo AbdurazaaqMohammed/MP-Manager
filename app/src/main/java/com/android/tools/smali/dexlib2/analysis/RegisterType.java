@@ -213,29 +213,18 @@ public class RegisterType {
 
     @Nonnull
     public static RegisterType getRegisterType(@Nonnull ClassPath classPath, @Nonnull CharSequence type) {
-        switch (type.charAt(0)) {
-            case 'Z':
-                return BOOLEAN_TYPE;
-            case 'B':
-                return BYTE_TYPE;
-            case 'S':
-                return SHORT_TYPE;
-            case 'C':
-                return CHAR_TYPE;
-            case 'I':
-                return INTEGER_TYPE;
-            case 'F':
-                return FLOAT_TYPE;
-            case 'J':
-                return LONG_LO_TYPE;
-            case 'D':
-                return DOUBLE_LO_TYPE;
-            case 'L':
-            case '[':
-                return getRegisterType(REFERENCE, classPath.getClass(type));
-            default:
-                throw new AnalysisException("Invalid type: " + type);
-        }
+        return switch (type.charAt(0)) {
+            case 'Z' -> BOOLEAN_TYPE;
+            case 'B' -> BYTE_TYPE;
+            case 'S' -> SHORT_TYPE;
+            case 'C' -> CHAR_TYPE;
+            case 'I' -> INTEGER_TYPE;
+            case 'F' -> FLOAT_TYPE;
+            case 'J' -> LONG_LO_TYPE;
+            case 'D' -> DOUBLE_LO_TYPE;
+            case 'L', '[' -> getRegisterType(REFERENCE, classPath.getClass(type));
+            default -> throw new AnalysisException("Invalid type: " + type);
+        };
     }
 
     @Nonnull
@@ -308,43 +297,26 @@ public class RegisterType {
 
     @Nonnull
     public static RegisterType getRegisterType(byte category, @Nullable TypeProto typeProto) {
-        switch (category) {
-            case UNKNOWN:
-                return UNKNOWN_TYPE;
-            case UNINIT:
-                return UNINIT_TYPE;
-            case NULL:
-                return NULL_TYPE;
-            case ONE:
-                return ONE_TYPE;
-            case BOOLEAN:
-                return BOOLEAN_TYPE;
-            case BYTE:
-                return BYTE_TYPE;
-            case POS_BYTE:
-                return POS_BYTE_TYPE;
-            case SHORT:
-                return SHORT_TYPE;
-            case POS_SHORT:
-                return POS_SHORT_TYPE;
-            case CHAR:
-                return CHAR_TYPE;
-            case INTEGER:
-                return INTEGER_TYPE;
-            case FLOAT:
-                return FLOAT_TYPE;
-            case LONG_LO:
-                return LONG_LO_TYPE;
-            case LONG_HI:
-                return LONG_HI_TYPE;
-            case DOUBLE_LO:
-                return DOUBLE_LO_TYPE;
-            case DOUBLE_HI:
-                return DOUBLE_HI_TYPE;
-            case CONFLICTED:
-                return CONFLICTED_TYPE;
-        }
+        return switch (category) {
+            case UNKNOWN -> UNKNOWN_TYPE;
+            case UNINIT -> UNINIT_TYPE;
+            case NULL -> NULL_TYPE;
+            case ONE -> ONE_TYPE;
+            case BOOLEAN -> BOOLEAN_TYPE;
+            case BYTE -> BYTE_TYPE;
+            case POS_BYTE -> POS_BYTE_TYPE;
+            case SHORT -> SHORT_TYPE;
+            case POS_SHORT -> POS_SHORT_TYPE;
+            case CHAR -> CHAR_TYPE;
+            case INTEGER -> INTEGER_TYPE;
+            case FLOAT -> FLOAT_TYPE;
+            case LONG_LO -> LONG_LO_TYPE;
+            case LONG_HI -> LONG_HI_TYPE;
+            case DOUBLE_LO -> DOUBLE_LO_TYPE;
+            case DOUBLE_HI -> DOUBLE_HI_TYPE;
+            case CONFLICTED -> CONFLICTED_TYPE;
+            default -> new RegisterType(category, typeProto);
+        };
 
-        return new RegisterType(category, typeProto);
     }
 }

@@ -141,58 +141,68 @@ public class EncodedValue {
         int valueType = valueArgType & 0x1f;
         int intValue;
 
-        switch (valueType) {
-            case ValueType.BYTE:
+        return switch (valueType) {
+            case ValueType.BYTE -> {
                 intValue = reader.readByte();
-                return String.format("0x%x", intValue);
-            case ValueType.SHORT:
-                intValue = reader.readSizedInt(valueArg+1);
-                return String.format("0x%x", intValue);
-            case ValueType.CHAR:
-                intValue = reader.readSizedSmallUint(valueArg+1);
-                return String.format("0x%x", intValue);
-            case ValueType.INT:
-                intValue = reader.readSizedInt(valueArg+1);
-                return String.format("0x%x", intValue);
-            case ValueType.LONG:
-                long longValue = reader.readSizedLong(valueArg+1);
-                return String.format("0x%x", longValue);
-            case ValueType.FLOAT:
+                yield String.format("0x%x", intValue);
+            }
+            case ValueType.SHORT -> {
+                intValue = reader.readSizedInt(valueArg + 1);
+                yield String.format("0x%x", intValue);
+            }
+            case ValueType.CHAR -> {
+                intValue = reader.readSizedSmallUint(valueArg + 1);
+                yield String.format("0x%x", intValue);
+            }
+            case ValueType.INT -> {
+                intValue = reader.readSizedInt(valueArg + 1);
+                yield String.format("0x%x", intValue);
+            }
+            case ValueType.LONG -> {
+                long longValue = reader.readSizedLong(valueArg + 1);
+                yield String.format("0x%x", longValue);
+            }
+            case ValueType.FLOAT -> {
                 float floatValue = Float.intBitsToFloat(reader.readSizedRightExtendedInt(valueArg + 1));
-                return String.format("%f", floatValue);
-            case ValueType.DOUBLE:
+                yield String.format("%f", floatValue);
+            }
+            case ValueType.DOUBLE -> {
                 double doubleValue = Double.longBitsToDouble(reader.readSizedRightExtendedLong(valueArg + 1));
-                return String.format("%f", doubleValue);
-            case ValueType.METHOD_TYPE:
+                yield String.format("%f", doubleValue);
+            }
+            case ValueType.METHOD_TYPE -> {
                 int protoIndex = reader.readSizedSmallUint(valueArg + 1);
-                return ProtoIdItem.getReferenceAnnotation(dexFile, protoIndex);
-            case ValueType.STRING:
+                yield ProtoIdItem.getReferenceAnnotation(dexFile, protoIndex);
+            }
+            case ValueType.STRING -> {
                 int stringIndex = reader.readSizedSmallUint(valueArg + 1);
-                return StringIdItem.getReferenceAnnotation(dexFile, stringIndex, true);
-            case ValueType.TYPE:
-                int typeIndex = reader.readSizedSmallUint(valueArg+1);
-                return TypeIdItem.getReferenceAnnotation(dexFile, typeIndex);
-            case ValueType.FIELD:
-                int fieldIndex = reader.readSizedSmallUint(valueArg+1);
-                return FieldIdItem.getReferenceAnnotation(dexFile, fieldIndex);
-            case ValueType.METHOD:
-                int methodIndex = reader.readSizedSmallUint(valueArg+1);
-                return MethodIdItem.getReferenceAnnotation(dexFile, methodIndex);
-            case ValueType.ENUM:
-                fieldIndex = reader.readSizedSmallUint(valueArg+1);
-                return FieldIdItem.getReferenceAnnotation(dexFile, fieldIndex);
-            case ValueType.ARRAY:
-            case ValueType.ANNOTATION:
-            case ValueType.METHOD_HANDLE:
+                yield StringIdItem.getReferenceAnnotation(dexFile, stringIndex, true);
+            }
+            case ValueType.TYPE -> {
+                int typeIndex = reader.readSizedSmallUint(valueArg + 1);
+                yield TypeIdItem.getReferenceAnnotation(dexFile, typeIndex);
+            }
+            case ValueType.FIELD -> {
+                int fieldIndex = reader.readSizedSmallUint(valueArg + 1);
+                yield FieldIdItem.getReferenceAnnotation(dexFile, fieldIndex);
+            }
+            case ValueType.METHOD -> {
+                int methodIndex = reader.readSizedSmallUint(valueArg + 1);
+                yield MethodIdItem.getReferenceAnnotation(dexFile, methodIndex);
+            }
+            case ValueType.ENUM -> {
+                fieldIndex = reader.readSizedSmallUint(valueArg + 1);
+                yield FieldIdItem.getReferenceAnnotation(dexFile, fieldIndex);
+            }
+            case ValueType.ARRAY, ValueType.ANNOTATION, ValueType.METHOD_HANDLE -> {
                 reader.setOffset(reader.getOffset() - 1);
-                return DexBackedEncodedValue.readFrom(dexFile, reader).toString();
-            case ValueType.NULL:
-                return "null";
-            case ValueType.BOOLEAN:
-                return Boolean.toString(valueArg == 1);
-            default:
-                throw new IllegalArgumentException(String.format("Invalid encoded value type 0x%x at offset 0x%x",
-                        valueType, reader.getOffset()));
-        }
+                yield DexBackedEncodedValue.readFrom(dexFile, reader).toString();
+            }
+            case ValueType.NULL -> "null";
+            case ValueType.BOOLEAN -> Boolean.toString(valueArg == 1);
+            default ->
+                    throw new IllegalArgumentException(String.format("Invalid encoded value type 0x%x at offset 0x%x",
+                            valueType, reader.getOffset()));
+        };
     }
 }

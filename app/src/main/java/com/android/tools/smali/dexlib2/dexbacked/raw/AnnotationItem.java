@@ -63,16 +63,12 @@ public class AnnotationItem {
     }
 
     private static String getAnnotationVisibility(int visibility) {
-        switch (visibility) {
-            case 0:
-                return "build";
-            case 1:
-                return "runtime";
-            case 2:
-                return "system";
-            default:
-                return "invalid visibility";
-        }
+        return switch (visibility) {
+            case 0 -> "build";
+            case 1 -> "runtime";
+            case 2 -> "system";
+            default -> "invalid visibility";
+        };
     }
 
     public static String getReferenceAnnotation(@Nonnull DexBackedDexFile dexFile, int annotationItemOffset) {

@@ -64,13 +64,10 @@ public class AlgorithmIdentifier {
      */
     public static AlgorithmIdentifier getSignerInfoDigestAlgorithmOid(
             DigestAlgorithm digestAlgorithm) {
-        switch (digestAlgorithm) {
-            case SHA1:
-                return new AlgorithmIdentifier(OID_DIGEST_SHA1, ASN1_DER_NULL);
-            case SHA256:
-                return new AlgorithmIdentifier(OID_DIGEST_SHA256, ASN1_DER_NULL);
-        }
-        throw new IllegalArgumentException("Unsupported digest algorithm: " + digestAlgorithm);
+        return switch (digestAlgorithm) {
+            case SHA1 -> new AlgorithmIdentifier(OID_DIGEST_SHA1, ASN1_DER_NULL);
+            case SHA256 -> new AlgorithmIdentifier(OID_DIGEST_SHA256, ASN1_DER_NULL);
+        };
     }
 
     /**
@@ -81,42 +78,29 @@ public class AlgorithmIdentifier {
             PublicKey publicKey, DigestAlgorithm digestAlgorithm, boolean deterministicDsaSigning)
             throws InvalidKeyException {
         String keyAlgorithm = publicKey.getAlgorithm();
-        String jcaDigestPrefixForSigAlg;
-        switch (digestAlgorithm) {
-            case SHA1:
-                jcaDigestPrefixForSigAlg = "SHA1";
-                break;
-            case SHA256:
-                jcaDigestPrefixForSigAlg = "SHA256";
-                break;
-            default:
-                throw new IllegalArgumentException(
-                        "Unexpected digest algorithm: " + digestAlgorithm);
-        }
+        String jcaDigestPrefixForSigAlg = switch (digestAlgorithm) {
+            case SHA1 -> "SHA1";
+            case SHA256 -> "SHA256";
+            default -> throw new IllegalArgumentException(
+                    "Unexpected digest algorithm: " + digestAlgorithm);
+        };
         if ("RSA".equalsIgnoreCase(keyAlgorithm) || OID_RSA_ENCRYPTION.equals(keyAlgorithm)) {
             return Pair.of(
                     jcaDigestPrefixForSigAlg + "withRSA",
                     new AlgorithmIdentifier(OID_SIG_RSA, ASN1_DER_NULL));
         } else if ("DSA".equalsIgnoreCase(keyAlgorithm)) {
-            AlgorithmIdentifier sigAlgId;
-            switch (digestAlgorithm) {
-                case SHA1:
-                    sigAlgId =
-                            new AlgorithmIdentifier(OID_SIG_DSA, ASN1_DER_NULL);
-                    break;
-                case SHA256:
+            AlgorithmIdentifier sigAlgId = switch (digestAlgorithm) {
+                case SHA1 -> new AlgorithmIdentifier(OID_SIG_DSA, ASN1_DER_NULL);
+                case SHA256 ->
                     // DSA signatures with SHA-256 in SignedData are accepted by Android API Level
                     // 21 and higher. However, there are two ways to specify their SignedData
                     // SignatureAlgorithm: dsaWithSha256 (2.16.840.1.101.3.4.3.2) and
                     // dsa (1.2.840.10040.4.1). The latter works only on API Level 22+. Thus, we use
                     // the former.
-                    sigAlgId =
-                            new AlgorithmIdentifier(OID_SIG_SHA256_WITH_DSA, ASN1_DER_NULL);
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "Unexpected digest algorithm: " + digestAlgorithm);
-            }
+                        new AlgorithmIdentifier(OID_SIG_SHA256_WITH_DSA, ASN1_DER_NULL);
+                default -> throw new IllegalArgumentException(
+                        "Unexpected digest algorithm: " + digestAlgorithm);
+            };
             String signingAlgorithmName =
                     jcaDigestPrefixForSigAlg + (deterministicDsaSigning ? "withDetDSA" : "withDSA");
             return Pair.of(signingAlgorithmName, sigAlgId);

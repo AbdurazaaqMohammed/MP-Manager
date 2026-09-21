@@ -275,38 +275,10 @@ public class VitalClassesSet extends BaseApkModuleProcessor implements Predicate
         return true;
     }
     private boolean isValidSimpleName(char ch) {
-        switch (ch) {
-            case ' ':
-            case '\n':
-            case '\r':
-            case '\t':
-            case '(':
-            case ')':
-            case '[':
-            case ']':
-            case '<':
-            case '>':
-            case ',':
-            case '/':
-            case '\\':
-            case '!':
-            case '@':
-            case '#':
-            case '%':
-            case '^':
-            case '&':
-            case '*':
-            case '+':
-            case '=':
-            case '|':
-            case '\'':
-            case '"':
-            case ';':
-            case ':':
-            case '?':
-                return false;
-            default:
-                return true;
-        }
+        return switch (ch) {
+            case ' ', '\n', '\r', '\t', '(', ')', '[', ']', '<', '>', ',', '/', '\\', '!', '@', '#',
+                 '%', '^', '&', '*', '+', '=', '|', '\'', '"', ';', ':', '?' -> false;
+            default -> true;
+        };
     }
 }

@@ -268,23 +268,19 @@ public abstract class ApkUtils {
                     for (int i = 0; i < parser.getAttributeCount(); i++) {
                         if (parser.getAttributeNameResourceId(i) == MIN_SDK_VERSION_ATTR_ID) {
                             int valueType = parser.getAttributeValueType(i);
-                            switch (valueType) {
-                                case AndroidBinXmlParser.VALUE_TYPE_INT:
-                                    minSdkVersion = parser.getAttributeIntValue(i);
-                                    break;
-                                case AndroidBinXmlParser.VALUE_TYPE_STRING:
-                                    minSdkVersion =
-                                            getMinSdkVersionForCodename(
-                                                    parser.getAttributeStringValue(i));
-                                    break;
-                                default:
-                                    throw new MinSdkVersionException(
-                                            "Unable to determine APK's minimum supported Android"
-                                                    + ": unsupported value type in "
-                                                    + ANDROID_MANIFEST_ZIP_ENTRY_NAME + "'s"
-                                                    + " minSdkVersion"
-                                                    + ". Only integer values supported.");
-                            }
+                            minSdkVersion = switch (valueType) {
+                                case AndroidBinXmlParser.VALUE_TYPE_INT ->
+                                        parser.getAttributeIntValue(i);
+                                case AndroidBinXmlParser.VALUE_TYPE_STRING ->
+                                        getMinSdkVersionForCodename(
+                                                parser.getAttributeStringValue(i));
+                                default -> throw new MinSdkVersionException(
+                                        "Unable to determine APK's minimum supported Android"
+                                                + ": unsupported value type in "
+                                                + ANDROID_MANIFEST_ZIP_ENTRY_NAME + "'s"
+                                                + " minSdkVersion"
+                                                + ". Only integer values supported.");
+                            };
                             break;
                         }
                     }
@@ -422,36 +418,36 @@ public abstract class ApkUtils {
                     for (int i = 0; i < parser.getAttributeCount(); i++) {
                         if (parser.getAttributeNameResourceId(i) == DEBUGGABLE_ATTR_ID) {
                             int valueType = parser.getAttributeValueType(i);
-                            switch (valueType) {
-                                case AndroidBinXmlParser.VALUE_TYPE_BOOLEAN:
-                                case AndroidBinXmlParser.VALUE_TYPE_STRING:
-                                case AndroidBinXmlParser.VALUE_TYPE_INT:
+                            // References to resources are not supported on purpose. The
+                            // reason is that the resolved value depends on the resource
+                            // configuration (e.g, MNC/MCC, locale, screen density) used
+                            // at resolution time. As a result, the same APK may appear as
+                            // debuggable in one situation and as non-debuggable in another
+                            // situation. Such APKs may put users at risk.
+                            return switch (valueType) {
+                                case AndroidBinXmlParser.VALUE_TYPE_BOOLEAN,
+                                     AndroidBinXmlParser.VALUE_TYPE_STRING,
+                                     AndroidBinXmlParser.VALUE_TYPE_INT -> {
                                     String value = parser.getAttributeStringValue(i);
-                                    return ("true".equals(value))
+                                    yield ("true".equals(value))
                                             || ("TRUE".equals(value))
                                             || ("1".equals(value));
-                                case AndroidBinXmlParser.VALUE_TYPE_REFERENCE:
-                                    // References to resources are not supported on purpose. The
-                                    // reason is that the resolved value depends on the resource
-                                    // configuration (e.g, MNC/MCC, locale, screen density) used
-                                    // at resolution time. As a result, the same APK may appear as
-                                    // debuggable in one situation and as non-debuggable in another
-                                    // situation. Such APKs may put users at risk.
-                                    throw new ApkFormatException(
-                                            "Unable to determine whether APK is debuggable"
-                                                    + ": " + ANDROID_MANIFEST_ZIP_ENTRY_NAME + "'s"
-                                                    + " android:debuggable attribute references a"
-                                                    + " resource. References are not supported for"
-                                                    + " security reasons. Only constant boolean,"
-                                                    + " string and int values are supported.");
-                                default:
-                                    throw new ApkFormatException(
-                                            "Unable to determine whether APK is debuggable"
-                                                    + ": " + ANDROID_MANIFEST_ZIP_ENTRY_NAME + "'s"
-                                                    + " android:debuggable attribute uses"
-                                                    + " unsupported value type. Only boolean,"
-                                                    + " string and int values are supported.");
-                            }
+                                }
+                                case AndroidBinXmlParser.VALUE_TYPE_REFERENCE ->
+                                        throw new ApkFormatException(
+                                                "Unable to determine whether APK is debuggable"
+                                                        + ": " + ANDROID_MANIFEST_ZIP_ENTRY_NAME + "'s"
+                                                        + " android:debuggable attribute references a"
+                                                        + " resource. References are not supported for"
+                                                        + " security reasons. Only constant boolean,"
+                                                        + " string and int values are supported.");
+                                default -> throw new ApkFormatException(
+                                        "Unable to determine whether APK is debuggable"
+                                                + ": " + ANDROID_MANIFEST_ZIP_ENTRY_NAME + "'s"
+                                                + " android:debuggable attribute uses"
+                                                + " unsupported value type. Only boolean,"
+                                                + " string and int values are supported.");
+                            };
                         }
                     }
                     // This application element does not declare the debuggable attribute
@@ -638,17 +634,15 @@ public abstract class ApkUtils {
                     for (int i = 0; i < parser.getAttributeCount(); i++) {
                         if (parser.getAttributeNameResourceId(i) == attributeId) {
                             int valueType = parser.getAttributeValueType(i);
-                            switch (valueType) {
-                                case AndroidBinXmlParser.VALUE_TYPE_INT:
-                                case AndroidBinXmlParser.VALUE_TYPE_STRING:
-                                    return parser.getAttributeIntValue(i);
-                                default:
-                                    throw new ApkFormatException(
-                                            "Unsupported value type, " + valueType
-                                                    + ", for attribute " + String.format("0x%08X",
-                                                    attributeId) + " under element " + elementName);
-
-                            }
+                            return switch (valueType) {
+                                case AndroidBinXmlParser.VALUE_TYPE_INT,
+                                     AndroidBinXmlParser.VALUE_TYPE_STRING ->
+                                        parser.getAttributeIntValue(i);
+                                default -> throw new ApkFormatException(
+                                        "Unsupported value type, " + valueType
+                                                + ", for attribute " + String.format("0x%08X",
+                                                attributeId) + " under element " + elementName);
+                            };
                         }
                     }
                 }

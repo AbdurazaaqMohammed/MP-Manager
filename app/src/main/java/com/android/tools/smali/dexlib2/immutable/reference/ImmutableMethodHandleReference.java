@@ -60,27 +60,19 @@ public class ImmutableMethodHandleReference extends BaseMethodHandleReference im
             return (ImmutableMethodHandleReference) methodHandleReference;
         }
         int methodHandleType = methodHandleReference.getMethodHandleType();
-        ImmutableReference memberReference;
+        ImmutableReference memberReference = switch (methodHandleType) {
+            case MethodHandleType.STATIC_PUT, MethodHandleType.STATIC_GET,
+                 MethodHandleType.INSTANCE_PUT, MethodHandleType.INSTANCE_GET ->
+                    ImmutableFieldReference.of(
+                            (FieldReference) methodHandleReference.getMemberReference());
+            case MethodHandleType.INVOKE_STATIC, MethodHandleType.INVOKE_INSTANCE,
+                 MethodHandleType.INVOKE_CONSTRUCTOR, MethodHandleType.INVOKE_DIRECT,
+                 MethodHandleType.INVOKE_INTERFACE -> ImmutableMethodReference.of(
+                    (MethodReference) methodHandleReference.getMemberReference());
+            default ->
+                    throw new ExceptionWithContext("Invalid method handle type: %d", methodHandleType);
+        };
 
-        switch (methodHandleType) {
-            case MethodHandleType.STATIC_PUT:
-            case MethodHandleType.STATIC_GET:
-            case MethodHandleType.INSTANCE_PUT:
-            case MethodHandleType.INSTANCE_GET:
-                memberReference = ImmutableFieldReference.of(
-                        (FieldReference) methodHandleReference.getMemberReference());
-                break;
-            case MethodHandleType.INVOKE_STATIC:
-            case MethodHandleType.INVOKE_INSTANCE:
-            case MethodHandleType.INVOKE_CONSTRUCTOR:
-            case MethodHandleType.INVOKE_DIRECT:
-            case MethodHandleType.INVOKE_INTERFACE:
-                memberReference = ImmutableMethodReference.of(
-                        (MethodReference) methodHandleReference.getMemberReference());
-                break;
-            default:
-                throw new ExceptionWithContext("Invalid method handle type: %d", methodHandleType);
-        }
         return new ImmutableMethodHandleReference(methodHandleType, memberReference);
     }
 

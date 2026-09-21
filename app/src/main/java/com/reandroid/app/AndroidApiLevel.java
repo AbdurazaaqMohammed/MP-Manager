@@ -207,22 +207,15 @@ public class AndroidApiLevel implements Comparable<AndroidApiLevel>{
         return null;
     }
     public static AndroidApiLevel getMinAndroidApiLevelForDex(int dexVersion) {
-        switch(dexVersion) {
-            case 35:
-                return B;
-            case 37:
-                return N;
-            case 38:
-                return O;
-            case 39:
-                return P;
-            case 40:
-                return R;
-            case 41:
-                return ANDROID_PLATFORM;
-            default:
-                return null;
-        }
+        return switch (dexVersion) {
+            case 35 -> B;
+            case 37 -> N;
+            case 38 -> O;
+            case 39 -> P;
+            case 40 -> R;
+            case 41 -> ANDROID_PLATFORM;
+            default -> null;
+        };
     }
 
     public static AndroidApiLevel[] values() {

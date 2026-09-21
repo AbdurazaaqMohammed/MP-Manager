@@ -59,27 +59,18 @@ public class BuilderMethodHandlePool extends BaseBuilderPool
             return internedMethodHandle;
         }
 
-        BuilderReference memberReference;
-        switch (methodHandleReference.getMethodHandleType()) {
-            case MethodHandleType.STATIC_PUT:
-            case MethodHandleType.STATIC_GET:
-            case MethodHandleType.INSTANCE_PUT:
-            case MethodHandleType.INSTANCE_GET:
-                memberReference = dexBuilder.internFieldReference(
-                        (FieldReference) methodHandleReference.getMemberReference());
-                break;
-            case MethodHandleType.INVOKE_STATIC:
-            case MethodHandleType.INVOKE_INSTANCE:
-            case MethodHandleType.INVOKE_CONSTRUCTOR:
-            case MethodHandleType.INVOKE_DIRECT:
-            case MethodHandleType.INVOKE_INTERFACE:
-                memberReference = dexBuilder.internMethodReference(
-                        (MethodReference) methodHandleReference.getMemberReference());
-                break;
-            default:
-                throw new ExceptionWithContext("Invalid method handle type: %d",
-                        methodHandleReference.getMethodHandleType());
-        }
+        BuilderReference memberReference = switch (methodHandleReference.getMethodHandleType()) {
+            case MethodHandleType.STATIC_PUT, MethodHandleType.STATIC_GET,
+                 MethodHandleType.INSTANCE_PUT, MethodHandleType.INSTANCE_GET ->
+                    dexBuilder.internFieldReference(
+                            (FieldReference) methodHandleReference.getMemberReference());
+            case MethodHandleType.INVOKE_STATIC, MethodHandleType.INVOKE_INSTANCE,
+                 MethodHandleType.INVOKE_CONSTRUCTOR, MethodHandleType.INVOKE_DIRECT,
+                 MethodHandleType.INVOKE_INTERFACE -> dexBuilder.internMethodReference(
+                    (MethodReference) methodHandleReference.getMemberReference());
+            default -> throw new ExceptionWithContext("Invalid method handle type: %d",
+                    methodHandleReference.getMethodHandleType());
+        };
 
         internedMethodHandle = new BuilderMethodHandleReference(methodHandleReference.getMethodHandleType(),
                 memberReference);

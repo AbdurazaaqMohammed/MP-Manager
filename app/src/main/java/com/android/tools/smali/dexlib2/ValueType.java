@@ -53,45 +53,27 @@ public final class ValueType {
     private ValueType() {}
 
     public static String getValueTypeName(int valueType) {
-        switch (valueType) {
-            case BYTE:
-                return "byte";
-            case SHORT:
-                return "short";
-            case CHAR:
-                return "char";
-            case INT:
-                return "int";
-            case LONG:
-                return "long";
-            case FLOAT:
-                return "float";
-            case DOUBLE:
-                return "double";
-            case METHOD_TYPE:
-                return "method_type";
-            case METHOD_HANDLE:
-                return "method_handle";
-            case STRING:
-                return "string";
-            case TYPE:
-                return "type";
-            case FIELD:
-                return "field";
-            case METHOD:
-                return "method";
-            case ENUM:
-                return "enum";
-            case ARRAY:
-                return "array";
-            case ANNOTATION:
-                return "annotation";
-            case NULL:
-                return "null";
-            case BOOLEAN:
-                return "boolean";
-            default:
-                throw new IllegalArgumentException("Unknown encoded value type: " + valueType);
-        }
+        return switch (valueType) {
+            case BYTE -> "byte";
+            case SHORT -> "short";
+            case CHAR -> "char";
+            case INT -> "int";
+            case LONG -> "long";
+            case FLOAT -> "float";
+            case DOUBLE -> "double";
+            case METHOD_TYPE -> "method_type";
+            case METHOD_HANDLE -> "method_handle";
+            case STRING -> "string";
+            case TYPE -> "type";
+            case FIELD -> "field";
+            case METHOD -> "method";
+            case ENUM -> "enum";
+            case ARRAY -> "array";
+            case ANNOTATION -> "annotation";
+            case NULL -> "null";
+            case BOOLEAN -> "boolean";
+            default ->
+                    throw new IllegalArgumentException("Unknown encoded value type: " + valueType);
+        };
     }
 }

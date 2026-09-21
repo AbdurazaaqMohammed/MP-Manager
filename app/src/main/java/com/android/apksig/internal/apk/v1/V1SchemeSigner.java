@@ -557,26 +557,20 @@ public abstract class V1SchemeSigner {
 
 
     private static String getEntryDigestAttributeName(DigestAlgorithm digestAlgorithm) {
-        switch (digestAlgorithm) {
-            case SHA1:
-                return "SHA1-Digest";
-            case SHA256:
-                return "SHA-256-Digest";
-            default:
-                throw new IllegalArgumentException(
-                        "Unexpected content digest algorithm: " + digestAlgorithm);
-        }
+        return switch (digestAlgorithm) {
+            case SHA1 -> "SHA1-Digest";
+            case SHA256 -> "SHA-256-Digest";
+            default -> throw new IllegalArgumentException(
+                    "Unexpected content digest algorithm: " + digestAlgorithm);
+        };
     }
 
     private static String getManifestDigestAttributeName(DigestAlgorithm digestAlgorithm) {
-        switch (digestAlgorithm) {
-            case SHA1:
-                return "SHA1-Digest-Manifest";
-            case SHA256:
-                return "SHA-256-Digest-Manifest";
-            default:
-                throw new IllegalArgumentException(
-                        "Unexpected content digest algorithm: " + digestAlgorithm);
-        }
+        return switch (digestAlgorithm) {
+            case SHA1 -> "SHA1-Digest-Manifest";
+            case SHA256 -> "SHA-256-Digest-Manifest";
+            default -> throw new IllegalArgumentException(
+                    "Unexpected content digest algorithm: " + digestAlgorithm);
+        };
     }
 }

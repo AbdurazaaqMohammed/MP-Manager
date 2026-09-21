@@ -39,23 +39,17 @@ import javax.annotation.Nonnull;
 
 public abstract class DexBackedReference {
     public static Reference makeReference(@Nonnull DexBackedDexFile dexFile, int referenceType, int referenceIndex) {
-        switch (referenceType) {
-            case ReferenceType.STRING:
-                return new DexBackedStringReference(dexFile, referenceIndex);
-            case ReferenceType.TYPE:
-                return new DexBackedTypeReference(dexFile, referenceIndex);
-            case ReferenceType.METHOD:
-                return new DexBackedMethodReference(dexFile, referenceIndex);
-            case ReferenceType.FIELD:
-                return new DexBackedFieldReference(dexFile, referenceIndex);
-            case ReferenceType.METHOD_PROTO:
-                return new DexBackedMethodProtoReference(dexFile, referenceIndex);
-            case ReferenceType.METHOD_HANDLE:
-                return new DexBackedMethodHandleReference(dexFile, referenceIndex);
-            case ReferenceType.CALL_SITE:
-                return new DexBackedCallSiteReference(dexFile, referenceIndex);
-            default:
-                throw new ExceptionWithContext("Invalid reference type: %d", referenceType);
-        }
+        return switch (referenceType) {
+            case ReferenceType.STRING -> new DexBackedStringReference(dexFile, referenceIndex);
+            case ReferenceType.TYPE -> new DexBackedTypeReference(dexFile, referenceIndex);
+            case ReferenceType.METHOD -> new DexBackedMethodReference(dexFile, referenceIndex);
+            case ReferenceType.FIELD -> new DexBackedFieldReference(dexFile, referenceIndex);
+            case ReferenceType.METHOD_PROTO ->
+                    new DexBackedMethodProtoReference(dexFile, referenceIndex);
+            case ReferenceType.METHOD_HANDLE ->
+                    new DexBackedMethodHandleReference(dexFile, referenceIndex);
+            case ReferenceType.CALL_SITE -> new DexBackedCallSiteReference(dexFile, referenceIndex);
+            default -> throw new ExceptionWithContext("Invalid reference type: %d", referenceType);
+        };
     }
 }

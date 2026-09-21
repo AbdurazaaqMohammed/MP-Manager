@@ -151,19 +151,9 @@ public class ReferenceString {
         return true;
     }
     private static boolean isValidResourceName(char ch){
-        switch (ch){
-            case ':':
-            case '/':
-            case '@':
-            case '?':
-            case '"':
-            case '<':
-            case '>':
-            case '+':
-            case '*':
-                return false;
-            default:
-                return true;
-        }
+        return switch (ch) {
+            case ':', '/', '@', '?', '"', '<', '>', '+', '*' -> false;
+            default -> true;
+        };
     }
 }

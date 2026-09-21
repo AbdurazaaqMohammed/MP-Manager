@@ -213,16 +213,11 @@ public class Preconditions {
     }
 
     public static int checkArrayPayloadElementWidth(int elementWidth) {
-        switch (elementWidth) {
-            case 1:
-            case 2:
-            case 4:
-            case 8:
-                return elementWidth;
-
-            default:
-                throw new IllegalArgumentException(String.format("Not a valid element width: %d", elementWidth));
-        }
+        return switch (elementWidth) {
+            case 1, 2, 4, 8 -> elementWidth;
+            default ->
+                    throw new IllegalArgumentException(String.format("Not a valid element width: %d", elementWidth));
+        };
     }
 
     public static <L extends List<? extends Number>> L checkArrayPayloadElements(int elementWidth, L elements) {

@@ -326,26 +326,15 @@ public class DerValue {
 
         tag = stringTag;
 
-        switch (stringTag) {
-        case tag_PrintableString:
-        case tag_IA5String:
-        case tag_GeneralString:
-            enc = "ASCII";
-            break;
-        case tag_T61String:
-            enc = "ISO-8859-1";
-            break;
-        case tag_BMPString:
-            enc = "UnicodeBigUnmarked";
-            break;
-        case tag_UTF8String:
-            enc = "UTF8";
-            break;
+        enc = switch (stringTag) {
+            case tag_PrintableString, tag_IA5String, tag_GeneralString -> "ASCII";
+            case tag_T61String -> "ISO-8859-1";
+            case tag_BMPString -> "UnicodeBigUnmarked";
+            case tag_UTF8String -> "UTF8";
             // TBD: Need encoder for UniversalString before it can
             // be handled.
-        default:
-            throw new IllegalArgumentException("Unsupported DER string type");
-        }
+            default -> throw new IllegalArgumentException("Unsupported DER string type");
+        };
 
         byte[] buf = value.getBytes(enc);
         length = buf.length;
@@ -877,23 +866,22 @@ public class DerValue {
             (ch >= '0' && ch <= '9')) {
             return true;
         } else {
-            switch (ch) {
-                case ' ':       /* space */
-                case '\'':      /* apostrophe */
-                case '(':       /* left paren */
-                case ')':       /* right paren */
-                case '+':       /* plus */
-                case ',':       /* comma */
-                case '-':       /* hyphen */
-                case '.':       /* period */
-                case '/':       /* slash */
-                case ':':       /* colon */
-                case '=':       /* equals */
-                case '?':       /* question mark */
-                    return true;
-                default:
-                    return false;
-            }
+            return switch (ch) {       /* space */
+                /* apostrophe */
+                /* left paren */
+                /* right paren */
+                /* plus */
+                /* comma */
+                /* hyphen */
+                /* period */
+                /* slash */
+                /* colon */
+                /* equals */
+                case ' ', '\'', '(', ')', '+', ',', '-', '.', '/', ':', '=',
+                     '?' ->       /* question mark */
+                        true;
+                default -> false;
+            };
         }
     }
 

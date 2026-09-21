@@ -180,25 +180,16 @@ public class XmlSanitizer {
         return true;
     }
     private static boolean isWhiteSpace(char ch){
-        switch (ch){
-            case ' ':
-            case '\n':
-            case '\r':
-            case '\t':
-                return true;
-            default:
-                return false;
-        }
+        return switch (ch) {
+            case ' ', '\n', '\r', '\t' -> true;
+            default -> false;
+        };
     }
     private static boolean isSpecialCharacter(char ch){
-        switch (ch){
-            case '@':
-            case '?':
-            case '#':
-                return true;
-            default:
-                return false;
-        }
+        return switch (ch) {
+            case '@', '?', '#' -> true;
+            default -> false;
+        };
     }
 
 }

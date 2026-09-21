@@ -57,16 +57,12 @@ public abstract class AbstractIterator<T> implements Iterator<T>, Iterable<T> {
 
     @Override
     public final boolean hasNext() {
-        switch (state) {
-            case STATE_DONE:
-                return false;
-            case STATE_READY:
-                return true;
-            case STATE_FAILED:
-                throw new IllegalStateException();
-            default:
-        }
-        return tryToComputeNext();
+        return switch (state) {
+            case STATE_DONE -> false;
+            case STATE_READY -> true;
+            case STATE_FAILED -> throw new IllegalStateException();
+            default -> tryToComputeNext();
+        };
     }
 
     private boolean tryToComputeNext() {

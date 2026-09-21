@@ -242,43 +242,27 @@ public class GeneralSubtrees implements Cloneable {
      */
     private android.sun.security.x509.GeneralSubtree createWidestSubtree(android.sun.security.x509.GeneralNameInterface name) {
         try {
-            android.sun.security.x509.GeneralName newName;
-            switch (name.getType()) {
-            case android.sun.security.x509.GeneralNameInterface.NAME_ANY:
-                // Create new OtherName with same OID as baseName, but
-                // empty value
-                android.sun.security.util.ObjectIdentifier otherOID = ((android.sun.security.x509.OtherName)name).getOID();
-                newName = new android.sun.security.x509.GeneralName(new OtherName(otherOID, null));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_RFC822:
-                newName = new android.sun.security.x509.GeneralName(new RFC822Name(""));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_DNS:
-                newName = new android.sun.security.x509.GeneralName(new DNSName(""));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_X400:
-                newName = new android.sun.security.x509.GeneralName(new X400Address((byte[])null));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_DIRECTORY:
-                newName = new android.sun.security.x509.GeneralName(new X500Name(""));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_EDI:
-                newName = new android.sun.security.x509.GeneralName(new EDIPartyName(""));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_URI:
-                newName = new android.sun.security.x509.GeneralName(new URIName(""));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_IP:
-                newName = new android.sun.security.x509.GeneralName(new IPAddressName((byte[])null));
-                break;
-            case android.sun.security.x509.GeneralNameInterface.NAME_OID:
-                newName = new GeneralName
-                    (new OIDName(new android.sun.security.util.ObjectIdentifier((int[])null)));
-                break;
-            default:
-                throw new IOException
-                    ("Unsupported GeneralNameInterface type: " + name.getType());
-            }
+            android.sun.security.x509.GeneralName newName = switch (name.getType()) {
+                case GeneralNameInterface.NAME_ANY -> {
+                    // Create new OtherName with same OID as baseName, but
+                    // empty value
+                    android.sun.security.util.ObjectIdentifier otherOID = ((OtherName) name).getOID();
+                    yield new GeneralName(new OtherName(otherOID, null));
+                }
+                case GeneralNameInterface.NAME_RFC822 -> new GeneralName(new RFC822Name(""));
+                case GeneralNameInterface.NAME_DNS -> new GeneralName(new DNSName(""));
+                case GeneralNameInterface.NAME_X400 ->
+                        new GeneralName(new X400Address((byte[]) null));
+                case GeneralNameInterface.NAME_DIRECTORY -> new GeneralName(new X500Name(""));
+                case GeneralNameInterface.NAME_EDI -> new GeneralName(new EDIPartyName(""));
+                case GeneralNameInterface.NAME_URI -> new GeneralName(new URIName(""));
+                case GeneralNameInterface.NAME_IP ->
+                        new GeneralName(new IPAddressName((byte[]) null));
+                case GeneralNameInterface.NAME_OID -> new GeneralName
+                        (new OIDName(new android.sun.security.util.ObjectIdentifier((int[]) null)));
+                default -> throw new IOException
+                        ("Unsupported GeneralNameInterface type: " + name.getType());
+            };
             return new android.sun.security.x509.GeneralSubtree(newName, 0, -1);
         } catch (IOException e) {
             throw new RuntimeException("Unexpected error: " + e, e);

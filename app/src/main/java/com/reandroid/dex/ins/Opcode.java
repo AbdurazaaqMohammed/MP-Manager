@@ -1227,28 +1227,11 @@ public class Opcode<T extends Ins> implements InstructionOpcode, BlockCreator<T>
         return valueOf(smali.substring(i1, i2));
     }
     private static boolean isPrefix(byte b) {
-        switch (b) {
-            case 'a':
-            case 'c':
-            case 'd':
-            case 'e':
-            case 'f':
-            case 'g':
-            case 'i':
-            case 'l':
-            case 'm':
-            case 'n':
-            case 'o':
-            case 'p':
-            case 'r':
-            case 's':
-            case 't':
-            case 'u':
-            case 'x':
-                return true;
-            default:
-                return false;
-        }
+        return switch (b) {
+            case 'a', 'c', 'd', 'e', 'f', 'g', 'i', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u',
+                 'x' -> true;
+            default -> false;
+        };
     }
 
     public static Opcode<?> getConstIntegerFor(int i) {

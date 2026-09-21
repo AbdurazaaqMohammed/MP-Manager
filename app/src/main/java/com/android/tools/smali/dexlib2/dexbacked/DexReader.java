@@ -384,29 +384,20 @@ public class DexReader<T extends DexBuffer> {
         int o = dexBuf.baseOffset + offset;
         byte[] buf = dexBuf.buf;
 
-        int result;
-        switch (bytes) {
-            case 4:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        (buf[o+3] << 24);
-                break;
-            case 3:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2]) << 16);
-                break;
-            case 2:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1]) << 8);
-                break;
-            case 1:
-                result = buf[o];
-                break;
-            default:
-                throw new ExceptionWithContext("Invalid size %d for sized int at offset 0x%x", bytes, offset);
-        }
+        int result = switch (bytes) {
+            case 4 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    (buf[o + 3] << 24);
+            case 3 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2]) << 16);
+            case 2 -> (buf[o] & 0xff) |
+                    ((buf[o + 1]) << 8);
+            case 1 -> buf[o];
+            default ->
+                    throw new ExceptionWithContext("Invalid size %d for sized int at offset 0x%x", bytes, offset);
+        };
         offset = o + bytes - dexBuf.baseOffset;
         return result;
     }
@@ -445,30 +436,20 @@ public class DexReader<T extends DexBuffer> {
         int o = dexBuf.baseOffset + offset;
         byte[] buf = dexBuf.buf;
 
-        int result;
-        switch (bytes) {
-            case 4:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        (buf[o+3] << 24);
-                break;
-            case 3:
-                result = (buf[o] & 0xff) << 8 |
-                        ((buf[o+1] & 0xff) << 16) |
-                        (buf[o+2] << 24);
-                break;
-            case 2:
-                result = (buf[o] & 0xff) << 16 |
-                        (buf[o+1] << 24);
-                break;
-            case 1:
-                result = buf[o] << 24;
-                break;
-            default:
-                throw new ExceptionWithContext(
-                        "Invalid size %d for sized, right extended int at offset 0x%x", bytes, offset);
-        }
+        int result = switch (bytes) {
+            case 4 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    (buf[o + 3] << 24);
+            case 3 -> (buf[o] & 0xff) << 8 |
+                    ((buf[o + 1] & 0xff) << 16) |
+                    (buf[o + 2] << 24);
+            case 2 -> (buf[o] & 0xff) << 16 |
+                    (buf[o + 1] << 24);
+            case 1 -> buf[o] << 24;
+            default -> throw new ExceptionWithContext(
+                    "Invalid size %d for sized, right extended int at offset 0x%x", bytes, offset);
+        };
         offset = o + bytes - dexBuf.baseOffset;
         return result;
     }
@@ -477,64 +458,46 @@ public class DexReader<T extends DexBuffer> {
         int o = dexBuf.baseOffset + offset;
         byte[] buf = dexBuf.buf;
 
-        long result;
-        switch (bytes) {
-            case 8:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        ((buf[o+3] & 0xffL) << 24) |
-                        ((buf[o+4] & 0xffL) << 32) |
-                        ((buf[o+5] & 0xffL) << 40) |
-                        ((buf[o+6] & 0xffL) << 48) |
-                        (((long)buf[o+7]) << 56);
-                break;
-            case 7:
-                result = ((buf[o] & 0xff)) << 8 |
-                        ((buf[o+1] & 0xff) << 16) |
-                        ((buf[o+2] & 0xffL) << 24) |
-                        ((buf[o+3] & 0xffL) << 32) |
-                        ((buf[o+4] & 0xffL) << 40) |
-                        ((buf[o+5] & 0xffL) << 48) |
-                        (((long)buf[o+6]) << 56);
-                break;
-            case 6:
-                result = ((buf[o] & 0xff)) << 16 |
-                        ((buf[o+1] & 0xffL) << 24) |
-                        ((buf[o+2] & 0xffL) << 32) |
-                        ((buf[o+3] & 0xffL) << 40) |
-                        ((buf[o+4] & 0xffL) << 48) |
-                        (((long)buf[o+5]) << 56);
-                break;
-            case 5:
-                result = ((buf[o] & 0xffL)) << 24 |
-                        ((buf[o+1] & 0xffL) << 32) |
-                        ((buf[o+2] & 0xffL) << 40) |
-                        ((buf[o+3] & 0xffL) << 48) |
-                        (((long)buf[o+4]) << 56);
-                break;
-            case 4:
-                result = ((buf[o] & 0xffL)) << 32 |
-                        ((buf[o+1] & 0xffL) << 40) |
-                        ((buf[o+2] & 0xffL) << 48) |
-                        (((long)buf[o+3]) << 56);
-                break;
-            case 3:
-                result = ((buf[o] & 0xffL)) << 40 |
-                        ((buf[o+1] & 0xffL) << 48) |
-                        (((long)buf[o+2]) << 56);
-                break;
-            case 2:
-                result = ((buf[o] & 0xffL)) << 48 |
-                        (((long)buf[o+1]) << 56);
-                break;
-            case 1:
-                result = ((long)buf[o]) << 56;
-                break;
-            default:
-                throw new ExceptionWithContext(
-                        "Invalid size %d for sized, right extended long at offset 0x%x", bytes, offset);
-        }
+        long result = switch (bytes) {
+            case 8 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    ((buf[o + 3] & 0xffL) << 24) |
+                    ((buf[o + 4] & 0xffL) << 32) |
+                    ((buf[o + 5] & 0xffL) << 40) |
+                    ((buf[o + 6] & 0xffL) << 48) |
+                    (((long) buf[o + 7]) << 56);
+            case 7 -> ((buf[o] & 0xff)) << 8 |
+                    ((buf[o + 1] & 0xff) << 16) |
+                    ((buf[o + 2] & 0xffL) << 24) |
+                    ((buf[o + 3] & 0xffL) << 32) |
+                    ((buf[o + 4] & 0xffL) << 40) |
+                    ((buf[o + 5] & 0xffL) << 48) |
+                    (((long) buf[o + 6]) << 56);
+            case 6 -> ((buf[o] & 0xff)) << 16 |
+                    ((buf[o + 1] & 0xffL) << 24) |
+                    ((buf[o + 2] & 0xffL) << 32) |
+                    ((buf[o + 3] & 0xffL) << 40) |
+                    ((buf[o + 4] & 0xffL) << 48) |
+                    (((long) buf[o + 5]) << 56);
+            case 5 -> ((buf[o] & 0xffL)) << 24 |
+                    ((buf[o + 1] & 0xffL) << 32) |
+                    ((buf[o + 2] & 0xffL) << 40) |
+                    ((buf[o + 3] & 0xffL) << 48) |
+                    (((long) buf[o + 4]) << 56);
+            case 4 -> ((buf[o] & 0xffL)) << 32 |
+                    ((buf[o + 1] & 0xffL) << 40) |
+                    ((buf[o + 2] & 0xffL) << 48) |
+                    (((long) buf[o + 3]) << 56);
+            case 3 -> ((buf[o] & 0xffL)) << 40 |
+                    ((buf[o + 1] & 0xffL) << 48) |
+                    (((long) buf[o + 2]) << 56);
+            case 2 -> ((buf[o] & 0xffL)) << 48 |
+                    (((long) buf[o + 1]) << 56);
+            case 1 -> ((long) buf[o]) << 56;
+            default -> throw new ExceptionWithContext(
+                    "Invalid size %d for sized, right extended long at offset 0x%x", bytes, offset);
+        };
         offset = o + bytes - dexBuf.baseOffset;
         return result;
     }
@@ -543,63 +506,46 @@ public class DexReader<T extends DexBuffer> {
         int o = dexBuf.baseOffset + offset;
         byte[] buf = dexBuf.buf;
 
-        long result;
-        switch (bytes) {
-            case 8:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        ((buf[o+3] & 0xffL) << 24) |
-                        ((buf[o+4] & 0xffL) << 32) |
-                        ((buf[o+5] & 0xffL) << 40) |
-                        ((buf[o+6] & 0xffL) << 48) |
-                        (((long)buf[o+7]) << 56);
-                break;
-            case 7:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        ((buf[o+3] & 0xffL) << 24) |
-                        ((buf[o+4] & 0xffL) << 32) |
-                        ((buf[o+5] & 0xffL) << 40) |
-                        ((long)(buf[o+6]) << 48);
-                break;
-            case 6:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        ((buf[o+3] & 0xffL) << 24) |
-                        ((buf[o+4] & 0xffL) << 32) |
-                        ((long)(buf[o+5]) << 40);
-                break;
-            case 5:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        ((buf[o+3] & 0xffL) << 24) |
-                        ((long)(buf[o+4]) << 32);
-                break;
-            case 4:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        ((buf[o+2] & 0xff) << 16) |
-                        (((long)buf[o+3]) << 24);
-                break;
-            case 3:
-                result = (buf[o] & 0xff) |
-                        ((buf[o+1] & 0xff) << 8) |
-                        (buf[o+2] << 16);
-                break;
-            case 2:
-                result = (buf[o] & 0xff) |
-                        (buf[o+1] << 8);
-                break;
-            case 1:
-                result = buf[o];
-                break;
-            default:
-                throw new ExceptionWithContext("Invalid size %d for sized long at offset 0x%x", bytes, offset);
-        }
+        long result = switch (bytes) {
+            case 8 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    ((buf[o + 3] & 0xffL) << 24) |
+                    ((buf[o + 4] & 0xffL) << 32) |
+                    ((buf[o + 5] & 0xffL) << 40) |
+                    ((buf[o + 6] & 0xffL) << 48) |
+                    (((long) buf[o + 7]) << 56);
+            case 7 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    ((buf[o + 3] & 0xffL) << 24) |
+                    ((buf[o + 4] & 0xffL) << 32) |
+                    ((buf[o + 5] & 0xffL) << 40) |
+                    ((long) (buf[o + 6]) << 48);
+            case 6 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    ((buf[o + 3] & 0xffL) << 24) |
+                    ((buf[o + 4] & 0xffL) << 32) |
+                    ((long) (buf[o + 5]) << 40);
+            case 5 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    ((buf[o + 3] & 0xffL) << 24) |
+                    ((long) (buf[o + 4]) << 32);
+            case 4 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    ((buf[o + 2] & 0xff) << 16) |
+                    (((long) buf[o + 3]) << 24);
+            case 3 -> (buf[o] & 0xff) |
+                    ((buf[o + 1] & 0xff) << 8) |
+                    (buf[o + 2] << 16);
+            case 2 -> (buf[o] & 0xff) |
+                    (buf[o + 1] << 8);
+            case 1 -> buf[o];
+            default ->
+                    throw new ExceptionWithContext("Invalid size %d for sized long at offset 0x%x", bytes, offset);
+        };
 
         offset = o + bytes - dexBuf.baseOffset;
         return result;

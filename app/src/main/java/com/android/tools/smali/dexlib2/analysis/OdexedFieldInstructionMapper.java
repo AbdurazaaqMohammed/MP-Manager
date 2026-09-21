@@ -156,48 +156,28 @@ public class OdexedFieldInstructionMapper {
     private final Map<Opcode, Integer> opcodeValueTypeMap = new HashMap<Opcode, Integer>(30);
 
     private static int getValueType(char type) {
-        switch (type) {
-            case 'Z':
-            case 'B':
-            case 'S':
-            case 'C':
-            case 'I':
-            case 'F':
-                return PRIMITIVE;
-            case 'J':
-            case 'D':
-                return WIDE;
-            case 'L':
-            case '[':
-                return REFERENCE;
-        }
-        throw new RuntimeException(String.format("Unknown type %s: ", type));
+        return switch (type) {
+            case 'Z', 'B', 'S', 'C', 'I', 'F' -> PRIMITIVE;
+            case 'J', 'D' -> WIDE;
+            case 'L', '[' -> REFERENCE;
+            default -> throw new RuntimeException(String.format("Unknown type %s: ", type));
+        };
     }
 
     private static int getTypeIndex(char type) {
-        switch (type) {
-            case 'Z':
-                return 0;
-            case 'B':
-                return 1;
-            case 'S':
-                return 2;
-            case 'C':
-                return 3;
-            case 'I':
-                return 4;
-            case 'F':
-                return 5;
-            case 'J':
-                return 6;
-            case 'D':
-                return 7;
-            case 'L':
-                return 8;
-            case '[':
-                return 9;
-        }
-        throw new RuntimeException(String.format("Unknown type %s: ", type));
+        return switch (type) {
+            case 'Z' -> 0;
+            case 'B' -> 1;
+            case 'S' -> 2;
+            case 'C' -> 3;
+            case 'I' -> 4;
+            case 'F' -> 5;
+            case 'J' -> 6;
+            case 'D' -> 7;
+            case 'L' -> 8;
+            case '[' -> 9;
+            default -> throw new RuntimeException(String.format("Unknown type %s: ", type));
+        };
     }
 
     private static boolean isGet(@Nonnull Opcode opcode) {

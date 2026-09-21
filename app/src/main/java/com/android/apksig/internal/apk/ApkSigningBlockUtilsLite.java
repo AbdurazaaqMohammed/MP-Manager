@@ -233,36 +233,24 @@ public class ApkSigningBlockUtilsLite {
             ContentDigestAlgorithm alg2) {
         switch (alg1) {
             case CHUNKED_SHA256:
-                switch (alg2) {
-                    case CHUNKED_SHA256:
-                        return 0;
-                    case CHUNKED_SHA512:
-                    case VERITY_CHUNKED_SHA256:
-                        return -1;
-                    default:
-                        throw new IllegalArgumentException("Unknown alg2: " + alg2);
-                }
+                return switch (alg2) {
+                    case CHUNKED_SHA256 -> 0;
+                    case CHUNKED_SHA512, VERITY_CHUNKED_SHA256 -> -1;
+                    default -> throw new IllegalArgumentException("Unknown alg2: " + alg2);
+                };
             case CHUNKED_SHA512:
-                switch (alg2) {
-                    case CHUNKED_SHA256:
-                    case VERITY_CHUNKED_SHA256:
-                        return 1;
-                    case CHUNKED_SHA512:
-                        return 0;
-                    default:
-                        throw new IllegalArgumentException("Unknown alg2: " + alg2);
-                }
+                return switch (alg2) {
+                    case CHUNKED_SHA256, VERITY_CHUNKED_SHA256 -> 1;
+                    case CHUNKED_SHA512 -> 0;
+                    default -> throw new IllegalArgumentException("Unknown alg2: " + alg2);
+                };
             case VERITY_CHUNKED_SHA256:
-                switch (alg2) {
-                    case CHUNKED_SHA256:
-                        return 1;
-                    case VERITY_CHUNKED_SHA256:
-                        return 0;
-                    case CHUNKED_SHA512:
-                        return -1;
-                    default:
-                        throw new IllegalArgumentException("Unknown alg2: " + alg2);
-                }
+                return switch (alg2) {
+                    case CHUNKED_SHA256 -> 1;
+                    case VERITY_CHUNKED_SHA256 -> 0;
+                    case CHUNKED_SHA512 -> -1;
+                    default -> throw new IllegalArgumentException("Unknown alg2: " + alg2);
+                };
             default:
                 throw new IllegalArgumentException("Unknown alg1: " + alg1);
         }

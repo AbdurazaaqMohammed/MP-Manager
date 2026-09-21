@@ -513,17 +513,11 @@ public class AVA implements DerEncoder {
     }
 
     private static boolean isTerminator(int ch, int format) {
-        switch (ch) {
-            case -1:
-            case '+':
-            case ',':
-                return true;
-            case ';':
-            case '>':
-                return format != RFC2253;
-            default:
-                return false;
-        }
+        return switch (ch) {
+            case -1, '+', ',' -> true;
+            case ';', '>' -> format != RFC2253;
+            default -> false;
+        };
     }
 
     private static int readChar(Reader in, String errMsg) throws IOException {
@@ -946,25 +940,17 @@ public class AVA implements DerEncoder {
      */
     private static boolean isDerString(DerValue value, boolean canonical) {
         if (canonical) {
-            switch (value.tag) {
-                case DerValue.tag_PrintableString:
-                case DerValue.tag_UTF8String:
-                    return true;
-                default:
-                    return false;
-            }
+            return switch (value.tag) {
+                case DerValue.tag_PrintableString, DerValue.tag_UTF8String -> true;
+                default -> false;
+            };
         } else {
-            switch (value.tag) {
-                case DerValue.tag_PrintableString:
-                case DerValue.tag_T61String:
-                case DerValue.tag_IA5String:
-                case DerValue.tag_GeneralString:
-                case DerValue.tag_BMPString:
-                case DerValue.tag_UTF8String:
-                    return true;
-                default:
-                    return false;
-            }
+            return switch (value.tag) {
+                case DerValue.tag_PrintableString, DerValue.tag_T61String, DerValue.tag_IA5String,
+                     DerValue.tag_GeneralString, DerValue.tag_BMPString, DerValue.tag_UTF8String ->
+                        true;
+                default -> false;
+            };
         }
     }
 
@@ -1105,17 +1091,13 @@ class AVAKeyword {
     }
 
     private boolean isCompliant(int standard) {
-        switch (standard) {
-            case AVA.RFC1779:
-                return rfc1779Compliant;
-            case AVA.RFC2253:
-                return rfc2253Compliant;
-            case AVA.DEFAULT:
-                return true;
-            default:
-                // should not occur, internal error
-                throw new IllegalArgumentException("Invalid standard " + standard);
-        }
+        // should not occur, internal error
+        return switch (standard) {
+            case AVA.RFC1779 -> rfc1779Compliant;
+            case AVA.RFC2253 -> rfc2253Compliant;
+            case AVA.DEFAULT -> true;
+            default -> throw new IllegalArgumentException("Invalid standard " + standard);
+        };
     }
 
     /**

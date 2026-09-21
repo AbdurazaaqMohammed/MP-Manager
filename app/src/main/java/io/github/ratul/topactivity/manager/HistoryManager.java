@@ -117,14 +117,11 @@ public class HistoryManager {
     }
 
     private int mapPreferenceToHistorySize(String value) {
-        switch (value) {
-            case "0":
-                return 50;
-            case "1":
-                return 20;
-            default:
-                return 10;
-        }
+        return switch (value) {
+            case "0" -> 50;
+            case "1" -> 20;
+            default -> 10;
+        };
     }
 
     private static class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {

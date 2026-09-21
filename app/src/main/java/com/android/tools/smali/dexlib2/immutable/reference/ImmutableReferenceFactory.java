@@ -72,22 +72,18 @@ public class ImmutableReferenceFactory {
 
     @Nonnull
     public static ImmutableReference of(int referenceType, Reference reference) {
-        switch (referenceType) {
-            case ReferenceType.STRING:
-                return ImmutableStringReference.of((StringReference)reference);
-            case ReferenceType.TYPE:
-                return ImmutableTypeReference.of((TypeReference)reference);
-            case ReferenceType.FIELD:
-                return ImmutableFieldReference.of((FieldReference)reference);
-            case ReferenceType.METHOD:
-                return ImmutableMethodReference.of((MethodReference)reference);
-            case ReferenceType.METHOD_PROTO:
-                return ImmutableMethodProtoReference.of((MethodProtoReference)reference);
-            case ReferenceType.CALL_SITE:
-                return ImmutableCallSiteReference.of((CallSiteReference) reference);
-            case ReferenceType.METHOD_HANDLE:
-                return ImmutableMethodHandleReference.of((MethodHandleReference) reference);
-        }
-        throw new ExceptionWithContext("Invalid reference type: %d", referenceType);
+        return switch (referenceType) {
+            case ReferenceType.STRING -> ImmutableStringReference.of((StringReference) reference);
+            case ReferenceType.TYPE -> ImmutableTypeReference.of((TypeReference) reference);
+            case ReferenceType.FIELD -> ImmutableFieldReference.of((FieldReference) reference);
+            case ReferenceType.METHOD -> ImmutableMethodReference.of((MethodReference) reference);
+            case ReferenceType.METHOD_PROTO ->
+                    ImmutableMethodProtoReference.of((MethodProtoReference) reference);
+            case ReferenceType.CALL_SITE ->
+                    ImmutableCallSiteReference.of((CallSiteReference) reference);
+            case ReferenceType.METHOD_HANDLE ->
+                    ImmutableMethodHandleReference.of((MethodHandleReference) reference);
+            default -> throw new ExceptionWithContext("Invalid reference type: %d", referenceType);
+        };
     }
 }

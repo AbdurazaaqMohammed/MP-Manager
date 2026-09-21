@@ -59,66 +59,84 @@ public abstract class DexBackedEncodedValue {
             int valueType = b & 0x1f;
             int valueArg = b >>> 5;
 
-            switch (valueType) {
-                case ValueType.BYTE:
+            return switch (valueType) {
+                case ValueType.BYTE -> {
                     Preconditions.checkValueArg(valueArg, 0);
-                    return new ImmutableByteEncodedValue((byte)reader.readByte());
-                case ValueType.SHORT:
+                    yield new ImmutableByteEncodedValue((byte) reader.readByte());
+                }
+                case ValueType.SHORT -> {
                     Preconditions.checkValueArg(valueArg, 1);
-                    return new ImmutableShortEncodedValue((short)reader.readSizedInt(valueArg + 1));
-                case ValueType.CHAR:
+                    yield new ImmutableShortEncodedValue((short) reader.readSizedInt(valueArg + 1));
+                }
+                case ValueType.CHAR -> {
                     Preconditions.checkValueArg(valueArg, 1);
-                    return new ImmutableCharEncodedValue((char)reader.readSizedSmallUint(valueArg + 1));
-                case ValueType.INT:
+                    yield new ImmutableCharEncodedValue((char) reader.readSizedSmallUint(valueArg + 1));
+                }
+                case ValueType.INT -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new ImmutableIntEncodedValue(reader.readSizedInt(valueArg + 1));
-                case ValueType.LONG:
+                    yield new ImmutableIntEncodedValue(reader.readSizedInt(valueArg + 1));
+                }
+                case ValueType.LONG -> {
                     Preconditions.checkValueArg(valueArg, 7);
-                    return new ImmutableLongEncodedValue(reader.readSizedLong(valueArg + 1));
-                case ValueType.FLOAT:
+                    yield new ImmutableLongEncodedValue(reader.readSizedLong(valueArg + 1));
+                }
+                case ValueType.FLOAT -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new ImmutableFloatEncodedValue(Float.intBitsToFloat(
+                    yield new ImmutableFloatEncodedValue(Float.intBitsToFloat(
                             reader.readSizedRightExtendedInt(valueArg + 1)));
-                case ValueType.DOUBLE:
+                }
+                case ValueType.DOUBLE -> {
                     Preconditions.checkValueArg(valueArg, 7);
-                    return new ImmutableDoubleEncodedValue(Double.longBitsToDouble(
+                    yield new ImmutableDoubleEncodedValue(Double.longBitsToDouble(
                             reader.readSizedRightExtendedLong(valueArg + 1)));
-                case ValueType.STRING:
+                }
+                case ValueType.STRING -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedStringEncodedValue(dexFile, reader, valueArg);
-                case ValueType.TYPE:
+                    yield new DexBackedStringEncodedValue(dexFile, reader, valueArg);
+                }
+                case ValueType.TYPE -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedTypeEncodedValue(dexFile, reader, valueArg);
-                case ValueType.FIELD:
+                    yield new DexBackedTypeEncodedValue(dexFile, reader, valueArg);
+                }
+                case ValueType.FIELD -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedFieldEncodedValue(dexFile, reader, valueArg);
-                case ValueType.METHOD:
+                    yield new DexBackedFieldEncodedValue(dexFile, reader, valueArg);
+                }
+                case ValueType.METHOD -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedMethodEncodedValue(dexFile, reader, valueArg);
-                case ValueType.ENUM:
+                    yield new DexBackedMethodEncodedValue(dexFile, reader, valueArg);
+                }
+                case ValueType.ENUM -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedEnumEncodedValue(dexFile, reader, valueArg);
-                case ValueType.ARRAY:
+                    yield new DexBackedEnumEncodedValue(dexFile, reader, valueArg);
+                }
+                case ValueType.ARRAY -> {
                     Preconditions.checkValueArg(valueArg, 0);
-                    return new DexBackedArrayEncodedValue(dexFile, reader);
-                case ValueType.ANNOTATION:
+                    yield new DexBackedArrayEncodedValue(dexFile, reader);
+                }
+                case ValueType.ANNOTATION -> {
                     Preconditions.checkValueArg(valueArg, 0);
-                    return new DexBackedAnnotationEncodedValue(dexFile, reader);
-                case ValueType.NULL:
+                    yield new DexBackedAnnotationEncodedValue(dexFile, reader);
+                }
+                case ValueType.NULL -> {
                     Preconditions.checkValueArg(valueArg, 0);
-                    return ImmutableNullEncodedValue.INSTANCE;
-                case ValueType.BOOLEAN:
+                    yield ImmutableNullEncodedValue.INSTANCE;
+                }
+                case ValueType.BOOLEAN -> {
                     Preconditions.checkValueArg(valueArg, 1);
-                    return ImmutableBooleanEncodedValue.forBoolean(valueArg == 1);
-                case ValueType.METHOD_HANDLE:
+                    yield ImmutableBooleanEncodedValue.forBoolean(valueArg == 1);
+                }
+                case ValueType.METHOD_HANDLE -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedMethodHandleEncodedValue(dexFile, reader, valueArg);
-                case ValueType.METHOD_TYPE:
+                    yield new DexBackedMethodHandleEncodedValue(dexFile, reader, valueArg);
+                }
+                case ValueType.METHOD_TYPE -> {
                     Preconditions.checkValueArg(valueArg, 3);
-                    return new DexBackedMethodTypeEncodedValue(dexFile, reader, valueArg);
-                default:
-                    throw new ExceptionWithContext("Invalid encoded_value type: 0x%x", valueType);
-            }
+                    yield new DexBackedMethodTypeEncodedValue(dexFile, reader, valueArg);
+                }
+                default ->
+                        throw new ExceptionWithContext("Invalid encoded_value type: 0x%x", valueType);
+            };
         } catch (Exception ex) {
             throw ExceptionWithContext.withContext(ex, "Error while reading encoded value at offset 0x%x", startOffset);
         }

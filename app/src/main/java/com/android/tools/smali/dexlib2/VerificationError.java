@@ -62,28 +62,18 @@ public class VerificationError {
 
     @Nullable
     public static String getVerificationErrorName(int verificationError) {
-        switch (verificationError) {
-            case GENERIC:
-                return "generic-error";
-            case NO_SUCH_CLASS:
-                return "no-such-class";
-            case NO_SUCH_FIELD:
-                return "no-such-field";
-            case NO_SUCH_METHOD:
-                return "no-such-method";
-            case ILLEGAL_CLASS_ACCESS:
-                return "illegal-class-access";
-            case ILLEGAL_FIELD_ACCESS:
-                return "illegal-field-access";
-            case ILLEGAL_METHOD_ACCESS:
-                return "illegal-method-access";
-            case CLASS_CHANGE_ERROR:
-                return "class-change-error";
-            case INSTANTIATION_ERROR:
-                return "instantiation-error";
-            default:
-                return null;
-        }
+        return switch (verificationError) {
+            case GENERIC -> "generic-error";
+            case NO_SUCH_CLASS -> "no-such-class";
+            case NO_SUCH_FIELD -> "no-such-field";
+            case NO_SUCH_METHOD -> "no-such-method";
+            case ILLEGAL_CLASS_ACCESS -> "illegal-class-access";
+            case ILLEGAL_FIELD_ACCESS -> "illegal-field-access";
+            case ILLEGAL_METHOD_ACCESS -> "illegal-method-access";
+            case CLASS_CHANGE_ERROR -> "class-change-error";
+            case INSTANTIATION_ERROR -> "instantiation-error";
+            default -> null;
+        };
     }
 
     public static int getVerificationError(String verificationError) {

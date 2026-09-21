@@ -50,16 +50,12 @@ public class DebugItemRewriter implements Rewriter<DebugItem> {
     }
 
     @Nonnull @Override public DebugItem rewrite(@Nonnull DebugItem value) {
-        switch (value.getDebugItemType()) {
-            case DebugItemType.START_LOCAL:
-                return new RewrittenStartLocal((StartLocal)value);
-            case DebugItemType.END_LOCAL:
-                return new RewrittenEndLocal((EndLocal)value);
-            case DebugItemType.RESTART_LOCAL:
-                return new RewrittenRestartLocal((RestartLocal)value);
-            default:
-                return value;
-        }
+        return switch (value.getDebugItemType()) {
+            case DebugItemType.START_LOCAL -> new RewrittenStartLocal((StartLocal) value);
+            case DebugItemType.END_LOCAL -> new RewrittenEndLocal((EndLocal) value);
+            case DebugItemType.RESTART_LOCAL -> new RewrittenRestartLocal((RestartLocal) value);
+            default -> value;
+        };
     }
 
     protected class BaseRewrittenLocalInfoDebugItem<T extends DebugItem & LocalInfo> implements DebugItem, LocalInfo {

@@ -56,24 +56,21 @@ public abstract class DebugMethodItem extends MethodItem {
             ClassDefinition classDef, RegisterFormatter registerFormatter, DebugItem debugItem) {
 
         int codeAddress = debugItem.getCodeAddress();
-        switch (debugItem.getDebugItemType()) {
-            case DebugItemType.START_LOCAL:
-                return new StartLocalMethodItem(classDef, codeAddress, -1, registerFormatter, (StartLocal)debugItem);
-            case DebugItemType.END_LOCAL:
-                return new EndLocalMethodItem(codeAddress, -1, registerFormatter, (EndLocal)debugItem);
-            case DebugItemType.RESTART_LOCAL:
-                return new RestartLocalMethodItem(
-                        classDef, codeAddress, -1, registerFormatter, (RestartLocal)debugItem);
-            case DebugItemType.EPILOGUE_BEGIN:
-                return new BeginEpilogueMethodItem(codeAddress, -4);
-            case DebugItemType.PROLOGUE_END:
-                return new EndPrologueMethodItem(codeAddress, -4);
-            case DebugItemType.SET_SOURCE_FILE:
-                return new SetSourceFileMethodItem(codeAddress, -3, (SetSourceFile)debugItem);
-            case DebugItemType.LINE_NUMBER:
-                return new LineNumberMethodItem(codeAddress, -2, (LineNumber)debugItem);
-            default:
-                throw new ExceptionWithContext("Invalid debug item type: %d", debugItem.getDebugItemType());
-        }
+        return switch (debugItem.getDebugItemType()) {
+            case DebugItemType.START_LOCAL ->
+                    new StartLocalMethodItem(classDef, codeAddress, -1, registerFormatter, (StartLocal) debugItem);
+            case DebugItemType.END_LOCAL ->
+                    new EndLocalMethodItem(codeAddress, -1, registerFormatter, (EndLocal) debugItem);
+            case DebugItemType.RESTART_LOCAL -> new RestartLocalMethodItem(
+                    classDef, codeAddress, -1, registerFormatter, (RestartLocal) debugItem);
+            case DebugItemType.EPILOGUE_BEGIN -> new BeginEpilogueMethodItem(codeAddress, -4);
+            case DebugItemType.PROLOGUE_END -> new EndPrologueMethodItem(codeAddress, -4);
+            case DebugItemType.SET_SOURCE_FILE ->
+                    new SetSourceFileMethodItem(codeAddress, -3, (SetSourceFile) debugItem);
+            case DebugItemType.LINE_NUMBER ->
+                    new LineNumberMethodItem(codeAddress, -2, (LineNumber) debugItem);
+            default ->
+                    throw new ExceptionWithContext("Invalid debug item type: %d", debugItem.getDebugItemType());
+        };
     }
 }

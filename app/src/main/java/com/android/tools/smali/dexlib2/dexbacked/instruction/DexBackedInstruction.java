@@ -78,81 +78,57 @@ public abstract class DexBackedInstruction implements Instruction {
         if (opcode == null) {
             return new DexBackedUnknownInstruction(dexFile, instructionStartOffset);
         }
-        switch (opcode.format) {
-            case Format10t:
-                return new DexBackedInstruction10t(dexFile, opcode, instructionStartOffset);
-            case Format10x:
-                return new DexBackedInstruction10x(dexFile, opcode, instructionStartOffset);
-            case Format11n:
-                return new DexBackedInstruction11n(dexFile, opcode, instructionStartOffset);
-            case Format11x:
-                return new DexBackedInstruction11x(dexFile, opcode, instructionStartOffset);
-            case Format12x:
-                return new DexBackedInstruction12x(dexFile, opcode, instructionStartOffset);
-            case Format20bc:
-                return new DexBackedInstruction20bc(dexFile, opcode, instructionStartOffset);
-            case Format20t:
-                return new DexBackedInstruction20t(dexFile, opcode, instructionStartOffset);
-            case Format21c:
-                return new DexBackedInstruction21c(dexFile, opcode, instructionStartOffset);
-            case Format21ih:
-                return new DexBackedInstruction21ih(dexFile, opcode, instructionStartOffset);
-            case Format21lh:
-                return new DexBackedInstruction21lh(dexFile, opcode, instructionStartOffset);
-            case Format21s:
-                return new DexBackedInstruction21s(dexFile, opcode, instructionStartOffset);
-            case Format21t:
-                return new DexBackedInstruction21t(dexFile, opcode, instructionStartOffset);
-            case Format22b:
-                return new DexBackedInstruction22b(dexFile, opcode, instructionStartOffset);
-            case Format22c:
-                return new DexBackedInstruction22c(dexFile, opcode, instructionStartOffset);
-            case Format22cs:
-                return new DexBackedInstruction22cs(dexFile, opcode, instructionStartOffset);
-            case Format22s:
-                return new DexBackedInstruction22s(dexFile, opcode, instructionStartOffset);
-            case Format22t:
-                return new DexBackedInstruction22t(dexFile, opcode, instructionStartOffset);
-            case Format22x:
-                return new DexBackedInstruction22x(dexFile, opcode, instructionStartOffset);
-            case Format23x:
-                return new DexBackedInstruction23x(dexFile, opcode, instructionStartOffset);
-            case Format30t:
-                return new DexBackedInstruction30t(dexFile, opcode, instructionStartOffset);
-            case Format31c:
-                return new DexBackedInstruction31c(dexFile, opcode, instructionStartOffset);
-            case Format31i:
-                return new DexBackedInstruction31i(dexFile, opcode, instructionStartOffset);
-            case Format31t:
-                return new DexBackedInstruction31t(dexFile, opcode, instructionStartOffset);
-            case Format32x:
-                return new DexBackedInstruction32x(dexFile, opcode, instructionStartOffset);
-            case Format35c:
-                return new DexBackedInstruction35c(dexFile, opcode, instructionStartOffset);
-            case Format35ms:
-                return new DexBackedInstruction35ms(dexFile, opcode, instructionStartOffset);
-            case Format35mi:
-                return new DexBackedInstruction35mi(dexFile, opcode, instructionStartOffset);
-            case Format3rc:
-                return new DexBackedInstruction3rc(dexFile, opcode, instructionStartOffset);
-            case Format3rmi:
-                return new DexBackedInstruction3rmi(dexFile, opcode, instructionStartOffset);
-            case Format3rms:
-                return new DexBackedInstruction3rms(dexFile, opcode, instructionStartOffset);
-            case Format45cc:
-                return new DexBackedInstruction45cc(dexFile, opcode, instructionStartOffset);
-            case Format4rcc:
-                return new DexBackedInstruction4rcc(dexFile, opcode, instructionStartOffset);
-            case Format51l:
-                return new DexBackedInstruction51l(dexFile, opcode, instructionStartOffset);
-            case PackedSwitchPayload:
-                return new DexBackedPackedSwitchPayload(dexFile, instructionStartOffset);
-            case SparseSwitchPayload:
-                return new DexBackedSparseSwitchPayload(dexFile, instructionStartOffset);
-            case ArrayPayload:
-                return new DexBackedArrayPayload(dexFile, instructionStartOffset);
-            default:
-                throw new ExceptionWithContext("Unexpected opcode format: %s", opcode.format.toString());
-        }
+        return switch (opcode.format) {
+            case Format10t -> new DexBackedInstruction10t(dexFile, opcode, instructionStartOffset);
+            case Format10x -> new DexBackedInstruction10x(dexFile, opcode, instructionStartOffset);
+            case Format11n -> new DexBackedInstruction11n(dexFile, opcode, instructionStartOffset);
+            case Format11x -> new DexBackedInstruction11x(dexFile, opcode, instructionStartOffset);
+            case Format12x -> new DexBackedInstruction12x(dexFile, opcode, instructionStartOffset);
+            case Format20bc ->
+                    new DexBackedInstruction20bc(dexFile, opcode, instructionStartOffset);
+            case Format20t -> new DexBackedInstruction20t(dexFile, opcode, instructionStartOffset);
+            case Format21c -> new DexBackedInstruction21c(dexFile, opcode, instructionStartOffset);
+            case Format21ih ->
+                    new DexBackedInstruction21ih(dexFile, opcode, instructionStartOffset);
+            case Format21lh ->
+                    new DexBackedInstruction21lh(dexFile, opcode, instructionStartOffset);
+            case Format21s -> new DexBackedInstruction21s(dexFile, opcode, instructionStartOffset);
+            case Format21t -> new DexBackedInstruction21t(dexFile, opcode, instructionStartOffset);
+            case Format22b -> new DexBackedInstruction22b(dexFile, opcode, instructionStartOffset);
+            case Format22c -> new DexBackedInstruction22c(dexFile, opcode, instructionStartOffset);
+            case Format22cs ->
+                    new DexBackedInstruction22cs(dexFile, opcode, instructionStartOffset);
+            case Format22s -> new DexBackedInstruction22s(dexFile, opcode, instructionStartOffset);
+            case Format22t -> new DexBackedInstruction22t(dexFile, opcode, instructionStartOffset);
+            case Format22x -> new DexBackedInstruction22x(dexFile, opcode, instructionStartOffset);
+            case Format23x -> new DexBackedInstruction23x(dexFile, opcode, instructionStartOffset);
+            case Format30t -> new DexBackedInstruction30t(dexFile, opcode, instructionStartOffset);
+            case Format31c -> new DexBackedInstruction31c(dexFile, opcode, instructionStartOffset);
+            case Format31i -> new DexBackedInstruction31i(dexFile, opcode, instructionStartOffset);
+            case Format31t -> new DexBackedInstruction31t(dexFile, opcode, instructionStartOffset);
+            case Format32x -> new DexBackedInstruction32x(dexFile, opcode, instructionStartOffset);
+            case Format35c -> new DexBackedInstruction35c(dexFile, opcode, instructionStartOffset);
+            case Format35ms ->
+                    new DexBackedInstruction35ms(dexFile, opcode, instructionStartOffset);
+            case Format35mi ->
+                    new DexBackedInstruction35mi(dexFile, opcode, instructionStartOffset);
+            case Format3rc -> new DexBackedInstruction3rc(dexFile, opcode, instructionStartOffset);
+            case Format3rmi ->
+                    new DexBackedInstruction3rmi(dexFile, opcode, instructionStartOffset);
+            case Format3rms ->
+                    new DexBackedInstruction3rms(dexFile, opcode, instructionStartOffset);
+            case Format45cc ->
+                    new DexBackedInstruction45cc(dexFile, opcode, instructionStartOffset);
+            case Format4rcc ->
+                    new DexBackedInstruction4rcc(dexFile, opcode, instructionStartOffset);
+            case Format51l -> new DexBackedInstruction51l(dexFile, opcode, instructionStartOffset);
+            case PackedSwitchPayload ->
+                    new DexBackedPackedSwitchPayload(dexFile, instructionStartOffset);
+            case SparseSwitchPayload ->
+                    new DexBackedSparseSwitchPayload(dexFile, instructionStartOffset);
+            case ArrayPayload -> new DexBackedArrayPayload(dexFile, instructionStartOffset);
+            default ->
+                    throw new ExceptionWithContext("Unexpected opcode format: %s", opcode.format.toString());
+        };
     }
 }

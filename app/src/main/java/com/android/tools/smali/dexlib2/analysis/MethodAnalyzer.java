@@ -635,451 +635,375 @@ public class MethodAnalyzer {
     private boolean analyzeInstruction(@Nonnull AnalyzedInstruction analyzedInstruction) {
         Instruction instruction = analyzedInstruction.instruction;
 
-        switch (instruction.getOpcode()) {
-            case NOP:
-                return true;
-            case MOVE:
-            case MOVE_FROM16:
-            case MOVE_16:
-            case MOVE_WIDE:
-            case MOVE_WIDE_FROM16:
-            case MOVE_WIDE_16:
-            case MOVE_OBJECT:
-            case MOVE_OBJECT_FROM16:
-            case MOVE_OBJECT_16:
+        return switch (instruction.getOpcode()) {
+            case NOP -> true;
+            case MOVE, MOVE_FROM16, MOVE_16, MOVE_WIDE, MOVE_WIDE_FROM16, MOVE_WIDE_16, MOVE_OBJECT,
+                 MOVE_OBJECT_FROM16, MOVE_OBJECT_16 -> {
                 analyzeMove(analyzedInstruction);
-                return true;
-            case MOVE_RESULT:
-            case MOVE_RESULT_WIDE:
-            case MOVE_RESULT_OBJECT:
+                yield true;
+            }
+            case MOVE_RESULT, MOVE_RESULT_WIDE, MOVE_RESULT_OBJECT -> {
                 analyzeMoveResult(analyzedInstruction);
-                return true;
-            case MOVE_EXCEPTION:
+                yield true;
+            }
+            case MOVE_EXCEPTION -> {
                 analyzeMoveException(analyzedInstruction);
-                return true;
-            case RETURN_VOID:
-            case RETURN:
-            case RETURN_WIDE:
-            case RETURN_OBJECT:
-                return true;
-            case RETURN_VOID_BARRIER:
-            case RETURN_VOID_NO_BARRIER:
+                yield true;
+            }
+            case RETURN_VOID, RETURN, RETURN_WIDE, RETURN_OBJECT -> true;
+            case RETURN_VOID_BARRIER, RETURN_VOID_NO_BARRIER -> {
                 analyzeOdexReturnVoid(analyzedInstruction);
-                return true;
-            case CONST_4:
-            case CONST_16:
-            case CONST:
-            case CONST_HIGH16:
+                yield true;
+            }
+            case CONST_4, CONST_16, CONST, CONST_HIGH16 -> {
                 analyzeConst(analyzedInstruction);
-                return true;
-            case CONST_WIDE_16:
-            case CONST_WIDE_32:
-            case CONST_WIDE:
-            case CONST_WIDE_HIGH16:
+                yield true;
+            }
+            case CONST_WIDE_16, CONST_WIDE_32, CONST_WIDE, CONST_WIDE_HIGH16 -> {
                 analyzeWideConst(analyzedInstruction);
-                return true;
-            case CONST_STRING:
-            case CONST_STRING_JUMBO:
+                yield true;
+            }
+            case CONST_STRING, CONST_STRING_JUMBO -> {
                 analyzeConstString(analyzedInstruction);
-                return true;
-            case CONST_CLASS:
+                yield true;
+            }
+            case CONST_CLASS -> {
                 analyzeConstClass(analyzedInstruction);
-                return true;
-            case MONITOR_ENTER:
-            case MONITOR_EXIT:
-                return true;
-            case CHECK_CAST:
+                yield true;
+            }
+            case MONITOR_ENTER, MONITOR_EXIT -> true;
+            case CHECK_CAST -> {
                 analyzeCheckCast(analyzedInstruction);
-                return true;
-            case INSTANCE_OF:
+                yield true;
+            }
+            case INSTANCE_OF -> {
                 analyzeInstanceOf(analyzedInstruction);
-                return true;
-            case ARRAY_LENGTH:
+                yield true;
+            }
+            case ARRAY_LENGTH -> {
                 analyzeArrayLength(analyzedInstruction);
-                return true;
-            case NEW_INSTANCE:
+                yield true;
+            }
+            case NEW_INSTANCE -> {
                 analyzeNewInstance(analyzedInstruction);
-                return true;
-            case NEW_ARRAY:
+                yield true;
+            }
+            case NEW_ARRAY -> {
                 analyzeNewArray(analyzedInstruction);
-                return true;
-            case FILLED_NEW_ARRAY:
-            case FILLED_NEW_ARRAY_RANGE:
-                return true;
-            case FILL_ARRAY_DATA:
-                return true;
-            case THROW:
-            case GOTO:
-            case GOTO_16:
-            case GOTO_32:
-                return true;
-            case PACKED_SWITCH:
-            case SPARSE_SWITCH:
-                return true;
-            case CMPL_FLOAT:
-            case CMPG_FLOAT:
-            case CMPL_DOUBLE:
-            case CMPG_DOUBLE:
-            case CMP_LONG:
+                yield true;
+            }
+            case FILLED_NEW_ARRAY, FILLED_NEW_ARRAY_RANGE -> true;
+            case FILL_ARRAY_DATA -> true;
+            case THROW, GOTO, GOTO_16, GOTO_32 -> true;
+            case PACKED_SWITCH, SPARSE_SWITCH -> true;
+            case CMPL_FLOAT, CMPG_FLOAT, CMPL_DOUBLE, CMPG_DOUBLE, CMP_LONG -> {
                 analyzeFloatWideCmp(analyzedInstruction);
-                return true;
-            case IF_EQ:
-            case IF_NE:
-            case IF_LT:
-            case IF_GE:
-            case IF_GT:
-            case IF_LE:
-            case IF_LTZ:
-            case IF_GEZ:
-            case IF_GTZ:
-            case IF_LEZ:
-                return true;
-            case IF_EQZ:
-            case IF_NEZ:
+                yield true;
+            }
+            case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> true;
+            case IF_EQZ, IF_NEZ -> {
                 analyzeIfEqzNez(analyzedInstruction);
-                return true;
-            case AGET:
+                yield true;
+            }
+            case AGET -> {
                 analyze32BitPrimitiveAget(analyzedInstruction, RegisterType.INTEGER_TYPE);
-                return true;
-            case AGET_BOOLEAN:
+                yield true;
+            }
+            case AGET_BOOLEAN -> {
                 analyze32BitPrimitiveAget(analyzedInstruction, RegisterType.BOOLEAN_TYPE);
-                return true;
-            case AGET_BYTE:
+                yield true;
+            }
+            case AGET_BYTE -> {
                 analyze32BitPrimitiveAget(analyzedInstruction, RegisterType.BYTE_TYPE);
-                return true;
-            case AGET_CHAR:
+                yield true;
+            }
+            case AGET_CHAR -> {
                 analyze32BitPrimitiveAget(analyzedInstruction, RegisterType.CHAR_TYPE);
-                return true;
-            case AGET_SHORT:
+                yield true;
+            }
+            case AGET_SHORT -> {
                 analyze32BitPrimitiveAget(analyzedInstruction, RegisterType.SHORT_TYPE);
-                return true;
-            case AGET_WIDE:
+                yield true;
+            }
+            case AGET_WIDE -> {
                 analyzeAgetWide(analyzedInstruction);
-                return true;
-            case AGET_OBJECT:
+                yield true;
+            }
+            case AGET_OBJECT -> {
                 analyzeAgetObject(analyzedInstruction);
-                return true;
-            case APUT:
-            case APUT_BOOLEAN:
-            case APUT_BYTE:
-            case APUT_CHAR:
-            case APUT_SHORT:
-            case APUT_WIDE:
-            case APUT_OBJECT:
-                return true;
-            case IGET:
+                yield true;
+            }
+            case APUT, APUT_BOOLEAN, APUT_BYTE, APUT_CHAR, APUT_SHORT, APUT_WIDE, APUT_OBJECT ->
+                    true;
+            case IGET -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.INTEGER_TYPE);
-                return true;
-            case IGET_BOOLEAN:
+                yield true;
+            }
+            case IGET_BOOLEAN -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.BOOLEAN_TYPE);
-                return true;
-            case IGET_BYTE:
+                yield true;
+            }
+            case IGET_BYTE -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.BYTE_TYPE);
-                return true;
-            case IGET_CHAR:
+                yield true;
+            }
+            case IGET_CHAR -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.CHAR_TYPE);
-                return true;
-            case IGET_SHORT:
+                yield true;
+            }
+            case IGET_SHORT -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.SHORT_TYPE);
-                return true;
-            case IGET_WIDE:
-            case IGET_OBJECT:
+                yield true;
+            }
+            case IGET_WIDE, IGET_OBJECT -> {
                 analyzeIgetSgetWideObject(analyzedInstruction);
-                return true;
-            case IPUT:
-            case IPUT_BOOLEAN:
-            case IPUT_BYTE:
-            case IPUT_CHAR:
-            case IPUT_SHORT:
-            case IPUT_WIDE:
-            case IPUT_OBJECT:
-                return true;
-            case SGET:
+                yield true;
+            }
+            case IPUT, IPUT_BOOLEAN, IPUT_BYTE, IPUT_CHAR, IPUT_SHORT, IPUT_WIDE, IPUT_OBJECT ->
+                    true;
+            case SGET -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.INTEGER_TYPE);
-                return true;
-            case SGET_BOOLEAN:
+                yield true;
+            }
+            case SGET_BOOLEAN -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.BOOLEAN_TYPE);
-                return true;
-            case SGET_BYTE:
+                yield true;
+            }
+            case SGET_BYTE -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.BYTE_TYPE);
-                return true;
-            case SGET_CHAR:
+                yield true;
+            }
+            case SGET_CHAR -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.CHAR_TYPE);
-                return true;
-            case SGET_SHORT:
+                yield true;
+            }
+            case SGET_SHORT -> {
                 analyze32BitPrimitiveIgetSget(analyzedInstruction, RegisterType.SHORT_TYPE);
-                return true;
-            case SGET_WIDE:
-            case SGET_OBJECT:
+                yield true;
+            }
+            case SGET_WIDE, SGET_OBJECT -> {
                 analyzeIgetSgetWideObject(analyzedInstruction);
-                return true;
-            case SPUT:
-            case SPUT_BOOLEAN:
-            case SPUT_BYTE:
-            case SPUT_CHAR:
-            case SPUT_SHORT:
-            case SPUT_WIDE:
-            case SPUT_OBJECT:
-                return true;
-            case INVOKE_VIRTUAL:
+                yield true;
+            }
+            case SPUT, SPUT_BOOLEAN, SPUT_BYTE, SPUT_CHAR, SPUT_SHORT, SPUT_WIDE, SPUT_OBJECT ->
+                    true;
+            case INVOKE_VIRTUAL -> {
                 analyzeInvokeVirtual(analyzedInstruction, false);
-                return true;
-            case INVOKE_SUPER:
+                yield true;
+            }
+            case INVOKE_SUPER -> {
                 analyzeInvokeVirtual(analyzedInstruction, false);
-                return true;
-            case INVOKE_DIRECT:
+                yield true;
+            }
+            case INVOKE_DIRECT -> {
                 analyzeInvokeDirect(analyzedInstruction);
-                return true;
-            case INVOKE_STATIC:
-                return true;
-            case INVOKE_INTERFACE:
+                yield true;
+            }
+            case INVOKE_STATIC -> true;
+            case INVOKE_INTERFACE ->
                 // TODO: normalize interfaces
-                return true;
-            case INVOKE_VIRTUAL_RANGE:
+                    true;
+            case INVOKE_VIRTUAL_RANGE -> {
                 analyzeInvokeVirtual(analyzedInstruction, true);
-                return true;
-            case INVOKE_SUPER_RANGE:
+                yield true;
+            }
+            case INVOKE_SUPER_RANGE -> {
                 analyzeInvokeVirtual(analyzedInstruction, true);
-                return true;
-            case INVOKE_DIRECT_RANGE:
+                yield true;
+            }
+            case INVOKE_DIRECT_RANGE -> {
                 analyzeInvokeDirectRange(analyzedInstruction);
-                return true;
-            case INVOKE_STATIC_RANGE:
-                return true;
-            case INVOKE_INTERFACE_RANGE:
+                yield true;
+            }
+            case INVOKE_STATIC_RANGE -> true;
+            case INVOKE_INTERFACE_RANGE ->
                 // TODO: normalize interfaces
-                return true;
-            case NEG_INT:
-            case NOT_INT:
+                    true;
+            case NEG_INT, NOT_INT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE);
-                return true;
-            case NEG_LONG:
-            case NOT_LONG:
+                yield true;
+            }
+            case NEG_LONG, NOT_LONG -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.LONG_LO_TYPE);
-                return true;
-            case NEG_FLOAT:
+                yield true;
+            }
+            case NEG_FLOAT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.FLOAT_TYPE);
-                return true;
-            case NEG_DOUBLE:
+                yield true;
+            }
+            case NEG_DOUBLE -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.DOUBLE_LO_TYPE);
-                return true;
-            case INT_TO_LONG:
+                yield true;
+            }
+            case INT_TO_LONG -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.LONG_LO_TYPE);
-                return true;
-            case INT_TO_FLOAT:
+                yield true;
+            }
+            case INT_TO_FLOAT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.FLOAT_TYPE);
-                return true;
-            case INT_TO_DOUBLE:
+                yield true;
+            }
+            case INT_TO_DOUBLE -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.DOUBLE_LO_TYPE);
-                return true;
-            case LONG_TO_INT:
-            case DOUBLE_TO_INT:
+                yield true;
+            }
+            case LONG_TO_INT, DOUBLE_TO_INT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE);
-                return true;
-            case LONG_TO_FLOAT:
-            case DOUBLE_TO_FLOAT:
+                yield true;
+            }
+            case LONG_TO_FLOAT, DOUBLE_TO_FLOAT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.FLOAT_TYPE);
-                return true;
-            case LONG_TO_DOUBLE:
+                yield true;
+            }
+            case LONG_TO_DOUBLE -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.DOUBLE_LO_TYPE);
-                return true;
-            case FLOAT_TO_INT:
+                yield true;
+            }
+            case FLOAT_TO_INT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE);
-                return true;
-            case FLOAT_TO_LONG:
+                yield true;
+            }
+            case FLOAT_TO_LONG -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.LONG_LO_TYPE);
-                return true;
-            case FLOAT_TO_DOUBLE:
+                yield true;
+            }
+            case FLOAT_TO_DOUBLE -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.DOUBLE_LO_TYPE);
-                return true;
-            case DOUBLE_TO_LONG:
+                yield true;
+            }
+            case DOUBLE_TO_LONG -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.LONG_LO_TYPE);
-                return true;
-            case INT_TO_BYTE:
+                yield true;
+            }
+            case INT_TO_BYTE -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.BYTE_TYPE);
-                return true;
-            case INT_TO_CHAR:
+                yield true;
+            }
+            case INT_TO_CHAR -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.CHAR_TYPE);
-                return true;
-            case INT_TO_SHORT:
+                yield true;
+            }
+            case INT_TO_SHORT -> {
                 analyzeUnaryOp(analyzedInstruction, RegisterType.SHORT_TYPE);
-                return true;
-            case ADD_INT:
-            case SUB_INT:
-            case MUL_INT:
-            case DIV_INT:
-            case REM_INT:
-            case SHL_INT:
-            case SHR_INT:
-            case USHR_INT:
+                yield true;
+            }
+            case ADD_INT, SUB_INT, MUL_INT, DIV_INT, REM_INT, SHL_INT, SHR_INT, USHR_INT -> {
                 analyzeBinaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE, false);
-                return true;
-            case AND_INT:
-            case OR_INT:
-            case XOR_INT:
+                yield true;
+            }
+            case AND_INT, OR_INT, XOR_INT -> {
                 analyzeBinaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE, true);
-                return true;
-            case ADD_LONG:
-            case SUB_LONG:
-            case MUL_LONG:
-            case DIV_LONG:
-            case REM_LONG:
-            case AND_LONG:
-            case OR_LONG:
-            case XOR_LONG:
-            case SHL_LONG:
-            case SHR_LONG:
-            case USHR_LONG:
+                yield true;
+            }
+            case ADD_LONG, SUB_LONG, MUL_LONG, DIV_LONG, REM_LONG, AND_LONG, OR_LONG, XOR_LONG,
+                 SHL_LONG, SHR_LONG, USHR_LONG -> {
                 analyzeBinaryOp(analyzedInstruction, RegisterType.LONG_LO_TYPE, false);
-                return true;
-            case ADD_FLOAT:
-            case SUB_FLOAT:
-            case MUL_FLOAT:
-            case DIV_FLOAT:
-            case REM_FLOAT:
+                yield true;
+            }
+            case ADD_FLOAT, SUB_FLOAT, MUL_FLOAT, DIV_FLOAT, REM_FLOAT -> {
                 analyzeBinaryOp(analyzedInstruction, RegisterType.FLOAT_TYPE, false);
-                return true;
-            case ADD_DOUBLE:
-            case SUB_DOUBLE:
-            case MUL_DOUBLE:
-            case DIV_DOUBLE:
-            case REM_DOUBLE:
+                yield true;
+            }
+            case ADD_DOUBLE, SUB_DOUBLE, MUL_DOUBLE, DIV_DOUBLE, REM_DOUBLE -> {
                 analyzeBinaryOp(analyzedInstruction, RegisterType.DOUBLE_LO_TYPE, false);
-                return true;
-            case ADD_INT_2ADDR:
-            case SUB_INT_2ADDR:
-            case MUL_INT_2ADDR:
-            case DIV_INT_2ADDR:
-            case REM_INT_2ADDR:
-            case SHL_INT_2ADDR:
-            case SHR_INT_2ADDR:
-            case USHR_INT_2ADDR:
+                yield true;
+            }
+            case ADD_INT_2ADDR, SUB_INT_2ADDR, MUL_INT_2ADDR, DIV_INT_2ADDR, REM_INT_2ADDR,
+                 SHL_INT_2ADDR, SHR_INT_2ADDR, USHR_INT_2ADDR -> {
                 analyzeBinary2AddrOp(analyzedInstruction, RegisterType.INTEGER_TYPE, false);
-                return true;
-            case AND_INT_2ADDR:
-            case OR_INT_2ADDR:
-            case XOR_INT_2ADDR:
+                yield true;
+            }
+            case AND_INT_2ADDR, OR_INT_2ADDR, XOR_INT_2ADDR -> {
                 analyzeBinary2AddrOp(analyzedInstruction, RegisterType.INTEGER_TYPE, true);
-                return true;
-            case ADD_LONG_2ADDR:
-            case SUB_LONG_2ADDR:
-            case MUL_LONG_2ADDR:
-            case DIV_LONG_2ADDR:
-            case REM_LONG_2ADDR:
-            case AND_LONG_2ADDR:
-            case OR_LONG_2ADDR:
-            case XOR_LONG_2ADDR:
-            case SHL_LONG_2ADDR:
-            case SHR_LONG_2ADDR:
-            case USHR_LONG_2ADDR:
+                yield true;
+            }
+            case ADD_LONG_2ADDR, SUB_LONG_2ADDR, MUL_LONG_2ADDR, DIV_LONG_2ADDR, REM_LONG_2ADDR,
+                 AND_LONG_2ADDR, OR_LONG_2ADDR, XOR_LONG_2ADDR, SHL_LONG_2ADDR, SHR_LONG_2ADDR,
+                 USHR_LONG_2ADDR -> {
                 analyzeBinary2AddrOp(analyzedInstruction, RegisterType.LONG_LO_TYPE, false);
-                return true;
-            case ADD_FLOAT_2ADDR:
-            case SUB_FLOAT_2ADDR:
-            case MUL_FLOAT_2ADDR:
-            case DIV_FLOAT_2ADDR:
-            case REM_FLOAT_2ADDR:
+                yield true;
+            }
+            case ADD_FLOAT_2ADDR, SUB_FLOAT_2ADDR, MUL_FLOAT_2ADDR, DIV_FLOAT_2ADDR,
+                 REM_FLOAT_2ADDR -> {
                 analyzeBinary2AddrOp(analyzedInstruction, RegisterType.FLOAT_TYPE, false);
-                return true;
-            case ADD_DOUBLE_2ADDR:
-            case SUB_DOUBLE_2ADDR:
-            case MUL_DOUBLE_2ADDR:
-            case DIV_DOUBLE_2ADDR:
-            case REM_DOUBLE_2ADDR:
+                yield true;
+            }
+            case ADD_DOUBLE_2ADDR, SUB_DOUBLE_2ADDR, MUL_DOUBLE_2ADDR, DIV_DOUBLE_2ADDR,
+                 REM_DOUBLE_2ADDR -> {
                 analyzeBinary2AddrOp(analyzedInstruction, RegisterType.DOUBLE_LO_TYPE, false);
-                return true;
-            case ADD_INT_LIT16:
-            case RSUB_INT:
-            case MUL_INT_LIT16:
-            case DIV_INT_LIT16:
-            case REM_INT_LIT16:
+                yield true;
+            }
+            case ADD_INT_LIT16, RSUB_INT, MUL_INT_LIT16, DIV_INT_LIT16, REM_INT_LIT16 -> {
                 analyzeLiteralBinaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE, false);
-                return true;
-            case AND_INT_LIT16:
-            case OR_INT_LIT16:
-            case XOR_INT_LIT16:
+                yield true;
+            }
+            case AND_INT_LIT16, OR_INT_LIT16, XOR_INT_LIT16 -> {
                 analyzeLiteralBinaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE, true);
-                return true;
-            case ADD_INT_LIT8:
-            case RSUB_INT_LIT8:
-            case MUL_INT_LIT8:
-            case DIV_INT_LIT8:
-            case REM_INT_LIT8:
-            case SHL_INT_LIT8:
+                yield true;
+            }
+            case ADD_INT_LIT8, RSUB_INT_LIT8, MUL_INT_LIT8, DIV_INT_LIT8, REM_INT_LIT8,
+                 SHL_INT_LIT8 -> {
                 analyzeLiteralBinaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE, false);
-                return true;
-            case AND_INT_LIT8:
-            case OR_INT_LIT8:
-            case XOR_INT_LIT8:
+                yield true;
+            }
+            case AND_INT_LIT8, OR_INT_LIT8, XOR_INT_LIT8 -> {
                 analyzeLiteralBinaryOp(analyzedInstruction, RegisterType.INTEGER_TYPE, true);
-                return true;
-            case SHR_INT_LIT8:
+                yield true;
+            }
+            case SHR_INT_LIT8 -> {
                 analyzeLiteralBinaryOp(analyzedInstruction, getDestTypeForLiteralShiftRight(analyzedInstruction, true),
                         false);
-                return true;
-            case USHR_INT_LIT8:
+                yield true;
+            }
+            case USHR_INT_LIT8 -> {
                 analyzeLiteralBinaryOp(analyzedInstruction, getDestTypeForLiteralShiftRight(analyzedInstruction, false),
                         false);
-                return true;
+                yield true;
+            }
 
             /*odexed instructions*/
-            case IGET_VOLATILE:
-            case IPUT_VOLATILE:
-            case SGET_VOLATILE:
-            case SPUT_VOLATILE:
-            case IGET_OBJECT_VOLATILE:
-            case IGET_WIDE_VOLATILE:
-            case IPUT_WIDE_VOLATILE:
-            case SGET_WIDE_VOLATILE:
-            case SPUT_WIDE_VOLATILE:
+            case IGET_VOLATILE, IPUT_VOLATILE, SGET_VOLATILE, SPUT_VOLATILE, IGET_OBJECT_VOLATILE,
+                 IGET_WIDE_VOLATILE, IPUT_WIDE_VOLATILE, SGET_WIDE_VOLATILE, SPUT_WIDE_VOLATILE -> {
                 analyzePutGetVolatile(analyzedInstruction);
-                return true;
-            case THROW_VERIFICATION_ERROR:
-                return true;
-            case EXECUTE_INLINE:
+                yield true;
+            }
+            case THROW_VERIFICATION_ERROR -> true;
+            case EXECUTE_INLINE -> {
                 analyzeExecuteInline(analyzedInstruction);
-                return true;
-            case EXECUTE_INLINE_RANGE:
+                yield true;
+            }
+            case EXECUTE_INLINE_RANGE -> {
                 analyzeExecuteInlineRange(analyzedInstruction);
-                return true;
-            case INVOKE_DIRECT_EMPTY:
+                yield true;
+            }
+            case INVOKE_DIRECT_EMPTY -> {
                 analyzeInvokeDirectEmpty(analyzedInstruction);
-                return true;
-            case INVOKE_OBJECT_INIT_RANGE:
+                yield true;
+            }
+            case INVOKE_OBJECT_INIT_RANGE -> {
                 analyzeInvokeObjectInitRange(analyzedInstruction);
-                return true;
-            case IGET_QUICK:
-            case IGET_WIDE_QUICK:
-            case IGET_OBJECT_QUICK:
-            case IPUT_QUICK:
-            case IPUT_WIDE_QUICK:
-            case IPUT_OBJECT_QUICK:
-            case IPUT_BOOLEAN_QUICK:
-            case IPUT_BYTE_QUICK:
-            case IPUT_CHAR_QUICK:
-            case IPUT_SHORT_QUICK:
-            case IGET_BOOLEAN_QUICK:
-            case IGET_BYTE_QUICK:
-            case IGET_CHAR_QUICK:
-            case IGET_SHORT_QUICK:
-                return analyzeIputIgetQuick(analyzedInstruction);
-            case INVOKE_VIRTUAL_QUICK:
-                return analyzeInvokeVirtualQuick(analyzedInstruction, false, false);
-            case INVOKE_SUPER_QUICK:
-                return analyzeInvokeVirtualQuick(analyzedInstruction, true, false);
-            case INVOKE_VIRTUAL_QUICK_RANGE:
-                return analyzeInvokeVirtualQuick(analyzedInstruction, false, true);
-            case INVOKE_SUPER_QUICK_RANGE:
-                return analyzeInvokeVirtualQuick(analyzedInstruction, true, true);
-            case IPUT_OBJECT_VOLATILE:
-            case SGET_OBJECT_VOLATILE:
-            case SPUT_OBJECT_VOLATILE:
+                yield true;
+            }
+            case IGET_QUICK, IGET_WIDE_QUICK, IGET_OBJECT_QUICK, IPUT_QUICK, IPUT_WIDE_QUICK,
+                 IPUT_OBJECT_QUICK, IPUT_BOOLEAN_QUICK, IPUT_BYTE_QUICK, IPUT_CHAR_QUICK,
+                 IPUT_SHORT_QUICK, IGET_BOOLEAN_QUICK, IGET_BYTE_QUICK, IGET_CHAR_QUICK,
+                 IGET_SHORT_QUICK -> analyzeIputIgetQuick(analyzedInstruction);
+            case INVOKE_VIRTUAL_QUICK ->
+                    analyzeInvokeVirtualQuick(analyzedInstruction, false, false);
+            case INVOKE_SUPER_QUICK -> analyzeInvokeVirtualQuick(analyzedInstruction, true, false);
+            case INVOKE_VIRTUAL_QUICK_RANGE ->
+                    analyzeInvokeVirtualQuick(analyzedInstruction, false, true);
+            case INVOKE_SUPER_QUICK_RANGE ->
+                    analyzeInvokeVirtualQuick(analyzedInstruction, true, true);
+            case IPUT_OBJECT_VOLATILE, SGET_OBJECT_VOLATILE, SPUT_OBJECT_VOLATILE -> {
                 analyzePutGetVolatile(analyzedInstruction);
-                return true;
-            default:
+                yield true;
+            }
+            default -> {
                 assert false;
-                return true;
-        }
+                yield true;
+            }
+        };
     }
 
     private static final BitSet Primitive32BitCategories = BitSetUtils.bitSetOfIndexes(

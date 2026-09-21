@@ -58,24 +58,17 @@ public class MethodHandleItem {
                 out.annotate(2, "unused");
 
                 int fieldOrMethodId = dexFile.getBuffer().readUshort(out.getCursor());
-                String fieldOrMethodDescriptor;
-                switch (methodHandleType) {
-                    case MethodHandleType.STATIC_PUT:
-                    case MethodHandleType.STATIC_GET:
-                    case MethodHandleType.INSTANCE_PUT:
-                    case MethodHandleType.INSTANCE_GET:
-                        fieldOrMethodDescriptor = FieldIdItem.getReferenceAnnotation(dexFile, fieldOrMethodId);
-                        break;
-                    case MethodHandleType.INVOKE_STATIC:
-                    case MethodHandleType.INVOKE_INSTANCE:
-                    case MethodHandleType.INVOKE_CONSTRUCTOR:
-                    case MethodHandleType.INVOKE_DIRECT:
-                    case MethodHandleType.INVOKE_INTERFACE:
-                        fieldOrMethodDescriptor = MethodIdItem.getReferenceAnnotation(dexFile, fieldOrMethodId);
-                        break;
-                    default:
-                        throw new ExceptionWithContext("Invalid method handle type: %d", methodHandleType);
-                }
+                String fieldOrMethodDescriptor = switch (methodHandleType) {
+                    case MethodHandleType.STATIC_PUT, MethodHandleType.STATIC_GET,
+                         MethodHandleType.INSTANCE_PUT, MethodHandleType.INSTANCE_GET ->
+                            FieldIdItem.getReferenceAnnotation(dexFile, fieldOrMethodId);
+                    case MethodHandleType.INVOKE_STATIC, MethodHandleType.INVOKE_INSTANCE,
+                         MethodHandleType.INVOKE_CONSTRUCTOR, MethodHandleType.INVOKE_DIRECT,
+                         MethodHandleType.INVOKE_INTERFACE ->
+                            MethodIdItem.getReferenceAnnotation(dexFile, fieldOrMethodId);
+                    default ->
+                            throw new ExceptionWithContext("Invalid method handle type: %d", methodHandleType);
+                };
 
                 out.annotate(2, "field_or_method_id = %s", fieldOrMethodDescriptor);
                 out.annotate(2, "unused");

@@ -518,24 +518,16 @@ public class SmaliReader {
         return isWhiteSpace(b) || b == '#';
     }
     public static boolean isWhiteSpace(byte b) {
-        switch (b) {
-            case ' ':
-            case '\n':
-            case '\t':
-            case '\r':
-                return true;
-            default:
-                return false;
-        }
+        return switch (b) {
+            case ' ', '\n', '\t', '\r' -> true;
+            default -> false;
+        };
     }
     public static boolean isSpace(byte b) {
-        switch (b) {
-            case ' ':
-            case '\t':
-                return true;
-            default:
-                return false;
-        }
+        return switch (b) {
+            case ' ', '\t' -> true;
+            default -> false;
+        };
     }
     private static int base10Digit(byte b) {
         int bound = '0';
@@ -554,24 +546,16 @@ public class SmaliReader {
         if (b >= 'A' && b <= 'Z') {
             return true;
         }
-        switch (b) {
-            case '-':
-            case '+':
-            case '.':
-                return true;
-            default:
-                return false;
-        }
+        return switch (b) {
+            case '-', '+', '.' -> true;
+            default -> false;
+        };
     }
     private static boolean isLineEnd(byte b) {
-        switch (b) {
-            case '\n':
-            case '\r':
-            case '#':
-                return true;
-            default:
-                return false;
-        }
+        return switch (b) {
+            case '\n', '\r', '#' -> true;
+            default -> false;
+        };
     }
     private static char decodeSkipped(SmaliReader reader, char ch) {
         if (ch == 'u') {
@@ -580,20 +564,14 @@ public class SmaliReader {
         return decodeSkippedChar(ch);
     }
     private static char decodeSkippedChar(char ch) {
-        switch (ch) {
-            case 'b':
-                return '\b';
-            case 'f':
-                return  '\f';
-            case 'n':
-                return '\n';
-            case 'r':
-                return  '\r';
-            case 't':
-                return '\t';
-            default:
-                return ch;
-        }
+        return switch (ch) {
+            case 'b' -> '\b';
+            case 'f' -> '\f';
+            case 'n' -> '\n';
+            case 'r' -> '\r';
+            case 't' -> '\t';
+            default -> ch;
+        };
     }
     private static char decodeFourHex(SmaliReader reader) {
         int i = HexUtil.decodeHexChar(reader.read());

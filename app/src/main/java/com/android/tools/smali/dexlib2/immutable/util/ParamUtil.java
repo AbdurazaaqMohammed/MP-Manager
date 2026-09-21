@@ -38,26 +38,22 @@ import java.util.Iterator;
 public class ParamUtil {
     private static int findTypeEnd(@Nonnull String str, int index) {
         char c = str.charAt(index);
-        switch (c) {
-            case 'Z':
-            case 'B':
-            case 'S':
-            case 'C':
-            case 'I':
-            case 'J':
-            case 'F':
-            case 'D':
-                return index+1;
-            case 'L':
-                while (str.charAt(index++) != ';') {}
-                return index;
-            case '[':
-                while (str.charAt(index++) != '[') {}
-                return findTypeEnd(str, index);
-            default:
-                throw new IllegalArgumentException(String.format("Param string \"%s\" contains invalid type prefix: %s",
-                        str, c));
-        }
+        return switch (c) {
+            case 'Z', 'B', 'S', 'C', 'I', 'J', 'F', 'D' -> index + 1;
+            case 'L' -> {
+                while (str.charAt(index++) != ';') {
+                }
+                yield index;
+            }
+            case '[' -> {
+                while (str.charAt(index++) != '[') {
+                }
+                yield findTypeEnd(str, index);
+            }
+            default ->
+                    throw new IllegalArgumentException(String.format("Param string \"%s\" contains invalid type prefix: %s",
+                            str, c));
+        };
     }
 
     @Nonnull

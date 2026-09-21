@@ -60,22 +60,19 @@ public class EncodedValueRewriter implements Rewriter<EncodedValue> {
     }
 
     @Nonnull @Override public EncodedValue rewrite(@Nonnull EncodedValue encodedValue) {
-        switch (encodedValue.getValueType()) {
-            case ValueType.TYPE:
-                return new RewrittenTypeEncodedValue((TypeEncodedValue)encodedValue);
-            case ValueType.FIELD:
-                return new RewrittenFieldEncodedValue((FieldEncodedValue)encodedValue);
-            case ValueType.METHOD:
-                return new RewrittenMethodEncodedValue((MethodEncodedValue)encodedValue);
-            case ValueType.ENUM:
-                return new RewrittenEnumEncodedValue((EnumEncodedValue)encodedValue);
-            case ValueType.ARRAY:
-                return new RewrittenArrayEncodedValue((ArrayEncodedValue)encodedValue);
-            case ValueType.ANNOTATION:
-                return new RewrittenAnnotationEncodedValue((AnnotationEncodedValue)encodedValue);
-            default:
-                return encodedValue;
-        }
+        return switch (encodedValue.getValueType()) {
+            case ValueType.TYPE -> new RewrittenTypeEncodedValue((TypeEncodedValue) encodedValue);
+            case ValueType.FIELD ->
+                    new RewrittenFieldEncodedValue((FieldEncodedValue) encodedValue);
+            case ValueType.METHOD ->
+                    new RewrittenMethodEncodedValue((MethodEncodedValue) encodedValue);
+            case ValueType.ENUM -> new RewrittenEnumEncodedValue((EnumEncodedValue) encodedValue);
+            case ValueType.ARRAY ->
+                    new RewrittenArrayEncodedValue((ArrayEncodedValue) encodedValue);
+            case ValueType.ANNOTATION ->
+                    new RewrittenAnnotationEncodedValue((AnnotationEncodedValue) encodedValue);
+            default -> encodedValue;
+        };
     }
 
     protected class RewrittenTypeEncodedValue extends BaseTypeEncodedValue {

@@ -143,38 +143,38 @@ public class RewriterUtils {
     @Nonnull public static MethodHandleReference rewriteMethodHandleReference(
             @Nonnull final Rewriters rewriters,
             @Nonnull final MethodHandleReference methodHandleReference) {
-        switch (methodHandleReference.getMethodHandleType()) {
-            case MethodHandleType.STATIC_PUT:
-            case MethodHandleType.STATIC_GET:
-            case MethodHandleType.INSTANCE_PUT:
-            case MethodHandleType.INSTANCE_GET:
-                return new BaseMethodHandleReference() {
-                    @Override public int getMethodHandleType() {
-                        return methodHandleReference.getMethodHandleType();
-                    }
+        return switch (methodHandleReference.getMethodHandleType()) {
+            case MethodHandleType.STATIC_PUT, MethodHandleType.STATIC_GET,
+                 MethodHandleType.INSTANCE_PUT, MethodHandleType.INSTANCE_GET ->
+                    new BaseMethodHandleReference() {
+                        @Override
+                        public int getMethodHandleType() {
+                            return methodHandleReference.getMethodHandleType();
+                        }
 
-                    @Nonnull @Override public Reference getMemberReference() {
-                        return rewriters.getFieldReferenceRewriter().rewrite((FieldReference)methodHandleReference.getMemberReference());
-                    }
-                };
-            case MethodHandleType.INVOKE_STATIC:
-            case MethodHandleType.INVOKE_INSTANCE:
-            case MethodHandleType.INVOKE_CONSTRUCTOR:
-            case MethodHandleType.INVOKE_DIRECT:
-            case MethodHandleType.INVOKE_INTERFACE:
-                return new BaseMethodHandleReference() {
-                    @Override public int getMethodHandleType() {
-                        return methodHandleReference.getMethodHandleType();
-                    }
+                        @Nonnull
+                        @Override
+                        public Reference getMemberReference() {
+                            return rewriters.getFieldReferenceRewriter().rewrite((FieldReference) methodHandleReference.getMemberReference());
+                        }
+                    };
+            case MethodHandleType.INVOKE_STATIC, MethodHandleType.INVOKE_INSTANCE,
+                 MethodHandleType.INVOKE_CONSTRUCTOR, MethodHandleType.INVOKE_DIRECT,
+                 MethodHandleType.INVOKE_INTERFACE -> new BaseMethodHandleReference() {
+                @Override
+                public int getMethodHandleType() {
+                    return methodHandleReference.getMethodHandleType();
+                }
 
-                    @Nonnull @Override public Reference getMemberReference() {
-                        return rewriters.getMethodReferenceRewriter().rewrite((MethodReference)methodHandleReference.getMemberReference());
-                    }
-                };
-            default:
-                throw new ExceptionWithContext("Invalid method handle type: %d",
-                        methodHandleReference.getMethodHandleType());
-        }
+                @Nonnull
+                @Override
+                public Reference getMemberReference() {
+                    return rewriters.getMethodReferenceRewriter().rewrite((MethodReference) methodHandleReference.getMemberReference());
+                }
+            };
+            default -> throw new ExceptionWithContext("Invalid method handle type: %d",
+                    methodHandleReference.getMethodHandleType());
+        };
     }
 
     @Nonnull public static MethodProtoReference rewriteMethodProtoReference(
@@ -200,57 +200,51 @@ public class RewriterUtils {
     @Nonnull public static EncodedValue rewriteValue(
             @Nonnull final Rewriters rewriters,
             @Nonnull final EncodedValue encodedValue) {
-        switch (encodedValue.getValueType()) {
-            case ValueType.INT:
-            case ValueType.FLOAT:
-            case ValueType.LONG:
-            case ValueType.DOUBLE:
-            case ValueType.STRING:
-                return encodedValue;
-
-            case ValueType.METHOD_TYPE:
-                return new BaseMethodTypeEncodedValue () {
-                    @Override @Nonnull public MethodProtoReference getValue() {
-                        return rewriteMethodProtoReference(
+        return switch (encodedValue.getValueType()) {
+            case ValueType.INT, ValueType.FLOAT, ValueType.LONG, ValueType.DOUBLE,
+                 ValueType.STRING -> encodedValue;
+            case ValueType.METHOD_TYPE -> new BaseMethodTypeEncodedValue() {
+                @Override
+                @Nonnull
+                public MethodProtoReference getValue() {
+                    return rewriteMethodProtoReference(
                             rewriters.getTypeRewriter(),
                             ((MethodTypeEncodedValue) encodedValue).getValue());
-                    }
-                };
-
-            case ValueType.METHOD_HANDLE:
-                return new BaseMethodHandleEncodedValue () {
-                    @Override @Nonnull public MethodHandleReference getValue() {
-                        return rewriteMethodHandleReference(
+                }
+            };
+            case ValueType.METHOD_HANDLE -> new BaseMethodHandleEncodedValue() {
+                @Override
+                @Nonnull
+                public MethodHandleReference getValue() {
+                    return rewriteMethodHandleReference(
                             rewriters,
                             ((MethodHandleEncodedValue) encodedValue).getValue());
-                    }
-                };
-
-            case ValueType.TYPE:
-                return new BaseTypeEncodedValue () {
-                    @Override @Nonnull public String getValue() {
-                        return rewriters.getTypeRewriter().rewrite(((TypeEncodedValue) encodedValue).getValue());
-                    }
-                };
-
-            case ValueType.FIELD:
-                return new BaseFieldEncodedValue () {
-                    @Override @Nonnull public FieldReference getValue() {
-                        return rewriters.getFieldReferenceRewriter().rewrite(((FieldEncodedValue) encodedValue).getValue());
-                    }
-                };
-
-            case ValueType.METHOD:
-                return new BaseMethodEncodedValue () {
-                    @Override @Nonnull public MethodReference getValue() {
-                        return rewriters.getMethodReferenceRewriter().rewrite(((MethodEncodedValue) encodedValue).getValue());
-                    }
-                };
-
-            default:
-                throw new ExceptionWithContext("Unsupported encoded value type: %d",
-                        encodedValue.getValueType());
-        }
+                }
+            };
+            case ValueType.TYPE -> new BaseTypeEncodedValue() {
+                @Override
+                @Nonnull
+                public String getValue() {
+                    return rewriters.getTypeRewriter().rewrite(((TypeEncodedValue) encodedValue).getValue());
+                }
+            };
+            case ValueType.FIELD -> new BaseFieldEncodedValue() {
+                @Override
+                @Nonnull
+                public FieldReference getValue() {
+                    return rewriters.getFieldReferenceRewriter().rewrite(((FieldEncodedValue) encodedValue).getValue());
+                }
+            };
+            case ValueType.METHOD -> new BaseMethodEncodedValue() {
+                @Override
+                @Nonnull
+                public MethodReference getValue() {
+                    return rewriters.getMethodReferenceRewriter().rewrite(((MethodEncodedValue) encodedValue).getValue());
+                }
+            };
+            default -> throw new ExceptionWithContext("Unsupported encoded value type: %d",
+                    encodedValue.getValueType());
+        };
     }
 }
 

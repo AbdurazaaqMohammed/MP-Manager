@@ -84,42 +84,37 @@ public class DexBackedArrayPayload extends DexBackedInstruction implements Array
             return Collections.emptyList();
         }
 
-        switch (elementWidth) {
-            case 1:
-                return new ReturnedList() {
-                    @Nonnull
-                    @Override
-                    public Number readItem(int index) {
-                        return dexFile.getDataBuffer().readByte(elementsStart + index);
-                    }
-                };
-            case 2:
-                return new ReturnedList() {
-                    @Nonnull
-                    @Override
-                    public Number readItem(int index) {
-                        return dexFile.getDataBuffer().readShort(elementsStart + index*2);
-                    }
-                };
-            case 4:
-                return new ReturnedList() {
-                    @Nonnull
-                    @Override
-                    public Number readItem(int index) {
-                        return dexFile.getDataBuffer().readInt(elementsStart + index*4);
-                    }
-                };
-            case 8:
-                return new ReturnedList() {
-                    @Nonnull
-                    @Override
-                    public Number readItem(int index) {
-                        return dexFile.getDataBuffer().readLong(elementsStart + index*8);
-                    }
-                };
-            default:
-                throw new ExceptionWithContext("Invalid element width: %d", elementWidth);
-        }
+        return switch (elementWidth) {
+            case 1 -> new ReturnedList() {
+                @Nonnull
+                @Override
+                public Number readItem(int index) {
+                    return dexFile.getDataBuffer().readByte(elementsStart + index);
+                }
+            };
+            case 2 -> new ReturnedList() {
+                @Nonnull
+                @Override
+                public Number readItem(int index) {
+                    return dexFile.getDataBuffer().readShort(elementsStart + index * 2);
+                }
+            };
+            case 4 -> new ReturnedList() {
+                @Nonnull
+                @Override
+                public Number readItem(int index) {
+                    return dexFile.getDataBuffer().readInt(elementsStart + index * 4);
+                }
+            };
+            case 8 -> new ReturnedList() {
+                @Nonnull
+                @Override
+                public Number readItem(int index) {
+                    return dexFile.getDataBuffer().readLong(elementsStart + index * 8);
+                }
+            };
+            default -> throw new ExceptionWithContext("Invalid element width: %d", elementWidth);
+        };
     }
 
     @Override

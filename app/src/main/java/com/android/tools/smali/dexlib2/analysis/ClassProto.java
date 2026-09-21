@@ -799,33 +799,24 @@ public class ClassProto implements TypeProto {
                     // The sort order is based on type size (except references are first), and then based on the
                     // enum value of the primitive type for types of equal size. See: Primitive::Type enum
                     // in art/runtime/primitive.h
-                    switch (field.getType().charAt(0)) {
+                    return switch (field.getType().charAt(0)) {
                         /* reference */
-                        case '[':
-                        case 'L':
-                            return 0;
+                        case '[', 'L' -> 0;
                         /* 64 bit */
-                        case 'J':
-                            return 1;
-                        case 'D':
-                            return 2;
+                        case 'J' -> 1;
+                        case 'D' -> 2;
                         /* 32 bit */
-                        case 'I':
-                            return 3;
-                        case 'F':
-                            return 4;
+                        case 'I' -> 3;
+                        case 'F' -> 4;
                         /* 16 bit */
-                        case 'C':
-                            return 5;
-                        case 'S':
-                            return 6;
+                        case 'C' -> 5;
+                        case 'S' -> 6;
                         /* 8 bit */
-                        case 'Z':
-                            return 7;
-                        case 'B':
-                            return 8;
-                    }
-                    throw new ExceptionWithContext("Invalid field type: %s", field.getType());
+                        case 'Z' -> 7;
+                        case 'B' -> 8;
+                        default ->
+                                throw new ExceptionWithContext("Invalid field type: %s", field.getType());
+                    };
                 }
 
                 private int getFieldSize(@Nonnull FieldReference field) {
@@ -846,34 +837,21 @@ public class ClassProto implements TypeProto {
         if (classPath.isArt()) {
             return fieldOffset + getTypeSize(lastField.getType().charAt(0));
         } else {
-            switch (lastField.getType().charAt(0)) {
-                case 'J':
-                case 'D':
-                    return fieldOffset + 8;
-                default:
-                    return fieldOffset + 4;
-            }
+            return switch (lastField.getType().charAt(0)) {
+                case 'J', 'D' -> fieldOffset + 8;
+                default -> fieldOffset + 4;
+            };
         }
     }
 
     private static int getTypeSize(char type) {
-        switch (type) {
-            case 'J':
-            case 'D':
-                return 8;
-            case '[':
-            case 'L':
-            case 'I':
-            case 'F':
-                return 4;
-            case 'C':
-            case 'S':
-                return 2;
-            case 'B':
-            case 'Z':
-                return 1;
-        }
-        throw new ExceptionWithContext("Invalid type: %s", type);
+        return switch (type) {
+            case 'J', 'D' -> 8;
+            case '[', 'L', 'I', 'F' -> 4;
+            case 'C', 'S' -> 2;
+            case 'B', 'Z' -> 1;
+            default -> throw new ExceptionWithContext("Invalid type: %s", type);
+        };
     }
 
     @Nonnull public List<Method> getVtable() {
@@ -1228,16 +1206,11 @@ public class ClassProto implements TypeProto {
     }
 
     private static byte getFieldType(@Nonnull FieldReference field) {
-        switch (field.getType().charAt(0)) {
-            case '[':
-            case 'L':
-                return 0; //REFERENCE
-            case 'J':
-            case 'D':
-                return 1; //WIDE
-            default:
-                return 2; //OTHER
-        }
+        return switch (field.getType().charAt(0)) {
+            case '[', 'L' -> 0; //REFERENCE
+            case 'J', 'D' -> 1; //WIDE
+            default -> 2; //OTHER
+        };
     }
 
     private boolean isOverridableByDefaultMethod(@Nonnull Method method) {

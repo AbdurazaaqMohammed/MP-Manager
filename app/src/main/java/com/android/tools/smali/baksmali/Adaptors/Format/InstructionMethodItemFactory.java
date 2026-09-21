@@ -52,15 +52,14 @@ public class InstructionMethodItemFactory {
                     (UnresolvedOdexInstruction)instruction);
         }
 
-        switch (instruction.getOpcode().format) {
-            case ArrayPayload:
-                return new ArrayDataMethodItem(methodDef, codeAddress, (ArrayPayload)instruction);
-            case PackedSwitchPayload:
-                return new PackedSwitchMethodItem(methodDef, codeAddress, (PackedSwitchPayload)instruction);
-            case SparseSwitchPayload:
-                return new SparseSwitchMethodItem(methodDef, codeAddress, (SparseSwitchPayload)instruction);
-            default:
-                return new InstructionMethodItem<Instruction>(methodDef, codeAddress, instruction);
-        }
+        return switch (instruction.getOpcode().format) {
+            case ArrayPayload ->
+                    new ArrayDataMethodItem(methodDef, codeAddress, (ArrayPayload) instruction);
+            case PackedSwitchPayload ->
+                    new PackedSwitchMethodItem(methodDef, codeAddress, (PackedSwitchPayload) instruction);
+            case SparseSwitchPayload ->
+                    new SparseSwitchMethodItem(methodDef, codeAddress, (SparseSwitchPayload) instruction);
+            default -> new InstructionMethodItem<Instruction>(methodDef, codeAddress, instruction);
+        };
     }
 }

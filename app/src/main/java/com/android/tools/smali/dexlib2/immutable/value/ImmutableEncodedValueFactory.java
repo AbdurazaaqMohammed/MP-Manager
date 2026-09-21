@@ -59,73 +59,50 @@ import java.util.List;
 public class ImmutableEncodedValueFactory {
     @Nonnull
     public static ImmutableEncodedValue of(@Nonnull EncodedValue encodedValue) {
-        switch (encodedValue.getValueType()) {
-            case ValueType.BYTE:
-                return ImmutableByteEncodedValue.of((ByteEncodedValue)encodedValue);
-            case ValueType.SHORT:
-                return ImmutableShortEncodedValue.of((ShortEncodedValue)encodedValue);
-            case ValueType.CHAR:
-                return ImmutableCharEncodedValue.of((CharEncodedValue)encodedValue);
-            case ValueType.INT:
-                return ImmutableIntEncodedValue.of((IntEncodedValue)encodedValue);
-            case ValueType.LONG:
-                return ImmutableLongEncodedValue.of((LongEncodedValue)encodedValue);
-            case ValueType.FLOAT:
-                return ImmutableFloatEncodedValue.of((FloatEncodedValue)encodedValue);
-            case ValueType.DOUBLE:
-                return ImmutableDoubleEncodedValue.of((DoubleEncodedValue)encodedValue);
-            case ValueType.STRING:
-                return ImmutableStringEncodedValue.of((StringEncodedValue)encodedValue);
-            case ValueType.TYPE:
-                return ImmutableTypeEncodedValue.of((TypeEncodedValue)encodedValue);
-            case ValueType.FIELD:
-                return ImmutableFieldEncodedValue.of((FieldEncodedValue)encodedValue);
-            case ValueType.METHOD:
-                return ImmutableMethodEncodedValue.of((MethodEncodedValue)encodedValue);
-            case ValueType.ENUM:
-                return ImmutableEnumEncodedValue.of((EnumEncodedValue)encodedValue);
-            case ValueType.ARRAY:
-                return ImmutableArrayEncodedValue.of((ArrayEncodedValue)encodedValue);
-            case ValueType.ANNOTATION:
-                return ImmutableAnnotationEncodedValue.of((AnnotationEncodedValue)encodedValue);
-            case ValueType.NULL:
-                return ImmutableNullEncodedValue.INSTANCE;
-            case ValueType.BOOLEAN:
-                return ImmutableBooleanEncodedValue.of((BooleanEncodedValue)encodedValue);
-            case ValueType.METHOD_HANDLE:
-                return ImmutableMethodHandleEncodedValue.of((MethodHandleEncodedValue) encodedValue);
-            case ValueType.METHOD_TYPE:
-                return ImmutableMethodTypeEncodedValue.of((MethodTypeEncodedValue) encodedValue);
-            default:
-                throw new IllegalArgumentException("Invalid value type.");
-        }
+        return switch (encodedValue.getValueType()) {
+            case ValueType.BYTE -> ImmutableByteEncodedValue.of((ByteEncodedValue) encodedValue);
+            case ValueType.SHORT -> ImmutableShortEncodedValue.of((ShortEncodedValue) encodedValue);
+            case ValueType.CHAR -> ImmutableCharEncodedValue.of((CharEncodedValue) encodedValue);
+            case ValueType.INT -> ImmutableIntEncodedValue.of((IntEncodedValue) encodedValue);
+            case ValueType.LONG -> ImmutableLongEncodedValue.of((LongEncodedValue) encodedValue);
+            case ValueType.FLOAT -> ImmutableFloatEncodedValue.of((FloatEncodedValue) encodedValue);
+            case ValueType.DOUBLE ->
+                    ImmutableDoubleEncodedValue.of((DoubleEncodedValue) encodedValue);
+            case ValueType.STRING ->
+                    ImmutableStringEncodedValue.of((StringEncodedValue) encodedValue);
+            case ValueType.TYPE -> ImmutableTypeEncodedValue.of((TypeEncodedValue) encodedValue);
+            case ValueType.FIELD -> ImmutableFieldEncodedValue.of((FieldEncodedValue) encodedValue);
+            case ValueType.METHOD ->
+                    ImmutableMethodEncodedValue.of((MethodEncodedValue) encodedValue);
+            case ValueType.ENUM -> ImmutableEnumEncodedValue.of((EnumEncodedValue) encodedValue);
+            case ValueType.ARRAY -> ImmutableArrayEncodedValue.of((ArrayEncodedValue) encodedValue);
+            case ValueType.ANNOTATION ->
+                    ImmutableAnnotationEncodedValue.of((AnnotationEncodedValue) encodedValue);
+            case ValueType.NULL -> ImmutableNullEncodedValue.INSTANCE;
+            case ValueType.BOOLEAN ->
+                    ImmutableBooleanEncodedValue.of((BooleanEncodedValue) encodedValue);
+            case ValueType.METHOD_HANDLE ->
+                    ImmutableMethodHandleEncodedValue.of((MethodHandleEncodedValue) encodedValue);
+            case ValueType.METHOD_TYPE ->
+                    ImmutableMethodTypeEncodedValue.of((MethodTypeEncodedValue) encodedValue);
+            default -> throw new IllegalArgumentException("Invalid value type.");
+        };
     }
 
     @Nonnull
     public static EncodedValue defaultValueForType(String type) {
-        switch (type.charAt(0)) {
-            case 'Z':
-                return ImmutableBooleanEncodedValue.FALSE_VALUE;
-            case 'B':
-                return new ImmutableByteEncodedValue((byte)0);
-            case 'S':
-                return new ImmutableShortEncodedValue((short)0);
-            case 'C':
-                return new ImmutableCharEncodedValue((char)0);
-            case 'I':
-                return new ImmutableIntEncodedValue(0);
-            case 'J':
-                return new ImmutableLongEncodedValue(0);
-            case 'F':
-                return new ImmutableFloatEncodedValue(0);
-            case 'D':
-                return new ImmutableDoubleEncodedValue(0);
-            case 'L':
-            case '[':
-                return ImmutableNullEncodedValue.INSTANCE;
-            default:
-                throw new ExceptionWithContext("Unrecognized type: %s", type);
-        }
+        return switch (type.charAt(0)) {
+            case 'Z' -> ImmutableBooleanEncodedValue.FALSE_VALUE;
+            case 'B' -> new ImmutableByteEncodedValue((byte) 0);
+            case 'S' -> new ImmutableShortEncodedValue((short) 0);
+            case 'C' -> new ImmutableCharEncodedValue((char) 0);
+            case 'I' -> new ImmutableIntEncodedValue(0);
+            case 'J' -> new ImmutableLongEncodedValue(0);
+            case 'F' -> new ImmutableFloatEncodedValue(0);
+            case 'D' -> new ImmutableDoubleEncodedValue(0);
+            case 'L', '[' -> ImmutableNullEncodedValue.INSTANCE;
+            default -> throw new ExceptionWithContext("Unrecognized type: %s", type);
+        };
     }
 
     @Nullable

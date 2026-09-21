@@ -94,104 +94,56 @@ public final class FileMenuOrder {
     }
 
     public static String labelFor(Context context, String id, String direction) {
-        switch (id) {
-            case COPY:
-                return "Copy " + direction;
-            case MOVE:
-                return "Move " + direction;
-            case RENAME:
-                return "Rename";
-            case DELETE:
-                return "Delete";
-            case COMPRESS:
-                return "Compress";
-            case PROPERTIES:
-                return "Properties";
-            case SHARE:
-                return "Share";
-            case OPEN_WITH:
-                return "Open with";
-            case BOOKMARK:
-                return "Bookmark";
-            case CMD:
-                return "Command Helper";
-            case CHECK:
-                return context.getString(R.string.checksums);
-            case BATCH_SIGN:
-                return context.getString(R.string.batch_sign);
-            case BATCH_OPT:
-                return context.getString(R.string.batch_optimize);
-            case BATCH_INSTALL:
-                return context.getString(R.string.batch_install);
-            case EXTRACT:
-                return context.getString(R.string.extract);
-            case CMP_ZIP:
-                return "Compare ZIP";
-            case CMP_ARSC:
-                return "Compare ARSC";
-            case CMP_TEXT:
-                return "Compare Text";
-            case CMP_HASH:
-                return context.getString(R.string.compare_hashes);
-            case CMP_APK:
-                return context.getString(R.string.compare_apks);
-            case BATCH_CROP:
-                return "Crop images";
-            case BATCH_EXIF:
-                return "Set EXIF tags";
-            case BATCH_STRIP_META:
-                return "Remove metadata";
-            default:
-                return id;
-        }
+        return switch (id) {
+            case COPY -> "Copy " + direction;
+            case MOVE -> "Move " + direction;
+            case RENAME -> "Rename";
+            case DELETE -> "Delete";
+            case COMPRESS -> "Compress";
+            case PROPERTIES -> "Properties";
+            case SHARE -> "Share";
+            case OPEN_WITH -> "Open with";
+            case BOOKMARK -> "Bookmark";
+            case CMD -> "Command Helper";
+            case CHECK -> context.getString(R.string.checksums);
+            case BATCH_SIGN -> context.getString(R.string.batch_sign);
+            case BATCH_OPT -> context.getString(R.string.batch_optimize);
+            case BATCH_INSTALL -> context.getString(R.string.batch_install);
+            case EXTRACT -> context.getString(R.string.extract);
+            case CMP_ZIP -> "Compare ZIP";
+            case CMP_ARSC -> "Compare ARSC";
+            case CMP_TEXT -> "Compare Text";
+            case CMP_HASH -> context.getString(R.string.compare_hashes);
+            case CMP_APK -> context.getString(R.string.compare_apks);
+            case BATCH_CROP -> "Crop images";
+            case BATCH_EXIF -> "Set EXIF tags";
+            case BATCH_STRIP_META -> "Remove metadata";
+            default -> id;
+        };
     }
 
     public static int iconFor(Context context, String id, boolean moveDisabled, boolean zipDisabled) {
-        switch (id) {
-            case COPY:
-                return R.drawable.baseline_content_copy_24;
-            case MOVE:
-                return R.drawable.baseline_content_cut_24;
-            case RENAME:
-                return R.drawable.baseline_drive_file_rename_outline_24;
-            case DELETE:
-                return R.drawable.baseline_delete_24;
-            case COMPRESS:
-                return R.drawable.baseline_compress_24;
-            case PROPERTIES:
-                return R.drawable.baseline_info_24;
-            case SHARE:
-                return R.drawable.baseline_share_24;
-            case OPEN_WITH:
-                return R.drawable.baseline_open_in_new_24;
-            case BOOKMARK:
-                return android.R.drawable.ic_input_get;
-            case CMD:
-                return R.drawable.terminal_24px;
-            case CHECK:
-                return R.drawable.tag_24px;
-            case BATCH_SIGN:
-            case BATCH_OPT:
-            case BATCH_INSTALL:
-                return R.drawable.apk_document_24px;
-            case EXTRACT:
-                return R.drawable.baseline_compress_24;
-            case CMP_ZIP:
-            case CMP_ARSC:
-                return R.drawable.baseline_swap_horiz_24;
-            case CMP_TEXT:
-            case CMP_HASH:
-            case CMP_APK:
-                return R.drawable.baseline_swap_horiz_24;
-            case BATCH_CROP:
-                return R.drawable.edit_24px;
-            case BATCH_EXIF:
-                return R.drawable.baseline_text_snippet_24;
-            case BATCH_STRIP_META:
-                return R.drawable.baseline_delete_24;
-            default:
-                return 0;
-        }
+        return switch (id) {
+            case COPY -> R.drawable.baseline_content_copy_24;
+            case MOVE -> R.drawable.baseline_content_cut_24;
+            case RENAME -> R.drawable.baseline_drive_file_rename_outline_24;
+            case DELETE -> R.drawable.baseline_delete_24;
+            case COMPRESS -> R.drawable.baseline_compress_24;
+            case PROPERTIES -> R.drawable.baseline_info_24;
+            case SHARE -> R.drawable.baseline_share_24;
+            case OPEN_WITH -> R.drawable.baseline_open_in_new_24;
+            case BOOKMARK -> android.R.drawable.ic_input_get;
+            case CMD -> R.drawable.terminal_24px;
+            case CHECK -> R.drawable.tag_24px;
+            case BATCH_SIGN, BATCH_OPT, BATCH_INSTALL -> R.drawable.apk_document_24px;
+            case EXTRACT -> R.drawable.baseline_compress_24;
+            case CMP_ZIP, CMP_ARSC -> R.drawable.baseline_swap_horiz_24;
+            case CMP_TEXT, CMP_HASH, CMP_APK -> R.drawable.baseline_swap_horiz_24;
+            case BATCH_CROP -> R.drawable.edit_24px;
+            case BATCH_EXIF -> R.drawable.baseline_text_snippet_24;
+            case BATCH_STRIP_META -> R.drawable.baseline_delete_24;
+            default -> 0;
+        };
     }
 
     public static class MenuItem {

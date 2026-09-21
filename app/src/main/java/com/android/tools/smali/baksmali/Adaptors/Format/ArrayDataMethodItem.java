@@ -50,15 +50,11 @@ public class ArrayDataMethodItem extends InstructionMethodItem<ArrayPayload> {
 
         List<Number> elements = instruction.getArrayElements();
 
-        String suffix = "";
-        switch (elementWidth) {
-            case 1:
-                suffix = "t";
-                break;
-            case 2:
-                suffix = "s";
-                break;
-        }
+        String suffix = switch (elementWidth) {
+            case 1 -> "t";
+            case 2 -> "s";
+            default -> "";
+        };
 
         for (Number number: elements) {
             writer.writeSignedIntOrLongTo(number.longValue());

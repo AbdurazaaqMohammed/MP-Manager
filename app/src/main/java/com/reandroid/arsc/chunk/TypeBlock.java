@@ -391,14 +391,10 @@ public class TypeBlock extends Chunk<TypeHeader>
         return typeName;
     }
     private static boolean isWildTypeNamePrefix(char ch) {
-        switch (ch) {
-            case '^':
-            case '*':
-            case '+':
-                return true;
-            default:
-                return false;
-        }
+        return switch (ch) {
+            case '^', '*', '+' -> true;
+            default -> false;
+        };
     }
 
     public static final String NAME_name = "name";

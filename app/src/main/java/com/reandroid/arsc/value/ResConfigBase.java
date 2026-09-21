@@ -333,19 +333,10 @@ class ResConfigBase extends FixedBlockContainer
         return size +  ((4 - (size % 4)) % size);
     }
     public static boolean isValidSize(int size){
-        switch (size){
-            case SIZE_16:
-            case SIZE_28:
-            case SIZE_32:
-            case SIZE_36:
-            case SIZE_48:
-            case SIZE_52:
-            case SIZE_56:
-            case SIZE_64:
-                return true;
-            default:
-                return size > SIZE_64;
-        }
+        return switch (size) {
+            case SIZE_16, SIZE_28, SIZE_32, SIZE_36, SIZE_48, SIZE_52, SIZE_56, SIZE_64 -> true;
+            default -> size > SIZE_64;
+        };
     }
 
 

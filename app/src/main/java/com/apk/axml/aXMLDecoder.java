@@ -133,64 +133,52 @@ public class aXMLDecoder {
 		final int type = parser.getAttributeValueType(index);
 		final int data = parser.getAttributeValueData(index);
 
-		switch (type) {
-			case TypedValue.TYPE_STRING:
-				return parser.getAttributeValue(index);
+        return switch (type) {
+            case TypedValue.TYPE_STRING -> parser.getAttributeValue(index);
+            case TypedValue.TYPE_REFERENCE -> {
+                if (entries != null) {
+                    for (ResEntry e : entries) {
+                        if (e.getResourceId() == data) {
+                            yield e.getName() != null ? e.getName() : e.getValue() != null ? e.getValue() : e.getResAttr();
+                        }
+                    }
+                }
+                yield String.format("@%08X", data);
+            }
+            case TypedValue.TYPE_ATTRIBUTE -> {
+                if (entries != null) {
+                    for (ResEntry e : entries) {
+                        if (e.getResourceId() == data) {
+                            yield e.getName() != null ? "?" + e.getName().substring(1) : e.getValue() != null ? e.getValue() : String.format("?%08X", data);
+                        }
+                    }
+                }
+                yield String.format("?%08X", data);
+            }
+            case TypedValue.TYPE_INT_BOOLEAN -> data != 0 ? "true" : "false";
+            case TypedValue.TYPE_DIMENSION ->
+                    trimTrailingZero(complexToFloat(data)) + DIMENSION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
+            case TypedValue.TYPE_FRACTION ->
+                    trimTrailingZero(complexToFloat(data)) + FRACTION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
+            case TypedValue.TYPE_FLOAT -> trimTrailingZero(Float.intBitsToFloat(data));
+            case TypedValue.TYPE_INT_HEX -> String.format("0x%08X", data);
+            case TypedValue.TYPE_INT_DEC -> Integer.toString(data);
+            case TypedValue.TYPE_INT_COLOR_ARGB8 -> String.format("#%08X", data); // AARRGGBB
 
-			case TypedValue.TYPE_REFERENCE:
-				if (entries != null) {
-					for (ResEntry e : entries) {
-						if (e.getResourceId() == data) {
-							return e.getName() != null ? e.getName() : e.getValue() != null ? e.getValue() : e.getResAttr();
-						}
-					}
-				}
-				return String.format("@%08X", data);
+            case TypedValue.TYPE_INT_COLOR_RGB8 ->
+                    String.format("#%06X", data & 0x00FFFFFF); // RRGGBB
 
-			case TypedValue.TYPE_ATTRIBUTE:
-				if (entries != null) {
-					for (ResEntry e : entries) {
-						if (e.getResourceId() == data) {
-							return e.getName() != null ? "?" + e.getName().substring(1) : e.getValue() != null ? e.getValue() : String.format("?%08X", data);
-						}
-					}
-				}
-				return String.format("?%08X", data);
+            case TypedValue.TYPE_INT_COLOR_ARGB4 ->
+                    String.format("#%04X", data & 0x0000FFFF); // ARGB (4 bits each)
 
-			case TypedValue.TYPE_INT_BOOLEAN:
-				return data != 0 ? "true" : "false";
+            case TypedValue.TYPE_INT_COLOR_RGB4 ->
+                    String.format("#%03X", data & 0x00000FFF); // RGB (4 bits each)
 
-			case TypedValue.TYPE_DIMENSION:
-				return trimTrailingZero(complexToFloat(data)) + DIMENSION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
-
-			case TypedValue.TYPE_FRACTION:
-				return trimTrailingZero(complexToFloat(data)) + FRACTION_UNITS[data & TypedValue.COMPLEX_UNIT_MASK];
-
-			case TypedValue.TYPE_FLOAT:
-				return trimTrailingZero(Float.intBitsToFloat(data));
-
-			case TypedValue.TYPE_INT_HEX:
-				return String.format("0x%08X", data);
-
-			case TypedValue.TYPE_INT_DEC:
-				return Integer.toString(data);
-
-			case TypedValue.TYPE_INT_COLOR_ARGB8:
-				return String.format("#%08X", data); // AARRGGBB
-
-			case TypedValue.TYPE_INT_COLOR_RGB8:
-				return String.format("#%06X", data & 0x00FFFFFF); // RRGGBB
-
-			case TypedValue.TYPE_INT_COLOR_ARGB4:
-				return String.format("#%04X", data & 0x0000FFFF); // ARGB (4 bits each)
-
-			case TypedValue.TYPE_INT_COLOR_RGB4:
-				return String.format("#%03X", data & 0x00000FFF); // RGB (4 bits each)
-
-			default:
-				String v = parser.getAttributeValue(index);
-				return v != null ? v : String.format("<0x%X, type 0x%02X>", data, type);
-		}
+            default -> {
+                String v = parser.getAttributeValue(index);
+                yield v != null ? v : String.format("<0x%X, type 0x%02X>", data, type);
+            }
+        };
 	}
 
 	@RequiresApi(api = Build.VERSION_CODES.KITKAT)

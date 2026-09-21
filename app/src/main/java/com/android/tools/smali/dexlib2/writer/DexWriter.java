@@ -786,27 +786,18 @@ public abstract class DexWriter<
             MethodHandleKey methodHandleReference = entry.getKey();
             writer.writeUshort(methodHandleReference.getMethodHandleType());
             writer.writeUshort(0);
-            int memberIndex;
-            switch (methodHandleReference.getMethodHandleType()) {
-                case MethodHandleType.STATIC_PUT:
-                case MethodHandleType.STATIC_GET:
-                case MethodHandleType.INSTANCE_PUT:
-                case MethodHandleType.INSTANCE_GET:
-                    memberIndex = fieldSection.getItemIndex(
-                            methodHandleSection.getFieldReference(methodHandleReference));
-                    break;
-                case MethodHandleType.INVOKE_STATIC:
-                case MethodHandleType.INVOKE_INSTANCE:
-                case MethodHandleType.INVOKE_CONSTRUCTOR:
-                case MethodHandleType.INVOKE_DIRECT:
-                case MethodHandleType.INVOKE_INTERFACE:
-                    memberIndex = methodSection.getItemIndex(
-                            methodHandleSection.getMethodReference(methodHandleReference));
-                    break;
-                default:
-                    throw new ExceptionWithContext("Invalid method handle type: %d",
-                            methodHandleReference.getMethodHandleType());
-            }
+            int memberIndex = switch (methodHandleReference.getMethodHandleType()) {
+                case MethodHandleType.STATIC_PUT, MethodHandleType.STATIC_GET,
+                     MethodHandleType.INSTANCE_PUT, MethodHandleType.INSTANCE_GET ->
+                        fieldSection.getItemIndex(
+                                methodHandleSection.getFieldReference(methodHandleReference));
+                case MethodHandleType.INVOKE_STATIC, MethodHandleType.INVOKE_INSTANCE,
+                     MethodHandleType.INVOKE_CONSTRUCTOR, MethodHandleType.INVOKE_DIRECT,
+                     MethodHandleType.INVOKE_INTERFACE -> methodSection.getItemIndex(
+                        methodHandleSection.getMethodReference(methodHandleReference));
+                default -> throw new ExceptionWithContext("Invalid method handle type: %d",
+                        methodHandleReference.getMethodHandleType());
+            };
 
             writer.writeUshort(memberIndex);
             writer.writeUshort(0);

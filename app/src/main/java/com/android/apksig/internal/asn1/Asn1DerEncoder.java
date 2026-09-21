@@ -62,16 +62,13 @@ public final class Asn1DerEncoder {
         }
 
         Asn1Type containerType = containerAnnotation.type();
-        switch (containerType) {
-            case CHOICE:
-                return toChoice(container);
-            case SEQUENCE:
-                return toSequence(container);
-            case UNENCODED_CONTAINER:
-                return toSequence(container, true);
-            default:
-                throw new Asn1EncodingException("Unsupported container type: " + containerType);
-        }
+        return switch (containerType) {
+            case CHOICE -> toChoice(container);
+            case SEQUENCE -> toSequence(container);
+            case UNENCODED_CONTAINER -> toSequence(container, true);
+            default ->
+                    throw new Asn1EncodingException("Unsupported container type: " + containerType);
+        };
     }
 
     private static byte[] toChoice(Object container) throws Asn1EncodingException {

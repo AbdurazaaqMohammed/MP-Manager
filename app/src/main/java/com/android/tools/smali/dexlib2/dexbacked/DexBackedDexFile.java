@@ -253,24 +253,17 @@ public class DexBackedDexFile implements DexFile {
     }
 
     public List<? extends Reference> getReferences(int referenceType) {
-        switch (referenceType) {
-            case ReferenceType.STRING:
-                return getStringReferences();
-            case ReferenceType.TYPE:
-                return getTypeReferences();
-            case ReferenceType.METHOD:
-                return getMethodSection();
-            case ReferenceType.FIELD:
-                return getFieldSection();
-            case ReferenceType.METHOD_PROTO:
-                return getMethodSection();
-            case ReferenceType.METHOD_HANDLE:
-                return getMethodHandleSection();
-            case ReferenceType.CALL_SITE:
-                return getCallSiteSection();
-            default:
-                throw new IllegalArgumentException(String.format("Invalid reference type: %d", referenceType));
-        }
+        return switch (referenceType) {
+            case ReferenceType.STRING -> getStringReferences();
+            case ReferenceType.TYPE -> getTypeReferences();
+            case ReferenceType.METHOD -> getMethodSection();
+            case ReferenceType.FIELD -> getFieldSection();
+            case ReferenceType.METHOD_PROTO -> getMethodSection();
+            case ReferenceType.METHOD_HANDLE -> getMethodHandleSection();
+            case ReferenceType.CALL_SITE -> getCallSiteSection();
+            default ->
+                    throw new IllegalArgumentException(String.format("Invalid reference type: %d", referenceType));
+        };
     }
 
     public List<MapItem> getMapItems() {

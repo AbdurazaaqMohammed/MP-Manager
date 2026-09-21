@@ -718,24 +718,16 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
         return null;
     }
     public static SectionType<? extends IdItem> getReferenceType(int reference){
-        switch (reference){
-            case 0:
-                return STRING_ID;
-            case 1:
-                return TYPE_ID;
-            case 2:
-                return FIELD_ID;
-            case 3:
-                return METHOD_ID;
-            case 4:
-                return PROTO_ID;
-            case 5:
-                return CALL_SITE_ID;
-            case 6:
-                return METHOD_HANDLE;
-            default:
-                return null;
-        }
+        return switch (reference) {
+            case 0 -> STRING_ID;
+            case 1 -> TYPE_ID;
+            case 2 -> FIELD_ID;
+            case 3 -> METHOD_ID;
+            case 4 -> PROTO_ID;
+            case 5 -> CALL_SITE_ID;
+            case 6 -> METHOD_HANDLE;
+            default -> null;
+        };
     }
 
     public static SectionType<? extends IdItem> getIdSectionType(Key key) {

@@ -190,13 +190,10 @@ public class PopupManager {
     }
 
     public static double mapPreferenceToWindowSize(String value) {
-        switch (value) {
-            case "0":
-                return 0.80;
-            case "1":
-                return 0.65;
-            default:
-                return 0.50;
-        }
+        return switch (value) {
+            case "0" -> 0.80;
+            case "1" -> 0.65;
+            default -> 0.50;
+        };
     }
 }

@@ -549,47 +549,41 @@ BuilderAnnotationSetPool, BuilderEncodedArrayPool> {
 	}
 	
 	@Nonnull BuilderEncodedValue internEncodedValue(@Nonnull EncodedValue encodedValue) {
-		switch (encodedValue.getValueType()) {
-			case ValueType.ANNOTATION:
-			return internAnnotationEncodedValue((AnnotationEncodedValue)encodedValue);
-			case ValueType.ARRAY:
-			return internArrayEncodedValue((ArrayEncodedValue)encodedValue);
-			case ValueType.BOOLEAN:
-			boolean value = ((BooleanEncodedValue)encodedValue).getValue();
-			return value? BuilderBooleanEncodedValue.TRUE_VALUE:BuilderBooleanEncodedValue.FALSE_VALUE;
-			case ValueType.BYTE:
-			return new BuilderByteEncodedValue(((ByteEncodedValue)encodedValue).getValue());
-			case ValueType.CHAR:
-			return new BuilderCharEncodedValue(((CharEncodedValue)encodedValue).getValue());
-			case ValueType.DOUBLE:
-			return new BuilderDoubleEncodedValue(((DoubleEncodedValue)encodedValue).getValue());
-			case ValueType.ENUM:
-			return internEnumEncodedValue((EnumEncodedValue)encodedValue);
-			case ValueType.FIELD:
-			return internFieldEncodedValue((FieldEncodedValue)encodedValue);
-			case ValueType.FLOAT:
-			return new BuilderFloatEncodedValue(((FloatEncodedValue)encodedValue).getValue());
-			case ValueType.INT:
-			return new BuilderIntEncodedValue(((IntEncodedValue)encodedValue).getValue());
-			case ValueType.LONG:
-			return new BuilderLongEncodedValue(((LongEncodedValue)encodedValue).getValue());
-			case ValueType.METHOD:
-			return internMethodEncodedValue((MethodEncodedValue)encodedValue);
-			case ValueType.NULL:
-			return BuilderNullEncodedValue.INSTANCE;
-			case ValueType.SHORT:
-			return new BuilderShortEncodedValue(((ShortEncodedValue)encodedValue).getValue());
-			case ValueType.STRING:
-			return internStringEncodedValue((StringEncodedValue)encodedValue);
-			case ValueType.TYPE:
-			return internTypeEncodedValue((TypeEncodedValue)encodedValue);
-			case ValueType.METHOD_TYPE:
-			return internMethodTypeEncodedValue((MethodTypeEncodedValue) encodedValue);
-			case ValueType.METHOD_HANDLE:
-			return internMethodHandleEncodedValue((MethodHandleEncodedValue) encodedValue);
-			default:
-			throw new ExceptionWithContext("Unexpected encoded value type: %d", encodedValue.getValueType());
-		}
+        return switch (encodedValue.getValueType()) {
+            case ValueType.ANNOTATION ->
+                    internAnnotationEncodedValue((AnnotationEncodedValue) encodedValue);
+            case ValueType.ARRAY -> internArrayEncodedValue((ArrayEncodedValue) encodedValue);
+            case ValueType.BOOLEAN -> {
+                boolean value = ((BooleanEncodedValue) encodedValue).getValue();
+                yield value ? BuilderBooleanEncodedValue.TRUE_VALUE : BuilderBooleanEncodedValue.FALSE_VALUE;
+            }
+            case ValueType.BYTE ->
+                    new BuilderByteEncodedValue(((ByteEncodedValue) encodedValue).getValue());
+            case ValueType.CHAR ->
+                    new BuilderCharEncodedValue(((CharEncodedValue) encodedValue).getValue());
+            case ValueType.DOUBLE ->
+                    new BuilderDoubleEncodedValue(((DoubleEncodedValue) encodedValue).getValue());
+            case ValueType.ENUM -> internEnumEncodedValue((EnumEncodedValue) encodedValue);
+            case ValueType.FIELD -> internFieldEncodedValue((FieldEncodedValue) encodedValue);
+            case ValueType.FLOAT ->
+                    new BuilderFloatEncodedValue(((FloatEncodedValue) encodedValue).getValue());
+            case ValueType.INT ->
+                    new BuilderIntEncodedValue(((IntEncodedValue) encodedValue).getValue());
+            case ValueType.LONG ->
+                    new BuilderLongEncodedValue(((LongEncodedValue) encodedValue).getValue());
+            case ValueType.METHOD -> internMethodEncodedValue((MethodEncodedValue) encodedValue);
+            case ValueType.NULL -> BuilderNullEncodedValue.INSTANCE;
+            case ValueType.SHORT ->
+                    new BuilderShortEncodedValue(((ShortEncodedValue) encodedValue).getValue());
+            case ValueType.STRING -> internStringEncodedValue((StringEncodedValue) encodedValue);
+            case ValueType.TYPE -> internTypeEncodedValue((TypeEncodedValue) encodedValue);
+            case ValueType.METHOD_TYPE ->
+                    internMethodTypeEncodedValue((MethodTypeEncodedValue) encodedValue);
+            case ValueType.METHOD_HANDLE ->
+                    internMethodHandleEncodedValue((MethodHandleEncodedValue) encodedValue);
+            default ->
+                    throw new ExceptionWithContext("Unexpected encoded value type: %d", encodedValue.getValueType());
+        };
 	}
 	
 	@Nonnull private BuilderAnnotationEncodedValue internAnnotationEncodedValue(@Nonnull AnnotationEncodedValue value) {

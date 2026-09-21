@@ -353,16 +353,12 @@ public abstract class V4SchemeSigner {
     }
 
     public static int digestAlgorithmSortingOrder(ContentDigestAlgorithm contentDigestAlgorithm) {
-        switch (contentDigestAlgorithm) {
-            case CHUNKED_SHA256:
-                return 0;
-            case VERITY_CHUNKED_SHA256:
-                return 1;
-            case CHUNKED_SHA512:
-                return 2;
-            default:
-                return -1;
-        }
+        return switch (contentDigestAlgorithm) {
+            case CHUNKED_SHA256 -> 0;
+            case VERITY_CHUNKED_SHA256 -> 1;
+            case CHUNKED_SHA512 -> 2;
+            default -> -1;
+        };
     }
 
     private static boolean isSupported(final ContentDigestAlgorithm contentDigestAlgorithm,
@@ -381,13 +377,11 @@ public abstract class V4SchemeSigner {
 
     private static Pair<Integer, Byte> convertToV4HashingInfo(ContentDigestAlgorithm algorithm)
             throws NoSuchAlgorithmException {
-        switch (algorithm) {
-            case VERITY_CHUNKED_SHA256:
-                return Pair.of(V4Signature.HASHING_ALGORITHM_SHA256,
-                        V4Signature.LOG2_BLOCK_SIZE_4096_BYTES);
-            default:
-                throw new NoSuchAlgorithmException(
-                        "Invalid hash algorithm, only SHA2-256 over 4 KB chunks supported.");
-        }
+        return switch (algorithm) {
+            case VERITY_CHUNKED_SHA256 -> Pair.of(V4Signature.HASHING_ALGORITHM_SHA256,
+                    V4Signature.LOG2_BLOCK_SIZE_4096_BYTES);
+            default -> throw new NoSuchAlgorithmException(
+                    "Invalid hash algorithm, only SHA2-256 over 4 KB chunks supported.");
+        };
     }
 }

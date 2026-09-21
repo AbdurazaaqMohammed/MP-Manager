@@ -324,20 +324,14 @@ public class DexUtils {
         return sb.toString();
     }
     private static char getEscaped(char ch){
-        switch(ch) {
-            case 'b':
-                return '\b';
-            case 'f':
-                return '\f';
-            case 'n':
-                return '\n';
-            case 'r':
-                return '\r';
-            case 't':
-                return '\t';
-            default:
-                return ch;
-        }
+        return switch (ch) {
+            case 'b' -> '\b';
+            case 'f' -> '\f';
+            case 'n' -> '\n';
+            case 'r' -> '\r';
+            case 't' -> '\t';
+            default -> ch;
+        };
     }
     private static Character nextHex(String text, int start){
         int length = text.length();
@@ -537,20 +531,10 @@ public class DexUtils {
         return isPrimitive(type.charAt(0));
     }
     public static boolean isPrimitive(char ch){
-        switch (ch){
-            case 'B':
-            case 'C':
-            case 'D':
-            case 'F':
-            case 'I':
-            case 'J':
-            case 'S':
-            case 'V':
-            case 'Z':
-                return true;
-            default:
-                return false;
-        }
+        return switch (ch) {
+            case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'V', 'Z' -> true;
+            default -> false;
+        };
     }
     public static boolean looksSignatureType(String name){
         int length = name.length();
@@ -715,19 +699,10 @@ public class DexUtils {
         return results.toArray(new String[results.size()]);
     }
     private static boolean isSignatureSymbol(char ch){
-        switch (ch){
-            case '+':
-            case '-':
-            case '*':
-            case ':':
-            case ';':
-            case '<':
-            case '>':
-            case '?':
-                return true;
-            default:
-                return false;
-        }
+        return switch (ch) {
+            case '+', '-', '*', ':', ';', '<', '>', '?' -> true;
+            default -> false;
+        };
     }
 
     public static final String[] PLATFORM_PACKAGES = new String[]{

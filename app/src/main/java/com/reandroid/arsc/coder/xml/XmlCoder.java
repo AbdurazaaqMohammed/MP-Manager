@@ -441,17 +441,12 @@ public class XmlCoder {
         }
         public int decode(XmlSerializer serializer, Entry entry) throws IOException{
             ChildType childType = ChildType.getType(entry);
-            switch (childType){
-                case ATTR:
-                    return decodeAttr(serializer, entry);
-                case ARRAY:
-                    return decodeArray(serializer, entry);
-                case PLURAL:
-                    return decodePlural(serializer, entry);
-                case STYLE:
-                    return decodeStyle(serializer, entry);
-            }
-            return 0;
+            return switch (childType) {
+                case ATTR -> decodeAttr(serializer, entry);
+                case ARRAY -> decodeArray(serializer, entry);
+                case PLURAL -> decodePlural(serializer, entry);
+                case STYLE -> decodeStyle(serializer, entry);
+            };
         }
         public int decodeAttr(XmlSerializer serializer, Entry entry) throws IOException {
             ResTableMapEntry mapEntry = entry.getResTableMapEntry();
