@@ -37,8 +37,8 @@ import java.util.Arrays;
 
 public class BitArray {
 
-    private byte[] repn;
-    private int length;
+    private final byte[] repn;
+    private final int length;
 
     private static final int BITS_PER_UNIT = 8;
 

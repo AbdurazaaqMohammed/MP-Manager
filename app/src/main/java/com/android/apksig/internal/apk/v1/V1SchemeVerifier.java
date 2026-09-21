@@ -1504,7 +1504,7 @@ public abstract class V1SchemeVerifier {
     }
 
     private static class SignedAttributes {
-        private Map<String, List<Asn1OpaqueObject>> mAttrs;
+        private final Map<String, List<Asn1OpaqueObject>> mAttrs;
 
         public SignedAttributes(Collection<Attribute> attrs) throws Pkcs7DecodingException {
             Map<String, List<Asn1OpaqueObject>> result = new HashMap<>(attrs.size());

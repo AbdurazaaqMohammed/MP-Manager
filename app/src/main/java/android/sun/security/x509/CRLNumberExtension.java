@@ -57,8 +57,8 @@ implements CertAttrSet<String> {
     private static final String LABEL = "CRL Number";
 
     private BigInteger crlNumber = null;
-    private String extensionName;
-    private String extensionLabel;
+    private final String extensionName;
+    private final String extensionLabel;
 
     // Encode this extension value
     private void encodeThis() throws IOException {

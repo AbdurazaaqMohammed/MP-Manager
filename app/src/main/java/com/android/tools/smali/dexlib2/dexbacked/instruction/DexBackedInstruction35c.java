@@ -43,7 +43,7 @@ import javax.annotation.Nonnull;
 public class DexBackedInstruction35c extends DexBackedInstruction implements Instruction35c, UpdateReference {
 
 	private Reference reference = null;
-    private Reference reference2 = null;
+    private final Reference reference2 = null;
 
     public DexBackedInstruction35c(@Nonnull DexBackedDexFile dexFile,
                                    @Nonnull Opcode opcode,

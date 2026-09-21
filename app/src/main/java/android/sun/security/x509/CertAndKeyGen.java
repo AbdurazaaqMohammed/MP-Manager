@@ -294,7 +294,7 @@ public final class CertAndKeyGen {
     }
 
     private SecureRandom        prng;
-    private String              sigAlg;
+    private final String              sigAlg;
     private KeyPairGenerator    keyGen;
     private PublicKey           publicKey;
     private PrivateKey          privateKey;

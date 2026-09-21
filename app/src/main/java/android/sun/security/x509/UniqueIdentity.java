@@ -36,7 +36,7 @@ import java.io.IOException;
  */
 public class UniqueIdentity {
     // Private data members
-    private android.sun.security.util.BitArray id;
+    private final android.sun.security.util.BitArray id;
 
     /**
      * The default constructor for this class.

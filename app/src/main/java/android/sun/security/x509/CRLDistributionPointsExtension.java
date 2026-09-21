@@ -100,7 +100,7 @@ public class CRLDistributionPointsExtension extends Extension
      */
     private List<android.sun.security.x509.DistributionPoint> distributionPoints;
 
-    private String extensionName;
+    private final String extensionName;
 
     /**
      * Create a CRLDistributionPointsExtension from a List of

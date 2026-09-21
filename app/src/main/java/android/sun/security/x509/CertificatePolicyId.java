@@ -37,7 +37,7 @@ import java.io.IOException;
  * @author Hemma Prafullchandra
  */
 public class CertificatePolicyId {
-    private android.sun.security.util.ObjectIdentifier id;
+    private final android.sun.security.util.ObjectIdentifier id;
 
     /**
      * Create a CertificatePolicyId with the ObjectIdentifier.

@@ -348,7 +348,7 @@ public class PKCS10 {
     }
 
     private X500Name            subject;
-    private PublicKey           subjectPublicKeyInfo;
-    private PKCS10Attributes    attributeSet;
+    private final PublicKey           subjectPublicKeyInfo;
+    private final PKCS10Attributes    attributeSet;
     private byte[]              encoded;        // signed
 }
