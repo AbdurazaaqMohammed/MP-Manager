@@ -896,7 +896,7 @@ public class ArscSimpleEditorActivity extends AppCompatActivity {
             return rows.size();
         }
 
-        class Holder extends RecyclerView.ViewHolder {
+        static class Holder extends RecyclerView.ViewHolder {
             final TextView id;
             final TextView name;
             final TextView value;

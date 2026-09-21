@@ -26,6 +26,7 @@
 package android.sun.security.ec;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.math.BigInteger;
 
 import java.security.*;
@@ -61,6 +62,7 @@ import android.sun.security.pkcs.PKCS8Key;
  */
 public final class ECPrivateKeyImpl extends PKCS8Key implements ECPrivateKey {
 
+    @Serial
     private static final long serialVersionUID = 88695385615075129L;
 
     private BigInteger s;       // private value

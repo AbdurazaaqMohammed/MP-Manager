@@ -59,7 +59,7 @@ public abstract class Chunk<H extends Chunk.Header> {
         }
     }
 
-    public class EmptyHeader extends Header {
+    public static class EmptyHeader extends Header {
         public EmptyHeader() {
             super(ChunkType.Null);
         }

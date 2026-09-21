@@ -1075,7 +1075,7 @@ public class ClassTree {
     }
 
     // method implemention stripper
-    private class MethodImplementationStripper implements MethodImplementation {
+    private static class MethodImplementationStripper implements MethodImplementation {
         private final MethodImplementation delegate;
         private final CompilationOptions options;
 

@@ -91,6 +91,7 @@ class ObjectIdentifier implements Serializable
      * the 4th case, non-huge OID is still supportable in old versions, while
      * huge OID is not.
      */
+    @Serial
     private static final long serialVersionUID = 8697030238860181294L;
 
     /**
@@ -106,6 +107,7 @@ class ObjectIdentifier implements Serializable
     // Is the components field calculated?
     transient private boolean   componentsCalculated = false;
 
+    @Serial
     private void readObject(ObjectInputStream is)
             throws IOException, ClassNotFoundException {
         is.defaultReadObject();
@@ -115,6 +117,7 @@ class ObjectIdentifier implements Serializable
         }
     }
 
+    @Serial
     private void writeObject(ObjectOutputStream os)
             throws IOException {
         if (!componentsCalculated) {
@@ -131,6 +134,7 @@ class ObjectIdentifier implements Serializable
     }
 
     static class HugeOidNotSupportedByOldJDK implements Serializable {
+        @Serial
         private static final long serialVersionUID = 1L;
         static final HugeOidNotSupportedByOldJDK theOne = new HugeOidNotSupportedByOldJDK();
     }

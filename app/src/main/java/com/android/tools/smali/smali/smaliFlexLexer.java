@@ -3744,28 +3744,23 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
             case YYINITIAL: {
               return newToken(EOF);
             }
-            case 1345: break;
+            case 1345, 1350, 1349, 1348, 1347, 1346: break;
             case PARAM_LIST_OR_ID: {
               yybegin(YYINITIAL);
             }
-            case 1346: break;
-            case PARAM_LIST: {
+                case PARAM_LIST: {
               yybegin(YYINITIAL);
             }
-            case 1347: break;
-            case ARRAY_DESCRIPTOR: {
+                case ARRAY_DESCRIPTOR: {
               yybegin(YYINITIAL);
             }
-            case 1348: break;
-            case STRING: {
+                case STRING: {
               return invalidStateBasedToken("Unterminated string literal");
             }
-            case 1349: break;
-            case CHAR: {
+                case CHAR: {
               return invalidStateBasedToken("Unterminated character literal");
             }
-            case 1350: break;
-            default:
+                default:
         return null;
         }
       }
@@ -3774,109 +3769,93 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
           case 1:
             { return invalidToken("Invalid text");
             }
-          case 158: break;
+          case 158, 314, 313, 312, 311, 310, 309, 308, 307, 306, 305, 304, 303, 302, 301, 300, 299,
+               298, 297, 296, 295, 294, 293, 292, 291, 290, 289, 288, 287, 286, 285, 284, 283, 282,
+               281, 280, 279, 278, 277, 276, 275, 274, 273, 272, 271, 270, 269, 268, 267, 266, 265,
+               264, 263, 262, 261, 260, 259, 258, 257, 256, 255, 254, 253, 252, 251, 250, 249, 248,
+               247, 246, 245, 244, 243, 242, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231,
+               230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214,
+               213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197,
+               196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180,
+               179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 167, 166, 165, 164, 163,
+               162, 161, 160, 159: break;
           case 2:
             { return newToken(POSITIVE_INTEGER_LITERAL);
             }
-          case 159: break;
-          case 3:
+            case 3:
             { return newToken(SIMPLE_NAME, yytext());
             }
-          case 160: break;
-          case 4:
+            case 4:
             { return invalidToken("Invalid directive");
             }
-          case 161: break;
-          case 5:
+            case 5:
             { return newToken(PRIMITIVE_TYPE);
             }
-          case 162: break;
-          case 6:
+            case 6:
             { yybegin(ARRAY_DESCRIPTOR);
       return newToken(ARRAY_TYPE_PREFIX);
             }
-          case 163: break;
-          case 7:
+            case 7:
             { return newToken(WHITE_SPACE, true);
             }
-          case 164: break;
-          case 8:
+            case 8:
             { beginStateBasedToken(STRING); sb.append('"');
             }
-          case 165: break;
-          case 9:
+            case 9:
             { beginStateBasedToken(CHAR); sb.append('\'');
             }
-          case 166: break;
-          case 10:
+            case 10:
             { return newToken(AT);
             }
-          case 167: break;
-          case 11:
+            case 11:
             { return newToken(LINE_COMMENT, true);
             }
-          case 168: break;
-          case 12:
+            case 12:
             { return newToken(VOID_TYPE);
             }
-          case 169: break;
-          case 13:
+            case 13:
             { return newToken(EQUAL);
             }
-          case 170: break;
-          case 14:
+            case 14:
             { return newToken(COLON);
             }
-          case 171: break;
-          case 15:
+            case 15:
             { return newToken(COMMA);
             }
-          case 172: break;
-          case 16:
+            case 16:
             { return newToken(OPEN_BRACE);
             }
-          case 173: break;
-          case 17:
+            case 17:
             { return newToken(CLOSE_BRACE);
             }
-          case 174: break;
-          case 18:
+            case 18:
             { return newToken(OPEN_PAREN);
             }
-          case 175: break;
-          case 19:
+            case 19:
             { return newToken(CLOSE_PAREN);
             }
-          case 176: break;
-          case 20:
+            case 20:
             { yypushback(1); yybegin(YYINITIAL);
             }
-          case 177: break;
-          case 21:
+            case 21:
             { return newToken(PARAM_LIST_OR_ID_PRIMITIVE_TYPE);
             }
-          case 178: break;
-          case 22:
+            case 22:
             { return newToken(ARRAY_TYPE_PREFIX);
             }
-          case 179: break;
-          case 23:
+            case 23:
             { yybegin(YYINITIAL); return newToken(PRIMITIVE_TYPE);
             }
-          case 180: break;
-          case 24:
+            case 24:
             { sb.append(yytext());
             }
-          case 181: break;
-          case 25:
+            case 25:
             { sb.append('"'); return endStateBasedToken(STRING_LITERAL);
             }
-          case 182: break;
-          case 26:
+            case 26:
             { return invalidStateBasedToken("Unterminated string literal");
             }
-          case 183: break;
-          case 27:
+            case 27:
             { sb.append('\'');
         if (sb.length() == 2) {
             return invalidStateBasedToken("Empty character literal");
@@ -3886,546 +3865,415 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
 
         return endStateBasedToken(CHAR_LITERAL);
             }
-          case 184: break;
-          case 28:
+            case 28:
             { return invalidStateBasedToken("Unterminated character literal");
             }
-          case 185: break;
-          case 29:
+            case 29:
             { sb.append(yytext());
         return endStateBasedToken(CLASS_DESCRIPTOR);
             }
-          case 186: break;
-          case 30:
+            case 30:
             { return newToken(FLOAT_LITERAL_OR_ID);
             }
-          case 187: break;
-          case 31:
+            case 31:
             { return newToken(BYTE_LITERAL);
             }
-          case 188: break;
-          case 32:
+            case 32:
             { return newToken(DOUBLE_LITERAL);
             }
-          case 189: break;
-          case 33:
+            case 33:
             { return newToken(LONG_LITERAL);
             }
-          case 190: break;
-          case 34:
+            case 34:
             { return newToken(SHORT_LITERAL);
             }
-          case 191: break;
-          case 35:
+            case 35:
             { return newToken(DOUBLE_LITERAL_OR_ID);
             }
-          case 192: break;
-          case 36:
+            case 36:
             { return newToken(NEGATIVE_INTEGER_LITERAL);
             }
-          case 193: break;
-          case 37:
+            case 37:
             { return newToken(ARROW);
             }
-          case 194: break;
-          case 38:
+            case 38:
             { return newToken(DOTDOT);
             }
-          case 195: break;
-          case 39:
+            case 39:
             { // go back and re-lex it as a PARAM_LIST_OR_ID
         yypushback(yylength());
         yybegin(PARAM_LIST_OR_ID);
             }
-          case 196: break;
-          case 40:
+            case 40:
             { return newToken(REGISTER);
             }
-          case 197: break;
-          case 41:
+            case 41:
             { sb.append(yytext());
         setStateBasedTokenError("Invalid escape sequence " + yytext());
             }
-          case 198: break;
-          case 42:
+            case 42:
             { sb.append('\b');
             }
-          case 199: break;
-          case 43:
+            case 43:
             { sb.append('\f');
             }
-          case 200: break;
-          case 44:
+            case 44:
             { sb.append(yytext());
         setStateBasedTokenError("Invalid \\u sequence. \\u must be followed by 4 hex digits");
             }
-          case 201: break;
-          case 45:
+            case 45:
             { sb.append('\r');
             }
-          case 202: break;
-          case 46:
+            case 46:
             { sb.append('\n');
             }
-          case 203: break;
-          case 47:
+            case 47:
             { sb.append('\t');
             }
-          case 204: break;
-          case 48:
+            case 48:
             { sb.append('"');
             }
-          case 205: break;
-          case 49:
+            case 49:
             { sb.append('\'');
             }
-          case 206: break;
-          case 50:
+            case 50:
             { sb.append('\\');
             }
-          case 207: break;
-          case 51:
+            case 51:
             { sb.append(yytext());
         setStateBasedTokenError("Invalid \\u sequence. \\u must be followed by exactly 4 hex digits");
             }
-          case 208: break;
-          case 52:
+            case 52:
             { sb.append(yytext());
         yybegin(CLASS_DESCRIPTOR_REMAINING);
             }
-          case 209: break;
-          case 53:
+            case 53:
             { return newToken(FLOAT_LITERAL);
             }
-          case 210: break;
-          case 54:
+            case 54:
             { return newToken(SIMPLE_NAME, processQuotedSimpleName(yytext()));
             }
-          case 211: break;
-          case 55:
+            case 55:
             { return newToken(SIMPLE_NAME, processQuotedSimpleNameWithSpaces(yytext()));
             }
-          case 212: break;
-          case 56:
+            case 56:
             { // go back and re-lex it as a PARAM_LIST
         yypushback(yylength());
         yybegin(PARAM_LIST);
             }
-          case 213: break;
-          case 57:
+            case 57:
             { yypushback(yylength());
         beginStateBasedToken(CLASS_DESCRIPTOR_BEGINNING);
             }
-          case 214: break;
-          case 58:
+            case 58:
             { return newToken(INSTRUCTION_FORMAT10x);
             }
-          case 215: break;
-          case 59:
+            case 59:
             { return newToken(MEMBER_NAME);
             }
-          case 216: break;
-          case 60:
+            case 60:
             { yypushback(yylength());
         beginStateBasedToken(CLASS_DESCRIPTOR_BEGINNING);
         sb.append(yytext());
             }
-          case 217: break;
-          case 61:
+            case 61:
             { return newToken(INSTRUCTION_FORMAT22c_FIELD);
             }
-          case 218: break;
-          case 62:
+            case 62:
             { return newToken(INSTRUCTION_FORMAT23x);
             }
-          case 219: break;
-          case 63:
+            case 63:
             { return newToken(INSTRUCTION_FORMAT21c_FIELD);
             }
-          case 220: break;
-          case 64:
+            case 64:
             { return newToken(ACCESS_SPEC);
             }
-          case 221: break;
-          case 65:
+            case 65:
             { return newToken(INSTRUCTION_FORMAT12x_OR_ID);
             }
-          case 222: break;
-          case 66:
+            case 66:
             { return newToken(NULL_LITERAL);
             }
-          case 223: break;
-          case 67:
+            case 67:
             { return newToken(BOOL_LITERAL);
             }
-          case 224: break;
-          case 68:
+            case 68:
             { return newToken(INSTRUCTION_FORMAT10t);
             }
-          case 225: break;
-          case 69:
+            case 69:
             { sb.append("L");
         sb.append(processQuotedSimpleName(yytext().substring(1)));
         yybegin(CLASS_DESCRIPTOR_REMAINING);
             }
-          case 226: break;
-          case 70:
+            case 70:
             { sb.append("L");
         sb.append(processQuotedSimpleNameWithSpaces(yytext().substring(1)));
         yybegin(CLASS_DESCRIPTOR_REMAINING);
             }
-          case 227: break;
-          case 71:
+            case 71:
             { sb.append("/");
         sb.append(processQuotedSimpleName(yytext().substring(1)));
             }
-          case 228: break;
-          case 72:
+            case 72:
             { sb.append("/");
         sb.append(processQuotedSimpleNameWithSpaces(yytext().substring(1)));
             }
-          case 229: break;
-          case 73:
+            case 73:
             { return newToken(ANNOTATION_VISIBILITY);
             }
-          case 230: break;
-          case 74:
+            case 74:
             { return newToken(INSTRUCTION_FORMAT22t);
             }
-          case 231: break;
-          case 75:
+            case 75:
             { return newToken(LINE_DIRECTIVE);
             }
-          case 232: break;
-          case 76:
+            case 76:
             { return newToken(ENUM_DIRECTIVE);
             }
-          case 233: break;
-          case 77:
+            case 77:
             { return newToken(INSTRUCTION_FORMAT31i_OR_ID);
             }
-          case 234: break;
-          case 78:
+            case 78:
             { return newToken(INSTRUCTION_FORMAT11x);
             }
-          case 235: break;
-          case 79:
+            case 79:
             { return newToken(INSTRUCTION_FORMAT21t);
             }
-          case 236: break;
-          case 80:
+            case 80:
             { return newToken(FIELD_DIRECTIVE);
             }
-          case 237: break;
-          case 81:
+            case 81:
             { return newToken(CLASS_DIRECTIVE);
             }
-          case 238: break;
-          case 82:
+            case 82:
             { return newToken(CATCH_DIRECTIVE);
             }
-          case 239: break;
-          case 83:
+            case 83:
             { return newToken(LOCAL_DIRECTIVE);
             }
-          case 240: break;
-          case 84:
+            case 84:
             { return newToken(SUPER_DIRECTIVE);
             }
-          case 241: break;
-          case 85:
+            case 85:
             { return newToken(PARAMETER_DIRECTIVE);
             }
-          case 242: break;
-          case 86:
+            case 86:
             { sb.append((char)Integer.parseInt(yytext().substring(2,6), 16));
             }
-          case 243: break;
-          case 87:
+            case 87:
             { return newToken(LOCALS_DIRECTIVE);
             }
-          case 244: break;
-          case 88:
+            case 88:
             { return newToken(SOURCE_DIRECTIVE);
             }
-          case 245: break;
-          case 89:
+            case 89:
             { return newToken(METHOD_DIRECTIVE);
             }
-          case 246: break;
-          case 90:
+            case 90:
             { return newToken(INSTRUCTION_FORMAT11n);
             }
-          case 247: break;
-          case 91:
+            case 91:
             { return newToken(INSTRUCTION_FORMAT32x);
             }
-          case 248: break;
-          case 92:
+            case 92:
             { return newToken(INSTRUCTION_FORMAT20t);
             }
-          case 249: break;
-          case 93:
+            case 93:
             { return newToken(INSTRUCTION_FORMAT30t);
             }
-          case 250: break;
-          case 94:
+            case 94:
             { return newToken(INSTRUCTION_FORMAT21s);
             }
-          case 251: break;
-          case 95:
+            case 95:
             { return newToken(INSTRUCTION_FORMAT22s_OR_ID);
             }
-          case 252: break;
-          case 96:
+            case 96:
             { return newToken(VERIFICATION_ERROR_TYPE);
             }
-          case 253: break;
-          case 97:
+            case 97:
             { return newToken(HIDDENAPI_RESTRICTION);
             }
-          case 254: break;
-          case 98:
+            case 98:
             { return newToken(FIELD_OFFSET);
             }
-          case 255: break;
-          case 99:
+            case 99:
             { return newToken(CATCHALL_DIRECTIVE);
             }
-          case 256: break;
-          case 100:
+            case 100:
             { return newToken(PROLOGUE_DIRECTIVE);
             }
-          case 257: break;
-          case 101:
+            case 101:
             { return newToken(EPILOGUE_DIRECTIVE);
             }
-          case 258: break;
-          case 102:
+            case 102:
             { return newToken(INSTRUCTION_FORMAT22c_TYPE);
             }
-          case 259: break;
-          case 103:
+            case 103:
             { return newToken(INSTRUCTION_FORMAT22cs_FIELD);
             }
-          case 260: break;
-          case 104:
+            case 104:
             { return newToken(INLINE_INDEX);
             }
-          case 261: break;
-          case 105:
+            case 105:
             { return newToken(END_FIELD_DIRECTIVE);
             }
-          case 262: break;
-          case 106:
+            case 106:
             { return newToken(END_LOCAL_DIRECTIVE);
             }
-          case 263: break;
-          case 107:
+            case 107:
             { return newToken(END_PARAMETER_DIRECTIVE);
             }
-          case 264: break;
-          case 108:
+            case 108:
             { return newToken(REGISTERS_DIRECTIVE);
             }
-          case 265: break;
-          case 109:
+            case 109:
             { return newToken(INSTRUCTION_FORMAT51l);
             }
-          case 266: break;
-          case 110:
+            case 110:
             { return newToken(INSTRUCTION_FORMAT21c_TYPE);
             }
-          case 267: break;
-          case 111:
+            case 111:
             { return newToken(METHOD_HANDLE_TYPE_FIELD);
             }
-          case 268: break;
-          case 112:
+            case 112:
             { return newToken(VTABLE_INDEX);
             }
-          case 269: break;
-          case 113:
+            case 113:
             { return newToken(IMPLEMENTS_DIRECTIVE);
             }
-          case 270: break;
-          case 114:
+            case 114:
             { return newToken(ARRAY_DATA_DIRECTIVE);
             }
-          case 271: break;
-          case 115:
+            case 115:
             { return newToken(ANNOTATION_DIRECTIVE);
             }
-          case 272: break;
-          case 116:
+            case 116:
             { return newToken(END_METHOD_DIRECTIVE);
             }
-          case 273: break;
-          case 117:
+            case 117:
             { return newToken(INSTRUCTION_FORMAT22x);
             }
-          case 274: break;
-          case 118:
+            case 118:
             { return newToken(INSTRUCTION_FORMAT22b);
             }
-          case 275: break;
-          case 119:
+            case 119:
             { return newToken(INSTRUCTION_FORMAT35c_METHOD);
             }
-          case 276: break;
-          case 120:
+            case 120:
             { return newToken(INSTRUCTION_FORMAT21c_STRING);
             }
-          case 277: break;
-          case 121:
+            case 121:
             { return newToken(INSTRUCTION_FORMAT21ih);
             }
-          case 278: break;
-          case 122:
+            case 122:
             { return newToken(INSTRUCTION_FORMAT22s);
             }
-          case 279: break;
-          case 123:
+            case 123:
             { return newToken(INSTRUCTION_FORMAT12x);
             }
-          case 280: break;
-          case 124:
+            case 124:
             { return newToken(INSTRUCTION_FORMAT22c_FIELD_ODEX);
             }
-          case 281: break;
-          case 125:
+            case 125:
             { return newToken(INSTRUCTION_FORMAT35c_CALL_SITE);
             }
-          case 282: break;
-          case 126:
+            case 126:
             { return newToken(INSTRUCTION_FORMAT35c_METHOD_OR_METHOD_HANDLE_TYPE);
             }
-          case 283: break;
-          case 127:
+            case 127:
             { return newToken(INSTRUCTION_FORMAT31i);
             }
-          case 284: break;
-          case 128:
+            case 128:
             { return newToken(INSTRUCTION_FORMAT31t);
             }
-          case 285: break;
-          case 129:
+            case 129:
             { return newToken(INSTRUCTION_FORMAT21c_FIELD_ODEX);
             }
-          case 286: break;
-          case 130:
+            case 130:
             { return newToken(SUBANNOTATION_DIRECTIVE);
             }
-          case 287: break;
-          case 131:
+            case 131:
             { return newToken(SPARSE_SWITCH_DIRECTIVE);
             }
-          case 288: break;
-          case 132:
+            case 132:
             { return newToken(PACKED_SWITCH_DIRECTIVE);
             }
-          case 289: break;
-          case 133:
+            case 133:
             { return newToken(RESTART_LOCAL_DIRECTIVE);
             }
-          case 290: break;
-          case 134:
+            case 134:
             { return newToken(INSTRUCTION_FORMAT35mi_METHOD);
             }
-          case 291: break;
-          case 135:
+            case 135:
             { return newToken(METHOD_HANDLE_TYPE_METHOD);
             }
-          case 292: break;
-          case 136:
+            case 136:
             { return newToken(END_ARRAY_DATA_DIRECTIVE);
             }
-          case 293: break;
-          case 137:
+            case 137:
             { return newToken(END_ANNOTATION_DIRECTIVE);
             }
-          case 294: break;
-          case 138:
+            case 138:
             { return newToken(INSTRUCTION_FORMAT35c_TYPE);
             }
-          case 295: break;
-          case 139:
+            case 139:
             { return newToken(INSTRUCTION_FORMAT21c_METHOD_TYPE);
             }
-          case 296: break;
-          case 140:
+            case 140:
             { return newToken(INSTRUCTION_FORMAT21lh);
             }
-          case 297: break;
-          case 141:
+            case 141:
             { return newToken(INSTRUCTION_FORMAT35ms_METHOD);
             }
-          case 298: break;
-          case 142:
+            case 142:
             { return newToken(INSTRUCTION_FORMAT3rc_METHOD);
             }
-          case 299: break;
-          case 143:
+            case 143:
             { return newToken(INSTRUCTION_FORMAT45cc_METHOD);
             }
-          case 300: break;
-          case 144:
+            case 144:
             { return newToken(END_SUBANNOTATION_DIRECTIVE);
             }
-          case 301: break;
-          case 145:
+            case 145:
             { return newToken(END_SPARSE_SWITCH_DIRECTIVE);
             }
-          case 302: break;
-          case 146:
+            case 146:
             { return newToken(END_PACKED_SWITCH_DIRECTIVE);
             }
-          case 303: break;
-          case 147:
+            case 147:
             { return newToken(INSTRUCTION_FORMAT31c);
             }
-          case 304: break;
-          case 148:
+            case 148:
             { return newToken(INSTRUCTION_FORMAT3rc_CALL_SITE);
             }
-          case 305: break;
-          case 149:
+            case 149:
             { return newToken(INSTRUCTION_FORMAT35c_METHOD_ODEX);
             }
-          case 306: break;
-          case 150:
+            case 150:
             { return newToken(INSTRUCTION_FORMAT21c_METHOD_HANDLE);
             }
-          case 307: break;
-          case 151:
+            case 151:
             { return newToken(INSTRUCTION_FORMAT10x_ODEX);
             }
-          case 308: break;
-          case 152:
+            case 152:
             { return newToken(INSTRUCTION_FORMAT3rmi_METHOD);
             }
-          case 309: break;
-          case 153:
+            case 153:
             { return newToken(INSTRUCTION_FORMAT3rc_TYPE);
             }
-          case 310: break;
-          case 154:
+            case 154:
             { return newToken(INSTRUCTION_FORMAT3rms_METHOD);
             }
-          case 311: break;
-          case 155:
+            case 155:
             { return newToken(INSTRUCTION_FORMAT4rcc_METHOD);
             }
-          case 312: break;
-          case 156:
+            case 156:
             { return newToken(INSTRUCTION_FORMAT3rc_METHOD_ODEX);
             }
-          case 313: break;
-          case 157:
+            case 157:
             { return newToken(INSTRUCTION_FORMAT20bc);
             }
-          case 314: break;
-          default:
+            default:
             zzScanError(ZZ_NO_MATCH);
         }
       }

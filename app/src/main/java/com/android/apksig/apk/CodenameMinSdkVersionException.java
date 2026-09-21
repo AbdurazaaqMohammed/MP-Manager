@@ -16,6 +16,8 @@
 
 package com.android.apksig.apk;
 
+import java.io.Serial;
+
 /**
  * Indicates that there was an issue determining the minimum Android platform version supported by
  * an APK because the version is specified as a codename, rather than as API Level number, and the
@@ -23,6 +25,7 @@ package com.android.apksig.apk;
  */
 public class CodenameMinSdkVersionException extends MinSdkVersionException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /** Encountered codename. */

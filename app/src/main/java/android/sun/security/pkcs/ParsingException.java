@@ -32,9 +32,11 @@
 package android.sun.security.pkcs;
 
 import java.io.IOException;
+import java.io.Serial;
 
 public class ParsingException extends IOException {
 
+    @Serial
     private static final long serialVersionUID = -6316569918966181883L;
 
     public ParsingException() {

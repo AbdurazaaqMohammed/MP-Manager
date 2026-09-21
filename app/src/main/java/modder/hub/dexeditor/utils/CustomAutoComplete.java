@@ -176,7 +176,7 @@ public class CustomAutoComplete extends EmptyLanguage {
 		}
 	}
 	
-	public class EndwiseNewlineHandler implements NewlineHandler {
+	public static class EndwiseNewlineHandler implements NewlineHandler {
 		private static final String ENDWISE_PATTERN = "^((?!(--)).)*(\\b(else|function|then|do|repeat)\\b((?!\\b(end|until)\\b).)*)$";
 		
 		@Override

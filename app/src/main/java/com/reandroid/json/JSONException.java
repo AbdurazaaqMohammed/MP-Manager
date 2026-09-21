@@ -5,8 +5,11 @@
 */
 package com.reandroid.json;
 
+import java.io.Serial;
+
 public class JSONException extends IllegalArgumentException {
     /** Serialization ID */
+    @Serial
     private static final long serialVersionUID = 0;
 
     public JSONException(final String message) {

@@ -53,6 +53,7 @@ import android.sun.misc.HexDumpEncoder;
 public class PKCS8Key implements PrivateKey {
 
     /** use serialVersionUID from JDK 1.1. for interoperability */
+    @Serial
     private static final long serialVersionUID = -3836890099307167124L;
 
     /* The algorithm information (name, parameters, etc). */
@@ -365,6 +366,7 @@ public class PKCS8Key implements PrivateKey {
         decode(new ByteArrayInputStream(encodedKey));
     }
 
+    @Serial
     protected Object writeReplace() throws java.io.ObjectStreamException {
         return new KeyRep(KeyRep.Type.PRIVATE,
                         getAlgorithm(),
@@ -376,6 +378,7 @@ public class PKCS8Key implements PrivateKey {
      * Serialization read ... PKCS#8 keys serialize as
      * themselves, and they're parsed when they get read back.
      */
+    @Serial
     private void readObject (ObjectInputStream stream)
     throws IOException {
 

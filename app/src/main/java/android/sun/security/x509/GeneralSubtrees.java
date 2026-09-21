@@ -486,7 +486,8 @@ public class GeneralSubtrees implements Cloneable {
             for (int j = 0; j < size(); j++) {
                 android.sun.security.x509.GeneralNameInterface permitted = getGeneralNameInterface(j);
                 switch (excludedName.constrains(permitted)) {
-                case android.sun.security.x509.GeneralNameInterface.NAME_DIFF_TYPE:
+                case android.sun.security.x509.GeneralNameInterface.NAME_DIFF_TYPE,
+                     GeneralNameInterface.NAME_SAME_TYPE:
                     break;
                 case android.sun.security.x509.GeneralNameInterface.NAME_MATCH:
                     remove(j);
@@ -499,8 +500,6 @@ public class GeneralSubtrees implements Cloneable {
                     break;
                 case android.sun.security.x509.GeneralNameInterface.NAME_WIDENS:
                     /* permitted widens excluded */
-                    break;
-                case GeneralNameInterface.NAME_SAME_TYPE:
                     break;
                 }
             } /* end of this pass of permitted */

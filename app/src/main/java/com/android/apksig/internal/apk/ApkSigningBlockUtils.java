@@ -55,6 +55,7 @@ import com.android.apksig.util.DataSources;
 import com.android.apksig.util.RunnablesExecutor;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -1117,6 +1118,7 @@ public class ApkSigningBlockUtils {
     }
 
     public static class SignatureNotFoundException extends Exception {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         public SignatureNotFoundException(String message) {

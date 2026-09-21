@@ -16,12 +16,15 @@
 
 package com.android.apksig.apk;
 
+import java.io.Serial;
+
 /**
  * Indicates that there was an issue determining the minimum Android platform version supported by
  * an APK.
  */
 public class MinSdkVersionException extends ApkFormatException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

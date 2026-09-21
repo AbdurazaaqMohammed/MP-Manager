@@ -16,10 +16,13 @@
 
 package com.android.apksig.zip;
 
+import java.io.Serial;
+
 /**
  * Indicates that a ZIP archive is not well-formed.
  */
 public class ZipFormatException extends Exception {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public ZipFormatException(String message) {

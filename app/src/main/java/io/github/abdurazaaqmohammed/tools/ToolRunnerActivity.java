@@ -336,11 +336,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
             case "random" -> buildRandom(box);
             case "tally" -> buildTally(box);
             case "metronome" -> buildMetronome(box);
-            case "devicehub" -> buildDeviceHub(box);
-            case "connectivity" -> buildConnectivityHub(box);
-            case "deviceinfo", "battery", "cpuinfo", "storage", "sensors", "altimeter" ->
-                    buildDeviceHub(box);
-            case "netinfo", "datausage" -> buildConnectivityHub(box);
+            case "devicehub", "deviceinfo", "battery", "cpuinfo", "storage", "sensors",
+                 "altimeter" -> buildDeviceHub(box);
+            case "connectivity", "netinfo", "datausage" -> buildConnectivityHub(box);
             case "worldclock" -> buildWorldClock(box);
             case "currency" -> buildCurrency(box);
             case "tip" -> buildTip(box);

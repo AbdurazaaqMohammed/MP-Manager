@@ -16,10 +16,13 @@
 
 package com.android.apksig.internal.pkcs7;
 
+import java.io.Serial;
+
 /**
  * Indicates that an error was encountered while decoding a PKCS #7 structure.
  */
 public class Pkcs7DecodingException extends Exception {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public Pkcs7DecodingException(String message) {

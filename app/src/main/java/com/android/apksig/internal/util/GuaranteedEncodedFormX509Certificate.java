@@ -16,6 +16,7 @@
 
 package com.android.apksig.internal.util;
 
+import java.io.Serial;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -25,6 +26,7 @@ import java.util.Arrays;
  * time.
  */
 public class GuaranteedEncodedFormX509Certificate extends DelegatingX509Certificate {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private final byte[] mEncodedForm;

@@ -294,7 +294,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
 
     private class TabRowAdapter extends RecyclerView.Adapter<TabRowAdapter.TabVH> {
 
-        private class TabVH extends RecyclerView.ViewHolder {
+        private static class TabVH extends RecyclerView.ViewHolder {
             final TextView title;
             final View close;
 

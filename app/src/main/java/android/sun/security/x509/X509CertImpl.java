@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Serial;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -80,6 +81,7 @@ import android.sun.security.util.DerValue;
  */
 public class X509CertImpl extends X509Certificate implements android.sun.security.util.DerEncoder {
 
+    @Serial
     private static final long serialVersionUID = -3457612960190864406L;
 
     private static final String DOT = ".";

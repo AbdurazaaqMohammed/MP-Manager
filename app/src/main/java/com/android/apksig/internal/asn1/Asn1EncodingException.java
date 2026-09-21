@@ -16,10 +16,13 @@
 
 package com.android.apksig.internal.asn1;
 
+import java.io.Serial;
+
 /**
  * Indicates that an ASN.1 structure could not be encoded.
  */
 public class Asn1EncodingException extends Exception {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public Asn1EncodingException(String message) {

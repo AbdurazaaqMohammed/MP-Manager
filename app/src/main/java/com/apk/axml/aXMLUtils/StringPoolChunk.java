@@ -31,7 +31,7 @@ public class StringPoolChunk extends Chunk<StringPoolChunk.H> {
         super(parent);
     }
 
-    public class H extends Chunk.Header {
+    public static class H extends Chunk.Header {
         public int stringCount;
         public int styleCount;
         public int flags;

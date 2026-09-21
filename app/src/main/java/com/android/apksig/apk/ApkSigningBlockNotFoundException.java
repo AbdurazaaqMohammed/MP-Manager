@@ -16,10 +16,13 @@
 
 package com.android.apksig.apk;
 
+import java.io.Serial;
+
 /**
  * Indicates that no APK Signing Block was found in an APK.
  */
 public class ApkSigningBlockNotFoundException extends Exception {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public ApkSigningBlockNotFoundException(String message) {

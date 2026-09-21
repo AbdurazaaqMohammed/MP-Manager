@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import java.io.Serial;
+
 /**
  * CertException indicates one of a variety of certificate problems.
  *
@@ -39,6 +41,7 @@ package android.sun.security.x509;
 @Deprecated
 public class CertException extends SecurityException {
 
+    @Serial
     private static final long serialVersionUID = 6930793039696446142L;
 
     // Zero is reserved.

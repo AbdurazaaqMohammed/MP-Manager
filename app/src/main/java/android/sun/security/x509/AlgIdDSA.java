@@ -28,6 +28,7 @@ package android.sun.security.x509;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.math.BigInteger;
 import java.security.*;
 import java.security.interfaces.DSAParams;
@@ -76,6 +77,7 @@ public final
 class AlgIdDSA extends AlgorithmId implements DSAParams
 {
 
+    @Serial
     private static final long serialVersionUID = 3437177836797504046L;
 
     /*

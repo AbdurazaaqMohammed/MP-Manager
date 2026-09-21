@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -286,37 +289,37 @@ public class OverlaySmaliAuditTest {
         w.leftDp = 9;
         w.topDp = 10;
         OverlayInjectorUtil.AdvWidget c = OverlayInjectorUtil.copyWidget(w);
-        assertTrue(c != w);
-        assertTrue(c.kind.equals("button"));
-        assertTrue(c.text.equals("Hi"));
-        assertTrue(c.textSizeSp == 15f);
-        assertTrue(c.textColor == 0xFF112233);
-        assertTrue(c.fontStyle == 3);
-        assertTrue(c.font.equals("serif"));
-        assertTrue(c.fontPath.equals("/x/y.ttf"));
-        assertTrue(c.imageB64.equals("aGk="));
-        assertTrue(c.btnAction.equals("Open URL"));
-        assertTrue(c.url.equals("https://example.com"));
+        assertNotSame(c, w);
+        assertEquals("button", c.kind);
+        assertEquals("Hi", c.text);
+        assertEquals(15f, c.textSizeSp, 0.0);
+        assertEquals(0xFF112233, c.textColor);
+        assertEquals(3, c.fontStyle);
+        assertEquals("serif", c.font);
+        assertEquals("/x/y.ttf", c.fontPath);
+        assertEquals("aGk=", c.imageB64);
+        assertEquals("Open URL", c.btnAction);
+        assertEquals("https://example.com", c.url);
         assertTrue(c.btnBg == 1 && c.btnBg2 == 2);
-        assertTrue(c.btnCornerRadiusDp == 3f);
-        assertTrue(c.btnBorderWidthDp == 4f);
-        assertTrue(c.btnBorderColor == 5);
-        assertTrue(c.btnPaddingDp == 6);
+        assertEquals(3f, c.btnCornerRadiusDp, 0.0);
+        assertEquals(4f, c.btnBorderWidthDp, 0.0);
+        assertEquals(5, c.btnBorderColor);
+        assertEquals(6, c.btnPaddingDp);
         assertTrue(c.btnAnim && c.btnAnimRainbow && c.btnAnimSpeedMs == 111);
-        assertTrue(c.btnAnimColors.equals(w.btnAnimColors));
+        assertEquals(c.btnAnimColors, w.btnAnimColors);
         w.btnAnimColors.add(9);
-        assertTrue(c.btnAnimColors.size() == 2);
+        assertEquals(2, c.btnAnimColors.size());
         assertTrue(c.leftDp == 9 && c.topDp == 10);
-        assertTrue(OverlayInjectorUtil.copyWidget(null) == null);
+        assertNull(OverlayInjectorUtil.copyWidget(null));
     }
 
     @Test
     public void rainbowColorsSane() {
         int[] c = OverlayInjectorUtil.rainbowColors();
-        assertTrue(c.length == 12);
-        assertTrue(Integer.toHexString(c[0]), c[0] == 0xFFFF0000);
-        assertTrue(Integer.toHexString(c[4]), c[4] == 0xFF00FF00);
-        assertTrue(Integer.toHexString(c[8]), c[8] == 0xFF0000FF);
+        assertEquals(12, c.length);
+        assertEquals(Integer.toHexString(c[0]), 0xFFFF0000, c[0]);
+        assertEquals(Integer.toHexString(c[4]), 0xFF00FF00, c[4]);
+        assertEquals(Integer.toHexString(c[8]), 0xFF0000FF, c[8]);
     }
 
     @Test

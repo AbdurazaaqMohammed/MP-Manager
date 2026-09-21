@@ -26,6 +26,7 @@ import com.android.apksig.internal.compat.ClassCompat;
 import com.android.apksig.internal.util.ByteBufferUtils;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -455,6 +456,7 @@ public final class Asn1BerParser {
     }
 
     private static class Asn1UnexpectedTagException extends Asn1DecodingException {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         public Asn1UnexpectedTagException(String message) {

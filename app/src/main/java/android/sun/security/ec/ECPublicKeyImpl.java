@@ -27,6 +27,7 @@ package android.sun.security.ec;
 
 import java.io.IOException;
 
+import java.io.Serial;
 import java.security.*;
 import java.security.interfaces.*;
 import java.security.spec.*;
@@ -42,6 +43,7 @@ import android.sun.security.x509.*;
  */
 public final class ECPublicKeyImpl extends X509Key implements ECPublicKey {
 
+    @Serial
     private static final long serialVersionUID = -2462037275160462289L;
 
     private ECPoint w;
@@ -110,6 +112,7 @@ public final class ECPublicKeyImpl extends X509Key implements ECPublicKey {
             + "\n  parameters: " + params;
     }
 
+    @Serial
     protected Object writeReplace() throws java.io.ObjectStreamException {
         return new KeyRep(KeyRep.Type.PUBLIC,
                         getAlgorithm(),

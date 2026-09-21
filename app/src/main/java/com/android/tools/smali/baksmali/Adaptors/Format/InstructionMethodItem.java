@@ -214,7 +214,7 @@ public class InstructionMethodItem<T extends Instruction> extends MethodItem {
                 writer.write(' ');
                 writeFirstRegister(writer);
                 break;
-            case Format12x:
+            case Format12x, Format22x, Format32x:
                 writeOpcode(writer);
                 writer.write(' ');
                 writeFirstRegister(writer);
@@ -299,14 +299,6 @@ public class InstructionMethodItem<T extends Instruction> extends MethodItem {
                 writeSecondRegister(writer);
                 writer.write(", ");
                 writeTargetLabel(writer);
-                break;
-            case Format22x:
-            case Format32x:
-                writeOpcode(writer);
-                writer.write(' ');
-                writeFirstRegister(writer);
-                writer.write(", ");
-                writeSecondRegister(writer);
                 break;
             case Format23x:
                 writeOpcode(writer);

@@ -16,6 +16,7 @@
 
 package com.android.apksig.internal.apk;
 
+import java.io.Serial;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -831,6 +832,7 @@ public class AndroidBinXmlParser {
      * Indicates that an error occurred while parsing a document.
      */
     public static class XmlParserException extends Exception {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         public XmlParserException(String message) {

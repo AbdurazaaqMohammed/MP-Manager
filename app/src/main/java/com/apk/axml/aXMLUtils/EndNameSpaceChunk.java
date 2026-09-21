@@ -6,7 +6,7 @@ public class EndNameSpaceChunk extends Chunk<EndNameSpaceChunk.H> {
 
     private final StartNameSpaceChunk start;
 
-    public class H extends Chunk.NodeHeader {
+    public static class H extends Chunk.NodeHeader {
         public H() {
             super(ChunkType.XmlEndNamespace);
             size = 0x18;
