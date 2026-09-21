@@ -6466,9 +6466,9 @@ public class ToolRunnerActivity extends AppCompatActivity {
                     if (i > 0) {
                         b.append(' ');
                     }
-                    String bin = Integer.toBinaryString(bytes[i] & 255);
+                    StringBuilder bin = new StringBuilder(Integer.toBinaryString(bytes[i] & 255));
                     while (bin.length() < 8) {
-                        bin = "0" + bin;
+                        bin.insert(0, "0");
                     }
                     b.append(bin);
                 }

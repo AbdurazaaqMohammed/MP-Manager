@@ -225,7 +225,7 @@ public class DisassembleCommand extends DexInputCommand {
                 File publicXmlFile = new File(publicXml);
 
                 if (!publicXmlFile.exists()) {
-                    System.err.println(String.format("Can't find file: %s", publicXmlFile));
+                    System.err.printf("Can't find file: %s%n", publicXmlFile);
                     System.exit(-1);
                 }
 
@@ -268,7 +268,7 @@ public class DisassembleCommand extends DexInputCommand {
             } else if (registerInfoType.equalsIgnoreCase("FULLMERGE")) {
                 options.registerInfo  |= BaksmaliOptions.FULLMERGE;
             } else {
-                System.err.println(String.format("Invalid register info type: %s", registerInfoType));
+                System.err.printf("Invalid register info type: %s%n", registerInfoType);
                 usage();
                 System.exit(-1);
             }

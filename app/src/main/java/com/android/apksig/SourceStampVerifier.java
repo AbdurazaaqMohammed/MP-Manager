@@ -632,8 +632,7 @@ public class SourceStampVerifier {
          * and the source stamp.
          */
         public List<ApkVerificationIssue> getAllErrors() {
-            List<ApkVerificationIssue> errors = new ArrayList<>();
-            errors.addAll(mErrors);
+            List<ApkVerificationIssue> errors = new ArrayList<>(mErrors);
 
             for (List<SignerInfo> signers : mAllSchemeSigners) {
                 for (SignerInfo signer : signers) {
@@ -651,8 +650,7 @@ public class SourceStampVerifier {
          * signers and the source stamp.
          */
         public List<ApkVerificationIssue> getAllWarnings() {
-            List<ApkVerificationIssue> warnings = new ArrayList<>();
-            warnings.addAll(mWarnings);
+            List<ApkVerificationIssue> warnings = new ArrayList<>(mWarnings);
 
             for (List<SignerInfo> signers : mAllSchemeSigners) {
                 for (SignerInfo signer : signers) {

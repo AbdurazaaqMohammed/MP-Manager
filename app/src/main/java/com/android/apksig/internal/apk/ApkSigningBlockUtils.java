@@ -309,7 +309,7 @@ public class ApkSigningBlockUtils {
         int chunkCount = (int) chunkCountLong;
 
         ContentDigestAlgorithm[] digestAlgorithmsArray =
-                digestAlgorithms.toArray(new ContentDigestAlgorithm[digestAlgorithms.size()]);
+                digestAlgorithms.toArray(new ContentDigestAlgorithm[0]);
         MessageDigest[] mds = new MessageDigest[digestAlgorithmsArray.length];
         byte[][] digestsOfChunks = new byte[digestAlgorithmsArray.length][];
         int[] digestOutputSizes = new int[digestAlgorithmsArray.length];

@@ -165,7 +165,7 @@ public class V4Signature {
                 signingInfoBlocks.add(SigningInfoBlock.fromByteBuffer(buffer));
             }
             return new SigningInfos(signingInfo,
-                    signingInfoBlocks.toArray(new SigningInfoBlock[signingInfoBlocks.size()]));
+                    signingInfoBlocks.toArray(new SigningInfoBlock[0]));
         }
 
         byte[] toByteArray() {

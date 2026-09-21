@@ -21,6 +21,7 @@ import com.reandroid.utils.collection.FilterIterator;
 import com.reandroid.utils.collection.InstanceIterator;
 import com.reandroid.utils.collection.SingleIterator;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -274,9 +275,7 @@ public class HashSetStore {
         }
         ObjectsSet(Object[] elements) {
             super(elements.length);
-            for (Object obj : elements) {
-                add(obj);
-            }
+            this.addAll(Arrays.asList(elements));
         }
         ObjectsSet(Collection<?> collection) {
             super(collection);

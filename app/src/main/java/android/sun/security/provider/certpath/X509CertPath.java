@@ -319,7 +319,7 @@ public class X509CertPath extends CertPath {
     private byte[] encodePKCS7() throws CertificateEncodingException {
         PKCS7 p7 = new PKCS7(new AlgorithmId[0],
                              new ContentInfo(ContentInfo.DATA_OID, null),
-                             certs.toArray(new X509Certificate[certs.size()]),
+                             certs.toArray(new X509Certificate[0]),
                              new SignerInfo[0]);
         DerOutputStream derout = new DerOutputStream();
         try {

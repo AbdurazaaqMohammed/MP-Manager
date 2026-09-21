@@ -174,7 +174,7 @@ public class PKCS10Attributes implements DerEncoder {
         Collection<PKCS10Attribute> othersAttribs =
                 ((PKCS10Attributes)other).getAttributes();
         PKCS10Attribute[] attrs =
-            othersAttribs.toArray(new PKCS10Attribute[othersAttribs.size()]);
+            othersAttribs.toArray(new PKCS10Attribute[0]);
         int len = attrs.length;
         if (len != map.size())
             return false;

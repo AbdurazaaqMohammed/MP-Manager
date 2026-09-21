@@ -191,7 +191,7 @@ public class DexAnnotator extends AnnotatedBytes {
         // sort the map items based on the order defined by sectionAnnotationOrder
         Comparator<MapItem> comparator = (o1, o2) -> Integer.compare(sectionAnnotationOrder.get(o1.getType()), sectionAnnotationOrder.get(o2.getType()));
 
-        MapItem[] mapItemsArray = mapItems.toArray(new MapItem[mapItems.size()]);
+        MapItem[] mapItemsArray = mapItems.toArray(new MapItem[0]);
         Arrays.sort(mapItemsArray, comparator);
 
         try {
@@ -206,8 +206,8 @@ public class DexAnnotator extends AnnotatedBytes {
                     SectionAnnotator annotator = annotators.get(mapItem.getType());
                     annotator.annotateSection(this);
                 } catch (Exception ex) {
-                    System.err.println(String.format("There was an error while dumping the %s section",
-                            ItemType.getItemTypeName(mapItem.getType())));
+                    System.err.printf("There was an error while dumping the %s section%n",
+                            ItemType.getItemTypeName(mapItem.getType()));
                     ex.printStackTrace(System.err);
                 }
             }

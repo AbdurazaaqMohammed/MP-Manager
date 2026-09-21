@@ -94,9 +94,7 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
         Key[] elements = this.elements;
         int length = NumbersUtil.min(size, elements.length);
         Key[] result = newArray(size);
-        for (int i = 0; i < length; i++) {
-            result[i] = elements[i];
-        }
+        if (length >= 0) System.arraycopy(elements, 0, result, 0, length);
         for (int i = length; i < size; i++) {
             result[i] = item;
         }
@@ -114,9 +112,7 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
         Key[] elements = this.elements;
         int length = elements.length;
         Key[] result = newArray(length + 1);
-        for (int i = 0; i < length; i++) {
-            result[i] = elements[i];
-        }
+        System.arraycopy(elements, 0, result, 0, length);
         result[length] = item;
         return newInstance(result);
     }
@@ -134,14 +130,11 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
         if (index < 0) {
             index = 0;
         }
-        for (int i = 0; i < index; i++) {
-            result[i] = elements[i];
-        }
+        System.arraycopy(elements, 0, result, 0, index);
         result[index] = item;
         index = index + 1;
-        for (int i = index; i < length; i++) {
-            result[i] = elements[i - 1];
-        }
+        if (length - index >= 0)
+            System.arraycopy(elements, index - 1, result, index, length - index);
         return newInstance(result);
     }
     public KeyList<T> remove(T itemKey) {
@@ -195,9 +188,7 @@ public abstract class KeyList<T extends Key> implements Key, Iterable<T> {
         }
         Key[] result = newArray(j);
         length = result.length;
-        for (int i = 0; i < length; i++) {
-            result[i] = filtered[i];
-        }
+        System.arraycopy(filtered, 0, result, 0, length);
         return newInstance(result);
     }
 

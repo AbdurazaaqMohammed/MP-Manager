@@ -210,9 +210,9 @@ public class X509CertificatePair {
         StringBuffer sb = new StringBuffer();
         sb.append("X.509 Certificate Pair: [\n");
         if (forward != null)
-            sb.append("  Forward: " + forward + "\n");
+            sb.append("  Forward: ").append(forward).append("\n");
         if (reverse != null)
-            sb.append("  Reverse: " + reverse + "\n");
+            sb.append("  Reverse: ").append(reverse).append("\n");
         sb.append("]");
         return sb.toString();
     }

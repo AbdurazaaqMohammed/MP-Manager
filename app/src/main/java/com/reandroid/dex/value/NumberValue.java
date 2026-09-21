@@ -73,9 +73,7 @@ public class NumberValue extends DexBlockItem {
         setBytesLength(length, false);
         byte[] bytes = getBytesInternal();
 
-        for(int i = 0; i < length; i++){
-            bytes[i] = coming[i];
-        }
+        System.arraycopy(coming, 0, bytes, 0, length);
     }
 
     @Override

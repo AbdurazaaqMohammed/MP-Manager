@@ -382,9 +382,7 @@ public class MethodDefinition {
             setLabelSequentialNumbers();
         }
 
-        for (LabelMethodItem labelMethodItem: labelCache.getLabels()) {
-            methodItems.add(labelMethodItem);
-        }
+        methodItems.addAll(labelCache.getLabels());
 
         Collections.sort(methodItems);
 

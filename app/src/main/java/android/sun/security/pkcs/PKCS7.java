@@ -499,7 +499,7 @@ public class PKCS7 {
             // Add the CRL set (tagged with [1] IMPLICIT)
             // to the signed data
             signedData.putOrderedSetOf((byte)0xA1,
-                    implCRLs.toArray(new X509CRLImpl[implCRLs.size()]));
+                    implCRLs.toArray(new X509CRLImpl[0]));
         }
 
         // signerInfos
@@ -689,32 +689,32 @@ public class PKCS7 {
      * Returns the PKCS7 block in a printable string form.
      */
     public String toString() {
-        String out = "";
+        StringBuilder out = new StringBuilder();
 
-        out += contentInfo + "\n";
+        out.append(contentInfo).append("\n");
         if (version != null)
-            out += "PKCS7 :: version: " + Debug.toHexString(version) + "\n";
+            out.append("PKCS7 :: version: ").append(Debug.toHexString(version)).append("\n");
         if (digestAlgorithmIds != null) {
-            out += "PKCS7 :: digest AlgorithmIds: \n";
+            out.append("PKCS7 :: digest AlgorithmIds: \n");
             for (AlgorithmId digestAlgorithmId : digestAlgorithmIds)
-                out += "\t" + digestAlgorithmId + "\n";
+                out.append("\t").append(digestAlgorithmId).append("\n");
         }
         if (certificates != null) {
-            out += "PKCS7 :: certificates: \n";
+            out.append("PKCS7 :: certificates: \n");
             for (int i = 0; i < certificates.length; i++)
-                out += "\t" + i + ".   " + certificates[i] + "\n";
+                out.append("\t").append(i).append(".   ").append(certificates[i]).append("\n");
         }
         if (crls != null) {
-            out += "PKCS7 :: crls: \n";
+            out.append("PKCS7 :: crls: \n");
             for (int i = 0; i < crls.length; i++)
-                out += "\t" + i + ".   " + crls[i] + "\n";
+                out.append("\t").append(i).append(".   ").append(crls[i]).append("\n");
         }
         if (signerInfos != null) {
-            out += "PKCS7 :: signer infos: \n";
+            out.append("PKCS7 :: signer infos: \n");
             for (int i = 0; i < signerInfos.length; i++)
-                out += ("\t" + i + ".  " + signerInfos[i] + "\n");
+                out.append("\t").append(i).append(".  ").append(signerInfos[i]).append("\n");
         }
-        return out;
+        return out.toString();
     }
 
     /**

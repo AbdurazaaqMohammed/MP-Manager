@@ -141,16 +141,16 @@ extends Extension implements CertAttrSet<String> {
      */
     public String toString() {
 
-        String result = super.toString() + "IssuerAlternativeName [\n";
+        StringBuilder result = new StringBuilder(super.toString() + "IssuerAlternativeName [\n");
         if(names == null) {
-            result += "  null\n";
+            result.append("  null\n");
         } else {
             for(GeneralName name: names.names()) {
-                result += "  "+name+"\n";
+                result.append("  ").append(name).append("\n");
             }
         }
-        result += "]\n";
-        return result;
+        result.append("]\n");
+        return result.toString();
     }
 
     /**

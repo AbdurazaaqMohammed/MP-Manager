@@ -118,9 +118,9 @@ public class AnalysisArguments {
             for (String dir: classPathDirectories) {
                 File file = new File(dir);
                 if (!file.exists()) {
-                    System.err.println(String.format("Warning: directory %s does not exist. Ignoring.", dir));
+                    System.err.printf("Warning: directory %s does not exist. Ignoring.%n", dir);
                 } else if (!file.isDirectory()) {
-                    System.err.println(String.format("Warning: %s is not a directory. Ignoring.", dir));
+                    System.err.printf("Warning: %s is not a directory. Ignoring.%n", dir);
                 } else {
                     filteredClassPathDirectories.add(dir);
                 }

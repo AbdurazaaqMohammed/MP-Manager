@@ -202,18 +202,18 @@ implements CertAttrSet<String> {
      */
     public String toString() {
         if (keyUsages == null) return "";
-        String usage = "  ";
+        StringBuilder usage = new StringBuilder("  ");
         boolean first = true;
         for (ObjectIdentifier oid: keyUsages) {
             if(!first) {
-                usage += "\n  ";
+                usage.append("\n  ");
             }
 
             String result = map.get(oid);
             if (result != null) {
-                usage += result;
+                usage.append(result);
             } else {
-                usage += oid.toString();
+                usage.append(oid.toString());
             }
             first = false;
         }

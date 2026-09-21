@@ -78,13 +78,13 @@ public class DeodexCommand extends DisassembleCommand {
             } else {
                 File inlineTableFile = new File(inlineTable);
                 if (!inlineTableFile.exists()) {
-                    System.err.println(String.format("Could not find file: %s", inlineTable));
+                    System.err.printf("Could not find file: %s%n", inlineTable);
                     System.exit(-1);
                 }
                 try {
                     options.inlineResolver = new CustomInlineMethodResolver(options.classPath, inlineTableFile);
                 } catch (IOException ex) {
-                    System.err.println(String.format("Error while reading file: %s", inlineTableFile));
+                    System.err.printf("Error while reading file: %s%n", inlineTableFile);
                     ex.printStackTrace(System.err);
                     System.exit(-1);
                 }

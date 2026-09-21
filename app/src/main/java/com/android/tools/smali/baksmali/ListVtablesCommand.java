@@ -123,12 +123,12 @@ public class ListVtablesCommand extends DexInputCommand {
         for (int i = 0; i < methods.size(); i++) {
             Method method = methods.get(i);
 
-            String methodString = i + ":" + method.getDefiningClass() + "->" + method.getName() + "(";
+            StringBuilder methodString = new StringBuilder(i + ":" + method.getDefiningClass() + "->" + method.getName() + "(");
             for (CharSequence parameter : method.getParameterTypes()) {
-                methodString += parameter;
+                methodString.append(parameter);
             }
-            methodString += ")" + method.getReturnType() + "\n";
-            System.out.write(methodString.getBytes());
+            methodString.append(")").append(method.getReturnType()).append("\n");
+            System.out.write(methodString.toString().getBytes());
         }
         System.out.write("\n".getBytes());
     }

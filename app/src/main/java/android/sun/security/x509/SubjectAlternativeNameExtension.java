@@ -146,16 +146,16 @@ implements CertAttrSet<String> {
      */
     public String toString() {
 
-        String result = super.toString() + "SubjectAlternativeName [\n";
+        StringBuilder result = new StringBuilder(super.toString() + "SubjectAlternativeName [\n");
         if(names == null) {
-            result += "  null\n";
+            result.append("  null\n");
         } else {
             for(GeneralName name: names.names()) {
-                result += "  "+name+"\n";
+                result.append("  ").append(name).append("\n");
             }
         }
-        result += "]\n";
-        return result;
+        result.append("]\n");
+        return result.toString();
     }
 
     /**

@@ -694,7 +694,7 @@ public class DexUtils {
         if(builder.length() != 0){
             results.add(builder.toString());
         }
-        return results.toArray(new String[results.size()]);
+        return results.toArray(new String[0]);
     }
     private static boolean isSignatureSymbol(char ch){
         return switch (ch) {

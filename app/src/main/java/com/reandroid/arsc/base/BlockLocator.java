@@ -78,9 +78,7 @@ public class BlockLocator extends BlockCounter{
             count++;
         }
         Block[] results = new Block[count];
-        for(int i = 0; i < count; i++){
-            results[i] = tmp[i];
-        }
+        System.arraycopy(tmp, 0, results, 0, count);
         return results;
     }
     public static class Result{

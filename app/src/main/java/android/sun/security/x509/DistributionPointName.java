@@ -229,10 +229,10 @@ public class DistributionPointName {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         if (fullName != null) {
-            sb.append("DistributionPointName:\n     " + fullName + "\n");
+            sb.append("DistributionPointName:\n     ").append(fullName).append("\n");
 
         } else {
-            sb.append("DistributionPointName:\n     " + relativeName + "\n");
+            sb.append("DistributionPointName:\n     ").append(relativeName).append("\n");
         }
 
         return sb.toString();

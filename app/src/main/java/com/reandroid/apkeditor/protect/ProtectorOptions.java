@@ -125,7 +125,7 @@ public class ProtectorOptions extends Options {
         ArrayCollection<String> results = new ArrayCollection<>(
                 StringsUtil.split(full, '\n', true));
         results.removeIf((Predicate<String>) text -> StringsUtil.isEmpty(text));
-        return results.toArray(new String[results.size()]);
+        return results.toArray(new String[0]);
     }
     public boolean isKeepType(String type) {
         Set<String> keepTypes = this.keepTypes;

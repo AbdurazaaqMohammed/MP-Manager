@@ -629,9 +629,9 @@ public abstract class V1SchemeVerifier {
                     if (range.getMin() == range.getMax()) {
                         apiLevelsUserFriendly.append(range.getMin());
                     } else if (range.getMax() == Integer.MAX_VALUE) {
-                        apiLevelsUserFriendly.append(range.getMin() + "+");
+                        apiLevelsUserFriendly.append(range.getMin()).append("+");
                     } else {
-                        apiLevelsUserFriendly.append(range.getMin() + "-" + range.getMax());
+                        apiLevelsUserFriendly.append(range.getMin()).append("-").append(range.getMax());
                     }
                 }
                 mResult.addError(

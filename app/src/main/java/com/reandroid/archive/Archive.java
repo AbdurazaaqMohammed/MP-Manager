@@ -67,7 +67,7 @@ public abstract class Archive<T extends ZipInput> implements Closeable {
     public InputSource[] getInputSources(Predicate<? super ArchiveEntry> filter){
         Iterator<InputSource> iterator = ComputeIterator.of(iterator(filter), this::createInputSource);
         List<InputSource> sourceList = CollectionUtil.toList(iterator);
-        return sourceList.toArray(new InputSource[sourceList.size()]);
+        return sourceList.toArray(new InputSource[0]);
     }
 
     public PathTree<InputSource> getPathTree(){

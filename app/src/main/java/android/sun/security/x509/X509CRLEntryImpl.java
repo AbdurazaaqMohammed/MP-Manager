@@ -294,17 +294,17 @@ public class X509CRLEntryImpl extends X509CRLEntry {
         StringBuilder sb = new StringBuilder();
 
         sb.append(serialNumber.toString());
-        sb.append("  On: " + revocationDate.toString());
+        sb.append("  On: ").append(revocationDate.toString());
         if (certIssuer != null) {
-            sb.append("\n    Certificate issuer: " + certIssuer);
+            sb.append("\n    Certificate issuer: ").append(certIssuer);
         }
         if (extensions != null) {
             Collection allEntryExts = extensions.getAllExtensions();
             Object[] objs = allEntryExts.toArray();
 
-            sb.append("\n    CRL Entry Extensions: " + objs.length);
+            sb.append("\n    CRL Entry Extensions: ").append(objs.length);
             for (int i = 0; i < objs.length; i++) {
-                sb.append("\n    [" + (i+1) + "]: ");
+                sb.append("\n    [").append(i + 1).append("]: ");
                 android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
                 try {
                     if (android.sun.security.x509.OIDMap.getClass(ext.getExtensionId()) == null) {
@@ -315,9 +315,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
                             out.putOctetString(extValue);
                             extValue = out.toByteArray();
                             HexDumpEncoder enc = new HexDumpEncoder();
-                            sb.append("Extension unknown: "
-                                      + "DER encoded OCTET string =\n"
-                                      + enc.encodeBuffer(extValue) + "\n");
+                            sb.append("Extension unknown: " + "DER encoded OCTET string =\n").append(enc.encodeBuffer(extValue)).append("\n");
                         }
                     } else
                         sb.append(ext); //sub-class exists

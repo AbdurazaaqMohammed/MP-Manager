@@ -302,27 +302,27 @@ public class X509CertInfo implements CertAttrSet<String> {
         StringBuilder sb = new StringBuilder();
 
         sb.append("[\n");
-        sb.append("  " + version.toString() + "\n");
-        sb.append("  Subject: " + subject.toString() + "\n");
-        sb.append("  Signature Algorithm: " + algId.toString() + "\n");
-        sb.append("  Key:  " + pubKey.toString() + "\n");
-        sb.append("  " + interval.toString() + "\n");
-        sb.append("  Issuer: " + issuer.toString() + "\n");
-        sb.append("  " + serialNum.toString() + "\n");
+        sb.append("  ").append(version.toString()).append("\n");
+        sb.append("  Subject: ").append(subject.toString()).append("\n");
+        sb.append("  Signature Algorithm: ").append(algId.toString()).append("\n");
+        sb.append("  Key:  ").append(pubKey.toString()).append("\n");
+        sb.append("  ").append(interval.toString()).append("\n");
+        sb.append("  Issuer: ").append(issuer.toString()).append("\n");
+        sb.append("  ").append(serialNum.toString()).append("\n");
 
         // optional v2, v3 extras
         if (issuerUniqueId != null) {
-            sb.append("  Issuer Id:\n" + issuerUniqueId + "\n");
+            sb.append("  Issuer Id:\n").append(issuerUniqueId).append("\n");
         }
         if (subjectUniqueId != null) {
-            sb.append("  Subject Id:\n" + subjectUniqueId + "\n");
+            sb.append("  Subject Id:\n").append(subjectUniqueId).append("\n");
         }
         if (extensions != null) {
             Collection allExts = extensions.getAllExtensions();
             Object[] objs = allExts.toArray();
-            sb.append("\nCertificate Extensions: " + objs.length);
+            sb.append("\nCertificate Extensions: ").append(objs.length);
             for (int i = 0; i < objs.length; i++) {
-                sb.append("\n[" + (i+1) + "]: ");
+                sb.append("\n[").append(i + 1).append("]: ");
                 android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
                 try {
                     if (OIDMap.getClass(ext.getExtensionId()) == null) {
@@ -333,9 +333,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                             out.putOctetString(extValue);
                             extValue = out.toByteArray();
                             HexDumpEncoder enc = new HexDumpEncoder();
-                            sb.append("Extension unknown: "
-                                      + "DER encoded OCTET string =\n"
-                                      + enc.encodeBuffer(extValue) + "\n");
+                            sb.append("Extension unknown: " + "DER encoded OCTET string =\n").append(enc.encodeBuffer(extValue)).append("\n");
                         }
                     } else
                         sb.append(ext); //sub-class exists
@@ -345,10 +343,10 @@ public class X509CertInfo implements CertAttrSet<String> {
             }
             Map<String, android.sun.security.x509.Extension> invalid = extensions.getUnparseableExtensions();
             if (!invalid.isEmpty()) {
-                sb.append("\nUnparseable certificate extensions: " + invalid.size());
+                sb.append("\nUnparseable certificate extensions: ").append(invalid.size());
                 int i = 1;
                 for (Extension ext : invalid.values()) {
-                    sb.append("\n[" + (i++) + "]: ");
+                    sb.append("\n[").append(i++).append("]: ");
                     sb.append(ext);
                 }
             }

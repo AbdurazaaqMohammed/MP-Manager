@@ -388,22 +388,22 @@ public class DistributionPoint {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         if (fullName != null) {
-            sb.append("DistributionPoint:\n     " + fullName + "\n");
+            sb.append("DistributionPoint:\n     ").append(fullName).append("\n");
         }
         if (relativeName != null) {
-            sb.append("DistributionPoint:\n     " + relativeName + "\n");
+            sb.append("DistributionPoint:\n     ").append(relativeName).append("\n");
         }
 
         if (reasonFlags != null) {
             sb.append("   ReasonFlags:\n");
             for (int i = 0; i < reasonFlags.length; i++) {
                 if (reasonFlags[i]) {
-                    sb.append("    " + reasonToString(i) + "\n");
+                    sb.append("    ").append(reasonToString(i)).append("\n");
                 }
             }
         }
         if (crlIssuer != null) {
-            sb.append("   CRLIssuer:" + crlIssuer + "\n");
+            sb.append("   CRLIssuer:").append(crlIssuer).append("\n");
         }
         return sb.toString();
     }

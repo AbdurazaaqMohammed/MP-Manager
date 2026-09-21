@@ -21,6 +21,7 @@ import com.android.apksig.util.DataSource;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /** Pseudo {@link DataSource} that chains the given {@link DataSource} as a continuous one. */
 public class ChainedDataSource implements DataSource {
@@ -122,9 +123,7 @@ public class ChainedDataSource implements DataSource {
         int endIndex = lastSource.getFirst();
         long endLocalOffset = lastSource.getSecond();
 
-        for (int i = beginIndex + 1; i < endIndex; i++) {
-            sources.add(mSources[i]);
-        }
+        sources.addAll(Arrays.asList(mSources).subList(beginIndex + 1, endIndex));
 
         sources.add(mSources[endIndex].slice(0, endLocalOffset + 1));
         return new ChainedDataSource(sources.toArray(new DataSource[0]));

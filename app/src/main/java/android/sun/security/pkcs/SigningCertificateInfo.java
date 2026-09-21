@@ -158,8 +158,8 @@ class ESSCertId {
         }
         buffer.append(hexDumper.encode(certHash));
         if (issuer != null && serialNumber != null) {
-            buffer.append("\n\tIssuer: " + issuer + "\n");
-            buffer.append("\t" + serialNumber);
+            buffer.append("\n\tIssuer: ").append(issuer).append("\n");
+            buffer.append("\t").append(serialNumber);
         }
         buffer.append("\n]");
         return buffer.toString();

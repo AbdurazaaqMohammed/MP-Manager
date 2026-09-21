@@ -59,8 +59,7 @@ public final class ResourceSweeper {
         }
 
         Set<Integer> used = new HashSet<>();
-        Deque<Integer> queue = new ArrayDeque<>();
-        queue.addAll(resourceRoots);
+        Deque<Integer> queue = new ArrayDeque<>(resourceRoots);
         for (String key : nameRefKeys) {
             ResourceEntry entry = byName.get(key);
             if (entry != null) queue.add(entry.getResourceId());

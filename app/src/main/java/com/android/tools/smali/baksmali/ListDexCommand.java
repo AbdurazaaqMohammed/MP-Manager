@@ -81,7 +81,7 @@ public class ListDexCommand extends Command {
         File file = new File(input);
 
         if (!file.exists()) {
-            System.err.println(String.format("Could not find the file: %s", input));
+            System.err.printf("Could not find the file: %s%n", input);
             System.exit(-1);
         }
 

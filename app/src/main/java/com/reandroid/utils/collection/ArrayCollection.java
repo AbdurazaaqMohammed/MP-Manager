@@ -490,9 +490,7 @@ public class ArrayCollection<T> implements ArraySupplier<T>, List<T>, Set<T>, Sw
         }
         Object[] result = getNewArray(length);
         Object[] elements = this.mElements;
-        for(int i = start; i < end; i ++){
-            result[i] = elements[i];
-        }
+        if (end - start >= 0) System.arraycopy(elements, start, result, start, end - start);
         return new ArrayCollection<>(result);
     }
     public ArrayCollection<T> reversedCopy() {
@@ -1065,9 +1063,7 @@ public class ArrayCollection<T> implements ArraySupplier<T>, List<T>, Set<T>, Sw
         return update;
     }
     private void arrayCopy(Object[] source, Object[] destination, int length){
-        for(int i = 0; i < length; i++){
-            destination[i] = source[i];
-        }
+        if (length >= 0) System.arraycopy(source, 0, destination, 0, length);
     }
     private Object[] getNewArray(Object[] source, int length){
         Object[] result = getNewArray(length);

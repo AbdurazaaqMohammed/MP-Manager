@@ -145,7 +145,7 @@ public class RDN {
         android.sun.security.x509.AVA ava = new android.sun.security.x509.AVA(new StringReader(avaString), keywordMap);
         avaVec.add(ava);
 
-        assertion = avaVec.toArray(new android.sun.security.x509.AVA[avaVec.size()]);
+        assertion = avaVec.toArray(new AVA[0]);
     }
 
     /*
@@ -221,7 +221,7 @@ public class RDN {
         android.sun.security.x509.AVA ava = new android.sun.security.x509.AVA(new StringReader(avaString), android.sun.security.x509.AVA.RFC2253, keywordMap);
         avaVec.add(ava);
 
-        assertion = avaVec.toArray(new android.sun.security.x509.AVA[avaVec.size()]);
+        assertion = avaVec.toArray(new AVA[0]);
     }
 
     /*
@@ -454,9 +454,7 @@ public class RDN {
             // order the string type AVA's alphabetically,
             // followed by the oid type AVA's numerically
             List<android.sun.security.x509.AVA> avaList = new ArrayList<>(assertion.length);
-            for (AVA ava : assertion) {
-                avaList.add(ava);
-            }
+            Collections.addAll(avaList, assertion);
             java.util.Collections.sort(avaList, AVAComparator.getInstance());
 
             for (int i = 0; i < avaList.size(); i++) {

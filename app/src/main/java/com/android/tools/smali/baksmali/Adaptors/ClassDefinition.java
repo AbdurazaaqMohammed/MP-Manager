@@ -199,7 +199,7 @@ public class ClassDefinition {
             if (!writtenFields.add(fieldString)) {
                 writer.write("# duplicate field ignored\n");
                 fieldWriter = getCommentingWriter(writer);
-                System.err.println(String.format("Ignoring duplicate field: %s->%s", classDef.getType(), fieldString));
+                System.err.printf("Ignoring duplicate field: %s->%s%n", classDef.getType(), fieldString);
                 setInStaticConstructor = false;
             } else {
                 setInStaticConstructor = fieldsSetInStaticConstructor.contains(fieldString);
@@ -233,10 +233,10 @@ public class ClassDefinition {
             if (!writtenFields.add(fieldString)) {
                 writer.write("# duplicate field ignored\n");
                 fieldWriter = getCommentingWriter(writer);
-                System.err.println(String.format("Ignoring duplicate field: %s->%s", classDef.getType(), fieldString));
+                System.err.printf("Ignoring duplicate field: %s->%s%n", classDef.getType(), fieldString);
             } else if (staticFields.contains(fieldString)) {
-                System.err.println(String.format("Duplicate static+instance field found: %s->%s",
-                        classDef.getType(), fieldString));
+                System.err.printf("Duplicate static+instance field found: %s->%s%n",
+                        classDef.getType(), fieldString);
                 System.err.println("You will need to rename one of these fields, including all references.");
 
                 writer.write("""
@@ -319,8 +319,8 @@ public class ClassDefinition {
                         # There is both a direct and virtual method with this signature.
                         # You will need to rename one of these methods, including all references.
                         """);
-                System.err.println(String.format("Duplicate direct+virtual method found: %s->%s",
-                        classDef.getType(), methodString));
+                System.err.printf("Duplicate direct+virtual method found: %s->%s%n",
+                        classDef.getType(), methodString);
                 System.err.println("You will need to rename one of these methods, including all references.");
             }
 

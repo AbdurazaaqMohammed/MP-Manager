@@ -1326,7 +1326,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         /*
          * Match up private keys with certificate chains.
          */
-        KeyEntry[] list = keyList.toArray(new KeyEntry[keyList.size()]);
+        KeyEntry[] list = keyList.toArray(new KeyEntry[0]);
         for (KeyEntry entry : list) {
             if (entry.keyId != null) {
                 ArrayList<X509Certificate> chain =
@@ -1342,7 +1342,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
                 }
                 /* Update existing KeyEntry in entries table */
                 if (chain.size() > 0)
-                    entry.chain = chain.toArray(new Certificate[chain.size()]);
+                    entry.chain = chain.toArray(new Certificate[0]);
             }
         }
         certEntries.clear();

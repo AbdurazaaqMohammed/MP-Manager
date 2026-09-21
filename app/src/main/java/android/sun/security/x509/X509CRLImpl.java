@@ -480,31 +480,30 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
      */
     public String toString() {
         StringBuffer sb = new StringBuffer();
-        sb.append("X.509 CRL v" + (version+1) + "\n");
+        sb.append("X.509 CRL v").append(version + 1).append("\n");
         if (sigAlgId != null)
-            sb.append("Signature Algorithm: " + sigAlgId +
-                  ", OID=" + (sigAlgId.getOID()).toString() + "\n");
+            sb.append("Signature Algorithm: ").append(sigAlgId).append(", OID=").append((sigAlgId.getOID()).toString()).append("\n");
         if (issuer != null)
-            sb.append("Issuer: " + issuer + "\n");
+            sb.append("Issuer: ").append(issuer).append("\n");
         if (thisUpdate != null)
-            sb.append("\nThis Update: " + thisUpdate + "\n");
+            sb.append("\nThis Update: ").append(thisUpdate).append("\n");
         if (nextUpdate != null)
-            sb.append("Next Update: " + nextUpdate + "\n");
+            sb.append("Next Update: ").append(nextUpdate).append("\n");
         if (revokedCerts.isEmpty())
             sb.append("\nNO certificates have been revoked\n");
         else {
-            sb.append("\nRevoked Certificates: " + revokedCerts.size());
+            sb.append("\nRevoked Certificates: ").append(revokedCerts.size());
             int i = 1;
             for (Iterator<X509CRLEntry> iter = revokedCerts.values().iterator();
                                              iter.hasNext(); i++)
-                sb.append("\n[" + i + "] " + iter.next().toString());
+                sb.append("\n[").append(i).append("] ").append(iter.next().toString());
         }
         if (extensions != null) {
             Collection<android.sun.security.x509.Extension> allExts = extensions.getAllExtensions();
             Object[] objs = allExts.toArray();
-            sb.append("\nCRL Extensions: " + objs.length);
+            sb.append("\nCRL Extensions: ").append(objs.length);
             for (int i = 0; i < objs.length; i++) {
-                sb.append("\n[" + (i+1) + "]: ");
+                sb.append("\n[").append(i + 1).append("]: ");
                 android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
                 try {
                    if (android.sun.security.x509.OIDMap.getClass(ext.getExtensionId()) == null) {
@@ -515,9 +514,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
                            out.putOctetString(extValue);
                            extValue = out.toByteArray();
                            HexDumpEncoder enc = new HexDumpEncoder();
-                           sb.append("Extension unknown: "
-                                     + "DER encoded OCTET string =\n"
-                                     + enc.encodeBuffer(extValue) + "\n");
+                           sb.append("Extension unknown: " + "DER encoded OCTET string =\n").append(enc.encodeBuffer(extValue)).append("\n");
                       }
                    } else
                        sb.append(ext); // sub-class exists
@@ -528,8 +525,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
         }
         if (signature != null) {
             HexDumpEncoder encoder = new HexDumpEncoder();
-            sb.append("\nSignature:\n" + encoder.encodeBuffer(signature)
-                      + "\n");
+            sb.append("\nSignature:\n").append(encoder.encodeBuffer(signature)).append("\n");
         } else
             sb.append("NOT signed yet\n");
         return sb.toString();

@@ -49,9 +49,7 @@ public class CollectionUtil {
         }
         int length = elements.length;
         HashSet<T> results = new HashSet<>(length);
-        for (T element : elements) {
-            results.add(element);
-        }
+        Collections.addAll(results, elements);
         return results;
     }
     public static<T> HashSet<T> toHashSet(Iterator<? extends T> iterator) {

@@ -58,7 +58,7 @@ public class FileUtil {
         createNewFile(path);
 
         StringBuilder sb = new StringBuilder();
-        try (FileReader fr = new FileReader(new File(path))) {
+        try (FileReader fr = new FileReader(path)) {
 
             char[] buff = new char[1024];
             int length = 0;
@@ -76,7 +76,7 @@ public class FileUtil {
     public static void writeFile(String path, String str) {
         createNewFile(path);
 
-        try (FileWriter fileWriter = new FileWriter(new File(path), false)) {
+        try (FileWriter fileWriter = new FileWriter(path, false)) {
             try {
                 fileWriter.write(str);
                 fileWriter.flush();

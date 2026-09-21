@@ -1379,8 +1379,7 @@ public class ApkVerifier {
          * and the source stamp.
          */
         public List<IssueWithParams> getAllErrors() {
-            List<IssueWithParams> errors = new ArrayList<>();
-            errors.addAll(mErrors);
+            List<IssueWithParams> errors = new ArrayList<>(mErrors);
             if (mWarningsAsErrors) {
                 errors.addAll(mWarnings);
             }

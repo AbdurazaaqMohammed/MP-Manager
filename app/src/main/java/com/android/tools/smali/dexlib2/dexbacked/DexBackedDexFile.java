@@ -138,7 +138,7 @@ public class DexBackedDexFile implements DexFile {
           container_off = dexBuffer.readSmallUint(header_offset + HeaderItem.CONTAINER_OFF_OFFSET);
         }
         if (container_off != header_offset) {
-          throw new DexUtil.InvalidFile(String.format("Unexpected container offset in header"));
+          throw new DexUtil.InvalidFile("Unexpected container offset in header");
         }
     }
 
