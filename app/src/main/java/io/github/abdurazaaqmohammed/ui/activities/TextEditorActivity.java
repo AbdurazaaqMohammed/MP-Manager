@@ -175,7 +175,7 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             while ((line = reader.readLine()) != null) sb.append(line).append('\n');
             JSONObject root = new JSONObject(sb.toString());
             JSONArray arr = root.optJSONArray("tabs");
-            if (android.text.TextUtils.isEmpty(arr)) return;
+            if ((arr == null || arr.length() == 0)) return;
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject o = arr.getJSONObject(i);
                 EditorTab t = new EditorTab();

@@ -558,7 +558,7 @@ public class ImageEditActivity extends AppCompatActivity {
         }
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.img_exif))
-                .setView(exifBox)
+                .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(getString(R.string.save), (d, w) -> {
                     new Thread(() -> {

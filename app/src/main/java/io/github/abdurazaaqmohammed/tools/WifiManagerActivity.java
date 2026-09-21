@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.DnsManager;
 import io.github.abdurazaaqmohammed.utils.QrUtil;
