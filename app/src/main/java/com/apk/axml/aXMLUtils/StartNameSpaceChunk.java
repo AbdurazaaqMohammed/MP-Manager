@@ -8,7 +8,7 @@ public class StartNameSpaceChunk extends Chunk<StartNameSpaceChunk.H> {
         super(parent);
     }
 
-    public class H extends Chunk.NodeHeader{
+    public static class H extends Chunk.NodeHeader{
         public H() {
             super(ChunkType.XmlStartNamespace);
             size = 0x18;

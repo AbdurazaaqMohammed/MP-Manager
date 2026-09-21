@@ -114,6 +114,6 @@ public class JpegMetaStripTest {
         byte[] once = JpegMetaStrip.strip(sampleJpeg());
         byte[] twice = JpegMetaStrip.strip(once);
         assertArrayEquals(once, twice);
-        assertTrue(Arrays.equals(once, twice));
+        assertArrayEquals(once, twice);
     }
 }

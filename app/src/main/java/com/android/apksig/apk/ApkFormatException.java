@@ -16,6 +16,8 @@
 
 package com.android.apksig.apk;
 
+import java.io.Serial;
+
 /**
  * Indicates that an APK is not well-formed. For example, this may indicate that the APK is not a
  * well-formed ZIP archive, in which case {@link #getCause()} will return a
@@ -23,6 +25,7 @@ package com.android.apksig.apk;
  * multiple ZIP entries with the same name.
  */
 public class ApkFormatException extends Exception {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public ApkFormatException(String message) {

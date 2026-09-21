@@ -59,6 +59,7 @@ import java.security.*;
 public class AlgorithmId implements Serializable, android.sun.security.util.DerEncoder {
 
     /** use serialVersionUID from JDK 1.1. for interoperability */
+    @Serial
     private static final long serialVersionUID = 7205873507486557157L;
 
     /**

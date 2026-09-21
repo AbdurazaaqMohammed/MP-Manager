@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serial;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -64,6 +65,7 @@ import android.sun.security.util.DerInputStream;
  */
 public class X509CertPath extends CertPath {
 
+    @Serial
     private static final long serialVersionUID = 4989800333263052980L;
 
     /**

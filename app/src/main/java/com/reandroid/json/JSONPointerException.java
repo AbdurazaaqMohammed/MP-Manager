@@ -5,7 +5,10 @@
 */
 package com.reandroid.json;
 
+import java.io.Serial;
+
 public class JSONPointerException extends JSONException {
+    @Serial
     private static final long serialVersionUID = 8872944667561856751L;
 
     public JSONPointerException(String message) {

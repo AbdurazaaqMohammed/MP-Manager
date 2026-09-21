@@ -238,7 +238,7 @@ public class CodeItem {
 
                 reader.setOffset(instructionsStartOffset);
 
-					return new CodeItem.CodeItemAnnotator.PreInstructionInfo(totalTriesCount, totalInstructionsSize);
+					return new PreInstructionInfo(totalTriesCount, totalInstructionsSize);
             }
         };
     }
@@ -258,7 +258,7 @@ public class CodeItem {
             return 4;
         }
 
-        protected class PreInstructionInfo {
+        protected static class PreInstructionInfo {
             public final int triesCount;
             public final int instructionSize;
 

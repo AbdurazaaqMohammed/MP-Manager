@@ -6,7 +6,7 @@ import java.util.List;
 
 public class ResourceMapChunk extends Chunk<ResourceMapChunk.H> {
 
-    public class H extends Chunk.Header{
+    public static class H extends Chunk.Header{
 
         public H() {
             super(ChunkType.XmlResourceMap);

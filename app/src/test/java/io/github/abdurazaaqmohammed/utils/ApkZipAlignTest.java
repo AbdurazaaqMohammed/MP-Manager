@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -27,11 +28,11 @@ public class ApkZipAlignTest {
         assertTrue(ApkZipAlignUtil.mustStore("resources.arsc"));
         assertTrue(ApkZipAlignUtil.mustStore("res/drawable/icon.png"));
         assertTrue(ApkZipAlignUtil.mustStore("res/raw/sound.mp3"));
-        assertTrue(!ApkZipAlignUtil.mustStore("res/layout/main.xml"));
-        assertTrue(!ApkZipAlignUtil.mustStore("res/values/strings.xml"));
-        assertTrue(!ApkZipAlignUtil.mustStore("classes.dex"));
-        assertTrue(!ApkZipAlignUtil.mustStore("assets/font.ttf"));
-        assertTrue(!ApkZipAlignUtil.mustStore("META-INF/MANIFEST.MF"));
+        assertFalse(ApkZipAlignUtil.mustStore("res/layout/main.xml"));
+        assertFalse(ApkZipAlignUtil.mustStore("res/values/strings.xml"));
+        assertFalse(ApkZipAlignUtil.mustStore("classes.dex"));
+        assertFalse(ApkZipAlignUtil.mustStore("assets/font.ttf"));
+        assertFalse(ApkZipAlignUtil.mustStore("META-INF/MANIFEST.MF"));
     }
 
     @Test
@@ -60,7 +61,7 @@ public class ApkZipAlignTest {
         assertMethod(apk, "res/layout/main.xml", ZipEntry.DEFLATED);
 
         // idempotent: second run is a no-op
-        assertTrue(!ApkZipAlignUtil.ensureInstallable(apk));
+        assertFalse(ApkZipAlignUtil.ensureInstallable(apk));
         assertNull(ApkZipAlignUtil.installIssue(apk));
         assertPayloads(apk, payloads);
         assertLocalNamesMatchCentralDirectory(apk);

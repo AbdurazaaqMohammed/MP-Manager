@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.utils;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -140,7 +141,7 @@ public class FastDexTest {
                 "\\.method protected onCreate\\(Landroid/os/Bundle;\\)V",
                 java.util.regex.Matcher.quoteReplacement(
                         ".method private onCreate$mpmanager(Landroid/os/Bundle;)V"));
-        assertFalse(patched.equals(content));
+        assertNotEquals(patched, content);
         try (FileWriter w = new FileWriter(bSmali)) {
             w.write(patched);
         }

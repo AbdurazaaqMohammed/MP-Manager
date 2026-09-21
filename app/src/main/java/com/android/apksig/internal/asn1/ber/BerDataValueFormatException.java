@@ -16,12 +16,15 @@
 
 package com.android.apksig.internal.asn1.ber;
 
+import java.io.Serial;
+
 /**
  * Indicates that an ASN.1 data value being read could not be decoded using
  * Basic Encoding Rules (BER).
  */
 public class BerDataValueFormatException extends Exception {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public BerDataValueFormatException(String message) {
