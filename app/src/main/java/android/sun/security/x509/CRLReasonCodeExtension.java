@@ -158,7 +158,7 @@ public class CRLReasonCodeExtension extends Extension
      */
     public Object get(String name) throws IOException {
         if (name.equalsIgnoreCase(REASON)) {
-            return new Integer(reasonCode);
+            return Integer.valueOf(reasonCode);
         } else {
             throw new IOException
                 ("Name not supported by CRLReasonCodeExtension");
