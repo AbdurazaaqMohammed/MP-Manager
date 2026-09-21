@@ -165,9 +165,7 @@ public class CRLExtensions {
                 tmp = seq;
 
             out.write(tmp.toByteArray());
-        } catch (IOException e) {
-            throw new CRLException("Encoding error: " + e);
-        } catch (CertificateException e) {
+        } catch (IOException | CertificateException e) {
             throw new CRLException("Encoding error: " + e);
         }
     }

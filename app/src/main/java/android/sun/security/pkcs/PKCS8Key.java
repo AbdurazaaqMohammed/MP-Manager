@@ -185,9 +185,7 @@ public class PKCS8Key implements PrivateKey {
 
             // Generate the private key
             return keyFac.generatePrivate(pkcs8KeySpec);
-        } catch (NoSuchAlgorithmException e) {
-            // Return generic PKCS8Key with opaque key data (see below)
-        } catch (InvalidKeySpecException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             // Return generic PKCS8Key with opaque key data (see below)
         }
 
@@ -231,8 +229,7 @@ public class PKCS8Key implements PrivateKey {
                 result.parseKeyBits();
                 return result;
             }
-        } catch (ClassNotFoundException e) {
-        } catch (InstantiationException e) {
+        } catch (ClassNotFoundException | InstantiationException e) {
         } catch (IllegalAccessException e) {
             // this should not happen.
             throw new IOException (classname + " [internal error]");

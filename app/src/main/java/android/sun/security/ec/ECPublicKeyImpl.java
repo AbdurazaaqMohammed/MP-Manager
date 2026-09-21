@@ -97,9 +97,7 @@ public final class ECPublicKeyImpl extends X509Key implements ECPublicKey {
             AlgorithmParameters algParams = this.algid.getParameters();
             params = algParams.getParameterSpec(ECParameterSpec.class);
             w = ECParameters.decodePoint(key, params.getCurve());
-        } catch (IOException e) {
-            throw new InvalidKeyException("Invalid EC key", e);
-        } catch (InvalidParameterSpecException e) {
+        } catch (IOException | InvalidParameterSpecException e) {
             throw new InvalidKeyException("Invalid EC key", e);
         }
     }

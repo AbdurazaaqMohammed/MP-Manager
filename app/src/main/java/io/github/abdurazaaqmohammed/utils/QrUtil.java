@@ -110,8 +110,6 @@ public final class QrUtil {
             hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
             Result result = new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(source)), hints);
             return result == null ? null : result.getText();
-        } catch (NotFoundException e) {
-            return null;
         } catch (Exception e) {
             return null;
         }

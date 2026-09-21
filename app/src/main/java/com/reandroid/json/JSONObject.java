@@ -485,9 +485,7 @@ public class JSONObject extends JSONItem {
                 return myE;
             }
             return Enum.valueOf(clazz, val.toString());
-        } catch (IllegalArgumentException e) {
-            return defaultValue;
-        } catch (NullPointerException e) {
+        } catch (IllegalArgumentException | NullPointerException e) {
             return defaultValue;
         }
     }
@@ -719,9 +717,8 @@ public class JSONObject extends JSONItem {
                                 }
                             }
                         }
-                    } catch (IllegalAccessException ignore) {
-                    } catch (IllegalArgumentException ignore) {
-                    } catch (InvocationTargetException ignore) {
+                    } catch (IllegalAccessException | InvocationTargetException |
+                             IllegalArgumentException ignore) {
                     }
                 }
             }
@@ -790,9 +787,7 @@ public class JSONObject extends JSONItem {
             try {
                 Method im = i.getMethod(m.getName(), m.getParameterTypes());
                 return getAnnotation(im, annotationClass);
-            } catch (final SecurityException ex) {
-                continue;
-            } catch (final NoSuchMethodException ex) {
+            } catch (final SecurityException | NoSuchMethodException ex) {
                 continue;
             }
         }
@@ -801,9 +796,7 @@ public class JSONObject extends JSONItem {
             return getAnnotation(
                     c.getSuperclass().getMethod(m.getName(), m.getParameterTypes()),
                     annotationClass);
-        } catch (final SecurityException ex) {
-            return null;
-        } catch (final NoSuchMethodException ex) {
+        } catch (final SecurityException | NoSuchMethodException ex) {
             return null;
         }
     }
@@ -833,9 +826,7 @@ public class JSONObject extends JSONItem {
                     // since the annotation was on the interface, add 1
                     return d + 1;
                 }
-            } catch (final SecurityException ex) {
-                continue;
-            } catch (final NoSuchMethodException ex) {
+            } catch (final SecurityException | NoSuchMethodException ex) {
                 continue;
             }
         }
@@ -849,9 +840,7 @@ public class JSONObject extends JSONItem {
                 return d + 1;
             }
             return -1;
-        } catch (final SecurityException ex) {
-            return -1;
-        } catch (final NoSuchMethodException ex) {
+        } catch (final SecurityException | NoSuchMethodException ex) {
             return -1;
         }
     }

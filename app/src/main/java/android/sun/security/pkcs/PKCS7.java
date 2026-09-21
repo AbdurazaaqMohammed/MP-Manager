@@ -222,13 +222,9 @@ public class PKCS7 {
                     bais.close();
                     bais = null;
                 }
-            } catch (CertificateException ce) {
+            } catch (CertificateException | IOException ce) {
                 ParsingException pe = new ParsingException(ce.getMessage());
                 pe.initCause(ce);
-                throw pe;
-            } catch (IOException ioe) {
-                ParsingException pe = new ParsingException(ioe.getMessage());
-                pe.initCause(ioe);
                 throw pe;
             } finally {
                 if (bais != null)
@@ -295,13 +291,9 @@ public class PKCS7 {
                         bais.close();
                         bais = null;
                     }
-                } catch (CertificateException ce) {
+                } catch (CertificateException | IOException ce) {
                     ParsingException pe = new ParsingException(ce.getMessage());
                     pe.initCause(ce);
-                    throw pe;
-                } catch (IOException ioe) {
-                    ParsingException pe = new ParsingException(ioe.getMessage());
-                    pe.initCause(ioe);
                     throw pe;
                 } finally {
                     if (bais != null)
@@ -406,13 +398,9 @@ public class PKCS7 {
                     bais.close();
                     bais = null;
                 }
-            } catch (CertificateException ce) {
+            } catch (CertificateException | IOException ce) {
                 ParsingException pe = new ParsingException(ce.getMessage());
                 pe.initCause(ce);
-                throw pe;
-            } catch (IOException ioe) {
-                ParsingException pe = new ParsingException(ioe.getMessage());
-                pe.initCause(ioe);
                 throw pe;
             } finally {
                 if (bais != null)

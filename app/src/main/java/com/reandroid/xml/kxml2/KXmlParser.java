@@ -1241,8 +1241,6 @@ public class KXmlParser implements XmlPullParser, Closeable {
                 out.appendCodePoint(c);
                 unresolved = false;
                 return;
-            } catch (NumberFormatException notANumber) {
-                throw new XmlPullParserException("Invalid character reference: &" + code);
             } catch (IllegalArgumentException invalidCodePoint) {
                 throw new XmlPullParserException("Invalid character reference: &" + code);
             }

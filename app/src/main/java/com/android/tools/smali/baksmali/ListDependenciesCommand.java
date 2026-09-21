@@ -109,9 +109,7 @@ public class ListDependenciesCommand extends Command {
             return;
         } catch (IOException ex) {
             throw new RuntimeException(ex);
-        } catch (DexBackedOdexFile.NotAnOdexFile ex) {
-            // handled below
-        } catch (DexBackedDexFile.NotADexFile ex) {
+        } catch (DexBackedOdexFile.NotAnOdexFile | DexBackedDexFile.NotADexFile ex) {
             // handled below
         }
 

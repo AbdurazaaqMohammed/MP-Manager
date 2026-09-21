@@ -234,11 +234,7 @@ public class DisassembleCommand extends DexInputCommand {
 
             try {
                 options.loadResourceIds(resourceFiles);
-            } catch (IOException ex) {
-                System.err.println("Error while loading resource files:");
-                ex.printStackTrace(System.err);
-                System.exit(-1);
-            } catch (SAXException ex) {
+            } catch (IOException | SAXException ex) {
                 System.err.println("Error while loading resource files:");
                 ex.printStackTrace(System.err);
                 System.exit(-1);

@@ -580,12 +580,7 @@ public final class Asn1BerParser {
                         field.set(obj, convert(type, dataValue, field.getType()));
                         break;
                 }
-            } catch (IllegalAccessException e) {
-                throw new Asn1DecodingException(
-                        "Failed to set value of " + obj.getClass().getName()
-                                + "." + field.getName(),
-                        e);
-            } catch (ClassNotFoundException e) {
+            } catch (IllegalAccessException | ClassNotFoundException e) {
                 throw new Asn1DecodingException(
                         "Failed to set value of " + obj.getClass().getName()
                                 + "." + field.getName(),

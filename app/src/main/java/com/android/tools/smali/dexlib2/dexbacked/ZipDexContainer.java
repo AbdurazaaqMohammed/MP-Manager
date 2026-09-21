@@ -149,9 +149,7 @@ public class ZipDexContainer implements MultiDexContainer<DexBackedDexFile> {
         try  {
 			ZipFile zipFile = getZipFile();
             return true;
-        } catch (IOException ex) {
-            return false;
-        } catch (NotAZipFileException ex) {
+        } catch (IOException | NotAZipFileException ex) {
             return false;
         }
         // just eat it
@@ -161,11 +159,7 @@ public class ZipDexContainer implements MultiDexContainer<DexBackedDexFile> {
         try  {
 			InputStream inputStream = new BufferedInputStream(zipFile.getInputStream(zipEntry));
             DexUtil.verifyDexHeader(inputStream);
-        } catch (NotADexFile ex) {
-            return false;
-        } catch (InvalidFile ex) {
-            return false;
-        } catch (UnsupportedFile ex) {
+        } catch (NotADexFile | UnsupportedFile | InvalidFile ex) {
             return false;
         }
         return true;
