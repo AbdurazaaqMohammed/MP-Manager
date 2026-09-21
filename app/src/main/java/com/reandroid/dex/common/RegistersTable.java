@@ -47,12 +47,14 @@ public interface RegistersTable {
         return result;
     }
     default Iterator<Register> getRegisters(RegistersSet registersSet) {
-        return new Iterator<Register>() {
+        return new Iterator<>() {
             private int mIndex;
+
             @Override
             public boolean hasNext() {
                 return mIndex < registersSet.getRegistersCount();
             }
+
             @Override
             public Register next() {
                 return RegistersTable.this.getRegisterFor(registersSet.getRegister(mIndex++));

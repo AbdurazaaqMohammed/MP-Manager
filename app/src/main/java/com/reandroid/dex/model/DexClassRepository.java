@@ -112,7 +112,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
     }
 
     default Iterator<DexClass> getDexClasses(Predicate<? super TypeKey> filter) {
-        return new IterableIterator<DexClassModule, DexClass>(modules()) {
+        return new IterableIterator<>(modules()) {
             @Override
             public Iterator<DexClass> iterator(DexClassModule element) {
                 return element.getDexClasses(filter);
@@ -120,7 +120,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         };
     }
     default Iterator<DexClass> getDexClassesCloned(Predicate<? super TypeKey> filter) {
-        return new IterableIterator<DexClassModule, DexClass>(modules()) {
+        return new IterableIterator<>(modules()) {
             @Override
             public Iterator<DexClass> iterator(DexClassModule element) {
                 return element.getDexClassesCloned(filter);
@@ -130,7 +130,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
 
     default Iterator<DexClass> searchExtending(TypeKey typeKey) {
         UniqueIterator<DexClass> iterator = new UniqueIterator<>(
-                new IterableIterator<DexClassModule, DexClass>(getRootRepository().modules()) {
+                new IterableIterator<>(getRootRepository().modules()) {
                     @Override
                     public Iterator<DexClass> iterator(DexClassModule element) {
                         return element.getExtendingClasses(typeKey);
@@ -141,7 +141,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
     }
     default Iterator<DexClass> searchImplementations(TypeKey typeKey) {
         UniqueIterator<DexClass> iterator = new UniqueIterator<>(
-                new IterableIterator<DexClassModule, DexClass>(getRootRepository().modules()) {
+                new IterableIterator<>(getRootRepository().modules()) {
                     @Override
                     public Iterator<DexClass> iterator(DexClassModule element) {
                         return element.getImplementClasses(typeKey);
@@ -151,7 +151,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         return iterator;
     }
     default <T extends SectionItem> Iterator<Section<T>> getSections(SectionType<T> sectionType) {
-        return new IterableIterator<DexClassModule, Section<T>>(modules()) {
+        return new IterableIterator<>(modules()) {
             @Override
             public Iterator<Section<T>> iterator(DexClassModule element) {
                 return element.getSections(sectionType);
@@ -159,7 +159,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         };
     }
     default <T extends SectionItem> Iterator<T> getItems(SectionType<T> sectionType) {
-        return new IterableIterator<Section<T>, T>(getSections(sectionType)) {
+        return new IterableIterator<>(getSections(sectionType)) {
             @Override
             public Iterator<T> iterator(Section<T> element) {
                 return element.iterator();
@@ -167,7 +167,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         };
     }
     default <T extends SectionItem> Iterator<T> getClonedItems(SectionType<T> sectionType) {
-        return new IterableIterator<Section<T>, T>(getSections(sectionType)) {
+        return new IterableIterator<>(getSections(sectionType)) {
             @Override
             public Iterator<T> iterator(Section<T> element) {
                 return element.clonedIterator();
@@ -186,7 +186,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         return getClonedItemsIf(sectionType, item -> predicate.evaluate(item.getKey()));
     }
     default <T extends SectionItem> Iterator<T> getItems(SectionType<T> sectionType, Key key) {
-        return new IterableIterator<Section<T>, T>(getSections(sectionType)) {
+        return new IterableIterator<>(getSections(sectionType)) {
             @Override
             public Iterator<T> iterator(Section<T> element) {
                 return element.getAll(key);
@@ -195,7 +195,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
     }
     default <T extends SectionItem> Iterator<T> getItemsIf(
             SectionType<T> sectionType, Predicate<? super T> predicate) {
-        return new IterableIterator<Section<T>, T>(getSections(sectionType)) {
+        return new IterableIterator<>(getSections(sectionType)) {
             @Override
             public Iterator<T> iterator(Section<T> element) {
                 return element.iterator(predicate);
@@ -384,7 +384,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         return null;
     }
     default Iterator<DexMethod> getDeclaredMethods() {
-        return new IterableIterator<DexClass, DexMethod>(getDexClasses()) {
+        return new IterableIterator<>(getDexClasses()) {
             @Override
             public Iterator<DexMethod> iterator(DexClass dexClass) {
                 return dexClass.declaredMethods();
@@ -392,7 +392,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         };
     }
     default Iterator<DexField> getDeclaredFields() {
-        return new IterableIterator<DexClass, DexField>(getDexClasses()) {
+        return new IterableIterator<>(getDexClasses()) {
             @Override
             public Iterator<DexField> iterator(DexClass dexClass) {
                 return dexClass.declaredFields();
@@ -462,7 +462,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         return CombiningIterator.two(SingleIterator.of(definingKey), subKeys);
     }
     default Iterator<DexClass> getSuccessorClasses(TypeKey typeKey) {
-        return new IterableIterator<DexClassModule, DexClass>(modules()) {
+        return new IterableIterator<>(modules()) {
             @Override
             public Iterator<DexClass> iterator(DexClassModule element) {
                 return element.getSuccessorClasses(typeKey);
@@ -481,7 +481,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
             return EmptyIterator.of();
         }
         Iterator<DexMethod> iterator = defining.getMethods(methodKey);
-        Iterator<MethodKey> results = new IterableIterator<DexMethod, MethodKey>(iterator) {
+        Iterator<MethodKey> results = new IterableIterator<>(iterator) {
             @Override
             public Iterator<MethodKey> iterator(DexMethod element) {
                 element = element.getDeclared();
@@ -490,7 +490,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
             }
         };
         if (recursive) {
-            results = UniqueIterator.of(new IterableIterator<MethodKey, MethodKey>(results) {
+            results = UniqueIterator.of(new IterableIterator<>(results) {
                 @Override
                 public Iterator<MethodKey> iterator(MethodKey element) {
                     return findEquivalentMethods(element, false);
@@ -503,7 +503,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
         return ComputeIterator.of(findEquivalentMethods(methodKey), this::getDeclaredMethod);
     }
     default Iterator<MethodId> getMethodIds(MethodKey methodKey) {
-        return new IterableIterator<MethodKey, MethodId>(findEquivalentMethods(methodKey)) {
+        return new IterableIterator<>(findEquivalentMethods(methodKey)) {
             @Override
             public Iterator<MethodId> iterator(MethodKey element) {
                 return getItems(SectionType.METHOD_ID, element);
@@ -512,7 +512,7 @@ public interface DexClassRepository extends FullRefresh, BlockRefresh {
     }
 
     default Iterator<Marker> getMarkers() {
-        return new IterableIterator<DexClassModule, Marker>(modules()) {
+        return new IterableIterator<>(modules()) {
             @Override
             public Iterator<Marker> iterator(DexClassModule element) {
                 return element.getMarkers();

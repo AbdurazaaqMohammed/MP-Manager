@@ -1227,60 +1227,74 @@ public class ArrayCollection<T> implements ArraySupplier<T>, List<T>, Set<T>, Sw
 
     private static final int GROW_LIMIT = 8192;
 
-    private static final ArrayCollection<?> EMPTY = new ArrayCollection<Object>(){
+    private static final ArrayCollection<?> EMPTY = new ArrayCollection<>() {
         @Override
         public Object[] toArray() {
             return EMPTY_OBJECTS;
         }
+
         @Override
         public void ensureCapacity(int capacity) {
         }
+
         @Override
         public void trimToSize() {
         }
+
         @Override
         public void addAll(Iterator<?> iterator) {
             throw new IllegalArgumentException("Empty ArrayCollection!");
         }
+
         @Override
         public boolean contains(Object obj) {
             return false;
         }
+
         @Override
         public boolean containsAll(Collection<?> collection) {
             return false;
         }
+
         @Override
-        public void clearTemporarily(){
+        public void clearTemporarily() {
         }
+
         @Override
         public void clear() {
         }
+
         @Override
         public boolean addAll(Collection<?> collection) {
             throw new IllegalArgumentException("Empty ArrayCollection!");
         }
+
         @Override
         public boolean add(Object item) {
             throw new IllegalArgumentException("Empty ArrayCollection!");
         }
+
         @Override
         public Object set(int i, Object item) {
             throw new IllegalArgumentException("Empty ArrayCollection!");
         }
+
         @Override
         public void add(int i, Object item) {
             throw new IllegalArgumentException("Empty ArrayCollection!");
         }
+
         @Override
         public Iterator<Object> iterator() {
             return EmptyIterator.of();
         }
+
         @Override
         public boolean isEmpty() {
             return true;
         }
-        public boolean isImmutableEmpty(){
+
+        public boolean isImmutableEmpty() {
             return true;
         }
 
@@ -1288,34 +1302,41 @@ public class ArrayCollection<T> implements ArraySupplier<T>, List<T>, Set<T>, Sw
         public boolean removeAll(Collection<?> collection) {
             return false;
         }
+
         @Override
         public Object remove(int index) {
             return null;
         }
+
         @Override
         public boolean remove(Object obj) {
             return false;
         }
+
         @Override
         public int size() {
             return 0;
         }
+
         @Override
         public void sort(Comparator<? super Object> comparator) {
         }
+
         @Override
         public void setSize(int size, boolean notify) {
         }
+
         @Override
         public int hashCode() {
             return 0;
         }
+
         @Override
         public boolean equals(Object obj) {
-            if(obj == this){
+            if (obj == this) {
                 return true;
             }
-            if(obj instanceof Collection){
+            if (obj instanceof Collection) {
                 return ((Collection<?>) obj).size() == 0;
             }
             return false;

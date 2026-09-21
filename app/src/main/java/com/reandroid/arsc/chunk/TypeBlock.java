@@ -59,7 +59,7 @@ public class TypeBlock extends Chunk<TypeHeader>
     }
 
     public Iterator<ValueItem> allValues() {
-        return new IterableIterator<Entry, ValueItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<ValueItem> iterator(Entry element) {
                 return element.allValues();

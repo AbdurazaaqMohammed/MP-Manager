@@ -34,7 +34,7 @@ public class DexIntegerVisitor extends CombiningIterator<IntegerReference, Integ
     }
 
     private static Iterator<IntegerReference> getEncodedArrayReferences(DexClassRepository repository) {
-        return new IterableIterator<EncodedArray, IntegerReference>(
+        return new IterableIterator<>(
                 repository.getItems(SectionType.ENCODED_ARRAY)
         ) {
             @Override
@@ -44,7 +44,7 @@ public class DexIntegerVisitor extends CombiningIterator<IntegerReference, Integ
         };
     }
     private static Iterator<IntegerReference> getCodeItemReferences(DexClassRepository repository) {
-        return new IterableIterator<CodeItem, IntegerReference>(
+        return new IterableIterator<>(
                 repository.getItems(SectionType.CODE)
         ) {
             @Override
@@ -55,7 +55,7 @@ public class DexIntegerVisitor extends CombiningIterator<IntegerReference, Integ
     }
 
     static Iterator<IntegerReference> iterator(CodeItem codeItem) {
-        return new IterableIterator<Ins, IntegerReference>(codeItem.getInstructionList().iterator()) {
+        return new IterableIterator<>(codeItem.getInstructionList().iterator()) {
             @Override
             public Iterator<IntegerReference> iterator(Ins element) {
                 return DexIntegerVisitor.iterator(element);
@@ -73,7 +73,7 @@ public class DexIntegerVisitor extends CombiningIterator<IntegerReference, Integ
         }
     }
     static Iterator<IntegerReference> iterator(EncodedArray encodedArray) {
-        return new IterableIterator<DexValueBlock<?>, IntegerReference>(encodedArray.iterator()) {
+        return new IterableIterator<>(encodedArray.iterator()) {
             @Override
             public Iterator<IntegerReference> iterator(DexValueBlock<?> element) {
                 return DexIntegerVisitor.iterator(element);
@@ -91,7 +91,7 @@ public class DexIntegerVisitor extends CombiningIterator<IntegerReference, Integ
         return EmptyIterator.of();
     }
     private static Iterator<IntegerReference> iterator(ArrayValue arrayValue) {
-        return new IterableIterator<DexValueBlock<?>, IntegerReference>(arrayValue.iterator()) {
+        return new IterableIterator<>(arrayValue.iterator()) {
             @Override
             public Iterator<IntegerReference> iterator(DexValueBlock<?> element) {
                 return DexIntegerVisitor.iterator(element);
@@ -99,7 +99,7 @@ public class DexIntegerVisitor extends CombiningIterator<IntegerReference, Integ
         };
     }
     private static Iterator<IntegerReference> iterator(AnnotationItem arrayValue) {
-        return new IterableIterator<AnnotationElement, IntegerReference>(arrayValue.iterator()) {
+        return new IterableIterator<>(arrayValue.iterator()) {
             @Override
             public Iterator<IntegerReference> iterator(AnnotationElement element) {
                 return DexIntegerVisitor.iterator(element.getValueBlock());

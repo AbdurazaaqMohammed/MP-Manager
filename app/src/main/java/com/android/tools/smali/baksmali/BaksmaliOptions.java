@@ -71,7 +71,7 @@ public class BaksmaliOptions {
 
     public int registerInfo = 0;
 
-    public final Map<Integer,String> resourceIds = new HashMap<Integer,String>();
+    public final Map<Integer,String> resourceIds = new HashMap<>();
     public InlineMethodResolver inlineResolver = null;
     public ClassPath classPath = null;
     public SyntheticAccessorResolver syntheticAccessorResolver = null;

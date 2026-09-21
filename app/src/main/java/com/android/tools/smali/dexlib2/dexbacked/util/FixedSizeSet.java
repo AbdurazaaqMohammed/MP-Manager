@@ -42,11 +42,19 @@ import java.util.NoSuchElementException;
 public abstract class FixedSizeSet<T> extends AbstractSet<T> {
     @Override
     public Iterator<T> iterator() {
-        return new Iterator<T>() {
+        return new Iterator<>() {
             int index = 0;
 
-            @Override public boolean hasNext() { return index < size(); }
-            @Override public void remove() { throw new UnsupportedOperationException(); }
+            @Override
+            public boolean hasNext() {
+                return index < size();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+
             @Override
             public T next() {
                 if (!hasNext()) {

@@ -102,7 +102,7 @@ implements CertAttrSet<String> {
     public PolicyMappingsExtension() {
         extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
         critical = false;
-        maps = new ArrayList<android.sun.security.x509.CertificatePolicyMap>();
+        maps = new ArrayList<>();
     }
 
     /**
@@ -124,7 +124,7 @@ implements CertAttrSet<String> {
             throw new IOException("Invalid encoding for " +
                                   "PolicyMappingsExtension.");
         }
-        maps = new ArrayList<android.sun.security.x509.CertificatePolicyMap>();
+        maps = new ArrayList<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
             android.sun.security.x509.CertificatePolicyMap map = new android.sun.security.x509.CertificatePolicyMap(seq);

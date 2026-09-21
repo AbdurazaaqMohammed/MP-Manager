@@ -58,15 +58,18 @@ public class StaticInitializerUtil {
                 @Nonnull
                 @Override
                 public List<? extends EncodedValue> getValue() {
-                    return new AbstractForwardSequentialList<EncodedValue>() {
-                        @Nonnull @Override public Iterator<EncodedValue> iterator() {
+                    return new AbstractForwardSequentialList<>() {
+                        @Nonnull
+                        @Override
+                        public Iterator<EncodedValue> iterator() {
                             return FluentIterable.from(sortedStaticFields)
-                                    .limit(lastIndex+1)
+                                    .limit(lastIndex + 1)
                                     .transform(GET_INITIAL_VALUE).iterator();
                         }
 
-                        @Override public int size() {
-                            return lastIndex+1;
+                        @Override
+                        public int size() {
+                            return lastIndex + 1;
                         }
                     };
                 }
@@ -75,7 +78,7 @@ public class StaticInitializerUtil {
         return null;
     }
 
-    private static final Predicate<Field> HAS_INITIALIZER = new Predicate<Field>() {
+    private static final Predicate<Field> HAS_INITIALIZER = new Predicate<>() {
         @Override
         public boolean apply(Field input) {
             EncodedValue encodedValue = input.getInitialValue();
@@ -83,7 +86,7 @@ public class StaticInitializerUtil {
         }
     };
 
-    private static final Function<Field, EncodedValue> GET_INITIAL_VALUE = new Function<Field, EncodedValue>() {
+    private static final Function<Field, EncodedValue> GET_INITIAL_VALUE = new Function<>() {
         @Override
         public EncodedValue apply(Field input) {
             EncodedValue initialValue = input.getInitialValue();

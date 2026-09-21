@@ -45,10 +45,10 @@ public class XML {
     public static final String TYPE_ATTR = "xsi:type";
 
     private static Iterable<Integer> codePointIterator(final String string) {
-        return new Iterable<Integer>() {
+        return new Iterable<>() {
             @Override
             public Iterator<Integer> iterator() {
-                return new Iterator<Integer>() {
+                return new Iterator<>() {
                     private int nextIndex = 0;
                     private final int length = string.length();
 

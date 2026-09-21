@@ -66,13 +66,14 @@ public class DexBackedOdexFile extends DexBackedDexFile {
         final DexBuffer fromStartBuffer = new DexBuffer(getBuffer().buf, 0);
         int dependencyCount = fromStartBuffer.readInt(dependencyOffset + DEPENDENCY_COUNT_OFFSET);
 
-        return new VariableSizeList<String>(
+        return new VariableSizeList<>(
                 this.getDataBuffer(), dependencyOffset + DEPENDENCY_START_OFFSET, dependencyCount) {
-            @Override protected String readNextItem(@Nonnull DexReader<? extends DexBuffer> reader, int index) {
+            @Override
+            protected String readNextItem(@Nonnull DexReader<? extends DexBuffer> reader, int index) {
                 int length = reader.readInt();
                 int offset = reader.getOffset();
                 reader.moveRelative(length + 20);
-                return new String(fromStartBuffer.buf, offset, length-1, StandardCharsets.US_ASCII);
+                return new String(fromStartBuffer.buf, offset, length - 1, StandardCharsets.US_ASCII);
             }
         };
     }

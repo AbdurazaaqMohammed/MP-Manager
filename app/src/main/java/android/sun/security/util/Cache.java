@@ -262,8 +262,8 @@ class MemoryCache extends Cache {
         this.lifetime = lifetime * 1000;
         this.queue = soft ? new ReferenceQueue() : null;
         int buckets = (int)(maxSize / LOAD_FACTOR) + 1;
-        cacheMap = new LinkedHashMap<Object, CacheEntry>(buckets,
-                                                        LOAD_FACTOR, true);
+        cacheMap = new LinkedHashMap<>(buckets,
+                LOAD_FACTOR, true);
     }
 
     /**
@@ -439,7 +439,7 @@ class MemoryCache extends Cache {
     }
 
     private Map<Object, Object> getCachedEntries() {
-        Map<Object,Object> kvmap = new HashMap<Object,Object>(cacheMap.size());
+        Map<Object,Object> kvmap = new HashMap<>(cacheMap.size());
 
         for (CacheEntry entry : cacheMap.values()) {
             kvmap.put(entry.getKey(), entry.getValue());

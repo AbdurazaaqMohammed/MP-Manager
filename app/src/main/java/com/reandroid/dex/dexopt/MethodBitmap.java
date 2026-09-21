@@ -74,11 +74,12 @@ public class MethodBitmap extends FixedBlockContainer
         return get(id);
     }
     public Iterator<MethodBitmapElement> iterator() {
-        return ArraySupplierIterator.of(new ArraySupplier<MethodBitmapElement>() {
+        return ArraySupplierIterator.of(new ArraySupplier<>() {
             @Override
             public MethodBitmapElement get(int i) {
                 return MethodBitmap.this.get(i);
             }
+
             @Override
             public int getCount() {
                 return MethodBitmap.this.size();

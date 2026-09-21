@@ -142,7 +142,7 @@ public class ResXmlStartNamespaceList extends ResXmlChunkList<ResXmlStartNamespa
         return result;
     }
     public Iterator<ResXmlStartNamespace> getVisibleNamespaces() {
-        return new IterableIterator<ResXmlElement, ResXmlStartNamespace>(
+        return new IterableIterator<>(
                 element().getDescendingParentsWithSelf()) {
             @Override
             public Iterator<ResXmlStartNamespace> iterator(ResXmlElement element) {

@@ -141,7 +141,7 @@ public class DexBuffer {
 
     @Nonnull
     public DexReader<? extends DexBuffer> readerAt(int offset) {
-        return new DexReader<DexBuffer>(this, offset);
+        return new DexReader<>(this, offset);
     }
 
     @Nonnull

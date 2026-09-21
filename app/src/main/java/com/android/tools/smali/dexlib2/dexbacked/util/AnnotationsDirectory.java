@@ -99,15 +99,18 @@ public abstract class AnnotationsDirectory {
                                                                      final int annotationSetOffset) {
         if (annotationSetOffset != 0) {
             final int size = dexFile.getDataBuffer().readSmallUint(annotationSetOffset);
-            return new FixedSizeSet<DexBackedAnnotation>() {
+            return new FixedSizeSet<>() {
                 @Nonnull
                 @Override
                 public DexBackedAnnotation readItem(int index) {
-                    int annotationOffset = dexFile.getDataBuffer().readSmallUint(annotationSetOffset + 4 + (4*index));
+                    int annotationOffset = dexFile.getDataBuffer().readSmallUint(annotationSetOffset + 4 + (4 * index));
                     return new DexBackedAnnotation(dexFile, annotationOffset);
                 }
 
-                @Override public int size() { return size; }
+                @Override
+                public int size() {
+                    return size;
+                }
             };
         }
 
@@ -120,7 +123,7 @@ public abstract class AnnotationsDirectory {
         if (annotationSetListOffset > 0) {
             final int size = dexFile.getDataBuffer().readSmallUint(annotationSetListOffset);
 
-            return new FixedSizeList<Set<? extends DexBackedAnnotation>>() {
+            return new FixedSizeList<>() {
                 @Nonnull
                 @Override
                 public Set<? extends DexBackedAnnotation> readItem(int index) {
@@ -129,7 +132,10 @@ public abstract class AnnotationsDirectory {
                     return getAnnotations(dexFile, annotationSetOffset);
                 }
 
-                @Override public int size() { return size; }
+                @Override
+                public int size() {
+                    return size;
+                }
             };
         }
         return Collections.emptyList();

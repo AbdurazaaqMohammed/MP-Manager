@@ -96,7 +96,7 @@ public class ClassDefRewriter implements Rewriter<ClassDef> {
         @Nonnull
         @Override
         public Iterable<? extends Field> getFields() {
-            return new Iterable<Field>() {
+            return new Iterable<>() {
                 @Nonnull
                 @Override
                 public Iterator<Field> iterator() {
@@ -116,7 +116,7 @@ public class ClassDefRewriter implements Rewriter<ClassDef> {
         @Nonnull
         @Override
         public Iterable<? extends Method> getMethods() {
-            return new Iterable<Method>() {
+            return new Iterable<>() {
                 @Nonnull
                 @Override
                 public Iterator<Method> iterator() {

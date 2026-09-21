@@ -83,7 +83,7 @@ abstract class ResXmlDocumentOrElement extends ResXmlNodeTree {
             return iterator;
         }
         final int next = start + 1;
-        return new IterableIterator<ResXmlElement, ResXmlElement>(iterator) {
+        return new IterableIterator<>(iterator) {
             @Override
             public Iterator<ResXmlElement> iterator(ResXmlElement element) {
                 return element.getElementsWithChild(childNames, next);
@@ -126,7 +126,7 @@ abstract class ResXmlDocumentOrElement extends ResXmlNodeTree {
         return FilterIterator.of(recursiveAttributes(), predicate);
     }
     public Iterator<ResXmlAttribute> recursiveAttributes() {
-        Iterator<ResXmlAttribute> iterator = new IterableIterator<ResXmlElement, ResXmlAttribute>(recursiveElements()) {
+        Iterator<ResXmlAttribute> iterator = new IterableIterator<>(recursiveElements()) {
             @Override
             public Iterator<ResXmlAttribute> iterator(ResXmlElement element) {
                 return element.getAttributes();

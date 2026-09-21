@@ -129,7 +129,7 @@ public class ImmutableMethod extends BaseMethodReference implements Method {
     }
 
     private static final ImmutableConverter<ImmutableMethod, Method> CONVERTER =
-            new ImmutableConverter<ImmutableMethod, Method>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull Method item) {
                     return item instanceof ImmutableMethod;

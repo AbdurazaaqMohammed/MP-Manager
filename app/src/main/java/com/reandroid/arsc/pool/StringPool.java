@@ -230,7 +230,7 @@ public abstract class StringPool<T extends StringItem> extends Chunk<StringPoolH
         return mArrayStrings.getLast();
     }
     public<E extends Block> Iterator<E> getUsers(Class<E> parentClass, String value) {
-        return new IterableIterator<T, E>(getAll(value)) {
+        return new IterableIterator<>(getAll(value)) {
             @Override
             public Iterator<E> iterator(T element) {
                 return element.getUsers(parentClass);

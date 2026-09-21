@@ -154,33 +154,33 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		updateButtonStates();
 		
 		// Event subscriptions
-		codeEditor.subscribeEvent(SelectionChangeEvent.class, new EventReceiver<SelectionChangeEvent>() {
-			@Override
-			public void onReceive(SelectionChangeEvent event, Unsubscribe unsubscribe) {
-				onSelectionChanged(codeEditor, event, unsubscribe);
-			}
-		});
+		codeEditor.subscribeEvent(SelectionChangeEvent.class, new EventReceiver<>() {
+            @Override
+            public void onReceive(SelectionChangeEvent event, Unsubscribe unsubscribe) {
+                onSelectionChanged(codeEditor, event, unsubscribe);
+            }
+        });
 		
-		codeEditor.subscribeEvent(ScrollEvent.class, new EventReceiver<ScrollEvent>() {
-			@Override
-			public void onReceive(ScrollEvent event, Unsubscribe unsubscribe) {
-				onScrollEvent(event, unsubscribe);
-			}
-		});
+		codeEditor.subscribeEvent(ScrollEvent.class, new EventReceiver<>() {
+            @Override
+            public void onReceive(ScrollEvent event, Unsubscribe unsubscribe) {
+                onScrollEvent(event, unsubscribe);
+            }
+        });
 		
-		codeEditor.subscribeEvent(HandleStateChangeEvent.class, new EventReceiver<HandleStateChangeEvent>() {
-			@Override
-			public void onReceive(HandleStateChangeEvent event, Unsubscribe unsubscribe) {
-				onHandleStateChanged(event, unsubscribe);
-			}
-		});
+		codeEditor.subscribeEvent(HandleStateChangeEvent.class, new EventReceiver<>() {
+            @Override
+            public void onReceive(HandleStateChangeEvent event, Unsubscribe unsubscribe) {
+                onHandleStateChanged(event, unsubscribe);
+            }
+        });
 		
-		codeEditor.subscribeEvent(LongPressEvent.class, new EventReceiver<LongPressEvent>() {
-			@Override
-			public void onReceive(LongPressEvent event, Unsubscribe unsubscribe) {
-				onLongPressEvent(codeEditor, event, unsubscribe);
-			}
-		});
+		codeEditor.subscribeEvent(LongPressEvent.class, new EventReceiver<>() {
+            @Override
+            public void onReceive(LongPressEvent event, Unsubscribe unsubscribe) {
+                onLongPressEvent(codeEditor, event, unsubscribe);
+            }
+        });
 		
 		getPopup().setAnimationStyle(R.style.text_action_popup_animation);
 	}

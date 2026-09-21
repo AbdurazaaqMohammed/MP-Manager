@@ -78,12 +78,12 @@ public class DexBackedTryBlock extends BaseTryBlock<DexBackedExceptionHandler> {
         } else {
             //with catch-all
             final int sizeWithCatchAll = (-1 * encodedSize) + 1;
-            return new VariableSizeList<DexBackedExceptionHandler>(
+            return new VariableSizeList<>(
                     dexFile.getDataBuffer(), reader.getOffset(), sizeWithCatchAll) {
                 @Nonnull
                 @Override
                 protected DexBackedExceptionHandler readNextItem(@Nonnull DexReader<? extends DexBuffer> dexReader, int index) {
-                    if (index == sizeWithCatchAll-1) {
+                    if (index == sizeWithCatchAll - 1) {
                         return new DexBackedCatchAllExceptionHandler(dexReader);
                     } else {
                         return new DexBackedTypedExceptionHandler(dexFile, dexReader);

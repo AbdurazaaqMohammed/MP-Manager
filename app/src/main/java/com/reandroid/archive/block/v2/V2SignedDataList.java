@@ -28,7 +28,7 @@ public class V2SignedDataList extends LengthPrefixedList<V2SignedData> {
     }
 
     public Iterator<CertificateBlock> getCertificates() {
-        return new IterableIterator<V2SignedData, CertificateBlock>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<CertificateBlock> iterator(V2SignedData element) {
                 return element.getCertificates();

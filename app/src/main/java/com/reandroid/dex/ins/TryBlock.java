@@ -451,7 +451,7 @@ public class TryBlock extends FixedDexContainerWithTool implements
 
     @Override
     public Iterator<IdItem> usedIds() {
-        return new IterableIterator<TryItem, IdItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<IdItem> iterator(TryItem tryItem) {
                 return tryItem.usedIds();

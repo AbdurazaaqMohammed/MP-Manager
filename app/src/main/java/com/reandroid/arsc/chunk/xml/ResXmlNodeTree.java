@@ -65,7 +65,7 @@ public abstract class ResXmlNodeTree extends ResXmlNode implements NodeTree<ResX
         return InstanceIterator.of(recursive(), instance, predicate);
     }
     public Iterator<ResXmlNode> recursive() {
-        return new IterableIterator<ResXmlNode, ResXmlNode>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<ResXmlNode> iterator(ResXmlNode resXmlNode) {
                 if (resXmlNode instanceof ResXmlNodeTree) {
@@ -81,7 +81,7 @@ public abstract class ResXmlNodeTree extends ResXmlNode implements NodeTree<ResX
         return getNodeList().reversedIterator();
     }
     public Iterator<ResXmlNode> reversedRecursive() {
-        return new IterableIterator<ResXmlNode, ResXmlNode>(reversedIterator()) {
+        return new IterableIterator<>(reversedIterator()) {
             @Override
             public Iterator<ResXmlNode> iterator(ResXmlNode resXmlNode) {
                 if (resXmlNode instanceof ResXmlNodeTree) {
@@ -263,11 +263,12 @@ public abstract class ResXmlNodeTree extends ResXmlNode implements NodeTree<ResX
     void touchChildNodesForDebug() {
         PARENT_NODE = getParentNode();
         if (this.CHILD_NODES == null) {
-            CHILD_NODES = new AbstractList<ResXmlNode>() {
+            CHILD_NODES = new AbstractList<>() {
                 @Override
                 public ResXmlNode get(int i) {
                     return ResXmlNodeTree.this.get(i);
                 }
+
                 @Override
                 public int size() {
                     return ResXmlNodeTree.this.size();

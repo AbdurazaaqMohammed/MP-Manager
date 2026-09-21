@@ -62,15 +62,16 @@ public abstract class AbstractForwardSequentialList<T> extends AbstractSequentia
             throw new IndexOutOfBoundsException();
         }
 
-        return new AbstractListIterator<T>() {
+        return new AbstractListIterator<>() {
             private int index = initialIndex - 1;
-            @Nullable private Iterator<T> forwardIterator = initialIterator;
+            @Nullable
+            private Iterator<T> forwardIterator = initialIterator;
 
             @Nonnull
             private Iterator<T> getForwardIterator() {
                 if (forwardIterator == null) {
                     try {
-                        forwardIterator = iterator(index+1);
+                        forwardIterator = iterator(index + 1);
                     } catch (IndexOutOfBoundsException ex) {
                         throw new NoSuchElementException();
                     }
@@ -78,25 +79,30 @@ public abstract class AbstractForwardSequentialList<T> extends AbstractSequentia
                 return forwardIterator;
             }
 
-            @Override public boolean hasNext() {
+            @Override
+            public boolean hasNext() {
                 return getForwardIterator().hasNext();
             }
 
-            @Override public boolean hasPrevious() {
+            @Override
+            public boolean hasPrevious() {
                 return index >= 0;
             }
 
-            @Override public T next() {
+            @Override
+            public T next() {
                 T ret = getForwardIterator().next();
                 index++;
                 return ret;
             }
 
-            @Override public int nextIndex() {
-                return index+1;
+            @Override
+            public int nextIndex() {
+                return index + 1;
             }
 
-            @Override public T previous() {
+            @Override
+            public T previous() {
                 forwardIterator = null;
                 try {
                     return iterator(index--).next();
@@ -105,7 +111,8 @@ public abstract class AbstractForwardSequentialList<T> extends AbstractSequentia
                 }
             }
 
-            @Override public int previousIndex() {
+            @Override
+            public int previousIndex() {
                 return index;
             }
         };

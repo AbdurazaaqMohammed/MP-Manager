@@ -110,11 +110,12 @@ public class MethodDef extends Def<MethodId> implements MethodProgram {
     }
     @Override
     public Iterator<MethodParameterDef> getParameters() {
-        return ArraySupplierIterator.of(new ArraySupplier<MethodParameterDef>() {
+        return ArraySupplierIterator.of(new ArraySupplier<>() {
             @Override
             public MethodParameterDef get(int i) {
                 return MethodDef.this.getParameter(i);
             }
+
             @Override
             public int getCount() {
                 return MethodDef.this.getParametersCount();

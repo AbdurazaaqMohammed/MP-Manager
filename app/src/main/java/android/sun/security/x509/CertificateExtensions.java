@@ -57,7 +57,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
     private static final Debug debug = android.sun.security.util.Debug.getInstance("x509");
 
-    private final Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<String, android.sun.security.x509.Extension>();
+    private final Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<>();
     private boolean unsupportedCritExt = false;
 
     private Map<String, android.sun.security.x509.Extension> unparseableExtensions;
@@ -117,7 +117,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
             if (!ext.isCritical()) {
                 // ignore errors parsing non-critical extensions
                 if (unparseableExtensions == null) {
-                    unparseableExtensions = new HashMap<String, android.sun.security.x509.Extension>();
+                    unparseableExtensions = new HashMap<>();
                 }
                 unparseableExtensions.put(ext.getExtensionId().toString(),
                         new UnparseableExtension(ext, e));

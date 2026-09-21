@@ -165,11 +165,12 @@ public class InstructionList extends FixedBlockContainer implements
     public List<Register> getLocalFreeRegisters(int startIndex) {
         RegistersTable registersTable = getRegistersTable();
         int count = registersTable.getLocalRegistersCount();
-        Iterator<Register> iterator = new ArraySupplierIterator<>(new ArraySupplier<Register>() {
+        Iterator<Register> iterator = new ArraySupplierIterator<>(new ArraySupplier<>() {
             @Override
             public Register get(int i) {
                 return new Register(i, false, registersTable);
             }
+
             @Override
             public int getCount() {
                 return count;
@@ -488,7 +489,7 @@ public class InstructionList extends FixedBlockContainer implements
         return false;
     }
     public Iterator<IdItem> usedIds() {
-        return new IterableIterator<Ins, IdItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<IdItem> iterator(Ins element) {
                 return element.usedIds();

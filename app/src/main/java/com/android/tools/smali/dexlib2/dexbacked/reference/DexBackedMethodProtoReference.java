@@ -59,13 +59,17 @@ public class DexBackedMethodProtoReference extends BaseMethodProtoReference {
             final int parameterCount = dexFile.getDataBuffer().readSmallUint(
                     parametersOffset + TypeListItem.SIZE_OFFSET);
             final int paramListStart = parametersOffset + TypeListItem.LIST_OFFSET;
-            return new FixedSizeList<String>() {
+            return new FixedSizeList<>() {
                 @Nonnull
                 @Override
                 public String readItem(final int index) {
-                    return dexFile.getTypeSection().get(dexFile.getDataBuffer().readUshort(paramListStart + 2*index));
+                    return dexFile.getTypeSection().get(dexFile.getDataBuffer().readUshort(paramListStart + 2 * index));
                 }
-                @Override public int size() { return parameterCount; }
+
+                @Override
+                public int size() {
+                    return parameterCount;
+                }
             };
         }
         return Collections.emptyList();

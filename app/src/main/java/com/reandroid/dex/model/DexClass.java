@@ -113,7 +113,7 @@ public class DexClass extends DexDeclaration implements ClassProgram, Comparable
     }
     public Iterator<TypeKey> usedTypes() {
         Iterator<Key> iterator = ComputeIterator.of(getId().usedIds(), IdItem::getKey);
-        Iterator<Key> mentioned = new IterableIterator<Key, Key>(iterator) {
+        Iterator<Key> mentioned = new IterableIterator<>(iterator) {
             @SuppressWarnings("unchecked")
             @Override
             public Iterator<Key> iterator(Key element) {
@@ -284,7 +284,7 @@ public class DexClass extends DexDeclaration implements ClassProgram, Comparable
                 SingleIterator.of(getSuperClass()),
                 getInterfaceClasses());
 
-        iterator = new IterableIterator<DexClass, DexClass>(iterator) {
+        iterator = new IterableIterator<>(iterator) {
             @Override
             public Iterator<DexClass> iterator(DexClass element) {
                 return CombiningIterator.two(SingleIterator.of(element), element.getSuperTypes());
@@ -457,7 +457,7 @@ public class DexClass extends DexDeclaration implements ClassProgram, Comparable
         return getDexInstructions(null);
     }
     public Iterator<DexInstruction> getDexInstructions(Predicate<DexMethod> filter) {
-        return new IterableIterator<DexMethod, DexInstruction>(getDeclaredMethods(filter)) {
+        return new IterableIterator<>(getDeclaredMethods(filter)) {
             @Override
             public Iterator<DexInstruction> iterator(DexMethod element) {
                 return element.getInstructions();

@@ -580,7 +580,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
             }
 
             if (oidTable == null) {
-                oidTable = new HashMap<String, android.sun.security.util.ObjectIdentifier>(1);
+                oidTable = new HashMap<>(1);
             }
             initOidTable = true;
         }
@@ -855,7 +855,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      */
         sha1WithDSA_oid = android.sun.security.util.ObjectIdentifier.newInternal(dsaWithSHA1_PKIX_data);
 
-        nameTable = new HashMap<android.sun.security.util.ObjectIdentifier,String>();
+        nameTable = new HashMap<>();
         nameTable.put(MD5_oid, "MD5");
         nameTable.put(MD2_oid, "MD2");
         nameTable.put(SHA_oid, "SHA");

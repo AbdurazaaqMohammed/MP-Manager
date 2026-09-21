@@ -120,7 +120,7 @@ public class ImmutableEncodedValueFactory {
     }
 
     private static final ImmutableConverter<ImmutableEncodedValue, EncodedValue> CONVERTER =
-            new ImmutableConverter<ImmutableEncodedValue, EncodedValue>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull EncodedValue item) {
                     return item instanceof ImmutableEncodedValue;

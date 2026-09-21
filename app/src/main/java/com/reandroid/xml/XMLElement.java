@@ -59,11 +59,12 @@ public class XMLElement extends XMLNodeTree implements Element<XMLNode> {
         return mAttributes.get(index);
     }
     public Iterator<? extends XMLAttribute> getAttributes() {
-        return new IndexIterator<>(new SizedSupplier<XMLAttribute>() {
+        return new IndexIterator<>(new SizedSupplier<>() {
             @Override
             public int size() {
                 return getAttributeCount();
             }
+
             @Override
             public XMLAttribute get(int index) {
                 return getAttributeAt(index);

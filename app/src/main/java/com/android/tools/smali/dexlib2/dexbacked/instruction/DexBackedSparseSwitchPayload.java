@@ -56,24 +56,27 @@ public class DexBackedSparseSwitchPayload extends DexBackedInstruction implement
     @Nonnull
     @Override
     public List<? extends SwitchElement> getSwitchElements() {
-        return new FixedSizeList<SwitchElement>() {
+        return new FixedSizeList<>() {
             @Nonnull
             @Override
             public SwitchElement readItem(final int index) {
                 return new SwitchElement() {
                     @Override
                     public int getKey() {
-                        return dexFile.getDataBuffer().readInt(instructionStart + KEYS_OFFSET + index*4);
+                        return dexFile.getDataBuffer().readInt(instructionStart + KEYS_OFFSET + index * 4);
                     }
 
                     @Override
                     public int getOffset() {
-                        return dexFile.getDataBuffer().readInt(instructionStart + KEYS_OFFSET + elementCount*4 + index*4);
+                        return dexFile.getDataBuffer().readInt(instructionStart + KEYS_OFFSET + elementCount * 4 + index * 4);
                     }
                 };
             }
 
-            @Override public int size() { return elementCount; }
+            @Override
+            public int size() {
+                return elementCount;
+            }
         };
     }
 

@@ -292,21 +292,21 @@ public class AnnotationsDirectory extends DataItem implements KeyReference {
         } else {
             iterator1 = classAnnotation.usedIds();
         }
-        Iterator<IdItem> iterator2 = new IterableIterator<AnnotationSet, IdItem>(
+        Iterator<IdItem> iterator2 = new IterableIterator<>(
                 fieldsAnnotationMap.getValues()) {
             @Override
             public Iterator<IdItem> iterator(AnnotationSet element) {
                 return element.usedIds();
             }
         };
-        Iterator<IdItem> iterator3 = new IterableIterator<AnnotationSet, IdItem>(
+        Iterator<IdItem> iterator3 = new IterableIterator<>(
                 methodsAnnotationMap.getValues()) {
             @Override
             public Iterator<IdItem> iterator(AnnotationSet element) {
                 return element.usedIds();
             }
         };
-        Iterator<IdItem> iterator4 = new IterableIterator<AnnotationGroup, IdItem>(
+        Iterator<IdItem> iterator4 = new IterableIterator<>(
                 parametersAnnotationMap.getValues()) {
             @Override
             public Iterator<IdItem> iterator(AnnotationGroup element) {

@@ -1216,7 +1216,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             if (exts == null) {
                 return null;
             }
-            Set<String> extSet = new HashSet<String>();
+            Set<String> extSet = new HashSet<>();
             for (android.sun.security.x509.Extension ex : exts.getAllExtensions()) {
                 if (ex.isCritical()) {
                     extSet.add(ex.getExtensionId().toString());
@@ -1246,7 +1246,7 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             if (exts == null) {
                 return null;
             }
-            Set<String> extSet = new HashSet<String>();
+            Set<String> extSet = new HashSet<>();
             for (android.sun.security.x509.Extension ex : exts.getAllExtensions()) {
                 if (!ex.isCritical()) {
                     extSet.add(ex.getExtensionId().toString());
@@ -1481,10 +1481,10 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
         if (names.isEmpty()) {
             return Collections.<List<?>>emptySet();
         }
-        Set<List<?>> newNames = new HashSet<List<?>>();
+        Set<List<?>> newNames = new HashSet<>();
         for (GeneralName gname : names.names()) {
             android.sun.security.x509.GeneralNameInterface name = gname.getName();
-            List<Object> nameEntry = new ArrayList<Object>(2);
+            List<Object> nameEntry = new ArrayList<>(2);
             nameEntry.add(name.getType());
             switch (name.getType()) {
             case android.sun.security.x509.GeneralNameInterface.NAME_RFC822:
@@ -1542,12 +1542,12 @@ public class X509CertImpl extends X509Certificate implements android.sun.securit
             }
         }
         if (mustClone) {
-            Set<List<?>> namesCopy = new HashSet<List<?>>();
+            Set<List<?>> namesCopy = new HashSet<>();
             for (List<?> nameEntry : altNames) {
                 Object nameObject = nameEntry.get(1);
                 if (nameObject instanceof byte[]) {
                     List<Object> nameEntryCopy =
-                                        new ArrayList<Object>(nameEntry);
+                            new ArrayList<>(nameEntry);
                     nameEntryCopy.set(1, ((byte[])nameObject).clone());
                     namesCopy.add(Collections.unmodifiableList(nameEntryCopy));
                 } else {

@@ -35,11 +35,12 @@ public class ProfileDataBody extends ProfileBody {
 
         this.headerList = new CountedBlockList<>(ProfileDataHeader.CREATOR, count);
 
-        Creator<DexProfileData> creator = new Creator<DexProfileData>() {
+        Creator<DexProfileData> creator = new Creator<>() {
             @Override
             public DexProfileData newInstance() {
                 throw new RuntimeException("Must call newInstanceAt");
             }
+
             @Override
             public DexProfileData newInstanceAt(int index) {
                 if (headerList.size() <= index) {

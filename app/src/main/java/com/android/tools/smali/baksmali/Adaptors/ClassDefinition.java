@@ -70,7 +70,7 @@ public class ClassDefinition {
 
     @Nonnull
     private HashSet<String> findFieldsSetInStaticConstructor(@Nonnull ClassDef classDef) {
-        HashSet<String> fieldsSetInStaticConstructor = new HashSet<String>();
+        HashSet<String> fieldsSetInStaticConstructor = new HashSet<>();
 
         for (Method method: classDef.getDirectMethods()) {
             if (method.getName().equals("<clinit>")) {
@@ -176,7 +176,7 @@ public class ClassDefinition {
 
     private Set<String> writeStaticFields(BaksmaliWriter writer) throws IOException {
         boolean wroteHeader = false;
-        Set<String> writtenFields = new HashSet<String>();
+        Set<String> writtenFields = new HashSet<>();
 
         Iterable<? extends Field> staticFields;
         if (classDef instanceof DexBackedClassDef) {
@@ -211,7 +211,7 @@ public class ClassDefinition {
 
     private void writeInstanceFields(BaksmaliWriter writer, Set<String> staticFields) throws IOException {
         boolean wroteHeader = false;
-        Set<String> writtenFields = new HashSet<String>();
+        Set<String> writtenFields = new HashSet<>();
 
         Iterable<? extends Field> instanceFields;
         if (classDef instanceof DexBackedClassDef) {
@@ -250,7 +250,7 @@ public class ClassDefinition {
 
     private Set<String> writeDirectMethods(BaksmaliWriter writer) throws IOException {
         boolean wroteHeader = false;
-        Set<String> writtenMethods = new HashSet<String>();
+        Set<String> writtenMethods = new HashSet<>();
 
         Iterable<? extends Method> directMethods;
         if (classDef instanceof DexBackedClassDef) {
@@ -290,7 +290,7 @@ public class ClassDefinition {
     private void writeVirtualMethods(BaksmaliWriter writer, Set<String> directMethods)
             throws IOException {
         boolean wroteHeader = false;
-        Set<String> writtenMethods = new HashSet<String>();
+        Set<String> writtenMethods = new HashSet<>();
 
         Iterable<? extends Method> virtualMethods;
         if (classDef instanceof DexBackedClassDef) {

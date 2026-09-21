@@ -67,7 +67,7 @@ public class DexBackedArrayEncodedValue extends BaseArrayEncodedValue implements
     @Nonnull
     @Override
     public List<? extends EncodedValue> getValue() {
-        return new VariableSizeList<EncodedValue>(dexFile.getDataBuffer(), encodedArrayOffset, elementCount) {
+        return new VariableSizeList<>(dexFile.getDataBuffer(), encodedArrayOffset, elementCount) {
             @Nonnull
             @Override
             protected EncodedValue readNextItem(@Nonnull DexReader<? extends DexBuffer> dexReader, int index) {

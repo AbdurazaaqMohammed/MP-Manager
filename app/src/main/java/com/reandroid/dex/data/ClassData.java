@@ -347,7 +347,7 @@ public class ClassData extends DataItem implements SmaliFormat {
 
     @Override
     public Iterator<IdItem> usedIds() {
-        return new IterableIterator<DefArray<?>, IdItem>(getDefArrays()) {
+        return new IterableIterator<>(getDefArrays()) {
             @Override
             public Iterator<IdItem> iterator(DefArray<?> element) {
                 return element.usedIds();

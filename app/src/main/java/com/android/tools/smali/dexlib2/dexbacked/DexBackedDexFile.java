@@ -208,7 +208,7 @@ public class DexBackedDexFile implements DexFile {
 
     @Nonnull
     public Set<? extends DexBackedClassDef> getClasses() {
-        return new FixedSizeSet<DexBackedClassDef>() {
+        return new FixedSizeSet<>() {
             @Nonnull
             @Override
             public DexBackedClassDef readItem(int index) {
@@ -223,30 +223,34 @@ public class DexBackedDexFile implements DexFile {
     }
 
     public List<DexBackedStringReference> getStringReferences() {
-        return new AbstractList<DexBackedStringReference>() {
-            @Override public DexBackedStringReference get(int index) {
+        return new AbstractList<>() {
+            @Override
+            public DexBackedStringReference get(int index) {
                 if (index < 0 || index >= getStringSection().size()) {
                     throw new IndexOutOfBoundsException();
                 }
                 return new DexBackedStringReference(DexBackedDexFile.this, index);
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return getStringSection().size();
             }
         };
     }
 
     public List<DexBackedTypeReference> getTypeReferences() {
-        return new AbstractList<DexBackedTypeReference>() {
-            @Override public DexBackedTypeReference get(int index) {
+        return new AbstractList<>() {
+            @Override
+            public DexBackedTypeReference get(int index) {
                 if (index < 0 || index >= getTypeSection().size()) {
                     throw new IndexOutOfBoundsException();
                 }
                 return new DexBackedTypeReference(DexBackedDexFile.this, index);
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return getTypeSection().size();
             }
         };
@@ -269,14 +273,15 @@ public class DexBackedDexFile implements DexFile {
     public List<MapItem> getMapItems() {
         final int mapSize = dataBuffer.readSmallUint(mapOffset);
 
-        return new FixedSizeList<MapItem>() {
+        return new FixedSizeList<>() {
             @Override
             public MapItem readItem(int index) {
                 int mapItemOffset = mapOffset + 4 + index * MapItem.ITEM_SIZE;
                 return new MapItem(DexBackedDexFile.this, mapItemOffset);
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return mapSize;
             }
         };
@@ -309,7 +314,7 @@ public class DexBackedDexFile implements DexFile {
         }
     }
 
-    private final OptionalIndexedSection<String> stringSection = new OptionalIndexedSection<String>() {
+    private final OptionalIndexedSection<String> stringSection = new OptionalIndexedSection<>() {
         @Override
         public String get(int index) {
             int stringOffset = getOffset(index);
@@ -339,7 +344,7 @@ public class DexBackedDexFile implements DexFile {
                 throw new IndexOutOfBoundsException(
                         String.format("Invalid string index %d, not in [0, %d)", index, size()));
             }
-            return stringStartOffset + index* StringIdItem.ITEM_SIZE;
+            return stringStartOffset + index * StringIdItem.ITEM_SIZE;
         }
     };
 
@@ -347,7 +352,7 @@ public class DexBackedDexFile implements DexFile {
         return stringSection;
     }
 
-    private final OptionalIndexedSection<String> typeSection = new OptionalIndexedSection<String>() {
+    private final OptionalIndexedSection<String> typeSection = new OptionalIndexedSection<>() {
         @Override
         public String get(int index) {
             int typeOffset = getOffset(index);
@@ -383,7 +388,7 @@ public class DexBackedDexFile implements DexFile {
         return typeSection;
     }
 
-    private final IndexedSection<DexBackedFieldReference> fieldSection = new IndexedSection<DexBackedFieldReference>() {
+    private final IndexedSection<DexBackedFieldReference> fieldSection = new IndexedSection<>() {
         @Override
         public DexBackedFieldReference get(int index) {
             return new DexBackedFieldReference(DexBackedDexFile.this, index);
@@ -409,7 +414,7 @@ public class DexBackedDexFile implements DexFile {
         return fieldSection;
     }
 
-    private final IndexedSection<DexBackedMethodReference> methodSection = new IndexedSection<DexBackedMethodReference>() {
+    private final IndexedSection<DexBackedMethodReference> methodSection = new IndexedSection<>() {
         @Override
         public DexBackedMethodReference get(int index) {
             return new DexBackedMethodReference(DexBackedDexFile.this, index);
@@ -436,7 +441,7 @@ public class DexBackedDexFile implements DexFile {
     }
 
     private final IndexedSection<DexBackedMethodProtoReference> protoSection =
-            new IndexedSection<DexBackedMethodProtoReference>() {
+            new IndexedSection<>() {
                 @Override
                 public DexBackedMethodProtoReference get(int index) {
                     return new DexBackedMethodProtoReference(DexBackedDexFile.this, index);
@@ -462,7 +467,7 @@ public class DexBackedDexFile implements DexFile {
         return protoSection;
     }
 
-    private final IndexedSection<DexBackedClassDef> classSection = new IndexedSection<DexBackedClassDef>() {
+    private final IndexedSection<DexBackedClassDef> classSection = new IndexedSection<>() {
         @Override
         public DexBackedClassDef get(int index) {
             return new DexBackedClassDef(DexBackedDexFile.this, getOffset(index),
@@ -490,7 +495,7 @@ public class DexBackedDexFile implements DexFile {
     }
 
     private final IndexedSection<DexBackedCallSiteReference> callSiteSection =
-            new IndexedSection<DexBackedCallSiteReference>() {
+            new IndexedSection<>() {
                 @Override
                 public DexBackedCallSiteReference get(int index) {
                     return new DexBackedCallSiteReference(DexBackedDexFile.this, index);
@@ -521,7 +526,7 @@ public class DexBackedDexFile implements DexFile {
     }
 
     private final IndexedSection<DexBackedMethodHandleReference> methodHandleSection =
-            new IndexedSection<DexBackedMethodHandleReference>() {
+            new IndexedSection<>() {
                 @Override
                 public DexBackedMethodHandleReference get(int index) {
                     return new DexBackedMethodHandleReference(DexBackedDexFile.this, index);

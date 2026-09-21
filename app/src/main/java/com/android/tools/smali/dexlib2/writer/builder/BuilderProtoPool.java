@@ -90,12 +90,14 @@ class BuilderProtoPool extends BaseBuilderPool
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderMethodProtoReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderMethodProtoReference>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderMethodProtoReference key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderMethodProtoReference key) {
                 return key.index;
             }
 
-            @Override protected int setValue(@Nonnull BuilderMethodProtoReference key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderMethodProtoReference key, int value) {
                 int prev = key.index;
                 key.index = value;
                 return prev;

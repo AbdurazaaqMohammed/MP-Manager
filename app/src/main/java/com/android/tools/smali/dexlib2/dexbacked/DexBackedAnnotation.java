@@ -62,7 +62,7 @@ public class DexBackedAnnotation extends BaseAnnotation {
         DexReader<? extends DexBuffer> reader = dexFile.getDataBuffer().readerAt(elementsOffset);
         final int size = reader.readSmallUleb128();
 
-        return new VariableSizeSet<DexBackedAnnotationElement>(dexFile.getDataBuffer(), reader.getOffset(), size) {
+        return new VariableSizeSet<>(dexFile.getDataBuffer(), reader.getOffset(), size) {
             @Nonnull
             @Override
             protected DexBackedAnnotationElement readNextItem(@Nonnull DexReader<? extends DexBuffer> reader, int index) {

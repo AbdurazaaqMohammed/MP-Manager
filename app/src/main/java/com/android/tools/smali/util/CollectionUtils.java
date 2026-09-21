@@ -127,7 +127,7 @@ public class CollectionUtils {
     @Nonnull
     public static <T> Comparator<Collection<? extends T>> listComparator(
             @Nonnull final Comparator<? super T> elementComparator) {
-        return new Comparator<Collection<? extends T>>() {
+        return new Comparator<>() {
             @Override
             public int compare(Collection<? extends T> list1, Collection<? extends T> list2) {
                 return compareAsList(elementComparator, list1, list2);
@@ -180,7 +180,7 @@ public class CollectionUtils {
     @Nonnull
     public static <T> Comparator<Collection<? extends T>> setComparator(
             @Nonnull final Comparator<? super T> elementComparator) {
-        return new Comparator<Collection<? extends T>>() {
+        return new Comparator<>() {
             @Override
             public int compare(Collection<? extends T> list1, Collection<? extends T> list2) {
                 return compareAsSet(elementComparator, list1, list2);

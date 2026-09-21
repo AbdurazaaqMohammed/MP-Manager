@@ -38,19 +38,22 @@ public class Ins45cc extends Size8Ins implements RegistersSet, DualKeyReference 
     public Ins45cc(Opcode<?> opcode) {
         super(opcode);
         final Ins45cc ins45cc = this;
-        this.reference2 = new IdSectionReference<ProtoId>(ins45cc, UsageMarker.USAGE_INSTRUCTION) {
+        this.reference2 = new IdSectionReference<>(ins45cc, UsageMarker.USAGE_INSTRUCTION) {
             @Override
             public int get() {
                 return ins45cc.getData2();
             }
+
             @Override
             public void set(int value) {
                 ins45cc.setData2(value);
             }
+
             @Override
             public SectionType<ProtoId> getSectionType() {
                 return ins45cc.getSectionType2();
             }
+
             @Override
             protected String buildTrace(ProtoId currentItem) {
                 return SizeXIns.buildTrace(ins45cc, currentItem, get());

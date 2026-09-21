@@ -107,7 +107,7 @@ implements CertAttrSet<String> {
         new MapEntry(OBJECT_SIGNING_CA, 7),
     };
 
-    private static final Vector<String> mAttributeNames = new Vector<String>();
+    private static final Vector<String> mAttributeNames = new Vector<>();
     static {
         for (MapEntry entry : mMapData) {
             mAttributeNames.add(entry.mName);

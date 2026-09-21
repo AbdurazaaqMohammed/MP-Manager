@@ -18,11 +18,11 @@ public class patchLaunchMethod {
     public static Method patchLaunchMethod(Method m) {
         MethodImplementation im = m.getImplementation();
         if (im == null) return m;
-        List<Instruction> o_ins = new ArrayList<Instruction>();
+        List<Instruction> o_ins = new ArrayList<>();
         for (Instruction i : im.getInstructions()) {
         o_ins.add(i);
         }
-        List<Instruction> n_ins = new ArrayList<Instruction>();
+        List<Instruction> n_ins = new ArrayList<>();
         int p_off = -1;
         int c_off = 0;
 
@@ -58,13 +58,13 @@ public class patchLaunchMethod {
         if (p_off == -1) return m;
 
         List<? extends com.android.tools.smali.dexlib2.iface.TryBlock<? extends com.android.tools.smali.dexlib2.iface.ExceptionHandler>> o_tbs = im.getTryBlocks();
-        List<com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock> n_tbs = new ArrayList<com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock>();
+        List<com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock> n_tbs = new ArrayList<>();
 
         for (com.android.tools.smali.dexlib2.iface.TryBlock<? extends com.android.tools.smali.dexlib2.iface.ExceptionHandler> t : o_tbs) {
             int s = t.getStartCodeAddress();
             int c = t.getCodeUnitCount();
             int e = s + c;
-            List<com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler> h = new ArrayList<com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler>();
+            List<com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler> h = new ArrayList<>();
             for (com.android.tools.smali.dexlib2.iface.ExceptionHandler ha : t.getExceptionHandlers()) {
                 int h_a = ha.getHandlerCodeAddress();
                 if (h_a >= p_off) {

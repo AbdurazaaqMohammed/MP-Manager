@@ -101,12 +101,14 @@ class BuilderMethodPool extends BaseBuilderPool implements MethodSection<Builder
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderMethodReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderMethodReference>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderMethodReference key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderMethodReference key) {
                 return key.index;
             }
 
-            @Override protected int setValue(@Nonnull BuilderMethodReference key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderMethodReference key, int value) {
                 int prev = key.index;
                 key.index = value;
                 return prev;

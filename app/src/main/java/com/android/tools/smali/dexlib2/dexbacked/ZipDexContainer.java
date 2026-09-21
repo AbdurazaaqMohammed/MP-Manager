@@ -86,7 +86,7 @@ public class ZipDexContainer implements MultiDexContainer<DexBackedDexFile> {
         if (entries != null) {
 			return entries;
         }
-        entries = new TreeMap<String, DexBackedDexFile>();
+        entries = new TreeMap<>();
         try (ZipFile zipFile = getZipFile()) {
             Enumeration<? extends ZipEntry> entriesEnumeration = zipFile.entries();
 

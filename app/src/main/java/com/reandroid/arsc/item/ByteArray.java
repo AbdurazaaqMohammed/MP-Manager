@@ -143,11 +143,12 @@ public class ByteArray extends BlockItem {
     }
 
     public final List<Byte> toByteList(){
-        return new AbstractList<Byte>() {
+        return new AbstractList<>() {
             @Override
             public Byte get(int i) {
                 return ByteArray.this.get(i);
             }
+
             @Override
             public int size() {
                 return ByteArray.this.size();
@@ -155,26 +156,28 @@ public class ByteArray extends BlockItem {
         };
     }
     public final List<Short> toShortList(){
-        return new AbstractList<Short>() {
+        return new AbstractList<>() {
             @Override
             public Short get(int i) {
                 return ByteArray.this.getShort(i);
             }
+
             @Override
             public int size() {
-                return ByteArray.this.size()/2;
+                return ByteArray.this.size() / 2;
             }
         };
     }
     public final List<Integer> toIntegerList(){
-        return new AbstractList<Integer>() {
+        return new AbstractList<>() {
             @Override
             public Integer get(int i) {
                 return ByteArray.this.getInteger(i);
             }
+
             @Override
             public int size() {
-                return ByteArray.this.size()/4;
+                return ByteArray.this.size() / 4;
             }
         };
     }

@@ -54,7 +54,7 @@ public class ProfileMetadataBody extends ProfileBody implements LinkableProfileI
         };
         this.headerList = new CountedBlockList<>(ProfileMetadataHeaderV1.CREATOR, headerCountReference);
 
-        Creator<ProfileMetadata> creator = new Creator<ProfileMetadata>() {
+        Creator<ProfileMetadata> creator = new Creator<>() {
             @Override
             public ProfileMetadata newInstance() {
                 if (version.get() == ProfileVersion.METADATA_V001_N) {
@@ -62,6 +62,7 @@ public class ProfileMetadataBody extends ProfileBody implements LinkableProfileI
                 }
                 return new ProfileMetadataV2();
             }
+
             @Override
             public ProfileMetadata newInstanceAt(int index) {
                 if (version.get() == ProfileVersion.METADATA_V001_N) {

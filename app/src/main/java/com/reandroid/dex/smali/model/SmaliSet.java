@@ -104,7 +104,7 @@ public class SmaliSet<T extends Smali> extends Smali{
         return body.removeIf(filter);
     }
     public boolean removeInstances(Class<?> instance){
-        return body.removeIf(new Predicate<T>() {
+        return body.removeIf(new Predicate<>() {
             @Override
             public boolean evaluate(T obj) {
                 return instance.isInstance(obj);

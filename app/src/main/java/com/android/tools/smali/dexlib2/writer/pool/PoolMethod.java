@@ -49,8 +49,9 @@ class PoolMethod extends BaseMethodReference implements Method {
     protected int annotationSetRefListOffset = DexPool.NO_OFFSET;
     protected int codeItemOffset = DexPool.NO_OFFSET;
 
-    public static final Function<Method, PoolMethod> TRANSFORM = new Function<Method, PoolMethod>() {
-        @Override public PoolMethod apply(Method method) {
+    public static final Function<Method, PoolMethod> TRANSFORM = new Function<>() {
+        @Override
+        public PoolMethod apply(Method method) {
             return new PoolMethod(method);
         }
     };

@@ -61,7 +61,7 @@ import java.util.Hashtable;
  */
 public class CRLExtensions {
 
-    private final Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<String, android.sun.security.x509.Extension>();
+    private final Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<>();
     private boolean unsupportedCritExt = false;
 
     /**

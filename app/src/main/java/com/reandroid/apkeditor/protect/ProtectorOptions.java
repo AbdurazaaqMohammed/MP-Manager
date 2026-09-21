@@ -124,7 +124,7 @@ public class ProtectorOptions extends Options {
         }
         ArrayCollection<String> results = new ArrayCollection<>(
                 StringsUtil.split(full, '\n', true));
-        results.removeIf(new Predicate<String>() {
+        results.removeIf(new Predicate<>() {
             @Override
             public boolean evaluate(String text) {
                 return StringsUtil.isEmpty(text);

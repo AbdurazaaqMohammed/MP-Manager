@@ -104,7 +104,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
     private X500Principal    issuerPrincipal = null;
     private Date             thisUpdate = null;
     private Date             nextUpdate = null;
-    private final Map<X509IssuerSerial,X509CRLEntry> revokedCerts = new LinkedHashMap<X509IssuerSerial,X509CRLEntry>();
+    private final Map<X509IssuerSerial,X509CRLEntry> revokedCerts = new LinkedHashMap<>();
     private android.sun.security.x509.CRLExtensions extensions = null;
     private final static boolean isExplicit = true;
     private static final long YR_2050 = 2524636800000L;
@@ -669,7 +669,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
         if (revokedCerts.isEmpty()) {
             return null;
         } else {
-            return new HashSet<X509CRLEntry>(revokedCerts.values());
+            return new HashSet<>(revokedCerts.values());
         }
     }
 
@@ -904,7 +904,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
         if (extensions == null) {
             return null;
         }
-        Set<String> extSet = new HashSet<String>();
+        Set<String> extSet = new HashSet<>();
         for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
             if (ex.isCritical()) {
                 extSet.add(ex.getExtensionId().toString());
@@ -925,7 +925,7 @@ public class X509CRLImpl extends X509CRL implements android.sun.security.util.De
         if (extensions == null) {
             return null;
         }
-        Set<String> extSet = new HashSet<String>();
+        Set<String> extSet = new HashSet<>();
         for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
             if (!ex.isCritical()) {
                 extSet.add(ex.getExtensionId().toString());

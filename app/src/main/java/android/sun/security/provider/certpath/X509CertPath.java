@@ -84,7 +84,7 @@ public class X509CertPath extends CertPath {
     private static final Collection<String> encodingList;
 
     static {
-        List<String> list = new ArrayList<String>(2);
+        List<String> list = new ArrayList<>(2);
         list.add(PKIPATH_ENCODING);
         list.add(PKCS7_ENCODING);
         encodingList = Collections.unmodifiableCollection(list);
@@ -118,7 +118,7 @@ public class X509CertPath extends CertPath {
         // and the methods in the Sun JDK 1.4 implementation of ArrayList that
         // allow read-only access are thread-safe.
         this.certs = Collections.unmodifiableList(
-                new ArrayList<X509Certificate>((List<X509Certificate>)certs));
+                new ArrayList<>((List<X509Certificate>) certs));
     }
 
     /**
@@ -181,7 +181,7 @@ public class X509CertPath extends CertPath {
             }
 
             certFac = CertificateFactory.getInstance("X.509");
-            certList = new ArrayList<X509Certificate>(seq.length);
+            certList = new ArrayList<>(seq.length);
 
             // append certs in reverse order (target to trust anchor)
             for (int i = seq.length-1; i >= 0; i--) {
@@ -229,7 +229,7 @@ public class X509CertPath extends CertPath {
                 certList = Arrays.asList(certArray);
             } else {
                 // no certs provided
-                certList = new ArrayList<X509Certificate>(0);
+                certList = new ArrayList<>(0);
             }
         } catch (IOException ioe) {
             throw new CertificateException("IOException parsing PKCS7 data: " +

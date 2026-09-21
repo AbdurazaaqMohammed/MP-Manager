@@ -76,7 +76,7 @@ public class ImmutableTryBlock extends BaseTryBlock<ImmutableExceptionHandler> {
     }
 
     private static final ImmutableConverter<ImmutableTryBlock, TryBlock<? extends ExceptionHandler>> CONVERTER =
-            new ImmutableConverter<ImmutableTryBlock, TryBlock<? extends ExceptionHandler>>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull TryBlock item) {
                     return item instanceof ImmutableTryBlock;

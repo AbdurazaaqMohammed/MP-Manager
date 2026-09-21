@@ -24,15 +24,15 @@ import java.util.*;
 
 public class DexPatcher {
     public static void patch(ApkModule m) throws Exception {
-        List<String> dx_ns = new ArrayList<String>();
+        List<String> dx_ns = new ArrayList<>();
         for (InputSource s : m.getInputSources()) {
             if (s.getName().endsWith(".dex")) {
                 dx_ns.add(s.getName());
             }
         }
 
-        List<ClassDef> l_cds = new ArrayList<ClassDef>();
-        Set<String> a_ts = new HashSet<String>();
+        List<ClassDef> l_cds = new ArrayList<>();
+        Set<String> a_ts = new HashSet<>();
         String pkg = "nill";
         try {
             pkg = m.getPackageName();
@@ -56,7 +56,7 @@ public class DexPatcher {
 
                 for (ClassDef c : l_df.getClasses()) {
                     if ("Lcom/pairip/PairipLog;".equals(c.getType())) {
-                        List<com.android.tools.smali.dexlib2.iface.Field> s_fs = new ArrayList<com.android.tools.smali.dexlib2.iface.Field>();
+                        List<com.android.tools.smali.dexlib2.iface.Field> s_fs = new ArrayList<>();
                         for (com.android.tools.smali.dexlib2.iface.Field f : c.getStaticFields()) {
                             if ("DIR_PATH".equals(f.getName())) {
                                 String n_v = "/data/data/" + pkg + "/dictionary";
@@ -75,7 +75,7 @@ public class DexPatcher {
             }
         }
 
-        List<String> j_ts = new ArrayList<String>();
+        List<String> j_ts = new ArrayList<>();
         for (String dn : dx_ns) {
             InputSource s = m.getInputSource(dn);
             if (s == null) continue;
@@ -139,7 +139,7 @@ public class DexPatcher {
             DexFile d_f = DexFileFactory.loadDexFile(t_dx, Opcodes.getDefault());
             t_dx.delete();
 
-            List<ClassDef> cds = new ArrayList<ClassDef>();
+            List<ClassDef> cds = new ArrayList<>();
             boolean mod = false;
 
             for (ClassDef cd : d_f.getClasses()) {
@@ -151,11 +151,11 @@ public class DexPatcher {
                     cds.add(patchStartupLauncher(cd, j_ts));
                 } else if ("Lcom/pairip/SignatureCheck;".equals(cd.getType()) || "Lcom/pairip/licensecheck/LicenseClient;".equals(cd.getType()) || "Lcom/pairip/licensecheck3/LicenseClientV3;".equals(cd.getType()) || "Lcom/pairip/licensecheck/LicenseActivity;".equals(cd.getType()) || "Lcom/pairip/licensecheck2/LicenseClient2;".equals(cd.getType())) {
                     mod = true;
-                    List<Method> d_ms = new ArrayList<Method>();
+                    List<Method> d_ms = new ArrayList<>();
                     for (Method method : cd.getDirectMethods()) {
                         d_ms.add(patchM.patchMethodIfTarget(method));
                     }
-                    List<Method> v_ms = new ArrayList<Method>();
+                    List<Method> v_ms = new ArrayList<>();
                     for (Method method : cd.getVirtualMethods()) {
                         v_ms.add(patchM.patchMethodIfTarget(method));
                     }

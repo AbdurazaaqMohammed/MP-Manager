@@ -61,7 +61,7 @@ public class RSet implements Iterable<R> {
                 styleable -> styleable.toDeclareStyleable(tableBlock));
     }
     public Iterator<RDeclareStyleable> getRDeclareStyleables() {
-        Iterator<RDeclareStyleable> iterator = new IterableIterator<R, RDeclareStyleable>(
+        Iterator<RDeclareStyleable> iterator = new IterableIterator<>(
                 iterator()) {
             @Override
             public Iterator<RDeclareStyleable> iterator(R element) {

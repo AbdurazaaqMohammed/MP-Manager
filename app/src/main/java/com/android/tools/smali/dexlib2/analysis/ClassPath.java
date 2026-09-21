@@ -132,8 +132,9 @@ public class ClassPath {
         return loadedClasses.get(type.toString());
     }
 
-    @Nonnull private final LruCache<String, TypeProto> loadedClasses = new LruCache<String, TypeProto>(30000) {
-        @Override protected TypeProto create(String key) {
+    @Nonnull private final LruCache<String, TypeProto> loadedClasses = new LruCache<>(30000) {
+        @Override
+        protected TypeProto create(String key) {
             if (key.charAt(0) == '[') {
                 return new ArrayProto(ClassPath.this, key);
             } else {
@@ -163,8 +164,9 @@ public class ClassPath {
     }
 
     private final Supplier<OdexedFieldInstructionMapper> fieldInstructionMapperSupplier = MemoizingSupplier.memoize(
-            new Supplier<OdexedFieldInstructionMapper>() {
-                @Override public OdexedFieldInstructionMapper get() {
+            new Supplier<>() {
+                @Override
+                public OdexedFieldInstructionMapper get() {
                     return new OdexedFieldInstructionMapper(isArt());
                 }
             });

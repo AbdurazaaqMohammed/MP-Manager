@@ -79,7 +79,7 @@ public class Smali {
      * @return true if assembly completed with no errors, or false if errors were encountered
      */
     public static boolean assemble(final SmaliOptions options, List<String> input) throws IOException {
-        TreeSet<File> filesToProcessSet = new TreeSet<File>();
+        TreeSet<File> filesToProcessSet = new TreeSet<>();
 
         for (String fileToProcess: input) {
             File argFile = new File(fileToProcess);
@@ -103,8 +103,9 @@ public class Smali {
         List<Future<Boolean>> tasks = Lists.newArrayList();
 
         for (final File file: filesToProcessSet) {
-            tasks.add(executor.submit(new Callable<Boolean>() {
-                @Override public Boolean call() throws Exception {
+            tasks.add(executor.submit(new Callable<>() {
+                @Override
+                public Boolean call() throws Exception {
                     return assembleSmaliFile(file, dexBuilder, options);
                 }
             }));
@@ -146,7 +147,7 @@ public class Smali {
      * @return true if assembly completed with no errors, or false if errors were encountered
      */
     public static boolean printTokens(final SmaliOptions options, List<String> input) throws IOException {
-        TreeSet<File> filesToProcessSet = new TreeSet<File>();
+        TreeSet<File> filesToProcessSet = new TreeSet<>();
 
         for (String fileToProcess: input) {
             File argFile = new File(fileToProcess);

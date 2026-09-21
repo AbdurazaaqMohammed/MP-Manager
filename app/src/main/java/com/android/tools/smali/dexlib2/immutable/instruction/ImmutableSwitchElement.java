@@ -66,7 +66,7 @@ public class ImmutableSwitchElement implements SwitchElement {
     }
 
     private static final ImmutableConverter<ImmutableSwitchElement, SwitchElement> CONVERTER =
-            new ImmutableConverter<ImmutableSwitchElement, SwitchElement>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull SwitchElement item) {
                     return item instanceof ImmutableSwitchElement;

@@ -193,7 +193,7 @@ public class DexDirectory implements Iterable<DexFile>, Closeable,
         return null;
     }
     public Iterator<DexInstruction> getDexInstructions() {
-        return new IterableIterator<DexFile, DexInstruction>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<DexInstruction> iterator(DexFile element) {
                 return element.getDexInstructions();
@@ -201,7 +201,7 @@ public class DexDirectory implements Iterable<DexFile>, Closeable,
         };
     }
     public Iterator<DexInstruction> getDexInstructionsCloned() {
-        return new IterableIterator<DexFile, DexInstruction>(clonedIterator()) {
+        return new IterableIterator<>(clonedIterator()) {
             @Override
             public Iterator<DexInstruction> iterator(DexFile element) {
                 return element.getDexInstructionsCloned();
@@ -550,7 +550,7 @@ public class DexDirectory implements Iterable<DexFile>, Closeable,
     }
     @Override
     public Iterator<DexClassModule> modules() {
-        return new IterableIterator<DexFile, DexClassModule>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<DexClassModule> iterator(DexFile element) {
                 return element.modules();

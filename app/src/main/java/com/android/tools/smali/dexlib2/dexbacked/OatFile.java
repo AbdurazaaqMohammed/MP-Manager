@@ -182,16 +182,21 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
 
     @Nonnull
     public List<DexBackedDexFile> getDexFiles() {
-        return new AbstractForwardSequentialList<DexBackedDexFile>() {
+        return new AbstractForwardSequentialList<>() {
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 DexEntryIterator it = new DexEntryIterator();
                 return it.getSize();
             }
 
-            @Nonnull @Override public Iterator<DexBackedDexFile> iterator() {
-                return new TransformedIterator<OatDexEntry, DexBackedDexFile>(new DexEntryIterator(), new Function<OatDexEntry, DexBackedDexFile>() {
-                    @Nullable @Override public DexBackedDexFile apply(OatDexEntry dexEntry) {
+            @Nonnull
+            @Override
+            public Iterator<DexBackedDexFile> iterator() {
+                return new TransformedIterator<>(new DexEntryIterator(), new Function<>() {
+                    @Nullable
+                    @Override
+                    public DexBackedDexFile apply(OatDexEntry dexEntry) {
                         return dexEntry.getDexFile();
                     }
                 });
@@ -200,15 +205,20 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
     }
 
     @Nonnull @Override public List<String> getDexEntryNames() throws IOException {
-        return new AbstractForwardSequentialList<String>() {
-            @Override public int size() {
+        return new AbstractForwardSequentialList<>() {
+            @Override
+            public int size() {
                 DexEntryIterator it = new DexEntryIterator();
                 return it.getSize();
             }
 
-            @Nonnull @Override public Iterator<String> iterator() {
-                return new TransformedIterator<OatDexEntry, String>(new DexEntryIterator(), new Function<OatDexEntry, String>() {
-                    @Nullable @Override public String apply(OatDexEntry dexEntry) {
+            @Nonnull
+            @Override
+            public Iterator<String> iterator() {
+                return new TransformedIterator<>(new DexEntryIterator(), new Function<>() {
+                    @Nullable
+                    @Override
+                    public String apply(OatDexEntry dexEntry) {
                         return dexEntry.entryName;
                     }
                 });
@@ -369,8 +379,9 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
             throw new InvalidOatFileException("The ELF section headers extend past the end of the file");
         }
 
-        return new AbstractList<SectionHeader>() {
-            @Override public SectionHeader get(int index) {
+        return new AbstractList<>() {
+            @Override
+            public SectionHeader get(int index) {
                 if (index < 0 || index >= entryCount) {
                     throw new IndexOutOfBoundsException();
                 }
@@ -381,7 +392,8 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
                 }
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return entryCount;
             }
         };
@@ -465,8 +477,9 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
 
         @Nonnull
         public List<Symbol> getSymbols() {
-            return new AbstractList<Symbol>() {
-                @Override public Symbol get(int index) {
+            return new AbstractList<>() {
+                @Override
+                public Symbol get(int index) {
                     if (index < 0 || index >= entryCount) {
                         throw new IndexOutOfBoundsException();
                     }
@@ -477,7 +490,8 @@ public class OatFile extends DexBuffer implements MultiDexContainer<DexBackedDex
                     }
                 }
 
-                @Override public int size() {
+                @Override
+                public int size() {
                     return entryCount;
                 }
             };

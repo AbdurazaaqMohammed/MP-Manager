@@ -52,7 +52,7 @@ class DerIndefLenConverter {
     private int newDataPos, dataPos, dataSize, index;
     private int unresolved = 0;
 
-    private final ArrayList<Object> ndefsList = new ArrayList<Object>();
+    private final ArrayList<Object> ndefsList = new ArrayList<>();
 
     private int numOfTotalLenBytes = 0;
 

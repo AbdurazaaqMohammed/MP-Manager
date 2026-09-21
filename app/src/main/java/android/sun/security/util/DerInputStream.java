@@ -382,7 +382,7 @@ public class DerInputStream {
         /*
          * Pull values out of the stream.
          */
-        Vector<android.sun.security.util.DerValue> vec = new Vector<android.sun.security.util.DerValue>(startLen);
+        Vector<android.sun.security.util.DerValue> vec = new Vector<>(startLen);
         android.sun.security.util.DerValue value;
 
         do {

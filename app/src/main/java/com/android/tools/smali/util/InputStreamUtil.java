@@ -66,7 +66,7 @@ public final class InputStreamUtil {
      */
     public static byte[] toByteArray(InputStream in) throws IOException {
         int totalLen = 0;
-        ArrayDeque<byte[]> bufs = new ArrayDeque<byte[]>(TO_BYTE_ARRAY_DEQUE_SIZE);
+        ArrayDeque<byte[]> bufs = new ArrayDeque<>(TO_BYTE_ARRAY_DEQUE_SIZE);
 
         // Roughly size to match what has been read already. Some file systems, such as procfs,
         // return 0

@@ -39,15 +39,17 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 public final class FieldUtil {
-    public static final Predicate<Field> FIELD_IS_STATIC = new Predicate<Field>() {
-        @Override public boolean apply(@Nullable Field input) {
-            return input!=null && isStatic(input);
+    public static final Predicate<Field> FIELD_IS_STATIC = new Predicate<>() {
+        @Override
+        public boolean apply(@Nullable Field input) {
+            return input != null && isStatic(input);
         }
     };
 
-    public static final Predicate<Field> FIELD_IS_INSTANCE = new Predicate<Field>() {
-        @Override public boolean apply(@Nullable Field input) {
-            return input!= null && !isStatic(input);
+    public static final Predicate<Field> FIELD_IS_INSTANCE = new Predicate<>() {
+        @Override
+        public boolean apply(@Nullable Field input) {
+            return input != null && !isStatic(input);
         }
     };
 

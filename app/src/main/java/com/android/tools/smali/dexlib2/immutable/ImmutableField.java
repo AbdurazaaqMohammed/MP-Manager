@@ -104,7 +104,7 @@ public class ImmutableField extends BaseFieldReference implements Field {
     }
 
     private static final ImmutableConverter<ImmutableField, Field> CONVERTER =
-            new ImmutableConverter<ImmutableField, Field>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull Field item) {
                     return item instanceof ImmutableField;

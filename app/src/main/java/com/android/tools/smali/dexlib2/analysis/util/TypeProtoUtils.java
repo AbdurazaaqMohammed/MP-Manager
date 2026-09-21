@@ -52,17 +52,21 @@ public class TypeProtoUtils {
      */
     @Nonnull
     public static Iterable<TypeProto> getSuperclassChain(@Nonnull final TypeProto typeProto) {
-        return new Iterable<TypeProto>() {
+        return new Iterable<>() {
 
-            @Override public Iterator<TypeProto> iterator() {
-                return new Iterator<TypeProto>() {
-                    @Nullable private TypeProto type = getSuperclassAsTypeProto(typeProto);
+            @Override
+            public Iterator<TypeProto> iterator() {
+                return new Iterator<>() {
+                    @Nullable
+                    private TypeProto type = getSuperclassAsTypeProto(typeProto);
 
-                    @Override public boolean hasNext() {
+                    @Override
+                    public boolean hasNext() {
                         return type != null;
                     }
 
-                    @Override public TypeProto next() {
+                    @Override
+                    public TypeProto next() {
                         TypeProto type = this.type;
                         if (type == null) {
                             throw new NoSuchElementException();
@@ -72,7 +76,8 @@ public class TypeProtoUtils {
                         return type;
                     }
 
-                    @Override public void remove() {
+                    @Override
+                    public void remove() {
                         throw new UnsupportedOperationException();
                     }
                 };

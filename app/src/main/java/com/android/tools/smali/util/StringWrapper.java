@@ -50,10 +50,10 @@ public class StringWrapper {
         final BreakIterator breakIterator = BreakIterator.getLineInstance();
         breakIterator.setText(string);
 
-        return new Iterable<String>() {
+        return new Iterable<>() {
             @Override
             public Iterator<String> iterator() {
-                return new Iterator<String>() {
+                return new Iterator<>() {
                     private int currentLineStart = 0;
                     private boolean nextLineSet = false;
                     private String nextLine;
@@ -88,8 +88,8 @@ public class StringWrapper {
                                 break;
                             }
 
-                            if (string.charAt(lineEnd-1) == '\n') {
-                                nextLine = string.substring(currentLineStart, lineEnd-1);
+                            if (string.charAt(lineEnd - 1) == '\n') {
+                                nextLine = string.substring(currentLineStart, lineEnd - 1);
                                 nextLineSet = true;
                                 currentLineStart = lineEnd;
                                 return;

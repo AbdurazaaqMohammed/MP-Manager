@@ -466,7 +466,7 @@ public final class DexFileFactory {
 
         @Nullable @Override public DexEntry<DexBackedDexFile> getEntry(@Nonnull String entryName) {
             if (entryName.equals(this.entryName)) {
-                return new DexEntry<DexBackedDexFile>() {
+                return new DexEntry<>() {
                     @Nonnull
                     @Override
                     public String getEntryName() {

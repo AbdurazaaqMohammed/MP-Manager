@@ -67,7 +67,7 @@ public class ParameterisedProtoKey extends ArrayKey<ParameterisedTypeKey> implem
             iterator2 = EmptyIterator.of();
         }
         return CombiningIterator.two(
-                new IterableIterator<ParameterisedTypeKey, TypeKey>(iterator()) {
+                new IterableIterator<>(iterator()) {
                     @Override
                     public Iterator<TypeKey> iterator(ParameterisedTypeKey element) {
                         return element.getTypes();

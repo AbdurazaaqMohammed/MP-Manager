@@ -73,7 +73,7 @@ public class IndexIterator<T> implements Iterator<T> {
         if(supplier == null || supplier.size() == 0){
             return EmptyIterator.of();
         }
-        return new IndexIterator<T1>(supplier, filter);
+        return new IndexIterator<>(supplier, filter);
     }
 
 }

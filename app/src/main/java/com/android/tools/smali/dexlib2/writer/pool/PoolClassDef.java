@@ -63,7 +63,7 @@ class PoolClassDef extends BaseTypeReference implements ClassDef {
     PoolClassDef(@Nonnull ClassDef classDef) {
         this.classDef = classDef;
 
-        interfaces = new TypeListPool.Key<List<String>>(ImmutableList.copyOf(classDef.getInterfaces()));
+        interfaces = new TypeListPool.Key<>(ImmutableList.copyOf(classDef.getInterfaces()));
         staticFields = ImmutableSortedSet.copyOf(classDef.getStaticFields());
         instanceFields = ImmutableSortedSet.copyOf(classDef.getInstanceFields());
         directMethods = ImmutableSortedSet.copyOf(
@@ -105,14 +105,17 @@ class PoolClassDef extends BaseTypeReference implements ClassDef {
     }
 
     @Nonnull @Override public Collection<Field> getFields() {
-        return new AbstractCollection<Field>() {
-            @Nonnull @Override public Iterator<Field> iterator() {
+        return new AbstractCollection<>() {
+            @Nonnull
+            @Override
+            public Iterator<Field> iterator() {
                 return Iterators.mergeSorted(
                         ImmutableList.of(staticFields.iterator(), instanceFields.iterator()),
                         Ordering.natural());
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return staticFields.size() + instanceFields.size();
             }
         };
@@ -127,14 +130,17 @@ class PoolClassDef extends BaseTypeReference implements ClassDef {
     }
 
     @Nonnull @Override public Collection<PoolMethod> getMethods() {
-        return new AbstractCollection<PoolMethod>() {
-            @Nonnull @Override public Iterator<PoolMethod> iterator() {
+        return new AbstractCollection<>() {
+            @Nonnull
+            @Override
+            public Iterator<PoolMethod> iterator() {
                 return Iterators.mergeSorted(
                         ImmutableList.of(directMethods.iterator(), virtualMethods.iterator()),
                         Ordering.natural());
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return directMethods.size() + virtualMethods.size();
             }
         };

@@ -508,7 +508,7 @@ public class DexInstruction extends DexCode implements Instruction {
     }
     public Iterator<DexCatch> getCatches() {
         final int address = getAddress();
-        return new IterableIterator<DexTry, DexCatch>(getTries()) {
+        return new IterableIterator<>(getTries()) {
             @Override
             public Iterator<DexCatch> iterator(DexTry element) {
                 return element.getCatches(address);
@@ -740,7 +740,7 @@ public class DexInstruction extends DexCode implements Instruction {
     }
     public Iterator<DexCatch> getTargetingCatches() {
         int address = getAddress();
-        return new IterableIterator<DexTry, DexCatch>(getDexMethod().getDexTry()) {
+        return new IterableIterator<>(getDexMethod().getDexTry()) {
             @Override
             public Iterator<? extends DexCatch> iterator(DexTry element) {
                 return element.getCatchesAt(address);

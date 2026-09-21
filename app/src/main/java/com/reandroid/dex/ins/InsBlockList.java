@@ -113,7 +113,7 @@ public class InsBlockList extends BlockList<Ins> {
         return map;
     }
     public Iterator<InstructionLabel> getLabels() {
-        return  new IterableIterator<Ins, InstructionLabel>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<InstructionLabel> iterator(Ins element) {
                 Iterator<InstructionLabel> iterator = null;

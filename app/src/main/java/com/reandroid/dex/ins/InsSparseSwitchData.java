@@ -100,11 +100,12 @@ public class InsSparseSwitchData extends InsSwitchPayload<SparseSwitchEntry> {
     }
     @Override
     public Iterator<SparseSwitchEntry> getLabels() {
-        return new ArraySupplierIterator<>(new ArraySupplier<SparseSwitchEntry>() {
+        return new ArraySupplierIterator<>(new ArraySupplier<>() {
             @Override
             public SparseSwitchEntry get(int i) {
                 return InsSparseSwitchData.this.get(i);
             }
+
             @Override
             public int getCount() {
                 return InsSparseSwitchData.this.size();

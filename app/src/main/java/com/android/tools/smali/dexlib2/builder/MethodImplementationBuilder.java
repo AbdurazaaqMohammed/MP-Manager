@@ -40,7 +40,7 @@ import java.util.HashMap;
 
 public class MethodImplementationBuilder {
     // Contains all named labels - both placed and unplaced
-    private final HashMap<String, Label> labels = new HashMap<String, Label>();
+    private final HashMap<String, Label> labels = new HashMap<>();
 
     @Nonnull
     private final MutableMethodImplementation impl;

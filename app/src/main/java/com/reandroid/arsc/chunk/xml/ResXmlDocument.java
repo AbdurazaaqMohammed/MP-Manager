@@ -288,7 +288,7 @@ public class ResXmlDocument extends ResXmlDocumentOrElement implements
     Iterator<ResXmlEvent> getParserEvents() {
         return CombiningIterator.singleTwo(
                 ResXmlEvent.startDocument(this),
-                new IterableIterator<ResXmlNode, ResXmlEvent>(iterator()) {
+                new IterableIterator<>(iterator()) {
                     @Override
                     public Iterator<ResXmlEvent> iterator(ResXmlNode node) {
                         return node.getParserEvents();

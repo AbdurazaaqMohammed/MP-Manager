@@ -23,11 +23,12 @@ public class IntegerArrayBlock extends ShortArrayBlock{
         super();
     }
     public final List<Integer> toList(){
-        return new AbstractList<Integer>() {
+        return new AbstractList<>() {
             @Override
             public Integer get(int i) {
                 return IntegerArrayBlock.this.get(i);
             }
+
             @Override
             public int size() {
                 return IntegerArrayBlock.this.size();

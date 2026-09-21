@@ -329,23 +329,23 @@ BuilderAnnotationSetPool, BuilderEncodedArrayPool> {
 		final List<ExceptionHandler> exceptionHandlers = new ArrayList<>(tempExceptionHandlers.size());
 		for (ExceptionHandler backedExceptionHandler : tempExceptionHandlers)
 		exceptionHandlers.add(copyExceptionHandler(backedExceptionHandler));
-		return new BaseTryBlock<ExceptionHandler>() {
-			@Override
-			public int getStartCodeAddress() {
-				return startCodeAddress;
-			}
-			
-			@Override
-			public int getCodeUnitCount() {
-				return codeUnitCount;
-			}
-			
-			@Nonnull
-			@Override
-			public List<? extends ExceptionHandler> getExceptionHandlers() {
-				return exceptionHandlers;
-			}
-		};
+		return new BaseTryBlock<>() {
+            @Override
+            public int getStartCodeAddress() {
+                return startCodeAddress;
+            }
+
+            @Override
+            public int getCodeUnitCount() {
+                return codeUnitCount;
+            }
+
+            @Nonnull
+            @Override
+            public List<? extends ExceptionHandler> getExceptionHandlers() {
+                return exceptionHandlers;
+            }
+        };
 	}
 	
 	private ExceptionHandler copyExceptionHandler(ExceptionHandler exceptionHandler) {

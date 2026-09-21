@@ -55,26 +55,34 @@ public class ReflectionMethod extends BaseMethodReference implements Method {
 
     @Nonnull @Override public List<? extends MethodParameter> getParameters() {
         final java.lang.reflect.Method method = this.method;
-        return new AbstractList<MethodParameter>() {
+        return new AbstractList<>() {
             private final Class[] parameters = method.getParameterTypes();
 
-            @Override public MethodParameter get(final int index) {
+            @Override
+            public MethodParameter get(final int index) {
                 return new BaseMethodParameter() {
-                    @Nonnull @Override public Set<? extends Annotation> getAnnotations() {
+                    @Nonnull
+                    @Override
+                    public Set<? extends Annotation> getAnnotations() {
                         return Collections.emptySet();
                     }
 
-                    @Nullable @Override public String getName() {
+                    @Nullable
+                    @Override
+                    public String getName() {
                         return null;
                     }
 
-                    @Nonnull @Override public String getType() {
+                    @Nonnull
+                    @Override
+                    public String getType() {
                         return ReflectionUtils.javaToDexName(parameters[index].getName());
                     }
                 };
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return parameters.length;
             }
         };
@@ -101,14 +109,16 @@ public class ReflectionMethod extends BaseMethodReference implements Method {
     }
 
     @Nonnull @Override public List<String> getParameterTypes() {
-        return new AbstractList<String>() {
+        return new AbstractList<>() {
             private final List<? extends MethodParameter> parameters = getParameters();
 
-            @Override public String get(int index) {
+            @Override
+            public String get(int index) {
                 return parameters.get(index).getType();
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return parameters.size();
             }
         };

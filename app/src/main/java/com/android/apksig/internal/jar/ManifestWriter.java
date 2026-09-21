@@ -108,7 +108,7 @@ public abstract class ManifestWriter {
 
     static SortedMap<String, String> getAttributesSortedByName(Attributes attributes) {
         Set<Map.Entry<Object, Object>> attributesEntries = attributes.entrySet();
-        SortedMap<String, String> namedAttributes = new TreeMap<String, String>();
+        SortedMap<String, String> namedAttributes = new TreeMap<>();
         for (Map.Entry<Object, Object> attribute : attributesEntries) {
             String attrName = attribute.getKey().toString();
             String attrValue = attribute.getValue().toString();

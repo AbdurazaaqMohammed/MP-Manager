@@ -100,7 +100,7 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
 
     static {
 
-        HEADER = new SectionType<DexHeader>("HEADER", 0x0000){
+        HEADER = new SectionType<>("HEADER", 0x0000) {
             @Override
             public DexHeader newInstance() {
                 return new DexHeader();
@@ -110,12 +110,14 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isSpecialSection() {
                 return true;
             }
+
             @Override
-            public Section<DexHeader> createSection(IntegerPair countAndOffset){
+            public Section<DexHeader> createSection(IntegerPair countAndOffset) {
                 return new SpecialSection<>(countAndOffset, this);
             }
+
             @Override
-            public SpecialSection<DexHeader> createSpecialSection(IntegerReference offset){
+            public SpecialSection<DexHeader> createSpecialSection(IntegerReference offset) {
                 return new SpecialSection<>(offset, this);
             }
 
@@ -125,7 +127,7 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
         };
 
-        MAP_LIST = new SectionType<MapList>("MAP_LIST", 0x1000) {
+        MAP_LIST = new SectionType<>("MAP_LIST", 0x1000) {
             @Override
             public MapList newInstance() {
                 return new MapList(new NumberIntegerReference());
@@ -135,21 +137,24 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isSpecialSection() {
                 return true;
             }
+
             @Override
-            public Section<MapList> createSection(IntegerPair countAndOffset){
+            public Section<MapList> createSection(IntegerPair countAndOffset) {
                 return new SpecialSection<>(countAndOffset, this);
             }
+
             @Override
-            public SpecialSection<MapList> createSpecialSection(IntegerReference offset){
+            public SpecialSection<MapList> createSpecialSection(IntegerReference offset) {
                 return new SpecialSection<>(offset, this);
             }
+
             @Override
             public int sectionAlignment() {
                 return 4;
             }
         };
 
-        STRING_ID = new SectionType<StringId>("STRING_ID", 0x0001) {
+        STRING_ID = new SectionType<>("STRING_ID", 0x0001) {
 
             @Override
             public StringId newInstance() {
@@ -170,14 +175,15 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public int getReferenceType() {
                 return 0;
             }
+
             @Override
             public StringIdSection createSection(IntegerPair countAndOffset) {
                 return new StringIdSection(countAndOffset, this);
             }
-            
+
         };
 
-        STRING_DATA = new SectionType<StringData>("STRING_DATA", 0x2002) {
+        STRING_DATA = new SectionType<>("STRING_DATA", 0x2002) {
             @Override
             public StringData newInstance() {
                 return new StringData();
@@ -194,31 +200,34 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
 
             @Override
-            public StringDataSection createSection(IntegerPair countAndOffset){
+            public StringDataSection createSection(IntegerPair countAndOffset) {
                 return new StringDataSection(countAndOffset, this);
             }
         };
 
-        TYPE_ID = new SectionType<TypeId>("TYPE_ID", 0x0002) {
+        TYPE_ID = new SectionType<>("TYPE_ID", 0x0002) {
             @Override
             public TypeId newInstance() {
                 return new TypeId();
             }
+
             @Override
             public int getReferenceType() {
                 return 1;
             }
+
             @Override
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
-            public Section<TypeId> createSection(IntegerPair countAndOffset){
+            public Section<TypeId> createSection(IntegerPair countAndOffset) {
                 return new IdSection<>(countAndOffset, this);
             }
         };
 
-        TYPE_LIST = new SectionType<TypeList>("TYPE_LIST", 0x1001) {
+        TYPE_LIST = new SectionType<>("TYPE_LIST", 0x1001) {
             @Override
             public TypeList newInstance() {
                 return new TypeList();
@@ -228,8 +237,9 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public Section<TypeList> createSection(IntegerPair countAndOffset){
+            public Section<TypeList> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
 
@@ -239,7 +249,7 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
         };
 
-        PROTO_ID = new SectionType<ProtoId>("PROTO_ID", 0x0003) {
+        PROTO_ID = new SectionType<>("PROTO_ID", 0x0003) {
             @Override
             public ProtoId newInstance() {
                 return new ProtoId();
@@ -249,17 +259,19 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public int getReferenceType() {
                 return 4;
             }
+
             @Override
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
             public Section<ProtoId> createSection(IntegerPair countAndOffset) {
                 return new IdSection<>(countAndOffset, this);
             }
         };
 
-        FIELD_ID = new SectionType<FieldId>("FIELD_ID", 0x0004) {
+        FIELD_ID = new SectionType<>("FIELD_ID", 0x0004) {
 
             @Override
             public FieldId newInstance() {
@@ -270,17 +282,19 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public int getReferenceType() {
                 return 2;
             }
+
             @Override
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
             public Section<FieldId> createSection(IntegerPair countAndOffset) {
                 return new IdSection<>(countAndOffset, this);
             }
         };
 
-        METHOD_ID = new SectionType<MethodId>("METHOD_ID", 0x0005) {
+        METHOD_ID = new SectionType<>("METHOD_ID", 0x0005) {
             @Override
             public MethodId newInstance() {
                 return new MethodId();
@@ -290,24 +304,26 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
             public int getReferenceType() {
                 return 3;
             }
+
             @Override
             public Section<MethodId> createSection(IntegerPair countAndOffset) {
                 return new IdSection<>(countAndOffset, this);
             }
         };
 
-        ANNOTATION_ITEM = new SectionType<AnnotationItem>("ANNOTATION_ITEM", 0x2004) {
+        ANNOTATION_ITEM = new SectionType<>("ANNOTATION_ITEM", 0x2004) {
             @Override
             public AnnotationItem newInstance() {
                 return new AnnotationItem();
             }
-            
+
             @Override
-            public Section<AnnotationItem> createSection(IntegerPair countAndOffset){
+            public Section<AnnotationItem> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
 
@@ -317,7 +333,7 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
         };
 
-        ANNOTATION_SET = new SectionType<AnnotationSet>("ANNOTATION_SET", 0x1003) {
+        ANNOTATION_SET = new SectionType<>("ANNOTATION_SET", 0x1003) {
             @Override
             public AnnotationSet newInstance() {
                 return new AnnotationSet();
@@ -327,8 +343,9 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public AnnotationSetSection createSection(IntegerPair countAndOffset){
+            public AnnotationSetSection createSection(IntegerPair countAndOffset) {
                 return new AnnotationSetSection(countAndOffset, this);
             }
 
@@ -338,19 +355,20 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
         };
 
-        ANNOTATION_GROUP = new SectionType<AnnotationGroup>("ANNOTATION_GROUP", 0x1002) {
+        ANNOTATION_GROUP = new SectionType<>("ANNOTATION_GROUP", 0x1002) {
 
             @Override
             public AnnotationGroup newInstance() {
                 return new AnnotationGroup();
             }
-            
+
             @Override
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<AnnotationGroup> createSection(IntegerPair countAndOffset){
+            public DataSection<AnnotationGroup> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
 
@@ -360,7 +378,7 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
         };
 
-        ANNOTATION_DIRECTORY = new SectionType<AnnotationsDirectory>("ANNOTATIONS_DIRECTORY", 0x2006) {
+        ANNOTATION_DIRECTORY = new SectionType<>("ANNOTATIONS_DIRECTORY", 0x2006) {
             @Override
             public AnnotationsDirectory newInstance() {
                 return new AnnotationsDirectory();
@@ -370,17 +388,19 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public int sectionAlignment() {
                 return 4;
             }
+
             @Override
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<AnnotationsDirectory> createSection(IntegerPair countAndOffset){
+            public DataSection<AnnotationsDirectory> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
         };
 
-        CALL_SITE_ID = new SectionType<CallSiteId>("CALL_SITE_ID", 0x0007) {
+        CALL_SITE_ID = new SectionType<>("CALL_SITE_ID", 0x0007) {
             @Override
             public CallSiteId newInstance() {
                 return new CallSiteId();
@@ -395,13 +415,14 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
             public Section<CallSiteId> createSection(IntegerPair countAndOffset) {
                 return new IdSection<>(countAndOffset, this);
             }
         };
 
-        METHOD_HANDLE = new SectionType<MethodHandleId>("METHOD_HANDLE", 0x0008) {
+        METHOD_HANDLE = new SectionType<>("METHOD_HANDLE", 0x0008) {
             @Override
             public MethodHandleId newInstance() {
                 return new MethodHandleId();
@@ -411,17 +432,19 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public int getReferenceType() {
                 return 6;
             }
+
             @Override
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
             public Section<MethodHandleId> createSection(IntegerPair countAndOffset) {
                 return new IdSection<>(countAndOffset, this);
             }
         };
 
-        DEBUG_INFO = new SectionType<DebugInfo>("DEBUG_INFO", 0x2003) {
+        DEBUG_INFO = new SectionType<>("DEBUG_INFO", 0x2003) {
             @Override
             public DebugInfo newInstance() {
                 return new DebugInfo();
@@ -431,13 +454,14 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<DebugInfo> createSection(IntegerPair countAndOffset){
+            public DataSection<DebugInfo> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
         };
 
-        CODE = new SectionType<CodeItem>("CODE", 0x2001) {
+        CODE = new SectionType<>("CODE", 0x2001) {
 
             @Override
             public CodeItem newInstance() {
@@ -448,8 +472,9 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<CodeItem> createSection(IntegerPair countAndOffset){
+            public DataSection<CodeItem> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
 
@@ -459,7 +484,7 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             }
         };
 
-        ENCODED_ARRAY = new SectionType<EncodedArray>("ENCODED_ARRAY", 0x2005) {
+        ENCODED_ARRAY = new SectionType<>("ENCODED_ARRAY", 0x2005) {
             @Override
             public EncodedArray newInstance() {
                 return new EncodedArray();
@@ -469,29 +494,31 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<EncodedArray> createSection(IntegerPair countAndOffset){
+            public DataSection<EncodedArray> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
         };
 
-        CLASS_DATA = new SectionType<ClassData>("CLASS_DATA", 0x2000) {
+        CLASS_DATA = new SectionType<>("CLASS_DATA", 0x2000) {
             @Override
             public ClassData newInstance() {
                 return new ClassData();
             }
-            
+
             @Override
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<ClassData> createSection(IntegerPair countAndOffset){
+            public DataSection<ClassData> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
         };
 
-        CLASS_ID = new SectionType<ClassId>("CLASS_ID", 0x0006) {
+        CLASS_ID = new SectionType<>("CLASS_ID", 0x0006) {
             @Override
             public ClassId newInstance() {
                 return new ClassId();
@@ -501,17 +528,19 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public int getReferenceType() {
                 return 7;
             }
+
             @Override
             public boolean isIdSection() {
                 return true;
             }
+
             @Override
             public ClassIdSection createSection(IntegerPair countAndOffset) {
                 return new ClassIdSection(countAndOffset);
             }
         };
 
-        HIDDEN_API = new SectionType<HiddenApiRestrictions>("HIDDEN_API", 0xF000) {
+        HIDDEN_API = new SectionType<>("HIDDEN_API", 0xF000) {
             @Override
             public HiddenApiRestrictions newInstance() {
                 return new HiddenApiRestrictions();
@@ -521,8 +550,9 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
             public boolean isDataSection() {
                 return true;
             }
+
             @Override
-            public DataSection<HiddenApiRestrictions> createSection(IntegerPair countAndOffset){
+            public DataSection<HiddenApiRestrictions> createSection(IntegerPair countAndOffset) {
                 return new DataSection<>(countAndOffset, this);
             }
 

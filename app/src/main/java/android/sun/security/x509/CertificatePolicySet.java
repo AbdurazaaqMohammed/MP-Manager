@@ -58,7 +58,7 @@ public class CertificatePolicySet {
      * @exception IOException on decoding errors.
      */
     public CertificatePolicySet(android.sun.security.util.DerInputStream in) throws IOException {
-        ids = new Vector<android.sun.security.x509.CertificatePolicyId>();
+        ids = new Vector<>();
         android.sun.security.util.DerValue[] seq = in.getSequence(5);
 
         for (android.sun.security.util.DerValue derValue : seq) {

@@ -230,7 +230,7 @@ public class DexLayout implements DexClassModule, Closeable,
         getDexLayoutBlock().clearPoolMap();
     }
     public Iterator<DexInstruction> getDexInstructions() {
-        return new IterableIterator<DexClass, DexInstruction>(getDexClasses()) {
+        return new IterableIterator<>(getDexClasses()) {
             @Override
             public Iterator<DexInstruction> iterator(DexClass element) {
                 return element.getDexInstructions();
@@ -238,7 +238,7 @@ public class DexLayout implements DexClassModule, Closeable,
         };
     }
     public Iterator<DexInstruction> getDexInstructionsCloned() {
-        return new IterableIterator<DexClass, DexInstruction>(getDexClassesCloned()) {
+        return new IterableIterator<>(getDexClassesCloned()) {
             @Override
             public Iterator<DexInstruction> iterator(DexClass element) {
                 return element.getDexInstructions();

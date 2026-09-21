@@ -241,7 +241,7 @@ public class AnnotationSet extends AnnotationsList<AnnotationItem>
 
     @Override
     public Iterator<IdItem> usedIds(){
-        return new IterableIterator<AnnotationItem, IdItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<IdItem> iterator(AnnotationItem element) {
                 return element.usedIds();

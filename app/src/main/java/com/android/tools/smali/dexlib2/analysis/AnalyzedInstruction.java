@@ -78,13 +78,13 @@ public class AnalyzedInstruction implements Comparable<AnalyzedInstruction> {
      * Instructions that can pass on execution to this one during normal execution
      */
     @Nonnull
-    protected final TreeSet<AnalyzedInstruction> predecessors = new TreeSet<AnalyzedInstruction>();
+    protected final TreeSet<AnalyzedInstruction> predecessors = new TreeSet<>();
 
     /**
      * Instructions that can execution could pass on to next during normal execution
      */
     @Nonnull
-    protected final LinkedList<AnalyzedInstruction> successors = new LinkedList<AnalyzedInstruction>();
+    protected final LinkedList<AnalyzedInstruction> successors = new LinkedList<>();
 
     /**
      * This contains the register types *before* the instruction has executed

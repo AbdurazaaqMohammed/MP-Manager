@@ -257,7 +257,7 @@ public class CollectionUtil {
         if (!iterator.hasNext()) {
             return EmptyIterator.of();
         }
-        return new UniqueIterator<T>(ObjectsUtil.cast(iterator));
+        return new UniqueIterator<>(ObjectsUtil.cast(iterator));
     }
     public static<T> Iterator<T> copyOfUniqueOf(Iterator<? extends T> iterator) {
         return copyOf(uniqueOf(iterator));

@@ -67,7 +67,7 @@ public class ImmutableExceptionHandler extends BaseExceptionHandler implements E
     }
 
     private static final ImmutableConverter<ImmutableExceptionHandler, ExceptionHandler> CONVERTER =
-            new ImmutableConverter<ImmutableExceptionHandler, ExceptionHandler>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull ExceptionHandler item) {
                     return item instanceof ImmutableExceptionHandler;

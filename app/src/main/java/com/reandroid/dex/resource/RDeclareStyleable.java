@@ -222,16 +222,18 @@ public class RDeclareStyleable extends RStyleableItem implements Iterable<Intege
             if(!isValid()) {
                 return null;
             }
-            return new Iterator<IntegerReference>() {
+            return new Iterator<>() {
                 private int index;
+
                 @Override
                 public boolean hasNext() {
                     return index < size();
                 }
+
                 @Override
                 public IntegerReference next() {
                     IntegerReference reference = getValueReference(index);
-                    index ++;
+                    index++;
                     return reference;
                 }
             };

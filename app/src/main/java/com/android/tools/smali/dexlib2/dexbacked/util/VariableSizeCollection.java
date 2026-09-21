@@ -52,7 +52,7 @@ public abstract class VariableSizeCollection<T> extends AbstractCollection<T> {
     @Override
     @Nonnull
     public VariableSizeIterator<T> iterator() {
-        return new VariableSizeIterator<T>(buffer, offset, size) {
+        return new VariableSizeIterator<>(buffer, offset, size) {
             @Override
             protected T readNextItem(@Nonnull DexReader<? extends DexBuffer> reader, int index) {
                 return VariableSizeCollection.this.readNextItem(reader, index);

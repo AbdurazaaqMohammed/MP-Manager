@@ -244,7 +244,7 @@ public class PKCS9Attribute implements DerEncoder {
      * that occur in PKCS9, in lower case.
      */
     private static final Hashtable<String, ObjectIdentifier> NAME_OID_TABLE =
-        new Hashtable<String, ObjectIdentifier>(18);
+            new Hashtable<>(18);
 
     static { // static initializer for PCKS9_NAMES
         NAME_OID_TABLE.put("emailaddress", PKCS9_OIDS[1]);
@@ -271,7 +271,7 @@ public class PKCS9Attribute implements DerEncoder {
      * corresponding attribute value type.
      */
     private static final Hashtable<ObjectIdentifier, String> OID_NAME_TABLE =
-        new Hashtable<ObjectIdentifier, String>(16);
+            new Hashtable<>(16);
     static {
         OID_NAME_TABLE.put(PKCS9_OIDS[1], EMAIL_ADDRESS_STR);
         OID_NAME_TABLE.put(PKCS9_OIDS[2], UNSTRUCTURED_NAME_STR);

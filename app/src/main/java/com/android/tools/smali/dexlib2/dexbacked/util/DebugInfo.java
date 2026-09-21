@@ -174,7 +174,7 @@ public abstract class DebugInfo implements Iterable<DebugItem> {
                 }
             }
 
-            return new VariableSizeLookaheadIterator<DebugItem>(dexFile.getDataBuffer(), reader.getOffset()) {
+            return new VariableSizeLookaheadIterator<>(dexFile.getDataBuffer(), reader.getOffset()) {
                 private int codeAddress = 0;
                 private int lineNumber = lineNumberStart;
 
@@ -279,7 +279,7 @@ public abstract class DebugInfo implements Iterable<DebugItem> {
                                 codeAddress += adjusted / 15;
                                 lineNumber += (adjusted % 15) - 4;
                                 if (codeAddress > lastInstructionAddress) {
-                                  return endOfData();
+                                    return endOfData();
                                 }
                                 return new ImmutableLineNumber(codeAddress, lineNumber);
                             }
@@ -299,8 +299,9 @@ public abstract class DebugInfo implements Iterable<DebugItem> {
             }
             //TODO: make sure dalvik doesn't allow more parameter names than we have parameters
             final int parameterNameCount = reader.readSmallUleb128();
-            return new VariableSizeIterator<String>(reader, parameterNameCount) {
-                @Override protected String readNextItem(@Nonnull DexReader<? extends DexBuffer> reader, int index) {
+            return new VariableSizeIterator<>(reader, parameterNameCount) {
+                @Override
+                protected String readNextItem(@Nonnull DexReader<? extends DexBuffer> reader, int index) {
                     return dexFile.getStringSection().getOptional(reader.readSmallUleb128() - 1);
                 }
             };

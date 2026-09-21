@@ -79,12 +79,14 @@ class BuilderTypePool extends BaseBuilderPool
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderTypeReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderTypeReference>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderTypeReference key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderTypeReference key) {
                 return key.index;
             }
 
-            @Override protected int setValue(@Nonnull BuilderTypeReference key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderTypeReference key, int value) {
                 int prev = key.index;
                 key.index = value;
                 return prev;

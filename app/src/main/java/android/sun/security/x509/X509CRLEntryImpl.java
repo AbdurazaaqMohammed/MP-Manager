@@ -352,7 +352,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
         if (extensions == null) {
             return null;
         }
-        Set<String> extSet = new HashSet<String>();
+        Set<String> extSet = new HashSet<>();
         for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
             if (ex.isCritical()) {
                 extSet.add(ex.getExtensionId().toString());
@@ -373,7 +373,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
         if (extensions == null) {
             return null;
         }
-        Set<String> extSet = new HashSet<String>();
+        Set<String> extSet = new HashSet<>();
         for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
             if (!ex.isCritical()) {
                 extSet.add(ex.getExtensionId().toString());
@@ -504,7 +504,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
     // ANDROID: java.security.cert.Extension is not available before API 24
     public Map<String, Extension> getExtensions() {
         Collection<Extension> exts = extensions.getAllExtensions();
-        HashMap<String, Extension> map = new HashMap<String, Extension>(exts.size());
+        HashMap<String, Extension> map = new HashMap<>(exts.size());
         for (Extension ext : exts) {
             map.put(ext.getId(), ext);
         }

@@ -143,14 +143,17 @@ public class DexBackedMethod extends BaseMethodReference implements Method {
         if (parametersOffset > 0) {
             final List<String> parameterTypes = getParameterTypes();
 
-            return new AbstractForwardSequentialList<MethodParameter>() {
-                @Nonnull @Override public Iterator<MethodParameter> iterator() {
+            return new AbstractForwardSequentialList<>() {
+                @Nonnull
+                @Override
+                public Iterator<MethodParameter> iterator() {
                     return new ParameterIterator(parameterTypes,
                             getParameterAnnotations(),
                             getParameterNames());
                 }
 
-                @Override public int size() {
+                @Override
+                public int size() {
                     return parameterTypes.size();
                 }
             };
@@ -179,13 +182,17 @@ public class DexBackedMethod extends BaseMethodReference implements Method {
         if (parametersOffset > 0) {
             final int parameterCount = dexFile.getDataBuffer().readSmallUint(parametersOffset + TypeListItem.SIZE_OFFSET);
             final int paramListStart = parametersOffset + TypeListItem.LIST_OFFSET;
-            return new FixedSizeList<String>() {
+            return new FixedSizeList<>() {
                 @Nonnull
                 @Override
                 public String readItem(final int index) {
-                    return dexFile.getTypeSection().get(dexFile.getDataBuffer().readUshort(paramListStart + 2*index));
+                    return dexFile.getTypeSection().get(dexFile.getDataBuffer().readUshort(paramListStart + 2 * index));
                 }
-                @Override public int size() { return parameterCount; }
+
+                @Override
+                public int size() {
+                    return parameterCount;
+                }
             };
         }
         return Collections.emptyList();

@@ -880,11 +880,11 @@ public class KXmlParser implements XmlPullParser, Closeable {
 
     private void defineAttributeDefault(String elementName, String attributeName, String value) {
         if (defaultAttributes == null) {
-            defaultAttributes = new HashMap<String, Map<String, String>>();
+            defaultAttributes = new HashMap<>();
         }
         Map<String, String> elementAttributes = defaultAttributes.get(elementName);
         if (elementAttributes == null) {
-            elementAttributes = new HashMap<String, String>();
+            elementAttributes = new HashMap<>();
             defaultAttributes.put(elementName, elementAttributes);
         }
         elementAttributes.put(attributeName, value);
@@ -943,7 +943,7 @@ public class KXmlParser implements XmlPullParser, Closeable {
 
         if (generalEntity && processDocDecl) {
             if (documentEntities == null) {
-                documentEntities = new HashMap<String, char[]>();
+                documentEntities = new HashMap<>();
             }
             documentEntities.put(name, entityValue.toCharArray());
         }
@@ -1790,7 +1790,7 @@ public class KXmlParser implements XmlPullParser, Closeable {
                     "Entity replacement text must be defined after setInput()");
         }
         if (documentEntities == null) {
-            documentEntities = new HashMap<String, char[]>();
+            documentEntities = new HashMap<>();
         }
         documentEntities.put(entity, value.toCharArray());
     }

@@ -112,8 +112,8 @@ public class OIDMap {
     private final static Map<String,OIDInfo> nameMap;
 
     static {
-        oidMap = new HashMap<android.sun.security.util.ObjectIdentifier,OIDInfo>();
-        nameMap = new HashMap<String,OIDInfo>();
+        oidMap = new HashMap<>();
+        nameMap = new HashMap<>();
         addInternal(SUB_KEY_IDENTIFIER, android.sun.security.x509.PKIXExtensions.SubjectKey_Id,
                     "SubjectKeyIdentifierExtension");
         addInternal(KEY_USAGE, android.sun.security.x509.PKIXExtensions.KeyUsage_Id,

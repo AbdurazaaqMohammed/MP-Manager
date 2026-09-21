@@ -77,7 +77,7 @@ public class ImmutableMethodParameter extends BaseMethodParameter {
     }
 
     private static final ImmutableConverter<ImmutableMethodParameter, MethodParameter> CONVERTER =
-            new ImmutableConverter<ImmutableMethodParameter, MethodParameter>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull MethodParameter item) {
                     return item instanceof ImmutableMethodParameter;

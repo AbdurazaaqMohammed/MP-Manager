@@ -198,7 +198,7 @@ public class PackageBlock extends Chunk<PackageHeader>
         return null;
     }
     public Iterator<ResourceEntry> getResources() {
-        return new IterableIterator<SpecTypePair, ResourceEntry>(getSpecTypePairs()) {
+        return new IterableIterator<>(getSpecTypePairs()) {
             @Override
             public Iterator<ResourceEntry> iterator(SpecTypePair element) {
                 return element.getResources();
@@ -206,10 +206,10 @@ public class PackageBlock extends Chunk<PackageHeader>
         };
     }
     public Iterator<ResourceEntry> getResources(String type){
-        return new IterableIterator<SpecTypePair, ResourceEntry>(getSpecTypePairs()) {
+        return new IterableIterator<>(getSpecTypePairs()) {
             @Override
             public Iterator<ResourceEntry> iterator(SpecTypePair element) {
-                if(type.equals(element.getTypeName())){
+                if (type.equals(element.getTypeName())) {
                     return element.getResources();
                 }
                 return EmptyIterator.of();
@@ -576,7 +576,7 @@ public class PackageBlock extends Chunk<PackageHeader>
     }
 
     private Iterator<SpecTypePair> getAttrSpecs(){
-        return getSpecTypePairArray().iterator(new Predicate<SpecTypePair>() {
+        return getSpecTypePairArray().iterator(new Predicate<>() {
             @Override
             public boolean evaluate(SpecTypePair specTypePair) {
                 return specTypePair != null && specTypePair.isTypeAttr();

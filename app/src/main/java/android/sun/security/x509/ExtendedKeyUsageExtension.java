@@ -97,7 +97,7 @@ implements CertAttrSet<String> {
     // OID defined in RFC 3280 Sections 4.2.1.13
     // more from http://www.alvestrand.no/objectid/1.3.6.1.5.5.7.3.html
     private static final Map <ObjectIdentifier, String> map =
-            new HashMap <ObjectIdentifier, String> ();
+            new HashMap<>();
 
     private static final int[] anyExtendedKeyUsageOidData = {2, 5, 29, 37, 0};
     private static final int[] serverAuthOidData = {1, 3, 6, 1, 5, 5, 7, 3, 1};
@@ -189,7 +189,7 @@ implements CertAttrSet<String> {
             throw new IOException("Invalid encoding for " +
                                    "ExtendedKeyUsageExtension.");
         }
-        keyUsages = new Vector<ObjectIdentifier>();
+        keyUsages = new Vector<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
             ObjectIdentifier usage = seq.getOID();
@@ -302,7 +302,7 @@ implements CertAttrSet<String> {
     }
 
     public List<String> getExtendedKeyUsage() {
-        List<String> al = new ArrayList<String>(keyUsages.size());
+        List<String> al = new ArrayList<>(keyUsages.size());
         for (ObjectIdentifier oid : keyUsages) {
             al.add(oid.toString());
         }

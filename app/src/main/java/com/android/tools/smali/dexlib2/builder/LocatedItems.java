@@ -56,13 +56,13 @@ public abstract class LocatedItems<T extends ItemWithLocation> {
     }
 
     public Set<T> getModifiableItems(final MethodLocation newItemsLocation) {
-        return new AbstractSet<T>() {
+        return new AbstractSet<>() {
             @Nonnull
             @Override
             public Iterator<T> iterator() {
                 final Iterator<T> it = getItems().iterator();
 
-                return new Iterator<T>() {
+                return new Iterator<>() {
                     private @Nullable
                     T currentItem = null;
 

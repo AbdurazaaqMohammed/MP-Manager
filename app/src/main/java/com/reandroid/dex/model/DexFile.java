@@ -135,7 +135,7 @@ public class DexFile implements Closeable, DexClassRepository, Iterable<DexLayou
         getContainerBlock().clearEmptySections();
     }
     public Iterator<DexInstruction> getDexInstructions() {
-        return new IterableIterator<DexLayout, DexInstruction>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<DexInstruction> iterator(DexLayout element) {
                 return element.getDexInstructions();
@@ -143,7 +143,7 @@ public class DexFile implements Closeable, DexClassRepository, Iterable<DexLayou
         };
     }
     public Iterator<DexInstruction> getDexInstructionsCloned() {
-        return new IterableIterator<DexLayout, DexInstruction>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<DexInstruction> iterator(DexLayout element) {
                 return element.getDexInstructionsCloned();

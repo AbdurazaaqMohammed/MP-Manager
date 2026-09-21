@@ -191,7 +191,7 @@ public class DebugInfo extends DataItem implements KeyReference, Comparable<Debu
     }
 
     public Iterator<IdItem> usedIds() {
-        Iterator<IdItem> iterator1 = new IterableIterator<DebugParameterBlock, IdItem>(getParameters()) {
+        Iterator<IdItem> iterator1 = new IterableIterator<>(getParameters()) {
             @Override
             public Iterator<IdItem> iterator(DebugParameterBlock element) {
                 return element.usedIds();

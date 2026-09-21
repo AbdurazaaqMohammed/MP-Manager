@@ -66,6 +66,6 @@ public class ProtoPool extends BaseIndexPool<MethodProtoReference>
 
     @Nullable @Override public TypeListPool.Key<List<? extends CharSequence>> getParameters(
             @Nonnull MethodProtoReference methodProto) {
-        return new TypeListPool.Key<List<? extends CharSequence>>(methodProto.getParameterTypes());
+        return new TypeListPool.Key<>(methodProto.getParameterTypes());
     }
 }

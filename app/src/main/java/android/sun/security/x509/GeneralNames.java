@@ -74,7 +74,7 @@ public class GeneralNames {
      * The default constructor for this class.
      */
     public GeneralNames() {
-        names = new ArrayList<android.sun.security.x509.GeneralName>();
+        names = new ArrayList<>();
     }
 
     public GeneralNames add(android.sun.security.x509.GeneralName name) {

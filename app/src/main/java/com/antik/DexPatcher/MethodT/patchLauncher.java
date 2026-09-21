@@ -13,7 +13,7 @@ public class patchLauncher {
 
     public static ClassDef patchStartupLauncher(ClassDef cd, List<String> j_ts) {
         System.out.println("[INFO] Patching StartupLauncher");
-        List<Method> d_ms = new ArrayList<Method>();
+        List<Method> d_ms = new ArrayList<>();
         for (Method m : cd.getDirectMethods()) {
             if ("launch".equals(m.getName())) {
                 d_ms.add(patchLaunchMethod(m));

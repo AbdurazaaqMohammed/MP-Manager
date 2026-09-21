@@ -230,7 +230,7 @@ public class ResXmlElement extends ResXmlDocumentOrElement implements Element<Re
 
                 SingleIterator.of(ResXmlEvent.startComment(this)),
 
-                new IterableIterator<ResXmlNode, ResXmlEvent>(iterator()) {
+                new IterableIterator<>(iterator()) {
                     @Override
                     public Iterator<ResXmlEvent> iterator(ResXmlNode node) {
                         return node.getParserEvents();

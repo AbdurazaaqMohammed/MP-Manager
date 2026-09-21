@@ -552,10 +552,11 @@ public class BlockList<T extends Block> extends Block implements BlockRefresh, S
         mItems.setMonitor(getMonitor());
     }
     protected ArrayCollection.Monitor<T> getMonitor() {
-        return new ArrayCollection.Monitor<T>() {
+        return new ArrayCollection.Monitor<>() {
             @Override
             public void onAdd(int i, T item) {
             }
+
             @Override
             public void onRemoved(int i, T item) {
                 notifyPreRemove(item);
@@ -739,27 +740,31 @@ public class BlockList<T extends Block> extends Block implements BlockRefresh, S
         }
     }
 
-    private static final BlockList<?> empty_list = new BlockList<Block>() {
+    private static final BlockList<?> empty_list = new BlockList<>() {
         @Override
         public boolean add(Block item) {
             throw new IllegalArgumentException("Empty BlockList");
         }
+
         @Override
         public void add(int index, Block item) {
             throw new IllegalArgumentException("Empty BlockList");
         }
+
         @Override
         public void ensureCapacity(int capacity) {
             if (capacity != 0) {
                 throw new IllegalArgumentException("Empty BlockList");
             }
         }
+
         @Override
         public void setSize(int size, boolean notify) {
             if (size != 0) {
                 throw new IllegalArgumentException("Empty BlockList");
             }
         }
+
         @Override
         public int size() {
             return 0;

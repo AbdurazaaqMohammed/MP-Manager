@@ -26,7 +26,7 @@ import java.util.Iterator;
 public interface IdUsageIterator {
     Iterator<IdItem> usedIds();
     default Iterator<Key> usedKeys(){
-        return new IterableIterator<IdItem, Key>(usedIds()) {
+        return new IterableIterator<>(usedIds()) {
             @SuppressWarnings("unchecked")
             @Override
             public Iterator<Key> iterator(IdItem element) {

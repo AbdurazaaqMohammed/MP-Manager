@@ -67,8 +67,9 @@ public final class Utf8Utils {
     }
 
     private static final ThreadLocal<char[]> localBuffer =
-            new ThreadLocal<char[]> () {
-                @Override protected char[] initialValue() {
+            new ThreadLocal<>() {
+                @Override
+                protected char[] initialValue() {
                     // A reasonably sized initial value
                     return new char[256];
                 }

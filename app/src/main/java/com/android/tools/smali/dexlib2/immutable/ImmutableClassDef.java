@@ -183,7 +183,7 @@ public class ImmutableClassDef extends BaseTypeReference implements ClassDef {
     }
 
     private static final ImmutableConverter<ImmutableClassDef, ClassDef> CONVERTER =
-            new ImmutableConverter<ImmutableClassDef, ClassDef>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull ClassDef item) {
                     return item instanceof ImmutableClassDef;

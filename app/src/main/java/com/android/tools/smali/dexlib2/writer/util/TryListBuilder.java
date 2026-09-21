@@ -50,15 +50,15 @@ public class TryListBuilder<EH extends ExceptionHandler>
     private final MutableTryBlock<EH> listEnd;
 
     public TryListBuilder() {
-        listStart = new MutableTryBlock<EH>(0, 0);
-        listEnd = new MutableTryBlock<EH>(0, 0);
+        listStart = new MutableTryBlock<>(0, 0);
+        listEnd = new MutableTryBlock<>(0, 0);
         listStart.next = listEnd;
         listEnd.prev = listStart;
     }
 
     public static <EH extends ExceptionHandler> List<TryBlock<EH>> massageTryBlocks(
             List<? extends TryBlock<? extends EH>> tryBlocks) {
-        TryListBuilder<EH> tlb = new TryListBuilder<EH>();
+        TryListBuilder<EH> tlb = new TryListBuilder<>();
 
         for (TryBlock<? extends EH> tryBlock: tryBlocks) {
             int startAddress = tryBlock.getStartCodeAddress();
@@ -129,7 +129,7 @@ public class TryListBuilder<EH extends ExceptionHandler>
 
         @Nonnull
         public MutableTryBlock<EH> split(int splitAddress) {
-            MutableTryBlock<EH> newTryBlock = new MutableTryBlock<EH>(splitAddress, endCodeAddress, exceptionHandlers);
+            MutableTryBlock<EH> newTryBlock = new MutableTryBlock<>(splitAddress, endCodeAddress, exceptionHandlers);
             endCodeAddress = splitAddress;
             append(newTryBlock);
             return newTryBlock;
@@ -213,16 +213,16 @@ public class TryListBuilder<EH extends ExceptionHandler>
                     //^--^
                     /*Oops, totally too far! The new range doesn't overlap any existing
                     ones, so we just add it and return*/
-                    startBlock = new MutableTryBlock<EH>(startAddress, endAddress);
+                    startBlock = new MutableTryBlock<>(startAddress, endAddress);
                     tryBlock.prepend(startBlock);
-                    return new TryBounds<EH>(startBlock, startBlock);
+                    return new TryBounds<>(startBlock, startBlock);
                 } else {
                     //   |-----|
                     //^---------
                     /*Oops, too far! We've passed the start of the range being added, but
                      the new range does overlap this one. We need to add a new range just
                      before this one*/
-                    startBlock = new MutableTryBlock<EH>(startAddress, currentStartAddress);
+                    startBlock = new MutableTryBlock<>(startAddress, currentStartAddress);
                     tryBlock.prepend(startBlock);
                     break;
                 }
@@ -237,9 +237,9 @@ public class TryListBuilder<EH extends ExceptionHandler>
         end before the range being added starts. In either case, we just need
         to add a new range at the end of the list*/
         if (startBlock == null) {
-            startBlock = new MutableTryBlock<EH>(startAddress, endAddress);
+            startBlock = new MutableTryBlock<>(startAddress, endAddress);
             listEnd.prepend(startBlock);
-            return new TryBounds<EH>(startBlock, startBlock);
+            return new TryBounds<>(startBlock, startBlock);
         }
 
         tryBlock = startBlock;
@@ -251,7 +251,7 @@ public class TryListBuilder<EH extends ExceptionHandler>
                 //|-----|
                 //------^
                 /*Bam! We hit the end right on the head... err, tail.*/
-                return new TryBounds<EH>(startBlock, tryBlock);
+                return new TryBounds<>(startBlock, tryBlock);
             } else if (endAddress > currentStartAddress && endAddress < currentEndAddress) {
                 //|-----|
                 //--^
@@ -259,16 +259,16 @@ public class TryListBuilder<EH extends ExceptionHandler>
                 existing range. We need to split the existing range
                 at the end of the range being added.*/
                 tryBlock.split(endAddress);
-                return new TryBounds<EH>(startBlock, tryBlock);
+                return new TryBounds<>(startBlock, tryBlock);
             } else if (endAddress <= currentStartAddress) {
                 //|-----|       |-----|
                 //-----------^
                 /*Oops, too far! The current range starts after the range being added
                 ends. We need to create a new range that starts at the end of the
                 previous range, and ends at the end of the range being added*/
-                MutableTryBlock<EH> endBlock = new MutableTryBlock<EH>(tryBlock.prev.endCodeAddress, endAddress);
+                MutableTryBlock<EH> endBlock = new MutableTryBlock<>(tryBlock.prev.endCodeAddress, endAddress);
                 tryBlock.prepend(endBlock);
-                return new TryBounds<EH>(startBlock, endBlock);
+                return new TryBounds<>(startBlock, endBlock);
             }
             tryBlock = tryBlock.next;
         }
@@ -278,9 +278,9 @@ public class TryListBuilder<EH extends ExceptionHandler>
         /*The last range in the list ended before the end of the range being added.
         We need to add a new range that starts at the end of the last range in the
         list, and ends at the end of the range being added.*/
-        MutableTryBlock<EH> endBlock = new MutableTryBlock<EH>(listEnd.prev.endCodeAddress, endAddress);
+        MutableTryBlock<EH> endBlock = new MutableTryBlock<>(listEnd.prev.endCodeAddress, endAddress);
         listEnd.prepend(endBlock);
-        return new TryBounds<EH>(startBlock, endBlock);
+        return new TryBounds<>(startBlock, endBlock);
     }
 
     public void addHandler(int startAddress, int endAddress, EH handler) {
@@ -300,7 +300,7 @@ public class TryListBuilder<EH extends ExceptionHandler>
         {
             //is there a hole? If so, add a new range to fill the hole
             if (tryBlock.startCodeAddress > previousEnd) {
-                MutableTryBlock<EH> newBlock = new MutableTryBlock<EH>(previousEnd, tryBlock.startCodeAddress);
+                MutableTryBlock<EH> newBlock = new MutableTryBlock<>(previousEnd, tryBlock.startCodeAddress);
                 tryBlock.prepend(newBlock);
                 tryBlock = newBlock;
             }

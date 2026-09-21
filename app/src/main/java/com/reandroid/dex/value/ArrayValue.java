@@ -89,7 +89,7 @@ public class ArrayValue extends DexValueBlock<EncodedArray>
 
     @Override
     public Iterator<IdItem> usedIds(){
-        return new IterableIterator<DexValueBlock<?>, IdItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<IdItem> iterator(DexValueBlock<?> element) {
                 return element.usedIds();

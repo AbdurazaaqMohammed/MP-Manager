@@ -72,15 +72,16 @@ public class Baksmali {
 
         Set<String> classSet = null;
         if (classes != null) {
-            classSet = new HashSet<String>(classes);
+            classSet = new HashSet<>(classes);
         }
 
         for (final ClassDef classDef: classDefs) {
             if (classSet != null && !classSet.contains(classDef.getType())) {
                 continue;
             }
-            tasks.add(executor.submit(new Callable<Boolean>() {
-                @Override public Boolean call() throws Exception {
+            tasks.add(executor.submit(new Callable<>() {
+                @Override
+                public Boolean call() throws Exception {
                     return disassembleClass(classDef, fileNameHandler, options);
                 }
             }));

@@ -58,7 +58,7 @@ public class DexBackedPackedSwitchPayload extends DexBackedInstruction implement
     @Override
     public List<? extends SwitchElement> getSwitchElements() {
         final int firstKey = dexFile.getDataBuffer().readInt(instructionStart + FIRST_KEY_OFFSET);
-        return new FixedSizeList<SwitchElement>() {
+        return new FixedSizeList<>() {
             @Nonnull
             @Override
             public SwitchElement readItem(final int index) {
@@ -70,12 +70,15 @@ public class DexBackedPackedSwitchPayload extends DexBackedInstruction implement
 
                     @Override
                     public int getOffset() {
-                        return dexFile.getDataBuffer().readInt(instructionStart + TARGETS_OFFSET + index*4);
+                        return dexFile.getDataBuffer().readInt(instructionStart + TARGETS_OFFSET + index * 4);
                     }
                 };
             }
 
-            @Override public int size() { return elementCount; }
+            @Override
+            public int size() {
+                return elementCount;
+            }
         };
     }
 

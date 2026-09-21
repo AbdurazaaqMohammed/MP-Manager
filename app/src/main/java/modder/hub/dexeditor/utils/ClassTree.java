@@ -142,7 +142,7 @@ public class ClassTree {
     public int dep;
     public Stack<String> path;
     public String curFile;
-    public final List<ClassDef> classDefList = new ArrayList<ClassDef>();
+    public final List<ClassDef> classDefList = new ArrayList<>();
     public final List<String> paths;
     public int dexVersion;
     final Map<String, List<String>> dexClassMap = new LinkedHashMap<>();
@@ -320,8 +320,8 @@ public class ClassTree {
     public void removeClasses(List<String> classNames) {
         if (classNames == null || classNames.isEmpty()) return;
 
-        List<String> folderPrefixes = new ArrayList<String>();
-        Set<String> individualClasses = new HashSet<String>();
+        List<String> folderPrefixes = new ArrayList<>();
+        Set<String> individualClasses = new HashSet<>();
 
         for (String name : classNames) {
             if (name.endsWith("/")) {
@@ -910,7 +910,7 @@ public class ClassTree {
 
     public class Tree {
         private final List<Map<String, String>> node;
-        private final Comparator<String> sortByType = new Comparator<String>() {
+        private final Comparator<String> sortByType = new Comparator<>() {
             @Override
             public int compare(String a, String b) {
                 if (isDirectory(a) && !isDirectory(b)) return -1;

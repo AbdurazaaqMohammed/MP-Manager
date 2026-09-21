@@ -68,7 +68,7 @@ public class DexLayoutBlock extends FixedBlockContainer implements FullRefresh {
     public Iterator<ClassId> getExtendingOrImplementing(TypeKey typeKey) {
         Iterator<ClassId> iterator = CombiningIterator.two(getExtendingClassIds(typeKey),
                 getImplementationIds(typeKey));
-        return new IterableIterator<ClassId, ClassId>(iterator) {
+        return new IterableIterator<>(iterator) {
             @Override
             public Iterator<ClassId> iterator(ClassId element) {
                 return CombiningIterator.singleOne(element, getExtendingOrImplementing(element.getKey()));

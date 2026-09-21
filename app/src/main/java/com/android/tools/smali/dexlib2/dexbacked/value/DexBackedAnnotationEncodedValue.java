@@ -73,7 +73,7 @@ public class DexBackedAnnotationEncodedValue extends BaseAnnotationEncodedValue 
     @Nonnull
     @Override
     public Set<? extends DexBackedAnnotationElement> getElements() {
-        return new VariableSizeSet<DexBackedAnnotationElement>(dexFile.getDataBuffer(), elementsOffset, elementCount) {
+        return new VariableSizeSet<>(dexFile.getDataBuffer(), elementsOffset, elementCount) {
             @Nonnull
             @Override
             protected DexBackedAnnotationElement readNextItem(@Nonnull DexReader<? extends DexBuffer> dexReader, int index) {

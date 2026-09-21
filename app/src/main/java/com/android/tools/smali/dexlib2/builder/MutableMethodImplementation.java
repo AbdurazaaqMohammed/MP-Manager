@@ -224,8 +224,9 @@ public class MutableMethodImplementation implements MethodImplementation {
             fixInstructions();
         }
 
-        return new AbstractList<BuilderInstruction>() {
-            @Override public BuilderInstruction get(int i) {
+        return new AbstractList<>() {
+            @Override
+            public BuilderInstruction get(int i) {
                 if (i >= size()) {
                     throw new IndexOutOfBoundsException();
                 }
@@ -235,7 +236,8 @@ public class MutableMethodImplementation implements MethodImplementation {
                 return instructionList.get(i).instruction;
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 if (fixInstructions) {
                     fixInstructions();
                 }
@@ -257,8 +259,10 @@ public class MutableMethodImplementation implements MethodImplementation {
             fixInstructions();
         }
         return Iterables.concat(
-                Iterables.transform(instructionList, new Function<MethodLocation, Iterable<? extends DebugItem>>() {
-                    @Nullable @Override public Iterable<? extends DebugItem> apply(@Nullable MethodLocation input) {
+                Iterables.transform(instructionList, new Function<>() {
+                    @Nullable
+                    @Override
+                    public Iterable<? extends DebugItem> apply(@Nullable MethodLocation input) {
                         assert input != null;
                         if (fixInstructions) {
                             throw new IllegalStateException("This iterator was invalidated by a change to" +

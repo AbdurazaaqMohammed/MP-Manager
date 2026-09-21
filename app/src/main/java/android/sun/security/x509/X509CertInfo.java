@@ -112,7 +112,7 @@ public class X509CertInfo implements CertAttrSet<String> {
     private byte[]      rawCertInfo = null;
 
     // The certificate attribute name to integer mapping stored here
-    private static final Map<String,Integer> map = new HashMap<String,Integer>();
+    private static final Map<String,Integer> map = new HashMap<>();
     static {
         map.put(VERSION, ATTR_VERSION);
         map.put(SERIAL_NUMBER, ATTR_SERIAL);

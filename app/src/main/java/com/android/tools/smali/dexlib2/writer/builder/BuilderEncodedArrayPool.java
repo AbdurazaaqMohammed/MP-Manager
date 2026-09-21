@@ -71,7 +71,7 @@ public class BuilderEncodedArrayPool extends BaseBuilderPool implements
     @Nonnull
     @Override
     public Collection<? extends Map.Entry<? extends BuilderArrayEncodedValue, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderArrayEncodedValue>(internedItems.values()) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
             @Override
             protected int getValue(@Nonnull BuilderArrayEncodedValue builderArrayEncodedValue) {
                 return builderArrayEncodedValue.offset;

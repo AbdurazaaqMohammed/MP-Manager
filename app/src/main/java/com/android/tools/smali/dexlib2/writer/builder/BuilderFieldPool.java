@@ -91,12 +91,14 @@ public class BuilderFieldPool extends BaseBuilderPool
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderFieldReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderFieldReference>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderFieldReference key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderFieldReference key) {
                 return key.index;
             }
 
-            @Override protected int setValue(@Nonnull BuilderFieldReference key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderFieldReference key, int value) {
                 int prev = key.index;
                 key.index = value;
                 return prev;

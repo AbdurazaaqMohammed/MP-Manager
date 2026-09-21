@@ -46,7 +46,7 @@ public final class CharSequenceConverter {
     }
 
     private static final ImmutableConverter<String, CharSequence> CONVERTER =
-            new ImmutableConverter<String, CharSequence>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull CharSequence item) {
                     return item instanceof String;

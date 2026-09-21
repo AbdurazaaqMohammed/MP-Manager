@@ -230,7 +230,7 @@ public class SignerInfo implements DerEncoder {
         if (userCert == null)
             return null;
 
-        ArrayList<X509Certificate> certList = new ArrayList<X509Certificate>();
+        ArrayList<X509Certificate> certList = new ArrayList<>();
         certList.add(userCert);
 
         X509Certificate[] pkcsCerts = block.getCertificates();

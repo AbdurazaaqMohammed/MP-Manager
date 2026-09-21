@@ -247,7 +247,7 @@ public class DebugSequence extends FixedDexContainer implements Iterable<DebugEl
 
 
     public Iterator<IdItem> usedIds() {
-        return new IterableIterator<DebugElementBlock, IdItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<IdItem> iterator(DebugElementBlock element) {
                 return element.usedIds();

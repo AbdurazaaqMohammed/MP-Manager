@@ -955,23 +955,27 @@ public class Opcode<T extends Ins> implements InstructionOpcode, BlockCreator<T>
             map.put(opcode.name, opcode);
         }
 
-        OPCODES = new Opcodes<Opcode<?>>() {
+        OPCODES = new Opcodes<>() {
             @Override
             public Opcode<?> get(int value) {
                 return Opcode.valueOf(value);
             }
+
             @Override
             public Opcode<?> get(String name) {
                 return Opcode.valueOf(name);
             }
+
             @Override
             public Iterator<Opcode<?>> iterator() {
                 return Opcode.values();
             }
+
             @Override
             public int count() {
                 return 0;
             }
+
             @Override
             public ProgramType programType() {
                 return ProgramType.DEX;

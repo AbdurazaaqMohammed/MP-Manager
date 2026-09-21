@@ -135,7 +135,7 @@ public class RecursiveIterator<T> implements Iterator<T> {
     }
     @SuppressWarnings("unchecked")
     public static<T1, E> Iterator<E> compute(T1 item, Transformer<T1, Iterator<? extends T1>> transformer, Predicate<? super T1> filter, Transformer<T1, Iterator<? extends E>> computer){
-        return new IterableIterator<T1, E>(new RecursiveIterator<>(item, transformer, filter)) {
+        return new IterableIterator<>(new RecursiveIterator<>(item, transformer, filter)) {
             @Override
             public Iterator<E> iterator(T1 element) {
                 return (Iterator<E>) computer.transform(element);

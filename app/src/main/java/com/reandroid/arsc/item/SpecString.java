@@ -39,7 +39,7 @@ public class SpecString extends StringItem {
         return getUsers(Entry.class, filter);
     }
     public Iterator<Entry> getEntries(final int typeId){
-        return getUsers(Entry.class, new Predicate<Entry>() {
+        return getUsers(Entry.class, new Predicate<>() {
             @Override
             public boolean evaluate(Entry item) {
                 return typeId == item.getTypeId();
@@ -47,7 +47,7 @@ public class SpecString extends StringItem {
         });
     }
     public Iterator<Entry> getEntries(final String typeName){
-        return getUsers(Entry.class, new Predicate<Entry>() {
+        return getUsers(Entry.class, new Predicate<>() {
             @Override
             public boolean evaluate(Entry item) {
                 return typeName == null
@@ -56,7 +56,7 @@ public class SpecString extends StringItem {
         });
     }
     public Iterator<Entry> getEntries(final Block parentContext){
-        return getUsers(Entry.class, new Predicate<Entry>() {
+        return getUsers(Entry.class, new Predicate<>() {
             @Override
             public boolean evaluate(Entry item) {
                 return item.getParentInstance(parentContext.getClass())

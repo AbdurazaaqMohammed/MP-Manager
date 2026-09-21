@@ -96,7 +96,7 @@ public class BuilderMethodHandlePool extends BaseBuilderPool
     @Nonnull
     @Override
     public Collection<? extends Map.Entry<? extends BuilderMethodHandleReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderMethodHandleReference>(internedItems.values()) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
             @Override
             protected int getValue(@Nonnull BuilderMethodHandleReference builderMethodHandleReference) {
                 return builderMethodHandleReference.index;

@@ -58,11 +58,12 @@ public class StyleElement extends XMLElement implements Span {
     }
     @Override
     public Iterator<StyleAttribute> getAttributes() {
-        return new IndexIterator<>(new SizedSupplier<StyleAttribute>() {
+        return new IndexIterator<>(new SizedSupplier<>() {
             @Override
             public int size() {
                 return getAttributeCount();
             }
+
             @Override
             public StyleAttribute get(int index) {
                 return getAttributeAt(index);

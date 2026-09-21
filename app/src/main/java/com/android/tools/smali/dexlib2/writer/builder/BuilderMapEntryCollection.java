@@ -62,18 +62,21 @@ public abstract class BuilderMapEntryCollection<Key> extends AbstractCollection<
     @Nonnull @Override public Iterator<Map.Entry<Key, Integer>> iterator() {
         final Iterator<Key> iter = keys.iterator();
 
-        return new Iterator<Map.Entry<Key, Integer>>() {
-            @Override public boolean hasNext() {
+        return new Iterator<>() {
+            @Override
+            public boolean hasNext() {
                 return iter.hasNext();
             }
 
-            @Override public Map.Entry<Key, Integer> next() {
+            @Override
+            public Map.Entry<Key, Integer> next() {
                 MapEntry entry = new MapEntry();
                 entry.key = iter.next();
                 return entry;
             }
 
-            @Override public void remove() {
+            @Override
+            public void remove() {
                 throw new UnsupportedOperationException();
             }
         };

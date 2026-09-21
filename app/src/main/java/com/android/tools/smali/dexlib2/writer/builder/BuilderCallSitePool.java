@@ -75,7 +75,7 @@ public class BuilderCallSitePool extends BaseBuilderPool
     @Nonnull
     @Override
     public Collection<? extends Map.Entry<? extends BuilderCallSiteReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderCallSiteReference>(internedItems.values()) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
             @Override
             protected int getValue(@Nonnull BuilderCallSiteReference builderCallSiteReference) {
                 return builderCallSiteReference.index;

@@ -50,7 +50,7 @@ public class SpecStringPool extends StringPool<SpecString>{
         return 0;
     }
     public Iterator<Entry> getEntries(int typeId, String name){
-        return new IterableIterator<SpecString, Entry>(getAll(name)) {
+        return new IterableIterator<>(getAll(name)) {
             @Override
             public Iterator<Entry> iterator(SpecString element) {
                 return element.getEntries(typeId);
@@ -58,7 +58,7 @@ public class SpecStringPool extends StringPool<SpecString>{
         };
     }
     public Iterator<Entry> getEntries(String type, String name){
-        return new IterableIterator<SpecString, Entry>(getAll(name)) {
+        return new IterableIterator<>(getAll(name)) {
             @Override
             public Iterator<Entry> iterator(SpecString element) {
                 return element.getEntries(type);
@@ -66,7 +66,7 @@ public class SpecStringPool extends StringPool<SpecString>{
         };
     }
     public Iterator<Entry> getEntries(Block parentContext, String name){
-        return new IterableIterator<SpecString, Entry>(getAll(name)) {
+        return new IterableIterator<>(getAll(name)) {
             @Override
             public Iterator<Entry> iterator(SpecString element) {
                 return element.getEntries(parentContext);

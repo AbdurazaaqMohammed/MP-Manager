@@ -78,7 +78,7 @@ public abstract class ImmutableConverter<ImmutableItem, Item> {
 
         final Iterator<? extends Item> iter = iterable.iterator();
 
-        ArrayList<ImmutableItem> list = new ArrayList<ImmutableItem>();
+        ArrayList<ImmutableItem> list = new ArrayList<>();
         while (iter.hasNext()) {
             list.add(makeImmutable(iter.next()));
         }
@@ -110,7 +110,7 @@ public abstract class ImmutableConverter<ImmutableItem, Item> {
 
         final Iterator<? extends Item> iter = iterable.iterator();
 
-        HashSet<ImmutableItem> set = new HashSet<ImmutableItem>();
+        HashSet<ImmutableItem> set = new HashSet<>();
         while (iter.hasNext()) {
             set.add(makeImmutable(iter.next()));
         }
@@ -145,7 +145,7 @@ public abstract class ImmutableConverter<ImmutableItem, Item> {
 
         final Iterator<? extends Item> iter = iterable.iterator();
 
-        TreeSet<ImmutableItem> treeSet = new TreeSet<ImmutableItem>(comparator);
+        TreeSet<ImmutableItem> treeSet = new TreeSet<>(comparator);
         while (iter.hasNext()) {
             treeSet.add(makeImmutable(iter.next()));
         }

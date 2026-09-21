@@ -38,11 +38,12 @@ public class SpecFlagsArray extends IntegerArrayBlock implements BlockLoad, JSON
     }
     public AbstractList<SpecFlag> listSpecFlags(){
         if(specFlagList==null){
-            specFlagList = new AbstractList<SpecFlag>() {
+            specFlagList = new AbstractList<>() {
                 @Override
                 public SpecFlag get(int i) {
                     return SpecFlagsArray.this.getFlag(i);
                 }
+
                 @Override
                 public int size() {
                     return SpecFlagsArray.this.size();

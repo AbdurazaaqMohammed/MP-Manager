@@ -108,7 +108,7 @@ public class MethodAnalyzer {
 
     // This contains all the AnalyzedInstruction instances, keyed by the code unit address of the instruction
     @Nonnull private final SparseArray<AnalyzedInstruction> analyzedInstructions =
-            new SparseArray<AnalyzedInstruction>(0);
+            new SparseArray<>(0);
 
     // Which instructions have been analyzed, keyed by instruction index
     @Nonnull private final BitSet analyzedState;

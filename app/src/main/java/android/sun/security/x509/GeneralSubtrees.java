@@ -59,11 +59,11 @@ public class GeneralSubtrees implements Cloneable {
      * The default constructor for the class.
      */
     public GeneralSubtrees() {
-        trees = new ArrayList<android.sun.security.x509.GeneralSubtree>();
+        trees = new ArrayList<>();
     }
 
     private GeneralSubtrees(GeneralSubtrees source) {
-        trees = new ArrayList<android.sun.security.x509.GeneralSubtree>(source.trees);
+        trees = new ArrayList<>(source.trees);
     }
 
     /**

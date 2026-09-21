@@ -69,7 +69,7 @@ public abstract class XMLNodeTree extends XMLNode implements
     public Iterator<XMLNode> reversedIterator() {
         int size = size();
         int start = size - 1;
-        return new ReversedIterator<XMLNode>(start, size) {
+        return new ReversedIterator<>(start, size) {
             @Override
             public XMLNode get(int i) {
                 return XMLNodeTree.this.get(i);

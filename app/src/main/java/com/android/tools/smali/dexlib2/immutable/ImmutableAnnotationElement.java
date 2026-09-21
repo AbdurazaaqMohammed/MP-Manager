@@ -76,7 +76,7 @@ public class ImmutableAnnotationElement extends BaseAnnotationElement {
     }
 
     private static final ImmutableConverter<ImmutableAnnotationElement, AnnotationElement> CONVERTER =
-            new ImmutableConverter<ImmutableAnnotationElement, AnnotationElement>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull AnnotationElement item) {
                     return item instanceof ImmutableAnnotationElement;

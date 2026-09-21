@@ -118,10 +118,9 @@ public class InstructionWriter<StringRef extends StringReference, TypeRef extend
                 @Nonnull ProtoSection<?, ?, ProtoRefKey, ?> protoSection,
                 @Nonnull MethodHandleSection<MethodHandleKey, ?, ?> methodHandleSection,
                 @Nonnull CallSiteSection<CallSiteKey, ?> callSiteSection) {
-        return new InstructionWriter<
-                StringRef, TypeRef, FieldRefKey, MethodRefKey, ProtoRefKey, MethodHandleKey,CallSiteKey>(
-                        opcodes, writer, stringSection, typeSection, fieldSection, methodSection, protoSection,
-                        methodHandleSection, callSiteSection);
+        return new InstructionWriter<>(
+                opcodes, writer, stringSection, typeSection, fieldSection, methodSection, protoSection,
+                methodHandleSection, callSiteSection);
     }
 
     InstructionWriter(@Nonnull Opcodes opcodes,
@@ -549,8 +548,9 @@ public class InstructionWriter<StringRef extends StringReference, TypeRef extend
         }
     }
 
-    private final Comparator<SwitchElement> switchElementComparator = new Comparator<SwitchElement>() {
-        @Override public int compare(SwitchElement element1, SwitchElement element2) {
+    private final Comparator<SwitchElement> switchElementComparator = new Comparator<>() {
+        @Override
+        public int compare(SwitchElement element1, SwitchElement element2) {
             return Ints.compare(element1.getKey(), element2.getKey());
         }
     };

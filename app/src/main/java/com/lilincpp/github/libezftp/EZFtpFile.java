@@ -64,7 +64,7 @@ public final class EZFtpFile implements Parcelable {
         dest.writeSerializable(modifiedDate);
     }
 
-    private static final Parcelable.Creator<EZFtpFile> CREATOR = new Creator<EZFtpFile>() {
+    private static final Parcelable.Creator<EZFtpFile> CREATOR = new Creator<>() {
         @Override
         public EZFtpFile createFromParcel(Parcel source) {
             return new EZFtpFile(source);

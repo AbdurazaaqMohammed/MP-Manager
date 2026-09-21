@@ -198,12 +198,12 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
      * Hash entries are keyed by alias names.
      */
     private final Hashtable<String, KeyEntry> entries =
-                                new Hashtable<String, KeyEntry>();
+            new Hashtable<>();
 
-    private final ArrayList<KeyEntry> keyList = new ArrayList<KeyEntry>();
+    private final ArrayList<KeyEntry> keyList = new ArrayList<>();
     private final LinkedHashMap<X500Principal, X509Certificate> certsMap =
-            new LinkedHashMap<X500Principal, X509Certificate>();
-    private final ArrayList<CertEntry> certEntries = new ArrayList<CertEntry>();
+            new LinkedHashMap<>();
+    private final ArrayList<CertEntry> certEntries = new ArrayList<>();
 
     /**
      * Returns the key associated with the given alias, using the given
@@ -1330,7 +1330,7 @@ public final class PKCS12KeyStore extends KeyStoreSpi {
         for (KeyEntry entry : list) {
             if (entry.keyId != null) {
                 ArrayList<X509Certificate> chain =
-                        new ArrayList<X509Certificate>();
+                        new ArrayList<>();
                 X509Certificate cert = findMatchedCertificate(entry);
                 while (cert != null) {
                     chain.add(cert);

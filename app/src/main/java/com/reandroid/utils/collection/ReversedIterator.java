@@ -73,7 +73,7 @@ public abstract class ReversedIterator<T> implements Iterator<T> {
         if(elements.isEmpty()) {
             return EmptyIterator.of();
         }
-        return new ReversedIterator<T1>(start, length){
+        return new ReversedIterator<>(start, length) {
             @Override
             public T1 get(int i) {
                 return elements.get(i);
@@ -96,7 +96,7 @@ public abstract class ReversedIterator<T> implements Iterator<T> {
         if(elements == null || elements.length == 0){
             return EmptyIterator.of();
         }
-        return new ReversedIterator<T1>(start, length) {
+        return new ReversedIterator<>(start, length) {
             @SuppressWarnings("unchecked")
             @Override
             public T1 get(int i) {

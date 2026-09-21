@@ -154,7 +154,7 @@ public abstract class ImmutableInstruction implements Instruction {
     }
 
     private static final ImmutableConverter<ImmutableInstruction, Instruction> CONVERTER =
-            new ImmutableConverter<ImmutableInstruction, Instruction>() {
+            new ImmutableConverter<>() {
                 @Override
                 protected boolean isImmutable(@Nonnull Instruction item) {
                     return item instanceof ImmutableInstruction;

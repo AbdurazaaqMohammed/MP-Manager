@@ -126,15 +126,17 @@ public class SpecTypePair extends BlockContainer<Block>
         }
         final int end = getHighestEntryId();
         final int id = (packageBlock.getId() << 24) | (getId() << 16);
-        return new Iterator<ResourceEntry>() {
+        return new Iterator<>() {
             private int mIndex;
+
             @Override
             public boolean hasNext() {
                 return mIndex <= end;
             }
+
             @Override
             public ResourceEntry next() {
-                if(mIndex > end){
+                if (mIndex > end) {
                     throw new NoSuchElementException();
                 }
                 int resourceId = id | mIndex;

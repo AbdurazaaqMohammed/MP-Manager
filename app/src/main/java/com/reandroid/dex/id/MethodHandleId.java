@@ -42,7 +42,7 @@ public class MethodHandleId extends IdItem implements Comparable<MethodHandleId>
         MethodHandleTypeReference handleType = new MethodHandleTypeReference(this, 0);
         this.handleType = handleType;
         this.unused1 = new IndirectShort(this, 2);
-        this.member = new IdItemIndirectReference<IdItem>(null, this, 4,
+        this.member = new IdItemIndirectReference<>(null, this, 4,
                 UsageMarker.USAGE_METHOD_HANDLE) {
             @Override
             public SectionType<IdItem> getSectionType() {

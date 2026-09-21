@@ -38,7 +38,7 @@ public class ApkSignatureBlock extends LengthPrefixedList<SignatureInfo>
     }
 
     public Iterator<CertificateBlock> getCertificates() {
-        return new IterableIterator<SignatureInfo, CertificateBlock>(this.iterator()) {
+        return new IterableIterator<>(this.iterator()) {
             @Override
             public Iterator<CertificateBlock> iterator(SignatureInfo element) {
                 return element.getCertificates();

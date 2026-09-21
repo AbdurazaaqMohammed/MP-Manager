@@ -118,28 +118,34 @@ public class BuilderClassDef extends BaseTypeReference implements ClassDef {
     }
 
     @Nonnull @Override public Collection<BuilderField> getFields() {
-        return new AbstractCollection<BuilderField>() {
-            @Nonnull @Override public Iterator<BuilderField> iterator() {
+        return new AbstractCollection<>() {
+            @Nonnull
+            @Override
+            public Iterator<BuilderField> iterator() {
                 return Iterators.mergeSorted(
                         ImmutableList.of(staticFields.iterator(), instanceFields.iterator()),
                         Ordering.natural());
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return staticFields.size() + instanceFields.size();
             }
         };
     }
 
     @Nonnull @Override public Collection<BuilderMethod> getMethods() {
-        return new AbstractCollection<BuilderMethod>() {
-            @Nonnull @Override public Iterator<BuilderMethod> iterator() {
+        return new AbstractCollection<>() {
+            @Nonnull
+            @Override
+            public Iterator<BuilderMethod> iterator() {
                 return Iterators.mergeSorted(
                         ImmutableList.of(directMethods.iterator(), virtualMethods.iterator()),
                         Ordering.natural());
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return directMethods.size() + virtualMethods.size();
             }
         };

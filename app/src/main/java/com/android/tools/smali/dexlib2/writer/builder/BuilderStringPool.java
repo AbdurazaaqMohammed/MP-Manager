@@ -73,12 +73,14 @@ class BuilderStringPool implements StringSection<BuilderStringReference, Builder
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderStringReference, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderStringReference>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderStringReference key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderStringReference key) {
                 return key.index;
             }
 
-            @Override protected int setValue(@Nonnull BuilderStringReference key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderStringReference key, int value) {
                 int prev = key.index;
                 key.index = value;
                 return prev;

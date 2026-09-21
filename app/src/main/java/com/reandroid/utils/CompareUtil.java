@@ -125,14 +125,14 @@ public class CompareUtil {
     private static final Comparator<?> TO_STRING_COMPARATOR = StringsUtil::compareToString;
 
     @SuppressWarnings("unchecked")
-    private static final Comparator<Comparable<?>> COMPARATOR = new Comparator<Comparable<?>>() {
+    private static final Comparator<Comparable<?>> COMPARATOR = new Comparator<>() {
         @Override
         public int compare(Comparable comparable1, Comparable comparable2) {
             return CompareUtil.compare(comparable1, comparable2);
         }
     };
     @SuppressWarnings("unchecked")
-    private static final Comparator<Comparable<?>> INVERSE_COMPARATOR = new Comparator<Comparable<?>>() {
+    private static final Comparator<Comparable<?>> INVERSE_COMPARATOR = new Comparator<>() {
         @Override
         public int compare(Comparable comparable1, Comparable comparable2) {
             return CompareUtil.compare(comparable2, comparable1);

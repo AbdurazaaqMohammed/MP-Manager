@@ -90,12 +90,14 @@ class BuilderAnnotationSetPool extends BaseBuilderPool
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderAnnotationSet, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderAnnotationSet>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderAnnotationSet key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderAnnotationSet key) {
                 return key.offset;
             }
 
-            @Override protected int setValue(@Nonnull BuilderAnnotationSet key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderAnnotationSet key, int value) {
                 int prev = key.offset;
                 key.offset = value;
                 return prev;

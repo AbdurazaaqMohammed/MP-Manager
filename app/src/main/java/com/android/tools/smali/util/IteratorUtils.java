@@ -54,7 +54,7 @@ public final class IteratorUtils {
     
     public static <T> AbstractIterator<T> filter(
                 final Iterator<T> unfiltered, final Predicate<? super T> retainIfTrue) {
-        return new AbstractIterator<T>() {
+        return new AbstractIterator<>() {
             @Override
             protected T computeNext() {
                 while (unfiltered.hasNext()) {
@@ -73,7 +73,7 @@ public final class IteratorUtils {
     }
 
     public static <T> List<T> toList(Iterator<T> iterator) {
-        ArrayList<T> list = new ArrayList<T>();
+        ArrayList<T> list = new ArrayList<>();
         while (iterator.hasNext()) {
             list.add(iterator.next());
         }

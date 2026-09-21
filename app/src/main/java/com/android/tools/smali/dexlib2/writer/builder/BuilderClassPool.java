@@ -110,16 +110,19 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
             return null;
         }
 
-        return new Map.Entry<BuilderClassDef, Integer>() {
-            @Override public BuilderClassDef getKey() {
+        return new Map.Entry<>() {
+            @Override
+            public BuilderClassDef getKey() {
                 return classDef;
             }
 
-            @Override public Integer getValue() {
+            @Override
+            public Integer getValue() {
                 return classDef.classDefIndex;
             }
 
-            @Override public Integer setValue(Integer value) {
+            @Override
+            public Integer setValue(Integer value) {
                 return classDef.classDefIndex = value;
             }
         };
@@ -145,7 +148,7 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
         return builderClassDef.sourceFile;
     }
 
-    private static final Predicate<Field> HAS_INITIALIZER = new Predicate<Field>() {
+    private static final Predicate<Field> HAS_INITIALIZER = new Predicate<>() {
         @Override
         public boolean apply(Field input) {
             EncodedValue encodedValue = input.getInitialValue();
@@ -154,7 +157,7 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
     };
 
     private static final Function<BuilderField, BuilderEncodedValue> GET_INITIAL_VALUE =
-            new Function<BuilderField, BuilderEncodedValue>() {
+            new Function<>() {
                 @Override
                 public BuilderEncodedValue apply(BuilderField input) {
                     BuilderEncodedValue initialValue = input.getInitialValue();
@@ -240,7 +243,7 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
     }
 
     private static final Predicate<BuilderMethodParameter> HAS_PARAMETER_ANNOTATIONS =
-            new Predicate<BuilderMethodParameter>() {
+            new Predicate<>() {
                 @Override
                 public boolean apply(BuilderMethodParameter input) {
                     return input.getAnnotations().size() > 0;
@@ -248,7 +251,7 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
             };
 
     private static final Function<BuilderMethodParameter, BuilderAnnotationSet> PARAMETER_ANNOTATIONS =
-            new Function<BuilderMethodParameter, BuilderAnnotationSet>() {
+            new Function<>() {
                 @Override
                 public BuilderAnnotationSet apply(BuilderMethodParameter input) {
                     return input.getAnnotations();
@@ -261,13 +264,16 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
         boolean hasParameterAnnotations = Iterables.any(parameters, HAS_PARAMETER_ANNOTATIONS);
 
         if (hasParameterAnnotations) {
-            return new AbstractForwardSequentialList<BuilderAnnotationSet>() {
-                @Nonnull @Override public Iterator<BuilderAnnotationSet> iterator() {
+            return new AbstractForwardSequentialList<>() {
+                @Nonnull
+                @Override
+                public Iterator<BuilderAnnotationSet> iterator() {
                     return FluentIterable.from(parameters)
                             .transform(PARAMETER_ANNOTATIONS).iterator();
                 }
 
-                @Override public int size() {
+                @Override
+                public int size() {
                     return parameters.size();
                 }
             };
@@ -432,12 +438,14 @@ public class BuilderClassPool extends BaseBuilderPool implements ClassSection<Bu
     }
 
     @Nonnull @Override public Collection<? extends Entry<? extends BuilderClassDef, Integer>> getItems() {
-        return new BuilderMapEntryCollection<BuilderClassDef>(internedItems.values()) {
-            @Override protected int getValue(@Nonnull BuilderClassDef key) {
+        return new BuilderMapEntryCollection<>(internedItems.values()) {
+            @Override
+            protected int getValue(@Nonnull BuilderClassDef key) {
                 return key.classDefIndex;
             }
 
-            @Override protected int setValue(@Nonnull BuilderClassDef key, int value) {
+            @Override
+            protected int setValue(@Nonnull BuilderClassDef key, int value) {
                 int prev = key.classDefIndex;
                 key.classDefIndex = value;
                 return prev;

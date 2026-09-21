@@ -84,7 +84,7 @@ public abstract class MapBag<K, V extends BagItem> extends AbstractMap<K, V> imp
     private class EntrySet extends AbstractSet<Entry<K, V>> {
         @Override
         public Iterator<Entry<K, V>> iterator() {
-            return new Iterator<Entry<K, V>>() {
+            return new Iterator<>() {
                 private final Iterator<ResValueMap> iterator = getMapArray().iterator();
                 private final int expectedModCount = modCount;
 

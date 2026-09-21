@@ -58,8 +58,9 @@ public class SmaliMethodParameter extends BaseMethodParameter implements WithReg
     @Nullable @Override public String getName() { return name; }
     @Nullable @Override public String getSignature() { return null; }
 
-    public static final Comparator<WithRegister> COMPARATOR = new Comparator<WithRegister>() {
-        @Override public int compare(WithRegister o1, WithRegister o2) {
+    public static final Comparator<WithRegister> COMPARATOR = new Comparator<>() {
+        @Override
+        public int compare(WithRegister o1, WithRegister o2) {
             return Ints.compare(o1.getRegister(), o2.getRegister());
         }
     };

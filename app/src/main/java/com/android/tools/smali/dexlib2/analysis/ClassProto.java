@@ -100,8 +100,9 @@ public class ClassProto implements TypeProto {
     }
 
 
-    @Nonnull private final Supplier<ClassDef> classDefSupplier = MemoizingSupplier.memoize(new Supplier<ClassDef>() {
-        @Override public ClassDef get() {
+    @Nonnull private final Supplier<ClassDef> classDefSupplier = MemoizingSupplier.memoize(new Supplier<>() {
+        @Override
+        public ClassDef get() {
             return classPath.getClassDef(type);
         }
     });
@@ -146,13 +147,14 @@ public class ClassProto implements TypeProto {
      */
     @Nonnull
     private final Supplier<LinkedHashMap<String, ClassDef>> preDefaultMethodInterfaceSupplier =
-            MemoizingSupplier.memoize(new Supplier<LinkedHashMap<String, ClassDef>>() {
-                @Override public LinkedHashMap<String, ClassDef> get() {
+            MemoizingSupplier.memoize(new Supplier<>() {
+                @Override
+                public LinkedHashMap<String, ClassDef> get() {
                     Set<String> unresolvedInterfaces = new HashSet<>(0);
                     LinkedHashMap<String, ClassDef> interfaces = new LinkedHashMap<>();
 
                     try {
-                        for (String interfaceType: getClassDef().getInterfaces()) {
+                        for (String interfaceType : getClassDef().getInterfaces()) {
                             if (!interfaces.containsKey(interfaceType)) {
                                 ClassDef interfaceDef;
                                 try {
@@ -165,7 +167,7 @@ public class ClassProto implements TypeProto {
                                 }
 
                                 ClassProto interfaceProto = (ClassProto) classPath.getClass(interfaceType);
-                                for (String superInterface: interfaceProto.getInterfaces().keySet()) {
+                                for (String superInterface : interfaceProto.getInterfaces().keySet()) {
                                     if (!interfaces.containsKey(superInterface)) {
                                         interfaces.put(superInterface,
                                                 interfaceProto.getInterfaces().get(superInterface));
@@ -194,7 +196,7 @@ public class ClassProto implements TypeProto {
                     try {
                         if (superclass != null) {
                             ClassProto superclassProto = (ClassProto) classPath.getClass(superclass);
-                            for (String superclassInterface: superclassProto.getInterfaces().keySet()) {
+                            for (String superclassInterface : superclassProto.getInterfaces().keySet()) {
                                 if (!interfaces.containsKey(superclassInterface)) {
                                     interfaces.put(superclassInterface, null);
                                 }
@@ -222,15 +224,16 @@ public class ClassProto implements TypeProto {
      */
     @Nonnull
     private final Supplier<LinkedHashMap<String, ClassDef>> postDefaultMethodInterfaceSupplier =
-            MemoizingSupplier.memoize(new Supplier<LinkedHashMap<String, ClassDef>>() {
-                @Override public LinkedHashMap<String, ClassDef> get() {
-                    Set<String> unresolvedInterfaces = new HashSet<String>(0);
+            MemoizingSupplier.memoize(new Supplier<>() {
+                @Override
+                public LinkedHashMap<String, ClassDef> get() {
+                    Set<String> unresolvedInterfaces = new HashSet<>(0);
                     LinkedHashMap<String, ClassDef> interfaces = new LinkedHashMap<>();
 
                     String superclass = getSuperclass();
                     if (superclass != null) {
                         ClassProto superclassProto = (ClassProto) classPath.getClass(superclass);
-                        for (String superclassInterface: superclassProto.getInterfaces().keySet()) {
+                        for (String superclassInterface : superclassProto.getInterfaces().keySet()) {
                             interfaces.put(superclassInterface, null);
                         }
                         if (!superclassProto.interfacesFullyResolved) {
@@ -240,11 +243,11 @@ public class ClassProto implements TypeProto {
                     }
 
                     try {
-                        for (String interfaceType: getClassDef().getInterfaces()) {
+                        for (String interfaceType : getClassDef().getInterfaces()) {
                             if (!interfaces.containsKey(interfaceType)) {
-                                ClassProto interfaceProto = (ClassProto)classPath.getClass(interfaceType);
+                                ClassProto interfaceProto = (ClassProto) classPath.getClass(interfaceType);
                                 try {
-                                    for (Entry<String, ClassDef> entry: interfaceProto.getInterfaces().entrySet()) {
+                                    for (Entry<String, ClassDef> entry : interfaceProto.getInterfaces().entrySet()) {
                                         if (!interfaces.containsKey(entry.getKey())) {
                                             interfaces.put(entry.getKey(), entry.getValue());
                                         }
@@ -503,8 +506,9 @@ public class ClassProto implements TypeProto {
     }
 
     @Nonnull private final Supplier<SparseArray<FieldReference>> dalvikInstanceFieldsSupplier =
-            MemoizingSupplier.memoize(new Supplier<SparseArray<FieldReference>>() {
-                @Override public SparseArray<FieldReference> get() {
+            MemoizingSupplier.memoize(new Supplier<>() {
+                @Override
+                public SparseArray<FieldReference> get() {
                     //This is a bit of an "involved" operation. We need to follow the same algorithm that dalvik uses to
                     //arrange fields, so that we end up with the same field offsets (which is needed for deodexing).
                     //See mydroid/dalvik/vm/oo/Class.c - computeFieldOffsets()
@@ -513,7 +517,7 @@ public class ClassProto implements TypeProto {
                     final int fieldCount = fields.size();
                     //the "type" for each field in fields. 0=reference,1=wide,2=other
                     byte[] fieldTypes = new byte[fields.size()];
-                    for (int i=0; i<fieldCount; i++) {
+                    for (int i = 0; i < fieldCount; i++) {
                         fieldTypes[i] = getFieldType(fields.get(i));
                     }
 
@@ -521,7 +525,7 @@ public class ClassProto implements TypeProto {
                     //non-reference field, then find the last reference field, swap them and repeat
                     int back = fields.size() - 1;
                     int front;
-                    for (front = 0; front<fieldCount; front++) {
+                    for (front = 0; front < fieldCount; front++) {
                         if (fieldTypes[front] != REFERENCE) {
                             while (back > front) {
                                 if (fieldTypes[back] == REFERENCE) {
@@ -575,7 +579,7 @@ public class ClassProto implements TypeProto {
 
                     //do the swap thing for wide fields
                     back = fieldCount - 1;
-                    for (; front<fieldCount; front++) {
+                    for (; front < fieldCount; front++) {
                         if (fieldTypes[front] != WIDE) {
                             while (back > front) {
                                 if (fieldTypes[back] == WIDE) {
@@ -595,24 +599,24 @@ public class ClassProto implements TypeProto {
                     if (superclass != null) {
                         superFields = superclass.getInstanceFields();
                     } else {
-                        superFields = new SparseArray<FieldReference>();
+                        superFields = new SparseArray<>();
                     }
                     int superFieldCount = superFields.size();
 
                     //now the fields are in the correct order. Add them to the SparseArray and lookup, and calculate the offsets
                     int totalFieldCount = superFieldCount + fieldCount;
-                    SparseArray<FieldReference> instanceFields = new SparseArray<FieldReference>(totalFieldCount);
+                    SparseArray<FieldReference> instanceFields = new SparseArray<>(totalFieldCount);
 
                     int fieldOffset;
 
                     if (superclass != null && superFieldCount > 0) {
-                        for (int i=0; i<superFieldCount; i++) {
+                        for (int i = 0; i < superFieldCount; i++) {
                             instanceFields.append(superFields.keyAt(i), superFields.valueAt(i));
                         }
 
-                        fieldOffset = instanceFields.keyAt(superFieldCount-1);
+                        fieldOffset = instanceFields.keyAt(superFieldCount - 1);
 
-                        FieldReference lastSuperField = superFields.valueAt(superFieldCount-1);
+                        FieldReference lastSuperField = superFields.valueAt(superFieldCount - 1);
                         char fieldType = lastSuperField.getType().charAt(0);
                         if (fieldType == 'J' || fieldType == 'D') {
                             fieldOffset += 8;
@@ -625,7 +629,7 @@ public class ClassProto implements TypeProto {
                     }
 
                     boolean gotDouble = false;
-                    for (int i=0; i<fieldCount; i++) {
+                    for (int i = 0; i < fieldCount; i++) {
                         FieldReference field = fields.get(i);
 
                         //add padding to align the wide fields, if needed
@@ -650,7 +654,7 @@ public class ClassProto implements TypeProto {
 
                 @Nonnull
                 private ArrayList<Field> getSortedInstanceFields(@Nonnull ClassDef classDef) {
-                    ArrayList<Field> fields = (ArrayList<Field>)IteratorUtils.toList(classDef.getInstanceFields());
+                    ArrayList<Field> fields = (ArrayList<Field>) IteratorUtils.toList(classDef.getInstanceFields());
                     Collections.sort(fields);
                     return fields;
                 }
@@ -700,16 +704,17 @@ public class ClassProto implements TypeProto {
     }
 
     @Nonnull private final Supplier<SparseArray<FieldReference>> artInstanceFieldsSupplier =
-            MemoizingSupplier.memoize(new Supplier<SparseArray<FieldReference>>() {
+            MemoizingSupplier.memoize(new Supplier<>() {
 
-                @Override public SparseArray<FieldReference> get() {
+                @Override
+                public SparseArray<FieldReference> get() {
                     // We need to follow the same algorithm that art uses to arrange fields, so that we end up with the
                     // same field offsets, which is needed for deodexing.
                     // See LinkFields() in art/runtime/class_linker.cc
 
-                    PriorityQueue<FieldGap> gaps = new PriorityQueue<FieldGap>();
+                    PriorityQueue<FieldGap> gaps = new PriorityQueue<>();
 
-                    SparseArray<FieldReference> linkedFields = new SparseArray<FieldReference>();
+                    SparseArray<FieldReference> linkedFields = new SparseArray<>();
                     ArrayList<Field> fields = getSortedInstanceFields(getClassDef());
 
                     int fieldOffset = 0;
@@ -720,7 +725,7 @@ public class ClassProto implements TypeProto {
                         SparseArray<FieldReference> superFields = superclass.getInstanceFields();
                         FieldReference field = null;
                         int lastOffset = 0;
-                        for (int i=0; i<superFields.size(); i++) {
+                        for (int i = 0; i < superFields.size(); i++) {
                             int offset = superFields.keyAt(i);
                             field = superFields.valueAt(i);
                             linkedFields.put(offset, field);
@@ -731,7 +736,7 @@ public class ClassProto implements TypeProto {
                         }
                     }
 
-                    for (Field field: fields) {
+                    for (Field field : fields) {
                         int fieldSize = getFieldSize(field);
 
                         if (!AlignmentUtils.isAligned(fieldOffset, fieldSize)) {
@@ -777,9 +782,10 @@ public class ClassProto implements TypeProto {
 
                 @Nonnull
                 private ArrayList<Field> getSortedInstanceFields(@Nonnull ClassDef classDef) {
-                    ArrayList<Field> fields = (ArrayList<Field>)IteratorUtils.toList(classDef.getInstanceFields());
-                    Collections.sort(fields, new Comparator<Field>() {
-                        @Override public int compare(Field field1, Field field2) {
+                    ArrayList<Field> fields = (ArrayList<Field>) IteratorUtils.toList(classDef.getInstanceFields());
+                    Collections.sort(fields, new Comparator<>() {
+                        @Override
+                        public int compare(Field field1, Field field2) {
                             int result = Integer.compare(getFieldSortOrder(field1), getFieldSortOrder(field2));
                             if (result != 0) {
                                 return result;
@@ -865,8 +871,9 @@ public class ClassProto implements TypeProto {
     }
 
     //TODO: check the case when we have a package private method that overrides an interface method
-    @Nonnull private final Supplier<List<Method>> preDefaultMethodVtableSupplier = MemoizingSupplier.memoize(new Supplier<List<Method>>() {
-        @Override public List<Method> get() {
+    @Nonnull private final Supplier<List<Method>> preDefaultMethodVtableSupplier = MemoizingSupplier.memoize(new Supplier<>() {
+        @Override
+        public List<Method> get() {
             List<Method> vtable = new ArrayList<>();
 
             //copy the virtual methods from the superclass
@@ -874,7 +881,7 @@ public class ClassProto implements TypeProto {
             try {
                 superclassType = getSuperclass();
             } catch (UnresolvedClassException ex) {
-                vtable.addAll(((ClassProto)classPath.getClass("Ljava/lang/Object;")).getVtable());
+                vtable.addAll(((ClassProto) classPath.getClass("Ljava/lang/Object;")).getVtable());
                 vtableFullyResolved = false;
                 return vtable;
             }
@@ -899,9 +906,9 @@ public class ClassProto implements TypeProto {
                 // We use the current class for any vtable method references that we add, rather than the interface, so
                 // we don't end up trying to call invoke-virtual using an interface, which will fail verification
                 Iterable<ClassDef> interfaces = getDirectInterfaces();
-                for (ClassDef interfaceDef: interfaces) {
+                for (ClassDef interfaceDef : interfaces) {
                     List<Method> interfaceMethods = new ArrayList<>();
-                    for (Method interfaceMethod: interfaceDef.getVirtualMethods()) {
+                    for (Method interfaceMethod : interfaceDef.getVirtualMethods()) {
                         interfaceMethods.add(new ReparentedMethod(interfaceMethod, type));
                     }
                     addToVtable(interfaceMethods, vtable, false, true);
@@ -916,8 +923,9 @@ public class ClassProto implements TypeProto {
      * produce multiple vtable entries for a given virtual method. This supplier duplicates this buggy logic in order to
      * generate an identical vtable
      */
-    @Nonnull private final Supplier<List<Method>> buggyPostDefaultMethodVtableSupplier = MemoizingSupplier.memoize(new Supplier<List<Method>>() {
-        @Override public List<Method> get() {
+    @Nonnull private final Supplier<List<Method>> buggyPostDefaultMethodVtableSupplier = MemoizingSupplier.memoize(new Supplier<>() {
+        @Override
+        public List<Method> get() {
             List<Method> vtable = new ArrayList<>();
 
             //copy the virtual methods from the superclass
@@ -925,7 +933,7 @@ public class ClassProto implements TypeProto {
             try {
                 superclassType = getSuperclass();
             } catch (UnresolvedClassException ex) {
-                vtable.addAll(((ClassProto)classPath.getClass("Ljava/lang/Object;")).getVtable());
+                vtable.addAll(((ClassProto) classPath.getClass("Ljava/lang/Object;")).getVtable());
                 vtableFullyResolved = false;
                 return vtable;
             }
@@ -955,7 +963,7 @@ public class ClassProto implements TypeProto {
 
                 final HashMap<MethodReference, Integer> methodOrder = new HashMap<>();
 
-                for (int i=interfaces.size()-1; i>=0; i--) {
+                for (int i = interfaces.size() - 1; i >= 0; i--) {
                     String interfaceType = interfaces.get(i);
                     ClassDef interfaceDef = classPath.getClassDef(interfaceType);
 
@@ -967,7 +975,7 @@ public class ClassProto implements TypeProto {
                             oldVtableMethod = vtable.get(vtableIndex);
                         }
 
-                        for (int j=0; j<vtable.size(); j++) {
+                        for (int j = 0; j < vtable.size(); j++) {
                             Method candidate = vtable.get(j);
                             if (MethodUtil.methodSignaturesMatch(candidate, interfaceMethod)) {
                                 if (!classPath.shouldCheckPackagePrivateAccess() ||
@@ -989,7 +997,7 @@ public class ClassProto implements TypeProto {
 
                         if (defaultMethodIndex >= 0) {
                             if (!AccessFlags.ABSTRACT.isSet(interfaceMethod.getAccessFlags())) {
-                                ClassProto existingInterface = (ClassProto)classPath.getClass(
+                                ClassProto existingInterface = (ClassProto) classPath.getClass(
                                         defaultMethods.get(defaultMethodIndex).getDefiningClass());
                                 if (!existingInterface.implementsInterface(interfaceMethod.getDefiningClass())) {
                                     Method removedMethod = defaultMethods.remove(defaultMethodIndex);
@@ -1012,7 +1020,7 @@ public class ClassProto implements TypeProto {
                         if (mirandaMethodIndex >= 0) {
                             if (!AccessFlags.ABSTRACT.isSet(interfaceMethod.getAccessFlags())) {
 
-                                ClassProto existingInterface = (ClassProto)classPath.getClass(
+                                ClassProto existingInterface = (ClassProto) classPath.getClass(
                                         mirandaMethods.get(mirandaMethodIndex).getDefiningClass());
                                 if (!existingInterface.implementsInterface(interfaceMethod.getDefiningClass())) {
                                     Method oldMethod = mirandaMethods.remove(mirandaMethodIndex);
@@ -1042,8 +1050,9 @@ public class ClassProto implements TypeProto {
                     }
                 }
 
-                Comparator<MethodReference> comparator = new Comparator<MethodReference>() {
-                    @Override public int compare(MethodReference o1, MethodReference o2) {
+                Comparator<MethodReference> comparator = new Comparator<>() {
+                    @Override
+                    public int compare(MethodReference o1, MethodReference o2) {
                         return Integer.compare(methodOrder.get(o1), methodOrder.get(o2));
                     }
                 };
@@ -1063,8 +1072,9 @@ public class ClassProto implements TypeProto {
         }
     });
 
-    @Nonnull private final Supplier<List<Method>> postDefaultMethodVtableSupplier = MemoizingSupplier.memoize(new Supplier<List<Method>>() {
-        @Override public List<Method> get() {
+    @Nonnull private final Supplier<List<Method>> postDefaultMethodVtableSupplier = MemoizingSupplier.memoize(new Supplier<>() {
+        @Override
+        public List<Method> get() {
             List<Method> vtable = new ArrayList<>();
 
             //copy the virtual methods from the superclass
@@ -1072,7 +1082,7 @@ public class ClassProto implements TypeProto {
             try {
                 superclassType = getSuperclass();
             } catch (UnresolvedClassException ex) {
-                vtable.addAll(((ClassProto)classPath.getClass("Ljava/lang/Object;")).getVtable());
+                vtable.addAll(((ClassProto) classPath.getClass("Ljava/lang/Object;")).getVtable());
                 vtableFullyResolved = false;
                 return vtable;
             }
@@ -1103,7 +1113,7 @@ public class ClassProto implements TypeProto {
 
                 final HashMap<MethodReference, Integer> methodOrder = new HashMap<>();
 
-                for (ClassDef interfaceDef: interfaces) {
+                for (ClassDef interfaceDef : interfaces) {
                     for (Method interfaceMethod : interfaceDef.getVirtualMethods()) {
 
                         int vtableIndex = findMethodIndexInVtable(vtable, interfaceMethod);
@@ -1117,7 +1127,7 @@ public class ClassProto implements TypeProto {
 
                             if (defaultMethodIndex >= 0) {
                                 if (!AccessFlags.ABSTRACT.isSet(interfaceMethod.getAccessFlags())) {
-                                    ClassProto existingInterface = (ClassProto)classPath.getClass(
+                                    ClassProto existingInterface = (ClassProto) classPath.getClass(
                                             defaultMethods.get(defaultMethodIndex).getDefiningClass());
                                     if (!existingInterface.implementsInterface(interfaceMethod.getDefiningClass())) {
                                         Method removedMethod = defaultMethods.remove(defaultMethodIndex);
@@ -1140,7 +1150,7 @@ public class ClassProto implements TypeProto {
                             if (mirandaMethodIndex >= 0) {
                                 if (!AccessFlags.ABSTRACT.isSet(interfaceMethod.getAccessFlags())) {
 
-                                    ClassProto existingInterface = (ClassProto)classPath.getClass(
+                                    ClassProto existingInterface = (ClassProto) classPath.getClass(
                                             mirandaMethods.get(mirandaMethodIndex).getDefiningClass());
                                     if (!existingInterface.implementsInterface(interfaceMethod.getDefiningClass())) {
                                         Method oldMethod = mirandaMethods.remove(mirandaMethodIndex);
@@ -1163,8 +1173,9 @@ public class ClassProto implements TypeProto {
                     }
                 }
 
-                Comparator<MethodReference> comparator = new Comparator<MethodReference>() {
-                    @Override public int compare(MethodReference o1, MethodReference o2) {
+                Comparator<MethodReference> comparator = new Comparator<>() {
+                    @Override
+                    public int compare(MethodReference o1, MethodReference o2) {
                         return Integer.compare(methodOrder.get(o1), methodOrder.get(o2));
                     }
                 };

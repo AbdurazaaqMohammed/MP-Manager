@@ -49,7 +49,7 @@ public class DalvikSignatureKey extends ArrayKey<ParameterisedTypeKey> {
         return null;
     }
     public Iterator<TypeKey> getTypes() {
-        return new IterableIterator<ParameterisedTypeKey, TypeKey>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<TypeKey> iterator(ParameterisedTypeKey element) {
                 return element.getTypes();

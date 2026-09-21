@@ -735,7 +735,7 @@ public class StorageManagerActivity extends AppCompatActivity {
         if (thumbCache != null && thumbExecutor != null) return;
         int mem = (int) (Runtime.getRuntime().maxMemory() / 1024);
         int size = Math.max(4096, mem / 8);
-        thumbCache = new LruCache<String, Bitmap>(size) {
+        thumbCache = new LruCache<>(size) {
             protected int sizeOf(String key, Bitmap value) {
                 try {
                     return value.getByteCount() / 1024;

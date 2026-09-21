@@ -125,7 +125,7 @@ public class SubjectInfoAccessExtension extends Extension
             throw new IOException("Invalid encoding for " +
                                   "SubjectInfoAccessExtension.");
         }
-        accessDescriptions = new ArrayList<android.sun.security.x509.AccessDescription>();
+        accessDescriptions = new ArrayList<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
             android.sun.security.x509.AccessDescription accessDescription = new android.sun.security.x509.AccessDescription(seq);
@@ -199,7 +199,7 @@ public class SubjectInfoAccessExtension extends Extension
      */
     public void delete(String name) throws IOException {
         if (name.equalsIgnoreCase(DESCRIPTIONS)) {
-            accessDescriptions = new ArrayList<android.sun.security.x509.AccessDescription>();
+            accessDescriptions = new ArrayList<>();
         } else {
             throw new IOException("Attribute name [" + name +
                                 "] not recognized by " +

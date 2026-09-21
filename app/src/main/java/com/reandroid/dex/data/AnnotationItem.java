@@ -252,7 +252,7 @@ public class AnnotationItem extends DataItem
             return EmptyIterator.of();
         }
         return CombiningIterator.singleOne(getTypeId(),
-                new IterableIterator<AnnotationElement, IdItem>(iterator()) {
+                new IterableIterator<>(iterator()) {
                     @Override
                     public Iterator<IdItem> iterator(AnnotationElement element) {
                         return element.usedIds();

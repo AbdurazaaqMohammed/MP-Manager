@@ -51,7 +51,7 @@ public class OverlaySmaliAuditTest {
         o.animColorB = 0xFFFF0000;
         o.animSpeedMs = 300;
         String smali = OverlayInjectorUtil.dialogHelperSmali(
-                CLS, o, URL, null, NOSHOW, BLINK, DISMISS, new HashMap<String, String>(), null);
+                CLS, o, URL, null, NOSHOW, BLINK, DISMISS, new HashMap<>(), null);
         auditMethod(smali, "regularDialogAnimatedBorder");
         assertFalse(smali, smali.contains(".catch"));
     }
@@ -69,7 +69,7 @@ public class OverlaySmaliAuditTest {
         o.rainbowAnim = true;
         o.animSpeedMs = 200;
         String smali = OverlayInjectorUtil.dialogHelperSmali(
-                CLS, o, null, null, null, BLINK, null, new HashMap<String, String>(), null);
+                CLS, o, null, null, null, BLINK, null, new HashMap<>(), null);
         auditMethod(smali, "regularDialogRainbowBorder");
         assertTrue(smali, smali.contains("0xffff0000"));
         assertTrue(smali, smali.contains("0xff00ff00"));
@@ -96,7 +96,7 @@ public class OverlaySmaliAuditTest {
         o.btnColor = 0xFF0000FF;
         o.html = true;
         String smali = OverlayInjectorUtil.dialogHelperSmali(
-                CLS, o, null, null, null, null, null, new HashMap<String, String>(), null);
+                CLS, o, null, null, null, null, null, new HashMap<>(), null);
         auditMethod(smali, "regularDialogWithFontAndImage");
         assertFalse(smali, smali.contains("createFromFile"));
         assertFalse(smali, smali.contains(".catch"));
@@ -191,7 +191,7 @@ public class OverlaySmaliAuditTest {
         img.topDp = 200;
         o.widgets.add(img);
         String smali = OverlayInjectorUtil.dialogHelperSmali(
-                CLS, o, URL, URLVIEW, NOSHOW, BLINK, DISMISS, new HashMap<String, String>(), null);
+                CLS, o, URL, URLVIEW, NOSHOW, BLINK, DISMISS, new HashMap<>(), null);
         auditMethod(smali, "advancedDialogEverything");
         assertFalse(smali, smali.contains("fill-array-data"));
         assertFalse(smali, smali.contains("createFromFile"));
@@ -225,7 +225,7 @@ public class OverlaySmaliAuditTest {
         btn.topDp = 40;
         o.widgets.add(btn);
         String smali = OverlayInjectorUtil.dialogHelperSmali(
-                CLS, o, null, URLVIEW, null, null, DISMISS, new HashMap<String, String>(), RGB);
+                CLS, o, null, URLVIEW, null, null, DISMISS, new HashMap<>(), RGB);
         auditMethod(smali, "waveRgbBorderDialog");
         assertTrue(smali, smali.contains("$mpRgb;"));
         assertTrue(smali, smali.contains("-><init>(IFF)V"));
@@ -247,7 +247,7 @@ public class OverlaySmaliAuditTest {
         btn.btnAnimSpeedMs = 111;
         btn.btnAnimRainbow = false;
         String smali2 = OverlayInjectorUtil.dialogHelperSmali(
-                CLS, o, null, URLVIEW, null, null, DISMISS, new HashMap<String, String>(), RGB);
+                CLS, o, null, URLVIEW, null, null, DISMISS, new HashMap<>(), RGB);
         auditMethod(smali2, "waveMultiColorBorderDialog");
         assertTrue(smali2, smali2.contains("0xff123456"));
         assertTrue(smali2, smali2.contains("0xff654321"));

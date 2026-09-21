@@ -92,7 +92,7 @@ public class Opcodes {
             this.artVersion = artVersion;
         }
 
-        opcodeValues = new EnumMap<Opcode, Short>(Opcode.class);
+        opcodeValues = new EnumMap<>(Opcode.class);
         opcodesByName = new HashMap<>();
 
         int version;

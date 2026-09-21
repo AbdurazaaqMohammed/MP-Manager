@@ -52,15 +52,15 @@ Code comment and improvement by ChatGPT
 public class SmaliFieldAccessParser {
 	
 	// Map of primitive type codes to their corresponding suffixes for smali instructions
-	private static final Map<String, String> TYPE_SUFFIXES = new HashMap<String, String>() {{
-			put("Z", "boolean");  // boolean type
-			put("B", "byte");     // byte type
-			put("S", "short");    // short type
-			put("C", "char");     // char type
-			put("J", "wide");      // long type (uses wide suffix)
-			put("F", "float");     // float type
-			put("D", "wide");     // double type (uses wide suffix)
-		}};
+	private static final Map<String, String> TYPE_SUFFIXES = new HashMap<>() {{
+        put("Z", "boolean");  // boolean type
+        put("B", "byte");     // byte type
+        put("S", "short");    // short type
+        put("C", "char");     // char type
+        put("J", "wide");      // long type (uses wide suffix)
+        put("F", "float");     // float type
+        put("D", "wide");     // double type (uses wide suffix)
+    }};
 	
 	private final String className;  // The class name that contains the fields
 	

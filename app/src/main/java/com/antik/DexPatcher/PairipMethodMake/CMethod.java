@@ -17,7 +17,7 @@ import java.util.List;
 
 public class CMethod {
     public static Method createPairipMethod(String dc, List<String> j_ts) {
-        List<Instruction> ins = new ArrayList<Instruction>();
+        List<Instruction> ins = new ArrayList<>();
         for (String t : j_ts) {
             ins.add(new ImmutableInstruction21c(Opcode.CONST_CLASS, 0, new ImmutableTypeReference(t)));
             ins.add(new ImmutableInstruction35c(Opcode.INVOKE_STATIC, 1, 0, 0, 0, 0, 0, new ImmutableMethodReference("Lcom/pairip/PairipLog;", "put", Collections.singletonList("Ljava/lang/Class;"), "V")));

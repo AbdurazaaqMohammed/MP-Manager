@@ -50,7 +50,7 @@ public class ResourceEntry implements Iterable<Entry> {
         return this.getStringValues(this.iterator());
     }
     Iterator<String> getStringValues(Iterator<Entry> iterator) {
-        return new IterableIterator<Entry, String>(iterator) {
+        return new IterableIterator<>(iterator) {
             public Iterator<String> iterator(Entry element) {
                 return getStringValues(element);
             }

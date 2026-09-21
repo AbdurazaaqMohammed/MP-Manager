@@ -91,7 +91,7 @@ public class AnnotationGroup extends AnnotationsList<AnnotationSet> implements K
         }
     }
     public Iterator<IdItem> usedIds(){
-        return new IterableIterator<AnnotationSet, IdItem>(iterator()) {
+        return new IterableIterator<>(iterator()) {
             @Override
             public Iterator<IdItem> iterator(AnnotationSet element) {
                 return element.usedIds();

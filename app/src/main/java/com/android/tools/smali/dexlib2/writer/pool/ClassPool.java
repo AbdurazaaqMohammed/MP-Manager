@@ -107,7 +107,7 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
         dexPool.typeListSection.intern(poolClassDef.getInterfaces());
         dexPool.stringSection.internNullable(poolClassDef.getSourceFile());
 
-        HashSet<String> fields = new HashSet<String>();
+        HashSet<String> fields = new HashSet<>();
         for (Field field: poolClassDef.getFields()) {
             String fieldDescriptor = DexFormatter.INSTANCE.getShortFieldDescriptor(field);
             if (!fields.add(fieldDescriptor)) {
@@ -129,7 +129,7 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
             }
         }
 
-        HashSet<String> methods = new HashSet<String>();
+        HashSet<String> methods = new HashSet<>();
         for (PoolMethod method: poolClassDef.getMethods()) {
             String methodDescriptor = DexFormatter.INSTANCE.getShortMethodDescriptor(method);
             if (!methods.add(methodDescriptor)) {
@@ -252,16 +252,19 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
             return null;
         }
 
-        return new Map.Entry<PoolClassDef, Integer>() {
-            @Override public PoolClassDef getKey() {
+        return new Map.Entry<>() {
+            @Override
+            public PoolClassDef getKey() {
                 return classDef;
             }
 
-            @Override public Integer getValue() {
+            @Override
+            public Integer getValue() {
                 return classDef.classDefIndex;
             }
 
-            @Override public Integer setValue(Integer value) {
+            @Override
+            public Integer setValue(Integer value) {
                 return classDef.classDefIndex = value;
             }
         };
@@ -356,7 +359,7 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
         return annotations;
     }
 
-    private static final Predicate<MethodParameter> HAS_PARAMETER_ANNOTATIONS = new Predicate<MethodParameter>() {
+    private static final Predicate<MethodParameter> HAS_PARAMETER_ANNOTATIONS = new Predicate<>() {
         @Override
         public boolean apply(MethodParameter input) {
             return input.getAnnotations().size() > 0;
@@ -364,7 +367,7 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
     };
 
     private static final Function<MethodParameter, Set<? extends Annotation>> PARAMETER_ANNOTATIONS =
-            new Function<MethodParameter, Set<? extends Annotation>>() {
+            new Function<>() {
                 @Override
                 public Set<? extends Annotation> apply(MethodParameter input) {
                     return input.getAnnotations();
@@ -377,13 +380,16 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
         boolean hasParameterAnnotations = Iterables.any(parameters, HAS_PARAMETER_ANNOTATIONS);
 
         if (hasParameterAnnotations) {
-            return new AbstractForwardSequentialList<Set<? extends Annotation>>() {
-                @Nonnull @Override public Iterator<Set<? extends Annotation>> iterator() {
+            return new AbstractForwardSequentialList<>() {
+                @Nonnull
+                @Override
+                public Iterator<Set<? extends Annotation>> iterator() {
                     return FluentIterable.from(parameters)
                             .transform(PARAMETER_ANNOTATIONS).iterator();
                 }
 
-                @Override public int size() {
+                @Override
+                public int size() {
                     return parameters.size();
                 }
             };
@@ -536,26 +542,32 @@ public class ClassPool extends BasePool<String, PoolClassDef> implements ClassSe
             }
         }
 
-        return new AbstractCollection<Entry<PoolClassDef, Integer>>() {
-            @Nonnull @Override public Iterator<Entry<PoolClassDef, Integer>> iterator() {
-                return new Iterator<Entry<PoolClassDef, Integer>>() {
+        return new AbstractCollection<>() {
+            @Nonnull
+            @Override
+            public Iterator<Entry<PoolClassDef, Integer>> iterator() {
+                return new Iterator<>() {
                     final Iterator<PoolClassDef> iter = internedItems.values().iterator();
 
-                    @Override public boolean hasNext() {
+                    @Override
+                    public boolean hasNext() {
                         return iter.hasNext();
                     }
 
-                    @Override public Entry<PoolClassDef, Integer> next() {
+                    @Override
+                    public Entry<PoolClassDef, Integer> next() {
                         return new MapEntry(iter.next());
                     }
 
-                    @Override public void remove() {
+                    @Override
+                    public void remove() {
                         throw new UnsupportedOperationException();
                     }
                 };
             }
 
-            @Override public int size() {
+            @Override
+            public int size() {
                 return internedItems.size();
             }
         };

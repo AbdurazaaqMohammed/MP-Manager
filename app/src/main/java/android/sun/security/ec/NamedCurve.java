@@ -105,11 +105,11 @@ public final class NamedCurve extends ECParameterSpec {
     }
 
     private static final Map<String,NamedCurve> oidMap =
-                                        new LinkedHashMap<String,NamedCurve>();
+            new LinkedHashMap<>();
     private static final Map<String,NamedCurve> nameMap =
-                                        new HashMap<String,NamedCurve>();
+            new HashMap<>();
     private static final Map<Integer,NamedCurve> lengthMap =
-                                        new HashMap<Integer,NamedCurve>();
+            new HashMap<>();
 
     private static BigInteger bi(String s) {
         return new BigInteger(s, 16);

@@ -357,7 +357,7 @@ public class XMLPath implements Predicate<NamedNode> {
     }
     private Iterator<NamedNode> search(Iterator<NamedNode> iterator) {
         if (containsAnyElementPath()) {
-            iterator = new IterableIterator<NamedNode, NamedNode>(iterator) {
+            iterator = new IterableIterator<>(iterator) {
                 @Override
                 public Iterator<NamedNode> iterator(NamedNode node) {
                     if (node instanceof Element) {
@@ -367,7 +367,7 @@ public class XMLPath implements Predicate<NamedNode> {
                 }
             };
             if (isAttribute()) {
-                iterator = new IterableIterator<NamedNode, NamedNode>(iterator) {
+                iterator = new IterableIterator<>(iterator) {
                     @Override
                     public Iterator<NamedNode> iterator(NamedNode node) {
                         if (node instanceof Element) {
@@ -388,7 +388,7 @@ public class XMLPath implements Predicate<NamedNode> {
         }
         int nextDepth = depth - 1;
         boolean attribute = nextDepth == depthEnd && this.isAttribute();
-        iterator = new IterableIterator<NamedNode, NamedNode>(iterator) {
+        iterator = new IterableIterator<>(iterator) {
             @Override
             public Iterator<NamedNode> iterator(NamedNode namedNode) {
                 Element<?> element = (Element<?>) namedNode;

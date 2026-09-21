@@ -258,7 +258,7 @@ public abstract class DexWriter<
                                               @Nonnull EncodedValue encodedValue) throws IOException;
 
     private final Comparator<Map.Entry<? extends CallSiteKey, Integer>> callSiteComparator =
-            new Comparator<Entry<? extends CallSiteKey, Integer>>() {
+            new Comparator<>() {
                 @Override
                 public int compare(Entry<? extends CallSiteKey, Integer> o1, Entry<? extends CallSiteKey, Integer> o2) {
                     int offset1 = encodedArraySection.getItemOffset(callSiteSection.getEncodedCallSite(o1.getKey()));
@@ -268,23 +268,26 @@ public abstract class DexWriter<
             };
 
     private static final Comparator<Map.Entry> toStringKeyComparator =
-            new Comparator<Map.Entry>() {
-                @Override public int compare(Entry o1, Entry o2) {
+            new Comparator<>() {
+                @Override
+                public int compare(Entry o1, Entry o2) {
                     return o1.getKey().toString().compareTo(o2.getKey().toString());
                 }
             };
 
     private static <T extends Comparable<? super T>> Comparator<Map.Entry<? extends T, ?>> comparableKeyComparator() {
-        return new Comparator<Entry<? extends T, ?>>() {
-            @Override public int compare(Entry<? extends T, ?> o1, Entry<? extends T, ?> o2) {
+        return new Comparator<>() {
+            @Override
+            public int compare(Entry<? extends T, ?> o1, Entry<? extends T, ?> o2) {
                 return o1.getKey().compareTo(o2.getKey());
             }
         };
     }
 
     private static <T extends Comparable<? super T>> Comparator<Entry<?, ? extends T>> comparableValueComparator() {
-        return new Comparator<Entry<?, ? extends T>>() {
-            @Override public int compare(Entry<?, ? extends T> o1, Entry<?, ? extends T> o2) {
+        return new Comparator<>() {
+            @Override
+            public int compare(Entry<?, ? extends T> o1, Entry<?, ? extends T> o2) {
                 return o1.getValue().compareTo(o2.getValue());
             }
         };
@@ -1042,7 +1045,7 @@ public abstract class DexWriter<
         ByteArrayOutputStream ehBuf = new ByteArrayOutputStream();
         debugSectionOffset = offsetWriter.getPosition();
         DebugWriter<StringKey, TypeKey> debugWriter =
-                new DebugWriter<StringKey, TypeKey>(stringSection, typeSection, offsetWriter);
+                new DebugWriter<>(stringSection, typeSection, offsetWriter);
 
         DexDataWriter codeWriter = new DexDataWriter(temp, 0);
 
@@ -1095,7 +1098,7 @@ public abstract class DexWriter<
                 }
 
                 if (codeItemOffset != -1) {
-                    codeOffsets.add(new CodeItemOffset<MethodKey>(methodKey, codeItemOffset));
+                    codeOffsets.add(new CodeItemOffset<>(methodKey, codeItemOffset));
                 }
             }
         }

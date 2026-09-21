@@ -49,7 +49,7 @@ public class R implements Iterable<RTypeItem> {
         return InstanceIterator.of(getTypeList().iterator(), RStyleableType.class);
     }
     public Iterator<RDeclareStyleable> getRDeclareStyleables() {
-        Iterator<RDeclareStyleable> iterator = new IterableIterator<RStyleableType, RDeclareStyleable>(
+        Iterator<RDeclareStyleable> iterator = new IterableIterator<>(
                 getStyleables()) {
             @Override
             public Iterator<RDeclareStyleable> iterator(RStyleableType element) {
