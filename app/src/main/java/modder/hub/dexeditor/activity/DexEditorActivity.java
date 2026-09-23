@@ -169,6 +169,7 @@ public class DexEditorActivity extends AppCompatActivity {
     public final List<TreeNode> searchNodes = new ArrayList<>();
     public String pendingSearchPath = null;
     public String pendingStringSearchQuery = null;
+    public Runnable pendingUsageSearch = null;
     public TabsAdapter tabsAdapter;
     private boolean needsModifiedTreeRebuild = true;
     private boolean needsExplorerRefresh = false;
@@ -2151,8 +2152,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
     /** Switches to the Search tab and runs a "String" type search for the given exact text. */
     public void searchStringInClasses(String query) {
-        if (explorerViewPager == null) return;
-        explorerViewPager.setCurrentItem(2, true);
+        showSearchTab();
         Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
         if (f instanceof SearchFragment) {
             ((SearchFragment) f).runStringSearch(query);
@@ -2160,6 +2160,72 @@ public class DexEditorActivity extends AppCompatActivity {
             // Fragment not created/attached yet - SearchFragment.onResume() will pick this up.
             pendingStringSearchQuery = query;
         }
+    }
+
+    private void runUsageOnSearchTab(Runnable search) {
+        showSearchTab();
+        Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+        if (f instanceof SearchFragment && f.isAdded()) {
+            search.run();
+        } else {
+            pendingUsageSearch = search;
+        }
+    }
+
+    public void showSearchTab() {
+        try {
+            if (viewPager != null && viewPager.getVisibility() == View.VISIBLE) hideEditor();
+        } catch (Exception ignored) {
+        }
+        try {
+            if (explorerViewPager != null) explorerViewPager.setCurrentItem(2, true);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void searchMethodUsages(String slashClass, String methodName, String proto, boolean includeOverrides) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runMethodUsageSearch(slashClass, methodName, proto, includeOverrides);
+            }
+        });
+    }
+
+    public void searchMethodOverrides(String slashClass, String methodName, String proto) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runOverrideSearch(slashClass, methodName, proto);
+            }
+        });
+    }
+
+    public void searchFieldUsages(String slashClass, String fieldName, String fieldType, int mode) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runFieldUsageSearch(slashClass, fieldName, fieldType, mode);
+            }
+        });
+    }
+
+    public void searchClassUsages(String slashClass) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runClassUsageSearch(slashClass);
+            }
+        });
+    }
+
+    public void searchSubclasses(String slashClass) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runSubclassSearch(slashClass);
+            }
+        });
     }
 
     private static class ExplorerTabAdapter extends FragmentStateAdapter {

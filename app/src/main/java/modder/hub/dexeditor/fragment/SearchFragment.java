@@ -107,6 +107,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.adapter.TreeAdapter;
 import modder.hub.dexeditor.model.TreeNode;
+import modder.hub.dexeditor.utils.DexUsageHelper;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.TreeHelper;
 import modder.hub.dexeditor.views.AlertProgress;
@@ -213,6 +214,11 @@ public class SearchFragment extends Fragment {
             String q = activity.pendingStringSearchQuery;
             activity.pendingStringSearchQuery = null;
             runStringSearch(q);
+        }
+        if (activity != null && activity.pendingUsageSearch != null) {
+            Runnable r = activity.pendingUsageSearch;
+            activity.pendingUsageSearch = null;
+            r.run();
         }
     }
 
@@ -655,6 +661,648 @@ public class SearchFragment extends Fragment {
         if (adapter != null) adapter.refreshVisibleNodes();
         updateUIState();
         new SearchTask(this, query, "/", "String", true, true, false, false, false, null, false).start();
+    }
+
+    public void runMethodUsageSearch(String slashClass, String methodName, String proto, boolean includeOverrides) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || DexEditorActivity.classTree == null || methodName == null || proto == null) return;
+        String declaring = DexUsageHelper.toType(slashClass);
+        Set<String> defining = new HashSet<>();
+        defining.add(declaring);
+        if (includeOverrides) {
+            try {
+                List<ClassDef> all;
+                synchronized (DexEditorActivity.classTree) {
+                    all = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                }
+                for (DexUsageHelper.OverrideEntry e : DexUsageHelper.findOverrides(declaring, methodName, proto, all, DexEditorActivity.classTree.classMap)) {
+                    try {
+                        defining.add(e.holder.getType());
+                    } catch (Exception ignored) {
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        List<String> needles = new ArrayList<>();
+        for (String d : defining) needles.add(d + "->" + methodName + "(");
+        String display = "usages of " + methodName + proto;
+        lastSearchQuery = "->" + methodName + "(";
+        lastSearchType = "Smali";
+        lastMatchCase = true;
+        lastIsRegex = false;
+        lastExactlyMatch = false;
+        try {
+            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, lastSearchQuery);
+        } catch (Exception ignored) {
+        }
+        searchResults.clear();
+        currentQuery = null;
+        if (adapter != null) adapter.refreshVisibleNodes();
+        updateUIState();
+        new UsageSearchTask(this, UsageSearchTask.KIND_METHOD, needles, -1, display, "->" + methodName + "(", slashClass, methodName, proto, defining).start();
+    }
+
+    public void runOverrideSearch(String slashClass, String methodName, String proto) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || DexEditorActivity.classTree == null || methodName == null || proto == null) return;
+        String display = "overrides of " + methodName + proto;
+        lastSearchQuery = display;
+        lastSearchType = "Smali";
+        lastMatchCase = true;
+        lastIsRegex = false;
+        lastExactlyMatch = false;
+        searchResults.clear();
+        currentQuery = null;
+        if (adapter != null) adapter.refreshVisibleNodes();
+        updateUIState();
+        new UsageSearchTask(this, UsageSearchTask.KIND_OVERRIDE, null, -1, display, methodName, slashClass, methodName, proto, null).start();
+    }
+
+    public void runFieldUsageSearch(String slashClass, String fieldName, String fieldType, int mode) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || DexEditorActivity.classTree == null || fieldName == null) return;
+        String declaring = DexUsageHelper.toType(slashClass);
+        List<String> needles = new ArrayList<>();
+        needles.add(declaring + "->" + fieldName + ":");
+        String display = mode == 1 ? "get usages of " + fieldName : mode == 2 ? "put usages of " + fieldName : "usages of " + fieldName;
+        lastSearchQuery = "->" + fieldName + ":";
+        lastSearchType = "Smali";
+        lastMatchCase = true;
+        lastIsRegex = false;
+        lastExactlyMatch = false;
+        try {
+            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, lastSearchQuery);
+        } catch (Exception ignored) {
+        }
+        searchResults.clear();
+        currentQuery = null;
+        if (adapter != null) adapter.refreshVisibleNodes();
+        updateUIState();
+        Set<String> defining = new HashSet<>();
+        defining.add(declaring);
+        new UsageSearchTask(this, UsageSearchTask.KIND_FIELD, needles, mode, display, "->" + fieldName + ":", slashClass, fieldName, fieldType, defining).start();
+    }
+
+    public void runClassUsageSearch(String slashClass) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || DexEditorActivity.classTree == null || slashClass == null) return;
+        List<String> needles = new ArrayList<>();
+        needles.add(DexUsageHelper.toType(slashClass));
+        String display = "usages of " + slashClass.replace('/', '.');
+        lastSearchQuery = DexUsageHelper.toType(slashClass);
+        lastSearchType = "Smali";
+        lastMatchCase = true;
+        lastIsRegex = false;
+        lastExactlyMatch = false;
+        try {
+            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, lastSearchQuery);
+        } catch (Exception ignored) {
+        }
+        searchResults.clear();
+        currentQuery = null;
+        if (adapter != null) adapter.refreshVisibleNodes();
+        updateUIState();
+        new UsageSearchTask(this, UsageSearchTask.KIND_CLASS, needles, -1, display, DexUsageHelper.toType(slashClass), slashClass, null, null, null).start();
+    }
+
+    public void runSubclassSearch(String slashClass) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || DexEditorActivity.classTree == null || slashClass == null) return;
+        String display = "subclasses of " + slashClass.replace('/', '.');
+        lastSearchQuery = display;
+        lastSearchType = "Class name";
+        lastMatchCase = true;
+        lastIsRegex = false;
+        lastExactlyMatch = false;
+        searchResults.clear();
+        currentQuery = null;
+        if (adapter != null) adapter.refreshVisibleNodes();
+        updateUIState();
+        new UsageSearchTask(this, UsageSearchTask.KIND_SUBCLASS, null, -1, display, DexUsageHelper.toType(slashClass), slashClass, null, null, null).start();
+    }
+
+    private static class UsageSearchTask {
+        static final int KIND_METHOD = 0;
+        static final int KIND_FIELD = 1;
+        static final int KIND_CLASS = 2;
+        static final int KIND_SUBCLASS = 3;
+        static final int KIND_OVERRIDE = 4;
+
+        private final WeakReference<SearchFragment> fragmentRef;
+        private final int kind;
+        private final List<String> needles;
+        private final int fieldMode;
+        private final String displayQuery;
+        private final String highlightQuery;
+        private final String targetSlash;
+        private final String targetName;
+        private final String targetProto;
+        private final Set<String> definingTypes;
+        private final AtomicInteger foundCount = new AtomicInteger(0);
+        private final AtomicInteger processedCount = new AtomicInteger(0);
+        private final Handler mainHandler = new Handler(Looper.getMainLooper());
+        private final Map<String, String> openEditorsContent = new HashMap<>();
+        private final Set<String> pendingSmaliClasses = new HashSet<>();
+        private AlertProgress progressDialog;
+        private volatile boolean isStopped = false;
+        private final AtomicBoolean isFinalized = new AtomicBoolean(false);
+        private long lastProgressUpdateTime = 0;
+        private ExecutorService executor;
+
+        UsageSearchTask(SearchFragment fragment, int kind, List<String> needles, int fieldMode, String displayQuery, String highlightQuery, String targetSlash, String targetName, String targetProto, Set<String> definingTypes) {
+            this.fragmentRef = new WeakReference<>(fragment);
+            this.kind = kind;
+            this.needles = needles;
+            this.fieldMode = fieldMode;
+            this.displayQuery = displayQuery;
+            this.highlightQuery = highlightQuery;
+            this.targetSlash = targetSlash;
+            this.targetName = targetName;
+            this.targetProto = targetProto;
+            this.definingTypes = definingTypes;
+        }
+
+        void start() {
+            SearchFragment fragment = fragmentRef.get();
+            if (fragment == null) return;
+            DexEditorActivity activity = (DexEditorActivity) fragment.getActivity();
+            if (activity == null) return;
+            final List<TreeNode> results = Collections.synchronizedList(new ArrayList<>());
+            progressDialog = new AlertProgress(activity);
+            progressDialog.setTitle(activity.getString(R.string.searching));
+            progressDialog.setMessage("Found: 0");
+            progressDialog.setCancelable(false);
+            progressDialog.setOnCancelListener(() -> {
+                if (isFinalized.compareAndSet(false, true)) {
+                    isStopped = true;
+                    if (executor != null) executor.shutdownNow();
+                    new Thread(() -> finalizeResults(results)).start();
+                }
+            });
+            progressDialog.show();
+            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+                if (tab.type == 0) {
+                    UnifiedEditorFragment editorFrag = activity.getFragmentAtIndex(i);
+                    if (editorFrag != null && editorFrag.getEditor() != null) {
+                        openEditorsContent.put(tab.className, editorFrag.getEditor().getText().toString());
+                    } else if (tab.isModified) {
+                        openEditorsContent.put(tab.className, tab.content);
+                    }
+                }
+            }
+            new Thread(() -> {
+                if (DexEditorActivity.classTree == null) {
+                    mainHandler.post(() -> onPostExecute(new ArrayList<>()));
+                    return;
+                }
+                if (kind == KIND_SUBCLASS || kind == KIND_OVERRIDE) {
+                    runHierarchy(results, activity);
+                    if (isFinalized.compareAndSet(false, true)) finalizeResults(results);
+                    return;
+                }
+                List<ClassDef> classesToSearch;
+                Set<String> pendingKeys = new HashSet<>();
+                synchronized (DexEditorActivity.classTree) {
+                    classesToSearch = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                    try {
+                        pendingKeys.addAll(DexEditorActivity.classTree.getPendingSmaliMap().keySet());
+                    } catch (Exception ignored) {
+                    }
+                }
+                pendingSmaliClasses.addAll(pendingKeys);
+                final int total = classesToSearch.size();
+                int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+                executor = Executors.newFixedThreadPool(numThreads);
+                for (final ClassDef classDef : classesToSearch) {
+                    if (isStopped) break;
+                    executor.execute(() -> {
+                        if (isStopped || Thread.currentThread().isInterrupted()) return;
+                        try {
+                            String fullType;
+                            try {
+                                fullType = classDef.getType();
+                            } catch (Exception e) {
+                                updateProgress(processedCount.incrementAndGet(), total);
+                                return;
+                            }
+                            String className = fullType.substring(1, fullType.length() - 1);
+                            String openContent = openEditorsContent.get(className);
+                            String smali;
+                            if (openContent != null) {
+                                smali = openContent;
+                            } else if (!pendingSmaliClasses.contains(className) && fastReject(classDef, className)) {
+                                updateProgress(processedCount.incrementAndGet(), total);
+                                return;
+                            } else {
+                                smali = generateSmaliSafe(classDef);
+                            }
+                            if (smali == null || smali.isEmpty()) {
+                                updateProgress(processedCount.incrementAndGet(), total);
+                                return;
+                            }
+                            List<TreeNode> snippets = snippetsFromSmali(smali, className);
+                            if (!snippets.isEmpty()) {
+                                String simple = className.contains("/") ? className.substring(className.lastIndexOf('/') + 1) : className;
+                                TreeNode classNode = new TreeNode(simple, className, 0, false);
+                                classNode.setChildren(snippets);
+                                classNode.setExpanded(true);
+                                results.add(classNode);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                        updateProgress(processedCount.incrementAndGet(), total);
+                    });
+                }
+                executor.shutdown();
+                try {
+                    executor.awaitTermination(1, TimeUnit.HOURS);
+                } catch (InterruptedException ignored) {
+                }
+                if (isFinalized.compareAndSet(false, true)) finalizeResults(results);
+            }).start();
+        }
+
+        private void runHierarchy(List<TreeNode> results, DexEditorActivity activity) {
+            try {
+                List<ClassDef> all;
+                synchronized (DexEditorActivity.classTree) {
+                    all = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                }
+                if (kind == KIND_SUBCLASS) {
+                    String target = DexUsageHelper.toType(targetSlash);
+                    List<ClassDef> subs;
+                    synchronized (DexEditorActivity.classTree) {
+                        subs = DexUsageHelper.findSubclasses(target, all, DexEditorActivity.classTree.classMap);
+                    }
+                    for (ClassDef c : subs) {
+                        if (isStopped) break;
+                        try {
+                            String fullType = c.getType();
+                            String slash = fullType.substring(1, fullType.length() - 1);
+                            String simple = slash.contains("/") ? slash.substring(slash.lastIndexOf('/') + 1) : slash;
+                            results.add(new TreeNode(simple, slash, 0, false));
+                            foundCount.incrementAndGet();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                } else {
+                    String declaring = DexUsageHelper.toType(targetSlash);
+                    List<DexUsageHelper.OverrideEntry> overrides;
+                    synchronized (DexEditorActivity.classTree) {
+                        overrides = DexUsageHelper.findOverrides(declaring, targetName, targetProto, all, DexEditorActivity.classTree.classMap);
+                    }
+                    for (DexUsageHelper.OverrideEntry e : overrides) {
+                        if (isStopped) break;
+                        try {
+                            String fullType = e.holder.getType();
+                            String slash = fullType.substring(1, fullType.length() - 1);
+                            String simple = slash.contains("/") ? slash.substring(slash.lastIndexOf('/') + 1) : slash;
+                            TreeNode classNode = new TreeNode(simple, slash, 0, false);
+                            String smali = generateSmaliSafe(e.holder);
+                            int lineIdx = findMethodLine(smali, targetName);
+                            String snippetText = ".method ..." + targetName + targetProto;
+                            TreeNode snippet = new TreeNode(snippetText, slash, 0, false);
+                            snippet.setSnippet(true);
+                            snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                            classNode.setChildren(new ArrayList<>(Collections.singletonList(snippet)));
+                            classNode.setExpanded(true);
+                            results.add(classNode);
+                            foundCount.incrementAndGet();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        private List<TreeNode> snippetsFromSmali(String smali, String className) {
+            List<TreeNode> snippets = new ArrayList<>();
+            int lineIdx = 0;
+            int start = 0;
+            int end;
+            while ((end = smali.indexOf('\n', start)) != -1) {
+                if (foundCount.get() >= 250000) {
+                    isStopped = true;
+                    break;
+                }
+                String line = smali.substring(start, end);
+                if (lineMatches(line)) {
+                    if (foundCount.incrementAndGet() >= 250000) {
+                        isStopped = true;
+                        break;
+                    }
+                    TreeNode snippet = new TreeNode(line.trim(), className, 0, false);
+                    snippet.setSnippet(true);
+                    snippet.setLineNumber(lineIdx);
+                    snippets.add(snippet);
+                }
+                start = end + 1;
+                lineIdx++;
+            }
+            return snippets;
+        }
+
+        private boolean fastReject(ClassDef classDef, String className) {
+            try {
+                if (kind == KIND_METHOD) return !hasMethodRef(classDef);
+                if (kind == KIND_FIELD) return !hasFieldRef(classDef);
+                if (kind == KIND_CLASS) return !usesClass(classDef);
+            } catch (Exception ignored) {
+                return false;
+            }
+            return false;
+        }
+
+        private boolean hasMethodRef(ClassDef classDef) {
+            try {
+                for (Method m : classDef.getMethods()) {
+                    MethodImplementation impl = m.getImplementation();
+                    if (impl == null) continue;
+                    for (Instruction inst : impl.getInstructions()) {
+                        if (!(inst instanceof ReferenceInstruction)) continue;
+                        Reference ref = ((ReferenceInstruction) inst).getReference();
+                        if (!(ref instanceof MethodReference)) continue;
+                        MethodReference mr = (MethodReference) ref;
+                        if (!targetName.equals(mr.getName())) continue;
+                        if (!refProtoEquals(mr)) continue;
+                        if (definingTypes != null && !definingTypes.contains(mr.getDefiningClass())) continue;
+                        return true;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return false;
+        }
+
+        private boolean refProtoEquals(MethodReference mr) {
+            try {
+                StringBuilder sb = new StringBuilder("(");
+                for (CharSequence p : mr.getParameterTypes()) sb.append(p);
+                sb.append(")").append(mr.getReturnType());
+                return targetProto.equals(sb.toString());
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        private boolean hasFieldRef(ClassDef classDef) {
+            try {
+                for (Method m : classDef.getMethods()) {
+                    MethodImplementation impl = m.getImplementation();
+                    if (impl == null) continue;
+                    for (Instruction inst : impl.getInstructions()) {
+                        if (!(inst instanceof ReferenceInstruction)) continue;
+                        Reference ref = ((ReferenceInstruction) inst).getReference();
+                        if (!(ref instanceof FieldReference)) continue;
+                        FieldReference fr = (FieldReference) ref;
+                        if (!targetName.equals(fr.getName())) continue;
+                        if (targetProto != null && !targetProto.isEmpty() && !targetProto.equals(fr.getType())) continue;
+                        if (definingTypes != null && !definingTypes.contains(fr.getDefiningClass())) continue;
+                        if (!opcodeMatchesFieldMode(inst)) continue;
+                        return true;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return false;
+        }
+
+        private boolean opcodeMatchesFieldMode(Instruction inst) {
+            if (fieldMode == 0) return true;
+            String op;
+            try {
+                op = inst.getOpcode().name.toLowerCase();
+            } catch (Exception e) {
+                return false;
+            }
+            boolean isGet = op.startsWith("sget") || op.startsWith("iget");
+            boolean isPut = op.startsWith("sput") || op.startsWith("iput");
+            if (fieldMode == 1) return isGet;
+            if (fieldMode == 2) return isPut;
+            return false;
+        }
+
+        private boolean usesClass(ClassDef classDef) {
+            String target = DexUsageHelper.toType(targetSlash);
+            try {
+                if (target.equals(classDef.getSuperclass())) return true;
+                for (String iface : classDef.getInterfaces()) {
+                    if (target.equals(iface)) return true;
+                }
+                for (Field f : classDef.getFields()) {
+                    if (target.equals(f.getType())) return true;
+                    if (annotationsUseClass(f.getAnnotations(), target)) return true;
+                }
+                for (Method m : classDef.getMethods()) {
+                    if (target.equals(m.getReturnType())) return true;
+                    for (MethodParameter p : m.getParameters()) {
+                        if (target.equals(p.getType())) return true;
+                    }
+                    if (annotationsUseClass(m.getAnnotations(), target)) return true;
+                    MethodImplementation impl = m.getImplementation();
+                    if (impl != null) {
+                        for (Instruction inst : impl.getInstructions()) {
+                            if (!(inst instanceof ReferenceInstruction)) continue;
+                            Reference ref = ((ReferenceInstruction) inst).getReference();
+                            if (ref instanceof TypeReference) {
+                                if (target.equals(((TypeReference) ref).getType())) return true;
+                            } else if (ref instanceof MethodReference) {
+                                if (target.equals(((MethodReference) ref).getDefiningClass())) return true;
+                            } else if (ref instanceof FieldReference) {
+                                if (target.equals(((FieldReference) ref).getDefiningClass())
+                                        || target.equals(((FieldReference) ref).getType())) return true;
+                            }
+                        }
+                    }
+                }
+                if (annotationsUseClass(classDef.getAnnotations(), target)) return true;
+            } catch (Exception ignored) {
+            }
+            return false;
+        }
+
+        private boolean annotationsUseClass(Set<? extends Annotation> annotations, String target) {
+            if (annotations == null) return false;
+            try {
+                for (Annotation a : annotations) {
+                    if (target.equals(a.getType())) return true;
+                    for (AnnotationElement e : a.getElements()) {
+                        if (encodedValueUsesClass(e.getValue(), target)) return true;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return false;
+        }
+
+        private boolean encodedValueUsesClass(EncodedValue v, String target) {
+            if (v == null) return false;
+            try {
+                if (v instanceof TypeEncodedValue) return target.equals(((TypeEncodedValue) v).getValue());
+                if (v instanceof FieldEncodedValue) {
+                    FieldReference fr = ((FieldEncodedValue) v).getValue();
+                    return target.equals(fr.getDefiningClass()) || target.equals(fr.getType());
+                }
+                if (v instanceof EnumEncodedValue) {
+                    FieldReference fr = ((EnumEncodedValue) v).getValue();
+                    return target.equals(fr.getDefiningClass()) || target.equals(fr.getType());
+                }
+                if (v instanceof MethodEncodedValue) {
+                    return target.equals(((MethodEncodedValue) v).getValue().getDefiningClass());
+                }
+                if (v instanceof MethodTypeEncodedValue) {
+                    try {
+                        String proto = ((MethodTypeEncodedValue) v).getValue().toString();
+                        return proto != null && proto.contains(target.substring(1, target.length() - 1));
+                    } catch (Exception ignored) {
+                        return false;
+                    }
+                }
+                if (v instanceof AnnotationEncodedValue) {
+                    for (AnnotationElement e : ((AnnotationEncodedValue) v).getElements()) {
+                        if (encodedValueUsesClass(e.getValue(), target)) return true;
+                    }
+                }
+                if (v instanceof ArrayEncodedValue) {
+                    for (EncodedValue sub : ((ArrayEncodedValue) v).getValue()) {
+                        if (encodedValueUsesClass(sub, target)) return true;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return false;
+        }
+
+        private boolean lineMatches(String line) {
+            if (line == null || needles == null) return false;
+            boolean hit = false;
+            for (String n : needles) {
+                if (line.contains(n)) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit) return false;
+            if (kind == KIND_FIELD && fieldMode != 0) {
+                String t = line.trim();
+                boolean isGet = t.startsWith("sget") || t.startsWith("iget");
+                boolean isPut = t.startsWith("sput") || t.startsWith("iput");
+                if (fieldMode == 1) return isGet;
+                if (fieldMode == 2) return isPut;
+                return false;
+            }
+            return true;
+        }
+
+        private String generateSmaliSafe(ClassDef classDef) {
+            try {
+                if (DexEditorActivity.classTree != null) return DexEditorActivity.classTree.getSmaliByType(classDef);
+            } catch (Exception ignored) {
+            }
+            return "";
+        }
+
+        private int findMethodLine(String smali, String name) {
+            if (smali == null || name == null) return -1;
+            int idx = 0;
+            int start = 0;
+            int end;
+            while ((end = smali.indexOf('\n', start)) != -1) {
+                String line = smali.substring(start, end).trim();
+                if (line.startsWith(".method") && line.contains(name + "(")) return idx;
+                start = end + 1;
+                idx++;
+            }
+            return -1;
+        }
+
+        private void updateProgress(int processed, int total) {
+            long now = System.currentTimeMillis();
+            if (now - lastProgressUpdateTime > 100 || processed == total || isStopped) {
+                lastProgressUpdateTime = now;
+                mainHandler.post(() -> {
+                    if (progressDialog != null && progressDialog.isShowing()) {
+                        progressDialog.setMax(total);
+                        progressDialog.setProgress(processed);
+                        progressDialog.setMessage("Found: " + foundCount.get());
+                    }
+                });
+            }
+        }
+
+        private void finalizeResults(List<TreeNode> results) {
+            List<TreeNode> tree;
+            if (results.isEmpty()) {
+                tree = new ArrayList<>();
+            } else {
+                List<TreeNode> snapshot = new ArrayList<>(results);
+                Collections.sort(snapshot, Comparator.comparing(TreeNode::getFullName));
+                tree = buildTreeStructure(snapshot);
+                Collections.sort(tree, (n1, n2) -> {
+                    if (n1.isDirectory() != n2.isDirectory()) return n1.isDirectory() ? -1 : 1;
+                    return n1.getName().compareTo(n2.getName());
+                });
+            }
+            mainHandler.post(() -> onPostExecute(tree));
+        }
+
+        private List<TreeNode> buildTreeStructure(List<TreeNode> classNodes) {
+            Map<String, TreeNode> packageMap = new HashMap<>();
+            List<TreeNode> roots = new ArrayList<>();
+            for (TreeNode classNode : classNodes) {
+                String fullName = classNode.getFullName();
+                String pkgName = fullName.contains("/") ? fullName.substring(0, fullName.lastIndexOf('/')) : "";
+                if (pkgName.isEmpty()) {
+                    roots.add(classNode);
+                } else {
+                    TreeNode pkgNode = packageMap.get(pkgName);
+                    if (pkgNode == null) {
+                        pkgNode = new TreeNode(pkgName.replace('/', '.'), pkgName, 0, true);
+                        pkgNode.setExpanded(true);
+                        packageMap.put(pkgName, pkgNode);
+                        roots.add(pkgNode);
+                    }
+                    pkgNode.addChild(classNode);
+                }
+            }
+            for (TreeNode root : roots) sortChildrenRecursive(root);
+            return roots;
+        }
+
+        private void sortChildrenRecursive(TreeNode node) {
+            if (node.isDirectory()) {
+                Collections.sort(node.getChildren(), (n1, n2) -> {
+                    if (n1.isDirectory() != n2.isDirectory()) return n1.isDirectory() ? -1 : 1;
+                    return n1.getName().compareTo(n2.getName());
+                });
+                for (TreeNode child : node.getChildren()) sortChildrenRecursive(child);
+            }
+        }
+
+        private void onPostExecute(final List<TreeNode> tree) {
+            if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
+            SearchFragment fragment = fragmentRef.get();
+            if (fragment == null) return;
+            fragment.currentQuery = displayQuery;
+            final DexEditorActivity activity = (DexEditorActivity) fragment.getActivity();
+            if (activity != null) {
+                activity.searchNodes.clear();
+                activity.searchNodes.addAll(tree);
+                fragment.updateSearchInfoBar();
+                fragment.updateUIState();
+                if (fragment.adapter != null) {
+                    fragment.adapter.setSearchList(true, highlightQuery);
+                    fragment.adapter.refreshVisibleNodes();
+                }
+                try {
+                    activity.showSearchTab();
+                } catch (Exception ignored) {
+                }
+            }
+        }
     }
     private static class ReplaceTask {
         private final WeakReference<SearchFragment> fragmentRef;
