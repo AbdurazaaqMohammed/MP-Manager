@@ -472,21 +472,42 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private void postInitialize(boolean skipRestorePosition) {
         Activity activity = getActivity();
+        boolean consumedPending = false;
         if (isSmali && activity instanceof DexEditorActivity) {
-            DexEditorActivity.EditorTab tab = ((DexEditorActivity) activity).getTabForClassName(className);
+            DexEditorActivity.EditorTab tab = null;
+            for (DexEditorActivity.EditorTab t : DexEditorActivity.tabs) {
+                if (t.className.equals(className) && t.type == 0) {
+                    tab = t;
+                    break;
+                }
+            }
             if (tab != null) {
                 if (type == TYPE_JAVA) editor.setEditable(false);
                 else editor.setEditable(!tab.isReadOnly);
+                if (tab.pendingLine >= 0) {
+                    int line = tab.pendingLine;
+                    int col = tab.pendingColumn;
+                    String q = tab.pendingQuery;
+                    tab.pendingLine = -1;
+                    tab.pendingColumn = -1;
+                    tab.pendingQuery = null;
+                    navigateTo(line, col, q);
+                    consumedPending = true;
+                }
             }
         }
         new Handler(Looper.getMainLooper()).post(() -> isInitializing = false);
-        if (!skipRestorePosition && positionManager != null) {
+        if (!skipRestorePosition && !consumedPending && positionManager != null) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 try {
                     EditorPositionManager.Position pos = positionManager.getPosition(className);
                     if (pos != null && pos.lineno >= 0 && pos.lineno < editor.getText().getLineCount()) {
-                        editor.jumpToLine(pos.lineno);
-                        editor.getCursor().set(pos.lineno, pos.column);
+                        editor.getCursor().set(pos.lineno, 0);
+                        try {
+                            editor.getCursor().set(pos.lineno, pos.column);
+                        } catch (Exception ignored) {
+                        }
+                        scrollSelectionIntoView();
                     }
                 } catch (Exception ignored) {}
             }, 100);
@@ -522,7 +543,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             try {
                 EditorPositionManager.Position pos = positionManager.getPosition(className);
-                if (pos != null) editor.jumpToLine(pos.lineno);
+                if (pos != null && pos.lineno >= 0 && pos.lineno < editor.getText().getLineCount()) {
+                    editor.getCursor().set(pos.lineno, 0);
+                    scrollSelectionIntoView();
+                }
             } catch (Exception ignored) {}
         }, 200);
     }
@@ -1190,27 +1214,52 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
         try {
             if (lineNum >= 0 && lineNum < editor.getText().getLineCount()) {
-                editor.jumpToLine(lineNum);
+                String lineText = editor.getText().getLineString(lineNum);
                 if (column >= 0 && column < editor.getText().getColumnCount(lineNum))
                     editor.getCursor().set(lineNum, column);
-                String lineText = editor.getText().getLineString(lineNum);
+                else
+                    editor.getCursor().set(lineNum, 0);
                 if (query != null && !query.isEmpty() && !query.contains("\n")) {
                     int start = lineText.toLowerCase().indexOf(query.toLowerCase());
                     if (start != -1) {
-                        editor.setSelectionRegion(lineNum, start, lineNum, start + query.length());
+                        editor.setSelectionRegion(lineNum, start, lineNum, start + query.length(), false, 0);
                         dismissEditorWindow(editor);
+                        scrollSelectionIntoView();
                         return;
                     }
                 }
                 if (isSmali && lineText.contains("const-string")) {
                     int[] positions = SmaliHelper.getOuterQuotePositions(lineText);
                     if (positions[0] != -1 && positions[1] != -1) {
-                        editor.setSelectionRegion(lineNum, positions[0] + 1, lineNum, positions[1]);
+                        editor.setSelectionRegion(lineNum, positions[0] + 1, lineNum, positions[1], false, 0);
                         dismissEditorWindow(editor);
+                        scrollSelectionIntoView();
+                        return;
                     }
                 }
+                scrollSelectionIntoView();
             }
         } catch (Exception ignored) {}
+    }
+
+    private void scrollSelectionIntoView() {
+        if (editor == null) return;
+        try {
+            editor.post(() -> {
+                try {
+                    editor.ensureSelectionVisible();
+                } catch (Exception ignored) {
+                }
+            });
+        } catch (Exception ignored) {
+        }
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                if (!isAdded() || editor == null) return;
+                editor.ensureSelectionVisible();
+            } catch (Exception ignored) {
+            }
+        }, 200);
     }
 
     public void showMethodFieldList() {
