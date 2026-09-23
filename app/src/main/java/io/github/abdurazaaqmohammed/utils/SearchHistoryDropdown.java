@@ -135,15 +135,6 @@ public final class SearchHistoryDropdown {
             row.setGravity(Gravity.CENTER_VERTICAL);
             int pad = (int) (12 * context.getResources().getDisplayMetrics().density);
             row.setPadding(pad, (int) (pad * 0.7f), pad / 2, (int) (pad * 0.7f));
-            TypedValue tv = new TypedValue();
-//            try {
-//                Resources.Theme theme = context.getTheme();
-//                theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
-//                row.setBackgroundResource(tv.resourceId);
-//                theme.resolveAttribute(com.google.android.material.R.attr.colorSurface,tv,true);
-//                row.setBackgroundColor(tv.data);
-//            } catch (Exception ignored) {
-//            }
             row.setBackgroundResource(R.drawable.bg_ripple);
             TextView text = new TextView(context);
             text.setText(it.query);
