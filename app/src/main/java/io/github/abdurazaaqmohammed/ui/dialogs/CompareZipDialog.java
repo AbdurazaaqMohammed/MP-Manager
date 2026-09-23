@@ -30,22 +30,13 @@ public class CompareZipDialog {
     private final File zip1;
     private final File zip2;
 
-    private static class DiffItem {
-        final String text;
-        final String fileName;
-        final String status;
-
-        DiffItem(String text, String fileName, String status) {
-            this.text = text;
-            this.fileName = fileName;
-            this.status = status;
-        }
+    private record DiffItem(String text, String fileName, String status) {
 
         @Override
-        public String toString() {
-            return text;
+            public String toString() {
+                return text;
+            }
         }
-    }
 
     public CompareZipDialog(Activity context, File zip1, File zip2) {
         this.context = context;
