@@ -1401,15 +1401,15 @@ public class ApkToolsHandler {
         if (target == null) return;
         target.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                menu.add(0, 101, 0, "Bold");
-                menu.add(0, 102, 1, "Italic");
-                menu.add(0, 103, 2, "Underline");
-                menu.add(0, 104, 3, "Color");
-                menu.add(0, 105, 4, "Copy");
-                menu.add(0, 106, 5, "Cut");
-                menu.add(0, 107, 6, "Paste");
-                menu.add(0, 108, 7, "Share");
-                menu.add(0, 109, 8, "Select all");
+                menu.add(0, 101, 0, R.string.bold);
+                menu.add(0, 102, 1, R.string.italic);
+                menu.add(0, 103, 2, R.string.underline);
+                menu.add(0, 104, 3, R.string.color);
+                menu.add(0, 105, 4, android.R.string.copy);
+                menu.add(0, 106, 5, android.R.string.cut);
+                menu.add(0, 107, 6, android.R.string.paste);
+                menu.add(0, 108, 7, R.string.share);
+                menu.add(0, 109, 8, android.R.string.selectAll);
                 return true;
             }
 

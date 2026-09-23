@@ -8,17 +8,21 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
+
 public class ProfileManager {
     private static final String PREFS_NAME = "FtpProfiles";
     private static final String PROFILES_KEY = "profiles";
-    private static final String DEFAULT_SERVER_PROFILE = "Default Server";
-    private static final String DEFAULT_CLIENT_PROFILE = "Default Client";
+    private final String DEFAULT_SERVER_PROFILE;
+    private final String DEFAULT_CLIENT_PROFILE;
     private final SharedPreferences prefs;
     private List<FtpProfile> profiles;
     private final Gson gson;
 
     public ProfileManager(Context context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        DEFAULT_SERVER_PROFILE = context.getString(R.string.default_server);
+        DEFAULT_CLIENT_PROFILE = context.getString(R.string.default_client);
         gson = new Gson();
         loadProfiles();
         ensureDefaultProfiles();

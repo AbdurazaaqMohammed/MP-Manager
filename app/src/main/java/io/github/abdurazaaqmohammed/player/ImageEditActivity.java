@@ -143,11 +143,11 @@ public class ImageEditActivity extends AppCompatActivity {
         main.setOrientation(LinearLayout.VERTICAL);
         toolbar = new MaterialToolbar(this);
         toolbar.setTitle(new File(originalPath).getName());
-        toolbar.setSubtitle("Image editor");
+        toolbar.setSubtitle(R.string.image_editor);
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
         Menu toolbarMenu = toolbar.getMenu();
-        toolbarMenu.add(0, 1, 0, "Save").setIcon(R.drawable.save_24px).setShowAsAction(1);
+        toolbarMenu.add(0, 1, 0, R.string.save).setIcon(R.drawable.save_24px).setShowAsAction(1);
         toolbar.setOnMenuItemClickListener(item -> {
             saveAndFinish();
             return true;
@@ -181,7 +181,7 @@ public class ImageEditActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
-        String[] names = {"Free", "1:1", "4:3", "3:4", "16:9", "9:16", "Custom"};
+        String[] names = {getString(R.string.free), "1:1", "4:3", "3:4", "16:9", "9:16", getString(R.string.custom)};
         float[] ratios = {0f, 1f, 4f / 3f, 3f / 4f, 16f / 9f, 9f / 16f, -1f};
         for (int i = 0; i < names.length; i++) {
             final float ratio = ratios[i];
@@ -492,10 +492,12 @@ public class ImageEditActivity extends AppCompatActivity {
                 out = Bitmap.createBitmap(src, x, y, w, h);
             } else {
                 android.graphics.Matrix matrix = new android.graphics.Matrix();
-                if (op.equals("left")) matrix.postRotate(-90);
-                else if (op.equals("right")) matrix.postRotate(90);
-                else if (op.equals("flipH")) matrix.postScale(-1, 1);
-                else matrix.postScale(1, -1);
+                switch (op) {
+                    case "left" -> matrix.postRotate(-90);
+                    case "right" -> matrix.postRotate(90);
+                    case "flipH" -> matrix.postScale(-1, 1);
+                    default -> matrix.postScale(1, -1);
+                }
                 out = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), matrix, true);
             }
             try (FileOutputStream fos = new FileOutputStream(workingFile)) {

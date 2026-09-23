@@ -282,9 +282,9 @@ public class ArscEditorActivity extends AppCompatActivity {
 
     private List<Row> rootRows() {
         List<Row> out = new ArrayList<>();
-        out.add(Row.simple("String pool", "pool"));
-        out.add(Row.simple("Search resource value", "search_value"));
-        out.add(Row.simple("Search by ID", "search_id"));
+        out.add(Row.simple(getString(R.string.string_pool), "pool"));
+        out.add(Row.simple(getString(R.string.search_resource_value), "search_value"));
+        out.add(Row.simple(getString(R.string.search_by_id), "search_id"));
         try {
             if (data != null) {
                 for (PackageBlock pkg : data.table.listPackages()) {
@@ -742,11 +742,12 @@ public class ArscEditorActivity extends AppCompatActivity {
         PopupMenu menu = anchor != null
                 ? new PopupMenu(this, anchor)
                 : new PopupMenu(this, toolbar, Gravity.END);
-        menu.getMenu().add("Backup");
-        menu.getMenu().add("Exit");
+        String s = getString(R.string.backup);
+        menu.getMenu().add(s);
+        menu.getMenu().add(R.string.exit);
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
-            if (title.equals("Backup")) backupNow();
+            if (title.equals(s)) backupNow();
             else confirmExit();
             return true;
         });

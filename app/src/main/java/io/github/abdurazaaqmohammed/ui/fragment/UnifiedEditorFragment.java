@@ -298,7 +298,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 menu.add(2, 2, 2, className.replace('/', '.'));
                 menu.add(3, 3, 3, className);
                 menu.add(4, 4, 4, "L" + className + ";");
-                menu.add(5, 5, 5, "Locate");
+                menu.add(5, 5, 5, R.string.locate);
                 popupMenu.setOnMenuItemClickListener(menuItem -> {
                     int id = menuItem.getItemId();
                     if (id == 5) {
@@ -338,9 +338,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         btnReplaceAll.setOnClickListener(v -> performReplaceAll());
         btnSearchMenu.setOnClickListener(v -> {
             PopupMenu popupMenu = new PopupMenu(requireContext(), btnSearchMenu);
-            popupMenu.getMenu().add(0, 1, 0, "Regex").setCheckable(true).setChecked(regex);
-            popupMenu.getMenu().add(0, 2, 0, "Whole words").setCheckable(true).setChecked(wholeWord);
-            popupMenu.getMenu().add(0, 3, 0, "Match case").setCheckable(true).setChecked(matchCase);
+            popupMenu.getMenu().add(0, 1, 0, R.string.regex).setCheckable(true).setChecked(regex);
+            popupMenu.getMenu().add(0, 2, 0, R.string.whole_words).setCheckable(true).setChecked(wholeWord);
+            popupMenu.getMenu().add(0, 3, 0, R.string.match_case).setCheckable(true).setChecked(matchCase);
             popupMenu.setOnMenuItemClickListener(item -> {
                 item.setChecked(!item.isChecked());
                 switch (item.getItemId()) {
@@ -884,7 +884,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             popupMenu.getMenu().add(0, i, 0, baseOptions[i]).setIcon(baseIcons[i]);
         }
         if (isSmali) {
-            popupMenu.getMenu().add(0, 12, 0, "Toggle comment").setIcon(R.drawable.ic_hash_mt);
+            popupMenu.getMenu().add(0, 12, 0, R.string.toggle_comment).setIcon(R.drawable.ic_hash_mt);
         }
         popupMenu.setOnMenuItemClickListener(item -> {
             executeEditAction(item.getItemId());
@@ -983,23 +983,23 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         forceShowIcons(popupMenu);
         List<String> optionsList = new ArrayList<>();
         List<Integer> iconsList = new ArrayList<>();
-        optionsList.add("File"); iconsList.add(R.drawable.baseline_insert_drive_file_24);
-        optionsList.add("Search"); iconsList.add(R.drawable.baseline_search_24);
-        optionsList.add("Syntax"); iconsList.add(R.drawable.baseline_text_snippet_24);
-        optionsList.add("Previous position"); iconsList.add(R.drawable.keyboard_double_arrow_left_24px);
-        optionsList.add("Next position"); iconsList.add(R.drawable.keyboard_double_arrow_right_24px);
-        optionsList.add("Jump to line"); iconsList.add(R.drawable.jump_to_element_24px);
-        optionsList.add("Start of line"); iconsList.add(R.drawable.text_select_jump_to_beginning_24px);
-        optionsList.add("End of line"); iconsList.add(R.drawable.text_select_jump_to_end_24px);
-        optionsList.add("Word wrap"); iconsList.add(R.drawable.wrap_text_24px);
-        optionsList.add("Read only"); iconsList.add(R.drawable.edit_off_24px);
+        optionsList.add(getString(R.string.file)); iconsList.add(R.drawable.baseline_insert_drive_file_24);
+        optionsList.add(getString(R.string.search)); iconsList.add(R.drawable.baseline_search_24);
+        optionsList.add(getString(R.string.syntax)); iconsList.add(R.drawable.baseline_text_snippet_24);
+        optionsList.add(getString(R.string.previous_position)); iconsList.add(R.drawable.keyboard_double_arrow_left_24px);
+        optionsList.add(getString(R.string.next_position)); iconsList.add(R.drawable.keyboard_double_arrow_right_24px);
+        optionsList.add(getString(R.string.jump_to_line)); iconsList.add(R.drawable.jump_to_element_24px);
+        optionsList.add(getString(R.string.start_of_line)); iconsList.add(R.drawable.text_select_jump_to_beginning_24px);
+        optionsList.add(getString(R.string.end_of_line)); iconsList.add(R.drawable.text_select_jump_to_end_24px);
+        optionsList.add(getString(R.string.word_wrap)); iconsList.add(R.drawable.wrap_text_24px);
+        optionsList.add(getString(R.string.read_only)); iconsList.add(R.drawable.edit_off_24px);
         if (isSmali) {
-            optionsList.add("Smali to Java"); iconsList.add(R.drawable.ic_java_mt);
-            optionsList.add("Instructions query"); iconsList.add(R.drawable.ic_instruction_query_mt);
-            optionsList.add("Method/Field list"); iconsList.add(R.drawable.ic_navigation);
+            optionsList.add(getString(R.string.smali_to_java)); iconsList.add(R.drawable.ic_java_mt);
+            optionsList.add(getString(R.string.instructions_query)); iconsList.add(R.drawable.ic_instruction_query_mt);
+            optionsList.add(getString(R.string.method_field_list)); iconsList.add(R.drawable.ic_navigation);
         }
-        optionsList.add("Preferences"); iconsList.add(R.drawable.baseline_settings_24);
-        optionsList.add("Close file"); iconsList.add(R.drawable.baseline_exit_to_app_24);
+        optionsList.add(getString(R.string.preferences)); iconsList.add(R.drawable.baseline_settings_24);
+        optionsList.add(getString(R.string.close_file)); iconsList.add(R.drawable.baseline_exit_to_app_24);
         for (int i = 0; i < optionsList.size(); i++) {
             MenuItem item = popupMenu.getMenu().add(0, i, 0, optionsList.get(i));
             item.setIcon(iconsList.get(i));

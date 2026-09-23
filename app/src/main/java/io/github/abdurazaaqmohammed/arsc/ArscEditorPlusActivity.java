@@ -13,6 +13,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -742,33 +743,52 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
 
     private void showMainMenu() {
         View anchor = toolbar.findViewById(R.id.arsc_menu_more);
+
         PopupMenu menu = anchor != null
                 ? new PopupMenu(this, anchor)
                 : new PopupMenu(this, toolbar, Gravity.END);
-        if (!MODE_EDITOR.equals(mode)) menu.getMenu().add("Resource querier");
-        menu.getMenu().add("Search");
-        menu.getMenu().add("Batch export");
-        menu.getMenu().add("Batch import");
-        menu.getMenu().add("Export strings");
-        menu.getMenu().add("Import strings");
-        menu.getMenu().add("Backup");
-        menu.getMenu().add("Exit");
+
+        menu.inflate(R.menu.arsc_plus_menu);
+
+        if (MODE_EDITOR.equals(mode)) {
+            MenuItem resourceQuerier = menu.getMenu().findItem(R.id.action_resource_querier);
+
+            if (resourceQuerier != null) resourceQuerier.setVisible(false);
+        }
+
         menu.setOnMenuItemClickListener(item -> {
-            String title = item.getTitle().toString();
-            switch (title) {
-                case "Resource querier" -> ArscQuerier.toggleFloat(this);
-                case "Search" -> openSearchDialog("");
-                case "Batch export" -> enterBatchMode(false);
-                case "Batch import" -> batchImport(null, null);
-                case "Export strings" -> exportStrings();
-                case "Import strings" -> importStrings();
-                case "Backup" -> backupNow();
-                default -> confirmExit();
+            int itemId = item.getItemId();
+            if (itemId == R.id.action_resource_querier) {
+                ArscQuerier.toggleFloat(this);
+                return true;
+            } else if (itemId == R.id.action_search) {
+                openSearchDialog("");
+                return true;
+            } else if (itemId == R.id.action_batch_export) {
+                enterBatchMode(false);
+                return true;
+            } else if (itemId == R.id.action_batch_import) {
+                batchImport(null, null);
+                return true;
+            } else if (itemId == R.id.action_export_strings) {
+                exportStrings();
+                return true;
+            } else if (itemId == R.id.action_import_strings) {
+                importStrings();
+                return true;
+            } else if (itemId == R.id.action_backup) {
+                backupNow();
+                return true;
+            } else if (itemId == R.id.action_exit) {
+                confirmExit();
+                return true;
             }
-            return true;
+            return false;
         });
+
         menu.show();
     }
+
 
     private void backupNow() {
         if (data == null) return;
@@ -964,12 +984,12 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
         String pkgName = parts.length > 0 ? parts[0] : "";
         String type = parts.length > 1 ? parts[1] : "";
         PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add("Search");
-        menu.getMenu().add("Add");
-        menu.getMenu().add("Import");
-        menu.getMenu().add("Delete");
-        menu.getMenu().add("Batch export");
-        menu.getMenu().add("Batch remove");
+        menu.getMenu().add(R.string.search);
+        menu.getMenu().add(R.string.add);
+        menu.getMenu().add(R.string.imports);
+        menu.getMenu().add(R.string.delete);
+        menu.getMenu().add(R.string.batch_export);
+        menu.getMenu().add(R.string.batch_remove);
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
             switch (title) {
@@ -987,22 +1007,30 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
 
     private void showConfigMenu(ArscData.Node node, TypeBlock tb, View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add("Open in text editor");
-        menu.getMenu().add("Search in type");
-        menu.getMenu().add("Export config");
-        menu.getMenu().add("Delete config");
+
+        menu.inflate(R.menu.arsc_plus_config_menu);
+
         menu.setOnMenuItemClickListener(item -> {
-            String title = item.getTitle().toString();
-            switch (title) {
-                case "Open in text editor" -> openTextPage(tb, null);
-                case "Search in type" -> openSearchDialog(node.key);
-                case "Export config" -> exportEntriesNow(ArscData.resourcesOf(tb));
-                default -> confirmDeleteConfig(tb);
+            int itemId = item.getItemId();
+            if (itemId == R.id.action_open_text_editor) {
+                openTextPage(tb, null);
+                return true;
+            } else if (itemId == R.id.action_search_in_type) {
+                openSearchDialog(node.key);
+                return true;
+            } else if (itemId == R.id.action_export_config) {
+                exportEntriesNow(ArscData.resourcesOf(tb));
+                return true;
+            } else if (itemId == R.id.action_delete_config) {
+                confirmDeleteConfig(tb);
+                return true;
             }
-            return true;
+            return false;
         });
+
         menu.show();
     }
+
 
     private void confirmDeleteConfig(TypeBlock tb) {
         String label = ArscData.configLabel(tb);

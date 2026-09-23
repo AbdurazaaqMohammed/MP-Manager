@@ -76,25 +76,25 @@ public class CompareZipDialog {
                 ZipEntry ze2 = entries2.get(name);
 
                 if (ze2 == null) {
-                    differences.add(new DiffItem("[Removed] " + name + " (" + ze1.getSize() + " bytes)", name, "[Removed]"));
+                    differences.add(new DiffItem("[" + context.getString(R.string.removed) + "] " + name + " (" + ze1.getSize() + " bytes)", name, "[Removed]"));
                 } else {
                     if (ze1.getCrc() != ze2.getCrc() || ze1.getSize() != ze2.getSize()) {
-                        differences.add(new DiffItem("[Modified] " + name + " (Size: " + ze1.getSize() + " -> " + ze2.getSize() + " bytes)", name, "[Modified]"));
+                        differences.add(new DiffItem("[" + context.getString(R.string.modified) + "] " + name + " (Size: " + ze1.getSize() + " -> " + ze2.getSize() + " bytes)", name, "[Modified]"));
                     }
                     entries2.remove(name);
                 }
             }
 
             for (Map.Entry<String, ZipEntry> e : entries2.entrySet()) {
-                differences.add(new DiffItem("[Added] " + e.getKey() + " (" + e.getValue().getSize() + " bytes)", e.getKey(), "[Added]"));
+                differences.add(new DiffItem("[" + context.getString(R.string.added) + "] " + e.getKey() + " (" + e.getValue().getSize() + " bytes)", e.getKey(), "[Added]"));
             }
 
         } catch (Exception e) {
-            differences.add(new DiffItem("Error reading ZIP files: " + e.getMessage(), "", "Error"));
+            differences.add(new DiffItem(context.getString(R.string.error_reading_zip_files) + e.getMessage(), "", "Error"));
         }
 
         if (differences.isEmpty()) {
-            differences.add(new DiffItem("No differences found.", "", "Info"));
+            differences.add(new DiffItem(context.getString(R.string.no_differences_found), "", "Info"));
         }
 
         ListView listView = new ListView(context);
