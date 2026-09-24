@@ -1349,6 +1349,14 @@ Layout Inspector
     <string name="replace_line">Replace line</string>
     <string name="no_matches_found">No matches found</string>
     <string name="reload_file">Reload file</string>
+    <string name="overriding_methods_found">%1$d overriding methods found. Do you want to search for usages of the overriding methods?</string>
+    <string name="only_this_method">Only this method</string>
+    <string name="clearing_method">Clearing method...</string>
+    <string name="search_resources">Search resources</string>
+    <string name="pick_a_search_type">Pick a search type</string>
+    <string name="font">Font</string>
+    <string name="menu_seq">Use the menu logo to slide up and down to change the menu sequence</string>
+    <string name="edit_floating_menus">Edit floating menus</string>
     <string-array name="editor_syntaxes">
         <item>Plain Text</item>
         <item>Java</item>

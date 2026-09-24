@@ -349,7 +349,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
             });
         });
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
-                .setTitle("Search resources")
+                .setTitle(R.string.search_resources)
                 .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, null)
@@ -359,7 +359,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
             String q = etFind.getText() == null ? "" : etFind.getText().toString();
             String picked = spinnerSearchType.getSelectedItem() == null ? SEARCH_TYPES[0] : spinnerSearchType.getSelectedItem().toString();
             if (!Arrays.asList(SEARCH_TYPES).contains(picked)) {
-                Extensions.showMessage(this, "Pick a search type");
+                Extensions.showMessage(this, R.string.pick_a_search_type);
                 return;
             }
             boolean matchCase = cbMatchCase.isChecked();
@@ -369,7 +369,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
                     if (matchCase) java.util.regex.Pattern.compile(q);
                     else java.util.regex.Pattern.compile(q, java.util.regex.Pattern.CASE_INSENSITIVE);
                 } catch (Exception e) {
-                    Extensions.showMessage(this, "Bad regex");
+                    Extensions.showMessage(this, R.string.bad_regex);
                     return;
                 }
             }
@@ -405,7 +405,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
     private View buildStringsPage() {
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        TextView reloadRow = stringsActionRow("Reload", R.drawable.baseline_refresh_24, false);
+        TextView reloadRow = stringsActionRow(getString(R.string.reload), R.drawable.baseline_refresh_24, false);
         reloadRow.setOnClickListener(v -> {
             stringsFilterQuery = "";
             stringsMatchCase = false;
@@ -415,14 +415,14 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
             updateStringsApply();
             refreshStrings();
         });
-        TextView filterRow = stringsActionRow("Filter", R.drawable.baseline_filter_list_24, false);
+        TextView filterRow = stringsActionRow(getString(R.string.filter), R.drawable.baseline_filter_list_24, false);
         filterRow.setOnClickListener(v -> showStringsFilterDialog());
-        TextView replaceRow = stringsActionRow("Replace", R.drawable.find_replace_24px, false);
+        TextView replaceRow = stringsActionRow(getString(R.string.replace), R.drawable.find_replace_24px, false);
         replaceRow.setOnClickListener(v -> showStringsReplaceDialog());
         page.addView(reloadRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         page.addView(filterRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         page.addView(replaceRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        stringsApplyBtn = stringsActionRow("Apply changes", R.drawable.baseline_check_circle_24, true);
+        stringsApplyBtn = stringsActionRow(getString(R.string.apply_changes), R.drawable.baseline_check_circle_24, true);
         stringsApplyBtn.setVisibility(View.GONE);
         stringsApplyBtn.setOnClickListener(v -> applyStringsStaged());
         page.addView(stringsApplyBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1349,7 +1349,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
         props.selection_type = FilePickerDialog.DIR_SELECT;
         FilePickerDialog picker = new FilePickerDialog(this, props);
-        picker.setTitle("Select directory");
+        picker.setTitle(getString(R.string.select_directory));
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) return;
             promptBatchExportName(new File(files[0]), entries);

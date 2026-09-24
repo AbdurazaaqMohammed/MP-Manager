@@ -532,14 +532,14 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         final String sClass = slashClass;
         if (overrideCount > 0) {
             new MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Find usages")
-                    .setMessage("This method has " + overrideCount + " overriding method(s). Include usages of overriding methods in the search?")
-                    .setPositiveButton("Include overrides", (d, w) -> {
+                    .setTitle(R.string.find_usages)
+                    .setMessage(getString(R.string.overriding_methods_found, overrideCount))
+                    .setPositiveButton(android.R.string.ok, (d, w) -> {
                         DexEditorActivity a = (DexEditorActivity) getActivity();
                         dismiss();
                         if (a != null) a.searchMethodUsages(sClass, mName, proto, true);
                     })
-                    .setNegativeButton("Only this method", (d, w) -> {
+                    .setNegativeButton(R.string.only_this_method, (d, w) -> {
                         DexEditorActivity a = (DexEditorActivity) getActivity();
                         dismiss();
                         if (a != null) a.searchMethodUsages(sClass, mName, proto, false);
@@ -573,7 +573,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         DexEditorActivity activity = (DexEditorActivity) act;
         AlertCircularProgress pd = new AlertCircularProgress(activity);
         try {
-            pd.setMessage("Clearing method...");
+            pd.setMessage(getString(R.string.clearing_method));
         } catch (Exception ignored) {
         }
         pd.show();

@@ -90,8 +90,8 @@ public class EditFloatingMenusActivity extends AppCompatActivity implements Star
     }
 
     private void initializeLogic() {
-        setTitle("Edit floating menus");
-        Toast.makeText(this, "Use the menu logo to slide up and down to change the menu sequence", Toast.LENGTH_LONG).show();
+        setTitle(getString(R.string.edit_floating_menus));
+        Toast.makeText(this, R.string.menu_seq, Toast.LENGTH_LONG).show();
         _load_shortcut_keys();
     }
 

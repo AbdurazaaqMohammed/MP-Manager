@@ -2040,7 +2040,7 @@ public class ApkToolsHandler {
             }
         }
         dialogUtil.getDialogBuilder()
-                .setTitle("Font")
+                .setTitle(R.string.font)
                 .setSingleChoiceItems(labels, checked, (d, which) -> {
                     d.dismiss();
                     if (which < FONT_LABELS.length) {

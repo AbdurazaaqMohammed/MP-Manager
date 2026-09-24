@@ -277,7 +277,7 @@ public class ArscTextActivity extends AppCompatActivity {
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Unsaved changes")
+                .setTitle(R.string.unsaved_changes)
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
                 .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
