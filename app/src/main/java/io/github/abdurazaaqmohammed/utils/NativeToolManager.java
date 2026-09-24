@@ -188,7 +188,7 @@ public class NativeToolManager {
                 .setMessage(activity.getString(R.string.native_need_download, String.valueOf(approx / 1024 / 1024)))
                 .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))
                 .setNeutralButton(activity.getString(R.string.set_url), (d, w) -> showUrlDialog(activity, cb))
-                .setPositiveButton(activity.getString(R.string.native_download), (d, w) -> downloadPacks(activity, zips, packs, version, missing, cb))
+                .setPositiveButton(activity.getString(R.string.download), (d, w) -> downloadPacks(activity, zips, packs, version, missing, cb))
                 .show();
     }
 

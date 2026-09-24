@@ -80,11 +80,18 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import com.android.tools.smali.dexlib2.AccessFlags;
+import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.smali.SmaliOptions;
+import com.android.tools.smali.smali2.Smali;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import modder.hub.dexeditor.GraphDot.DrawFlowDiagram;
 import modder.hub.dexeditor.GraphDot.Method;
@@ -97,6 +104,7 @@ import modder.hub.dexeditor.smali.SmaliMethodBody;
 import modder.hub.dexeditor.smali.SmaliMethodInvokeParser;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.smali.SmaliHelper;
+import modder.hub.dexeditor.utils.DexUsageHelper;
 import modder.hub.dexeditor.utils.ViewAnimationHelper;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
@@ -454,8 +462,245 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         new Handler(Looper.getMainLooper()).postDelayed(new SmaliToJavaTask(activity, methodName), 200L);
     }
 
-    public void showExceptionDlg(final Activity activity, final Exception e) {
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+    private String[] splitMethodTarget(String methodOrFieldName) {
+        if (methodOrFieldName == null) return null;
+        int paren = methodOrFieldName.indexOf('(');
+        if (paren == -1) return null;
+        return new String[]{methodOrFieldName.substring(0, paren), methodOrFieldName.substring(paren)};
+    }
+
+    private String[] splitFieldTarget(String methodOrFieldName) {
+        if (methodOrFieldName == null) return null;
+        int colon = methodOrFieldName.indexOf(':');
+        if (colon == -1) return null;
+        return new String[]{methodOrFieldName.substring(0, colon), methodOrFieldName.substring(colon + 1)};
+    }
+
+    private void findClassUsages(String slashClass) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || slashClass == null || slashClass.isEmpty()) return;
+        dismiss();
+        activity.searchClassUsages(slashClass);
+    }
+
+    private void findClassSubclasses(String slashClass) {
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity == null || slashClass == null || slashClass.isEmpty()) return;
+        dismiss();
+        activity.searchSubclasses(slashClass);
+    }
+
+    private void showFieldUsageSubMenu(View anchor, String methodOrFieldName) {
+        String[] parsed = splitFieldTarget(methodOrFieldName);
+        if (parsed == null || getActivity() == null) return;
+        PopupMenu sub = new PopupMenu(getActivity(), anchor);
+        android.view.Menu m = sub.getMenu();
+        m.add(0, 23, 0, "Find all usages");
+        m.add(0, 24, 1, "Find get usages");
+        m.add(0, 25, 2, "Find put usages");
+        sub.setOnMenuItemClickListener(item1 -> {
+            DexEditorActivity activity = (DexEditorActivity) getActivity();
+            if (activity == null) return false;
+            String slashClass = SmaliHelper.smali2OnlySlash(fullClassName);
+            int mode = item1.getItemId() == 24 ? 1 : item1.getItemId() == 25 ? 2 : 0;
+            dismiss();
+            activity.searchFieldUsages(slashClass, parsed[0], parsed[1], mode);
+            return true;
+        });
+        sub.show();
+    }
+
+    private void findMethodUsagesWithOverridePrompt(String methodOrFieldName) {
+        String[] parsed = splitMethodTarget(methodOrFieldName);
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (parsed == null || activity == null) return;
+        String slashClass = SmaliHelper.smali2OnlySlash(fullClassName);
+        String declaring = DexUsageHelper.toType(slashClass);
+        int overrideCount = 0;
+        try {
+            if (DexEditorActivity.classTree != null) {
+                List<ClassDef> all;
+                synchronized (DexEditorActivity.classTree) {
+                    all = new ArrayList<>(DexEditorActivity.classTree.classMap.values());
+                }
+                overrideCount = DexUsageHelper.findOverrides(declaring, parsed[0], parsed[1], all, DexEditorActivity.classTree.classMap).size();
+            }
+        } catch (Exception ignored) {
+        }
+        final String mName = parsed[0];
+        final String proto = parsed[1];
+        final String sClass = slashClass;
+        if (overrideCount > 0) {
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.find_usages)
+                    .setMessage(getString(R.string.overriding_methods_found, overrideCount))
+                    .setPositiveButton(android.R.string.ok, (d, w) -> {
+                        DexEditorActivity a = (DexEditorActivity) getActivity();
+                        dismiss();
+                        if (a != null) a.searchMethodUsages(sClass, mName, proto, true);
+                    })
+                    .setNegativeButton(R.string.only_this_method, (d, w) -> {
+                        DexEditorActivity a = (DexEditorActivity) getActivity();
+                        dismiss();
+                        if (a != null) a.searchMethodUsages(sClass, mName, proto, false);
+                    })
+                    .setNeutralButton(android.R.string.cancel, null)
+                    .show();
+        } else {
+            dismiss();
+            activity.searchMethodUsages(slashClass, mName, proto, false);
+        }
+    }
+
+    private void findMethodOverrides(String methodOrFieldName) {
+        String[] parsed = splitMethodTarget(methodOrFieldName);
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (parsed == null || activity == null) return;
+        String slashClass = SmaliHelper.smali2OnlySlash(fullClassName);
+        dismiss();
+        activity.searchMethodOverrides(slashClass, parsed[0], parsed[1]);
+    }
+
+    private void clearMethod(HashMap<String, Object> item) {
+        Activity act = getActivity();
+        if (act == null || DexEditorActivity.classTree == null || item == null) return;
+        String methodOrFieldName = Objects.requireNonNull(item.get("MethodOrFieldName")).toString();
+        String[] parsed = splitMethodTarget(methodOrFieldName);
+        if (parsed == null) return;
+        String mName = parsed[0];
+        String proto = parsed[1];
+        String slashClass = SmaliHelper.smali2OnlySlash(fullClassName);
+        DexEditorActivity activity = (DexEditorActivity) act;
+        AlertCircularProgress pd = new AlertCircularProgress(activity);
+        try {
+            pd.setMessage(getString(R.string.clearing_method));
+        } catch (Exception ignored) {
+        }
+        pd.show();
+        new Thread(() -> {
+            try {
+                ClassDef def;
+                synchronized (DexEditorActivity.classTree) {
+                    def = DexEditorActivity.classTree.classMap.get(slashClass);
+                }
+                if (def == null) throw new Exception("Class not found");
+                com.android.tools.smali.dexlib2.iface.Method target = DexUsageHelper.findMethod(def, mName, proto);
+                if (target == null) throw new Exception("Method not found");
+                int flags = target.getAccessFlags();
+                if (AccessFlags.ABSTRACT.isSet(flags) || AccessFlags.NATIVE.isSet(flags))
+                    throw new Exception("Cannot clear abstract or native method");
+                boolean isStatic = AccessFlags.STATIC.isSet(flags);
+                int paramCount = target.getParameters().size();
+                String ret = target.getReturnType();
+                int numParams = paramCount + (isStatic ? 0 : 1);
+                char rc = (ret == null || ret.isEmpty()) ? 'V' : ret.charAt(0);
+                boolean wide = rc == 'J' || rc == 'D';
+                int registers = numParams + (wide ? 2 : 1);
+                List<String> body = new ArrayList<>();
+                body.add("    .registers " + registers);
+                if (rc == 'V') {
+                    body.add("    return-void");
+                } else if (rc == 'Z' || rc == 'B' || rc == 'S' || rc == 'C' || rc == 'I') {
+                    body.add("    const/4 v0, 0x0");
+                    body.add("    return v0");
+                } else if (rc == 'F') {
+                    body.add("    const v0, 0x0");
+                    body.add("    return v0");
+                } else if (wide) {
+                    body.add("    const-wide v0, 0x0");
+                    body.add("    return-wide v0");
+                } else {
+                    body.add("    const v0, 0x0");
+                    body.add("    return-object v0");
+                }
+                String current;
+                synchronized (DexEditorActivity.classTree) {
+                    String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(slashClass);
+                    current = pending != null ? pending : DexEditorActivity.classTree.getSmaliByType(def);
+                }
+                if (current == null) throw new Exception("Cannot read class");
+                String[] lines = current.split("\n", -1);
+                int start = -1;
+                int end = -1;
+                String needle = mName + proto;
+                for (int i = 0; i < lines.length; i++) {
+                    String t = lines[i].trim();
+                    if (t.startsWith(".method") && t.contains(needle)) {
+                        start = i;
+                        break;
+                    }
+                }
+                if (start == -1) throw new Exception("Method block not found");
+                for (int i = start + 1; i < lines.length; i++) {
+                    if (lines[i].trim().startsWith(".end method")) {
+                        end = i;
+                        break;
+                    }
+                }
+                if (end == -1) throw new Exception("Method block not found");
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i <= start; i++) sb.append(lines[i]).append("\n");
+                for (String b : body) sb.append(b).append("\n");
+                for (int i = end; i < lines.length; i++) {
+                    sb.append(lines[i]);
+                    if (i < lines.length - 1) sb.append("\n");
+                }
+                String newSmali = sb.toString();
+                try {
+                    ClassDef newDef = Smali.assemble(newSmali, new SmaliOptions(), activity.dexVersion);
+                    DexEditorActivity.classTree.saveClassDef(newDef);
+                } catch (Throwable e) {
+                    DexEditorActivity.classTree.saveSmali(slashClass, newSmali);
+                }
+                try {
+                    String pure = newSmali.replaceFirst("(?s)^#.*?\\n\\n", "");
+                    FileWriter fw = new FileWriter(smaliFilePath);
+                    fw.write(pure);
+                    fw.close();
+                } catch (Exception ignored) {
+                }
+                final String doneSmali = newSmali;
+                final int clearedLine = start;
+                activity.runOnUiThread(() -> {
+                    try {
+                        if (pd != null) pd.dismiss();
+                    } catch (Exception ignored) {
+                    }
+                    try {
+                        dismiss();
+                    } catch (Exception ignored) {
+                    }
+                    for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
+                        DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+                        if (tab.className.equals(slashClass) && tab.type == 0) {
+                            tab.content = doneSmali;
+                            tab.isModified = false;
+                            UnifiedEditorFragment ef = activity.getFragmentAtIndex(i);
+                            if (ef != null && ef.getEditor() != null) {
+                                ef.getEditor().setText(doneSmali);
+                                ef.navigateTo(clearedLine, -1, null);
+                            }
+                        }
+                    }
+                    DexEditorActivity.isChanged = true;
+                    activity.refreshExplorerPage(1);
+                    new LoadDataRunnable().run();
+                    Extensions.showMessage(activity, "Method cleared");
+                });
+            } catch (Throwable e) {
+                final String msg = String.valueOf(e.getMessage());
+                activity.runOnUiThread(() -> {
+                    try {
+                        if (pd != null) pd.dismiss();
+                    } catch (Exception ignored) {
+                    }
+                    Notify_MT.Notify(activity, "Error", msg == null ? "Failed" : msg, "Close");
+                });
+            }
+        }).start();
+    }
+
+    public void showExceptionDlg(final Activity activity, final Exception e) {        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
             return;
         }
         activity.runOnUiThread(() -> Notify_MT.Notify(activity, activity.getString(R.string.error), e.getMessage(), activity.getString(R.string.close)));
@@ -519,7 +764,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                             HashMap<String, Object> stringInfo = new HashMap<>();
                             stringInfo.put("StringName", extractedString);
-                            stringInfo.put("StartLineNumber", currentLineNumber);
+                            stringInfo.put("StartLineNumber", currentLineNumber - 1);
                             stringList.add(stringInfo);
                         }
                     }
@@ -532,7 +777,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         isInsideMethod = true;
                         currentMethodName = tokens[tokens.length - 1]; // Last token is the method name
                         currentFullMethodSignature = currentLine.trim(); // Store full method signature
-                        methodStartLine = currentLineNumber;
+                        methodStartLine = currentLineNumber - 1;
                     }
                     // Check if the line ends a method
                     else if (tokens[0].equals(".end") && tokens[1].equals("method")) {
@@ -542,7 +787,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                             methodInfo.put("MethodOrFieldName", currentMethodName); // Original behavior
                             methodInfo.put("FullMethodOrField", currentFullMethodSignature); // New full signature
                             methodInfo.put("StartLineNumber", methodStartLine);
-                            methodInfo.put("EndLineNumber", currentLineNumber);
+                            methodInfo.put("EndLineNumber", currentLineNumber - 1);
                             methodInfoList.add(methodInfo);
 
                             // Reset method tracking variables
@@ -566,7 +811,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                                             ":" + fieldSignature.substring(colonIndex + 1).trim());
                             // New full signature
                             fieldInfo.put("FullMethodOrField", currentLine.trim());
-                            fieldInfo.put("StartLineNumber", currentLineNumber);
+                            fieldInfo.put("StartLineNumber", currentLineNumber - 1);
                             fieldInfoList.add(fieldInfo);
                         }
                     }
@@ -773,25 +1018,31 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 // Check if this is a class signature (starts with L and ends with ;)
                 if (methodOrFieldName1.startsWith("L") && methodOrFieldName1.endsWith(";")) {
-                    menu.add(1, 1, 1, "Copy class signature");
-                    menu.add(2, 2, 2, "Copy subclass signature");
+                    menu.add(20, 20, 20, R.string.find_usages);
+                    menu.add(21, 21, 21, R.string.find_subclasses);
+                    menu.add(1, 1, 1, R.string.copy_class_signature);
+                    menu.add(2, 2, 2, R.string.copy_subclass_signature);
                 }
 
                 // Check if this is a field (contains :)
                 if (methodOrFieldName1.contains(":")) {
-                    menu.add(3, 3, 3, "Copy field signature");
-                    menu.add(9, 9, 9, "Copy field get code");  // Generate smali get instruction
-                    menu.add(10, 10, 10, "Copy field put code"); // Generate smali put instruction
+                    menu.add(22, 22, 22, R.string.find_usages);
+                    menu.add(3, 3, 3, R.string.copy_field_signature);
+                    menu.add(9, 9, 9, R.string.copy_field_get_code);  // Generate smali get instruction
+                    menu.add(10, 10, 10, R.string.copy_field_put_code); // Generate smali put instruction
                 }
 
                 // Check if this is a method (contains ( but not :)
                 if (methodOrFieldName1.contains("(") && !methodOrFieldName1.contains(":")) {
-                    menu.add(4, 4, 4, "Copy method signature");
-                    menu.add(5, 5, 5, "Copy method code");      // Get full method body
-                    menu.add(6, 6, 6, "Copy method invoke code"); // Generate invoke instruction
-                    menu.add(7, 7, 7, "View flowchart");       // Show method flowchart
-                    menu.add(8, 8, 8, "Smali to Java").setEnabled(Build.VERSION.SDK_INT > 23);        // Convert smali to Java
-                    menu.add(11, 11, 11, "AI Explanation").setEnabled(Build.VERSION.SDK_INT > 20);
+                    menu.add(26, 26, 26, R.string.find_usages);
+                    menu.add(27, 27, 27, R.string.find_overriding_methods);
+                    menu.add(4, 4, 4, R.string.copy_method_signature);
+                    menu.add(5, 5, 5, R.string.copy_method_code);      // Get full method body
+                    menu.add(6, 6, 6, R.string.copy_method_invoke_code); // Generate invoke instruction
+                    menu.add(7, 7, 7, R.string.view_flowchart);       // Show method flowchart
+                    menu.add(8, 8, 8, R.string.smali_to_java).setEnabled(Build.VERSION.SDK_INT > 23);        // Convert smali to Java
+                    menu.add(11, 11, 11, R.string.ai_explanation).setEnabled(Build.VERSION.SDK_INT > 20);
+                    menu.add(28, 28, 28, R.string.clear_method);
                 }
                 // Set click listener for popup menu items
                 popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
@@ -866,6 +1117,30 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                                 Intent intent = new Intent(requireContext().getApplicationContext(), AIOverViewActivity.class);
                                 intent.putExtra("smali", smaliMethodBody2.parseClassInSmali());
                                 startActivity(intent);
+                                return true;
+
+                            case 20:  // Find usages of class
+                                findClassUsages(SmaliHelper.smali2OnlySlash(methodOrFieldName1));
+                                return true;
+
+                            case 21:  // Find subclasses of class
+                                findClassSubclasses(SmaliHelper.smali2OnlySlash(methodOrFieldName1));
+                                return true;
+
+                            case 22:  // Find usages of field (submenu)
+                                showFieldUsageSubMenu(_view, methodOrFieldName1);
+                                return true;
+
+                            case 26:  // Find usages of method
+                                findMethodUsagesWithOverridePrompt(methodOrFieldName1);
+                                return true;
+
+                            case 27:  // Find overriding methods
+                                findMethodOverrides(methodOrFieldName1);
+                                return true;
+
+                            case 28:  // Clear method
+                                clearMethod(item);
                                 return true;
 
                             default:
@@ -1056,7 +1331,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             holder.backgroundLayout.setOnLongClickListener(_view -> {
                 PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
                 Menu menu = popupMenu.getMenu();
-                menu.add(1, 1, 1, "Copy");
+                menu.add(1, 1, 1, android.R.string.copy);
                 popupMenu.setOnMenuItemClickListener(item1 -> {
                     if (item1.getItemId() == 1) {
                         CopyUtil.copyToClipboard(requireActivity(), stringName);

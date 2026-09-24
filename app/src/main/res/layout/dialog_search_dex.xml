@@ -16,16 +16,28 @@
             android:text="@string/text_to_find"
             android:textSize="14sp" />
 
-        <RelativeLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
             <AutoCompleteTextView
                 android:id="@+id/et_find"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:inputType="text" />
 
-        </RelativeLayout>
+            <ImageView
+                android:id="@+id/btn_history_dropdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="8dp"
+                android:src="@drawable/arrow_drop_down_24px"
+                android:contentDescription="@string/hist" />
+
+        </LinearLayout>
 
         <RelativeLayout
             android:layout_width="match_parent"

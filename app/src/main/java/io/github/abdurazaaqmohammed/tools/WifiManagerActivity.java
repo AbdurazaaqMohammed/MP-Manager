@@ -484,7 +484,7 @@ public class WifiManagerActivity extends AppCompatActivity {
                     copyBtn.setText(android.R.string.copy);
                     actionRow.addView(copyBtn);
                     MaterialButton shareBtn = new MaterialButton(WifiManagerActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
-                    shareBtn.setText(getString(R.string.wifi_share));
+                    shareBtn.setText(getString(R.string.share));
                     actionRow.addView(shareBtn);
                     inner.addView(actionRow);
                     card.addView(inner);
@@ -610,7 +610,7 @@ public class WifiManagerActivity extends AppCompatActivity {
             secView.setTextIsSelectable(true);
             qrBox.addView(secView);
             new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.wifi_share_wifi)).setView(qrBox)
-                    .setPositiveButton(getString(R.string.wifi_share), (d, w) -> shareWifiText(config))
+                    .setPositiveButton(getString(R.string.share), (d, w) -> shareWifiText(config))
                     .setNeutralButton(getString(R.string.wifi_save_image), (d, w) -> new Thread(() -> {
                         try {
                             QrUtil.saveToGallery(WifiManagerActivity.this, qr, e.ssid + "_wifi_qr");

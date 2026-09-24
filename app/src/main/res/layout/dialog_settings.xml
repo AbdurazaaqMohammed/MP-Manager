@@ -147,6 +147,21 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/language">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/languageTv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -554,6 +569,21 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/ask_bookmark_tab" />
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/search_history_limit">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/searchHistoryLimitEt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:inputType="number"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -585,7 +615,7 @@
                     android:orientation="horizontal">
                     <com.google.android.material.checkbox.MaterialCheckBox
                         android:text="@string/auto_sign"
-                        android:textSize="20sp"
+                        android:textSize="14sp"
                         android:id="@+id/autosign"
                         android:layout_gravity="start"
                         android:layout_width="wrap_content"
@@ -600,6 +630,45 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:outlineSpotShadowColor="@android:color/transparent"
+            app:cardElevation="0dp"
+            app:cardCornerRadius="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/update"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/checkUpdatesToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/check_for_updates" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/checkUpdateNow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/check_update_now"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/about"

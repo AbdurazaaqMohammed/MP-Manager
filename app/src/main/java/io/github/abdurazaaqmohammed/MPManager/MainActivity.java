@@ -6,6 +6,7 @@ import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPer
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
+import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
@@ -19,8 +20,10 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RotateDrawable;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
@@ -74,10 +77,12 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.os.LocaleListCompat;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -91,7 +96,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.github.paul035.LocaleHelper;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
@@ -180,6 +184,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -188,6 +193,7 @@ import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.utils.UpdateUtil;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -224,7 +230,80 @@ public class MainActivity extends AppCompatActivity {
     public Handler handler;
     private boolean systemTheme;
     public int theme;
+    private boolean checkForUpdates;
+    public String lastVerChecked;
+    public long downloadId;
+    private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
 
+            if (id == downloadId) {
+                downloadId = -1;
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(id);
+                DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                try (Cursor cursor = downloadManager.query(query)) {
+                    if (cursor.moveToFirst()) {
+                        int columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                        if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(columnIndex)) {
+                            int columnIndex1 = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                            String fileUri = cursor.getString(columnIndex1);
+                            promptInstallDownloadedUpdate(fileUri);
+                        }
+                    }
+                } catch (Exception e) {
+                    Extensions.showMessage(MainActivity.this, e.toString());
+                }
+            }
+        }
+    };
+
+    private void checkPendingUpdateDownload() {
+        if (downloadId == -1) return;
+        try {
+            DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            try (Cursor cursor = downloadManager.query(query)) {
+                if (cursor.moveToFirst()) {
+                    int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                    if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(statusIndex)) {
+                        long id = downloadId;
+                        downloadId = -1;
+                        int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                        promptInstallDownloadedUpdate(cursor.getString(uriIndex));
+                    } else if (DownloadManager.STATUS_FAILED == cursor.getInt(statusIndex)) {
+                        downloadId = -1;
+                    }
+                } else {
+                    downloadId = -1;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void promptInstallDownloadedUpdate(String fileUri) {
+        try {
+            File apkFile = null;
+            if (fileUri != null && !fileUri.isEmpty()) {
+                Uri uri = Uri.parse(fileUri);
+                if ("file".equals(uri.getScheme()) && uri.getPath() != null) {
+                    apkFile = new File(uri.getPath());
+                } else if (uri.getScheme() == null) {
+                    apkFile = new File(fileUri);
+                }
+            }
+            if (apkFile == null || !apkFile.isFile()) {
+                Extensions.showMessage(this, getString(R.string.file_no_longer_available));
+                return;
+            }
+            InstallUtil.installApkWithDialog(this, apkFile);
+        } catch (Exception e) {
+            Extensions.showMessage(this, e.toString());
+        }
+    }
     private File[] currentPane1Files;
     private File[] currentPane2Files;
     private List<ZipEntryInfo> currentPane1ZipEntries;
@@ -381,10 +460,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        unregisterReceiver(onDownloadComplete);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         settings.edit()
                 .putString("bookmarks", bookmarks.toString())
                 .putBoolean("systemTheme", systemTheme)
+                .putBoolean("checkForUpdates", checkForUpdates)
                 .putInt("theme", theme)
                 .apply();
     }
@@ -449,22 +530,41 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if(requestCode == 757) {
                 if (data == null || data.getData() == null) return;
-                handleModifiedFileResult(data.getData());
+                handleModifiedFileResult(data.getData(), data.getStringExtra("zipEntryPath"), data.getStringExtra("zipFilePath"));
             }
         }
     }
 
     public void handleModifiedFileResult(Uri uri) {
+        handleModifiedFileResult(uri, null, null);
+    }
+
+    public void handleModifiedFileResult(Uri uri, String entryPath, String zipFileExtra) {
         boolean pane1 = lastPaneSelected == 1;
         String path = uri == null ? null : uri.getPath();
-        File zipFile = pane1 ? pane1Folder : pane2Folder;
-        if (path == null || !path.startsWith(getCacheDir().getPath())) return;
+        File resolvedZip = null;
+        if (zipFileExtra != null && !zipFileExtra.isEmpty()) {
+            File zp = new File(zipFileExtra);
+            if (zp.isFile()) resolvedZip = zp;
+        }
+        if (resolvedZip == null) resolvedZip = pane1 ? pane1Folder : pane2Folder;
+        final File zipFile = resolvedZip;
+        if (path == null) return;
+        boolean inAppPrivateDir = path.startsWith(getCacheDir().getPath());
+        try {
+            inAppPrivateDir = inAppPrivateDir || path.startsWith(getFilesDir().getPath());
+        } catch (Exception ignored) {
+        }
+        if (!inAppPrivateDir) return;
         if (zipFile == null || !zipFile.isFile()) {
             Extensions.showMessage(this, R.string.archive_no_longer_open);
             return;
         }
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-                    String modifiedFileName = path.substring(path.lastIndexOf("/") + 1);
+                    String entryName = (entryPath != null && !entryPath.isEmpty()) ? entryPath : null;
+                    String modifiedFileName = entryName != null
+                            ? entryName.substring(entryName.lastIndexOf("/") + 1)
+                            : path.substring(path.lastIndexOf("/") + 1);
                     LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.item_modified_dialog, null);
                     String zipFileName = zipFile.getName();
                     boolean isApk = zipFileName.endsWith(".apk");
@@ -501,6 +601,7 @@ public class MainActivity extends AppCompatActivity {
                                             ZipParameters zp = new ZipParameters();
                                             boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
                                             zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                            if (entryName != null) zp.setFileNameInZip(entryName);
                                             zf.addFile(path, zp);
                                         }
                                     } catch (Exception e) {
@@ -1326,7 +1427,7 @@ public class MainActivity extends AppCompatActivity {
 
         lang = settings.getString("lang", supportedLang ? deviceLang : "en");
         boolean useDeviceRss = lang.equals(deviceLang);
-        rss = /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, Locale.getDefault().getLanguage()).getResources();
+        rss = getResources();// /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, Locale.getDefault().getLanguage()).getResources();
 
         new Thread(() -> {
             Security.addProvider(new BouncyCastleProvider());
@@ -1374,6 +1475,15 @@ public class MainActivity extends AppCompatActivity {
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
+        View sidebarDrawer = findViewById(R.id.sidebar_drawer);
+
+        if (sidebarDrawer.getBackground() instanceof GradientDrawable sidebarBackground) {
+//            sidebarBackground.setColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.BLACK));
+//            sidebarDrawer.setBackground(sidebarBackground);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            sidebarDrawer.setClipToOutline(true);
+        }
         bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bookmarks_drawer));
         bottomSheetBehavior.setPeekHeight(0, false); // animate=false, keeps it hidden
         bottomSheetBehavior.setHideable(true); // allows fully hidden state
@@ -1427,8 +1537,17 @@ public class MainActivity extends AppCompatActivity {
         historyList.setAdapter(historyAdapter = new HistoryAdapter(this, lastPaneSelected == 1 ? pane1History : pane2History));
         historyList.setOnItemClickListener((parent, view, position, id) -> {
             NavigationHistoryEntry entry = historyAdapter.getItem(position);
-            if (entry.isZip()) loadZipFolderInPane(entry.file(), entry.zipPath(), lastPaneSelected == 1, false);
-            else loadFolderInPane(entry.file(), lastPaneSelected == 1, false);
+            if (entry == null) return;
+            boolean pane1 = lastPaneSelected == 1;
+            List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
+            int idx = history.indexOf(entry);
+            if (idx >= 0) {
+                if (pane1) pane1HistoryIndex = idx;
+                else pane2HistoryIndex = idx;
+            }
+            if (entry.isZip()) loadZipFolderInPane(entry.file(), entry.zipPath(), pane1, false);
+            else loadFolderInPane(entry.file(), pane1, false);
+            updateNavigationButtons();
             closeBookmarksDrawer();
         });
 
@@ -1470,17 +1589,15 @@ public class MainActivity extends AppCompatActivity {
         };
 
         findViewById(R.id.sidebarTitle).setOnClickListener(v -> uiHelper.showAboutDialog());
-        LinearLayout container = findViewById(R.id.storageContainer);
+        LinearLayout storageBox = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
+
         ArrayList<String> sidebarOptions = new ArrayList<>(Arrays.asList(getString(R.string.sidebar_extract), getString(R.string.ftp_server), getString(R.string.ftp_client), getString(R.string.color_picker), getString(R.string.sidebar_layout_inspector), getString(R.string.sidebar_wifi), getString(R.string.sidebar_tools), getString(R.string.settings)));
         ArrayList<Integer> sidebarIcons = new ArrayList<>(Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.wifi_24px, R.drawable.tools_24px, R.drawable.baseline_settings_24));
         SwipeRefreshLayout sidebarRefresh = findViewById(R.id.sidebarRefresh);
         if (sidebarRefresh != null) {
             sidebarRefresh.setOnRefreshListener(() -> {
-                try {
-                    StorageUtil.populateStorageUI(this, container);
-                } catch (Exception ignored) {
-                }
+                try { StorageUtil.populateStorageUI(this, storageBox); } catch (Exception ignored) { }
                 sidebarRefresh.setRefreshing(false);
             });
         }
@@ -1496,12 +1613,12 @@ public class MainActivity extends AppCompatActivity {
                     convertView = LayoutInflater.from(MainActivity.this).inflate(R.layout.item_dropdown_option, parent, false);
                 }
 
-                convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
-                convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-                if (position == 3 && Build.VERSION.SDK_INT < 24)
-                    convertView.setVisibility(View.GONE);
-                if (position == 4 && Build.VERSION.SDK_INT < 20)
-                    convertView.setVisibility(View.GONE);
+                if (position == 3 && Build.VERSION.SDK_INT < 24) convertView.setVisibility(View.GONE);
+                else if (position == 4 && Build.VERSION.SDK_INT < 20) convertView.setVisibility(View.GONE);
+                else {
+                    convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
+                    convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
+                }
                 return convertView;
             }
         });
@@ -1816,11 +1933,25 @@ public class MainActivity extends AppCompatActivity {
                             if (pathLayout.getVisibility() == View.VISIBLE) {
                                 pathLayout.setVisibility(View.GONE);
                                 filterBox.setVisibility(View.VISIBLE);
-                                if (filterBar != null) filterBar.requestFocus();
+                                if (filterBar != null) {
+                                    filterBar.requestFocus();
+                                    try {
+                                        android.view.inputmethod.InputMethodManager imm =
+                                                (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                        if (imm != null) imm.showSoftInput(filterBar, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                                    } catch (Exception ignored) {
+                                    }
+                                }
                             } else {
                                 pathLayout.setVisibility(View.VISIBLE);
                                 filterBox.setVisibility(View.GONE);
                                 if (filterBar != null) filterBar.setText("");
+                                try {
+                                    android.view.inputmethod.InputMethodManager imm =
+                                            (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                    if (imm != null) imm.hideSoftInputFromWindow(topBar.getWindowToken(), 0);
+                                } catch (Exception ignored) {
+                                }
                             }
                             break;
                         case 2:
@@ -1935,7 +2066,7 @@ public class MainActivity extends AppCompatActivity {
         handler.post(() -> {
             setupFilterBar();
             setupNavigationButtons();
-            StorageUtil.populateStorageUI(this, container);
+            StorageUtil.populateStorageUI(this, storageBox);
             File[] dir1Files = homeDir1.listFiles();
             if (dir1Files != null) {
                 File[] folders = homeDir1.listFiles(File::isDirectory);
@@ -1954,8 +2085,7 @@ public class MainActivity extends AppCompatActivity {
                         handler.post(() -> {
                             try {
                                 Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
-                                LinearLayout storageBox = findViewById(R.id.storageContainer);
-                                if (storageBox != null) StorageUtil.populateStorageUI(MainActivity.this, storageBox);
+                                StorageUtil.populateStorageUI(MainActivity.this, storageBox);
                             } catch (Exception ignored) {
                             }
                         });
@@ -1968,6 +2098,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         });
+        if ((checkForUpdates = settings.getBoolean("checkForUpdates", true))) UpdateUtil.checkForUpdates(false, this);
     }
 
     private File resolveStartupFolder(boolean pane1, File home) {
@@ -2060,7 +2191,7 @@ public class MainActivity extends AppCompatActivity {
         else {
             List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
             int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
-            if (historyIndex > 0) {
+            if (historyIndex > 0 && historyIndex <= history.size()) {
                 NavigationHistoryEntry entry = history.get(--historyIndex);
                 if (pane1) pane1HistoryIndex = historyIndex;
                 else pane2HistoryIndex = historyIndex;
@@ -2077,7 +2208,7 @@ public class MainActivity extends AppCompatActivity {
     public void navigateForward(boolean pane1) {
         List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
         int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
-        if (historyIndex < history.size() - 1) {
+        if (historyIndex >= -1 && historyIndex < history.size() - 1) {
             NavigationHistoryEntry entry = history.get(++historyIndex);
             if (pane1)
                 pane1HistoryIndex = historyIndex;
@@ -2092,11 +2223,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateNavigationButtons() {
-        boolean canGoBack = lastPaneSelected == 1 ? pane1HistoryIndex > 0 : pane2HistoryIndex > 0;
+        int backIndex = lastPaneSelected == 1 ? pane1HistoryIndex : pane2HistoryIndex;
+        int backSize = lastPaneSelected == 1 ? pane1History.size() : pane2History.size();
+        boolean canGoBack = backIndex > 0 && backIndex <= backSize;
         boolean canGoForward = lastPaneSelected == 1 ? pane1HistoryIndex < pane1History.size() - 1
                 : pane2HistoryIndex < pane2History.size() - 1;
         findViewById(R.id.backButton).setEnabled(canGoBack);
         findViewById(R.id.forwardButton).setEnabled(canGoForward);
+    }
+
+    private void pushNavigationHistory(boolean pane1, NavigationHistoryEntry entry) {
+        List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
+        int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
+        if (historyIndex < -1) historyIndex = -1;
+        if (historyIndex > history.size() - 1) historyIndex = history.size() - 1;
+        while (history.size() > historyIndex + 1) {
+            history.remove(history.size() - 1);
+        }
+        if (!history.isEmpty() && history.get(history.size() - 1).equals(entry)) {
+            historyIndex = history.size() - 1;
+        } else {
+            history.add(entry);
+            historyIndex = history.size() - 1;
+        }
+        if (pane1) pane1HistoryIndex = historyIndex;
+        else pane2HistoryIndex = historyIndex;
+        refreshHistoryTab();
+    }
+
+    private void refreshHistoryTab() {
+        try {
+            if (historyAdapter != null) {
+                historyAdapter.setData(lastPaneSelected == 1 ? pane1History : pane2History);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
@@ -2235,23 +2396,13 @@ public class MainActivity extends AppCompatActivity {
             currentPane1Files = files;
             pane1Folder = folder;
             if (addToHistory) {
-                while (pane1History.size() > pane1HistoryIndex + 1) {
-                    pane1History.remove(pane1History.size() - 1);
-                }
-                pane1History.add(new NavigationHistoryEntry(folder, false, null));
-                historyAdapter.notifyDataSetChanged();
-                pane1HistoryIndex++;
+                pushNavigationHistory(true, new NavigationHistoryEntry(folder, false, null));
             }
         } else {
             currentPane2Files = files;
             pane2Folder = folder;
             if (addToHistory) {
-                while (pane2History.size() > pane2HistoryIndex + 1) {
-                    pane2History.remove(pane2History.size() - 1);
-                }
-                pane2History.add(new NavigationHistoryEntry(folder, false, null));
-                historyAdapter.notifyDataSetChanged();
-                pane2HistoryIndex++;
+                pushNavigationHistory(false, new NavigationHistoryEntry(folder, false, null));
             }
         }
         setCurrentFolder(folder, files);
@@ -2313,21 +2464,13 @@ public class MainActivity extends AppCompatActivity {
                 currentPane1ZipEntries = entries;
                 pane1Folder = zipFile;
                 if (addToHistory) {
-                    while (pane1History.size() > pane1HistoryIndex + 1) {
-                        pane1History.remove(pane1History.size() - 1);
-                    }
-                    pane1History.add(new NavigationHistoryEntry(zipFile, true, path));
-                    pane1HistoryIndex++;
+                    pushNavigationHistory(true, new NavigationHistoryEntry(zipFile, true, path));
                 }
             } else {
                 currentPane2ZipEntries = entries;
                 pane2Folder = zipFile;
                 if (addToHistory) {
-                    while (pane2History.size() > pane2HistoryIndex + 1) {
-                        pane2History.remove(pane2History.size() - 1);
-                    }
-                    pane2History.add(new NavigationHistoryEntry(zipFile, true, path));
-                    pane2HistoryIndex++;
+                    pushNavigationHistory(false, new NavigationHistoryEntry(zipFile, true, path));
                 }
             }
 
@@ -2534,6 +2677,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         try {
+            if (Build.VERSION.SDK_INT > 32) {
+                registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                        Context.RECEIVER_NOT_EXPORTED);
+            } else
+                registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            checkPendingUpdateDownload();
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
@@ -2643,17 +2792,33 @@ public class MainActivity extends AppCompatActivity {
         });
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String historyStr = prefs.getString("search_history", "");
-        List<String> historyList = new ArrayList<>(Arrays.asList(historyStr.split("\n")));
-        if (historyList.size() == 1 && historyList.get(0).isEmpty()) {
-            historyList.clear();
-        }
+        java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> historyItems =
+                io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line,
-                historyList);
+                new ArrayList<>());
         searchQuery.setAdapter(adapter);
 
-        searchHistoryDropdown.setOnClickListener(v -> searchQuery.showDropDown());
+        searchHistoryDropdown.setOnClickListener(v -> {
+            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
+                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN);
+            if (hist.isEmpty()) {
+                Extensions.showMessage(this, R.string.no_files_found);
+                return;
+            }
+            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(this, searchQuery, hist,
+                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+                        @Override
+                        public void onSelect(String query) {
+                            searchQuery.setText(query);
+                            searchQuery.setSelection(query.length());
+                        }
+                        @Override
+                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
+                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(MainActivity.this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN, items);
+                        }
+                    });
+        });
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(getString(android.R.string.search_go))
@@ -2671,12 +2836,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 String query = q.toString();
-                historyList.remove(query);
-                historyList.add(0, query);
-                if (historyList.size() > 20) {
-                    historyList.remove(historyList.size() - 1);
-                }
-                prefs.edit().putString("search_history", TextUtils.join("\n", historyList)).apply();
+                io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN, query);
 
                 boolean subfolders = searchSubfolders.isChecked();
                 boolean mCase = matchCase.isChecked();
@@ -3058,23 +3218,58 @@ public class MainActivity extends AppCompatActivity {
         askBookmarkTabToggle.setChecked(settings.getBoolean("ask_bookmark_tab", false));
         askBookmarkTabToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ask_bookmark_tab", isChecked).apply());
 
+        android.widget.EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
+        if (searchHistoryLimitEt != null) {
+            int limit = settings.getInt("search_history_limit", 50);
+            searchHistoryLimitEt.setText(String.valueOf(limit));
+        }
+
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
         setupAppearanceSettings(settingsDialog, settings);
+        setupLanguageSettings(settingsDialog);
         setupFolderSettings(settingsDialog, settings);
         setupFileOpsSettings(settingsDialog, settings);
         setupAccessSettings(settingsDialog, settings);
+
+        View checkUpdateNow = settingsDialog.findViewById(R.id.checkUpdateNow);
+        CompoundButton updateSwitch = settingsDialog.findViewById(R.id.checkUpdatesToggle);
+        updateSwitch.setChecked(checkForUpdates);
+        updateSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> checkUpdateNow.setVisibility((checkForUpdates = isChecked) ? View.GONE : View.VISIBLE));
+        checkUpdateNow.setVisibility(checkForUpdates ? View.GONE : View.VISIBLE);
+        checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, this));
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
-        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.settings)).setView(settingsDialog).create();
+        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.settings)).setView(settingsDialog).create();
         settingsAlert.setOnDismissListener(d -> {
             saveSuCommand(settingsDialog);
             saveDateFormat(settingsDialog);
+            saveSearchHistoryLimit(settingsDialog);
             refreshFileLists();
         });
         settingsAlert.show();
+    }
+
+    private void setupLanguageSettings(ScrollView root) {
+        AutoCompleteTextView languageTv = root.findViewById(R.id.languageTv);
+        String[] langTags = {"", "en", "ru", "zh-CN"};
+        String[] langLabels = {getString(R.string.language_system), "English", "Русский", "中文 (简体)"};
+        languageTv.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, langLabels));
+        String current = AppCompatDelegate.getApplicationLocales().toLanguageTags();
+        int selected = 0;
+        for (int i = 0; i < langTags.length; i++) {
+            if (langTags[i].equals(current)) {
+                selected = i;
+                break;
+            }
+        }
+        languageTv.setText(langLabels[selected], false);
+        languageTv.setOnItemClickListener((p, v, pos, id) ->
+                AppCompatDelegate.setApplicationLocales(langTags[pos].isEmpty()
+                        ? LocaleListCompat.getEmptyLocaleList()
+                        : LocaleListCompat.forLanguageTags(langTags[pos])));
     }
 
     private void setupAppearanceSettings(ScrollView root, SharedPreferences settings) {
@@ -3187,6 +3382,20 @@ public class MainActivity extends AppCompatActivity {
             new SimpleDateFormat(pattern, Locale.getDefault());
             PreferenceManager.getDefaultSharedPreferences(this).edit()
                     .putString("date_format", pattern).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void saveSearchHistoryLimit(ScrollView root) {
+        try {
+            android.widget.EditText et = root.findViewById(R.id.searchHistoryLimitEt);
+            if (et == null || et.getText() == null) return;
+            String s = et.getText().toString().trim();
+            if (s.isEmpty()) return;
+            int v = Integer.parseInt(s);
+            if (v < 5) v = 5;
+            if (v > 500) v = 500;
+            PreferenceManager.getDefaultSharedPreferences(this).edit().putInt("search_history_limit", v).apply();
         } catch (Exception ignored) {
         }
     }
@@ -3496,7 +3705,6 @@ public class MainActivity extends AppCompatActivity {
         TextInputLayout filterBox =
                 UiFields.box(this, "Filter...");
         EditText filterBar = UiFields.field(filterBox, 0);
-        filterBar.setVisibility(View.GONE);
         filterBox.setVisibility(View.GONE);
         filterBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         filterBar.setSingleLine(true);
@@ -3585,7 +3793,7 @@ public class MainActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(32, 32, 32, 32);
 
-        String[] sortOptions = { "Name", "Size", "Date", "Type" };
+        String[] sortOptions = { rss.getString(R.string.name), rss.getString(R.string.size), rss.getString(R.string.sort_date), rss.getString(R.string.type) };
         RadioGroup radioGroup = new RadioGroup(this);
         for (int i = 0; i < sortOptions.length; i++) {
             RadioButton rb = new RadioButton(this);

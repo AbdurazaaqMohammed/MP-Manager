@@ -90,24 +90,57 @@ public class EditFloatingMenusActivity extends AppCompatActivity implements Star
     }
 
     private void initializeLogic() {
-        setTitle("Edit floating menus");
-        Toast.makeText(this, "Use the menu logo to slide up and down to change the menu sequence", Toast.LENGTH_LONG).show();
+        setTitle(getString(R.string.edit_floating_menus));
+        Toast.makeText(this, R.string.menu_seq, Toast.LENGTH_LONG).show();
         _load_shortcut_keys();
     }
 
 
-    @Override
-    public void requestDrag(RecyclerView.ViewHolder viewHolder) {
-        touchHelper.startDrag(viewHolder);
+	@Override
+	public void requestDrag(RecyclerView.ViewHolder viewHolder) {
+		touchHelper.startDrag(viewHolder);
 
-    }
+	}
+
+	private boolean insertMissingButton(ArrayList<HashMap<String, Object>> items, String id, String title, String afterId) {
+		for (HashMap<String, Object> item : items) {
+			if (id.equals(item.get("id"))) return false;
+		}
+		int at = items.size();
+		if (afterId != null) {
+			int anchor = indexOfMenuId(items, afterId);
+			if (anchor < 0) anchor = indexOfMenuId(items, "panel_btn_paste");
+			at = anchor >= 0 ? anchor + 1 : Math.min(3, items.size());
+		}
+		if (at < 0) at = 0;
+		if (at > items.size()) at = items.size();
+		HashMap<String, Object> entry = new HashMap<>();
+		entry.put("id", id);
+		entry.put("title", title);
+		entry.put("disabled", false);
+		items.add(at, entry);
+		return true;
+	}
+
+	private int indexOfMenuId(ArrayList<HashMap<String, Object>> items, String id) {
+		for (int i = 0; i < items.size(); i++) {
+			if (id.equals(items.get(i).get("id"))) return i;
+		}
+		return -1;
+	}
 
 
-    public void _load_shortcut_keys() {
+	public void _load_shortcut_keys() {
         SharedPreferences prefs = getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
         String jsonConfig = prefs.getString("menu_order", null);
         ArrayList<HashMap<String, Object>> menu_items = new Gson().fromJson(jsonConfig, new TypeToken<ArrayList<HashMap<String, Object>>>() {
         }.getType());
+        if (menu_items == null) menu_items = new ArrayList<>();
+        boolean changed = insertMissingButton(menu_items, "id_btn", "ID", "panel_btn_paste");
+        changed |= insertMissingButton(menu_items, "goto_id_btn", "Goto ID", "id_btn");
+        if (changed) {
+            prefs.edit().putString("menu_order", new Gson().toJson(menu_items)).apply();
+        }
         try {
             RecyclerViewAdapter mAdapter = new RecyclerViewAdapter(menu_items, this, this);
             ItemTouchHelper.Callback callback = new ItemMoveCallback(mAdapter);

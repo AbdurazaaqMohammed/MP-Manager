@@ -43,6 +43,7 @@ public class FileIconLoader {
     private static final LruCache<String, Drawable> iconCache = new LruCache<>(100);
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
+            cachedDexIcon, cachedArscIcon,
             cachedMusicIcon, cachedArchiveIcon, cachedPdfIcon, cachedTextIcon, cachedFileIcon;
     private static int cachedIconTheme = -1;
     private static int cachedIconBucket = -1;
@@ -113,6 +114,10 @@ public class FileIconLoader {
             fileIconView.setImageDrawable(cachedArchiveIcon);
         } else if (".pdf".equals(ext)) {
             fileIconView.setImageDrawable(cachedPdfIcon);
+        } else if(".dex".equals(ext)) {
+            fileIconView.setImageDrawable(cachedDexIcon);
+        } else if(".arsc".equals(ext)) {
+            fileIconView.setImageDrawable(cachedArscIcon);
         } else if (FileUtils.matchExt(ext, FileUtils.TEXT_EXTS)) {
             fileIconView.setImageDrawable(cachedTextIcon);
         } else {
@@ -172,6 +177,8 @@ public class FileIconLoader {
         cachedImageIcon   = badge(res, density, R.drawable.image_24px, 0xFF6A1B9A, true);
         cachedVideoIcon   = badge(res, density, R.drawable.video_24px, 0xFFC62828, true);
         cachedMusicIcon   = badge(res, density, R.drawable.music_24px, 0xFF00897B, true);
+        cachedArscIcon    = badge(res, density, R.drawable.stacks_24px, 0xFF9A6A00, true);
+        cachedDexIcon     = badge(res, density, R.drawable.code_24px, 0xFF549395, true);
         cachedArchiveIcon = badge(res, density, R.drawable.baseline_folder_zip_24, 0xFFE65100, true);
         cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
         cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);

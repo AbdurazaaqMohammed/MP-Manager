@@ -36,7 +36,7 @@
             <ImageView
                 android:layout_width="wrap_content"
                 android:id="@+id/share"
-                android:contentDescription="@string/share"
+                android:contentDescription="@string/share_text"
                 app:tint="?attr/colorOnSurface"
                 android:background="?attr/selectableItemBackground"
                 android:layout_height="wrap_content"

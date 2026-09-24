@@ -9,7 +9,7 @@ public final class TextUtils {
     }
 
     public static boolean isEmpty(CharSequence str) {
-        return android.text.TextUtils.isEmpty(str);
+        return str == null || str.length() == 0;
     }
 
     public static boolean equals(CharSequence a, CharSequence b) {

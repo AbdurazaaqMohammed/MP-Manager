@@ -69,14 +69,14 @@ public class StorageUtil {
                         isPrimary = vol.isPrimary();
                     } catch (Exception ignored) {
                     }
-                    if (isPrimary) si.name = "Internal storage";
+                    if (isPrimary) si.name = ctx.getString(R.string.internal_storage);
                     else {
                         CharSequence desc = null;
                         try {
                             desc = vol.getDescription(ctx);
                         } catch (Exception ignored) {
                         }
-                        si.name = (TextUtils.isEmpty(desc)) ? "Storage" : desc.toString();
+                        si.name = (TextUtils.isEmpty(desc)) ? ctx.getString(R.string.storage) : desc.toString();
                     }
 
                     StatFs statFs = new StatFs(si.path);

@@ -42,6 +42,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
@@ -365,26 +366,20 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 String[] items = new String[menuItems.size()];
                 String[] itemIds = new String[menuItems.size()];
                 for (int mi = 0; mi < menuItems.size(); mi++) {
-                    items[mi] = menuItems.get(mi).label;
-                    itemIds[mi] = menuItems.get(mi).id;
+                    items[mi] = menuItems.get(mi).label();
+                    itemIds[mi] = menuItems.get(mi).id();
                 }
 
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
 
-                GridView gridView = new GridView(context);
-                gridView.setNumColumns(2);
-                gridView.setBackgroundColor(Color.TRANSPARENT);
-                gridView.setPadding(16, 16, 16, 16);
-                gridView.setAdapter(new DialogAdapter(context, menuItems, isInZip));
-                gridView.setVerticalSpacing(40);
-                AlertDialog dialog = dialogUtil.getDialogBuilder()
-                        .setTitle(fileName)
-                        .setView(gridView)
-                        .create();
-
-                gridView.setOnItemClickListener((parent1, view, position1, id) -> {
-                    dialog.dismiss();
+                BottomSheetDialog menuSheet = new BottomSheetDialog(context);
+                View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
+                ((TextView) menuView.findViewById(R.id.fileMenuTitle)).setText(fileName);
+                RecyclerView menuList = menuView.findViewById(R.id.fileMenuList);
+                menuList.setLayoutManager(new LinearLayoutManager(context));
+                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, position1 -> {
+                    menuSheet.dismiss();
                     try {
                         String actionId = itemIds[position1];
                         switch (actionId) {
@@ -416,7 +411,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             case FileMenuOrder.CHECK:
                                 if (isInZip) {
                                     if (multi) {
-                                        Extensions.showMessage(context, "Checksums for multiple zip entries not supported");
+                                        Extensions.showMessage(context, R.string.checksums_for_multiple_zip_entries_not_supported);
                                     } else {
                                         ZipEntryInfo zipEntry = (ZipEntryInfo) item;
                                         if (!zipEntry.isDirectory()) {
@@ -455,7 +450,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             case FileMenuOrder.BATCH_CROP: {
                                 List<File> images = selectedImageFiles();
                                 if (images.isEmpty()) {
-                                    Extensions.showMessage(context, "No images selected");
+                                    Extensions.showMessage(context, R.string.no_images_selected);
                                     return;
                                 }
                                 showBatchCropDialog(images);
@@ -464,7 +459,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             case FileMenuOrder.BATCH_EXIF: {
                                 List<File> images = selectedJpegFiles();
                                 if (images.isEmpty()) {
-                                    Extensions.showMessage(context, "No JPEG files selected");
+                                    Extensions.showMessage(context, R.string.no_jpeg_files_selected);
                                     return;
                                 }
                                 showBatchExifDialog(images);
@@ -473,7 +468,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             case FileMenuOrder.BATCH_STRIP_META: {
                                 List<File> images = selectedJpegFiles();
                                 if (images.isEmpty()) {
-                                    Extensions.showMessage(context, "No JPEG files selected");
+                                    Extensions.showMessage(context, R.string.no_jpeg_files_selected);
                                     return;
                                 }
                                 confirmBatchStrip(images);
@@ -481,7 +476,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             }
                             case FileMenuOrder.CMD:
                                 if (isInZip) {
-                                    Extensions.showMessage(context, "Command Helper not supported for zip entries");
+                                    Extensions.showMessage(context, R.string.command_helper_not_supported_for_zip_entries);
                                     return;
                                 }
                                 ArrayList<String> cmdFilePaths = new ArrayList<>();
@@ -542,8 +537,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
-                });
-                dialogUtil.styleAlertDialog(dialog);
+                }));
+                menuSheet.setContentView(menuView);
+                context.runOnUiThread(menuSheet::show);
                 return true;
             };
             context.handler.post(() -> {
@@ -643,10 +639,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         hInput.setSingleLine(true);
         root.addView(hInput);
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle("Crop " + images.size() + " images")
+                .setTitle(context.getString(R.string.crop_X_imgs,  images.size()))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Crop", (d, w) -> {
+                .setPositiveButton(R.string.crop, (d, w) -> {
                     int reqW;
                     int reqH;
                     try {
@@ -654,7 +650,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         reqH = Integer.parseInt(hInput.getText().toString().trim());
                         if (reqW <= 0 || reqH <= 0) throw new NumberFormatException();
                     } catch (NumberFormatException e) {
-                        Extensions.showMessage(context, "Enter width and height");
+                        Extensions.showMessage(context, R.string.enter_width_and_height);
                         return;
                     }
                     ArrayList<File> targets = new ArrayList<>(images);
@@ -667,11 +663,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                     if (needJni && !NativeToolManager.loadJpegtranJni(context)) {
                         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                                .setTitle("Crop quality")
-                                .setMessage("Lossless crop needs the JPEG tools download. Or crop now with standard quality.")
+                                .setTitle(R.string.crop_quality)
+                                .setMessage(R.string.jpegtran_info)
                                 .setNegativeButton(android.R.string.cancel, null)
-                                .setNeutralButton("Standard crop", (dd, ww) -> runBatchCrop(targets, reqW, reqH, true))
-                                .setPositiveButton("Lossless", (dd, ww) -> NativeToolManager.ensureJpegtran(context,
+                                .setNeutralButton(R.string.standard_crop, (dd, ww) -> runBatchCrop(targets, reqW, reqH, true))
+                                .setPositiveButton(R.string.lossless, (dd, ww) -> NativeToolManager.ensureJpegtran(context,
                                         new NativeToolManager.ReadyCallback() {
                                             public void onReady() {
                                                 runBatchCrop(targets, reqW, reqH, false);
@@ -774,7 +770,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 pm.dismiss();
                 int doneCount = done;
                 int skippedCount = skipped;
-                context.handler.post(() -> finishBatchOp("Cropped " + doneCount + ", skipped " + skippedCount));
+                context.handler.post(() -> finishBatchOp(context.getString(R.string.cropped_xskippedx, doneCount, skippedCount)));
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(context).showError(e);
@@ -849,10 +845,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     private void confirmBatchStrip(List<File> images) {
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle("Remove metadata")
-                .setMessage("Strip metadata from " + images.size() + " files? Pixels stay identical.")
+                .setTitle(R.string.remove_metadata)
+                .setMessage(context.getString(R.string.strip_metadata_info, images.size()))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Strip", (d, w) -> runBatchStrip(new ArrayList<>(images)))
+                .setPositiveButton(R.string.remove, (d, w) -> runBatchStrip(new ArrayList<>(images)))
                 .create());
     }
 
@@ -871,7 +867,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             }
             pm.dismiss();
             int doneCount = done;
-            context.handler.post(() -> finishBatchOp("Stripped " + doneCount + " of " + images.size()));
+            context.handler.post(() -> finishBatchOp(context.getString(R.string.removed_metadata_fromxofx, doneCount, images.size())));
         }).start();
     }
 
@@ -1209,7 +1205,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             } catch (Exception ignored) {
             }
             String[] items = binary
-                    ? new String[]{context.getString(R.string.open_as_text), "Decode & open"}
+                    ? new String[]{context.getString(R.string.open_as_text), context.getString(R.string.decode_open)}
                     : new String[]{context.getString(R.string.open_as_text), context.getString(R.string.format_xml)};
             final boolean isBinary = binary;
             dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
@@ -1387,10 +1383,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             return;
         }
         if (!AccessManager.fileOpsOn(context)) {
-            Extensions.showMessage(context, "Cannot open: permission denied. Enable elevated file ops for system paths.");
+            Extensions.showMessage(context, R.string.cannot_open_permission_denied);
             return;
         }
-        Extensions.showMessage(context, "Reading with elevated access…");
+        Extensions.showMessage(context, R.string.reading_with_elevated_access);
         new Thread(() -> {
             try {
                 File staged = RootStaging.stageForRead(context, file.getAbsolutePath());
@@ -1412,7 +1408,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (readable != null && original != null
                 && !readable.getAbsolutePath().equals(original.getAbsolutePath())) {
             i.putExtra("rootOriginalPath", original.getAbsolutePath());
-            Extensions.showMessage(context, "Opened via root — Save writes back as root");
+            Extensions.showMessage(context, R.string.opened_with_root);
         }
         return i;
     }
@@ -1429,7 +1425,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     .putExtra("path", readable.getAbsolutePath());
             if (!readable.getAbsolutePath().equals(file.getAbsolutePath())) {
                 i.putExtra("rootOriginalPath", file.getAbsolutePath());
-                Extensions.showMessage(context, "Opened via root — Save writes back as root");
+                Extensions.showMessage(context, R.string.opened_with_root);
             }
             context.startActivity(i);
         });
@@ -1472,7 +1468,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     private void showSplitApkMenu(File readable, String displayName) {
-        String[] items = new String[] { "Install", "View", "Sign", "AntiSplit/merge to APK" };
+        String[] items = new String[] { context.rss.getString(R.string.install), context.rss.getString(R.string.view), context.rss.getString(R.string.sign), context.rss.getString(R.string.antisplit_merge_to_apk) };
         dialogUtil.styleAlertDialog(
                 dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog, which) -> {
                     dialog.dismiss();
@@ -1509,7 +1505,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                     }).start();
                                 } else {
                                     Extensions.showMessage(context, "Installing split APKs is not supported on this version of Android :(");
-                                    Extensions.showMessage(context, "You could try merging the APK then installing it");
+                                    context.handler.postDelayed(() -> Extensions.showMessage(context, "You could try merging the APK then installing it"), 1500);
                                 }
                                 break;
                             case 1:
@@ -1529,14 +1525,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     private void showArscOpenWith(File arscFile, File apkFile, String entryPath) {
-        String[] options = {"ARSC Editor Plus", "ARSC Editor", "Translation mode", "Resource querier"};
+        String[] options = {context.rss.getString(R.string.arsc_editor_plus), context.rss.getString(R.string.arsc_editor), context.rss.getString(R.string.translation_mode), context.rss.getString(R.string.resource_querier)};
         String[] modes = {
                 ArscEditorPlusActivity.MODE_PLUS,
                 ArscEditorPlusActivity.MODE_EDITOR,
                 ArscEditorPlusActivity.MODE_TRANSLATE,
                 ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle("Open with")
+                .setTitle(R.string.open_with)
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
                     Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
@@ -1621,11 +1617,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 context.loadFolderInPane(ogFolder, pane1);
                             } catch (Exception e) {
                                 if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                                else Extensions.showMessage(context, "Failed to rename " + fileName);
+                                else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
                             }
                         } else {
                             if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                            else Extensions.showMessage(context, "Failed to rename " + fileName);
+                            else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
                         }
                     }
                 });
@@ -1747,7 +1743,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     new MaterialAlertDialogBuilder(context)
                             .setTitle(R.string.warning_dangerous_directory)
                             .setMessage(R.string.warn_delete_s)
-                            .setPositiveButton("Delete Anyway", (d, w) -> {
+                            .setPositiveButton(R.string.delete, (d, w) -> {
                                 if (sign[0]) SignWrapper.requireAuth(context, sw -> {
                                     wrapper[0] = sw;
                                     doDelete.run();

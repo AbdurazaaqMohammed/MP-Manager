@@ -58,6 +58,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         boolean pendingSearchRegex;
         boolean pendingSearchMatchCase;
         String rootOriginalPath;
+        String zipFilePath;
+        String zipEntryPath;
         boolean axml;
         List<ResEntry> resEntries;
         String pendingDecoded;
@@ -143,6 +145,12 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                 if (t.rootOriginalPath != null && !t.rootOriginalPath.isEmpty()) {
                     o.put("rootOriginal", t.rootOriginalPath);
                 }
+                if (t.zipFilePath != null && !t.zipFilePath.isEmpty()) {
+                    o.put("zipFile", t.zipFilePath);
+                }
+                if (t.zipEntryPath != null && !t.zipEntryPath.isEmpty()) {
+                    o.put("zipEntry", t.zipEntryPath);
+                }
                 o.put("modified", t.modified);
                 boolean untitledWithText = t.file == null && t.fileUri == null && t.loaded
                         && t.content != null && !t.content.isEmpty();
@@ -197,6 +205,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                         t.title = new File(savedRootOriginal).getName() + " (root)";
                     }
                 }
+                String savedZipFile = o.optString("zipFile", null);
+                if (savedZipFile != null && !savedZipFile.isEmpty()) t.zipFilePath = savedZipFile;
+                String savedZipEntry = o.optString("zipEntry", null);
+                if (savedZipEntry != null && !savedZipEntry.isEmpty()) t.zipEntryPath = savedZipEntry;
                 t.modified = o.optBoolean("modified", false);
                 if (o.has("content")) {
                     t.content = o.getString("content");
@@ -451,6 +463,14 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
             if (existing.loadFailed) {
                 existing.loaded = false;
             }
+            String existingZipFile = intent.getStringExtra("zf");
+            String existingZipEntry = intent.getStringExtra("zipEntryPath");
+            if ((existing.zipFilePath == null || existing.zipFilePath.isEmpty()) && existingZipFile != null && !existingZipFile.isEmpty()) {
+                existing.zipFilePath = existingZipFile;
+            }
+            if ((existing.zipEntryPath == null || existing.zipEntryPath.isEmpty()) && existingZipEntry != null && !existingZipEntry.isEmpty()) {
+                existing.zipEntryPath = existingZipEntry;
+            }
             int idx = tabs.indexOf(existing);
             selectTab(idx);
             updateTabsList();
@@ -480,6 +500,10 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
         tab.fileUri = uri;
         tab.axml = isAxml;
         tab.resEntries = entries;
+        String zipFileExtra = intent.getStringExtra("zf");
+        String zipEntryExtra = intent.getStringExtra("zipEntryPath");
+        if (zipFileExtra != null && !zipFileExtra.isEmpty()) tab.zipFilePath = zipFileExtra;
+        if (zipEntryExtra != null && !zipEntryExtra.isEmpty()) tab.zipEntryPath = zipEntryExtra;
         if (intent.hasExtra("search")) {
             tab.pendingSearch = intent.getStringExtra("search");
             tab.pendingSearchRegex = intent.getBooleanExtra("searchRegex", false);
@@ -815,6 +839,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                             Intent resultIntent = new Intent();
                             resultIntent.setData(currentFileUri);
                             resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            if (t.zipFilePath != null) resultIntent.putExtra("zipFilePath", t.zipFilePath);
+                            if (t.zipEntryPath != null) resultIntent.putExtra("zipEntryPath", t.zipEntryPath);
                             setResult(757, resultIntent);
                             finish();
                         });
@@ -866,6 +892,8 @@ public class TextEditorActivity extends AppCompatActivity implements UnifiedEdit
                             Intent resultIntent = new Intent();
                             resultIntent.setData(currentFileUri);
                             resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            if (t.zipFilePath != null) resultIntent.putExtra("zipFilePath", t.zipFilePath);
+                            if (t.zipEntryPath != null) resultIntent.putExtra("zipEntryPath", t.zipEntryPath);
                             setResult(757, resultIntent);
                             finish();
                         });

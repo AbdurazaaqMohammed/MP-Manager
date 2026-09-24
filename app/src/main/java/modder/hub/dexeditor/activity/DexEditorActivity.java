@@ -169,6 +169,7 @@ public class DexEditorActivity extends AppCompatActivity {
     public final List<TreeNode> searchNodes = new ArrayList<>();
     public String pendingSearchPath = null;
     public String pendingStringSearchQuery = null;
+    public Runnable pendingUsageSearch = null;
     public TabsAdapter tabsAdapter;
     private boolean needsModifiedTreeRebuild = true;
     private boolean needsExplorerRefresh = false;
@@ -378,7 +379,7 @@ public class DexEditorActivity extends AppCompatActivity {
         reduceDragSensitivity(explorerViewPager);
 
         new TabLayoutMediator(explorerTabLayout, explorerViewPager, (tab, position) -> {
-            String[] titles = {"Explorer", "History", "Search", "Strings"};
+            String[] titles = {getString(R.string.explorer), getString(R.string.history), getString(R.string.search), getString(R.string.strings_tab)};
             tab.setText(titles[position]);
         }).attach();
 
@@ -440,7 +441,8 @@ public class DexEditorActivity extends AppCompatActivity {
         File[] cacheFiles = getCacheDir().listFiles();
         if (cacheFiles != null) {
             for (File file : cacheFiles) {
-                if (file.isDirectory() && file.getName().startsWith("dex_editor_")) {
+                if (file.isDirectory() && file.getName().startsWith("dex_editor_")
+                        && !ClassTree.isWorkDirClaimed(file.getAbsolutePath())) {
                     deleteRecursive(file);
                 }
             }
@@ -455,7 +457,7 @@ public class DexEditorActivity extends AppCompatActivity {
         } else fabDelete.setColorFilter(new LightingColorFilter(Color.BLACK, 0xFFFFFFFF));
         fabDelete.hide();
 
-        String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new Random().nextInt(9000) + 1000);
+        String uniqueId = System.currentTimeMillis() + "_" + System.nanoTime() + "_" + (new Random().nextInt(9000) + 1000);
         File cacheDir = new File(getCacheDir(), "dex_editor_" + uniqueId);
 
         if (dexPaths != null && !dexPaths.isEmpty()) {
@@ -2151,8 +2153,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
     /** Switches to the Search tab and runs a "String" type search for the given exact text. */
     public void searchStringInClasses(String query) {
-        if (explorerViewPager == null) return;
-        explorerViewPager.setCurrentItem(2, true);
+        showSearchTab();
         Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
         if (f instanceof SearchFragment) {
             ((SearchFragment) f).runStringSearch(query);
@@ -2160,6 +2161,72 @@ public class DexEditorActivity extends AppCompatActivity {
             // Fragment not created/attached yet - SearchFragment.onResume() will pick this up.
             pendingStringSearchQuery = query;
         }
+    }
+
+    private void runUsageOnSearchTab(Runnable search) {
+        showSearchTab();
+        Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+        if (f instanceof SearchFragment && f.isAdded()) {
+            search.run();
+        } else {
+            pendingUsageSearch = search;
+        }
+    }
+
+    public void showSearchTab() {
+        try {
+            if (viewPager != null && viewPager.getVisibility() == View.VISIBLE) hideEditor();
+        } catch (Exception ignored) {
+        }
+        try {
+            if (explorerViewPager != null) explorerViewPager.setCurrentItem(2, true);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void searchMethodUsages(String slashClass, String methodName, String proto, boolean includeOverrides) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runMethodUsageSearch(slashClass, methodName, proto, includeOverrides);
+            }
+        });
+    }
+
+    public void searchMethodOverrides(String slashClass, String methodName, String proto) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runOverrideSearch(slashClass, methodName, proto);
+            }
+        });
+    }
+
+    public void searchFieldUsages(String slashClass, String fieldName, String fieldType, int mode) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runFieldUsageSearch(slashClass, fieldName, fieldType, mode);
+            }
+        });
+    }
+
+    public void searchClassUsages(String slashClass) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runClassUsageSearch(slashClass);
+            }
+        });
+    }
+
+    public void searchSubclasses(String slashClass) {
+        runUsageOnSearchTab(() -> {
+            Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+            if (f instanceof SearchFragment) {
+                ((SearchFragment) f).runSubclassSearch(slashClass);
+            }
+        });
     }
 
     private static class ExplorerTabAdapter extends FragmentStateAdapter {
@@ -2336,6 +2403,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
         @Override
         public void run() {
+            ClassTree.claimWorkDir(cachePath);
             try {
                 classTree = new ClassTree(paths, cachePath);
                 // Pre-build trees in background to avoid UI lag
@@ -2362,6 +2430,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 showProcessingProgress(false);
                 runOnUiThread(() -> showErrorDialog(e));
             } finally {
+                ClassTree.releaseWorkDir(cachePath);
                 showProcessingProgress(false);
             }
         }

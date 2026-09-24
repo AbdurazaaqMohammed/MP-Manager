@@ -43,7 +43,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -140,13 +139,10 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	private void setupFloatingMenuPreference() {
 		Preference floatingMenuPref = findPreference(KEY_FLOATING_MENU);
 		if (floatingMenuPref != null) {
-			floatingMenuPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-				@Override
-				public boolean onPreferenceClick(@NonNull Preference preference) {
-					startActivity(new Intent(getActivity(), EditFloatingMenusActivity.class));
-					return true;
-				}
-			});
+			floatingMenuPref.setOnPreferenceClickListener(preference -> {
+                startActivity(new Intent(getActivity(), EditFloatingMenusActivity.class));
+                return true;
+            });
 		}
 	}
 	

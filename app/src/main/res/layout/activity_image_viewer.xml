@@ -114,7 +114,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackground"
             android:src="@drawable/baseline_share_24"
-            android:contentDescription="@string/share" />
+            android:contentDescription="@string/share_text" />
 
         <ImageButton
             android:id="@+id/btnOpenWith"

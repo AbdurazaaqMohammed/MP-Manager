@@ -152,6 +152,20 @@ public class ClassTree {
     private Map<String, HashSet<String>> deletedClassJson = new HashMap<>();
     private final Map<String, String> typeToDexMap = new HashMap<>();
 
+    private static final Set<String> activeWorkDirs = new HashSet<>();
+
+    public static synchronized void claimWorkDir(String workDir) {
+        if (workDir != null) activeWorkDirs.add(workDir);
+    }
+
+    public static synchronized void releaseWorkDir(String workDir) {
+        if (workDir != null) activeWorkDirs.remove(workDir);
+    }
+
+    public static synchronized boolean isWorkDirClaimed(String workDir) {
+        return workDir != null && activeWorkDirs.contains(workDir);
+    }
+
     public static class CompilationOptions {
         public String dexVersion = "Keep the same";
         public boolean removeAllDebug = false;
@@ -239,6 +253,8 @@ public class ClassTree {
     // save all classes names in JSON during loading of initial dexes
     private void saveAllClassesJson() throws IOException {
         File file = new File(ALL_CLASSES_JSON);
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists()) parent.mkdirs();
         if (file.exists()) {
             file.delete();
         }
@@ -273,6 +289,8 @@ public class ClassTree {
     private void saveDeletedClasses() {
         try {
             File file = new File(DELETED_CLASSES_JSON);
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists()) parent.mkdirs();
             if (file.exists()) {
                 file.delete();
             }
@@ -790,8 +808,8 @@ public class ClassTree {
         tree = null;
         curFile = null;
         
-        // Clean up cache directory
-        if (workDir != null) {
+        // Clean up cache directory (never while a load is still using it)
+        if (workDir != null && !isWorkDirClaimed(workDir)) {
             deleteRecursive(new File(workDir));
         }
         

@@ -2,13 +2,18 @@ package io.github.abdurazaaqmohammed.arsc;
 
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,11 +23,21 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.TypeBlock;
+import com.reandroid.arsc.model.ResourceEntry;
+
+import java.util.Iterator;
+import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
+import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.rosemoe.sora.event.ContentChangeEvent;
+import io.github.rosemoe.sora.event.ScrollEvent;
+import io.github.rosemoe.sora.event.SelectionChangeEvent;
+import io.github.rosemoe.sora.text.Cursor;
+import io.github.rosemoe.sora.widget.CodeEditor;
 
 public class ArscTextActivity extends AppCompatActivity {
 
@@ -42,6 +57,11 @@ public class ArscTextActivity extends AppCompatActivity {
     private boolean applied;
     private boolean bufferDirty;
     private boolean loadingText;
+    private int loadToken;
+    private String currentHighlight;
+    private PopupWindow idPopup;
+    private final Handler selHandler = new Handler(Looper.getMainLooper());
+    private boolean menuSubscribed;
 
     private ImageButton barButton(int icon, String desc) {
         ImageButton b = new ImageButton(this);
@@ -173,6 +193,14 @@ public class ArscTextActivity extends AppCompatActivity {
             }
         });
         final TypeBlock tb = block;
+        currentHighlight = highlight;
+        loadBlockText();
+    }
+
+    private void loadBlockText() {
+        final TypeBlock tb = block;
+        final String highlight = currentHighlight;
+        final int token = ++loadToken;
         Extensions.showMessage(this, R.string.loading);
         new Thread(() -> {
             String text = ArscData.typeBlockText(tb, ArscData.TEXT_ENTRY_CAP);
@@ -184,7 +212,7 @@ public class ArscTextActivity extends AppCompatActivity {
             final String loaded = text;
             final int entryCount = count;
             runOnUiThread(() -> {
-                if (block != tb || fragment == null) return;
+                if (token != loadToken || block != tb || fragment == null) return;
                 loadingText = true;
                 try {
                     fragment.setText(loaded);
@@ -192,6 +220,7 @@ public class ArscTextActivity extends AppCompatActivity {
                 }
                 loadingText = false;
                 bufferDirty = false;
+                ensureMenuSubscribed();
                 if (highlight != null) {
                     String key = "\"" + highlight + "\"";
                     int idx = loaded.indexOf(key);
@@ -204,13 +233,7 @@ public class ArscTextActivity extends AppCompatActivity {
                         final int fLine = line;
                         final int fCol = idx - lineStart;
                         try {
-                            fragment.getEditor().post(() -> {
-                                try {
-                                    fragment.getEditor().jumpToLine(fLine);
-                                    fragment.getEditor().getCursor().set(fLine, fCol);
-                                } catch (Exception ignored) {
-                                }
-                            });
+                            fragment.navigateTo(fLine, fCol, key);
                         } catch (Exception ignored) {
                         }
                     }
@@ -278,10 +301,10 @@ public class ArscTextActivity extends AppCompatActivity {
             return;
         }
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Unsaved changes")
-                .setMessage("Save before exit?")
-                .setPositiveButton("Save", (d, w) -> applyText(this::finishWithResult))
-                .setNegativeButton("Discard", (d, w) -> finishWithResult())
+                .setTitle(R.string.unsaved_changes)
+                .setMessage(R.string.save_before_exit)
+                .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
+                .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
                 .setNeutralButton(android.R.string.cancel, null)
                 .show();
     }
@@ -291,8 +314,365 @@ public class ArscTextActivity extends AppCompatActivity {
         confirmExit();
     }
 
+    void openBlock(TypeBlock tb, String highlightName) {
+        if (tb == null || data == null) return;
+        if (bufferDirty) {
+            final TypeBlock target = tb;
+            final String hl = highlightName;
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.unsaved_changes)
+                    .setMessage(R.string.save_before_exit)
+                    .setPositiveButton(R.string.save, (d, w) -> applyText(() -> openBlockNow(target, hl)))
+                    .setNegativeButton(R.string.discard, (d, w) -> openBlockNow(target, hl))
+                    .setNeutralButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+        openBlockNow(tb, highlightName);
+    }
+
+    private void openBlockNow(TypeBlock tb, String highlightName) {
+        dismissIdPopup();
+        block = tb;
+        currentHighlight = highlightName;
+        bufferDirty = false;
+        applied = false;
+        try {
+            String label = ArscData.configLabel(tb);
+            String pkg = "";
+            try {
+                if (tb.getPackageBlock() != null) pkg = tb.getPackageBlock().getName();
+            } catch (Exception ignored) {
+            }
+            toolbar.setTitle(pkg.isEmpty() ? label : pkg + "/" + label);
+        } catch (Exception ignored) {
+        }
+        loadBlockText();
+    }
+
+    public void bindSelectionMenu(modder.hub.dexeditor.views.TextActionWindow window) {
+        if (window == null) return;
+        window.setArscIdHandler(new modder.hub.dexeditor.views.TextActionWindow.ArscIdHandler() {
+            @Override
+            public boolean isArscIdAvailable(String selectedText) {
+                return resolveArscEntry(selectedText) != null;
+            }
+
+            @Override
+            public void onArscIdClick(String selectedText) {
+                ResourceEntry re = resolveArscEntry(selectedText);
+                if (re == null) return;
+                try {
+                    String hex = re.getHexId();
+                    CopyUtil.copyToClipboard(ArscTextActivity.this, hex);
+                    Extensions.showMessage(ArscTextActivity.this, "Copied " + hex);
+                } catch (Exception ignored) {
+                }
+            }
+
+            @Override
+            public void onArscGotoIdClick(String selectedText) {
+                ResourceEntry re = resolveArscEntry(selectedText);
+                if (re == null) return;
+                String name = normalizeArscName(selectedText);
+                if (name == null) return;
+                String hex;
+                try {
+                    hex = re.getHexId();
+                } catch (Exception e) {
+                    return;
+                }
+                List<ArscData.ConfigValue> configs = data.configValues(re);
+                CodeEditor ed;
+                try {
+                    ed = fragment == null ? null : fragment.getEditor();
+                } catch (Exception e) {
+                    ed = null;
+                }
+                if (ed == null) return;
+                int anchorLine;
+                int anchorCol;
+                try {
+                    Cursor cursor = ed.getCursor();
+                    if (cursor == null || !cursor.isSelected()) return;
+                    anchorLine = cursor.getRightLine();
+                    anchorCol = cursor.getRightColumn();
+                } catch (Exception e) {
+                    return;
+                }
+                showIdPopup(ed, re, name, hex, configs, anchorLine, anchorCol);
+            }
+        });
+    }
+
+    private String normalizeArscName(String sel) {
+        if (sel == null) return null;
+        String name = sel.trim();
+        if (name.length() > 1 && name.startsWith("\"") && name.endsWith("\"")) {
+            name = name.substring(1, name.length() - 1).trim();
+        }
+        if (name.isEmpty() || name.length() > 64 || !name.matches("[A-Za-z_][A-Za-z0-9_]*")) return null;
+        return name;
+    }
+
+    private ResourceEntry resolveArscEntry(String sel) {
+        String name = normalizeArscName(sel);
+        if (name == null || data == null || block == null) return null;
+        final String resName = name;
+        ResourceEntry found = null;
+        String blockType = null;
+        try {
+            blockType = block.getTypeName();
+        } catch (Exception ignored) {
+        }
+        try {
+            Iterator<ResourceEntry> it = data.table.getResources();
+            while (it.hasNext()) {
+                ResourceEntry re;
+                try {
+                    re = it.next();
+                } catch (Exception e) {
+                    continue;
+                }
+                if (re == null) continue;
+                String rn;
+                try {
+                    rn = re.getName();
+                } catch (Exception e) {
+                    continue;
+                }
+                if (!resName.equals(rn)) continue;
+                if (found == null) found = re;
+                try {
+                    if (blockType != null && blockType.equals(re.getType())) {
+                        found = re;
+                        break;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return found;
+    }
+
+    private void ensureMenuSubscribed() {
+        if (menuSubscribed || fragment == null) return;
+        CodeEditor ed;
+        try {
+            ed = fragment.getEditor();
+        } catch (Exception e) {
+            ed = null;
+        }
+        if (ed == null) {
+            selHandler.postDelayed(this::ensureMenuSubscribed, 200);
+            return;
+        }
+        menuSubscribed = true;
+        try {
+            ed.subscribeEvent(SelectionChangeEvent.class, (event, unsubscribe) -> dismissIdPopup());
+            ed.subscribeEvent(ContentChangeEvent.class, (event, unsubscribe) -> dismissIdPopup());
+            ed.subscribeEvent(ScrollEvent.class, (event, unsubscribe) -> dismissIdPopup());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void dismissIdPopup() {
+        if (idPopup != null) {
+            try {
+                idPopup.dismiss();
+            } catch (Exception ignored) {
+            }
+            idPopup = null;
+        }
+    }
+
+    private void showIdPopup(CodeEditor ed, ResourceEntry entry, String resName, String hexId,
+                             List<ArscData.ConfigValue> configs, int anchorLine, int anchorCol) {
+        dismissIdPopup();
+        try {
+            if (ed == null || !ed.getCursor().isSelected()) return;
+        } catch (Exception e) {
+            return;
+        }
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(4);
+        list.setPadding(pad, pad, pad, pad);
+        TextView idRow = menuRow("ID  " + hexId);
+        list.addView(idRow);
+        idRow.setOnClickListener(v -> {
+            try {
+                CopyUtil.copyToClipboard(this, hexId);
+                Extensions.showMessage(this, "Copied " + hexId);
+            } catch (Exception ignored) {
+            }
+            dismissIdPopup();
+        });
+        if (configs != null) {
+            for (ArscData.ConfigValue cv : configs) {
+                if (cv == null) continue;
+                String label = (cv.qualifiers == null || cv.qualifiers.isEmpty()) ? "default" : cv.qualifiers;
+                String value = cv.value == null ? "" : cv.value;
+                if (value.length() > 60) value = value.substring(0, 60) + "…";
+                TextView row = menuRow(label + "  —  " + value);
+                row.setBackgroundResource(R.drawable.bg_ripple);
+                final ArscData.ConfigValue item = cv;
+                row.setOnClickListener(v -> {
+                    dismissIdPopup();
+                    gotoConfig(entry, resName, item);
+                });
+                list.addView(row);
+            }
+        }
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(list);
+        int width = ed.getWidth() - dp(64);
+        if (width <= 0) width = dp(280);
+        width = Math.min(width, dp(340));
+        int rows = (configs == null ? 0 : configs.size()) + 1;
+        int height = rows > 6 ? dp(340) : ViewGroup.LayoutParams.WRAP_CONTENT;
+        PopupWindow popup = new PopupWindow(scroll, width, height, true);
+        popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+        try {
+            TypedValue tv = new TypedValue();
+            getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, tv, true);
+            popup.setBackgroundDrawable(new ColorDrawable(tv.data != 0 ? tv.data : 0xFFFFFFFF));
+        } catch (Exception e) {
+            popup.setBackgroundDrawable(new ColorDrawable(0xFFFFFFFF));
+        }
+        try {
+            if (io.github.abdurazaaqmohammed.utils.LegacyUtils.aboveSdk20) popup.setElevation(dp(8));
+        } catch (Exception ignored) {
+        }
+        popup.setOutsideTouchable(true);
+        float[] off;
+        try {
+            if (ed.getLayout() == null) return;
+            off = ed.getLayout().getCharLayoutOffset(anchorLine, anchorCol);
+        } catch (Exception e) {
+            return;
+        }
+        if (off == null) return;
+        int[] loc = new int[2];
+        try {
+            ed.getLocationOnScreen(loc);
+        } catch (Exception e) {
+            return;
+        }
+        int rowH;
+        try {
+            rowH = ed.getRowHeight();
+        } catch (Exception e) {
+            rowH = dp(24);
+        }
+        int x = loc[0] + (int) (off[0] - ed.getOffsetX());
+        int y = loc[1] + (int) (off[1] - ed.getOffsetY()) + rowH + dp(4);
+        int maxX = loc[0] + ed.getWidth() - width - dp(8);
+        if (x > maxX) x = Math.max(loc[0] + dp(8), maxX);
+        if (x < loc[0] + dp(8)) x = loc[0] + dp(8);
+        int estH = rows > 6 ? dp(340) : rows * dp(52);
+        if (y + estH > loc[1] + ed.getHeight() - dp(8)) {
+            y = loc[1] + (int) (off[1] - ed.getOffsetY()) - estH - dp(4);
+        }
+        idPopup = popup;
+        try {
+            popup.showAtLocation(ed, Gravity.NO_GRAVITY, x, y);
+        } catch (Exception e) {
+            idPopup = null;
+        }
+    }
+
+    private TextView menuRow(String text) {
+        TextView row = new TextView(this);
+        row.setText(text == null ? "" : text);
+        row.setTextSize(15);
+        row.setSingleLine(true);
+        row.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        int h = dp(12);
+        int w = dp(16);
+        row.setPadding(w, h, w, h);
+        try {
+            TypedValue tv = new TypedValue();
+            getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+            row.setBackgroundResource(tv.resourceId);
+        } catch (Exception ignored) {
+        }
+        return row;
+    }
+
+    private void gotoConfig(ResourceEntry entry, String resName, ArscData.ConfigValue cv) {
+        if (entry == null || cv == null || resName == null) return;
+        TypeBlock target = null;
+        try {
+            if (cv.entry != null) target = cv.entry.getTypeBlock();
+        } catch (Exception ignored) {
+        }
+        if (target != null && sameBlock(target, block)) {
+            jumpToNameInText(resName);
+            return;
+        }
+        if (target != null) {
+            openBlock(target, resName);
+            return;
+        }
+        jumpToNameInText(resName);
+    }
+
+    private boolean sameBlock(TypeBlock a, TypeBlock b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        try {
+            if (!ArscData.configLabel(a).equals(ArscData.configLabel(b))) return false;
+            String pa = "";
+            String pb = "";
+            try {
+                if (a.getPackageBlock() != null) pa = a.getPackageBlock().getName();
+            } catch (Exception ignored) {
+            }
+            try {
+                if (b.getPackageBlock() != null) pb = b.getPackageBlock().getName();
+            } catch (Exception ignored) {
+            }
+            return pa.equals(pb);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void jumpToNameInText(String resName) {
+        if (fragment == null || resName == null) return;
+        CodeEditor ed;
+        try {
+            ed = fragment.getEditor();
+        } catch (Exception e) {
+            return;
+        }
+        if (ed == null) return;
+        String text;
+        try {
+            text = ed.getText().toString();
+        } catch (Exception e) {
+            return;
+        }
+        if (text == null) return;
+        String key = "\"" + resName + "\"";
+        int idx = text.indexOf(key);
+        if (idx < 0) return;
+        int line = 0;
+        for (int i = 0; i < idx; i++) {
+            if (text.charAt(i) == '\n') line++;
+        }
+        int lineStart = text.lastIndexOf('\n', idx) + 1;
+        try {
+            fragment.navigateTo(line, idx - lineStart, key);
+        } catch (Exception ignored) {
+        }
+    }
+
     @Override
     protected void onDestroy() {
+        dismissIdPopup();
         try {
             if (fragment != null && fragment.getEditor() != null) fragment.getEditor().release();
         } catch (Exception ignored) {

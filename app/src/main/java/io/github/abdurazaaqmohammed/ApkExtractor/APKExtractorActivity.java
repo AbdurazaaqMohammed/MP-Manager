@@ -69,8 +69,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -221,7 +219,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         antisplit = settings.getBoolean("antisplit", false);
         sortMode = settings.getInt("sortMode", 0);
         lang = settings.getString("lang", "en");
-        if (Objects.equals(lang, Locale.getDefault().getLanguage()))
+        //if (Objects.equals(lang, Locale.getDefault().getLanguage()))
             rss = getResources();
 
         userAppInfoList = Collections.synchronizedList(new ArrayList<>());
@@ -573,7 +571,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.filterButton).setOnClickListener(v -> {
-            String[] display = new String[] { "Name", "Last updated date", "First install date" };
+            String[] display = new String[] { getString(R.string.name), getString(R.string.last_updated_date), getString(R.string.first_install_date) };
             AlertDialog ad = new MaterialAlertDialogBuilder(this)
                     .setSingleChoiceItems(display, sortMode, (dialog, which) -> {
                         sortMode = which;
@@ -607,102 +605,102 @@ public class APKExtractorActivity extends AppCompatActivity {
         List<Integer> iconList = new ArrayList<>();
         List<Integer> actionIds = new ArrayList<>();
 
-        displayList.add("Extract APK");
+        displayList.add(getString(R.string.extract_apk));
         iconList.add(ai.isSplit && !antisplit ? R.drawable.archive_24px : R.drawable.save_24px);
         actionIds.add(0);
 
-        displayList.add("Share APK");
+        displayList.add(getString(R.string.share_apk));
         iconList.add(R.drawable.baseline_share_24);
         actionIds.add(1);
 
-        displayList.add("Launch");
+        displayList.add(getString(R.string.launch));
         iconList.add(R.drawable.baseline_open_in_new_24);
         actionIds.add(100);
 
-        displayList.add("App Info");
+        displayList.add(getString(R.string.app_info));
         iconList.add(R.drawable.baseline_info_24);
         actionIds.add(101);
 
-        displayList.add("Uninstall");
+        displayList.add(getString(R.string.uninstall));
         iconList.add(R.drawable.baseline_delete_24);
         actionIds.add(102);
 
         if (showExtractRes) {
-            displayList.add("Extract resources");
+            displayList.add(getString(R.string.extract_resources));
             iconList.add(R.drawable.inventory_2_24px);
             actionIds.add(2);
         }
         if (showExtractDex) {
-            displayList.add("Extract dex");
+            displayList.add(getString(R.string.extract_dex));
             iconList.add(R.drawable.baseline_folder_zip_24);
             actionIds.add(3);
         }
         if (showExtractManifest) {
-            displayList.add("Extract Manifest");
+            displayList.add(getString(R.string.extract_manifest));
             iconList.add(R.drawable.baseline_text_snippet_24);
             actionIds.add(4);
         }
         if (showExtractBase) {
-            displayList.add("Extract base.apk");
+            displayList.add(getString(R.string.extract_base_apk));
             iconList.add(R.drawable.apk_document_24px);
             actionIds.add(5);
         }
         if (showExtractLibs) {
-            displayList.add("Extract libs");
+            displayList.add(getString(R.string.extract_libs));
             iconList.add(R.drawable.baseline_folder_zip_24);
             actionIds.add(6);
         }
         if (showExtractIcon) {
-            displayList.add("Extract icon");
+            displayList.add(getString(R.string.extract_icon));
             iconList.add(R.drawable.image_24px);
             actionIds.add(7);
         }
 
         if(showLaunchActivities) {
-            displayList.add("Launch Activity");
+            displayList.add(getString(R.string.launch_activity));
             iconList.add(R.drawable.baseline_open_in_new_24);
             actionIds.add(107);
         }
         if (ai.isSplit) {
             if (showExtractSplit) {
-                displayList.add("Choose split APK");
+                displayList.add(getString(R.string.choose_split_apk));
                 iconList.add(R.drawable.baseline_arrow_drop_down_24);
                 actionIds.add(103);
             }
             if(antisplit) {
-                displayList.add("Save split APKS");
+                displayList.add(getString(R.string.save_split_apks));
                 iconList.add(R.drawable.archive_24px);
                 actionIds.add(106);
             } else {
-                displayList.add("Antisplit merge and save");
+                displayList.add(getString(R.string.antisplit_merge_and_save));
                 iconList.add(R.drawable.baseline_compress_24);
                 actionIds.add(104);
             }
 
-            displayList.add("Antisplit merge and share");
+            displayList.add(getString(R.string.antisplit_merge_and_share));
             iconList.add(R.drawable.baseline_share_24);
             actionIds.add(105);
         }
 
         RootManager rootManager = RootManager.getInstance(this);
         if (rootManager.isRootExtractorEnabled() && rootManager.isRootAvailable()) {
-            displayList.add("Clear app data");
+            displayList.add(getString(R.string.clear_app_data));
             iconList.add(R.drawable.baseline_delete_24);
             actionIds.add(200);
 
-            displayList.add("Force stop");
+            displayList.add(getString(R.string.force_stop));
             iconList.add(R.drawable.stop_circle_24px);
             actionIds.add(201);
 
-            displayList.add("Enable app");
+            displayList.add(getString(R.string.enable_app));
             iconList.add(R.drawable.baseline_check_circle_24);
             actionIds.add(202);
 
-            displayList.add("Disable app");
+            displayList.add(getString(R.string.disable_app));
             iconList.add(R.drawable.visibility_off_24px);
             actionIds.add(203);
 
-            displayList.add("Silent uninstall (root)");
+            displayList.add(getString(R.string.uninstall_roots));
             iconList.add(R.drawable.ic_delete);
             actionIds.add(204);
         }

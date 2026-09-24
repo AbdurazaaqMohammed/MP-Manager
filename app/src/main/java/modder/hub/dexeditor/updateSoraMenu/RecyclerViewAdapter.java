@@ -82,6 +82,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         put("share_btn", R.drawable.ic_share_mt);
         put("panel_btn_long_select", R.drawable.ic_text_select_start_mt);
         put("delete_btn", R.drawable.ic_delete_mt);
+        put("id_btn", R.drawable.ic_tag_mt);
+        put("goto_id_btn", R.drawable.ic_goto_mt);
         put("customize_btn", R.drawable.ic_setting_mt);
     }};
 	

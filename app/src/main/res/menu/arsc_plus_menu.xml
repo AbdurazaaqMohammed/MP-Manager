@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_resource_querier"
+        android:title="@string/resource_querier" />
+
+    <item
+        android:id="@+id/action_search"
+        android:title="@string/search" />
+
+    <item
+        android:id="@+id/action_batch_export"
+        android:title="@string/batch_export" />
+
+    <item
+        android:id="@+id/action_batch_import"
+        android:title="@string/batch_import" />
+
+    <item
+        android:id="@+id/action_export_strings"
+        android:title="@string/export_strings" />
+
+    <item
+        android:id="@+id/action_import_strings"
+        android:title="@string/import_strings" />
+
+    <item
+        android:id="@+id/action_backup"
+        android:title="@string/backup" />
+
+    <item
+        android:id="@+id/action_exit"
+        android:title="@string/exit" />
+
+</menu>

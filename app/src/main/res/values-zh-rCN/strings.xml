@@ -143,6 +143,7 @@
     <string name="customize">自定义</string>
     <string name="customize_file_menu">文件菜单顺序</string>
     <string name="customize_file_menu_hint">长按可将项目拖到任意位置</string>
+    <string name="cut">剪切</string>
     <string name="dark_theme">深色主题</string>
     <string name="date_format">日期/时间格式</string>
     <string name="debug_key_reset">已加载默认调试密钥</string>
@@ -199,6 +200,17 @@
     <string name="edit_profile">编辑配置文件</string>
     <string name="edit_string">编辑字符串</string>
     <string name="editor_settings">编辑器设置</string>
+    <string-array name="editor_syntaxes">
+        <item>纯文本</item>
+        <item>Java</item>
+        <item>C</item>
+        <item>C++</item>
+        <item>Python</item>
+        <item>JavaScript</item>
+        <item>HTML</item>
+        <item>CSS</item>
+        <item>Markdown</item>
+    </string-array>
     <string name="elevated_access">提升权限</string>
     <string name="enable_logs">保存日志</string>
     <string name="encode_dex_profile_json">将已解码的 dex profile json 文件编码为二进制 assets/dexopt 文件</string>
@@ -336,6 +348,7 @@
     <string name="image_viewer">图像查看器</string>
     <string name="import_signature">导入签名</string>
     <string name="info">信息</string>
+    <string name="insert_text">插入文本</string>
     <string name="inspect_mode">检查模式</string>
     <string name="inspect_stopped">检查模式已停止</string>
     <string name="inspector">检查器</string>
@@ -362,6 +375,8 @@
     <string name="kres">已找到 1000+ 条结果。你确定要继续吗？</string>
     <string name="label_parent_dir">…</string>
     <string name="label_parent_directory">上级目录</string>
+    <string name="language">语言</string>
+    <string name="language_system">系统默认</string>
     <string name="last_edit">上次编辑：</string>
     <string name="launch">启动</string>
     <string name="light_theme">浅色主题</string>
@@ -466,6 +481,7 @@
     <string name="no_apps_found">未找到应用</string>
     <string name="no_children">无子项</string>
     <string name="no_files_need_renaming">没有需要重命名的文件</string>
+    <string name="no_matches_found">未找到匹配项</string>
     <string name="no_password_entered">未输入密码</string>
     <string name="no_profiles">无配置文件</string>
     <string name="no_profiles_msg">请先创建配置文件以生成命令。</string>
@@ -505,6 +521,7 @@
     <string name="parent">上级</string>
     <string name="parent_dir">父目录</string>
     <string name="password_toggle_content_description">显示密码</string>
+    <string name="paste">粘贴</string>
     <string name="paste_from">粘贴自</string>
     <string name="path">路径</string>
     <string name="pattern">模式</string>
@@ -557,7 +574,9 @@
     <string name="redo">重做</string>
     <string name="refactored">已重构 %1$s</string>
     <string name="regex">使用正则表达式</string>
+    <string name="regex_find_replace">正则查找并替换</string>
     <string name="reload">重新加载</string>
+    <string name="reload_file">重新加载文件</string>
     <string name="reload_with_charset">使用字符集重新加载</string>
     <string name="remove">移除</string>
     <string name="remove_all_debug_info">移除所有调试信息</string>
@@ -583,6 +602,7 @@
     <string name="replace">替换</string>
     <string name="replace_all">全部替换</string>
     <string name="replace_in_all_strings">替换所有字符串</string>
+    <string name="replace_line">替换行</string>
     <string name="replace_with">替换为</string>
     <string name="replacement_errors">替换错误</string>
     <string name="reported_mime">已报告 MIME</string>
@@ -646,7 +666,7 @@
     <string name="set_point_b">设置 B 点</string>
     <string name="set_uid">设置 UID</string>
     <string name="settings">设置</string>
-    <string name="share">分享文本</string>
+    <string name="share_text">分享文本</string>
     <string name="share_apk">分享 APK</string>
     <string name="share_apks">分享 APK</string>
     <string name="shizuku_file_operations">Shizuku 文件操作（Android/data、obb、media）</string>
@@ -671,7 +691,7 @@
     <string name="show_v_name">显示版本名称</string>
     <string name="shuffle">随机播放</string>
     <string name="side_sheet_accessibility_pane_title">侧边页</string>
-    <string name="sign_apk">合并后签署 APK</string>
+    <string name="sign_apk_after_merge">合并后签署 APK</string>
     <string name="sign_set">签名设置</string>
     <string name="signature_file_set">已设置签名文件</string>
     <string name="signature_key">签名密钥</string>

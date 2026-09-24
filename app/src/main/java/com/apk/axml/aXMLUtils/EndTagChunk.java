@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public class EndTagChunk extends Chunk<EndTagChunk.H> {
 
-    public static class H extends Chunk.NodeHeader {
+    public class H extends Chunk.NodeHeader {
 
         public H() {
             super(ChunkType.XmlEndElement);
