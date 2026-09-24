@@ -34,6 +34,10 @@ public class UIHelper {
                                 String licenseFile) {
     }
 
+    public int dp(int dp) {
+        return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     private void showLibraryDialog(AboutLibrary lib) {
         StringBuilder message = new StringBuilder(lib.licenseName).append('\n');
         try {

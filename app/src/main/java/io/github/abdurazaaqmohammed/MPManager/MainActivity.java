@@ -6,6 +6,7 @@ import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPer
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
+import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
@@ -18,6 +19,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -176,6 +178,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -184,6 +187,7 @@ import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.utils.UpdateUtil;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -220,7 +224,80 @@ public class MainActivity extends AppCompatActivity {
     public Handler handler;
     private boolean systemTheme;
     public int theme;
+    private boolean checkForUpdates;
+    public String lastVerChecked;
+    public long downloadId;
+    private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
 
+            if (id == downloadId) {
+                downloadId = -1;
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(id);
+                DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                try (Cursor cursor = downloadManager.query(query)) {
+                    if (cursor.moveToFirst()) {
+                        int columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                        if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(columnIndex)) {
+                            int columnIndex1 = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                            String fileUri = cursor.getString(columnIndex1);
+                            promptInstallDownloadedUpdate(fileUri);
+                        }
+                    }
+                } catch (Exception e) {
+                    Extensions.showMessage(MainActivity.this, e.toString());
+                }
+            }
+        }
+    };
+
+    private void checkPendingUpdateDownload() {
+        if (downloadId == -1) return;
+        try {
+            DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            try (Cursor cursor = downloadManager.query(query)) {
+                if (cursor.moveToFirst()) {
+                    int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                    if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(statusIndex)) {
+                        long id = downloadId;
+                        downloadId = -1;
+                        int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                        promptInstallDownloadedUpdate(cursor.getString(uriIndex));
+                    } else if (DownloadManager.STATUS_FAILED == cursor.getInt(statusIndex)) {
+                        downloadId = -1;
+                    }
+                } else {
+                    downloadId = -1;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void promptInstallDownloadedUpdate(String fileUri) {
+        try {
+            File apkFile = null;
+            if (fileUri != null && !fileUri.isEmpty()) {
+                Uri uri = Uri.parse(fileUri);
+                if ("file".equals(uri.getScheme()) && uri.getPath() != null) {
+                    apkFile = new File(uri.getPath());
+                } else if (uri.getScheme() == null) {
+                    apkFile = new File(fileUri);
+                }
+            }
+            if (apkFile == null || !apkFile.isFile()) {
+                Extensions.showMessage(this, getString(R.string.file_no_longer_available));
+                return;
+            }
+            InstallUtil.installApkWithDialog(this, apkFile);
+        } catch (Exception e) {
+            Extensions.showMessage(this, e.toString());
+        }
+    }
     private File[] currentPane1Files;
     private File[] currentPane2Files;
     private List<ZipEntryInfo> currentPane1ZipEntries;
@@ -377,10 +454,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        unregisterReceiver(onDownloadComplete);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         settings.edit()
                 .putString("bookmarks", bookmarks.toString())
                 .putBoolean("systemTheme", systemTheme)
+                .putBoolean("checkForUpdates", checkForUpdates)
                 .putInt("theme", theme)
                 .apply();
     }
@@ -464,7 +543,13 @@ public class MainActivity extends AppCompatActivity {
         }
         if (resolvedZip == null) resolvedZip = pane1 ? pane1Folder : pane2Folder;
         final File zipFile = resolvedZip;
-        if (path == null || !path.startsWith(getCacheDir().getPath())) return;
+        if (path == null) return;
+        boolean inAppPrivateDir = path.startsWith(getCacheDir().getPath());
+        try {
+            inAppPrivateDir = inAppPrivateDir || path.startsWith(getFilesDir().getPath());
+        } catch (Exception ignored) {
+        }
+        if (!inAppPrivateDir) return;
         if (zipFile == null || !zipFile.isFile()) {
             Extensions.showMessage(this, R.string.archive_no_longer_open);
             return;
@@ -2005,6 +2090,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         });
+        if ((checkForUpdates = settings.getBoolean("checkForUpdates", true))) UpdateUtil.checkForUpdates(false, this);
     }
 
     private File resolveStartupFolder(boolean pane1, File home) {
@@ -2544,6 +2630,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         try {
+            if (Build.VERSION.SDK_INT > 32) {
+                registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                        Context.RECEIVER_NOT_EXPORTED);
+            } else
+                registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            checkPendingUpdateDownload();
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
             if (locate != null && !locate.isEmpty()) {
                 try {
@@ -3093,9 +3185,15 @@ public class MainActivity extends AppCompatActivity {
         setupFolderSettings(settingsDialog, settings);
         setupFileOpsSettings(settingsDialog, settings);
         setupAccessSettings(settingsDialog, settings);
+
+        View checkUpdateNow = settingsDialog.findViewById(R.id.checkUpdateNow);
+        CompoundButton updateSwitch = settingsDialog.findViewById(R.id.checkUpdatesToggle);
+        updateSwitch.setChecked(checkForUpdates);
+        updateSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> checkUpdateNow.setVisibility((checkForUpdates = isChecked) ? View.GONE : View.VISIBLE));
+        checkUpdateNow.setVisibility(checkForUpdates ? View.GONE : View.VISIBLE);
+        checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, this));
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> uiHelper.showAboutDialog());
-        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.settings)).setView(settingsDialog).create();
+        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.settings)).setView(settingsDialog).create();
         settingsAlert.setOnDismissListener(d -> {
             saveSuCommand(settingsDialog);
             saveDateFormat(settingsDialog);

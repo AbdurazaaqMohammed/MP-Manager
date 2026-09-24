@@ -1015,7 +1015,7 @@ Layout Inspector
     <string name="edsettings_edit">Edit Button</string>
     <string name="native_required">Native tools required</string>
     <string name="native_need_download">This feature needs native binaries (~%1$s MB download). Download now?</string>
-    <string name="native_download">Download</string>
+    <string name="download">Download</string>
     <string name="native_pack_server">Tool pack server</string>
     <string name="native_pack_msg">Base URL hosting packs.json plus the pack zips. Leave empty for the default.</string>
     <string name="native_downloading">Downloading native tools</string>
@@ -1364,6 +1364,12 @@ Layout Inspector
     <string name="compare_arsc">Compare ARSC</string>
     <string name="compare_text">Compare Text</string>
     <string name="crop_images">Crop images</string>
+    <string name="update">Update</string>
+    <string name="no_update_found">No update found</string>
+    <string name="new_ver">New version %1$s found</string>
+    <string name="check_update_now">Check Update Now</string>
+    <string name="check_for_updates">Check for updates</string>
+    <string name="failed_to_check_for_update">Failed to check for update</string>
     <string-array name="editor_syntaxes">
         <item>Plain Text</item>
         <item>Java</item>
