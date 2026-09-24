@@ -16,6 +16,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -49,11 +50,11 @@ import mt.signature.generate.KeyStoreMakerDialog;
 
 public class SignatureKeyDialog {
 
-    public static void show(MainActivity activity) {
+    public static void show(AppCompatActivity activity) {
         show(activity, null, false);
     }
 
-    public static void show(MainActivity activity, File file, boolean isSplitApk) {
+    public static void show(AppCompatActivity activity, File file, boolean isSplitApk) {
         File keysDir = new File(
                 Environment.getExternalStorageDirectory().getPath() + File.separatorChar + "MT2"
                         + File.separatorChar + "keys"
@@ -264,7 +265,7 @@ public class SignatureKeyDialog {
                                             pm.dismiss();
                                             activity.runOnUiThread(() -> {
                                                 Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
-                                                activity.reloadCurrentFolder();
+                                                if (activity instanceof MainActivity) ((MainActivity) activity).reloadCurrentFolder();
                                             });
                                         } catch (Exception e) {
                                             pm.dismiss();
@@ -279,8 +280,8 @@ public class SignatureKeyDialog {
                                 }
                             });
                             BiometricPrompt.PromptInfo.Builder auth = new BiometricPrompt.PromptInfo.Builder()
-                                    .setTitle(activity.rss.getString(R.string.auth_sign))
-                                    .setSubtitle(activity.rss.getString(R.string.auth_sign_msg));
+                                    .setTitle(activity.getString(R.string.auth_sign))
+                                    .setSubtitle(activity.getString(R.string.auth_sign_msg));
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 auth.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
                             } else auth.setDeviceCredentialAllowed(true);
@@ -314,7 +315,7 @@ public class SignatureKeyDialog {
                                 pm.dismiss();
                                 activity.runOnUiThread(() -> {
                                     Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
-                                    activity.reloadCurrentFolder();
+                                    if (activity instanceof MainActivity) ((MainActivity) activity).reloadCurrentFolder();
                                 });
                             } catch (Exception e) {
                                 pm.dismiss();

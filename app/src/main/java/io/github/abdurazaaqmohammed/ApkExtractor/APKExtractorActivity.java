@@ -38,12 +38,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
+import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
@@ -61,6 +64,7 @@ import com.reandroid.archive.ArchiveFile;
 import com.reandroid.archive.InputSource;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -253,6 +257,12 @@ public class APKExtractorActivity extends AppCompatActivity {
                 }
             });
 
+            SharedPreferences defaultSettings = PreferenceManager.getDefaultSharedPreferences(this);
+            CheckBox autosignBox = settingsMenu.findViewById(R.id.autosign);
+            autosignBox.setChecked(defaultSettings.getBoolean("autosign", true));
+            autosignBox.setOnCheckedChangeListener((buttonView, isChecked) -> defaultSettings.edit().putBoolean("autosign", isChecked).apply());
+            settingsMenu.findViewById(R.id.sign_settings).setOnClickListener(v1 -> SignatureKeyDialog.show(this));
+
             CompoundButton antisplitToggle = settingsMenu.findViewById(R.id.antisplitToggle);
             if (LegacyUtils.aboveSdk20) {
                 antisplitToggle.setChecked(antisplit);
@@ -396,6 +406,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         loadingApps = true;
         findViewById(R.id.progressBar).setVisibility(View.VISIBLE);
         new Thread(() -> {
+            try {
             PackageManager pm = getPackageManager();
             List<PackageInfo> apps = pm.getInstalledPackages(0);
 
@@ -478,6 +489,15 @@ public class APKExtractorActivity extends AppCompatActivity {
                     }
                 }).start();
             });
+            } catch (Exception e) {
+                handler.post(() -> {
+                    findViewById(R.id.progressBar).setVisibility(View.GONE);
+                    loadingApps = false;
+                    ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshUser)).setRefreshing(false);
+                    ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshSystem)).setRefreshing(false);
+                });
+                new ErrorUtil(APKExtractorActivity.this).showError(e);
+            }
         }).start();
     }
 
@@ -941,6 +961,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                             inputSource.write(FileUtils.getUnusedFile(appFolder, destName));
                             if (i == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                         } catch (Exception e) {
+                            pm.dismiss();
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
@@ -970,6 +991,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                             }
                             if (j == itemsToProcessSize-1) handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                         } catch (Exception e) {
+                            pm.dismiss();
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
@@ -992,6 +1014,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                                 handler.post(showFinishedDialog(singleItem ? path + File.separator + destName : path, pm));
                             }
                         } catch (Exception e) {
+                            pm.dismiss();
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
@@ -1008,6 +1031,8 @@ public class APKExtractorActivity extends AppCompatActivity {
                             pm.setText(rss.getString(R.string.extracting, name));
                             FileUtils.copyFile(new File(ai.filePath), FileUtils.getUnusedFile(appFolder, name));
                         } catch (Exception e) {
+                            pm.dismiss();
+                            errorOccurred = true;
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
@@ -1037,6 +1062,7 @@ public class APKExtractorActivity extends AppCompatActivity {
                         } catch (Exception e) {
                             pm.dismiss();
                             logger.close();
+                            errorOccurred = true;
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
@@ -1058,6 +1084,8 @@ public class APKExtractorActivity extends AppCompatActivity {
 
                             bm.compress(Bitmap.CompressFormat.PNG, 100, os);
                         } catch (Exception e) {
+                            pm.dismiss();
+                            errorOccurred = true;
                             new ErrorUtil(APKExtractorActivity.this).showError(e);
                         }
                     }
@@ -1111,17 +1139,22 @@ public class APKExtractorActivity extends AppCompatActivity {
                 if (split && antisplit) try (ApkBundle bundle = new ApkBundle()) {
                     bundle.loadApkDirectory(apkDirectory, false);
                     APKLogger logger = pm.getLogger();
-                    bundle.setAPKLogger(logger);
-                    finalOutput = FileUtils.getUnusedFile(output);
-                    MergeUtil.mergeBundle(bundle).renameTo(finalOutput);
-                    logger.close();
+                    try {
+                        bundle.setAPKLogger(logger);
+                        finalOutput = FileUtils.getUnusedFile(output);
+                        MergeUtil.mergeBundle(bundle).renameTo(finalOutput);
+                    } finally {
+                        logger.close();
+                    }
                 }
                 else {
                     finalOutput = FileUtils.getUnusedFile(output);
                     if (split) try (ZipFile zf = new ZipFile(finalOutput)) {
                         ZipParameters zp = new ZipParameters();
                         zp.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
-                        for (File f : apkDirectory.listFiles()) {
+                        File[] apkFiles = apkDirectory.listFiles();
+                        if (apkFiles == null) throw new IOException("Cannot list " + apkDirectory);
+                        for (File f : apkFiles) {
                             String name = f.getName();
                             if (f.isFile() && name.endsWith(".apk")) {
                                 pm.setText(rss.getString(R.string.adding_to, name, fileNameString));
@@ -1136,8 +1169,27 @@ public class APKExtractorActivity extends AppCompatActivity {
                         }
                     }
                 }
-                 handler.post(showFinishedDialog ? showFinishedDialog(finalOutput.getPath(), pm) : pm::dismiss);
+                pm.dismiss();
+                if (split && antisplit && signApk && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("autosign", true)) {
+                    File toSign = finalOutput;
+                    handler.post(() -> SignWrapper.requireAuth(this, sw -> {
+                        ProgressManager signPm = new ProgressManager(this, true);
+                        signPm.setText(getString(R.string.signing, toSign.getName()));
+                        signPm.show();
+                        new Thread(() -> {
+                            try {
+                                sw.signApk(toSign);
+                                signPm.dismiss();
+                                if (showFinishedDialog) handler.post(showFinishedDialog(toSign.getPath(), null));
+                            } catch (Exception e) {
+                                signPm.dismiss();
+                                new ErrorUtil(this).showError(e);
+                            }
+                        }).start();
+                    }));
+                } else if (showFinishedDialog) handler.post(showFinishedDialog(finalOutput.getPath(), null));
             } catch (Exception e) {
+                pm.dismiss();
                 new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
         }).start();
@@ -1181,6 +1233,7 @@ public class APKExtractorActivity extends AppCompatActivity {
             }
             pm.dismiss();
 
+            if (fileUris.isEmpty()) return;
             Intent intent= new Intent(Intent.ACTION_SEND_MULTIPLE)
                     .setType("application/vnd.android.package-archive")
                     .putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris)
@@ -1206,16 +1259,12 @@ public class APKExtractorActivity extends AppCompatActivity {
                         try (ApkBundle bundle = new ApkBundle()) {
                             bundle.loadApkDirectory(new File(ai.filePath).getParentFile());
                             APKLogger logger = pm.getLogger();
-                            bundle.setAPKLogger(logger);
-                            new Thread(() -> {
-                                try {
-                                    toShare[0] = MergeUtil.mergeBundle(bundle);
-                                } catch (Exception e) {
-                                    pm.dismiss();
-                                    new ErrorUtil(APKExtractorActivity.this).showError(e);
-                                }
-                            }).start();
-                            logger.close();
+                            try {
+                                bundle.setAPKLogger(logger);
+                                toShare[0] = MergeUtil.mergeBundle(bundle);
+                            } finally {
+                                logger.close();
+                            }
                         }
                     } else {
                         File[] files = new File(ai.filePath).getParentFile().listFiles();

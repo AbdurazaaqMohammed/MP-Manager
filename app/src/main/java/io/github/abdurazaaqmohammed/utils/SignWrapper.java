@@ -13,6 +13,7 @@ import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -107,7 +108,7 @@ public class SignWrapper {
         this(pathToSignatureFile, password, true, true, true, false);
     }
 
-    public static void requireAuth(MainActivity activity, SignKeyCallback callback) {
+    public static void requireAuth(AppCompatActivity activity, SignKeyCallback callback) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         String keyPath;
         try {
@@ -140,16 +141,16 @@ public class SignWrapper {
         }
     }
 
-    private static void requestPassword(MainActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
+    private static void requestPassword(AppCompatActivity activity, File keyFile, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
         EditText pwInput = new EditText(activity);
         pwInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        pwInput.setHint(activity.rss.getString(R.string.enter_password));
+        pwInput.setHint(activity.getString(R.string.enter_password));
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
         layout.addView(UiFields.wrap(activity, pwInput, null, 0));
         new MaterialAlertDialogBuilder(activity)
-                .setTitle(activity.rss.getString(R.string.enter_password))
+                .setTitle(activity.getString(R.string.enter_password))
                 .setView(layout)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String password = pwInput.getText() != null ? pwInput.getText().toString() : "";
@@ -167,7 +168,7 @@ public class SignWrapper {
                 .show();
     }
 
-    private static void authenticateWithBiometrics(MainActivity activity, File keyFile, String storedPass, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
+    private static void authenticateWithBiometrics(AppCompatActivity activity, File keyFile, String storedPass, boolean v1, boolean v2, boolean v3, boolean v4, String signedBy, boolean zipalign, SignKeyCallback callback) {
         Executor executor = ContextCompat.getMainExecutor(activity);
         BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
@@ -189,8 +190,8 @@ public class SignWrapper {
             }
         });
         BiometricPrompt.PromptInfo.Builder auth = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(activity.rss.getString(R.string.auth_sign))
-                .setSubtitle(activity.rss.getString(R.string.auth_sign_msg));
+                .setTitle(activity.getString(R.string.auth_sign))
+                .setSubtitle(activity.getString(R.string.auth_sign_msg));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             auth.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
         } else auth.setDeviceCredentialAllowed(true);
