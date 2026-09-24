@@ -1810,11 +1810,25 @@ public class MainActivity extends AppCompatActivity {
                             if (pathLayout.getVisibility() == View.VISIBLE) {
                                 pathLayout.setVisibility(View.GONE);
                                 filterBox.setVisibility(View.VISIBLE);
-                                if (filterBar != null) filterBar.requestFocus();
+                                if (filterBar != null) {
+                                    filterBar.requestFocus();
+                                    try {
+                                        android.view.inputmethod.InputMethodManager imm =
+                                                (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                        if (imm != null) imm.showSoftInput(filterBar, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                                    } catch (Exception ignored) {
+                                    }
+                                }
                             } else {
                                 pathLayout.setVisibility(View.VISIBLE);
                                 filterBox.setVisibility(View.GONE);
                                 if (filterBar != null) filterBar.setText("");
+                                try {
+                                    android.view.inputmethod.InputMethodManager imm =
+                                            (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                    if (imm != null) imm.hideSoftInputFromWindow(topBar.getWindowToken(), 0);
+                                } catch (Exception ignored) {
+                                }
                             }
                             break;
                         case 2:
@@ -3483,7 +3497,6 @@ public class MainActivity extends AppCompatActivity {
         TextInputLayout filterBox =
                 UiFields.box(this, "Filter...");
         EditText filterBar = UiFields.field(filterBox, 0);
-        filterBar.setVisibility(View.GONE);
         filterBox.setVisibility(View.GONE);
         filterBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         filterBar.setSingleLine(true);
