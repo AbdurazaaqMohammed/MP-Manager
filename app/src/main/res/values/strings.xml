@@ -694,6 +694,8 @@ Layout Inspector
     <string name="file_list_size">File list size (%1$d%%)</string>
     <string name="filename_max_lines">File name lines (%1$d)</string>
     <string name="date_format">Date/time format</string>
+    <string name="language">Language</string>
+    <string name="language_system">System default</string>
     <string name="startup_pane_1">Startup folder, pane 1</string>
     <string name="startup_pane_2">Startup folder, pane 2</string>
     <string name="opt_home_folder">Home folder</string>

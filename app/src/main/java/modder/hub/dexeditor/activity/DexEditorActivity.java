@@ -379,7 +379,7 @@ public class DexEditorActivity extends AppCompatActivity {
         reduceDragSensitivity(explorerViewPager);
 
         new TabLayoutMediator(explorerTabLayout, explorerViewPager, (tab, position) -> {
-            String[] titles = {"Explorer", "History", "Search", "Strings"};
+            String[] titles = {getString(R.string.explorer), getString(R.string.history), getString(R.string.search), getString(R.string.strings_tab)};
             tab.setText(titles[position]);
         }).attach();
 

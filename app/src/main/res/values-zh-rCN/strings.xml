@@ -375,6 +375,8 @@
     <string name="kres">已找到 1000+ 条结果。你确定要继续吗？</string>
     <string name="label_parent_dir">…</string>
     <string name="label_parent_directory">上级目录</string>
+    <string name="language">语言</string>
+    <string name="language_system">系统默认</string>
     <string name="last_edit">上次编辑：</string>
     <string name="launch">启动</string>
     <string name="light_theme">浅色主题</string>

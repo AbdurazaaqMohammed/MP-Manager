@@ -76,10 +76,12 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.os.LocaleListCompat;
 import androidx.core.view.GestureDetectorCompat;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -3182,6 +3184,7 @@ public class MainActivity extends AppCompatActivity {
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
         setupAppearanceSettings(settingsDialog, settings);
+        setupLanguageSettings(settingsDialog);
         setupFolderSettings(settingsDialog, settings);
         setupFileOpsSettings(settingsDialog, settings);
         setupAccessSettings(settingsDialog, settings);
@@ -3201,6 +3204,27 @@ public class MainActivity extends AppCompatActivity {
             refreshFileLists();
         });
         settingsAlert.show();
+    }
+
+    private void setupLanguageSettings(ScrollView root) {
+        AutoCompleteTextView languageTv = root.findViewById(R.id.languageTv);
+        String[] langTags = {"", "en", "ru", "zh-CN"};
+        String[] langLabels = {getString(R.string.language_system), "English", "Русский", "中文 (简体)"};
+        languageTv.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, langLabels));
+        String current = AppCompatDelegate.getApplicationLocales().toLanguageTags();
+        int selected = 0;
+        for (int i = 0; i < langTags.length; i++) {
+            if (langTags[i].equals(current)) {
+                selected = i;
+                break;
+            }
+        }
+        languageTv.setText(langLabels[selected], false);
+        languageTv.setOnItemClickListener((p, v, pos, id) ->
+                AppCompatDelegate.setApplicationLocales(langTags[pos].isEmpty()
+                        ? LocaleListCompat.getEmptyLocaleList()
+                        : LocaleListCompat.forLanguageTags(langTags[pos])));
     }
 
     private void setupAppearanceSettings(ScrollView root, SharedPreferences settings) {
