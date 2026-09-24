@@ -164,6 +164,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return oldValues;
     }
 
+    /** Entries currently shown (including the up-dir at index 0), for callers that must not re-list. */
+    public File[] getShownFiles() {
+        if (!(values instanceof File[])) return null;
+        return (File[]) values;
+    }
+
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
             String currentZipPath) {
         this.values = isInZip ? values : getNewValues(values, (File) parent);

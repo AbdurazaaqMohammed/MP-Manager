@@ -1152,4 +1152,9 @@ Layout Inspector
     <string name="read_write_exec">"        Read    Write   Exec"</string>
     <string name="i_ftsave">%1$d file(s) to save. Pick a folder.</string>
     <string name="save_to_folder">Save to folder</string>
+    <string name="shizuku_needed">This folder requires Shizuku. Install Shizuku and grant access to continue.</string>
+    <string name="shizuku_install">Install Shizuku</string>
+    <string name="shizuku_grant">Grant</string>
+    <string name="shizuku_not_running_hint">Shizuku is not running. Open the Shizuku app to start it.</string>
+    <string name="shizuku_open">Open Shizuku</string>
 </resources>
