@@ -534,6 +534,14 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             }
         }
         editor.replaceComponent(EditorTextActionWindow.class, new TextActionWindow(editor, new TextActionCallback(className)));
+        try {
+            Activity act = getActivity();
+            if (act instanceof io.github.abdurazaaqmohammed.arsc.ArscTextActivity arscActivity) {
+                Object comp = editor.getComponent(EditorTextActionWindow.class);
+                if (comp instanceof TextActionWindow arscWindow) arscActivity.bindSelectionMenu(arscWindow);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void reloadText() {

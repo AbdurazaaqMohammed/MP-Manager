@@ -111,6 +111,8 @@
     <string name="about_tap_for_license">Tap a project to view its license and source link</string>
 
     <string name="go_to">Go To</string>
+    <string name="arsc_copy_id">ID</string>
+    <string name="arsc_goto_id">Goto ID</string>
     <string name="translate">Translate</string>
     <string name="long_select">Long Select</string>
     <string name="link">Open link</string>

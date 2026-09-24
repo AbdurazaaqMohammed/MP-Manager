@@ -96,6 +96,8 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	private ImageButton openLinkButton;
 	private ImageButton customizeButton;
 	private ImageButton deleteButton;
+	private ImageButton arscIdButton;
+	private ImageButton arscGotoIdButton;
 	
 	private final Map<String, ImageButton> buttonMap = new HashMap<>();
 	private final ArrayList<String> menuItems = new ArrayList<>();
@@ -117,6 +119,19 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		void onClickGoTo(View view, String text);
 		void onClickTranslate(View view, String text);
 		void onLongClickTranslate(View view);
+	}
+	
+	public interface ArscIdHandler {
+		boolean isArscIdAvailable(String selectedText);
+		void onArscIdClick(String selectedText);
+		void onArscGotoIdClick(String selectedText);
+	}
+	
+	private ArscIdHandler arscIdHandler;
+	
+	public void setArscIdHandler(ArscIdHandler handler) {
+		this.arscIdHandler = handler;
+		updateButtonStates();
 	}
 	
 	public TextActionWindow(CodeEditor codeEditor) {
@@ -180,6 +195,8 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			"{\"id\":\"panel_btn_select_all\",\"title\":\"Select All\",\"disabled\":false}," +
 			"{\"id\":\"panel_btn_copy\",\"title\":\"Copy\",\"disabled\":false}," +
 			"{\"id\":\"panel_btn_paste\",\"title\":\"Paste\",\"disabled\":false}," +
+			"{\"id\":\"id_btn\",\"title\":\"ID\",\"disabled\":false}," +
+			"{\"id\":\"goto_id_btn\",\"title\":\"Goto ID\",\"disabled\":false}," +
 			"{\"id\":\"goto_btn\",\"title\":\"Go To\",\"disabled\":false}," +
 			"{\"id\":\"translate_btn\",\"title\":\"Translate\",\"disabled\":false}," +
 			"{\"id\":\"panel_btn_cut\",\"title\":\"Cut\",\"disabled\":false}," +
@@ -205,12 +222,30 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 					menuItems.add(item.getString("id"));
 				}
 			}
+			if (!menuItems.contains("id_btn") || !menuItems.contains("goto_id_btn")) {
+				boolean allDisabledId = isMenuIdDisabled(jsonArray, "id_btn");
+				boolean allDisabledGotoId = isMenuIdDisabled(jsonArray, "goto_id_btn");
+				boolean inserted = false;
+				if (!menuItems.contains("id_btn") && !allDisabledId) {
+					menuItems.add(defaultInsertPosition(menuItems, null), "id_btn");
+					inserted = true;
+				}
+				if (!menuItems.contains("goto_id_btn") && !allDisabledGotoId) {
+					menuItems.add(defaultInsertPosition(menuItems, "id_btn"), "goto_id_btn");
+					inserted = true;
+				}
+				if (inserted) {
+					persistMenuItems(jsonArray);
+				}
+			}
 		} catch (Exception e) {
 			// Fallback to default order (without titles)
 			menuItems.clear();
 			menuItems.add("panel_btn_select_all");
 			menuItems.add("panel_btn_copy");
 			menuItems.add("panel_btn_paste");
+			menuItems.add("id_btn");
+			menuItems.add("goto_id_btn");
 			menuItems.add("goto_btn");
 			menuItems.add("translate_btn");
 			menuItems.add("panel_btn_cut");
@@ -219,8 +254,64 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			menuItems.add("share_btn");
 			menuItems.add("panel_btn_long_select");
 			menuItems.add("delete_btn");
+			menuItems.add("id_btn");
+			menuItems.add("goto_id_btn");
 		}
 	}
+	
+		private boolean isMenuIdDisabled(JSONArray jsonArray, String id) {
+			try {
+				for (int i = 0; i < jsonArray.length(); i++) {
+					JSONObject item = jsonArray.getJSONObject(i);
+					if (id.equals(item.optString("id"))) {
+						return item.optBoolean("disabled", false);
+					}
+				}
+			} catch (Exception ignored) {
+			}
+			return false;
+		}
+		
+		private void persistMenuItems(JSONArray jsonArray) {
+			try {
+				for (String menuId : menuItems) {
+					boolean found = false;
+					for (int i = 0; i < jsonArray.length(); i++) {
+						if (menuId.equals(jsonArray.getJSONObject(i).optString("id"))) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						JSONObject item = new JSONObject();
+						item.put("id", menuId);
+						item.put("title", menuTitleFor(menuId));
+						item.put("disabled", false);
+						jsonArray.put(item);
+					}
+				}
+				SharedPreferences prefs = codeEditor.getContext()
+				.getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
+				prefs.edit().putString("menu_order", jsonArray.toString()).apply();
+			} catch (Exception ignored) {
+			}
+		}
+		
+		private String menuTitleFor(String menuId) {
+			if ("id_btn".equals(menuId)) return "ID";
+			if ("goto_id_btn".equals(menuId)) return "Goto ID";
+			return menuId;
+		}
+		
+		private int defaultInsertPosition(java.util.List<String> order, String afterId) {
+			if (afterId != null) {
+				int anchor = order.indexOf(afterId);
+				if (anchor >= 0) return Math.min(anchor + 1, order.size());
+			}
+			int paste = order.indexOf("panel_btn_paste");
+			if (paste >= 0) return Math.min(paste + 1, order.size());
+			return Math.min(3, order.size());
+		}
 	
 	private void initializeButtons(ViewGroup parent) {
 		parent.removeAllViews();
@@ -253,6 +344,8 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		allButtons.put("share_btn", new ButtonConfig(R.drawable.ic_share_mt, R.string.share));
 		allButtons.put("panel_btn_long_select", new ButtonConfig(R.drawable.ic_text_select_start_mt, R.string.long_select));
 		allButtons.put("delete_btn", new ButtonConfig(R.drawable.ic_delete_mt, R.string.delete));
+		allButtons.put("id_btn", new ButtonConfig(R.drawable.ic_tag_mt, R.string.arsc_copy_id));
+		allButtons.put("goto_id_btn", new ButtonConfig(R.drawable.ic_goto_mt, R.string.arsc_goto_id));
 		allButtons.put("customize_btn", new ButtonConfig(R.drawable.ic_setting_mt, R.string.customize));
 		
 		// Create buttons in JSON-defined order
@@ -291,6 +384,8 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		this.openLinkButton = buttonMap.get("openLink_btn");
 		this.shareButton = buttonMap.get("share_btn");
 		this.deleteButton = buttonMap.get("delete_btn");
+		this.arscIdButton = buttonMap.get("id_btn");
+		this.arscGotoIdButton = buttonMap.get("goto_id_btn");
 		this.customizeButton = buttonMap.get("customize_btn");
 	}
 
@@ -339,6 +434,22 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			break;
 			case "delete_btn" :
 			this.codeEditor.deleteText();
+			break;
+			case "id_btn" :
+			if (cursor.isSelected() && arscIdHandler != null) {
+				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+				if (selectedText != null) {
+					arscIdHandler.onArscIdClick(selectedText);
+				}
+			}
+			break;
+			case "goto_id_btn" :
+			if (cursor.isSelected() && arscIdHandler != null) {
+				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+				if (selectedText != null) {
+					arscIdHandler.onArscGotoIdClick(selectedText);
+				}
+			}
 			break;
 			case "customize_btn" :
 			Intent intent = new Intent(codeEditor.getContext(), EditFloatingMenusActivity.class);
@@ -471,6 +582,27 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		updateShareButtonVisibility();
 		updateOpenLinkButtonVisibility();
 		updateCommentButtonVisibility();
+		updateArscIdButtonsVisibility();
+	}
+	
+	private void updateArscIdButtonsVisibility() {
+		int visibility = View.GONE;
+		if (arscIdHandler != null && this.codeEditor.getCursor().isSelected()) {
+			try {
+				Cursor cursor = this.codeEditor.getCursor();
+				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+				if (selectedText != null && arscIdHandler.isArscIdAvailable(selectedText)) {
+					visibility = View.VISIBLE;
+				}
+			} catch (Exception ignored) {
+			}
+		}
+		if (arscIdButton != null) {
+			arscIdButton.setVisibility(visibility);
+		}
+		if (arscGotoIdButton != null) {
+			arscGotoIdButton.setVisibility(visibility);
+		}
 	}
 	
 	private void updatePasteButtonState() {
