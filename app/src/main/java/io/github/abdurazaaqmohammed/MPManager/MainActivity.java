@@ -1444,8 +1444,17 @@ public class MainActivity extends AppCompatActivity {
         historyList.setAdapter(historyAdapter = new HistoryAdapter(this, lastPaneSelected == 1 ? pane1History : pane2History));
         historyList.setOnItemClickListener((parent, view, position, id) -> {
             NavigationHistoryEntry entry = historyAdapter.getItem(position);
-            if (entry.isZip()) loadZipFolderInPane(entry.file(), entry.zipPath(), lastPaneSelected == 1, false);
-            else loadFolderInPane(entry.file(), lastPaneSelected == 1, false);
+            if (entry == null) return;
+            boolean pane1 = lastPaneSelected == 1;
+            List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
+            int idx = history.indexOf(entry);
+            if (idx >= 0) {
+                if (pane1) pane1HistoryIndex = idx;
+                else pane2HistoryIndex = idx;
+            }
+            if (entry.isZip()) loadZipFolderInPane(entry.file(), entry.zipPath(), pane1, false);
+            else loadFolderInPane(entry.file(), pane1, false);
+            updateNavigationButtons();
             closeBookmarksDrawer();
         });
 
@@ -2088,7 +2097,7 @@ public class MainActivity extends AppCompatActivity {
         else {
             List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
             int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
-            if (historyIndex > 0) {
+            if (historyIndex > 0 && historyIndex <= history.size()) {
                 NavigationHistoryEntry entry = history.get(--historyIndex);
                 if (pane1) pane1HistoryIndex = historyIndex;
                 else pane2HistoryIndex = historyIndex;
@@ -2105,7 +2114,7 @@ public class MainActivity extends AppCompatActivity {
     public void navigateForward(boolean pane1) {
         List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
         int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
-        if (historyIndex < history.size() - 1) {
+        if (historyIndex >= -1 && historyIndex < history.size() - 1) {
             NavigationHistoryEntry entry = history.get(++historyIndex);
             if (pane1)
                 pane1HistoryIndex = historyIndex;
@@ -2120,11 +2129,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateNavigationButtons() {
-        boolean canGoBack = lastPaneSelected == 1 ? pane1HistoryIndex > 0 : pane2HistoryIndex > 0;
+        int backIndex = lastPaneSelected == 1 ? pane1HistoryIndex : pane2HistoryIndex;
+        int backSize = lastPaneSelected == 1 ? pane1History.size() : pane2History.size();
+        boolean canGoBack = backIndex > 0 && backIndex <= backSize;
         boolean canGoForward = lastPaneSelected == 1 ? pane1HistoryIndex < pane1History.size() - 1
                 : pane2HistoryIndex < pane2History.size() - 1;
         findViewById(R.id.backButton).setEnabled(canGoBack);
         findViewById(R.id.forwardButton).setEnabled(canGoForward);
+    }
+
+    private void pushNavigationHistory(boolean pane1, NavigationHistoryEntry entry) {
+        List<NavigationHistoryEntry> history = pane1 ? pane1History : pane2History;
+        int historyIndex = pane1 ? pane1HistoryIndex : pane2HistoryIndex;
+        if (historyIndex < -1) historyIndex = -1;
+        if (historyIndex > history.size() - 1) historyIndex = history.size() - 1;
+        while (history.size() > historyIndex + 1) {
+            history.remove(history.size() - 1);
+        }
+        if (!history.isEmpty() && history.get(history.size() - 1).equals(entry)) {
+            historyIndex = history.size() - 1;
+        } else {
+            history.add(entry);
+            historyIndex = history.size() - 1;
+        }
+        if (pane1) pane1HistoryIndex = historyIndex;
+        else pane2HistoryIndex = historyIndex;
+        refreshHistoryTab();
+    }
+
+    private void refreshHistoryTab() {
+        try {
+            if (historyAdapter != null) {
+                historyAdapter.setData(lastPaneSelected == 1 ? pane1History : pane2History);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
@@ -2257,23 +2296,13 @@ public class MainActivity extends AppCompatActivity {
             currentPane1Files = files;
             pane1Folder = folder;
             if (addToHistory) {
-                while (pane1History.size() > pane1HistoryIndex + 1) {
-                    pane1History.remove(pane1History.size() - 1);
-                }
-                pane1History.add(new NavigationHistoryEntry(folder, false, null));
-                historyAdapter.notifyDataSetChanged();
-                pane1HistoryIndex++;
+                pushNavigationHistory(true, new NavigationHistoryEntry(folder, false, null));
             }
         } else {
             currentPane2Files = files;
             pane2Folder = folder;
             if (addToHistory) {
-                while (pane2History.size() > pane2HistoryIndex + 1) {
-                    pane2History.remove(pane2History.size() - 1);
-                }
-                pane2History.add(new NavigationHistoryEntry(folder, false, null));
-                historyAdapter.notifyDataSetChanged();
-                pane2HistoryIndex++;
+                pushNavigationHistory(false, new NavigationHistoryEntry(folder, false, null));
             }
         }
         setCurrentFolder(folder, files);
@@ -2335,21 +2364,13 @@ public class MainActivity extends AppCompatActivity {
                 currentPane1ZipEntries = entries;
                 pane1Folder = zipFile;
                 if (addToHistory) {
-                    while (pane1History.size() > pane1HistoryIndex + 1) {
-                        pane1History.remove(pane1History.size() - 1);
-                    }
-                    pane1History.add(new NavigationHistoryEntry(zipFile, true, path));
-                    pane1HistoryIndex++;
+                    pushNavigationHistory(true, new NavigationHistoryEntry(zipFile, true, path));
                 }
             } else {
                 currentPane2ZipEntries = entries;
                 pane2Folder = zipFile;
                 if (addToHistory) {
-                    while (pane2History.size() > pane2HistoryIndex + 1) {
-                        pane2History.remove(pane2History.size() - 1);
-                    }
-                    pane2History.add(new NavigationHistoryEntry(zipFile, true, path));
-                    pane2HistoryIndex++;
+                    pushNavigationHistory(false, new NavigationHistoryEntry(zipFile, true, path));
                 }
             }
 

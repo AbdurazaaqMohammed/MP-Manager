@@ -14,6 +14,7 @@ import androidx.core.content.res.ResourcesCompat;
 import android.text.TextUtils;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -24,13 +25,15 @@ public class HistoryAdapter extends ArrayAdapter<MainActivity.NavigationHistoryE
     private final MainActivity context;
 
     public HistoryAdapter(MainActivity context, List<MainActivity.NavigationHistoryEntry> values) {
-        super(context, android.R.layout.simple_list_item_1, values);
+        super(context, android.R.layout.simple_list_item_1, new ArrayList<>());
         this.context = context;
+        if (values != null) addAll(values);
     }
 
     public void setData(List<MainActivity.NavigationHistoryEntry> values) {
+        setNotifyOnChange(false);
         clear();
-        addAll(values);
+        if (values != null) addAll(values);
         notifyDataSetChanged();
     }
 
