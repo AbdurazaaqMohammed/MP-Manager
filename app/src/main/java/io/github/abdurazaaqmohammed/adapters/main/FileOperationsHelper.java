@@ -777,80 +777,209 @@ public class FileOperationsHelper {
         context.startActivityForResult(intent, 757);
     }
 
-    private void openDexPlusInZip(File zipFile, String preselected) {
-        ProgressManager pm = new ProgressManager(context, false);
-        pm.show();
+    private static final Map<String, DexPreExtract> dexPreExtracts = new LinkedHashMap<>();
+
+    private static class DexPreExtract {
+        final File zipFile;
+        final File outputDir;
+        final List<String> dexNames = new ArrayList<>();
+        final CountDownLatch done = new CountDownLatch(1);
+        volatile String error;
+        volatile int extracted;
+        volatile int total;
+
+        DexPreExtract(File zipFile, File outputDir) {
+            this.zipFile = zipFile;
+            this.outputDir = outputDir;
+        }
+    }
+
+    private static synchronized DexPreExtract preExtractAllDex(Context ctx, File zipFile, boolean force) {
+        String key = zipFile.getAbsolutePath();
+        DexPreExtract existing = dexPreExtracts.get(key);
+        if (!force && existing != null && existing.error == null) return existing;
+        if (existing != null) {
+            dexPreExtracts.remove(key);
+            deleteQuietly(existing.outputDir);
+        }
+        DexPreExtract session = new DexPreExtract(zipFile, new File(ctx.getFilesDir(), "dexwork_" + UUID.randomUUID()));
+        //noinspection ResultOfMethodCallIgnored
+        session.outputDir.mkdirs();
+        dexPreExtracts.put(key, session);
         new Thread(() -> {
-            try {
-                List<String> dexFiles = new ArrayList<>();
-                String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
-                new File(outputDir).mkdir();
-                try (ZipFile zf = new ZipFile(zipFile)) {
-                    FileHeader fh = zf.getFileHeader("classes.dex");
-                    int i = 2;
-                    while (fh != null) {
-                        dexFiles.add(fh.getFileName());
-                        fh = zf.getFileHeader("classes" + i + ".dex");
-                        i++;
-                    }
-                    int size = dexFiles.size();
-                    for (int j = 0; j < size; j++) {
-                        String df = dexFiles.get(j);
-                        if (pm.dialog != null && pm.dialog.isShowing()) {
-                            pm.setProgress(j, size);
-                            pm.setText(context.rss.getString(R.string.extracting, df));
-                        }
-                        zf.extractFile(zf.getFileHeader(df), outputDir);
-                    }
+            try (ZipFile zf = new ZipFile(zipFile)) {
+                FileHeader fh = zf.getFileHeader("classes.dex");
+                int i = 2;
+                while (fh != null) {
+                    session.dexNames.add(fh.getFileName());
+                    fh = zf.getFileHeader("classes" + i + ".dex");
+                    i++;
                 }
-                pm.dismiss();
-                File tempFolder = new File(outputDir);
-                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-                builder.setTitle(context.rss.getString(R.string.fo_multidex));
-                CharSequence[] fileNames = new CharSequence[dexFiles.size()];
-                for (int j = 0; j < dexFiles.size(); j++) fileNames[j] = dexFiles.get(j);
-                boolean[] selectedItems = new boolean[dexFiles.size()];
-                String classesNo = preselected == null ? "" : preselected.replace("classes", "").replace(".dex", "");
-                try {
-                    int initialIndex = TextUtils.isEmpty(classesNo) ? 0 : (Integer.parseInt(classesNo) - 1);
-                    if (initialIndex >= 0 && initialIndex < selectedItems.length) selectedItems[initialIndex] = true;
-                } catch (NumberFormatException ignored) { }
-                builder.setMultiChoiceItems(fileNames, selectedItems, (dialog, which, isChecked) -> selectedItems[which] = isChecked);
-                builder.setNeutralButton(context.rss.getString(android.R.string.selectAll), null).setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    ArrayList<String> selectedPaths = new ArrayList<>();
-                    for (int k = 0; k < selectedItems.length; k++) {
-                        if (selectedItems[k]) selectedPaths.add(new File(tempFolder, dexFiles.get(k)).getPath());
+                session.total = session.dexNames.size();
+                for (int j = 0; j < session.dexNames.size(); j++) {
+                    String name = session.dexNames.get(j);
+                    FileHeader header = zf.getFileHeader(name);
+                    if (header == null) throw new IOException("Entry vanished: " + name);
+                    zf.extractFile(header, session.outputDir.getAbsolutePath());
+                    File out = new File(session.outputDir, name);
+                    long expected = -1;
+                    try {
+                        expected = header.getUncompressedSize();
+                    } catch (Exception ignored) {
                     }
-                    openDexPlusFiles(selectedPaths, null);
-                });
-                builder.setNegativeButton(android.R.string.cancel, null);
-                context.handler.post(() -> {
-                    AlertDialog dialog = builder.create();
-                    dialog.setOnShowListener(dialogInterface -> {
-                        Button invertButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
-                        invertButton.setOnClickListener(v -> {
-                            String buttonText = invertButton.getText().toString();
-                            if (buttonText.equals(context.rss.getString(android.R.string.selectAll))) {
-                                for (int i1 = 0; i1 < selectedItems.length; i1++) {
-                                    selectedItems[i1] = true;
-                                    dialog.getListView().setItemChecked(i1, true);
-                                }
-                                invertButton.setText(R.string.invert_selection);
-                            } else {
-                                for (int i1 = 0; i1 < selectedItems.length; i1++) {
-                                    selectedItems[i1] = !selectedItems[i1];
-                                    dialog.getListView().setItemChecked(i1, selectedItems[i1]);
-                                }
-                            }
-                        });
-                    });
-                    dialog.show();
-                });
+                    if (!out.isFile() || (expected > 0 && out.length() != expected)) {
+                        throw new IOException("Extract failed: " + out.getAbsolutePath());
+                    }
+                    session.extracted = j + 1;
+                }
             } catch (Exception e) {
-                pm.dismiss();
-                new ErrorUtil(context).showError(e);
+                session.error = String.valueOf(e.getMessage());
+            } finally {
+                session.done.countDown();
             }
         }).start();
+        return session;
+    }
+
+    private static void deleteQuietly(File f) {
+        try {
+            if (f == null || !f.exists()) return;
+            if (f.isDirectory()) {
+                File[] kids = f.listFiles();
+                if (kids != null) for (File k : kids) deleteQuietly(k);
+            }
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static List<String> listAllDexNames(File zipFile) throws IOException {
+        List<String> dexNames = new ArrayList<>();
+        try (ZipFile zf = new ZipFile(zipFile)) {
+            FileHeader fh = zf.getFileHeader("classes.dex");
+            int i = 2;
+            while (fh != null) {
+                dexNames.add(fh.getFileName());
+                fh = zf.getFileHeader("classes" + i + ".dex");
+                i++;
+            }
+        }
+        return dexNames;
+    }
+
+    private void openDexPlusInZip(File zipFile, String preselected) {
+        DexPreExtract session = preExtractAllDex(context, zipFile, false);
+        List<String> dexFiles;
+        try {
+            dexFiles = listAllDexNames(zipFile);
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+            return;
+        }
+        if (dexFiles.isEmpty()) {
+            Extensions.showMessage(context, R.string.no_files_found);
+            return;
+        }
+        File tempFolder = session.outputDir;
+        List<String> dexNames = new ArrayList<>(dexFiles);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        builder.setTitle(context.rss.getString(R.string.fo_multidex));
+        CharSequence[] fileNames = new CharSequence[dexNames.size()];
+        for (int j = 0; j < dexNames.size(); j++) fileNames[j] = dexNames.get(j);
+        boolean[] selectedItems = new boolean[dexNames.size()];
+        String classesNo = preselected == null ? "" : preselected.replace("classes", "").replace(".dex", "");
+        try {
+            int initialIndex = TextUtils.isEmpty(classesNo) ? 0 : (Integer.parseInt(classesNo) - 1);
+            if (initialIndex >= 0 && initialIndex < selectedItems.length) selectedItems[initialIndex] = true;
+        } catch (NumberFormatException ignored) { }
+        builder.setMultiChoiceItems(fileNames, selectedItems, (dialog, which, isChecked) -> selectedItems[which] = isChecked);
+        builder.setNeutralButton(context.rss.getString(android.R.string.selectAll), null).setPositiveButton(android.R.string.ok, (dialog, which) -> {
+            List<String> selectedNames = new ArrayList<>();
+            for (int k = 0; k < selectedItems.length; k++) {
+                if (selectedItems[k]) selectedNames.add(dexNames.get(k));
+            }
+            if (selectedNames.isEmpty()) return;
+            DexPreExtract useSession = session;
+            boolean allThere = useSession.error == null;
+            if (allThere) {
+                for (String n : selectedNames) {
+                    if (!new File(useSession.outputDir, n).isFile()) {
+                        allThere = false;
+                        break;
+                    }
+                }
+            }
+            if (!allThere) useSession = preExtractAllDex(context, zipFile, true);
+            final DexPreExtract waitSession = useSession;
+            if (waitSession.done.getCount() == 0 && waitSession.error == null) {
+                openExtractedDex(waitSession, selectedNames);
+                return;
+            }
+            ProgressManager pm = new ProgressManager(context, false);
+            pm.show();
+            int total = Math.max(1, selectedNames.size());
+            pm.setProgress(0, total);
+            pm.setText(context.rss.getString(R.string.extracting, selectedNames.get(0)));
+            new Thread(() -> {
+                while (waitSession.done.getCount() > 0) {
+                    int done = Math.min(waitSession.extracted, total);
+                    context.handler.post(() -> {
+                        pm.setProgress(done, total);
+                        pm.setText(context.rss.getString(R.string.extracting, done + "/" + total));
+                    });
+                    try {
+                        Thread.sleep(150);
+                    } catch (InterruptedException ignored) {
+                        break;
+                    }
+                }
+                context.handler.post(() -> {
+                    pm.dismiss();
+                    if (waitSession.error != null) {
+                        new ErrorUtil(context).showError(new Exception(waitSession.error));
+                        return;
+                    }
+                    openExtractedDex(waitSession, selectedNames);
+                });
+            }).start();
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+        AlertDialog dialog = builder.create();
+        dialog.setOnShowListener(dialogInterface -> {
+            Button invertButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+            invertButton.setOnClickListener(v -> {
+                String buttonText = invertButton.getText().toString();
+                if (buttonText.equals(context.rss.getString(android.R.string.selectAll))) {
+                    for (int i1 = 0; i1 < selectedItems.length; i1++) {
+                        selectedItems[i1] = true;
+                        dialog.getListView().setItemChecked(i1, true);
+                    }
+                    invertButton.setText(R.string.invert_selection);
+                } else {
+                    for (int i1 = 0; i1 < selectedItems.length; i1++) {
+                        selectedItems[i1] = !selectedItems[i1];
+                        dialog.getListView().setItemChecked(i1, selectedItems[i1]);
+                    }
+                }
+            });
+        });
+        dialog.show();
+    }
+
+    private void openExtractedDex(DexPreExtract session, List<String> selectedNames) {
+        ArrayList<String> selectedPaths = new ArrayList<>();
+        String missing = null;
+        for (String n : selectedNames) {
+            File f = new File(session.outputDir, n);
+            if (f.isFile() && f.length() > 0) selectedPaths.add(f.getPath());
+            else if (missing == null) missing = f.getAbsolutePath();
+        }
+        if (selectedPaths.isEmpty()) {
+            Extensions.showMessage(context, missing != null ? missing : context.rss.getString(R.string.file_no_longer_available));
+            return;
+        }
+        openDexPlusFiles(selectedPaths, null);
     }
 
     private void repairDex(File dexFile, File zipFile) {
@@ -983,6 +1112,7 @@ public class FileOperationsHelper {
             tempFile.createNewFile();
             if(name.endsWith(".dex")) {
                 FileUtils.copyFile(is, tempFile);
+                preExtractAllDex(context, zipFile, false);
                 context.handler.post(() -> showDexOptionsDialog(tempFile, zipFile, fullPath, name));
             } else if (name.endsWith(".xml")) {
                 boolean isAxml = FileUtils.isAxml(is);
@@ -1001,7 +1131,10 @@ public class FileOperationsHelper {
                         .putExtra("zipEntryPath", fullPath)
                         .putExtra("axml", true)
                         .putExtra("path", tempFile.getPath()), 757);
-                } else context.startActivity(new Intent(context, TextEditorActivity.class).putExtra("path", tempFile.getPath()));
+                } else context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                        .putExtra("zf", zipFile.getPath())
+                        .putExtra("zipEntryPath", fullPath)
+                        .putExtra("path", tempFile.getPath()), 757);
             } else if (name.equals("resources.arsc")) {
                 FileUtils.copyFile(is, tempFile);
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));

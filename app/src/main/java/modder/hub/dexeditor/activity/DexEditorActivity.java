@@ -441,7 +441,8 @@ public class DexEditorActivity extends AppCompatActivity {
         File[] cacheFiles = getCacheDir().listFiles();
         if (cacheFiles != null) {
             for (File file : cacheFiles) {
-                if (file.isDirectory() && file.getName().startsWith("dex_editor_")) {
+                if (file.isDirectory() && file.getName().startsWith("dex_editor_")
+                        && !ClassTree.isWorkDirClaimed(file.getAbsolutePath())) {
                     deleteRecursive(file);
                 }
             }
@@ -456,7 +457,7 @@ public class DexEditorActivity extends AppCompatActivity {
         } else fabDelete.setColorFilter(new LightingColorFilter(Color.BLACK, 0xFFFFFFFF));
         fabDelete.hide();
 
-        String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new Random().nextInt(9000) + 1000);
+        String uniqueId = System.currentTimeMillis() + "_" + System.nanoTime() + "_" + (new Random().nextInt(9000) + 1000);
         File cacheDir = new File(getCacheDir(), "dex_editor_" + uniqueId);
 
         if (dexPaths != null && !dexPaths.isEmpty()) {
@@ -2402,6 +2403,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
         @Override
         public void run() {
+            ClassTree.claimWorkDir(cachePath);
             try {
                 classTree = new ClassTree(paths, cachePath);
                 // Pre-build trees in background to avoid UI lag
@@ -2428,6 +2430,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 showProcessingProgress(false);
                 runOnUiThread(() -> showErrorDialog(e));
             } finally {
+                ClassTree.releaseWorkDir(cachePath);
                 showProcessingProgress(false);
             }
         }
