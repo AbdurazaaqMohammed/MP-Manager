@@ -7,7 +7,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
+
+import android.util.TypedValue;
 
 import java.util.List;
 
@@ -42,11 +45,13 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         FileMenuOrder.MenuItem item = items.get(position);
-        holder.label.setText(item.label);
-        holder.icon.setImageResource(FileMenuOrder.iconFor(context, item.id, false, false));
-
-        boolean disabled = (FileMenuOrder.MOVE.equals(item.id) && context.pane1Folder == context.pane2Folder)
-                || ((FileMenuOrder.COMPRESS.equals(item.id) || FileMenuOrder.BOOKMARK.equals(item.id)) && isInZip);
+        holder.label.setText(item.label());
+        holder.icon.setImageResource(FileMenuOrder.iconFor(context, item.id(), false, false));
+        TypedValue tv = new TypedValue();
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true);
+        DrawableCompat.setTint(holder.icon.getDrawable(), tv.data);
+        boolean disabled = (FileMenuOrder.MOVE.equals(item.id()) && context.pane1Folder == context.pane2Folder)
+                || ((FileMenuOrder.COMPRESS.equals(item.id()) || FileMenuOrder.BOOKMARK.equals(item.id())) && isInZip);
         holder.itemView.setAlpha(disabled ? 0.38f : 1f);
         holder.itemView.setOnClickListener(v -> {
             if (listener == null) return;
