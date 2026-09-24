@@ -27,7 +27,6 @@ import java.net.URL;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 
@@ -55,12 +54,12 @@ public class UpdateUtil {
                     }
                     String currentVer;
                     try {
-                        currentVer = null;//(context).getPackageManager().getPackageInfo((context).getPackageName(), 0).versionName;
+                        currentVer = (context).getPackageManager().getPackageInfo((context).getPackageName(), 0).versionName;
                     } catch (Exception e) {
                         currentVer = null;
                     }
                     boolean newVer = false;
-                    char[] curr = TextUtils.isEmpty(currentVer) ? new char[] { '1', '0', '2' }
+                    char[] curr = TextUtils.isEmpty(currentVer) ? new char[] { '1', '0', '7' }
                             : currentVer.replace(".", "").toCharArray();
                     char[] latest = latestVersion.replace(".", "").toCharArray();
 
