@@ -20,6 +20,7 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RotateDrawable;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
@@ -90,7 +91,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.github.paul035.LocaleHelper;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
@@ -445,22 +445,35 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if(requestCode == 757) {
                 if (data == null || data.getData() == null) return;
-                handleModifiedFileResult(data.getData());
+                handleModifiedFileResult(data.getData(), data.getStringExtra("zipEntryPath"), data.getStringExtra("zipFilePath"));
             }
         }
     }
 
     public void handleModifiedFileResult(Uri uri) {
+        handleModifiedFileResult(uri, null, null);
+    }
+
+    public void handleModifiedFileResult(Uri uri, String entryPath, String zipFileExtra) {
         boolean pane1 = lastPaneSelected == 1;
         String path = uri == null ? null : uri.getPath();
-        File zipFile = pane1 ? pane1Folder : pane2Folder;
+        File resolvedZip = null;
+        if (zipFileExtra != null && !zipFileExtra.isEmpty()) {
+            File zp = new File(zipFileExtra);
+            if (zp.isFile()) resolvedZip = zp;
+        }
+        if (resolvedZip == null) resolvedZip = pane1 ? pane1Folder : pane2Folder;
+        final File zipFile = resolvedZip;
         if (path == null || !path.startsWith(getCacheDir().getPath())) return;
         if (zipFile == null || !zipFile.isFile()) {
             Extensions.showMessage(this, R.string.archive_no_longer_open);
             return;
         }
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-                    String modifiedFileName = path.substring(path.lastIndexOf("/") + 1);
+                    String entryName = (entryPath != null && !entryPath.isEmpty()) ? entryPath : null;
+                    String modifiedFileName = entryName != null
+                            ? entryName.substring(entryName.lastIndexOf("/") + 1)
+                            : path.substring(path.lastIndexOf("/") + 1);
                     LinearLayout ll = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.item_modified_dialog, null);
                     String zipFileName = zipFile.getName();
                     boolean isApk = zipFileName.endsWith(".apk");
@@ -497,6 +510,7 @@ public class MainActivity extends AppCompatActivity {
                                             ZipParameters zp = new ZipParameters();
                                             boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
                                             zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+                                            if (entryName != null) zp.setFileNameInZip(entryName);
                                             zf.addFile(path, zp);
                                         }
                                     } catch (Exception e) {
@@ -1368,6 +1382,15 @@ public class MainActivity extends AppCompatActivity {
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
+        View sidebarDrawer = findViewById(R.id.sidebar_drawer);
+
+        if (sidebarDrawer.getBackground() instanceof GradientDrawable sidebarBackground) {
+//            sidebarBackground.setColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.BLACK));
+//            sidebarDrawer.setBackground(sidebarBackground);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            sidebarDrawer.setClipToOutline(true);
+        }
         bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bookmarks_drawer));
         bottomSheetBehavior.setPeekHeight(0, false); // animate=false, keeps it hidden
         bottomSheetBehavior.setHideable(true); // allows fully hidden state
@@ -1464,17 +1487,15 @@ public class MainActivity extends AppCompatActivity {
         };
 
         findViewById(R.id.sidebarTitle).setOnClickListener(v -> uiHelper.showAboutDialog());
-        LinearLayout container = findViewById(R.id.storageContainer);
+        LinearLayout storageBox = findViewById(R.id.storageContainer);
         ListView sidebar = findViewById(R.id.sidebarList);
+
         ArrayList<String> sidebarOptions = new ArrayList<>(Arrays.asList(getString(R.string.sidebar_extract), getString(R.string.ftp_server), getString(R.string.ftp_client), getString(R.string.color_picker), getString(R.string.sidebar_layout_inspector), getString(R.string.sidebar_wifi), getString(R.string.sidebar_tools), getString(R.string.settings)));
         ArrayList<Integer> sidebarIcons = new ArrayList<>(Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.wifi_24px, R.drawable.tools_24px, R.drawable.baseline_settings_24));
         SwipeRefreshLayout sidebarRefresh = findViewById(R.id.sidebarRefresh);
         if (sidebarRefresh != null) {
             sidebarRefresh.setOnRefreshListener(() -> {
-                try {
-                    StorageUtil.populateStorageUI(this, container);
-                } catch (Exception ignored) {
-                }
+                try { StorageUtil.populateStorageUI(this, storageBox); } catch (Exception ignored) { }
                 sidebarRefresh.setRefreshing(false);
             });
         }
@@ -1490,12 +1511,12 @@ public class MainActivity extends AppCompatActivity {
                     convertView = LayoutInflater.from(MainActivity.this).inflate(R.layout.item_dropdown_option, parent, false);
                 }
 
-                convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
-                convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-                if (position == 3 && Build.VERSION.SDK_INT < 24)
-                    convertView.setVisibility(View.GONE);
-                if (position == 4 && Build.VERSION.SDK_INT < 20)
-                    convertView.setVisibility(View.GONE);
+                if (position == 3 && Build.VERSION.SDK_INT < 24) convertView.setVisibility(View.GONE);
+                else if (position == 4 && Build.VERSION.SDK_INT < 20) convertView.setVisibility(View.GONE);
+                else {
+                    convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
+                    convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
+                }
                 return convertView;
             }
         });
@@ -1943,7 +1964,7 @@ public class MainActivity extends AppCompatActivity {
         handler.post(() -> {
             setupFilterBar();
             setupNavigationButtons();
-            StorageUtil.populateStorageUI(this, container);
+            StorageUtil.populateStorageUI(this, storageBox);
             File[] dir1Files = homeDir1.listFiles();
             if (dir1Files != null) {
                 File[] folders = homeDir1.listFiles(File::isDirectory);
@@ -1962,8 +1983,7 @@ public class MainActivity extends AppCompatActivity {
                         handler.post(() -> {
                             try {
                                 Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
-                                LinearLayout storageBox = findViewById(R.id.storageContainer);
-                                if (storageBox != null) StorageUtil.populateStorageUI(MainActivity.this, storageBox);
+                                StorageUtil.populateStorageUI(MainActivity.this, storageBox);
                             } catch (Exception ignored) {
                             }
                         });
