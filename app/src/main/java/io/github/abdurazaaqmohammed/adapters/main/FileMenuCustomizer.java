@@ -1,18 +1,15 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
-import android.graphics.drawable.Drawable;
-import android.util.TypedValue;
-import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -22,7 +19,6 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -39,17 +35,19 @@ public final class FileMenuCustomizer {
             items.add(new FileMenuOrder.MenuItem(id, FileMenuOrder.labelFor(context, id, "->")));
         }
 
-        RecyclerView grid = new RecyclerView(context);
-        grid.setLayoutManager(new GridLayoutManager(context, 2));
+        RecyclerView list = new RecyclerView(context);
+        list.setLayoutManager(new LinearLayoutManager(context));
+        list.setClipToPadding(false);
+        int pad = (int) (4 * context.getResources().getDisplayMetrics().density + 0.5f);
+        list.setPadding(0, pad, 0, pad);
         OrderAdapter adapter = new OrderAdapter(context, items);
-        grid.setAdapter(adapter);
+        list.setAdapter(adapter);
 
         ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.Callback() {
             @Override
             public int getMovementFlags(@NonNull RecyclerView recyclerView,
                                         @NonNull RecyclerView.ViewHolder viewHolder) {
-                int drag = ItemTouchHelper.UP | ItemTouchHelper.DOWN
-                        | ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
+                int drag = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
                 return makeMovementFlags(drag, 0);
             }
 
@@ -74,12 +72,12 @@ public final class FileMenuCustomizer {
                 return true;
             }
         });
-        helper.attachToRecyclerView(grid);
+        helper.attachToRecyclerView(list);
 
         AlertDialog dialog = dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.customize_file_menu))
                 .setMessage(context.getString(R.string.customize_file_menu_hint))
-                .setView(grid)
+                .setView(list)
                 .setPositiveButton(android.R.string.ok, null)
                 .setNeutralButton(R.string.reset, (d, w) -> {
                     FileMenuOrder.save(context, new ArrayList<>(Arrays.asList(FileMenuOrder.DEFAULT_ORDER)));
@@ -106,18 +104,8 @@ public final class FileMenuCustomizer {
         @NonNull
         @Override
         public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            LinearLayout row = new LinearLayout(context);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(24, 24, 24, 24);
-            ImageView icon = new ImageView(context);
-            icon.setLayoutParams(new ViewGroup.LayoutParams(72, 72));
-            icon.setPadding(0, 0, 10, 0);
-            TextView label = new TextView(context);
-            label.setTextSize(18);
-            row.addView(icon);
-            row.addView(label);
-            return new Holder(row, icon, label);
+            View row = LayoutInflater.from(context).inflate(R.layout.item_file_menu_action, parent, false);
+            return new Holder(row, row.findViewById(R.id.menuItemIcon), row.findViewById(R.id.menuItemLabel));
         }
 
         @Override
@@ -125,13 +113,6 @@ public final class FileMenuCustomizer {
             FileMenuOrder.MenuItem item = items.get(position);
             holder.label.setText(item.label);
             holder.icon.setImageResource(FileMenuOrder.iconFor(context, item.id, false, false));
-            Drawable drawable = holder.icon.getDrawable();
-            if (drawable != null) {
-                TypedValue typedValue = new TypedValue();
-                context.getTheme().resolveAttribute(
-                        com.google.android.material.R.attr.colorOnSurface, typedValue, true);
-                ColorUtil.changeImageColor(drawable, typedValue.data);
-            }
         }
 
         @Override
