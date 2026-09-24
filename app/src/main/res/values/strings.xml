@@ -666,4 +666,9 @@ Layout Inspector
     <string name="select_none">Select none</string>
     <string name="debug_key_reset">Default debug key loaded</string>
     <string name="new_key">New Key</string>
+    <string name="shizuku_needed">This folder requires Shizuku. Install Shizuku and grant access to continue.</string>
+    <string name="shizuku_install">Install Shizuku</string>
+    <string name="shizuku_grant">Grant</string>
+    <string name="shizuku_not_running">Shizuku is not running. Open the Shizuku app to start it.</string>
+    <string name="shizuku_open">Open Shizuku</string>
 </resources>

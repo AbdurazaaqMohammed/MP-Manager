@@ -46,6 +46,7 @@ import java.util.concurrent.CountDownLatch;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
@@ -186,6 +187,8 @@ public class FileOperationsHelper {
                     } catch (Exception e) {
                     }
                 }
+                if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellMove(f, destinationFolder, dest.getName()))
+                    continue;
                 if (f.renameTo(dest)) continue;
                 if (f.isDirectory()) {
                     dest.mkdir();
@@ -233,6 +236,8 @@ public class FileOperationsHelper {
                     } catch (Exception e) {
                     }
                 }
+                if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellCopy(f, destinationFolder, dest.getName()) != null)
+                    continue;
                 if (f.isDirectory()) {
                     dest.mkdir();
                     FileUtils.copyFolder(f, dest);

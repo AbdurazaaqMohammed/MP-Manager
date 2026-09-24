@@ -161,6 +161,9 @@ public class FileUtils {
     }
 
     public static InputStream getInputStream(File file) throws IOException {
+        if (file instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile) {
+            file = io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps.materialize(null, file);
+        }
         return LegacyUtils.supportsFileChannel ?
                 Files.newInputStream(file.toPath(), StandardOpenOption.READ)
                 : new FileInputStream(file);

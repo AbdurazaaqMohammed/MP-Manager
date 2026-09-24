@@ -14,6 +14,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.util.Log;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
@@ -72,6 +73,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FTPFileWrapper;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpsCertificateUtil;
 import io.github.abdurazaaqmohammed.MPManager.ftp.FtpForegroundService;
 import io.github.abdurazaaqmohammed.MPManager.ftp.ProfileHelper;
@@ -1236,6 +1240,8 @@ public class MainActivity extends AppCompatActivity {
         boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         setTheme(theme = settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
         super.onCreate(savedInstanceState);
+        ShizukuFileOps.init(this);
+        ShizukuShell.warmUp(this);
         DynamicColors.applyToActivitiesIfAvailable(getApplication());
         //WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
@@ -1947,8 +1953,14 @@ public class MainActivity extends AppCompatActivity {
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
+        boolean shizukuDir = ShizukuFile.isAndroidDataPath(folder);
         File[] files = folder.listFiles(this::isNotHidden);
+        if (files == null || (files.length == 0 && shizukuDir)) {
+            File[] viaShizuku = ShizukuFile.tryList(this, folder);
+            if (viaShizuku != null) files = viaShizuku;
+        }
         if (files == null) {
+            if (shizukuDir) showShizukuGuideOnce(folder, pane1);
             RootManager rm = RootManager.getInstance(this);
             if (rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
                 files = rm.listRootFiles(folder.getAbsolutePath());
@@ -2160,6 +2172,37 @@ public class MainActivity extends AppCompatActivity {
         loadFolderInPane(folder, pane1, true);
     }
 
+    /** Nudge to install/start/grant Shizuku when the user hits an Android/data folder without it. */
+    private void showShizukuGuideOnce(File folder, boolean pane1) {
+        boolean installed = ShizukuShell.isInstalled(this);
+        String message;
+        int positiveLabel;
+        Runnable onPositive;
+        if (!installed) {
+            message = rss.getString(R.string.shizuku_needed);
+            positiveLabel = R.string.shizuku_install;
+            onPositive = () -> ShizukuShell.openShizukuApp(this);
+        } else if (!ShizukuShell.isAvailable()) {
+            message = rss.getString(R.string.shizuku_not_running);
+            positiveLabel = R.string.shizuku_open;
+            onPositive = () -> ShizukuShell.openShizukuApp(this);
+        } else {
+            message = rss.getString(R.string.shizuku_needed);
+            positiveLabel = R.string.shizuku_grant;
+            onPositive = () -> ShizukuShell.requestPermission();
+        }
+        // Once the binder arrives (user started Shizuku / granted), reload this folder automatically.
+        ShizukuShell.onBinderReceived(() -> runOnUiThread(() -> {
+            if (ShizukuShell.isGranted()) loadFolderInPane(folder, pane1, false);
+        }));
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Shizuku")
+                .setMessage(message)
+                .setPositiveButton(positiveLabel, (d, w) -> onPositive.run())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
     private boolean showMsgOnLongPress(View v) {
         CharSequence contentDescription = v.getContentDescription();
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
@@ -2200,8 +2243,15 @@ public class MainActivity extends AppCompatActivity {
         uiHelper.scrollTextView(currentFolderPath);
         if (files == null) this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, 0, 0));
         else {
-            File[] folders = curr.listFiles(File::isDirectory);
-            int foldersCount = folders == null ? 0 : folders.length;
+            int foldersCount;
+            if (ShizukuFile.isAndroidDataPath(curr)) {
+                // ShizukuFile folders can't listFiles(); count from the entries we already have.
+                foldersCount = 0;
+                for (File f : files) if (f.isDirectory()) foldersCount++;
+            } else {
+                File[] folders = curr.listFiles(File::isDirectory);
+                foldersCount = folders == null ? 0 : folders.length;
+            }
             this.<TextView>findViewById(R.id.folderCount).setText(rss.getString(R.string.folders_files_x, foldersCount, files.length - foldersCount));
         }
     }
@@ -2217,7 +2267,9 @@ public class MainActivity extends AppCompatActivity {
                 setCurrentFolder(adapter.currentZipPath, Arrays.asList(adapter.values));
             } else {
                 File curr = pane == 1 ? pane1Folder : pane2Folder;
-                setCurrentFolder(curr, curr.listFiles());
+                // ShizukuFile.listFiles() can't list; reuse the entries the adapter already shows.
+                File[] shown = adapter.getShownFiles();
+                setCurrentFolder(curr, shown != null ? shown : curr.listFiles());
             }
         }
         updateNavigationButtons();
