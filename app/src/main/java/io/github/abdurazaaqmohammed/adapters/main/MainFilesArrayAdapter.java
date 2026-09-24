@@ -42,6 +42,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
@@ -366,19 +367,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
 
-                GridView gridView = new GridView(context);
-                gridView.setNumColumns(2);
-                gridView.setBackgroundColor(Color.TRANSPARENT);
-                gridView.setPadding(16, 16, 16, 16);
-                gridView.setAdapter(new DialogAdapter(context, menuItems, isInZip));
-                gridView.setVerticalSpacing(40);
-                AlertDialog dialog = dialogUtil.getDialogBuilder()
-                        .setTitle(fileName)
-                        .setView(gridView)
-                        .create();
-
-                gridView.setOnItemClickListener((parent1, view, position1, id) -> {
-                    dialog.dismiss();
+                BottomSheetDialog menuSheet = new BottomSheetDialog(context);
+                View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
+                ((TextView) menuView.findViewById(R.id.fileMenuTitle)).setText(fileName);
+                RecyclerView menuList = menuView.findViewById(R.id.fileMenuList);
+                menuList.setLayoutManager(new LinearLayoutManager(context));
+                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, position1 -> {
+                    menuSheet.dismiss();
                     try {
                         String actionId = itemIds[position1];
                         switch (actionId) {

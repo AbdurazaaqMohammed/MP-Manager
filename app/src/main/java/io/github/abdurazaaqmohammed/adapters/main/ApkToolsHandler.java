@@ -448,8 +448,8 @@ public class ApkToolsHandler {
 
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
-                .setNeutralButton("More", (dialog, which) -> {
-                    String[] items = new String[]{"Sign APK", "Optimize APK", "Decompile (REAndroid APKEditor)", "Refactor obfuscated resource names", "Protect (REAndroid APKEditor)", "Clone APK", context.getString(R.string.view_certificate), "Kill signature verification", "Add Toast / Dialog", "Remove all toasts", "Remove signature", "Signature health", "Manifest toggles", "Permissions"};
+                .setNeutralButton(R.string.more, (dialog, which) -> {
+                    String[] items = new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)};
                     dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
                         dialog12.dismiss();
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
@@ -621,7 +621,7 @@ public class ApkToolsHandler {
                         layout.addView(forceSwitch);
                         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
                                 .setNegativeButton(android.R.string.cancel, null)
-                                .setPositiveButton("Refactor", (dialog2, which3) -> {
+                                .setPositiveButton(R.string.refactor, (dialog2, which3) -> {
                                     options.cleanMeta = settings.getBoolean("cleanMeta", true);
                                     options.fixTypeNames = settings.getBoolean("fixTypes", true);
                                     options.force = settings.getBoolean("flagForce", false);
@@ -695,7 +695,7 @@ public class ApkToolsHandler {
                         layout.addView(forceView);
                         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
                                 .setNegativeButton(android.R.string.cancel, null)
-                                .setPositiveButton("Protect", (dialog2, which3) -> {
+                                .setPositiveButton(R.string.protect, (dialog2, which3) -> {
                                     options.skipManifest = settings.getBoolean("skipManifest", false);
                                     options.confuse_zip = settings.getBoolean("confuseZip", false);
                                     options.dexLevel = settings.getInt("dexLevel", 0);
@@ -769,8 +769,8 @@ public class ApkToolsHandler {
                     else if (which1 == 13) manifestEditor.showPermissionsDialog(file);
                     }).show();
                 })
-                .setPositiveButton("Install", (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
-                .setNegativeButton("View", (dialog, which) -> openZipFile(file))
+                .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
+                .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file))
                 .create();
         dialogUtil.styleAlertDialog(ad);
         LinearLayout rootInfoSection = display.findViewById(R.id.rootInfoSection);
@@ -2073,7 +2073,10 @@ public class ApkToolsHandler {
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_overlay_editor, null);
 
         MaterialAutoCompleteTextView modeTv = view.findViewById(R.id.overlayModeTv);
-        String[] modes = {"Toast", "Dialog", "Advanced"};
+        String toast = context.rss.getString(R.string.toast);
+        String dialog = context.rss.getString(R.string.dialog);
+        String adv = context.rss.getString(R.string.advanced);
+        String[] modes = {toast, dialog, adv};
         modeTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, modes));
         modeTv.setText(modes[0], false);
 
@@ -2162,8 +2165,8 @@ public class ApkToolsHandler {
             }
             EditText textInput = new EditText(context);
             textInput.setText(w.text == null ? "" : w.text);
-            if (w.kind.equals("button")) textInput.setHint("Button text");
-            else textInput.setHint("Text (HTML allowed)");
+            if (w.kind.equals("button")) textInput.setHint(R.string.button_text);
+            else textInput.setHint(R.string.text_html_allowed);
             advProps.addView(UiFields.wrap(context, textInput, null, 0));
             textInput.addTextChangedListener(new TextWatcher() {
                 public void beforeTextChanged(CharSequence s, int a, int b, int c) {
@@ -2465,25 +2468,26 @@ public class ApkToolsHandler {
                 });
                 renderBtnAnim[0].run();
                 MaterialAutoCompleteTextView actionTv = new MaterialAutoCompleteTextView(context);
+                String dismiss = context.rss.getString(R.string.dismiss);
+                String openUrl = context.rss.getString(R.string.open_url);
                 actionTv.setAdapter(new ArrayAdapter<>(context,
-                        android.R.layout.simple_dropdown_item_1line, new String[]{"Dismiss", "Open URL"}));
-                actionTv.setText(w.btnAction == null ? "Dismiss" : w.btnAction, false);
+                        android.R.layout.simple_dropdown_item_1line, new String[]{dismiss, openUrl}));
+                actionTv.setText(w.btnAction == null ? dismiss : w.btnAction, false);
                 actionTv.setInputType(InputType.TYPE_NULL);
                 actionTv.setCursorVisible(false);
                 actionTv.setOnClickListener(vv -> actionTv.showDropDown());
-                TextInputLayout actionBox =
-                        UiFields.box(context, "Tap action");
+                TextInputLayout actionBox = UiFields.box(context, context.rss.getString(R.string.tap_action));
                 actionBox.addView(actionTv);
                 advProps.addView(actionBox);
                 EditText urlInput = new EditText(context);
                 urlInput.setText(w.url == null ? "" : w.url);
-                View urlBox = UiFields.wrap(context, urlInput, "URL (for Open URL)", 0);
+                View urlBox = UiFields.wrap(context, urlInput, context.rss.getString(R.string.url_for_open_url), 0);
                 advProps.addView(urlBox);
                 Runnable syncUrlBox = () -> urlBox.setVisibility(
-                        actionTv.getText() != null && actionTv.getText().toString().equals("Open URL")
+                        actionTv.getText() != null && actionTv.getText().toString().equals(openUrl)
                                 ? View.VISIBLE : View.GONE);
                 actionTv.setOnItemClickListener((p, vv, pos, id) -> {
-                    w.btnAction = pos == 1 ? "Open URL" : "Dismiss";
+                    w.btnAction = pos == 1 ? openUrl : dismiss;
                     syncUrlBox.run();
                 });
                 syncUrlBox.run();
@@ -2522,7 +2526,7 @@ public class ApkToolsHandler {
                     vw = iv;
                 } else if (w.kind.equals("button")) {
                     MaterialButton btn = new MaterialButton(context);
-                    btn.setText(displayText(w.text == null || w.text.isEmpty() ? "Button" : w.text, richText));
+                    btn.setText(displayText(w.text == null || w.text.isEmpty() ? context.rss.getString(R.string.button) : w.text, richText));
                     btn.setTextSize(w.textSizeSp > 0 ? w.textSizeSp : 14f);
                     if (w.textColor != 0) btn.setTextColor(w.textColor);
                     applyWidgetTypeface(btn, w, form);
@@ -2638,7 +2642,7 @@ public class ApkToolsHandler {
         view.findViewById(R.id.advAddText).setOnClickListener(v -> {
             OverlayInjectorUtil.AdvWidget w = new OverlayInjectorUtil.AdvWidget();
             w.kind = "text";
-            w.text = "Text";
+            w.text = context.rss.getString(R.string.text);
             w.textSizeSp = 16f;
             w.leftDp = 16;
             w.topDp = 16 * advWidgets.size();
@@ -2681,10 +2685,10 @@ public class ApkToolsHandler {
         TextInputEditText messageInput = view.findViewById(R.id.overlayToastMessage);
         MaterialAutoCompleteTextView durationTv = view.findViewById(R.id.overlayToastDuration);
         durationTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line,
-                new String[]{"Long", "Short"}));
+                new String[]{context.rss.getString(R.string.longs), context.rss.getString(R.string.shorts)}));
         MaterialAutoCompleteTextView gravityTv = view.findViewById(R.id.overlayToastGravity);
         gravityTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line,
-                new String[]{"Default", "Bottom", "Center", "Top"}));
+                new String[]{context.rss.getString(R.string.def), context.rss.getString(R.string.bottom), context.rss.getString(R.string.center), context.rss.getString(R.string.top)}));
         TextInputEditText xInput = view.findViewById(R.id.overlayToastX);
         TextInputEditText yInput = view.findViewById(R.id.overlayToastY);
         MaterialSwitch toastHtmlSwitch = view.findViewById(R.id.overlayToastHtml);
@@ -2712,7 +2716,7 @@ public class ApkToolsHandler {
         MaterialSwitch dlgB64Switch = view.findViewById(R.id.overlayDlgB64);
         TextView dlgPreviewTitle = view.findViewById(R.id.overlayDlgPreviewTitle);
         TextView dlgPreviewMsg = view.findViewById(R.id.overlayDlgPreviewMsg);
-        String[] buttonActions = {"Dismiss", "Open URL"};
+        String[] buttonActions = {context.rss.getString(R.string.dismiss), context.rss.getString(R.string.open_url)};
         ArrayAdapter<String> actionAdapter = new ArrayAdapter<>(context,
                 android.R.layout.simple_dropdown_item_1line, buttonActions);
         dlgPosAction.setAdapter(actionAdapter);
@@ -2784,10 +2788,10 @@ public class ApkToolsHandler {
         MaterialAutoCompleteTextView profileTv = view.findViewById(R.id.overlayProfileTv);
         refreshProfiles(form, true);
         Runnable syncModeSections = () -> {
-            String mode = modeTv.getText() == null ? "Toast" : modeTv.getText().toString();
-            boolean isToast = !"Dialog".equals(mode) && !"Advanced".equals(mode);
-            boolean isAdvanced = "Advanced".equals(mode);
-            boolean isDialog = "Dialog".equals(mode);
+            String mode = modeTv.getText() == null ? toast : modeTv.getText().toString();
+            boolean isToast = !dialog.equals(mode) && !adv.equals(mode);
+            boolean isAdvanced = adv.equals(mode);
+            boolean isDialog = dialog.equals(mode);
             toastSection.setVisibility(isToast ? View.VISIBLE : View.GONE);
             dialogSection.setVisibility(isDialog ? View.VISIBLE : View.GONE);
             if (dialogSection2 != null) dialogSection2.setVisibility(isDialog ? View.VISIBLE : View.GONE);
@@ -2831,7 +2835,7 @@ public class ApkToolsHandler {
                 }
                 renderAdv[0].run();
                 showAdvProps[0].run();
-                Extensions.showMessage(context, "Dialog font applied to all widgets");
+                Extensions.showMessage(context, R.string.dialog_font_applied_to_all_widgets);
             });
         }
         updatePreview.run();
@@ -2866,14 +2870,14 @@ public class ApkToolsHandler {
             String current = profileTv.getText() == null ? "" : profileTv.getText().toString();
             nameInput.setText(current);
             dialogUtil.getDialogBuilder()
-                    .setTitle("Save profile")
-                    .setView(UiFields.wrap(context, nameInput, "Profile name", 16))
+                    .setTitle(R.string.save_profile)
+                    .setView(UiFields.wrap(context, nameInput, context.rss.getString(R.string.profile_name), 16))
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(android.R.string.ok, (d, w) -> {
                         String profileName = nameInput.getText() == null ? ""
                                 : nameInput.getText().toString().trim();
                         if (profileName.isEmpty()) {
-                            Extensions.showMessage(context, "Enter a name");
+                            Extensions.showMessage(context, R.string.enter_a_name);
                             return;
                         }
                         if (isToast) {
@@ -2891,7 +2895,7 @@ public class ApkToolsHandler {
                         }
                         refreshProfiles(form, isToast);
                         profileTv.setText(profileName, false);
-                        Extensions.showMessage(context, "Profile saved");
+                        Extensions.showMessage(context, R.string.profile_saved);
                     }).show();
         });
         view.findViewById(R.id.overlayProfileDelete).setOnClickListener(v -> {
@@ -2907,16 +2911,14 @@ public class ApkToolsHandler {
         overlayImagePreviewView = view.findViewById(R.id.overlayDlgImagePreview);
         overlayImagePreviewView.setVisibility(View.GONE);
         overlayImagePreviewView.setImageBitmap(null);
-        view.findViewById(R.id.overlayDlgImageBtn).setOnClickListener(v -> {
-            pickImage((thumb, b64) -> {
-                overlayImageBase64 = b64;
-                if (overlayImagePreviewView != null) {
-                    overlayImagePreviewView.setImageBitmap(thumb);
-                    overlayImagePreviewView.setVisibility(View.VISIBLE);
-                }
-                if (activeOverlayForm != null) updatePreviewImage(activeOverlayForm);
-            });
-        });
+        view.findViewById(R.id.overlayDlgImageBtn).setOnClickListener(v -> pickImage((thumb, b64) -> {
+            overlayImageBase64 = b64;
+            if (overlayImagePreviewView != null) {
+                overlayImagePreviewView.setImageBitmap(thumb);
+                overlayImagePreviewView.setVisibility(View.VISIBLE);
+            }
+            if (activeOverlayForm != null) updatePreviewImage(activeOverlayForm);
+        }));
 
         LinearLayout posBox = view.findViewById(R.id.overlayPosBox);
         LinearLayout negBox = view.findViewById(R.id.overlayNegBox);
@@ -2953,22 +2955,22 @@ public class ApkToolsHandler {
         activeOverlayForm = form;
 
         AlertDialog overlayDialog = dialogUtil.getDialogBuilder()
-                .setTitle("Toast / Dialog")
+                .setTitle(R.string.toast_dialog)
                 .setView(view)
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    OverlayInjectorUtil.ToastOptions toast = null;
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    OverlayInjectorUtil.ToastOptions to = null;
                     OverlayInjectorUtil.DialogOptions dlg = null;
                     if (advancedSection.getVisibility() == View.VISIBLE) {
                         dlg = collectAdvanced(form, advWidgets);
                         if (dlg == null) return;
                     } else if (toastSection.getVisibility() == View.VISIBLE) {
-                        toast = collectToast(form);
-                        if (toast == null) return;
+                        to = collectToast(form);
+                        if (to == null) return;
                     } else {
                         dlg = collectDialog(form);
                         if (dlg == null) return;
                     }
-                    runAddOverlay(file, selectedActivities, toast, dlg, sign[0]);
+                    runAddOverlay(file, selectedActivities, to, dlg, sign[0]);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
@@ -2979,13 +2981,13 @@ public class ApkToolsHandler {
         overlayDialog.show();
     }
 
-    private static void syncUrlBox(MaterialAutoCompleteTextView actionTv, TextInputEditText urlInput) {
+    private void syncUrlBox(MaterialAutoCompleteTextView actionTv, TextInputEditText urlInput) {
         if (actionTv == null || urlInput == null || !(urlInput.getParent() instanceof View)) return;
-        boolean open = actionTv.getText() != null && actionTv.getText().toString().equals("Open URL");
+        boolean open = actionTv.getText() != null && actionTv.getText().toString().equals(context.rss.getString(R.string.open_url));
         ((View) urlInput.getParent()).setVisibility(open ? View.VISIBLE : View.GONE);
     }
 
-    private static void syncUrlBoxes(OverlayForm f) {
+    private void syncUrlBoxes(OverlayForm f) {
         if (f == null) return;
         syncUrlBox(f.posAction, f.posUrl);
         syncUrlBox(f.negAction, f.negUrl);
@@ -3003,10 +3005,10 @@ public class ApkToolsHandler {
 
     private String actionUrl(MaterialAutoCompleteTextView actionTv, TextInputEditText urlInput, boolean[] badUrl) {
         try {
-            if (actionTv.getText() != null && actionTv.getText().toString().equals("Open URL")) {
+            if (actionTv.getText() != null && actionTv.getText().toString().equals(context.rss.getString(R.string.open_url))) {
                 String url = urlInput.getText() == null ? "" : urlInput.getText().toString().trim();
                 if (url.isEmpty() || url.equals("https://") || url.equals("http://")) {
-                    Extensions.showMessage(context, "Enter a URL or set the button to Dismiss");
+                    Extensions.showMessage(context, R.string.enter_a_url_or_set_the_button_to_dismiss);
                     badUrl[0] = true;
                     return null;
                 }
@@ -3182,14 +3184,14 @@ public class ApkToolsHandler {
         syncFromWheel.run();
         wheel.setColor(initialArgb);
         dialogUtil.getDialogBuilder()
-                .setTitle("Pick a color")
+                .setTitle(R.string.pick_a_color)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Apply", (d, w) -> {
+                .setPositiveButton(R.string.apply, (d, w) -> {
                     String hex = hexInput.getText() == null ? "" : hexInput.getText().toString().trim();
                     if (!hex.startsWith("#")) hex = "#" + hex;
                     if (!hex.matches("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")) {
-                        Extensions.showMessage(context, "Invalid hex color");
+                        Extensions.showMessage(context, R.string.invalid_hex_color);
                         return;
                     }
                     hex = hex.toUpperCase();
@@ -3198,7 +3200,7 @@ public class ApkToolsHandler {
                         argb = (int) Long.parseLong(hex.substring(1), 16)
                                 | (hex.length() == 7 ? 0xFF000000 : 0);
                     } catch (Exception e) {
-                        Extensions.showMessage(context, "Invalid hex color");
+                        Extensions.showMessage(context, R.string.invalid_hex_color);
                         return;
                     }
                     onApply.onColor(argb, hex);
@@ -3396,10 +3398,10 @@ public class ApkToolsHandler {
         layout.addView(signSettings);
 
         dialogUtil.getDialogBuilder()
-                .setTitle("Remove all toasts")
-                .setMessage("This will decompile the APK, remove all Toast.makeText/show calls from smali code, then recompile. Continue?")
+                .setTitle(R.string.remove_all_toasts)
+                .setMessage(R.string.remove_toasts_info)
                 .setView(layout)
-                .setPositiveButton("Remove", (dialog, which) -> runRemoveAllToasts(file, sign[0]))
+                .setPositiveButton(R.string.remove, (dialog, which) -> runRemoveAllToasts(file, sign[0]))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -3610,7 +3612,7 @@ public class ApkToolsHandler {
             boolean ok = SignatureStripUtil.strip(apk);
             pm.dismiss();
             context.handler.post(() -> {
-                Extensions.showMessage(context, ok ? "Signature removed" : "Failed to remove signature");
+                Extensions.showMessage(context, context.rss.getString(ok ? R.string.signature_removed : R.string.failed_to_remove_signature));
                 if (ok) context.loadFolderInPane(apk.getParentFile(), pane1, false);
             });
         }).start();
@@ -3632,11 +3634,11 @@ public class ApkToolsHandler {
                 ScrollView scroll = new ScrollView(context);
                 scroll.addView(tv);
                 dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                        .setTitle("Signature health")
+                        .setTitle(R.string.signature_health)
                         .setView(scroll)
                         .setNegativeButton(android.R.string.ok, null)
-                        .setNeutralButton("Re-sign", (d, w) -> SignatureKeyDialog.show(context, apk, false))
-                        .setPositiveButton("Fix alignment", (d, w) -> {
+                        .setNeutralButton(R.string.re_sign, (d, w) -> SignatureKeyDialog.show(context, apk, false))
+                        .setPositiveButton(R.string.fix_alignment, (d, w) -> {
                             ProgressManager pm2 = new ProgressManager(context, true).show();
                             new Thread(() -> {
                                 try {
