@@ -81,9 +81,9 @@ public final class FileMenuCustomizer {
                 .setMessage(context.getString(R.string.customize_file_menu_hint))
                 .setView(grid)
                 .setPositiveButton(android.R.string.ok, null)
-                .setNeutralButton("Reset", (d, w) -> {
+                .setNeutralButton(R.string.reset, (d, w) -> {
                     FileMenuOrder.save(context, new ArrayList<>(Arrays.asList(FileMenuOrder.DEFAULT_ORDER)));
-                    Extensions.showMessage(context, "Menu order reset");
+                    Extensions.showMessage(context, R.string.menu_order_reset);
                 })
                 .create();
         dialog.setOnDismissListener(d -> {

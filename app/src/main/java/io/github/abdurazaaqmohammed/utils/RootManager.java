@@ -282,8 +282,7 @@ public class RootManager {
         return mode.equals("recovery") || mode.equals("bootloader") || mode.equals("-p");
     }
 
-    // ========== Execution ==========
-
+    
     public ShellResult execute(String command) {
         return execute(command, 30);
     }
@@ -459,8 +458,7 @@ public class RootManager {
         }
     }
 
-    // ========== File Operations ==========
-
+    
     public List<String> listFiles(String path) throws IOException {
         ShellResult result = executeFs("ls -1 " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("Failed to list: " + result.error);
@@ -872,8 +870,7 @@ public class RootManager {
         return packages;
     }
 
-    // ========== System Operations ==========
-
+    
     public void remountSystem(boolean rw) throws IOException {
         String cmd = rw ? "mount -o remount,rw /system" : "mount -o remount,ro /system";
         ShellResult result = execute(cmd);
@@ -1317,8 +1314,7 @@ public class RootManager {
         }
     }
 
-    // ========== Utility ==========
-
+    
     public String getMountInfo() throws IOException {
         ShellResult result = execute("mount");
         return result.isSuccess() ? result.output : "";

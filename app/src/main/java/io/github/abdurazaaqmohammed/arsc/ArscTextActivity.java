@@ -9,7 +9,6 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
@@ -279,9 +278,9 @@ public class ArscTextActivity extends AppCompatActivity {
         }
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Unsaved changes")
-                .setMessage("Save before exit?")
-                .setPositiveButton("Save", (d, w) -> applyText(this::finishWithResult))
-                .setNegativeButton("Discard", (d, w) -> finishWithResult())
+                .setMessage(R.string.save_before_exit)
+                .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
+                .setNegativeButton(R.string.discard, (d, w) -> finishWithResult())
                 .setNeutralButton(android.R.string.cancel, null)
                 .show();
     }

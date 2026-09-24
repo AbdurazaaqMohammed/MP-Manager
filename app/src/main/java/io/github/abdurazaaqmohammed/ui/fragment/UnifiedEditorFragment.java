@@ -105,7 +105,6 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public static final int TYPE_SMALI = 0;
     public static final int TYPE_JAVA = 1;
 
-    private static final String[] SYNTAXES = { "Plain Text", "Java", "C", "C++", "Python", "JavaScript", "HTML", "CSS", "Markdown" };
     private static final String[] CHARSETS = { "UTF-8", "UTF-16", "UTF-16BE", "UTF-16LE", "US-ASCII", "ISO-8859-1", "GBK", "Big5" };
     private static final String[] LINEBREAKS = { "LF (\\n)", "CRLF (\\r\\n)", "CR (\\r)" };
 
@@ -265,7 +264,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         });
         ViewCompat.requestApplyInsets(bottomBarScroll);
 
-        if (textviewLeft != null) textviewLeft.setText(!TextUtils.isEmpty(title) ? title : "...");
+        if (textviewLeft != null) textviewLeft.setText(!TextUtils.isEmpty(title) ? title : getString(R.string.ellipsis));
 
         setupHeaderListeners();
         setupSearchListeners();
@@ -457,7 +456,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         } else {
             currentElement = SmaliCursorUtils.getCurrentMethodOrFieldName(text, cursor.getLeftLine());
         }
-        if (methodName != null) methodName.setText(currentElement != null ? currentElement : "...");
+        if (methodName != null) methodName.setText(currentElement != null ? currentElement : getString(R.string.ellipsis));
     }
 
     private void updateUndoRedoButtons() {
@@ -628,8 +627,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public boolean isSaved() { return saved; }
     public void markSaved() { saved = true; }
 
-    // ===== Navigation History =====
-    private void recordPosition(int line, int col) {
+        private void recordPosition(int line, int col) {
         if (navigationHistory.isEmpty() ||
                 Math.abs(navigationHistory.get(historyPointer)[0] - line) > 2 ||
                 Math.abs(navigationHistory.get(historyPointer)[1] - col) > 5) {
@@ -669,8 +667,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         isNavigating = false;
     }
 
-    // ===== Search/Replace =====
-    public void showSearchPanel() { searchPanel.setVisibility(View.VISIBLE); }
+        public void showSearchPanel() { searchPanel.setVisibility(View.VISIBLE); }
 
     public void searchFor(String query, boolean useRegex, boolean matchCase) {
         if (editor == null || query == null || query.isEmpty()) return;
@@ -729,7 +726,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         if (!isAdded() || editor.getSearcher() != searcher) return;
         if (searcher.gotoNext()) return;
         if (attempt >= 12) {
-            Extensions.showMessage(requireActivity(), "No matches found");
+            Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
             return;
         }
         editor.postDelayed(() -> jumpWhenReady(searcher, attempt + 1), 80);
@@ -751,8 +748,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         }
     }
 
-    // ===== Bottom Bar =====
-    public void loadBottomBarFunctions() {
+        public void loadBottomBarFunctions() {
         if (bottomBarLayout == null) return;
         bottomBarLayout.removeAllViews();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
@@ -779,7 +775,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 String action = obj.getString("action");
                 String label = obj.optString("label", action);
                 MaterialButton btn = new MaterialButton(requireContext());
-                btn.setText(label);
+                btn.setText(resolveBottomBarLabel(label));
                 btn.setLayoutParams(params);
                 btn.setOnClickListener(v -> executeBottomBarFunction(obj, false));
                 btn.setOnLongClickListener(v -> {
@@ -790,6 +786,26 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
             }
         } catch (Exception e) {
             if (getContext() != null) new ErrorUtil(getActivity()).showError(e);
+        }
+    }
+
+    private String resolveBottomBarLabel(String label) {
+        switch (label) {
+            case "Search": return getString(R.string.search);
+            case "Copy":
+            case "Copy selection": return getString(R.string.copy);
+            case "Cut":
+            case "Cut selection": return getString(R.string.cut);
+            case "Paste":
+            case "Paste selection": return getString(R.string.paste);
+            case "Insert text": return getString(R.string.insert_text);
+            case "Regex find and replace": return getString(R.string.regex_find_replace);
+            case "Copy line": return getString(R.string.copy_line);
+            case "Cut line": return getString(R.string.cut_line);
+            case "Delete line": return getString(R.string.delete_line);
+            case "Empty line": return getString(R.string.empty_line);
+            case "Replace line": return getString(R.string.replace_line);
+            default: return label;
         }
     }
 
@@ -825,7 +841,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                         if (m.end() > cursorOffset) { found = true; break; }
                     }
                     if (!found) {
-                        Extensions.showMessage(requireActivity(), "No matches found");
+                        Extensions.showMessage(requireActivity(), getString(R.string.no_matches_found));
                         break;
                     }
                     StringBuffer sb = new StringBuffer();
@@ -870,9 +886,9 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void showEditMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
         forceShowIcons(popupMenu);
-        String[] baseOptions = { "Copy line", "Cut line", "Delete line", "Empty line", "Replace line (with clipboard)",
-                "Duplicate line", "Convert to uppercase", "Convert to lowercase", "Convert to sentence case",
-                "Convert to camelcase", "Increase indent", "Decrease indent" };
+        String[] baseOptions = { getString(R.string.copy_line), getString(R.string.cut_line), getString(R.string.delete_line), getString(R.string.empty_line), getString(R.string.replace_line_with_clipboard),
+                getString(R.string.duplicate_line), getString(R.string.convert_to_uppercase), getString(R.string.convert_to_lowercase), getString(R.string.convert_to_sentence_case),
+                getString(R.string.convert_to_camelcase), getString(R.string.increase_indent), getString(R.string.decrease_indent) };
         int[] baseIcons = {
                 R.drawable.baseline_content_copy_24, R.drawable.baseline_content_cut_24,
                 R.drawable.baseline_delete_24, R.drawable.baseline_remove_circle_24,
@@ -977,8 +993,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         else if (lt.startsWith("\t")) content.delete(line, 0, line, 1);
     }
 
-    // ===== File operations menu =====
-    public void showFileMenu(View anchor) {
+        public void showFileMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
         forceShowIcons(popupMenu);
         List<String> optionsList = new ArrayList<>();
@@ -1060,7 +1075,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private void showSubFileMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
         forceShowIcons(popupMenu);
-        String[] options = { "Reload file", "Reload with charset", "Set encoding", "Set linebreak type", "Statistics" };
+        String[] options = { getString(R.string.reload_file), getString(R.string.reload_with_charset), getString(R.string.set_encoding), getString(R.string.set_linebreak_type), getString(R.string.stats) };
         int[] icons = {
                 R.drawable.baseline_refresh_24, R.drawable.baseline_refresh_24,
                 R.drawable.baseline_settings_24, R.drawable.baseline_swap_horiz_24,
@@ -1082,9 +1097,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     public void showSyntaxDialog() {
+        final String[] syntaxes = requireContext().getResources().getStringArray(R.array.editor_syntaxes);
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.choose_syntax)
-                .setItems(SYNTAXES, (dialog, which) -> Extensions.showMessage(requireActivity(), getString(R.string.syntax_set_to, SYNTAXES[which])))
+                .setItems(syntaxes, (dialog, which) -> Extensions.showMessage(requireActivity(), getString(R.string.syntax_set_to, syntaxes[which])))
                 .show();
     }
 
@@ -1142,8 +1158,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 .show();
     }
 
-    // ===== Clipboard operations =====
-    private void copySelection() {
+        private void copySelection() {
         Cursor cursor = editor.getCursor();
         if (cursor.isSelected()) {
             Content text = editor.getText();
@@ -1203,8 +1218,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         return null;
     }
 
-    // ===== Smali-specific features =====
-    public void navigateTo(int lineNum, String query) { navigateTo(lineNum, -1, query); }
+        public void navigateTo(int lineNum, String query) { navigateTo(lineNum, -1, query); }
 
     public void navigateTo(final int lineNum, final int column, final String query) {
         if (editor == null) return;
@@ -1397,8 +1411,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 .show();
     }
 
-    // ===== Static language/theme caching =====
-    public static void clearCache() {
+        public static void clearCache() {
         cachedSmaliLanguage = null;
         cachedColorScheme = null;
         cachedInstructions = null;
@@ -1462,8 +1475,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         return SmaliInstructionHelper.isSmaliInstruction(firstWord) ? firstWord : null;
     }
 
-    // ===== ExtractMethodFieldInfoTask =====
-    private static class ExtractMethodFieldInfoTask {
+        private static class ExtractMethodFieldInfoTask {
         private final WeakReference<UnifiedEditorFragment> fragmentRef;
         private final String target;
         private final Content text;

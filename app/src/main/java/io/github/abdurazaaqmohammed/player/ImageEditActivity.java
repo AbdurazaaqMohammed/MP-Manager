@@ -725,7 +725,7 @@ public class ImageEditActivity extends AppCompatActivity {
         }
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.unsaved_changes))
-                .setMessage(getString(R.string.arsc_save_before_exit))
+                .setMessage(getString(R.string.save_before_exit))
                 .setPositiveButton(getString(R.string.save), (d, w) -> saveAndFinish())
                 .setNegativeButton(getString(R.string.discard), (d, w) -> {
                     setResult(RESULT_CANCELED);

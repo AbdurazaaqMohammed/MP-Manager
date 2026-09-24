@@ -3572,7 +3572,7 @@ public class MainActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(32, 32, 32, 32);
 
-        String[] sortOptions = { "Name", "Size", "Date", "Type" };
+        String[] sortOptions = { rss.getString(R.string.name), rss.getString(R.string.size), rss.getString(R.string.sort_date), rss.getString(R.string.type) };
         RadioGroup radioGroup = new RadioGroup(this);
         for (int i = 0; i < sortOptions.length; i++) {
             RadioButton rb = new RadioButton(this);

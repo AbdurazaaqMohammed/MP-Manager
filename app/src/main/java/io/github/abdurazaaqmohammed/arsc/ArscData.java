@@ -604,11 +604,11 @@ public class ArscData {
         public Entry sample;
     }
 
-    public List<SearchHit> search(String query, String searchType, String pathFilter) {
-        return search(query, searchType, pathFilter, true, false, false);
+    public List<SearchHit> search(String query, String searchType, String pathFilter, String[] SEARCH_TYPES) {
+        return search(query, searchType, pathFilter, true, false, false, SEARCH_TYPES);
     }
 
-    public List<SearchHit> search(String query, String searchType, String pathFilter, boolean searchSubfolders, boolean matchCase, boolean regex) {
+    public List<SearchHit> search(String query, String searchType, String pathFilter, boolean searchSubfolders, boolean matchCase, boolean regex, String[] SEARCH_TYPES) {
         List<SearchHit> out = new ArrayList<>();
         if (query == null) query = "";
         String q = query.trim();
@@ -623,7 +623,7 @@ public class ArscData {
             }
         }
         try {
-            if (type.equals("resource id")) {
+            if (type.equals(SEARCH_TYPES[1])) { // resource id
                 ResourceEntry found = null;
                 String t = q.startsWith("@") ? q.substring(1) : q;
                 if (t.matches("(?i)(0x)?[0-9a-f]+")) {
@@ -673,101 +673,96 @@ public class ArscData {
                     continue;
                 }
                 if (re == null || !matchPath(re, path, searchSubfolders)) continue;
-                switch (type) {
-                    case "xml" -> {
-                        if (q.isEmpty() || matchText(re.getName(), q, matchCase, pattern)) {
+                if (type.equals("XML")) {
+                    if (q.isEmpty() || matchText(re.getName(), q, matchCase, pattern)) {
+                        SearchHit hit = new SearchHit();
+                        hit.entry = re;
+                        hit.line = re.getType() + "/" + re.getName();
+                        hit.detail = re.getHexId();
+                        out.add(hit);
+                    }
+                } else if (type.equals(SEARCH_TYPES[2])) { // string
+                    for (Entry e : re) {
+                        if (e == null || e.isNull()) continue;
+                        ValueType vt = null;
+                        try {
+                            vt = e.getValueType();
+                        } catch (Exception ignored) {
+                        }
+                        if (vt != ValueType.STRING) continue;
+                        String v = null;
+                        try {
+                            v = e.getValueAsString();
+                        } catch (Exception ignored) {
+                        }
+                        if (v != null && (q.isEmpty() || matchText(v, q, matchCase, pattern))) {
                             SearchHit hit = new SearchHit();
                             hit.entry = re;
-                            hit.line = re.getType() + "/" + re.getName();
-                            hit.detail = re.getHexId();
+                            hit.sample = e;
+                            hit.line = re.getName();
+                            hit.detail = v;
                             out.add(hit);
+                            break;
                         }
                     }
-                    case "string" -> {
-                        for (Entry e : re) {
-                            if (e == null || e.isNull()) continue;
-                            ValueType vt = null;
-                            try {
-                                vt = e.getValueType();
-                            } catch (Exception ignored) {
-                            }
-                            if (vt != ValueType.STRING) continue;
-                            String v = null;
-                            try {
-                                v = e.getValueAsString();
-                            } catch (Exception ignored) {
-                            }
-                            if (v != null && (q.isEmpty() || matchText(v, q, matchCase, pattern))) {
-                                SearchHit hit = new SearchHit();
-                                hit.entry = re;
-                                hit.sample = e;
-                                hit.line = re.getName();
-                                hit.detail = v;
-                                out.add(hit);
-                                break;
-                            }
-                        }
+                } else if (type.equals(SEARCH_TYPES[3])) { //int
+                    int want;
+                    try {
+                        want = parseNumber(q);
+                    } catch (Exception e) {
+                        return out;
                     }
-                    case "integer" -> {
-                        int want;
+                    for (Entry e : re) {
+                        if (e == null || e.isNull()) continue;
+                        ValueType vt = null;
                         try {
-                            want = parseNumber(q);
-                        } catch (Exception e) {
-                            return out;
+                            vt = e.getValueType();
+                        } catch (Exception ignored) {
                         }
-                        for (Entry e : re) {
-                            if (e == null || e.isNull()) continue;
-                            ValueType vt = null;
-                            try {
-                                vt = e.getValueType();
-                            } catch (Exception ignored) {
-                            }
-                            if (vt == null || !vt.isInteger()) continue;
-                            int data = 0;
-                            try {
-                                data = e.getResValue().getData();
-                            } catch (Exception ignored) {
-                            }
-                            if (data == want) {
-                                SearchHit hit = new SearchHit();
-                                hit.entry = re;
-                                hit.sample = e;
-                                hit.line = re.getName();
-                                hit.detail = String.valueOf(data);
-                                out.add(hit);
-                                break;
-                            }
+                        if (vt == null || !vt.isInteger()) continue;
+                        int data = 0;
+                        try {
+                            data = e.getResValue().getData();
+                        } catch (Exception ignored) {
+                        }
+                        if (data == want) {
+                            SearchHit hit = new SearchHit();
+                            hit.entry = re;
+                            hit.sample = e;
+                            hit.line = re.getName();
+                            hit.detail = String.valueOf(data);
+                            out.add(hit);
+                            break;
                         }
                     }
-                    case "color" -> {
-                        int want;
+                } else if (type.equals(SEARCH_TYPES[4])) { //color
+                    int want;
+                    try {
+                        want = parseColor(q);
+                    } catch (Exception e) {
+                        return out;
+                    }
+                    for (Entry e : re) {
+                        if (e == null || e.isNull()) continue;
+                        ValueType vt = null;
                         try {
-                            want = parseColor(q);
-                        } catch (Exception e) {
-                            return out;
+                            vt = e.getValueType();
+                        } catch (Exception ignored) {
                         }
-                        for (Entry e : re) {
-                            if (e == null || e.isNull()) continue;
-                            ValueType vt = null;
-                            try {
-                                vt = e.getValueType();
-                            } catch (Exception ignored) {
-                            }
-                            if (vt == null || !vt.isColor()) continue;
-                            int data = 0;
-                            try {
-                                data = e.getResValue().getData();
-                            } catch (Exception ignored) {
-                            }
-                            if (data == want) {
-                                SearchHit hit = new SearchHit();
-                                hit.entry = re;
-                                hit.sample = e;
-                                hit.line = re.getName();
-                                hit.detail = String.format(Locale.US, "#%08X", data);
-                                out.add(hit);
-                                break;
-                            }
+                        if (vt == null || !vt.isColor()) continue;
+                        int data = 0;
+                        try {
+                            data = e.getResValue().getData();
+                        } catch (Exception ignored) {
+                        }
+                        if (data == want) {
+                            SearchHit hit = new SearchHit();
+                            hit.entry = re;
+                            hit.sample = e;
+                            hit.line = re.getName();
+                            hit.detail = String.format(Locale.US, "#%08X", data);
+                            out.add(hit);
+                            break;
                         }
                     }
                 }

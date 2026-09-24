@@ -571,7 +571,7 @@ public class APKExtractorActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.filterButton).setOnClickListener(v -> {
-            String[] display = new String[] { "Name", "Last updated date", "First install date" };
+            String[] display = new String[] { getString(R.string.name), getString(R.string.last_updated_date), getString(R.string.first_install_date) };
             AlertDialog ad = new MaterialAlertDialogBuilder(this)
                     .setSingleChoiceItems(display, sortMode, (dialog, which) -> {
                         sortMode = which;
