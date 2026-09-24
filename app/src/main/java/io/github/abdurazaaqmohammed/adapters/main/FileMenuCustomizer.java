@@ -86,7 +86,7 @@ public final class FileMenuCustomizer {
                 .create();
         dialog.setOnDismissListener(d -> {
             List<String> ids = new ArrayList<>();
-            for (FileMenuOrder.MenuItem item : items) ids.add(item.id);
+            for (FileMenuOrder.MenuItem item : items) ids.add(item.id());
             FileMenuOrder.save(context, ids);
         });
         dialogUtil.styleAlertDialog(dialog);
@@ -111,8 +111,8 @@ public final class FileMenuCustomizer {
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             FileMenuOrder.MenuItem item = items.get(position);
-            holder.label.setText(item.label);
-            holder.icon.setImageResource(FileMenuOrder.iconFor(context, item.id, false, false));
+            holder.label.setText(item.label());
+            holder.icon.setImageResource(FileMenuOrder.iconFor(context, item.id(), false, false));
         }
 
         @Override

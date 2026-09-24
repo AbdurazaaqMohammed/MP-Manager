@@ -360,8 +360,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 String[] items = new String[menuItems.size()];
                 String[] itemIds = new String[menuItems.size()];
                 for (int mi = 0; mi < menuItems.size(); mi++) {
-                    items[mi] = menuItems.get(mi).label;
-                    itemIds[mi] = menuItems.get(mi).id;
+                    items[mi] = menuItems.get(mi).label();
+                    itemIds[mi] = menuItems.get(mi).id();
                 }
 
                 final Object finalCompareFile1 = compareFile1;

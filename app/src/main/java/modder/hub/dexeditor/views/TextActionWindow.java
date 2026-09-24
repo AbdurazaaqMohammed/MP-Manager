@@ -341,7 +341,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		allButtons.put("panel_btn_cut", new ButtonConfig(R.drawable.ic_cut_mt, android.R.string.cut));
 		allButtons.put("comment_btn", new ButtonConfig(R.drawable.ic_hash_mt, R.string.comment));
 		allButtons.put("openLink_btn", new ButtonConfig(R.drawable.ic_link_mt, R.string.link));
-		allButtons.put("share_btn", new ButtonConfig(R.drawable.ic_share_mt, R.string.share));
+		allButtons.put("share_btn", new ButtonConfig(R.drawable.ic_share_mt, R.string.share_text));
 		allButtons.put("panel_btn_long_select", new ButtonConfig(R.drawable.ic_text_select_start_mt, R.string.long_select));
 		allButtons.put("delete_btn", new ButtonConfig(R.drawable.ic_delete_mt, R.string.delete));
 		allButtons.put("id_btn", new ButtonConfig(R.drawable.ic_tag_mt, R.string.arsc_copy_id));

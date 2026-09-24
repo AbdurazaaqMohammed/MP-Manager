@@ -117,7 +117,7 @@
     <string name="long_select">Long Select</string>
     <string name="link">Open link</string>
     <string name="comment">Toggle comment</string>
-    <string name="share">Share text</string>
+    <string name="share_text">Share text</string>
     <string name="customize">Customize</string>
     <string name="delete">Delete</string>
     <string name="exit">Exit</string>
@@ -955,7 +955,7 @@ Layout Inspector
     <string name="wifi_search_networks">Search networks</string>
     <string name="wifi_hide_passwords">Hide passwords</string>
     <string name="export">Export</string>
-    <string name="wifi_share">Share</string>
+    <string name="share">Share</string>
     <string name="wifi_copy_all">Copy all</string>
     <string name="wifi_open_network">Open network</string>
     <string name="wifi_name_plus_password">Name + password</string>
@@ -1359,6 +1359,11 @@ Layout Inspector
     <string name="font">Font</string>
     <string name="menu_seq">Use the menu logo to slide up and down to change the menu sequence</string>
     <string name="edit_floating_menus">Edit floating menus</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="compare_zip">Compare ZIP</string>
+    <string name="compare_arsc">Compare ARSC</string>
+    <string name="compare_text">Compare Text</string>
+    <string name="crop_images">Crop images</string>
     <string-array name="editor_syntaxes">
         <item>Plain Text</item>
         <item>Java</item>

@@ -664,7 +664,7 @@
     <string name="set_point_b">设置 B 点</string>
     <string name="set_uid">设置 UID</string>
     <string name="settings">设置</string>
-    <string name="share">分享文本</string>
+    <string name="share_text">分享文本</string>
     <string name="share_apk">分享 APK</string>
     <string name="share_apks">分享 APK</string>
     <string name="shizuku_file_operations">Shizuku 文件操作（Android/data、obb、media）</string>

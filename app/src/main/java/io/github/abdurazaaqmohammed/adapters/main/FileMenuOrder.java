@@ -94,29 +94,29 @@ public final class FileMenuOrder {
 
     public static String labelFor(Context context, String id, String direction) {
         return switch (id) {
-            case COPY -> "Copy " + direction;
-            case MOVE -> "Move " + direction;
-            case RENAME -> "Rename";
-            case DELETE -> "Delete";
-            case COMPRESS -> "Compress";
-            case PROPERTIES -> "Properties";
-            case SHARE -> "Share";
-            case OPEN_WITH -> "Open with";
-            case BOOKMARK -> "Bookmark";
-            case CMD -> "Command Helper";
+            case COPY -> context.getString(android.R.string.copy) + ' ' + direction;
+            case MOVE -> context.getString(R.string.move) + ' ' + direction;
+            case RENAME -> context.getString(R.string.rename);
+            case DELETE -> context.getString(R.string.delete);
+            case COMPRESS -> context.getString(R.string.compress);
+            case PROPERTIES -> context.getString(R.string.properties);
+            case SHARE -> context.getString(R.string.share);
+            case OPEN_WITH -> context.getString(R.string.open_with);
+            case BOOKMARK -> context.getString(R.string.bookmark);
+            case CMD -> context.getString(R.string.command_helper);
             case CHECK -> context.getString(R.string.checksums);
             case BATCH_SIGN -> context.getString(R.string.batch_sign);
             case BATCH_OPT -> context.getString(R.string.batch_optimize);
             case BATCH_INSTALL -> context.getString(R.string.batch_install);
             case EXTRACT -> context.getString(R.string.extract);
-            case CMP_ZIP -> "Compare ZIP";
-            case CMP_ARSC -> "Compare ARSC";
-            case CMP_TEXT -> "Compare Text";
+            case CMP_ZIP -> context.getString(R.string.compare_zip);
+            case CMP_ARSC -> context.getString(R.string.compare_arsc);
+            case CMP_TEXT -> context.getString(R.string.compare_text);
             case CMP_HASH -> context.getString(R.string.compare_hashes);
             case CMP_APK -> context.getString(R.string.compare_apks);
-            case BATCH_CROP -> "Crop images";
-            case BATCH_EXIF -> "Set EXIF tags";
-            case BATCH_STRIP_META -> "Remove metadata";
+            case BATCH_CROP -> context.getString(R.string.crop_images);
+            case BATCH_EXIF -> context.getString(R.string.set_exif_tags);
+            case BATCH_STRIP_META -> context.getString(R.string.remove_metadata);
             default -> id;
         };
     }
@@ -145,13 +145,6 @@ public final class FileMenuOrder {
         };
     }
 
-    public static class MenuItem {
-        public final String id;
-        public final String label;
-
-        public MenuItem(String id, String label) {
-            this.id = id;
-            this.label = label;
-        }
+    public record MenuItem(String id, String label) {
     }
 }

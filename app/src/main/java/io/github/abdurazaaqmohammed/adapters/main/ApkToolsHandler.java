@@ -1408,7 +1408,7 @@ public class ApkToolsHandler {
                 menu.add(0, 105, 4, android.R.string.copy);
                 menu.add(0, 106, 5, android.R.string.cut);
                 menu.add(0, 107, 6, android.R.string.paste);
-                menu.add(0, 108, 7, R.string.share);
+                menu.add(0, 108, 7, R.string.share_text);
                 menu.add(0, 109, 8, android.R.string.selectAll);
                 return true;
             }
