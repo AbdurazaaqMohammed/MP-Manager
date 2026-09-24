@@ -21,7 +21,7 @@ public class StartTagChunk extends Chunk<StartTagChunk.H> {
     final LinkedList<AttrChunk> attrs = new LinkedList<>();
     final List<StartNameSpaceChunk> startNameSpace = new Stack<>();
 
-    public static class H extends Chunk.NodeHeader {
+    public class H extends Chunk.NodeHeader {
 
         public H() {
             super(ChunkType.XmlStartElement);

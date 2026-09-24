@@ -24,7 +24,7 @@ public class XmlChunk extends Chunk<XmlChunk.H> {
         this.resourceEntries = resourceEntries;
     }
 
-    public static class H extends Chunk.Header {
+    public class H extends Chunk.Header {
 
         public H() {
             super(ChunkType.Xml);
