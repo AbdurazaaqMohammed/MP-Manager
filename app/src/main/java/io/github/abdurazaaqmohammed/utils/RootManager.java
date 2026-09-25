@@ -13,15 +13,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RootManager {
@@ -36,6 +40,7 @@ public class RootManager {
 
     // Shell argument pattern: alphanumeric, dash, underscore, dot, slash, space, colon
     private static final Pattern SAFE_ARG = Pattern.compile("^[a-zA-Z0-9_./\\-: ]+$");
+    private static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:[A-Z][a-z]{2}\\s+\\d{1,2}|\\d{4}-\\d{2}-\\d{2})\\s+\\S+)\\s+(.*)$");
 
     // Directories that should never be deleted (absolute block)
     private static final Set<String> BLOCKED_DELETE_PATHS = new HashSet<>(Arrays.asList(
@@ -1066,7 +1071,7 @@ public class RootManager {
     }
 
     private File[] listRootFilesFresh(String dirPath) {
-        File[] primary = listRootFilesDetailed(dirPath);
+        File[] primary = listRootFilesLsLong(dirPath);
         if (!isAppDataDir(dirPath)) {
             if (primary != null && primary.length > 0) return primary;
             File[] portable = listRootFilesPortable(dirPath);
@@ -1079,6 +1084,68 @@ public class RootManager {
         if (merged != null && merged.length > 0) return merged;
         File[] portable = listRootFilesPortable(dirPath);
         return unionRootFiles(merged, portable);
+    }
+
+    private File[] listRootFilesLsLong(String dirPath) {
+        if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
+        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(dirPath) + " 2>/dev/null", 15);
+        if (!result.isSuccess() || result.output == null) return null;
+        List<File> files = new ArrayList<>();
+        for (String line : result.output.split("\\r?\\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("total ")) continue;
+            Matcher matcher = LS_LONG_LINE.matcher(line);
+            if (!matcher.matches()) continue;
+            char type = matcher.group(1).charAt(0);
+            if (type != '-' && type != 'd' && type != 'l') continue;
+            String name = matcher.group(4);
+            int arrow = name.indexOf(" -> ");
+            if (arrow > 0) name = name.substring(0, arrow);
+            if (name.isEmpty() || name.equals(".") || name.equals("..")) continue;
+            long size;
+            try {
+                size = Long.parseLong(matcher.group(2));
+            } catch (NumberFormatException ignored) {
+                size = 0L;
+            }
+            String dateTime = matcher.group(3);
+            int dateSplit = dateTime.indexOf(' ');
+            long mtime;
+            if (dateSplit > 0 && Character.isDigit(dateTime.charAt(0))) {
+                mtime = parseLsDateTime(dateTime.substring(0, dateSplit), dateTime.substring(dateSplit + 1));
+            } else {
+                String[] dateParts = dateTime.split("\\s+", 3);
+                mtime = dateParts.length == 3 ? parseLsTime(dateParts[0], dateParts[1], dateParts[2]) : 0L;
+            }
+            String mode = matcher.group(1).length() > 1 ? matcher.group(1).substring(1) : null;
+            files.add(new RootFile(dirPath, name, true, type == 'd', type != 'd',
+                    type == 'd' ? 0L : Math.max(0L, size), mtime, mode));
+        }
+        return files.toArray(new File[0]);
+    }
+
+    private static long parseLsTime(String month, String day, String time) {
+        try {
+            boolean hasYear = time.matches("\\d{4}");
+            String pattern = hasYear ? "MMM d yyyy" : "MMM d HH:mm";
+            SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.US);
+            format.setLenient(false);
+            if (!hasYear) {
+                Calendar now = Calendar.getInstance();
+                format.setCalendar(now);
+            }
+            return format.parse(month + " " + day + " " + time).getTime();
+        } catch (Exception ignored) {
+            return 0L;
+        }
+    }
+
+    private static long parseLsDateTime(String date, String time) {
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).parse(date + " " + time).getTime();
+        } catch (Exception ignored) {
+            return 0L;
+        }
     }
 
     private static boolean isAppDataDir(String dirPath) {
