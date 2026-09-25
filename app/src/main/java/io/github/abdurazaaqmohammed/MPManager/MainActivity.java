@@ -10,12 +10,12 @@ import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.util.Log;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -42,6 +42,7 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.util.TypedValue;
+import android.view.DragEvent;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -49,9 +50,11 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.animation.DecelerateInterpolator;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -73,7 +76,6 @@ import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -103,6 +105,7 @@ import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -163,6 +166,7 @@ import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.adapters.BookmarksAdapter;
+import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
@@ -172,6 +176,7 @@ import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
 import io.github.abdurazaaqmohammed.player.PlayerManager;
+import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
@@ -189,6 +194,8 @@ import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -334,6 +341,21 @@ public class MainActivity extends AppCompatActivity {
     private BookmarkListController batchController;
     private final Set<Integer> batchSelected = new HashSet<>();
     private boolean bookmarkDragging;
+    private SidebarAdapter sidebarAdapter;
+    private ListView sidebarList;
+    private SwipeRefreshLayout sidebarRefresh;
+    private boolean sidebarOrganizeMode;
+    private View organizeDragView;
+    private View organizeDragCard;
+    private SidebarAdapter.SidebarEntry organizeDragEntry;
+    private float organizeDownX;
+    private float organizeDownY;
+    private boolean organizeDragStarted;
+    private final Runnable organizeLongPressRunnable = () -> {
+        if (!sidebarOrganizeMode || organizeDragStarted || organizeDragView == null || organizeDragEntry == null) return;
+        organizeDragStarted = true;
+        startSidebarDrag(organizeDragView, organizeDragEntry);
+    };
 
     private class BookmarkListController implements BookmarksAdapter.Callbacks {
         final String key; // "bookmarks" or a group name
@@ -415,6 +437,7 @@ public class MainActivity extends AppCompatActivity {
             bookmarks.add(file);
             bookmarksAdapter.notifyDataSetChanged();
         }
+        refreshSidebar(getSidebarSectionOrder());
         Extensions.showMessage(this, rss.getString(R.string.added_to_bookmarks, file));
     }
 
@@ -438,6 +461,7 @@ public class MainActivity extends AppCompatActivity {
             controller.items.addAll(loadGroupBookmarks(group));
             controller.adapter.notifyDataSetChanged();
         }
+        refreshSidebar(getSidebarSectionOrder());
     }
 
     public void openImageViewer(String filePath) {
@@ -872,9 +896,11 @@ public class MainActivity extends AppCompatActivity {
                     Extensions.showMessage(this, R.string.group_already_exists  );
                     return;
                 }
-                bookmarkGroups.add(name);
-                saveBookmarkGroups();
-                rebuildBookmarksPager();
+                 bookmarkGroups.add(name);
+                 saveBookmarkGroups();
+                 rebuildBookmarksPager();
+                 refreshSidebar(getSidebarSectionOrder());
+
                 bookmarksPager.post(() -> {
                     int tab = bookmarkGroups.size() + 1;
                     if (bookmarksTabs.getTabAt(tab) != null) bookmarksTabs.getTabAt(tab).select();
@@ -959,7 +985,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showBookmarkItemMenu(BookmarkListController controller, int position) {
-        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(this, controller.listView);
+        showBookmarkItemMenu(controller, position, controller.listView);
+    }
+
+    private void showBookmarkItemMenu(BookmarkListController controller, int position, View anchor) {
+        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(this, anchor);
         String edit = rss.getString(R.string.edit_bookmark);
         String move = rss.getString(R.string.move);
         String delete = rss.getString(R.string.delete);
@@ -1000,12 +1030,14 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (!newName.isEmpty() && !newName.equals(finalFile.getName()))
                         bookmarkLabels.put(finalFile.getPath(), newName);
-                    else
-                        bookmarkLabels.remove(finalFile.getPath());
-                    saveBookmarkLabels();
-                    persistBookmarkOrder(controller);
-                    controller.adapter.notifyDataSetChanged();
-                }).show();
+                     else
+                         bookmarkLabels.remove(finalFile.getPath());
+                     saveBookmarkLabels();
+                     persistBookmarkOrder(controller);
+                     controller.adapter.notifyDataSetChanged();
+                     refreshSidebar(getSidebarSectionOrder());
+                 }).show();
+
     }
 
     private void showMoveBookmarkDialog(BookmarkListController controller, int position) {
@@ -1051,11 +1083,13 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(rss.getString(R.string.delete), (dialog, which) -> {
                     File removed = controller.items.remove(position);
-                    bookmarkLabels.remove(removed.getPath());
-                    saveBookmarkLabels();
-                    persistBookmarkOrder(controller);
-                    controller.adapter.notifyDataSetChanged();
-                }).show();
+                     bookmarkLabels.remove(removed.getPath());
+                     saveBookmarkLabels();
+                     persistBookmarkOrder(controller);
+                     controller.adapter.notifyDataSetChanged();
+                     refreshSidebar(getSidebarSectionOrder());
+                 }).show();
+
     }
 
     private void enterBookmarkBatchMode(BookmarkListController controller) {
@@ -1083,10 +1117,12 @@ public class MainActivity extends AppCompatActivity {
             File removed = source.items.remove(position);
             bookmarkLabels.remove(removed.getPath());
         }
-        saveBookmarkLabels();
-        persistBookmarkOrder(source);
-        source.adapter.notifyDataSetChanged();
-        exitBookmarkBatchMode();
+         saveBookmarkLabels();
+         persistBookmarkOrder(source);
+         source.adapter.notifyDataSetChanged();
+         refreshSidebar(getSidebarSectionOrder());
+         exitBookmarkBatchMode();
+
     }
 
     private void batchCopyOrMove(boolean copy) {
@@ -1302,6 +1338,415 @@ public class MainActivity extends AppCompatActivity {
             return false;
         };
         return bookmarksSwipeDownCloseListener;
+    }
+
+
+    private void setupSidebar() {
+        findViewById(R.id.storageContainer).setVisibility(View.GONE);
+        sidebarList = findViewById(R.id.sidebarList);
+        sidebarAdapter = new SidebarAdapter(this, new SidebarAdapter.Callbacks() {
+            @Override
+            public void onEntryClicked(SidebarAdapter.SidebarEntry entry, View view) {
+                if (sidebarOrganizeMode) {
+                    if (entry != null && entry.type() != SidebarAdapter.EntryType.HEADER) startSidebarDrag(view, entry);
+                    return;
+                }
+                openSidebarEntry(entry);
+            }
+
+            @Override
+            public void onHeaderToggle(SidebarAdapter.SidebarEntry entry) {
+                boolean collapsed = !sidebarAdapter.isCollapsed(entry.section());
+                sidebarAdapter.setCollapsed(entry.section(), collapsed);
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                Set<String> saved = new HashSet<>(prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet()));
+                if (collapsed) saved.add(entry.section());
+                else saved.remove(entry.section());
+                prefs.edit().putStringSet("sidebar_collapsed_sections", saved).apply();
+            }
+
+            @Override
+            public void onEntryStorageLongPressed(SidebarAdapter.SidebarEntry entry, View view) {
+                PopupMenu menu = new PopupMenu(MainActivity.this, view);
+                menu.getMenu().add(R.string.manage_storage);
+                menu.getMenu().add(R.string.open_location);
+                menu.setOnMenuItemClickListener(item -> {
+                    if (item.getItemId() == R.string.manage_storage) {
+                        startActivity(new Intent(MainActivity.this, StorageManagerActivity.class));
+                    } else {
+                        loadFolderInPane(new File(entry.storage().path), lastPaneSelected == 1);
+                        closeSidebarDrawer();
+                    }
+                    return true;
+                });
+                menu.show();
+            }
+
+            @Override
+            public void onEntryLongPressed(SidebarAdapter.SidebarEntry entry, View view) {
+                if (!sidebarOrganizeMode && entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
+                    showSidebarBookmarkMenu(entry, view);
+                }
+            }
+
+            @Override
+            public void onEntryDragHandleTouched(SidebarAdapter.SidebarEntry entry, View view) {
+                if (sidebarOrganizeMode) startSidebarDrag(view, entry);
+            }
+
+            @Override
+            public void onEntryHideRequested(SidebarAdapter.SidebarEntry entry) {
+                if (entry.type() == SidebarAdapter.EntryType.HEADER) {
+                    sidebarAdapter.setCollapsed(entry.section(), true);
+                    return;
+                }
+                if (sidebarAdapter.isHidden(entry)) sidebarAdapter.unhideEntry(entry);
+                else sidebarAdapter.hideEntry(entry);
+                PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit()
+                        .putStringSet("sidebar_hidden_items", sidebarAdapter.getHiddenItems()).apply();
+            }
+        });
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        List<String> sectionOrder = new ArrayList<>();
+        try {
+            List<String> saved = new Gson().fromJson(prefs.getString("sidebar_section_order", "[]"),
+                    new TypeToken<List<String>>() {}.getType());
+            if (saved != null) sectionOrder.addAll(saved);
+        } catch (Exception ignored) {
+        }
+        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+            if (!sectionOrder.contains(section)) sectionOrder.add(section);
+        }
+        if (prefs.getBoolean("sidebar_show_bookmark_groups", false)) {
+            for (String group : bookmarkGroups) {
+                String section = "bookmark_group:" + group;
+                if (!sectionOrder.contains(section)) sectionOrder.add(section);
+            }
+        }
+        List<String> toolOrder = new ArrayList<>();
+        try {
+            List<String> saved = new Gson().fromJson(prefs.getString("sidebar_tool_order", "[]"),
+                    new TypeToken<List<String>>() {}.getType());
+            if (saved != null) toolOrder.addAll(saved);
+        } catch (Exception ignored) {
+        }
+        sidebarAdapter.setToolOrder(toolOrder);
+        sidebarAdapter.setHiddenItems(prefs.getStringSet("sidebar_hidden_items", Collections.emptySet()));
+        Set<String> collapsed = prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet());
+        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+            sidebarAdapter.setCollapsedState(section, collapsed.contains(section));
+        }
+        refreshSidebar(sectionOrder);
+        sidebarList.setAdapter(sidebarAdapter);
+        sidebarList.setOnItemClickListener((parent, view, position, id) -> {
+            SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
+            if (sidebarOrganizeMode) {
+                if (entry != null && entry.type() != SidebarAdapter.EntryType.HEADER) {
+                    startSidebarDrag(view, entry);
+                }
+                return;
+            }
+            if (entry != null) openSidebarEntry(entry);
+        });
+        sidebarList.setOnItemLongClickListener((parent, view, position, id) -> {
+            if (!sidebarOrganizeMode) return false;
+            SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
+            if (entry == null || entry.type() == SidebarAdapter.EntryType.STORAGE) return false;
+            startSidebarDrag(view, entry);
+            return true;
+        });
+        sidebarList.setOnDragListener((v, event) -> handleSidebarDrag(event));
+        sidebarRefresh = findViewById(R.id.sidebarRefresh);
+        if (sidebarRefresh != null) {
+            sidebarRefresh.setOnRefreshListener(() -> {
+                refreshSidebar(getSidebarSectionOrder());
+                sidebarRefresh.setRefreshing(false);
+            });
+        }
+        ImageButton organizeButton = findViewById(R.id.sidebarOrganizeButton);
+        organizeButton.setOnLongClickListener(v -> {
+            Snackbar.make(findViewById(android.R.id.content), R.string.organize_sidebar, Snackbar.LENGTH_SHORT).show();
+            return false;
+        });
+        organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
+        registerStorageRefreshReceiver();
+    }
+
+    private boolean handleOrganizeTouch(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            organizeDragStarted = false;
+            organizeDownX = event.getX();
+            organizeDownY = event.getY();
+            int position = sidebarList.pointToPosition((int) event.getX(), (int) event.getY());
+            organizeDragEntry = sidebarAdapter.getEntry(position);
+            int childIndex = position - sidebarList.getFirstVisiblePosition();
+            organizeDragView = childIndex >= 0 && childIndex < sidebarList.getChildCount()
+                    ? sidebarList.getChildAt(childIndex) : null;
+            organizeDragCard = organizeDragView;
+            if (organizeDragEntry != null && organizeDragEntry.type() != SidebarAdapter.EntryType.HEADER
+                    && organizeDragView != null) {
+                handler.postDelayed(organizeLongPressRunnable, ViewConfiguration.getLongPressTimeout());
+            }
+            return true;
+        }
+        if (event.getActionMasked() == MotionEvent.ACTION_MOVE && !organizeDragStarted
+                && Math.hypot(event.getX() - organizeDownX, event.getY() - organizeDownY)
+                > ViewConfiguration.get(this).getScaledTouchSlop()) {
+            handler.removeCallbacks(organizeLongPressRunnable);
+        }
+        if (event.getActionMasked() == MotionEvent.ACTION_UP
+                || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+            if (!organizeDragStarted) handler.removeCallbacks(organizeLongPressRunnable);
+            return true;
+        }
+        return true;
+    }
+
+    private void startSidebarDrag(View view, SidebarAdapter.SidebarEntry entry) {
+        View card = view;
+        while (card.getParent() instanceof View && card.getParent() != sidebarList) {
+            card = (View) card.getParent();
+        }
+        organizeDragCard = card;
+        ClipData data = ClipData.newPlainText("sidebar", entry.dragPayload());
+        View.DragShadowBuilder shadow = new View.DragShadowBuilder(card);
+        card.setAlpha(0.45f);
+        if (Build.VERSION.SDK_INT >= 24) {
+            card.startDragAndDrop(data, shadow, null, 0);
+        } else {
+            card.startDrag(data, shadow, null, 0);
+        }
+    }
+
+    private void setSidebarOrganizeMode(boolean enabled) {
+        sidebarOrganizeMode = enabled;
+        if (sidebarAdapter != null) sidebarAdapter.setOrganizeMode(enabled);
+        if (sidebarRefresh != null) {
+            sidebarRefresh.setRefreshing(false);
+            sidebarRefresh.setEnabled(!enabled);
+        }
+        if (sidebarList != null) {
+            sidebarList.setAlpha(enabled ? 0.85f : 1.0f);
+            if (enabled) sidebarList.setOnTouchListener((v, event) -> handleOrganizeTouch(event));
+            else sidebarList.setOnTouchListener(null);
+        }
+        if (!enabled) {
+            handler.removeCallbacks(organizeLongPressRunnable);
+            organizeDragStarted = false;
+            organizeDragView = null;
+            organizeDragCard = null;
+            organizeDragEntry = null;
+        }
+        ImageButton organizeButton = findViewById(R.id.sidebarOrganizeButton);
+        organizeButton.setImageResource(enabled ? R.drawable.baseline_check_circle_24 : R.drawable.drag_handle_24px);
+        String msg = getString(enabled ? R.string.organize_sidebar : R.string.done_organizing_sidebar);
+        organizeButton.setContentDescription(msg);
+        Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
+    }
+
+    private List<String> getSidebarSectionOrder() {
+        List<String> order = new ArrayList<>();
+        try {
+            List<String> saved = new Gson().fromJson(PreferenceManager.getDefaultSharedPreferences(this)
+                    .getString("sidebar_section_order", "[]"), new TypeToken<List<String>>() {}.getType());
+            if (saved != null) order.addAll(saved);
+        } catch (Exception ignored) {
+        }
+        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+            if (!order.contains(section)) order.add(section);
+        }
+        if (PreferenceManager.getDefaultSharedPreferences(this)
+                .getBoolean("sidebar_show_bookmark_groups", false)) {
+            for (String group : bookmarkGroups) {
+                String section = "bookmark_group:" + group;
+                if (!order.contains(section)) order.add(section);
+            }
+        }
+        return order;
+    }
+
+    private void refreshSidebar(List<String> sectionOrder) {
+        if (sidebarAdapter == null) return;
+        Map<String, List<File>> groups = new LinkedHashMap<>();
+        for (String group : bookmarkGroups) groups.put(group, loadGroupBookmarks(group));
+        List<StorageUtil.StorageInfo> storage = new ArrayList<>();
+        try {
+            storage = StorageUtil.getStorageInfos(this);
+        } catch (Exception ignored) {
+        }
+        sidebarAdapter.setData(sectionOrder,
+                PreferenceManager.getDefaultSharedPreferences(this).getBoolean("sidebar_show_bookmarks", true),
+                PreferenceManager.getDefaultSharedPreferences(this).getBoolean("sidebar_show_bookmark_groups", false),
+                storage, getBookmarks(), groups, bookmarkLabels);
+    }
+
+    private void openSidebarEntry(SidebarAdapter.SidebarEntry entry) {
+        if (sidebarOrganizeMode) return;
+        if (entry == null || entry.type() == SidebarAdapter.EntryType.HEADER) return;
+        if (entry.type() == SidebarAdapter.EntryType.STORAGE) {
+            loadFolderInPane(new File(entry.storage().path), lastPaneSelected == 1);
+        } else if (entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
+            File file = entry.file();
+            loadFolderInPane(file.isFile() ? file.getParentFile() : file, lastPaneSelected == 1);
+        } else {
+            openSidebarTool(entry.id());
+        }
+        closeSidebarDrawer();
+    }
+
+    private void openSidebarTool(String id) {
+        switch (id) {
+            case "extract":
+                startActivityForResult(new Intent(this, APKExtractorActivity.class), 11);
+                break;
+            case "ftp_server":
+                showFtpServerDialog();
+                break;
+            case "ftp_client":
+                showFtpClientDialog();
+                break;
+            case "wifi":
+                startActivity(new Intent(this, WifiManagerActivity.class));
+                break;
+            case "settings":
+                showSettingsDialog();
+                break;
+            case "tools":
+                startActivity(new Intent(this, ToolsHubActivity.class));
+                break;
+            case "color_picker":
+                if (Build.VERSION.SDK_INT < 24) return;
+                PreferencesDialogFragment dialogFragment = new PreferencesDialogFragment();
+                dialogFragment.show(getSupportFragmentManager(), "preferences_dialog");
+                handler.post(() -> {
+                    AlertDialog ad = (AlertDialog) dialogFragment.requireDialog();
+                    ((Toolbar) ad.findViewById(R.id.topAppBar)).setOnMenuItemClickListener(item -> {
+                        if (item.getItemId() == R.id.menu_github) {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/codehasan/ScreenColorPicker")));
+                            return true;
+                        }
+                        return false;
+                    });
+                    boolean isRunning = ServiceState.getInstance().isRunning();
+                    TextView button = ad.getButton(DialogInterface.BUTTON_POSITIVE);
+                    button.setText(isRunning ? getString(R.string.color_stop) : getString(R.string.color_start));
+                    button.setOnClickListener(v -> {
+                        ad.dismiss();
+                        if (isRunning) ServiceState.getInstance().stopColorPickerService(MainActivity.this);
+                        else {
+                            if (!Settings.canDrawOverlays(MainActivity.this)) {
+                                PermissionUtil.requestSystemOverlayPermission(MainActivity.this);
+                                return;
+                            }
+                            if (!Extensions.canShowNotification(MainActivity.this)) {
+                                PermissionUtil.requestNotificationPermission(MainActivity.this);
+                                return;
+                            }
+                            colorPickerLauncher.launch(mediaProjectionManager.createScreenCaptureIntent());
+                        }
+                    });
+                });
+                break;
+            case "layout":
+                if (Build.VERSION.SDK_INT < 20) return;
+                if (DataRepository.getInstance().getAppState().isRunning()) {
+                    DataRepository.getInstance().updateStatus(false);
+                    return;
+                }
+                try {
+                    RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
+                } catch (Exception ignored) {
+                }
+                if (!requestMissingPermissions(this)) return;
+                DataRepository.getInstance().updateStatus(true);
+                Intent intent = new Intent(this, PackageMonitoringService.class);
+                startService(intent);
+                bindService(intent, serviceConnection, BIND_AUTO_CREATE);
+                new ServiceManager(this).show();
+                DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
+                break;
+        }
+    }
+
+    private boolean handleSidebarDrag(DragEvent event) {
+        if (event.getAction() == DragEvent.ACTION_DRAG_STARTED) {
+            return event.getClipDescription() != null;
+        }
+        if (event.getAction() == DragEvent.ACTION_DRAG_ENDED) {
+            if (organizeDragCard != null) organizeDragCard.setAlpha(1f);
+            for (int i = 0; i < sidebarList.getChildCount(); i++) {
+                sidebarList.getChildAt(i).setAlpha(1f);
+            }
+            organizeDragCard = null;
+            return true;
+        }
+        if (event.getAction() == DragEvent.ACTION_DROP && sidebarAdapter != null) {
+            String payload = event.getClipData() == null || event.getClipData().getItemCount() == 0
+                    ? null : event.getClipData().getItemAt(0).getText().toString();
+            SidebarAdapter.SidebarEntry source = sidebarAdapter.findByPayload(payload);
+            SidebarAdapter.SidebarEntry target = sidebarAdapter.getEntry(sidebarList.pointToPosition(
+                    (int) event.getX(), (int) event.getY()));
+            if (source == null || target == null) return false;
+            if (source.type() == SidebarAdapter.EntryType.HEADER) {
+                String targetSection = target.section();
+                if (target.type() != SidebarAdapter.EntryType.HEADER) return false;
+                if (!source.section().equals(targetSection)) {
+                    sidebarAdapter.moveSection(source.section(), targetSection);
+                    List<String> order = new ArrayList<>();
+                    for (int i = 0; i < sidebarAdapter.getCount(); i++) {
+                        SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(i);
+                        if (entry.type() == SidebarAdapter.EntryType.HEADER && !order.contains(entry.section())) order.add(entry.section());
+                    }
+                    PreferenceManager.getDefaultSharedPreferences(this).edit()
+                            .putString("sidebar_section_order", new Gson().toJson(order)).apply();
+                }
+                return true;
+            }
+            if (!source.section().equals(target.section())) return false;
+            if (source.type() == SidebarAdapter.EntryType.BOOKMARK) {
+                persistSidebarBookmarkMove(source, target);
+            }
+            if (sidebarAdapter.moveEntry(source, target) && source.type() == SidebarAdapter.EntryType.TOOL) {
+                PreferenceManager.getDefaultSharedPreferences(this).edit()
+                        .putString("sidebar_tool_order", new Gson().toJson(sidebarAdapter.getToolOrder())).apply();
+            }
+            return true;
+        }
+        return true;
+    }
+
+    private void showSidebarBookmarkMenu(SidebarAdapter.SidebarEntry entry, View anchor) {
+        String[] parts = entry.id().split("\\u0001", -1);
+        if (parts.length < 3) return;
+        BookmarkListController controller = parts[1].equals("bookmarks")
+                ? mainBookmarkController : groupControllers.get(parts[1]);
+        if (controller == null) return;
+        for (int i = 0; i < controller.items.size(); i++) {
+            if (parts[2].equals(controller.items.get(i).getPath())) {
+                showBookmarkItemMenu(controller, i, anchor);
+                return;
+            }
+        }
+    }
+
+    private void persistSidebarBookmarkMove(SidebarAdapter.SidebarEntry source, SidebarAdapter.SidebarEntry target) {
+        String[] sourceParts = source.id().split("\\u0001", -1);
+        String[] targetParts = target.id().split("\\u0001", -1);
+        if (sourceParts.length < 3 || targetParts.length < 3 || !sourceParts[1].equals(targetParts[1])) return;
+        BookmarkListController controller = sourceParts[1].equals("bookmarks") ? mainBookmarkController : groupControllers.get(sourceParts[1]);
+        if (controller == null) return;
+        int from = -1;
+        int to = -1;
+        for (int i = 0; i < controller.items.size(); i++) {
+            if (sourceParts[2].equals(controller.items.get(i).getPath())) from = i;
+            if (targetParts[2].equals(controller.items.get(i).getPath())) to = i;
+        }
+        if (from < 0 || to < 0 || from == to) return;
+        File file = controller.items.remove(from);
+        if (to > from) to--;
+        controller.items.add(to, file);
+        persistBookmarkOrder(controller);
+        controller.adapter.notifyDataSetChanged();
     }
 
 
@@ -1589,117 +2034,7 @@ public class MainActivity extends AppCompatActivity {
         };
 
         findViewById(R.id.sidebarTitle).setOnClickListener(v -> uiHelper.showAboutDialog());
-        LinearLayout storageBox = findViewById(R.id.storageContainer);
-        ListView sidebar = findViewById(R.id.sidebarList);
-
-        ArrayList<String> sidebarOptions = new ArrayList<>(Arrays.asList(getString(R.string.sidebar_extract), getString(R.string.ftp_server), getString(R.string.ftp_client), getString(R.string.color_picker), getString(R.string.sidebar_layout_inspector), getString(R.string.sidebar_wifi), getString(R.string.sidebar_tools), getString(R.string.settings)));
-        ArrayList<Integer> sidebarIcons = new ArrayList<>(Arrays.asList(R.drawable.apk_document_24px, R.drawable.cloud_upload_24px, R.drawable.cloud_download_24px, R.drawable.colorize_24px, R.drawable.ic_inspect, R.drawable.wifi_24px, R.drawable.tools_24px, R.drawable.baseline_settings_24));
-        SwipeRefreshLayout sidebarRefresh = findViewById(R.id.sidebarRefresh);
-        if (sidebarRefresh != null) {
-            sidebarRefresh.setOnRefreshListener(() -> {
-                try { StorageUtil.populateStorageUI(this, storageBox); } catch (Exception ignored) { }
-                sidebarRefresh.setRefreshing(false);
-            });
-        }
-        registerStorageRefreshReceiver();
-        String[] options = sidebarOptions.toArray(new String[0]);
-        int[] icons = new int[sidebarIcons.size()];
-        for (int sidebarIndex = 0; sidebarIndex < sidebarIcons.size(); sidebarIndex++) icons[sidebarIndex] = sidebarIcons.get(sidebarIndex);
-        sidebar.setAdapter(new ArrayAdapter<>(this, R.layout.item_dropdown_option, options) {
-            @NonNull
-            @Override
-            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                if (convertView == null) {
-                    convertView = LayoutInflater.from(MainActivity.this).inflate(R.layout.item_dropdown_option, parent, false);
-                }
-
-                if (position == 3 && Build.VERSION.SDK_INT < 24) convertView.setVisibility(View.GONE);
-                else if (position == 4 && Build.VERSION.SDK_INT < 20) convertView.setVisibility(View.GONE);
-                else {
-                    convertView.<ImageView>findViewById(R.id.optionIcon).setImageResource(icons[position]);
-                    convertView.<TextView>findViewById(R.id.optionText).setText(options[position]);
-                }
-                return convertView;
-            }
-        });
-        sidebar.setOnItemClickListener((parent, view, position, id) -> {
-            switch (position) {
-                case 0:
-                    startActivityForResult(new Intent(this, APKExtractorActivity.class), 11);
-                    break;
-                case 1:
-                    showFtpServerDialog();
-                    break;
-                case 2:
-                    showFtpClientDialog();
-                    break;
-                case 5:
-                    startActivity(new Intent(this, WifiManagerActivity.class));
-                    break;
-                case 3:
-                    if(Build.VERSION.SDK_INT < 24) return;
-                    PreferencesDialogFragment dialogFragment = new PreferencesDialogFragment();
-                    dialogFragment.show(getSupportFragmentManager(), "preferences_dialog");
-                    handler.post(() -> {
-                        AlertDialog ad = (AlertDialog) dialogFragment.requireDialog();
-                        ((Toolbar) ad.findViewById(R.id.topAppBar)).setOnMenuItemClickListener(item -> {
-                            if (item.getItemId() == R.id.menu_github) {
-                                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/codehasan/ScreenColorPicker")));
-                                return true;
-                            }
-                            return false;
-                        });
-                        boolean isRunning = ServiceState.getInstance().isRunning();
-                        TextView button = ad.getButton(DialogInterface.BUTTON_POSITIVE);
-                        button.setText(isRunning ? getString(R.string.color_stop) : getString(R.string.color_start));
-                        button.setOnClickListener(v -> {
-                            ad.dismiss();
-                            if (isRunning) ServiceState.getInstance().stopColorPickerService(MainActivity.this);
-                            else {
-                                if (!Settings.canDrawOverlays(MainActivity.this)) {
-                                    PermissionUtil.requestSystemOverlayPermission(MainActivity.this);
-                                    return;
-                                }
-
-                                if (!Extensions.canShowNotification(MainActivity.this)) {
-                                    PermissionUtil.requestNotificationPermission(MainActivity.this);
-                                    return;
-                                }
-
-                                colorPickerLauncher.launch(mediaProjectionManager.createScreenCaptureIntent());
-                            }
-                        });
-                    });
-                    break;
-                case 4:
-                    if(Build.VERSION.SDK_INT < 20) return;
-                    if (DataRepository.getInstance().getAppState().isRunning()) {
-                        DataRepository.getInstance().updateStatus(false);
-                        return;
-                    }
-
-                    try {
-                        RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
-                    } catch (Exception ignored) {
-                    }
-                    if (!requestMissingPermissions(this)) return;
-
-                    DataRepository.getInstance().updateStatus(true);
-                    Intent intent = new Intent(this, PackageMonitoringService.class);
-                    startService(intent);
-                    bindService(intent, serviceConnection, BIND_AUTO_CREATE);
-                    new ServiceManager(this).show();
-                    DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
-                    break;
-                case 6:
-                    startActivity(new Intent(this, ToolsHubActivity.class));
-                    break;
-                case 7:
-                    showSettingsDialog();
-                    break;
-            }
-            drawerLayout.closeDrawer(GravityCompat.START);
-        });
+        setupSidebar();
         bottomBarGestureDetector = new GestureDetectorCompat(this,
                 new GestureDetector.SimpleOnGestureListener() {
                     @Override
@@ -1936,9 +2271,9 @@ public class MainActivity extends AppCompatActivity {
                                 if (filterBar != null) {
                                     filterBar.requestFocus();
                                     try {
-                                        android.view.inputmethod.InputMethodManager imm =
-                                                (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                                        if (imm != null) imm.showSoftInput(filterBar, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                                        InputMethodManager imm =
+                                                (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                        if (imm != null) imm.showSoftInput(filterBar, InputMethodManager.SHOW_IMPLICIT);
                                     } catch (Exception ignored) {
                                     }
                                 }
@@ -1947,8 +2282,8 @@ public class MainActivity extends AppCompatActivity {
                                 filterBox.setVisibility(View.GONE);
                                 if (filterBar != null) filterBar.setText("");
                                 try {
-                                    android.view.inputmethod.InputMethodManager imm =
-                                            (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                    InputMethodManager imm =
+                                            (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
                                     if (imm != null) imm.hideSoftInputFromWindow(topBar.getWindowToken(), 0);
                                 } catch (Exception ignored) {
                                 }
@@ -2066,7 +2401,7 @@ public class MainActivity extends AppCompatActivity {
         handler.post(() -> {
             setupFilterBar();
             setupNavigationButtons();
-            StorageUtil.populateStorageUI(this, storageBox);
+            refreshSidebar(getSidebarSectionOrder());
             File[] dir1Files = homeDir1.listFiles();
             if (dir1Files != null) {
                 File[] folders = homeDir1.listFiles(File::isDirectory);
@@ -2085,7 +2420,7 @@ public class MainActivity extends AppCompatActivity {
                         handler.post(() -> {
                             try {
                                 Extensions.showMessage(MainActivity.this, R.string.root_detected_enabled);
-                                StorageUtil.populateStorageUI(MainActivity.this, storageBox);
+                                refreshSidebar(getSidebarSectionOrder());
                             } catch (Exception ignored) {
                             }
                         });
@@ -2270,7 +2605,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         boolean shizukuDir = ShizukuFile.isAndroidDataPath(folder);
-        File[] files = folder.listFiles(this::isNotHidden);
+        File[] files = null;
+        String folderPath = folder.getAbsolutePath();
+        boolean rootListingPath = "/".equals(folderPath) || RootManager.isRootOnlyPath(folderPath);
+        if (rootListingPath && AccessManager.active(this) == AccessManager.Backend.ROOT && AccessManager.fileOpsOn(this)) {
+            files = AccessManager.listWithStat(this, folder.getAbsolutePath());
+            if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
+        }
+        if (files == null) files = folder.listFiles(this::isNotHidden);
         if (files == null || (files.length == 0 && shizukuDir)) {
             File[] viaShizuku = ShizukuFile.tryList(this, folder);
             if (viaShizuku != null) files = viaShizuku;
@@ -2285,7 +2627,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             if (elevated) {
-                files = AccessManager.listWithStat(this, folder.getAbsolutePath());
+            files = AccessManager.listWithStat(this, folderPath);
+
                 if (files != null) {
                     files = Arrays.stream(files)
                             .filter(this::isNotHidden)
@@ -2548,7 +2891,7 @@ public class MainActivity extends AppCompatActivity {
         ShizukuShell.onBinderReceived(() -> runOnUiThread(() -> {
             if (ShizukuShell.isGranted()) loadFolderInPane(folder, pane1, false);
         }));
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Shizuku")
                 .setMessage(message)
                 .setPositiveButton(positiveLabel, (d, w) -> onPositive.run())
@@ -2699,8 +3042,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {
         }
         try {
-            LinearLayout storageBox = findViewById(R.id.storageContainer);
-            if (storageBox != null) StorageUtil.populateStorageUI(this, storageBox);
+            if (sidebarAdapter != null) refreshSidebar(getSidebarSectionOrder());
         } catch (Exception ignored) {
         }
     }
@@ -2713,8 +3055,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onReceive(Context context, Intent intent) {
                     handler.post(() -> {
                         try {
-                            LinearLayout storageBox = findViewById(R.id.storageContainer);
-                            if (storageBox != null) StorageUtil.populateStorageUI(MainActivity.this, storageBox);
+                            if (sidebarAdapter != null) refreshSidebar(getSidebarSectionOrder());
                         } catch (Exception ignored) {
                         }
                     });
@@ -2792,30 +3133,30 @@ public class MainActivity extends AppCompatActivity {
         });
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> historyItems =
-                io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN);
+        List<SearchHistoryHelper.Item> historyItems =
+                SearchHistoryHelper.load(this, SearchHistoryHelper.KEY_MAIN);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line,
                 new ArrayList<>());
         searchQuery.setAdapter(adapter);
 
         searchHistoryDropdown.setOnClickListener(v -> {
-            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
-                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN);
+            List<SearchHistoryHelper.Item> hist =
+                    SearchHistoryHelper.load(this, SearchHistoryHelper.KEY_MAIN);
             if (hist.isEmpty()) {
                 Extensions.showMessage(this, R.string.no_files_found);
                 return;
             }
-            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(this, searchQuery, hist,
-                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+            SearchHistoryDropdown.show(this, searchQuery, hist,
+                    new SearchHistoryDropdown.Listener() {
                         @Override
                         public void onSelect(String query) {
                             searchQuery.setText(query);
                             searchQuery.setSelection(query.length());
                         }
                         @Override
-                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
-                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(MainActivity.this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN, items);
+                        public void onChanged(List<SearchHistoryHelper.Item> items) {
+                            SearchHistoryHelper.save(MainActivity.this, SearchHistoryHelper.KEY_MAIN, items);
                         }
                     });
         });
@@ -2836,7 +3177,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 String query = q.toString();
-                io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(this, io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_MAIN, query);
+                SearchHistoryHelper.push(this, SearchHistoryHelper.KEY_MAIN, query);
 
                 boolean subfolders = searchSubfolders.isChecked();
                 boolean mCase = matchCase.isChecked();
@@ -3218,7 +3559,21 @@ public class MainActivity extends AppCompatActivity {
         askBookmarkTabToggle.setChecked(settings.getBoolean("ask_bookmark_tab", false));
         askBookmarkTabToggle.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ask_bookmark_tab", isChecked).apply());
 
-        android.widget.EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
+        CompoundButton sidebarBookmarksToggle = settingsDialog.findViewById(R.id.sidebarBookmarksToggle);
+        sidebarBookmarksToggle.setChecked(settings.getBoolean("sidebar_show_bookmarks", true));
+        sidebarBookmarksToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            settings.edit().putBoolean("sidebar_show_bookmarks", isChecked).apply();
+            refreshSidebar(getSidebarSectionOrder());
+        });
+
+        CompoundButton sidebarBookmarkGroupsToggle = settingsDialog.findViewById(R.id.sidebarBookmarkGroupsToggle);
+        sidebarBookmarkGroupsToggle.setChecked(settings.getBoolean("sidebar_show_bookmark_groups", false));
+        sidebarBookmarkGroupsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            settings.edit().putBoolean("sidebar_show_bookmark_groups", isChecked).apply();
+            refreshSidebar(getSidebarSectionOrder());
+        });
+
+        EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
         if (searchHistoryLimitEt != null) {
             int limit = settings.getInt("search_history_limit", 50);
             searchHistoryLimitEt.setText(String.valueOf(limit));
@@ -3388,7 +3743,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveSearchHistoryLimit(ScrollView root) {
         try {
-            android.widget.EditText et = root.findViewById(R.id.searchHistoryLimitEt);
+            EditText et = root.findViewById(R.id.searchHistoryLimitEt);
             if (et == null || et.getText() == null) return;
             String s = et.getText().toString().trim();
             if (s.isEmpty()) return;

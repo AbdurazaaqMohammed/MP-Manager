@@ -35,7 +35,30 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
+
+        <ImageButton
+            android:id="@+id/optionHideButton"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/hide"
+            android:padding="2dp"
+            android:visibility="invisible"
+            android:src="@drawable/visibility_off_24px"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <ImageView
+            android:id="@+id/optionDragHandle"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@string/drag_to_reorder"
+            android:padding="0dp"
+            android:visibility="invisible"
+            android:src="@drawable/drag_handle_24px"
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -621,6 +621,15 @@ Layout Inspector
     <string name="menu_items">Menu items</string>
     <string name="option_icon_cd">Option Icon</string>
     <string name="storage">Storage</string>
+    <string name="tools_section">Tools</string>
+    <string name="show_bookmarks_sidebar">Show bookmarks in sidebar</string>
+    <string name="include_bookmark_groups_sidebar">Include bookmark groups in sidebar</string>
+    <string name="sidebar_collapse">Collapse section</string>
+    <string name="sidebar_expand">Expand section</string>
+    <string name="organize_sidebar">Organize sidebar</string>
+    <string name="done_organizing_sidebar">Done organizing</string>
+    <string name="drag_to_reorder">Drag to reorder</string>
+    <string name="restore_sidebar_item">Restore sidebar item</string>
     <string name="more_options">More options</string>
     <string name="destination_path">Destination Path</string>
     <string name="alias_key_name_hint">Alias / Key name</string>
