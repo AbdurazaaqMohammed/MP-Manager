@@ -34,6 +34,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -741,7 +742,16 @@ public class APKExtractorActivity extends AppCompatActivity {
         popupWindow.setWidth(popupWidth);
 
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        popupWindow.showAsDropDown(anchor, 0, 0);
+        int[] location = new int[2];
+        anchor.getLocationOnScreen(location);
+        int anchorY = location[1];
+        int screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
+
+        if (anchorY + anchor.getHeight() + popupView.getMeasuredHeight() > screenHeight) {
+            popupWindow.showAsDropDown(anchor, 0, -anchor.getHeight() - popupView.getMeasuredHeight());
+        } else {
+            popupWindow.showAsDropDown(anchor, 0, 0);
+        }
         listView.setOnItemClickListener((parent, view, position, id) -> {
             popupWindow.dismiss();
             int actionId = actionIds.get(position);
