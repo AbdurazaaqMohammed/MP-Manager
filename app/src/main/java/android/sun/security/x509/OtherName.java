@@ -25,6 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
@@ -46,12 +49,12 @@ import java.util.Arrays;
  * </pre>
  * @author Hemma Prafullchandra
  */
-public class OtherName implements android.sun.security.x509.GeneralNameInterface {
+public class OtherName implements GeneralNameInterface {
 
     private final String name;
-    private final android.sun.security.util.ObjectIdentifier oid;
+    private final ObjectIdentifier oid;
     private byte[] nameValue = null;
-    private android.sun.security.x509.GeneralNameInterface gni = null;
+    private GeneralNameInterface gni = null;
 
     private static final byte TAG_VALUE = 0;
 
@@ -85,11 +88,11 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
      * @param derValue the encoded DER OtherName.
      * @exception IOException on error.
      */
-    public OtherName(android.sun.security.util.DerValue derValue) throws IOException {
-        android.sun.security.util.DerInputStream in = derValue.toDerInputStream();
+    public OtherName(DerValue derValue) throws IOException {
+        DerInputStream in = derValue.toDerInputStream();
 
         oid = in.getOID();
-        android.sun.security.util.DerValue val = in.getDerValue();
+        DerValue val = in.getDerValue();
         nameValue = val.toByteArray();
         gni = getGNI(oid, nameValue);
         if (gni != null) {
@@ -102,7 +105,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
     /**
      * Get ObjectIdentifier
      */
-    public android.sun.security.util.ObjectIdentifier getOID() {
+    public ObjectIdentifier getOID() {
         //XXXX May want to consider cloning this
         return oid;
     }
@@ -117,7 +120,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
     /**
      * Get GeneralNameInterface
      */
-    private android.sun.security.x509.GeneralNameInterface getGNI(android.sun.security.util.ObjectIdentifier oid, byte[] nameValue)
+    private GeneralNameInterface getGNI(ObjectIdentifier oid, byte[] nameValue)
             throws IOException {
         try {
             Class extClass = OIDMap.getClass(oid);
@@ -138,7 +141,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return android.sun.security.x509.GeneralNameInterface.NAME_ANY;
+        return GeneralNameInterface.NAME_ANY;
     }
 
     /**
@@ -147,16 +150,16 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
      * @param out the DER stream to encode the Other-Name to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
         if (gni != null) {
             // This OtherName has a supported class
             gni.encode(out);
         } else {
             // This OtherName has no supporting class
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putOID(oid);
-            tmp.write(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT, true, TAG_VALUE), nameValue);
-            out.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+            tmp.write(DerValue.createTag(DerValue.TAG_CONTEXT, true, TAG_VALUE), nameValue);
+            out.write(DerValue.tag_Sequence, tmp);
         }
     }
 
@@ -175,7 +178,7 @@ public class OtherName implements android.sun.security.x509.GeneralNameInterface
         if (!(otherOther.oid.equals(oid))) {
             return false;
         }
-        android.sun.security.x509.GeneralNameInterface otherGNI = null;
+        GeneralNameInterface otherGNI = null;
         try {
             otherGNI = getGNI(otherOther.oid, otherOther.nameValue);
         } catch (IOException ioe) {

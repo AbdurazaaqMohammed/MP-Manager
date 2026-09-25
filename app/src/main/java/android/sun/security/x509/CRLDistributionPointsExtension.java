@@ -75,9 +75,9 @@ import android.sun.security.util.ObjectIdentifier;
  * @author Anne Anderson
  * @author Andreas Sterbenz
  * @since 1.4.2
- * @see android.sun.security.x509.DistributionPoint
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see DistributionPoint
+ * @see Extension
+ * @see CertAttrSet
  */
 public class CRLDistributionPointsExtension extends Extension
         implements CertAttrSet<String> {
@@ -98,7 +98,7 @@ public class CRLDistributionPointsExtension extends Extension
     /**
      * The List of DistributionPoint objects.
      */
-    private List<android.sun.security.x509.DistributionPoint> distributionPoints;
+    private List<DistributionPoint> distributionPoints;
 
     private final String extensionName;
 
@@ -110,7 +110,7 @@ public class CRLDistributionPointsExtension extends Extension
      * @throws IOException on error
      */
     public CRLDistributionPointsExtension(
-        List<android.sun.security.x509.DistributionPoint> distributionPoints) throws IOException {
+        List<DistributionPoint> distributionPoints) throws IOException {
 
         this(false, distributionPoints);
     }
@@ -124,9 +124,9 @@ public class CRLDistributionPointsExtension extends Extension
      * @throws IOException on error
      */
     public CRLDistributionPointsExtension(boolean isCritical,
-        List<android.sun.security.x509.DistributionPoint> distributionPoints) throws IOException {
+        List<DistributionPoint> distributionPoints) throws IOException {
 
-        this(android.sun.security.x509.PKIXExtensions.CRLDistributionPoints_Id, isCritical,
+        this(PKIXExtensions.CRLDistributionPoints_Id, isCritical,
             distributionPoints, NAME);
     }
 
@@ -134,7 +134,7 @@ public class CRLDistributionPointsExtension extends Extension
      * Creates the extension (also called by the subclass).
      */
     protected CRLDistributionPointsExtension(ObjectIdentifier extensionId,
-        boolean isCritical, List<android.sun.security.x509.DistributionPoint> distributionPoints,
+        boolean isCritical, List<DistributionPoint> distributionPoints,
             String extensionName) throws IOException {
 
         this.extensionId = extensionId;
@@ -153,7 +153,7 @@ public class CRLDistributionPointsExtension extends Extension
      */
     public CRLDistributionPointsExtension(Boolean critical, Object value)
             throws IOException {
-        this(android.sun.security.x509.PKIXExtensions.CRLDistributionPoints_Id, critical, value, NAME);
+        this(PKIXExtensions.CRLDistributionPoints_Id, critical, value, NAME);
     }
 
     /**
@@ -179,7 +179,7 @@ public class CRLDistributionPointsExtension extends Extension
         distributionPoints = new ArrayList<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
-            android.sun.security.x509.DistributionPoint point = new android.sun.security.x509.DistributionPoint(seq);
+            DistributionPoint point = new DistributionPoint(seq);
             distributionPoints.add(point);
         }
         this.extensionName = extensionName;
@@ -227,7 +227,7 @@ public class CRLDistributionPointsExtension extends Extension
             if (!(obj instanceof List)) {
                 throw new IOException("Attribute value should be of type List.");
             }
-            distributionPoints = (List<android.sun.security.x509.DistributionPoint>)obj;
+            distributionPoints = (List<DistributionPoint>)obj;
         } else {
             throw new IOException("Attribute name [" + name +
                                 "] not recognized by " +
@@ -268,7 +268,7 @@ public class CRLDistributionPointsExtension extends Extension
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(POINTS);
         return elements.elements();
     }

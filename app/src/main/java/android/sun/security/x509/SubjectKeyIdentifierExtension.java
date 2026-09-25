@@ -25,6 +25,7 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -49,8 +50,8 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class SubjectKeyIdentifierExtension extends Extension
 implements CertAttrSet<String> {
@@ -67,7 +68,7 @@ implements CertAttrSet<String> {
     public static final String KEY_ID = "key_id";
 
     // Private data member
-    private android.sun.security.x509.KeyIdentifier id = null;
+    private KeyIdentifier id = null;
 
     // Encode this extension value
     private void encodeThis() throws IOException {
@@ -75,7 +76,7 @@ implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
+        DerOutputStream os = new DerOutputStream();
         id.encode(os);
         this.extensionValue = os.toByteArray();
     }
@@ -87,9 +88,9 @@ implements CertAttrSet<String> {
      */
     public SubjectKeyIdentifierExtension(byte[] octetString)
     throws IOException {
-        id = new android.sun.security.x509.KeyIdentifier(octetString);
+        id = new KeyIdentifier(octetString);
 
-        this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectKey_Id;
+        this.extensionId = PKIXExtensions.SubjectKey_Id;
         this.critical = false;
         encodeThis();
     }
@@ -104,11 +105,11 @@ implements CertAttrSet<String> {
      */
     public SubjectKeyIdentifierExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectKey_Id;
+        this.extensionId = PKIXExtensions.SubjectKey_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new DerValue(this.extensionValue);
-        this.id = new android.sun.security.x509.KeyIdentifier(val);
+        DerValue val = new DerValue(this.extensionValue);
+        this.id = new KeyIdentifier(val);
     }
 
     /**
@@ -126,7 +127,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         if (extensionValue == null) {
             extensionId = PKIXExtensions.SubjectKey_Id;
             critical = false;
@@ -141,7 +142,7 @@ implements CertAttrSet<String> {
      */
     public void set(String name, Object obj) throws IOException {
         if (name.equalsIgnoreCase(KEY_ID)) {
-            if (!(obj instanceof android.sun.security.x509.KeyIdentifier)) {
+            if (!(obj instanceof KeyIdentifier)) {
               throw new IOException("Attribute value should be of" +
                                     " type KeyIdentifier.");
             }
@@ -183,7 +184,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(KEY_ID);
 
         return (elements.elements());

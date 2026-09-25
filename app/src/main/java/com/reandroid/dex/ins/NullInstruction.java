@@ -15,7 +15,6 @@
  */
 package com.reandroid.dex.ins;
 
-import com.reandroid.arsc.item.IntegerReference;
 import com.reandroid.dex.smali.SmaliWriter;
 
 import java.io.IOException;

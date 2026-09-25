@@ -26,6 +26,7 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,8 +50,8 @@ import java.util.Enumeration;
  * </pre>
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class SubjectAlternativeNameExtension extends Extension
 implements CertAttrSet<String> {
@@ -67,7 +68,7 @@ implements CertAttrSet<String> {
     public static final String SUBJECT_NAME = "subject_name";
 
     // private data members
-    android.sun.security.x509.GeneralNames names = null;
+    GeneralNames names = null;
 
     // Encode this extension
     private void encodeThis() throws IOException {
@@ -75,7 +76,7 @@ implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
+        DerOutputStream os = new DerOutputStream();
         names.encode(os);
         this.extensionValue = os.toByteArray();
     }
@@ -87,7 +88,7 @@ implements CertAttrSet<String> {
      * @param names the GeneralNames for the subject.
      * @exception IOException on error.
      */
-    public SubjectAlternativeNameExtension(android.sun.security.x509.GeneralNames names)
+    public SubjectAlternativeNameExtension(GeneralNames names)
     throws IOException {
         this(Boolean.FALSE, names);
     }
@@ -100,10 +101,10 @@ implements CertAttrSet<String> {
      * @param names the GeneralNames for the subject.
      * @exception IOException on error.
      */
-    public SubjectAlternativeNameExtension(Boolean critical, android.sun.security.x509.GeneralNames names)
+    public SubjectAlternativeNameExtension(Boolean critical, GeneralNames names)
     throws IOException {
         this.names = names;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectAlternativeName_Id;
+        this.extensionId = PKIXExtensions.SubjectAlternativeName_Id;
         this.critical = critical;
         encodeThis();
     }
@@ -113,9 +114,9 @@ implements CertAttrSet<String> {
      * is marked non-critical.
      */
     public SubjectAlternativeNameExtension() {
-        extensionId = android.sun.security.x509.PKIXExtensions.SubjectAlternativeName_Id;
+        extensionId = PKIXExtensions.SubjectAlternativeName_Id;
         critical = false;
-        names = new android.sun.security.x509.GeneralNames();
+        names = new GeneralNames();
     }
 
     /**
@@ -128,17 +129,17 @@ implements CertAttrSet<String> {
      */
     public SubjectAlternativeNameExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectAlternativeName_Id;
+        this.extensionId = PKIXExtensions.SubjectAlternativeName_Id;
         this.critical = critical;
 
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         if (val.data == null) {
-            names = new android.sun.security.x509.GeneralNames();
+            names = new GeneralNames();
             return;
         }
 
-        names = new android.sun.security.x509.GeneralNames(val);
+        names = new GeneralNames(val);
     }
 
     /**
@@ -165,7 +166,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         if (extensionValue == null) {
             extensionId = PKIXExtensions.SubjectAlternativeName_Id;
             critical = false;
@@ -180,7 +181,7 @@ implements CertAttrSet<String> {
      */
     public void set(String name, Object obj) throws IOException {
         if (name.equalsIgnoreCase(SUBJECT_NAME)) {
-            if (!(obj instanceof android.sun.security.x509.GeneralNames)) {
+            if (!(obj instanceof GeneralNames)) {
               throw new IOException("Attribute value should be of " +
                                     "type GeneralNames.");
             }
@@ -222,7 +223,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(SUBJECT_NAME);
 
         return (elements.elements());

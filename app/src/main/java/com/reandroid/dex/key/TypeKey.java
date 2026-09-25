@@ -16,6 +16,7 @@
 package com.reandroid.dex.key;
 
 import android.os.Build;
+import android.text.TextUtils;
 
 import com.reandroid.dex.common.DexUtils;
 import com.reandroid.dex.smali.SmaliParseException;
@@ -531,7 +532,7 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
     }
 
     public static TypeKey parse(String name) {
-        if (android.text.TextUtils.isEmpty(name)) {
+        if (TextUtils.isEmpty(name)) {
             return null;
         }
         if (name.indexOf('>') > 0 ||
@@ -547,7 +548,7 @@ public class TypeKey implements TypeDescriptorKey, ProgramKey {
         return parseSourceName(name);
     }
     public static TypeKey fromClassPath(String path) {
-        if (android.text.TextUtils.isEmpty(path)) {
+        if (TextUtils.isEmpty(path)) {
             return null;
         }
         String ext = ".class";

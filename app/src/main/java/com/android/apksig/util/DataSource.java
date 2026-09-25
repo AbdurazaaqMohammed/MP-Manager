@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
  * <p>This abstraction serves three purposes:
  * <ul>
  * <li>Transparent handling of different types of sources, such as {@code byte[]},
- *     {@link java.nio.ByteBuffer}, {@link java.io.RandomAccessFile}, memory-mapped file.</li>
+ *     {@link ByteBuffer}, {@link java.io.RandomAccessFile}, memory-mapped file.</li>
  * <li>Support sources larger than 2 GB. If all sources were smaller than 2 GB, {@code ByteBuffer}
  *     may have worked as the unifying abstraction.</li>
  * <li>Support sources which do not fit into logical memory as a contiguous region.</li>

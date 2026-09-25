@@ -78,118 +78,118 @@ public class PKIXExtensions {
     /**
      * Identifies the particular public key used to sign the certificate.
      */
-    public static final android.sun.security.util.ObjectIdentifier AuthorityKey_Id;
+    public static final ObjectIdentifier AuthorityKey_Id;
 
     /**
      * Identifies the particular public key used in an application.
      */
-    public static final android.sun.security.util.ObjectIdentifier SubjectKey_Id;
+    public static final ObjectIdentifier SubjectKey_Id;
 
     /**
      * Defines the purpose of the key contained in the certificate.
      */
-    public static final android.sun.security.util.ObjectIdentifier KeyUsage_Id;
+    public static final ObjectIdentifier KeyUsage_Id;
 
     /**
      * Allows the certificate issuer to specify a different validity period
      * for the private key than the certificate.
      */
-    public static final android.sun.security.util.ObjectIdentifier PrivateKeyUsage_Id;
+    public static final ObjectIdentifier PrivateKeyUsage_Id;
 
     /**
      * Contains the sequence of policy information terms.
      */
-    public static final android.sun.security.util.ObjectIdentifier CertificatePolicies_Id;
+    public static final ObjectIdentifier CertificatePolicies_Id;
 
     /**
      * Lists pairs of objectidentifiers of policies considered equivalent by the
      * issuing CA to the subject CA.
      */
-    public static final android.sun.security.util.ObjectIdentifier PolicyMappings_Id;
+    public static final ObjectIdentifier PolicyMappings_Id;
 
     /**
      * Allows additional identities to be bound to the subject of the certificate.
      */
-    public static final android.sun.security.util.ObjectIdentifier SubjectAlternativeName_Id;
+    public static final ObjectIdentifier SubjectAlternativeName_Id;
 
     /**
      * Allows additional identities to be associated with the certificate issuer.
      */
-    public static final android.sun.security.util.ObjectIdentifier IssuerAlternativeName_Id;
+    public static final ObjectIdentifier IssuerAlternativeName_Id;
 
     /**
      * Identifies additional directory attributes.
      * This extension is always non-critical.
      */
-    public static final android.sun.security.util.ObjectIdentifier SubjectDirectoryAttributes_Id;
+    public static final ObjectIdentifier SubjectDirectoryAttributes_Id;
 
     /**
      * Identifies whether the subject of the certificate is a CA and how deep
      * a certification path may exist through that CA.
      */
-    public static final android.sun.security.util.ObjectIdentifier BasicConstraints_Id;
+    public static final ObjectIdentifier BasicConstraints_Id;
 
     /**
      * Provides for permitted and excluded subtrees that place restrictions
      * on names that may be included within a certificate issued by a given CA.
      */
-    public static final android.sun.security.util.ObjectIdentifier NameConstraints_Id;
+    public static final ObjectIdentifier NameConstraints_Id;
 
     /**
      * Used to either prohibit policy mapping or limit the set of policies
      * that can be in subsequent certificates.
      */
-    public static final android.sun.security.util.ObjectIdentifier PolicyConstraints_Id;
+    public static final ObjectIdentifier PolicyConstraints_Id;
 
     /**
      * Identifies how CRL information is obtained.
      */
-    public static final android.sun.security.util.ObjectIdentifier CRLDistributionPoints_Id;
+    public static final ObjectIdentifier CRLDistributionPoints_Id;
 
     /**
      * Conveys a monotonically increasing sequence number for each CRL
      * issued by a given CA.
      */
-    public static final android.sun.security.util.ObjectIdentifier CRLNumber_Id;
+    public static final ObjectIdentifier CRLNumber_Id;
 
     /**
      * Identifies the CRL distribution point for a particular CRL.
      */
-    public static final android.sun.security.util.ObjectIdentifier IssuingDistributionPoint_Id;
+    public static final ObjectIdentifier IssuingDistributionPoint_Id;
 
     /**
      * Identifies the delta CRL.
      */
-    public static final android.sun.security.util.ObjectIdentifier DeltaCRLIndicator_Id;
+    public static final ObjectIdentifier DeltaCRLIndicator_Id;
 
     /**
      * Identifies the reason for the certificate revocation.
      */
-    public static final android.sun.security.util.ObjectIdentifier ReasonCode_Id;
+    public static final ObjectIdentifier ReasonCode_Id;
 
     /**
      * This extension provides a registered instruction identifier indicating
      * the action to be taken, after encountering a certificate that has been
      * placed on hold.
      */
-    public static final android.sun.security.util.ObjectIdentifier HoldInstructionCode_Id;
+    public static final ObjectIdentifier HoldInstructionCode_Id;
 
     /**
      * Identifies the date on which it is known or suspected that the private
      * key was compromised or that the certificate otherwise became invalid.
      */
-    public static final android.sun.security.util.ObjectIdentifier InvalidityDate_Id;
+    public static final ObjectIdentifier InvalidityDate_Id;
     /**
      * Identifies one or more purposes for which the certified public key
      * may be used, in addition to or in place of the basic purposes
      * indicated in the key usage extension field.
      */
-    public static final android.sun.security.util.ObjectIdentifier ExtendedKeyUsage_Id;
+    public static final ObjectIdentifier ExtendedKeyUsage_Id;
 
     /**
      * Specifies whether any-policy policy OID is permitted
      */
-    public static final android.sun.security.util.ObjectIdentifier InhibitAnyPolicy_Id;
+    public static final ObjectIdentifier InhibitAnyPolicy_Id;
 
     /**
      * Identifies the certificate issuer associated with an entry in an
@@ -203,66 +203,66 @@ public class PKIXExtensions {
      * This information may be used for on-line certification validation
      * services.
      */
-    public static final android.sun.security.util.ObjectIdentifier AuthInfoAccess_Id;
+    public static final ObjectIdentifier AuthInfoAccess_Id;
 
     /**
      * This extension indicates how to access CA information and services for
      * the subject of the certificate in which the extension appears.
      */
-    public static final android.sun.security.util.ObjectIdentifier SubjectInfoAccess_Id;
+    public static final ObjectIdentifier SubjectInfoAccess_Id;
 
     /**
      * Identifies how delta CRL information is obtained.
      */
-    public static final android.sun.security.util.ObjectIdentifier FreshestCRL_Id;
+    public static final ObjectIdentifier FreshestCRL_Id;
 
     /**
      * Identifies the OCSP client can trust the responder for the
      * lifetime of the responder's certificate.
      */
-    public static final android.sun.security.util.ObjectIdentifier OCSPNoCheck_Id;
+    public static final ObjectIdentifier OCSPNoCheck_Id;
 
     static {
-        AuthorityKey_Id = android.sun.security.util.ObjectIdentifier.newInternal(AuthorityKey_data);
-        SubjectKey_Id   = android.sun.security.util.ObjectIdentifier.newInternal(SubjectKey_data);
-        KeyUsage_Id     = android.sun.security.util.ObjectIdentifier.newInternal(KeyUsage_data);
-        PrivateKeyUsage_Id = android.sun.security.util.ObjectIdentifier.newInternal(PrivateKeyUsage_data);
+        AuthorityKey_Id = ObjectIdentifier.newInternal(AuthorityKey_data);
+        SubjectKey_Id   = ObjectIdentifier.newInternal(SubjectKey_data);
+        KeyUsage_Id     = ObjectIdentifier.newInternal(KeyUsage_data);
+        PrivateKeyUsage_Id = ObjectIdentifier.newInternal(PrivateKeyUsage_data);
         CertificatePolicies_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(CertificatePolicies_data);
-        PolicyMappings_Id = android.sun.security.util.ObjectIdentifier.newInternal(PolicyMappings_data);
+            ObjectIdentifier.newInternal(CertificatePolicies_data);
+        PolicyMappings_Id = ObjectIdentifier.newInternal(PolicyMappings_data);
         SubjectAlternativeName_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(SubjectAlternativeName_data);
+            ObjectIdentifier.newInternal(SubjectAlternativeName_data);
         IssuerAlternativeName_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(IssuerAlternativeName_data);
-        ExtendedKeyUsage_Id = android.sun.security.util.ObjectIdentifier.newInternal(ExtendedKeyUsage_data);
-        InhibitAnyPolicy_Id = android.sun.security.util.ObjectIdentifier.newInternal(InhibitAnyPolicy_data);
+            ObjectIdentifier.newInternal(IssuerAlternativeName_data);
+        ExtendedKeyUsage_Id = ObjectIdentifier.newInternal(ExtendedKeyUsage_data);
+        InhibitAnyPolicy_Id = ObjectIdentifier.newInternal(InhibitAnyPolicy_data);
         SubjectDirectoryAttributes_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(SubjectDirectoryAttributes_data);
+            ObjectIdentifier.newInternal(SubjectDirectoryAttributes_data);
         BasicConstraints_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(BasicConstraints_data);
-        ReasonCode_Id = android.sun.security.util.ObjectIdentifier.newInternal(ReasonCode_data);
+            ObjectIdentifier.newInternal(BasicConstraints_data);
+        ReasonCode_Id = ObjectIdentifier.newInternal(ReasonCode_data);
         HoldInstructionCode_Id  =
-            android.sun.security.util.ObjectIdentifier.newInternal(HoldInstructionCode_data);
-        InvalidityDate_Id = android.sun.security.util.ObjectIdentifier.newInternal(InvalidityDate_data);
+            ObjectIdentifier.newInternal(HoldInstructionCode_data);
+        InvalidityDate_Id = ObjectIdentifier.newInternal(InvalidityDate_data);
 
-        NameConstraints_Id = android.sun.security.util.ObjectIdentifier.newInternal(NameConstraints_data);
+        NameConstraints_Id = ObjectIdentifier.newInternal(NameConstraints_data);
         PolicyConstraints_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(PolicyConstraints_data);
+            ObjectIdentifier.newInternal(PolicyConstraints_data);
         CRLDistributionPoints_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(CRLDistributionPoints_data);
+            ObjectIdentifier.newInternal(CRLDistributionPoints_data);
         CRLNumber_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(CRLNumber_data);
+            ObjectIdentifier.newInternal(CRLNumber_data);
         IssuingDistributionPoint_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(IssuingDistributionPoint_data);
+            ObjectIdentifier.newInternal(IssuingDistributionPoint_data);
         DeltaCRLIndicator_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(DeltaCRLIndicator_data);
+            ObjectIdentifier.newInternal(DeltaCRLIndicator_data);
         CertificateIssuer_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(CertificateIssuer_data);
+            ObjectIdentifier.newInternal(CertificateIssuer_data);
         AuthInfoAccess_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(AuthInfoAccess_data);
+            ObjectIdentifier.newInternal(AuthInfoAccess_data);
         SubjectInfoAccess_Id =
-            android.sun.security.util.ObjectIdentifier.newInternal(SubjectInfoAccess_data);
-        FreshestCRL_Id = android.sun.security.util.ObjectIdentifier.newInternal(FreshestCRL_data);
-        OCSPNoCheck_Id = android.sun.security.util.ObjectIdentifier.newInternal(OCSPNoCheck_data);
+            ObjectIdentifier.newInternal(SubjectInfoAccess_data);
+        FreshestCRL_Id = ObjectIdentifier.newInternal(FreshestCRL_data);
+        OCSPNoCheck_Id = ObjectIdentifier.newInternal(OCSPNoCheck_data);
     }
 }

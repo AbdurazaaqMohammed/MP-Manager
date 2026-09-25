@@ -15,12 +15,13 @@
  */
 package com.reandroid.arsc.coder;
 
+import android.text.TextUtils;
+
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Value;
 import com.reandroid.arsc.value.attribute.AttributeBag;
-import com.reandroid.utils.HexUtil;
 import com.reandroid.arsc.value.AttributeDataFormat;
 import com.reandroid.arsc.value.ValueType;
 import com.reandroid.utils.StringsUtil;
@@ -147,7 +148,7 @@ public class ValueCoder {
         return CoderUnknownNameId.INS.encode(text);
     }
     public static EncodeResult encodeUnknownResourceId(String text){
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             return null;
         }
         EncodeResult encodeResult = encodeNull(text);
@@ -171,7 +172,7 @@ public class ValueCoder {
         if(isEmpty(expectedDataFormats)){
             return encodeAny(text);
         }
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             return null;
         }
         EncodeResult encodeResult = encodeUnknown(text);
@@ -184,7 +185,7 @@ public class ValueCoder {
         if(isEmpty(expectedTypes)){
             return encodeAny(text);
         }
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             return null;
         }
         EncodeResult encodeResult = encodeUnknown(text);
@@ -208,7 +209,7 @@ public class ValueCoder {
         return true;
     }
     private static EncodeResult encodeWithin(String text, AttributeDataFormat... expectedDataFormats){
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             return null;
         }
         for(AttributeDataFormat dataFormat : expectedDataFormats){
@@ -220,7 +221,7 @@ public class ValueCoder {
         return null;
     }
     private static EncodeResult encodeWithin(String text, ValueType... expectedTypes){
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             return null;
         }
         EncodeResult encodeResult;
@@ -241,7 +242,7 @@ public class ValueCoder {
         return null;
     }
     private static EncodeResult encodeAny(String text){
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             return null;
         }
         EncodeResult encodeResult = encodeUnknown(text);

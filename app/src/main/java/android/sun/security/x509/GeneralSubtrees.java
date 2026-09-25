@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 import java.io.*;
 import java.util.*;
@@ -46,14 +48,14 @@ import java.util.*;
  */
 public class GeneralSubtrees implements Cloneable {
 
-    private final List<android.sun.security.x509.GeneralSubtree> trees;
+    private final List<GeneralSubtree> trees;
 
     // Private variables
-    private static final int NAME_DIFF_TYPE = android.sun.security.x509.GeneralNameInterface.NAME_DIFF_TYPE;
-    private static final int NAME_MATCH = android.sun.security.x509.GeneralNameInterface.NAME_MATCH;
-    private static final int NAME_NARROWS = android.sun.security.x509.GeneralNameInterface.NAME_NARROWS;
-    private static final int NAME_WIDENS = android.sun.security.x509.GeneralNameInterface.NAME_WIDENS;
-    private static final int NAME_SAME_TYPE = android.sun.security.x509.GeneralNameInterface.NAME_SAME_TYPE;
+    private static final int NAME_DIFF_TYPE = GeneralNameInterface.NAME_DIFF_TYPE;
+    private static final int NAME_MATCH = GeneralNameInterface.NAME_MATCH;
+    private static final int NAME_NARROWS = GeneralNameInterface.NAME_NARROWS;
+    private static final int NAME_WIDENS = GeneralNameInterface.NAME_WIDENS;
+    private static final int NAME_SAME_TYPE = GeneralNameInterface.NAME_SAME_TYPE;
 
     /**
      * The default constructor for the class.
@@ -71,19 +73,19 @@ public class GeneralSubtrees implements Cloneable {
      *
      * @param val the DER encoded form of the same.
      */
-    public GeneralSubtrees(android.sun.security.util.DerValue val) throws IOException {
+    public GeneralSubtrees(DerValue val) throws IOException {
         this();
-        if (val.tag != android.sun.security.util.DerValue.tag_Sequence) {
+        if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoding of GeneralSubtrees.");
         }
         while (val.data.available() != 0) {
-            android.sun.security.util.DerValue opt = val.data.getDerValue();
-            android.sun.security.x509.GeneralSubtree tree = new android.sun.security.x509.GeneralSubtree(opt);
+            DerValue opt = val.data.getDerValue();
+            GeneralSubtree tree = new GeneralSubtree(opt);
             add(tree);
         }
     }
 
-    public android.sun.security.x509.GeneralSubtree get(int index) {
+    public GeneralSubtree get(int index) {
         return trees.get(index);
     }
 
@@ -91,14 +93,14 @@ public class GeneralSubtrees implements Cloneable {
         trees.remove(index);
     }
 
-    public void add(android.sun.security.x509.GeneralSubtree tree) {
+    public void add(GeneralSubtree tree) {
         if (tree == null) {
             throw new NullPointerException();
         }
         trees.add(tree);
     }
 
-    public boolean contains(android.sun.security.x509.GeneralSubtree tree) {
+    public boolean contains(GeneralSubtree tree) {
         if (tree == null) {
             throw new NullPointerException();
         }
@@ -109,11 +111,11 @@ public class GeneralSubtrees implements Cloneable {
         return trees.size();
     }
 
-    public Iterator<android.sun.security.x509.GeneralSubtree> iterator() {
+    public Iterator<GeneralSubtree> iterator() {
         return trees.iterator();
     }
 
-    public List<android.sun.security.x509.GeneralSubtree> trees() {
+    public List<GeneralSubtree> trees() {
         return trees;
     }
 
@@ -133,8 +135,8 @@ public class GeneralSubtrees implements Cloneable {
      *
      * @params out the DerOutputStrean to encode this object to.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream seq = new android.sun.security.util.DerOutputStream();
+    public void encode(DerOutputStream out) throws IOException {
+        DerOutputStream seq = new DerOutputStream();
 
         for (int i = 0, n = size(); i < n; i++) {
             get(i).encode(seq);
@@ -169,12 +171,12 @@ public class GeneralSubtrees implements Cloneable {
      *
      * @param ndx index of the GeneralSubtree from which to obtain the name
      */
-    private android.sun.security.x509.GeneralNameInterface getGeneralNameInterface(int ndx) {
+    private GeneralNameInterface getGeneralNameInterface(int ndx) {
         return getGeneralNameInterface(get(ndx));
     }
 
-    private static android.sun.security.x509.GeneralNameInterface getGeneralNameInterface(android.sun.security.x509.GeneralSubtree gs) {
-        android.sun.security.x509.GeneralName gn = gs.getName();
+    private static GeneralNameInterface getGeneralNameInterface(GeneralSubtree gs) {
+        GeneralName gn = gs.getName();
         return gn.getName();
     }
 
@@ -189,32 +191,32 @@ public class GeneralSubtrees implements Cloneable {
         // remove entry n. If any subsequent entries narrow entry n, remove
         // the subsequent entries.
         for (int i = 0; i < size(); i++) {
-            android.sun.security.x509.GeneralNameInterface current = getGeneralNameInterface(i);
+            GeneralNameInterface current = getGeneralNameInterface(i);
             boolean remove1 = false;
 
             /* compare current to subsequent elements */
             for (int j = i + 1; j < size(); j++) {
-                android.sun.security.x509.GeneralNameInterface subsequent = getGeneralNameInterface(j);
+                GeneralNameInterface subsequent = getGeneralNameInterface(j);
                 switch (current.constrains(subsequent)) {
-                    case android.sun.security.x509.GeneralNameInterface.NAME_DIFF_TYPE:
+                    case GeneralNameInterface.NAME_DIFF_TYPE:
                         /* not comparable; different name types; keep checking */
                         continue;
-                    case android.sun.security.x509.GeneralNameInterface.NAME_MATCH:
+                    case GeneralNameInterface.NAME_MATCH:
                         /* delete one of the duplicates */
                         remove1 = true;
                         break;
-                    case android.sun.security.x509.GeneralNameInterface.NAME_NARROWS:
+                    case GeneralNameInterface.NAME_NARROWS:
                         /* subsequent narrows current */
                         /* remove narrower name (subsequent) */
                         remove(j);
                         j--; /* continue check with new subsequent */
                         continue;
-                    case android.sun.security.x509.GeneralNameInterface.NAME_WIDENS:
+                    case GeneralNameInterface.NAME_WIDENS:
                         /* subsequent widens current */
                         /* remove narrower name current */
                         remove1 = true;
                         break;
-                    case android.sun.security.x509.GeneralNameInterface.NAME_SAME_TYPE:
+                    case GeneralNameInterface.NAME_SAME_TYPE:
                         /* keep both for now; keep checking */
                         continue;
                 }
@@ -237,13 +239,13 @@ public class GeneralSubtrees implements Cloneable {
      * @returns GeneralSubtree containing widest name of that type
      * @throws RuntimeException on error (should not occur)
      */
-    private android.sun.security.x509.GeneralSubtree createWidestSubtree(android.sun.security.x509.GeneralNameInterface name) {
+    private GeneralSubtree createWidestSubtree(GeneralNameInterface name) {
         try {
-            android.sun.security.x509.GeneralName newName = switch (name.getType()) {
+            GeneralName newName = switch (name.getType()) {
                 case GeneralNameInterface.NAME_ANY -> {
                     // Create new OtherName with same OID as baseName, but
                     // empty value
-                    android.sun.security.util.ObjectIdentifier otherOID = ((OtherName) name).getOID();
+                    ObjectIdentifier otherOID = ((OtherName) name).getOID();
                     yield new GeneralName(new OtherName(otherOID, null));
                 }
                 case GeneralNameInterface.NAME_RFC822 -> new GeneralName(new RFC822Name(""));
@@ -256,11 +258,11 @@ public class GeneralSubtrees implements Cloneable {
                 case GeneralNameInterface.NAME_IP ->
                         new GeneralName(new IPAddressName((byte[]) null));
                 case GeneralNameInterface.NAME_OID -> new GeneralName
-                        (new OIDName(new android.sun.security.util.ObjectIdentifier((int[]) null)));
+                        (new OIDName(new ObjectIdentifier((int[]) null)));
                 default -> throw new IOException
                         ("Unsupported GeneralNameInterface type: " + name.getType());
             };
-            return new android.sun.security.x509.GeneralSubtree(newName, 0, -1);
+            return new GeneralSubtree(newName, 0, -1);
         } catch (IOException e) {
             throw new RuntimeException("Unexpected error: " + e, e);
         }
@@ -329,7 +331,7 @@ public class GeneralSubtrees implements Cloneable {
         // We add an entry from other to newThis if there is no name of the
         // same type in this.
         for (int i = 0; i < size(); i++) {
-            android.sun.security.x509.GeneralNameInterface thisEntry = getGeneralNameInterface(i);
+            GeneralNameInterface thisEntry = getGeneralNameInterface(i);
             boolean removeThisEntry = false;
 
             // Step 3a: If the widest name of this type in other narrows
@@ -339,8 +341,8 @@ public class GeneralSubtrees implements Cloneable {
             // or widens thisEntry.
             boolean sameType = false;
             for (int j = 0; j < other.size(); j++) {
-                android.sun.security.x509.GeneralSubtree otherEntryGS = other.get(j);
-                android.sun.security.x509.GeneralNameInterface otherEntry =
+                GeneralSubtree otherEntryGS = other.get(j);
+                GeneralNameInterface otherEntry =
                     getGeneralNameInterface(otherEntryGS);
                 switch (thisEntry.constrains(otherEntry)) {
                     case NAME_NARROWS:
@@ -375,11 +377,11 @@ public class GeneralSubtrees implements Cloneable {
                 // type to excluded.
                 boolean intersection = false;
                 for (int j = 0; j < size(); j++) {
-                    android.sun.security.x509.GeneralNameInterface thisAltEntry = getGeneralNameInterface(j);
+                    GeneralNameInterface thisAltEntry = getGeneralNameInterface(j);
 
                     if (thisAltEntry.getType() == thisEntry.getType()) {
                         for (int k = 0; k < other.size(); k++) {
-                            android.sun.security.x509.GeneralNameInterface othAltEntry =
+                            GeneralNameInterface othAltEntry =
                                 other.getGeneralNameInterface(k);
 
                             int constraintType =
@@ -397,7 +399,7 @@ public class GeneralSubtrees implements Cloneable {
                     if (newExcluded == null) {
                         newExcluded = new GeneralSubtrees();
                     }
-                    android.sun.security.x509.GeneralSubtree widestSubtree =
+                    GeneralSubtree widestSubtree =
                          createWidestSubtree(thisEntry);
                     if (!newExcluded.contains(widestSubtree)) {
                         newExcluded.add(widestSubtree);
@@ -419,10 +421,10 @@ public class GeneralSubtrees implements Cloneable {
         // same type in this to this
         for (int i = 0; i < other.size(); i++) {
             GeneralSubtree otherEntryGS = other.get(i);
-            android.sun.security.x509.GeneralNameInterface otherEntry = getGeneralNameInterface(otherEntryGS);
+            GeneralNameInterface otherEntry = getGeneralNameInterface(otherEntryGS);
             boolean diffType = false;
             for (int j = 0; j < size(); j++) {
-                android.sun.security.x509.GeneralNameInterface thisEntry = getGeneralNameInterface(j);
+                GeneralNameInterface thisEntry = getGeneralNameInterface(j);
                 switch (thisEntry.constrains(otherEntry)) {
                     case NAME_DIFF_TYPE:
                         diffType = true;
@@ -479,23 +481,23 @@ public class GeneralSubtrees implements Cloneable {
             return;
         }
         for (int i = 0, n = excluded.size(); i < n; i++) {
-            android.sun.security.x509.GeneralNameInterface excludedName = excluded.getGeneralNameInterface(i);
+            GeneralNameInterface excludedName = excluded.getGeneralNameInterface(i);
             for (int j = 0; j < size(); j++) {
-                android.sun.security.x509.GeneralNameInterface permitted = getGeneralNameInterface(j);
+                GeneralNameInterface permitted = getGeneralNameInterface(j);
                 switch (excludedName.constrains(permitted)) {
-                case android.sun.security.x509.GeneralNameInterface.NAME_DIFF_TYPE,
+                case GeneralNameInterface.NAME_DIFF_TYPE,
                      GeneralNameInterface.NAME_SAME_TYPE:
                     break;
-                case android.sun.security.x509.GeneralNameInterface.NAME_MATCH:
+                case GeneralNameInterface.NAME_MATCH:
                     remove(j);
                     j--;
                     break;
-                case android.sun.security.x509.GeneralNameInterface.NAME_NARROWS:
+                case GeneralNameInterface.NAME_NARROWS:
                     /* permitted narrows excluded */
                     remove(j);
                     j--;
                     break;
-                case android.sun.security.x509.GeneralNameInterface.NAME_WIDENS:
+                case GeneralNameInterface.NAME_WIDENS:
                     /* permitted widens excluded */
                     break;
                 }

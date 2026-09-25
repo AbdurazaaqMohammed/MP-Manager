@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.MPManager.shizuku;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -8,6 +7,7 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +15,9 @@ import java.util.concurrent.TimeUnit;
 
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import rikka.shizuku.Shizuku;
+import rikka.shizuku.ShizukuProcessFactory;
+import rikka.shizuku.ShizukuProvider;
+import rikka.shizuku.ShizukuRemoteProcess;
 
 /**
  * Thin wrapper around the Shizuku binder API for running shell commands as the shell (uid 2000).
@@ -53,7 +56,7 @@ public final class ShizukuShell {
             Log.d(TAG, "warmUp listener registration failed", t);
         }
         try {
-            rikka.shizuku.ShizukuProvider.requestBinderForNonProviderProcess(context);
+            ShizukuProvider.requestBinderForNonProviderProcess(context);
         } catch (Throwable t) {
             Log.d(TAG, "requestBinderForNonProviderProcess failed", t);
         }
@@ -144,8 +147,8 @@ public final class ShizukuShell {
             return new Result(false, "", "Shizuku not granted", -1);
         }
         try {
-            rikka.shizuku.ShizukuRemoteProcess p =
-                    (rikka.shizuku.ShizukuRemoteProcess) new rikka.shizuku.ShizukuProcessFactory()
+            ShizukuRemoteProcess p =
+                    (ShizukuRemoteProcess) new ShizukuProcessFactory()
                             .newProcess(new String[]{"sh", "-c", command}, null, "/");
             StringBuilder out = new StringBuilder();
             StringBuilder err = new StringBuilder();
@@ -173,7 +176,7 @@ public final class ShizukuShell {
         }
     }
 
-    private static Thread drain(java.io.InputStream is, StringBuilder sb) {
+    private static Thread drain(InputStream is, StringBuilder sb) {
         Thread t = new Thread(() -> {
             try (BufferedReader r = new BufferedReader(new InputStreamReader(is))) {
                 String line;

@@ -25,6 +25,7 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -36,8 +37,8 @@ import java.io.IOException;
  * @author Hemma Prafullchandra
  */
 public class CertificatePolicyMap {
-    private final android.sun.security.x509.CertificatePolicyId issuerDomain;
-    private final android.sun.security.x509.CertificatePolicyId subjectDomain;
+    private final CertificatePolicyId issuerDomain;
+    private final CertificatePolicyId subjectDomain;
 
     /**
      * Create a CertificatePolicyMap with the passed CertificatePolicyId's.
@@ -45,8 +46,8 @@ public class CertificatePolicyMap {
      * @param issuer the CertificatePolicyId for the issuer CA.
      * @param subject the CertificatePolicyId for the subject CA.
      */
-    public CertificatePolicyMap(android.sun.security.x509.CertificatePolicyId issuer,
-                                android.sun.security.x509.CertificatePolicyId subject) {
+    public CertificatePolicyMap(CertificatePolicyId issuer,
+                                CertificatePolicyId subject) {
         this.issuerDomain = issuer;
         this.subjectDomain = subject;
     }
@@ -56,18 +57,18 @@ public class CertificatePolicyMap {
      *
      * @param val the DER encoded value of the same.
      */
-    public CertificatePolicyMap(android.sun.security.util.DerValue val) throws IOException {
+    public CertificatePolicyMap(DerValue val) throws IOException {
         if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoding for CertificatePolicyMap");
         }
-        issuerDomain = new android.sun.security.x509.CertificatePolicyId(val.data.getDerValue());
-        subjectDomain = new android.sun.security.x509.CertificatePolicyId(val.data.getDerValue());
+        issuerDomain = new CertificatePolicyId(val.data.getDerValue());
+        subjectDomain = new CertificatePolicyId(val.data.getDerValue());
     }
 
     /**
      * Return the issuer CA part of the policy map.
      */
-    public android.sun.security.x509.CertificatePolicyId getIssuerIdentifier() {
+    public CertificatePolicyId getIssuerIdentifier() {
         return (issuerDomain);
     }
 
@@ -95,11 +96,11 @@ public class CertificatePolicyMap {
      * @param out the DerOutputStream to write the object to.
      * @exception IOException on errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+    public void encode(DerOutputStream out) throws IOException {
+        DerOutputStream tmp = new DerOutputStream();
 
         issuerDomain.encode(tmp);
         subjectDomain.encode(tmp);
-        out.write(android.sun.security.util.DerValue.tag_Sequence,tmp);
+        out.write(DerValue.tag_Sequence,tmp);
     }
 }

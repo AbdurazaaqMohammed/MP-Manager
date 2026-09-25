@@ -31,6 +31,7 @@
 package com.android.tools.smali.util.jcommander;
 
 import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterDescription;
 import com.beust.jcommander.Parameterized;
 import com.beust.jcommander.Parameters;
@@ -128,7 +129,7 @@ public class ExtendedCommands {
         Class<?> cls = command.getClass();
         while (cls != null && cls != Object.class) {
             for (Field field : cls.getDeclaredFields()) {
-                com.beust.jcommander.Parameter annotation = field.getAnnotation(com.beust.jcommander.Parameter.class);
+                Parameter annotation = field.getAnnotation(Parameter.class);
                 if (annotation != null && annotation.names().length == 0) {
                     ExtendedParameter extendedParameter = field.getAnnotation(ExtendedParameter.class);
                     if (extendedParameter != null) {

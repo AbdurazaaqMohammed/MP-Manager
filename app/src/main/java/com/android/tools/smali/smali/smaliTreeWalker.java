@@ -7,11 +7,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.antlr.runtime.BitSet;
-import org.antlr.runtime.*;
-import org.antlr.runtime.tree.CommonTree;
-import org.antlr.runtime.tree.TreeNodeStream;
-import org.antlr.runtime.tree.TreeParser;
-import org.antlr.runtime.tree.TreeRuleReturnScope;
+
 import com.android.tools.smali.dexlib2.*;
 import com.android.tools.smali.dexlib2.builder.Label;
 import com.android.tools.smali.dexlib2.builder.MethodImplementationBuilder;
@@ -21,8 +17,6 @@ import com.android.tools.smali.dexlib2.iface.Annotation;
 import com.android.tools.smali.dexlib2.iface.AnnotationElement;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.MethodImplementation;
-import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
-import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.value.EncodedValue;
 import com.android.tools.smali.dexlib2.immutable.ImmutableAnnotation;
 import com.android.tools.smali.dexlib2.immutable.ImmutableAnnotationElement;
@@ -35,7 +29,6 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableReference;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableTypeReference;
 import com.android.tools.smali.dexlib2.immutable.value.*;
 import com.android.tools.smali.dexlib2.util.MethodUtil;
-import com.android.tools.smali.dexlib2.writer.InstructionFactory;
 import com.android.tools.smali.dexlib2.writer.builder.*;
 import com.android.tools.smali.util.LinearSearch;
 
@@ -44,9 +37,6 @@ import java.util.*;
 
 import org.antlr.runtime.*;
 import org.antlr.runtime.tree.*;
-import java.util.Stack;
-import java.util.List;
-import java.util.ArrayList;
 
 @SuppressWarnings("all")
 public class smaliTreeWalker extends TreeParser {

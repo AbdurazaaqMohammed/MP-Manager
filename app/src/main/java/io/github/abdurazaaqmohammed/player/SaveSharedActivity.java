@@ -14,6 +14,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.DynamicColors;
 
 import java.io.File;
@@ -73,8 +74,8 @@ public class SaveSharedActivity extends AppCompatActivity {
         info.setTextSize(15);
         info.setText(getString(R.string.i_ftsave, pendingUris.size()));
         root.addView(info, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        com.google.android.material.button.MaterialButton cancelBtn =
-                new com.google.android.material.button.MaterialButton(this);
+        MaterialButton cancelBtn =
+                new MaterialButton(this);
         cancelBtn.setText(android.R.string.cancel);
         cancelBtn.setOnClickListener(v -> finish());
         root.addView(cancelBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));

@@ -57,8 +57,8 @@ import android.sun.security.util.DerOutputStream;
  * @author Anne Anderson
  * @author Sean Mullan
  * @since 1.5
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class CertificateIssuerExtension extends Extension
     implements CertAttrSet<String> {
@@ -69,7 +69,7 @@ public class CertificateIssuerExtension extends Extension
     public static final String NAME = "CertificateIssuer";
     public static final String ISSUER = "issuer";
 
-    private android.sun.security.x509.GeneralNames names;
+    private GeneralNames names;
 
     /**
      * Encode this extension
@@ -91,8 +91,8 @@ public class CertificateIssuerExtension extends Extension
      * @param issuer the certificate issuer
      * @throws IOException on error
      */
-    public CertificateIssuerExtension(android.sun.security.x509.GeneralNames issuer) throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.CertificateIssuer_Id;
+    public CertificateIssuerExtension(GeneralNames issuer) throws IOException {
+        this.extensionId = PKIXExtensions.CertificateIssuer_Id;
         this.critical = true;
         this.names = issuer;
         encodeThis();
@@ -109,12 +109,12 @@ public class CertificateIssuerExtension extends Extension
      */
     public CertificateIssuerExtension(Boolean critical, Object value)
         throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.CertificateIssuer_Id;
+        this.extensionId = PKIXExtensions.CertificateIssuer_Id;
         this.critical = critical;
 
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);
-        this.names = new android.sun.security.x509.GeneralNames(val);
+        this.names = new GeneralNames(val);
     }
 
     /**
@@ -124,7 +124,7 @@ public class CertificateIssuerExtension extends Extension
      */
     public void set(String name, Object obj) throws IOException {
         if (name.equalsIgnoreCase(ISSUER)) {
-            if (!(obj instanceof android.sun.security.x509.GeneralNames)) {
+            if (!(obj instanceof GeneralNames)) {
                 throw new IOException("Attribute value must be of type " +
                     "GeneralNames");
             }
@@ -195,7 +195,7 @@ public class CertificateIssuerExtension extends Extension
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(ISSUER);
         return elements.elements();
     }

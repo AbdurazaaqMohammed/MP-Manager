@@ -63,7 +63,7 @@ public class DerInputStream {
      * awkward to deal with.  That's where BER is useful, since BER
      * handles streaming data relatively well.
      */
-    android.sun.security.util.DerInputBuffer buffer;
+    DerInputBuffer buffer;
 
     /** The DER tag of the value; one of the tag_ constants. */
     public byte         tag;
@@ -102,18 +102,18 @@ public class DerInputStream {
             throw new IOException("Encoding bytes too short");
         }
         // check for indefinite length encoding
-        if (android.sun.security.util.DerIndefLenConverter.isIndefinite(data[offset+1])) {
+        if (DerIndefLenConverter.isIndefinite(data[offset+1])) {
             byte[] inData = new byte[len];
             System.arraycopy(data, offset, inData, 0, len);
 
-            android.sun.security.util.DerIndefLenConverter derIn = new android.sun.security.util.DerIndefLenConverter();
-            buffer = new android.sun.security.util.DerInputBuffer(derIn.convert(inData));
+            DerIndefLenConverter derIn = new DerIndefLenConverter();
+            buffer = new DerInputBuffer(derIn.convert(inData));
         } else
-            buffer = new android.sun.security.util.DerInputBuffer(data, offset, len);
+            buffer = new DerInputBuffer(data, offset, len);
         buffer.mark(Integer.MAX_VALUE);
     }
 
-    DerInputStream(android.sun.security.util.DerInputBuffer buf) {
+    DerInputStream(DerInputBuffer buf) {
         buffer = buf;
         buffer.mark(Integer.MAX_VALUE);
     }
@@ -130,7 +130,7 @@ public class DerInputStream {
      */
     public DerInputStream subStream(int len, boolean do_skip)
     throws IOException {
-        android.sun.security.util.DerInputBuffer newbuf = buffer.dup();
+        DerInputBuffer newbuf = buffer.dup();
 
         newbuf.truncate(len);
         if (do_skip) {
@@ -163,7 +163,7 @@ public class DerInputStream {
      * @return the integer held in this DER input stream.
      */
     public int getInteger() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_Integer) {
+        if (buffer.read() != DerValue.tag_Integer) {
             throw new IOException("DER input, Integer tag error");
         }
         return buffer.getInteger(getLength(buffer));
@@ -175,7 +175,7 @@ public class DerInputStream {
      * @return the integer held in this DER input stream.
      */
     public BigInteger getBigInteger() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_Integer) {
+        if (buffer.read() != DerValue.tag_Integer) {
             throw new IOException("DER input, Integer tag error");
         }
         return buffer.getBigInteger(getLength(buffer), false);
@@ -189,7 +189,7 @@ public class DerInputStream {
      * @return the integer held in this DER value as a BigInteger.
      */
     public BigInteger getPositiveBigInteger() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_Integer) {
+        if (buffer.read() != DerValue.tag_Integer) {
             throw new IOException("DER input, Integer tag error");
         }
         return buffer.getBigInteger(getLength(buffer), true);
@@ -201,7 +201,7 @@ public class DerInputStream {
      * @return the integer held in this DER input stream.
      */
     public int getEnumerated() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_Enumerated) {
+        if (buffer.read() != DerValue.tag_Enumerated) {
             throw new IOException("DER input, Enumerated tag error");
         }
         return buffer.getInteger(getLength(buffer));
@@ -212,7 +212,7 @@ public class DerInputStream {
      * will be stripped off before the bit string is returned.
      */
     public byte[] getBitString() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_BitString)
+        if (buffer.read() != DerValue.tag_BitString)
             throw new IOException("DER input not an bit string");
 
         return buffer.getBitString(getLength(buffer));
@@ -222,8 +222,8 @@ public class DerInputStream {
      * Get a bit string from the input stream.  The bit string need
      * not be byte-aligned.
      */
-    public android.sun.security.util.BitArray getUnalignedBitString() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_BitString)
+    public BitArray getUnalignedBitString() throws IOException {
+        if (buffer.read() != DerValue.tag_BitString)
             throw new IOException("DER input not a bit string");
 
         int length = getLength(buffer) - 1;
@@ -245,7 +245,7 @@ public class DerInputStream {
      * Returns an ASN.1 OCTET STRING from the input stream.
      */
     public byte[] getOctetString() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_OctetString)
+        if (buffer.read() != DerValue.tag_OctetString)
             throw new IOException("DER input not an octet string");
 
         int length = getLength(buffer);
@@ -269,14 +269,14 @@ public class DerInputStream {
      * Reads an encoded null value from the input stream.
      */
     public void getNull() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_Null || buffer.read() != 0)
+        if (buffer.read() != DerValue.tag_Null || buffer.read() != 0)
             throw new IOException("getNull, bad data");
     }
 
     /**
      * Reads an X.200 style Object Identifier from the stream.
      */
-    public android.sun.security.util.ObjectIdentifier getOID() throws IOException {
+    public ObjectIdentifier getOID() throws IOException {
         return new ObjectIdentifier(this);
     }
 
@@ -290,9 +290,9 @@ public class DerInputStream {
      *          (used to initialize an auto-growing data structure)
      * @return array of the values in the sequence
      */
-    public android.sun.security.util.DerValue[] getSequence(int startLen) throws IOException {
+    public DerValue[] getSequence(int startLen) throws IOException {
         tag = (byte)buffer.read();
-        if (tag != android.sun.security.util.DerValue.tag_Sequence)
+        if (tag != DerValue.tag_Sequence)
             throw new IOException("Sequence tag error");
         return readVector(startLen);
     }
@@ -307,9 +307,9 @@ public class DerInputStream {
      *          (used to initialize an auto-growing data structure)
      * @return array of the values in the sequence
      */
-    public android.sun.security.util.DerValue[] getSet(int startLen) throws IOException {
+    public DerValue[] getSet(int startLen) throws IOException {
         tag = (byte)buffer.read();
-        if (tag != android.sun.security.util.DerValue.tag_Set)
+        if (tag != DerValue.tag_Set)
             throw new IOException("Set tag error");
         return readVector(startLen);
     }
@@ -325,11 +325,11 @@ public class DerInputStream {
      * @param implicit if true tag is assumed implicit.
      * @return array of the values in the sequence
      */
-    public android.sun.security.util.DerValue[] getSet(int startLen, boolean implicit)
+    public DerValue[] getSet(int startLen, boolean implicit)
         throws IOException {
         tag = (byte)buffer.read();
         if (!implicit) {
-            if (tag != android.sun.security.util.DerValue.tag_Set) {
+            if (tag != DerValue.tag_Set) {
                 throw new IOException("Set tag error");
             }
         }
@@ -341,7 +341,7 @@ public class DerInputStream {
      * same encoding, except for the initial tag, so both use
      * this same helper routine.
      */
-    protected android.sun.security.util.DerValue[] readVector(int startLen) throws IOException {
+    protected DerValue[] readVector(int startLen) throws IOException {
         DerInputStream  newstr;
 
         byte lenByte = (byte)buffer.read();
@@ -357,8 +357,8 @@ public class DerInputStream {
            DataInputStream dis = new DataInputStream(buffer);
            dis.readFully(indefData, offset, readLen);
            dis.close();
-           android.sun.security.util.DerIndefLenConverter derIn = new android.sun.security.util.DerIndefLenConverter();
-           buffer = new android.sun.security.util.DerInputBuffer(derIn.convert(indefData));
+           DerIndefLenConverter derIn = new DerIndefLenConverter();
+           buffer = new DerInputBuffer(derIn.convert(indefData));
            if (tag != buffer.read())
                 throw new IOException("Indefinite length encoding" +
                         " not supported");
@@ -368,7 +368,7 @@ public class DerInputStream {
         if (len == 0)
             // return empty array instead of null, which should be
             // used only for missing optionals
-            return new android.sun.security.util.DerValue[0];
+            return new DerValue[0];
 
         /*
          * Create a temporary stream from which to read the data,
@@ -382,11 +382,11 @@ public class DerInputStream {
         /*
          * Pull values out of the stream.
          */
-        Vector<android.sun.security.util.DerValue> vec = new Vector<>(startLen);
-        android.sun.security.util.DerValue value;
+        Vector<DerValue> vec = new Vector<>(startLen);
+        DerValue value;
 
         do {
-            value = new android.sun.security.util.DerValue(newstr.buffer);
+            value = new DerValue(newstr.buffer);
             vec.addElement(value);
         } while (newstr.available() > 0);
 
@@ -397,7 +397,7 @@ public class DerInputStream {
          * Now stick them into the array we're returning.
          */
         int             i, max = vec.size();
-        android.sun.security.util.DerValue[]      retval = new android.sun.security.util.DerValue[max];
+        DerValue[]      retval = new DerValue[max];
 
         for (i = 0; i < max; i++)
             retval[i] = vec.elementAt(i);
@@ -412,22 +412,22 @@ public class DerInputStream {
      * sequence out with one call, and only examine its elements
      * later when you really need to.
      */
-    public android.sun.security.util.DerValue getDerValue() throws IOException {
-        return new android.sun.security.util.DerValue(buffer);
+    public DerValue getDerValue() throws IOException {
+        return new DerValue(buffer);
     }
 
     /**
      * Read a string that was encoded as a UTF8String DER value.
      */
     public String getUTF8String() throws IOException {
-        return readString(android.sun.security.util.DerValue.tag_UTF8String, "UTF-8", "UTF8");
+        return readString(DerValue.tag_UTF8String, "UTF-8", "UTF8");
     }
 
     /**
      * Read a string that was encoded as a PrintableString DER value.
      */
     public String getPrintableString() throws IOException {
-        return readString(android.sun.security.util.DerValue.tag_PrintableString, "Printable",
+        return readString(DerValue.tag_PrintableString, "Printable",
                           "ASCII");
     }
 
@@ -438,21 +438,21 @@ public class DerInputStream {
         /*
          * Works for common characters between T61 and ASCII.
          */
-        return readString(android.sun.security.util.DerValue.tag_T61String, "T61", "ISO-8859-1");
+        return readString(DerValue.tag_T61String, "T61", "ISO-8859-1");
     }
 
     /**
      * Read a string that was encoded as a IA5tring DER value.
      */
     public String getIA5String() throws IOException {
-        return readString(android.sun.security.util.DerValue.tag_IA5String, "IA5", "ASCII");
+        return readString(DerValue.tag_IA5String, "IA5", "ASCII");
     }
 
     /**
      * Read a string that was encoded as a BMPString DER value.
      */
     public String getBMPString() throws IOException {
-        return readString(android.sun.security.util.DerValue.tag_BMPString, "BMP",
+        return readString(DerValue.tag_BMPString, "BMP",
                           "UnicodeBigUnmarked");
     }
 
@@ -460,7 +460,7 @@ public class DerInputStream {
      * Read a string that was encoded as a GeneralString DER value.
      */
     public String getGeneralString() throws IOException {
-        return readString(android.sun.security.util.DerValue.tag_GeneralString, "General",
+        return readString(DerValue.tag_GeneralString, "General",
                           "ASCII");
     }
 
@@ -492,7 +492,7 @@ public class DerInputStream {
      * Get a UTC encoded time value from the input stream.
      */
     public Date getUTCTime() throws IOException {
-        if (buffer.read() != android.sun.security.util.DerValue.tag_UtcTime)
+        if (buffer.read() != DerValue.tag_UtcTime)
             throw new IOException("DER input, UTCtime tag invalid ");
         return buffer.getUTCTime(getLength(buffer));
     }

@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.util.Vector;
@@ -40,14 +42,14 @@ import java.util.Collections;
  */
 public class CertificatePolicySet {
 
-    private final Vector<android.sun.security.x509.CertificatePolicyId> ids;
+    private final Vector<CertificatePolicyId> ids;
 
     /**
      * The default constructor for this class.
      *
      * @param ids the sequence of CertificatePolicyId's.
      */
-    public CertificatePolicySet(Vector<android.sun.security.x509.CertificatePolicyId> ids) {
+    public CertificatePolicySet(Vector<CertificatePolicyId> ids) {
         this.ids = ids;
     }
 
@@ -57,11 +59,11 @@ public class CertificatePolicySet {
      * @param in the passed DerInputStream.
      * @exception IOException on decoding errors.
      */
-    public CertificatePolicySet(android.sun.security.util.DerInputStream in) throws IOException {
+    public CertificatePolicySet(DerInputStream in) throws IOException {
         ids = new Vector<>();
-        android.sun.security.util.DerValue[] seq = in.getSequence(5);
+        DerValue[] seq = in.getSequence(5);
 
-        for (android.sun.security.util.DerValue derValue : seq) {
+        for (DerValue derValue : seq) {
             CertificatePolicyId id = new CertificatePolicyId(derValue);
             ids.addElement(id);
         }
@@ -83,12 +85,12 @@ public class CertificatePolicySet {
      * @param out the DerOutputStream to encode the data to.
      */
     public void encode(DerOutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         for (int i = 0; i < ids.size(); i++) {
             ids.elementAt(i).encode(tmp);
         }
-        out.write(android.sun.security.util.DerValue.tag_Sequence,tmp);
+        out.write(DerValue.tag_Sequence,tmp);
     }
 
     /**

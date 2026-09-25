@@ -23,7 +23,6 @@ import com.reandroid.utils.ObjectsUtil;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class DexFileInputSource extends RenamedInputSource<InputSource> implements Comparable<DexFileInputSource>{

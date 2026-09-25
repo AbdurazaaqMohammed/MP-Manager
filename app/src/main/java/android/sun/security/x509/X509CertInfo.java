@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -58,7 +60,7 @@ import android.sun.misc.HexDumpEncoder;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  * @see X509CertImpl
  */
 public class X509CertInfo implements CertAttrSet<String> {
@@ -69,32 +71,32 @@ public class X509CertInfo implements CertAttrSet<String> {
     public static final String IDENT = "x509.info";
     // Certificate attribute names
     public static final String NAME = "info";
-    public static final String VERSION = android.sun.security.x509.CertificateVersion.NAME;
-    public static final String SERIAL_NUMBER = android.sun.security.x509.CertificateSerialNumber.NAME;
-    public static final String ALGORITHM_ID = android.sun.security.x509.CertificateAlgorithmId.NAME;
-    public static final String ISSUER = android.sun.security.x509.CertificateIssuerName.NAME;
-    public static final String VALIDITY = android.sun.security.x509.CertificateValidity.NAME;
-    public static final String SUBJECT = android.sun.security.x509.CertificateSubjectName.NAME;
-    public static final String KEY = android.sun.security.x509.CertificateX509Key.NAME;
+    public static final String VERSION = CertificateVersion.NAME;
+    public static final String SERIAL_NUMBER = CertificateSerialNumber.NAME;
+    public static final String ALGORITHM_ID = CertificateAlgorithmId.NAME;
+    public static final String ISSUER = CertificateIssuerName.NAME;
+    public static final String VALIDITY = CertificateValidity.NAME;
+    public static final String SUBJECT = CertificateSubjectName.NAME;
+    public static final String KEY = CertificateX509Key.NAME;
     public static final String ISSUER_ID = CertificateIssuerUniqueIdentity.NAME;
     public static final String SUBJECT_ID = CertificateSubjectUniqueIdentity.NAME;
-    public static final String EXTENSIONS = android.sun.security.x509.CertificateExtensions.NAME;
+    public static final String EXTENSIONS = CertificateExtensions.NAME;
 
     // X509.v1 data
-    protected android.sun.security.x509.CertificateVersion version = new android.sun.security.x509.CertificateVersion();
-    protected android.sun.security.x509.CertificateSerialNumber serialNum = null;
-    protected android.sun.security.x509.CertificateAlgorithmId algId = null;
-    protected android.sun.security.x509.CertificateIssuerName issuer = null;
-    protected android.sun.security.x509.CertificateValidity interval = null;
-    protected android.sun.security.x509.CertificateSubjectName subject = null;
-    protected android.sun.security.x509.CertificateX509Key pubKey = null;
+    protected CertificateVersion version = new CertificateVersion();
+    protected CertificateSerialNumber serialNum = null;
+    protected CertificateAlgorithmId algId = null;
+    protected CertificateIssuerName issuer = null;
+    protected CertificateValidity interval = null;
+    protected CertificateSubjectName subject = null;
+    protected CertificateX509Key pubKey = null;
 
     // X509.v2 & v3 extensions
     protected CertificateIssuerUniqueIdentity   issuerUniqueId = null;
     protected CertificateSubjectUniqueIdentity  subjectUniqueId = null;
 
     // X509.v3 extensions
-    protected android.sun.security.x509.CertificateExtensions extensions = null;
+    protected CertificateExtensions extensions = null;
 
     // Attribute numbers for internal manipulation
     private static final int ATTR_VERSION = 1;
@@ -146,7 +148,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      */
     public X509CertInfo(byte[] cert) throws CertificateParsingException {
         try {
-            android.sun.security.util.DerValue in = new android.sun.security.util.DerValue(cert);
+            DerValue in = new DerValue(cert);
 
             parse(in);
         } catch (IOException e) {
@@ -162,7 +164,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @param derVal the der value containing the encoded cert.
      * @exception CertificateParsingException on parsing errors.
      */
-    public X509CertInfo(android.sun.security.util.DerValue derVal) throws CertificateParsingException {
+    public X509CertInfo(DerValue derVal) throws CertificateParsingException {
         try {
             parse(derVal);
         } catch (IOException e) {
@@ -180,7 +182,7 @@ public class X509CertInfo implements CertAttrSet<String> {
     public void encode(OutputStream out)
     throws CertificateException, IOException {
         if (rawCertInfo == null) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             emit(tmp);
             rawCertInfo = tmp.toByteArray();
         }
@@ -192,7 +194,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(VERSION);
         elements.addElement(SERIAL_NUMBER);
         elements.addElement(ALGORITHM_ID);
@@ -222,7 +224,7 @@ public class X509CertInfo implements CertAttrSet<String> {
     public byte[] getEncodedInfo() throws CertificateEncodingException {
         try {
             if (rawCertInfo == null) {
-                android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+                DerOutputStream tmp = new DerOutputStream();
                 emit(tmp);
                 rawCertInfo = tmp.toByteArray();
             }
@@ -317,13 +319,13 @@ public class X509CertInfo implements CertAttrSet<String> {
             sb.append("\nCertificate Extensions: ").append(objs.length);
             for (int i = 0; i < objs.length; i++) {
                 sb.append("\n[").append(i + 1).append("]: ");
-                android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
+                Extension ext = (Extension)objs[i];
                 try {
                     if (OIDMap.getClass(ext.getExtensionId()) == null) {
                         sb.append(ext);
                         byte[] extValue = ext.getExtensionValue();
                         if (extValue != null) {
-                            android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
+                            DerOutputStream out = new DerOutputStream();
                             out.putOctetString(extValue);
                             extValue = out.toByteArray();
                             HexDumpEncoder enc = new HexDumpEncoder();
@@ -335,7 +337,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                     sb.append(", Error parsing this extension");
                 }
             }
-            Map<String, android.sun.security.x509.Extension> invalid = extensions.getUnparseableExtensions();
+            Map<String, Extension> invalid = extensions.getUnparseableExtensions();
             if (!invalid.isEmpty()) {
                 sb.append("\nUnparseable certificate extensions: ").append(invalid.size());
                 int i = 1;
@@ -359,7 +361,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      */
     public void set(String name, Object val)
     throws CertificateException, IOException {
-        android.sun.security.x509.X509AttributeName attrName = new android.sun.security.x509.X509AttributeName(name);
+        X509AttributeName attrName = new X509AttributeName(name);
 
         int attr = attributeMap(attrName.getPrefix());
         if (attr == 0) {
@@ -448,7 +450,7 @@ public class X509CertInfo implements CertAttrSet<String> {
                 setExtensions(val);
             } else {
                 if (extensions == null)
-                    extensions = new android.sun.security.x509.CertificateExtensions();
+                    extensions = new CertificateExtensions();
                 extensions.set(suffix, val);
             }
             break;
@@ -464,7 +466,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      */
     public void delete(String name)
     throws CertificateException, IOException {
-        android.sun.security.x509.X509AttributeName attrName = new android.sun.security.x509.X509AttributeName(name);
+        X509AttributeName attrName = new X509AttributeName(name);
 
         int attr = attributeMap(attrName.getPrefix());
         if (attr == 0) {
@@ -560,7 +562,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      */
     public Object get(String name)
     throws CertificateException, IOException {
-        android.sun.security.x509.X509AttributeName attrName = new X509AttributeName(name);
+        X509AttributeName attrName = new X509AttributeName(name);
 
         int attr = attributeMap(attrName.getPrefix());
         if (attr == 0) {
@@ -647,10 +649,10 @@ public class X509CertInfo implements CertAttrSet<String> {
     /*
      * This routine unmarshals the certificate information.
      */
-    private void parse(android.sun.security.util.DerValue val)
+    private void parse(DerValue val)
     throws CertificateParsingException, IOException {
-        android.sun.security.util.DerInputStream in;
-        android.sun.security.util.DerValue tmp;
+        DerInputStream in;
+        DerValue tmp;
 
         if (val.tag != DerValue.tag_Sequence) {
             throw new CertificateParsingException("signed fields invalid");
@@ -662,42 +664,42 @@ public class X509CertInfo implements CertAttrSet<String> {
         // Version
         tmp = in.getDerValue();
         if (tmp.isContextSpecific((byte)0)) {
-            version = new android.sun.security.x509.CertificateVersion(tmp);
+            version = new CertificateVersion(tmp);
             tmp = in.getDerValue();
         }
 
         // Serial number ... an integer
-        serialNum = new android.sun.security.x509.CertificateSerialNumber(tmp);
+        serialNum = new CertificateSerialNumber(tmp);
 
         // Algorithm Identifier
-        algId = new android.sun.security.x509.CertificateAlgorithmId(in);
+        algId = new CertificateAlgorithmId(in);
 
         // Issuer name
-        issuer = new android.sun.security.x509.CertificateIssuerName(in);
-        android.sun.security.x509.X500Name issuerDN = (android.sun.security.x509.X500Name)issuer.get(android.sun.security.x509.CertificateIssuerName.DN_NAME);
+        issuer = new CertificateIssuerName(in);
+        X500Name issuerDN = (X500Name)issuer.get(CertificateIssuerName.DN_NAME);
         if (issuerDN.isEmpty()) {
             throw new CertificateParsingException(
                 "Empty issuer DN not allowed in X509Certificates");
         }
 
         // validity:  SEQUENCE { start date, end date }
-        interval = new android.sun.security.x509.CertificateValidity(in);
+        interval = new CertificateValidity(in);
 
         // subject name
-        subject = new android.sun.security.x509.CertificateSubjectName(in);
-        android.sun.security.x509.X500Name subjectDN = (android.sun.security.x509.X500Name)subject.get(android.sun.security.x509.CertificateSubjectName.DN_NAME);
-        if ((version.compare(android.sun.security.x509.CertificateVersion.V1) == 0) &&
+        subject = new CertificateSubjectName(in);
+        X500Name subjectDN = (X500Name)subject.get(CertificateSubjectName.DN_NAME);
+        if ((version.compare(CertificateVersion.V1) == 0) &&
                 subjectDN.isEmpty()) {
             throw new CertificateParsingException(
                       "Empty subject DN not allowed in v1 certificate");
         }
 
         // public key
-        pubKey = new android.sun.security.x509.CertificateX509Key(in);
+        pubKey = new CertificateX509Key(in);
 
         // If more data available, make sure version is not v1.
         if (in.available() != 0) {
-            if (version.compare(android.sun.security.x509.CertificateVersion.V1) == 0) {
+            if (version.compare(CertificateVersion.V1) == 0) {
                 throw new CertificateParsingException(
                           "no more data allowed for version 1 certificate");
             }
@@ -723,12 +725,12 @@ public class X509CertInfo implements CertAttrSet<String> {
         }
 
         // Get the extensions.
-        if (version.compare(android.sun.security.x509.CertificateVersion.V3) != 0) {
+        if (version.compare(CertificateVersion.V3) != 0) {
             throw new CertificateParsingException(
                       "Extensions not allowed in v2 certificate");
         }
         if (tmp.isConstructed() && tmp.isContextSpecific((byte)3)) {
-            extensions = new android.sun.security.x509.CertificateExtensions(tmp.data);
+            extensions = new CertificateExtensions(tmp.data);
         }
 
         // verify X.509 V3 Certificate
@@ -739,24 +741,24 @@ public class X509CertInfo implements CertAttrSet<String> {
     /*
      * Verify if X.509 V3 Certificate is compliant with RFC 3280.
      */
-    private void verifyCert(android.sun.security.x509.CertificateSubjectName subject,
-                            android.sun.security.x509.CertificateExtensions extensions)
+    private void verifyCert(CertificateSubjectName subject,
+                            CertificateExtensions extensions)
         throws CertificateParsingException, IOException {
 
         // if SubjectName is empty, check for SubjectAlternativeNameExtension
-        android.sun.security.x509.X500Name subjectDN = (X500Name)subject.get(android.sun.security.x509.CertificateSubjectName.DN_NAME);
+        X500Name subjectDN = (X500Name)subject.get(CertificateSubjectName.DN_NAME);
         if (subjectDN.isEmpty()) {
             if (extensions == null) {
                 throw new CertificateParsingException("X.509 Certificate is " +
                         "incomplete: subject field is empty, and certificate " +
                         "has no extensions");
             }
-            android.sun.security.x509.SubjectAlternativeNameExtension subjectAltNameExt = null;
-            android.sun.security.x509.SubjectAlternativeNameExtension extValue = null;
-            android.sun.security.x509.GeneralNames names = null;
+            SubjectAlternativeNameExtension subjectAltNameExt = null;
+            SubjectAlternativeNameExtension extValue = null;
+            GeneralNames names = null;
             try {
-                subjectAltNameExt = (android.sun.security.x509.SubjectAlternativeNameExtension)
-                        extensions.get(android.sun.security.x509.SubjectAlternativeNameExtension.NAME);
+                subjectAltNameExt = (SubjectAlternativeNameExtension)
+                        extensions.get(SubjectAlternativeNameExtension.NAME);
                 names = (GeneralNames) subjectAltNameExt.get
                         (SubjectAlternativeNameExtension.SUBJECT_NAME);
             } catch (IOException e) {
@@ -781,9 +783,9 @@ public class X509CertInfo implements CertAttrSet<String> {
     /*
      * Marshal the contents of a "raw" certificate into a DER sequence.
      */
-    private void emit(android.sun.security.util.DerOutputStream out)
+    private void emit(DerOutputStream out)
     throws CertificateException, IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         // version number, iff not V1
         version.encode(tmp);
@@ -793,7 +795,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         serialNum.encode(tmp);
         algId.encode(tmp);
 
-        if ((version.compare(android.sun.security.x509.CertificateVersion.V1) == 0) &&
+        if ((version.compare(CertificateVersion.V1) == 0) &&
             (issuer.toString() == null))
             throw new CertificateParsingException(
                       "Null issuer DN not allowed in v1 certificate");
@@ -802,7 +804,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         interval.encode(tmp);
 
         // Encode subject (principal) and associated key
-        if ((version.compare(android.sun.security.x509.CertificateVersion.V1) == 0) &&
+        if ((version.compare(CertificateVersion.V1) == 0) &&
             (subject.toString() == null))
             throw new CertificateParsingException(
                       "Null subject DN not allowed in v1 certificate");
@@ -823,7 +825,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         }
 
         // Wrap the data; encoding of the "raw" cert is now complete.
-        out.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+        out.write(DerValue.tag_Sequence, tmp);
     }
 
     /**
@@ -844,10 +846,10 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setVersion(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateVersion)) {
+        if (!(val instanceof CertificateVersion)) {
             throw new CertificateException("Version class type invalid.");
         }
-        version = (android.sun.security.x509.CertificateVersion)val;
+        version = (CertificateVersion)val;
     }
 
     /**
@@ -857,7 +859,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setSerialNumber(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateSerialNumber)) {
+        if (!(val instanceof CertificateSerialNumber)) {
             throw new CertificateException("SerialNumber class type invalid.");
         }
         serialNum = (CertificateSerialNumber)val;
@@ -870,7 +872,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setAlgorithmId(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateAlgorithmId)) {
+        if (!(val instanceof CertificateAlgorithmId)) {
             throw new CertificateException(
                              "AlgorithmId class type invalid.");
         }
@@ -884,7 +886,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setIssuer(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateIssuerName)) {
+        if (!(val instanceof CertificateIssuerName)) {
             throw new CertificateException(
                              "Issuer class type invalid.");
         }
@@ -898,7 +900,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setValidity(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateValidity)) {
+        if (!(val instanceof CertificateValidity)) {
             throw new CertificateException(
                              "CertificateValidity class type invalid.");
         }
@@ -912,7 +914,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setSubject(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateSubjectName)) {
+        if (!(val instanceof CertificateSubjectName)) {
             throw new CertificateException(
                              "Subject class type invalid.");
         }
@@ -926,7 +928,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException on invalid data.
      */
     private void setKey(Object val) throws CertificateException {
-        if (!(val instanceof android.sun.security.x509.CertificateX509Key)) {
+        if (!(val instanceof CertificateX509Key)) {
             throw new CertificateException(
                              "Key class type invalid.");
         }
@@ -940,7 +942,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException
      */
     private void setIssuerUniqueId(Object val) throws CertificateException {
-        if (version.compare(android.sun.security.x509.CertificateVersion.V2) < 0) {
+        if (version.compare(CertificateVersion.V2) < 0) {
             throw new CertificateException("Invalid version");
         }
         if (!(val instanceof CertificateIssuerUniqueIdentity)) {
@@ -957,7 +959,7 @@ public class X509CertInfo implements CertAttrSet<String> {
      * @exception CertificateException
      */
     private void setSubjectUniqueId(Object val) throws CertificateException {
-        if (version.compare(android.sun.security.x509.CertificateVersion.V2) < 0) {
+        if (version.compare(CertificateVersion.V2) < 0) {
             throw new CertificateException("Invalid version");
         }
         if (!(val instanceof CertificateSubjectUniqueIdentity)) {
@@ -977,7 +979,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         if (version.compare(CertificateVersion.V3) < 0) {
             throw new CertificateException("Invalid version");
         }
-        if (!(val instanceof android.sun.security.x509.CertificateExtensions)) {
+        if (!(val instanceof CertificateExtensions)) {
           throw new CertificateException(
                              "Extensions class type invalid.");
         }

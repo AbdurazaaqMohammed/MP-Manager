@@ -15,6 +15,8 @@
  */
 package com.reandroid.arsc.coder.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.arsc.array.ResValueMapArray;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
@@ -242,7 +244,7 @@ public class XmlCoder {
             }
             if(valueType == ValueType.STRING){
                 String value = resValue.getValueAsString();
-                return android.text.TextUtils.isEmpty(value);
+                return TextUtils.isEmpty(value);
             }
             return false;
         }
@@ -771,7 +773,7 @@ public class XmlCoder {
             }
             // TODO: confirm will never reach here
 
-            if(android.text.TextUtils.isEmpty(value)){
+            if(TextUtils.isEmpty(value)){
                 return;
             }
             entry.setName(value);

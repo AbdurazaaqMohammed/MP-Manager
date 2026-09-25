@@ -16,10 +16,8 @@
 
 package com.android.apksig.internal.jar;
 
-import android.os.Build;
 import android.text.TextUtils;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;

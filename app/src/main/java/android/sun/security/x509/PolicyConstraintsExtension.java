@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -51,8 +53,8 @@ import java.util.Enumeration;
  * </pre>
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class PolicyConstraintsExtension extends Extension
 implements CertAttrSet<String> {
@@ -80,22 +82,22 @@ implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream tagged = new android.sun.security.util.DerOutputStream();
-        android.sun.security.util.DerOutputStream seq = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tagged = new DerOutputStream();
+        DerOutputStream seq = new DerOutputStream();
 
         if (require != -1) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putInteger(require);
-            tagged.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            tagged.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                          false, TAG_REQUIRE), tmp);
         }
         if (inhibit != -1) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putInteger(inhibit);
-            tagged.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            tagged.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                          false, TAG_INHIBIT), tmp);
         }
-        seq.write(android.sun.security.util.DerValue.tag_Sequence, tagged);
+        seq.write(DerValue.tag_Sequence, tagged);
         this.extensionValue = seq.toByteArray();
     }
 
@@ -125,7 +127,7 @@ implements CertAttrSet<String> {
     throws IOException {
         this.require = require;
         this.inhibit = inhibit;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyConstraints_Id;
+        this.extensionId = PKIXExtensions.PolicyConstraints_Id;
         this.critical = critical;
         encodeThis();
     }
@@ -140,23 +142,23 @@ implements CertAttrSet<String> {
      */
     public PolicyConstraintsExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyConstraints_Id;
+        this.extensionId = PKIXExtensions.PolicyConstraints_Id;
         this.critical = critical;
 
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("Sequence tag missing for PolicyConstraint.");
         }
-        android.sun.security.util.DerInputStream in = val.data;
+        DerInputStream in = val.data;
         while (in != null && in.available() != 0) {
-            android.sun.security.util.DerValue next = in.getDerValue();
+            DerValue next = in.getDerValue();
 
             if (next.isContextSpecific(TAG_REQUIRE) && !next.isConstructed()) {
                 if (this.require != -1)
                     throw new IOException("Duplicate requireExplicitPolicy" +
                           "found in the PolicyConstraintsExtension");
-                next.resetTag(android.sun.security.util.DerValue.tag_Integer);
+                next.resetTag(DerValue.tag_Integer);
                 this.require = next.getInteger();
 
             } else if (next.isContextSpecific(TAG_INHIBIT) &&
@@ -164,7 +166,7 @@ implements CertAttrSet<String> {
                 if (this.inhibit != -1)
                     throw new IOException("Duplicate inhibitPolicyMapping" +
                           "found in the PolicyConstraintsExtension");
-                next.resetTag(android.sun.security.util.DerValue.tag_Integer);
+                next.resetTag(DerValue.tag_Integer);
                 this.inhibit = next.getInteger();
             } else
                 throw new IOException("Invalid encoding of PolicyConstraint");
@@ -197,7 +199,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         if (extensionValue == null) {
           extensionId = PKIXExtensions.PolicyConstraints_Id;
           critical = false;
@@ -260,7 +262,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(REQUIRE);
         elements.addElement(INHIBIT);
 

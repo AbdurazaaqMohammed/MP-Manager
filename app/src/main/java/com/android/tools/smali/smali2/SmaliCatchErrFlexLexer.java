@@ -38,9 +38,7 @@ package com.android.tools.smali.smali2;
 import com.android.tools.smali.smali.InvalidToken;
 import com.android.tools.smali.smali.smaliFlexLexer;
 
-import java.io.IOException;
 import java.io.Reader;
-import org.antlr.runtime.RecognitionException;
 import java.util.ArrayList;
 import java.util.List;
 /*

@@ -15,6 +15,8 @@
  */
 package com.reandroid.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.utils.CompareUtil;
 import com.reandroid.utils.ObjectsUtil;
 import com.reandroid.utils.StringsUtil;
@@ -185,7 +187,7 @@ public class XMLPath implements Predicate<NamedNode> {
         if (isAttribute()) {
             throw new InvalidPathException("Attribute can not have child element");
         }
-        if (android.text.TextUtils.isEmpty(name)) {
+        if (TextUtils.isEmpty(name)) {
             throw new InvalidPathException("Name can not be empty");
         }
         char c = name.charAt(0);

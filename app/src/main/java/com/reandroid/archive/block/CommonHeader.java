@@ -22,9 +22,7 @@ import com.reandroid.utils.HexUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 
 public abstract class CommonHeader extends ZipHeader {
     private final int offsetFileName;

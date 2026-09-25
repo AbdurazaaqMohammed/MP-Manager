@@ -1,13 +1,17 @@
 package com.antik.DexPatcher.MethodT;
 
 import com.android.tools.smali.dexlib2.Opcode;
+import com.android.tools.smali.dexlib2.iface.ExceptionHandler;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.MethodImplementation;
+import com.android.tools.smali.dexlib2.iface.TryBlock;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
+import com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation;
+import com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction35c;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
 
@@ -57,28 +61,28 @@ public class patchLaunchMethod {
 
         if (p_off == -1) return m;
 
-        List<? extends com.android.tools.smali.dexlib2.iface.TryBlock<? extends com.android.tools.smali.dexlib2.iface.ExceptionHandler>> o_tbs = im.getTryBlocks();
-        List<com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock> n_tbs = new ArrayList<>();
+        List<? extends TryBlock<? extends ExceptionHandler>> o_tbs = im.getTryBlocks();
+        List<ImmutableTryBlock> n_tbs = new ArrayList<>();
 
-        for (com.android.tools.smali.dexlib2.iface.TryBlock<? extends com.android.tools.smali.dexlib2.iface.ExceptionHandler> t : o_tbs) {
+        for (TryBlock<? extends ExceptionHandler> t : o_tbs) {
             int s = t.getStartCodeAddress();
             int c = t.getCodeUnitCount();
             int e = s + c;
-            List<com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler> h = new ArrayList<>();
-            for (com.android.tools.smali.dexlib2.iface.ExceptionHandler ha : t.getExceptionHandlers()) {
+            List<ImmutableExceptionHandler> h = new ArrayList<>();
+            for (ExceptionHandler ha : t.getExceptionHandlers()) {
                 int h_a = ha.getHandlerCodeAddress();
                 if (h_a >= p_off) {
-                    h.add(new com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler(ha.getExceptionType(), h_a + 3));
+                    h.add(new ImmutableExceptionHandler(ha.getExceptionType(), h_a + 3));
                 } else {
-                    h.add(com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler.of(ha));
+                    h.add(ImmutableExceptionHandler.of(ha));
                 }
             }
             if (s < p_off && e >= p_off) {
-                n_tbs.add(new com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock(s, c + 3, h));
+                n_tbs.add(new ImmutableTryBlock(s, c + 3, h));
             } else if (s >= p_off) {
-                n_tbs.add(new com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock(s + 3, c, h));
+                n_tbs.add(new ImmutableTryBlock(s + 3, c, h));
             } else {
-                n_tbs.add(new com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock(s, c, h));
+                n_tbs.add(new ImmutableTryBlock(s, c, h));
             }
         }
 

@@ -24,7 +24,10 @@
  */
 package android.sun.security.x509;
 
+import android.sun.security.util.Debug;
+import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +43,7 @@ public class SerialNumber {
     private BigInteger  serialNum;
 
     // Construct the class from the DerValue
-    private void construct(android.sun.security.util.DerValue derVal) throws IOException {
+    private void construct(DerValue derVal) throws IOException {
         serialNum = derVal.getBigInteger();
         if (derVal.data.available() != 0) {
             throw new IOException("Excess SerialNumber data");
@@ -71,8 +74,8 @@ public class SerialNumber {
      * @param in the DerInputStream to read the SerialNumber from.
      * @exception IOException on decoding errors.
      */
-    public SerialNumber(android.sun.security.util.DerInputStream in) throws IOException {
-        android.sun.security.util.DerValue derVal = in.getDerValue();
+    public SerialNumber(DerInputStream in) throws IOException {
+        DerValue derVal = in.getDerValue();
         construct(derVal);
     }
 
@@ -82,7 +85,7 @@ public class SerialNumber {
      * @param val the DerValue to read the SerialNumber from.
      * @exception IOException on decoding errors.
      */
-    public SerialNumber(android.sun.security.util.DerValue val) throws IOException {
+    public SerialNumber(DerValue val) throws IOException {
         construct(val);
     }
 
@@ -93,7 +96,7 @@ public class SerialNumber {
      * @exception IOException on decoding errors.
      */
     public SerialNumber(InputStream in) throws IOException {
-        android.sun.security.util.DerValue derVal = new android.sun.security.util.DerValue(in);
+        DerValue derVal = new DerValue(in);
         construct(derVal);
     }
 
@@ -101,7 +104,7 @@ public class SerialNumber {
      * Return the SerialNumber as user readable string.
      */
     public String toString() {
-        return ("SerialNumber: [" + android.sun.security.util.Debug.toHexString(serialNum) + "]");
+        return ("SerialNumber: [" + Debug.toHexString(serialNum) + "]");
     }
 
     /**

@@ -3120,7 +3120,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
   }
 
   /** the input device */
-  private java.io.Reader zzReader;
+  private Reader zzReader;
 
   /** the current state of the DFA */
   private int zzState;
@@ -3206,7 +3206,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
             }
             return token;
         }
-        catch (java.io.IOException e) {
+        catch (IOException e) {
             System.err.println("shouldn't happen: " + e.getMessage());
             return newToken(EOF);
         }
@@ -3377,7 +3377,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
    *
    * @param   in  the java.io.Reader to read input from.
    */
-  public smaliFlexLexer(java.io.Reader in, int apiLevel) {
+  public smaliFlexLexer(Reader in, int apiLevel) {
       this.apiLevel = apiLevel;
     this.zzReader = in;
   }
@@ -3407,9 +3407,9 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
    *
    * @return      <code>false</code>, iff there was new input.
    *
-   * @exception   java.io.IOException  if any I/O-Error occurs
+   * @exception   IOException  if any I/O-Error occurs
    */
-  private boolean zzRefill() throws java.io.IOException {
+  private boolean zzRefill() throws IOException {
 
     /* first: make room (if you can) */
     if (zzStartRead > 0) {
@@ -3442,7 +3442,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
 
     /* not supposed to occur according to specification of java.io.Reader */
     if (numRead == 0) {
-      throw new java.io.IOException("Reader returned 0 characters. See JFlex examples for workaround.");
+      throw new IOException("Reader returned 0 characters. See JFlex examples for workaround.");
     }
     if (numRead > 0) {
       zzEndRead += numRead;
@@ -3467,7 +3467,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
   /**
    * Closes the input stream.
    */
-  public final void yyclose() throws java.io.IOException {
+  public final void yyclose() throws IOException {
     zzAtEOF = true;            /* indicate end of file */
     zzEndRead = zzStartRead;  /* invalidate buffer    */
 
@@ -3488,7 +3488,7 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
    *
    * @param reader   the new input stream
    */
-  public final void yyreset(java.io.Reader reader) {
+  public final void yyreset(Reader reader) {
     zzReader = reader;
     zzAtBOL  = true;
     zzAtEOF  = false;
@@ -3601,9 +3601,9 @@ public class smaliFlexLexer implements TokenSource, LexerErrorInterface {
    * the end of input is encountered or an I/O-Error occurs.
    *
    * @return      the next token
-   * @exception   java.io.IOException  if any I/O-Error occurs
+   * @exception   IOException  if any I/O-Error occurs
    */
-  public Token yylex() throws java.io.IOException {
+  public Token yylex() throws IOException {
     int zzInput;
     int zzAction;
 

@@ -15,6 +15,8 @@
  */
 package com.reandroid.dex.debug;
 
+import android.text.TextUtils;
+
 import com.reandroid.dex.data.DebugInfo;
 import com.reandroid.dex.id.IdItem;
 import com.reandroid.dex.id.StringId;
@@ -43,7 +45,7 @@ public class DebugParameterBlock extends Base1Ule128IdItemReference<StringId> im
         return null;
     }
     public void setName(String name){
-        if(android.text.TextUtils.isEmpty(name)){
+        if(TextUtils.isEmpty(name)){
             setItem(null);
         }else {
             setKey(new StringKey(name));

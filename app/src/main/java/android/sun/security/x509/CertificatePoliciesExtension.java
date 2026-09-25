@@ -63,8 +63,8 @@ import android.sun.security.util.DerOutputStream;
  * </pre>
  * @author Anne Anderson
  * @since       1.4
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class CertificatePoliciesExtension extends Extension
 implements CertAttrSet<String> {
@@ -82,7 +82,7 @@ implements CertAttrSet<String> {
     /**
      * List of PolicyInformation for this object.
      */
-    private List<android.sun.security.x509.PolicyInformation> certPolicies;
+    private List<PolicyInformation> certPolicies;
 
     // Encode this extension value.
     private void encodeThis() throws IOException {
@@ -92,7 +92,7 @@ implements CertAttrSet<String> {
             DerOutputStream os = new DerOutputStream();
             DerOutputStream tmp = new DerOutputStream();
 
-            for (android.sun.security.x509.PolicyInformation info : certPolicies) {
+            for (PolicyInformation info : certPolicies) {
                 info.encode(tmp);
             }
 
@@ -107,7 +107,7 @@ implements CertAttrSet<String> {
      *
      * @param certPolicies the List of PolicyInformation.
      */
-    public CertificatePoliciesExtension(List<android.sun.security.x509.PolicyInformation> certPolicies)
+    public CertificatePoliciesExtension(List<PolicyInformation> certPolicies)
     throws IOException {
         this(Boolean.FALSE, certPolicies);
     }
@@ -120,9 +120,9 @@ implements CertAttrSet<String> {
      * @param certPolicies the List of PolicyInformation.
      */
     public CertificatePoliciesExtension(Boolean critical,
-            List<android.sun.security.x509.PolicyInformation> certPolicies) throws IOException {
+            List<PolicyInformation> certPolicies) throws IOException {
         this.certPolicies = certPolicies;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.CertificatePolicies_Id;
+        this.extensionId = PKIXExtensions.CertificatePolicies_Id;
         this.critical = critical;
         encodeThis();
     }
@@ -137,7 +137,7 @@ implements CertAttrSet<String> {
      */
     public CertificatePoliciesExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.CertificatePolicies_Id;
+        this.extensionId = PKIXExtensions.CertificatePolicies_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);
@@ -148,7 +148,7 @@ implements CertAttrSet<String> {
         certPolicies = new ArrayList<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
-            android.sun.security.x509.PolicyInformation policy = new android.sun.security.x509.PolicyInformation(seq);
+            PolicyInformation policy = new PolicyInformation(seq);
             certPolicies.add(policy);
         }
     }
@@ -162,7 +162,7 @@ implements CertAttrSet<String> {
         }
         StringBuilder sb = new StringBuilder(super.toString());
         sb.append("CertificatePolicies [\n");
-        for (android.sun.security.x509.PolicyInformation info : certPolicies) {
+        for (PolicyInformation info : certPolicies) {
             sb.append(info.toString());
         }
         sb.append("]\n");
@@ -236,7 +236,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(POLICIES);
 
         return (elements.elements());

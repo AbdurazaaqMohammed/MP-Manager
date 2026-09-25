@@ -36,15 +36,19 @@ import java.security.cert.CertificateException;
 import java.util.*;
 
 import android.sun.misc.HexDumpEncoder;
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 /**
  * This class defines the Extensions attribute for the Certificate.
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
-public class CertificateExtensions implements android.sun.security.x509.CertAttrSet<android.sun.security.x509.Extension> {
+public class CertificateExtensions implements CertAttrSet<Extension> {
     /**
      * Identifier for this attribute, to be used with the
      * get, set, delete methods of Certificate, x509 type.
@@ -55,12 +59,12 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
      */
     public static final String NAME = "extensions";
 
-    private static final Debug debug = android.sun.security.util.Debug.getInstance("x509");
+    private static final Debug debug = Debug.getInstance("x509");
 
-    private final Hashtable<String, android.sun.security.x509.Extension> map = new Hashtable<>();
+    private final Hashtable<String, Extension> map = new Hashtable<>();
     private boolean unsupportedCritExt = false;
 
-    private Map<String, android.sun.security.x509.Extension> unparseableExtensions;
+    private Map<String, Extension> unparseableExtensions;
 
     /**
      * Default constructor.
@@ -73,16 +77,16 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
      * @param in the DerInputStream to read the Extension from.
      * @exception IOException on decoding errors.
      */
-    public CertificateExtensions(android.sun.security.util.DerInputStream in) throws IOException {
+    public CertificateExtensions(DerInputStream in) throws IOException {
         init(in);
     }
 
     // helper routine
-    private void init(android.sun.security.util.DerInputStream in) throws IOException {
+    private void init(DerInputStream in) throws IOException {
 
-        android.sun.security.util.DerValue[] exts = in.getSequence(5);
+        DerValue[] exts = in.getSequence(5);
 
-        for (android.sun.security.util.DerValue derValue : exts) {
+        for (DerValue derValue : exts) {
             Extension ext = new Extension(derValue);
             parseExtension(ext);
         }
@@ -91,7 +95,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
     private static final Class[] PARAMS = {Boolean.class, Object.class};
 
     // Parse the encoded extension
-    private void parseExtension(android.sun.security.x509.Extension ext) throws IOException {
+    private void parseExtension(Extension ext) throws IOException {
         try {
             Class extClass = OIDMap.getClass(ext.getExtensionId());
             if (extClass == null) {   // Unsupported extension
@@ -108,8 +112,8 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
             Object[] passed = new Object[] {ext.isCritical(),
                     ext.getExtensionValue()};
-                    android.sun.security.x509.CertAttrSet certExt = (android.sun.security.x509.CertAttrSet)cons.newInstance(passed);
-                    if (map.put(certExt.getName(), (android.sun.security.x509.Extension)certExt) != null) {
+                    CertAttrSet certExt = (CertAttrSet)cons.newInstance(passed);
+                    if (map.put(certExt.getName(), (Extension)certExt) != null) {
                         throw new IOException("Duplicate extensions not allowed");
                     }
         } catch (InvocationTargetException invk) {
@@ -164,8 +168,8 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
      */
     public void encode(OutputStream out, boolean isCertReq)
     throws CertificateException, IOException {
-        android.sun.security.util.DerOutputStream extOut = new android.sun.security.util.DerOutputStream();
-        Collection<android.sun.security.x509.Extension> allExts = map.values();
+        DerOutputStream extOut = new DerOutputStream();
+        Collection<Extension> allExts = map.values();
         Object[] objs = allExts.toArray();
 
         for (Object obj : objs) {
@@ -177,13 +181,13 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
                 throw new CertificateException("Illegal extension object");
         }
 
-        android.sun.security.util.DerOutputStream seq = new android.sun.security.util.DerOutputStream();
-        seq.write(android.sun.security.util.DerValue.tag_Sequence, extOut);
+        DerOutputStream seq = new DerOutputStream();
+        seq.write(DerValue.tag_Sequence, extOut);
 
-        android.sun.security.util.DerOutputStream tmp;
+        DerOutputStream tmp;
         if (!isCertReq) { // certificate
-            tmp = new android.sun.security.util.DerOutputStream();
-            tmp.write(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT, true, (byte)3),
+            tmp = new DerOutputStream();
+            tmp.write(DerValue.createTag(DerValue.TAG_CONTEXT, true, (byte)3),
                     seq);
         } else
             tmp = seq; // pkcs#10 certificateRequest
@@ -198,8 +202,8 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
      * @exception IOException if the object could not be cached.
      */
     public void set(String name, Object obj) throws IOException {
-        if (obj instanceof android.sun.security.x509.Extension) {
-            map.put(name, (android.sun.security.x509.Extension)obj);
+        if (obj instanceof Extension) {
+            map.put(name, (Extension)obj);
         } else {
             throw new IOException("Unknown extension type.");
         }
@@ -231,7 +235,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
         map.remove(name);
     }
 
-    public String getNameByOid(android.sun.security.util.ObjectIdentifier oid) throws IOException {
+    public String getNameByOid(ObjectIdentifier oid) throws IOException {
         for (String name: map.keySet()) {
             if (map.get(name).getExtensionId().equals(oid)) {
                 return name;
@@ -244,7 +248,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
      * Return an enumeration of names of attributes existing within this
      * attribute.
      */
-    public Enumeration<android.sun.security.x509.Extension> getElements() {
+    public Enumeration<Extension> getElements() {
         return map.elements();
     }
 
@@ -252,11 +256,11 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
      * Return a collection view of the extensions.
      * @return a collection view of the extensions in this Certificate.
      */
-    public Collection<android.sun.security.x509.Extension> getAllExtensions() {
+    public Collection<Extension> getAllExtensions() {
         return map.values();
     }
 
-    public Map<String, android.sun.security.x509.Extension> getUnparseableExtensions() {
+    public Map<String, Extension> getUnparseableExtensions() {
         if (unparseableExtensions == null) {
             return Collections.emptyMap();
         } else {
@@ -295,7 +299,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
             return true;
         if (!(other instanceof CertificateExtensions))
             return false;
-        Collection<android.sun.security.x509.Extension> otherC =
+        Collection<Extension> otherC =
                 ((CertificateExtensions)other).getAllExtensions();
         Object[] objs = otherC.toArray();
 
@@ -303,7 +307,7 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
         if (len != map.size())
             return false;
 
-        android.sun.security.x509.Extension otherExt, thisExt;
+        Extension otherExt, thisExt;
         String key = null;
         for (Object obj : objs) {
             if (obj instanceof CertAttrSet)
@@ -344,16 +348,16 @@ public class CertificateExtensions implements android.sun.security.x509.CertAttr
 
 }
 
-class UnparseableExtension extends android.sun.security.x509.Extension {
+class UnparseableExtension extends Extension {
     private String name;
     private final Throwable why;
 
-    public UnparseableExtension(android.sun.security.x509.Extension ext, Throwable why) {
+    public UnparseableExtension(Extension ext, Throwable why) {
         super(ext);
 
         name = "";
         try {
-            Class extClass = android.sun.security.x509.OIDMap.getClass(ext.getExtensionId());
+            Class extClass = OIDMap.getClass(ext.getExtensionId());
             if (extClass != null) {
                 Field field = extClass.getDeclaredField("NAME");
                 name = field.get(null) + " ";

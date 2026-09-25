@@ -25,12 +25,14 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.security.PublicKey;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import android.sun.misc.HexDumpEncoder;
 
@@ -57,7 +59,7 @@ public class KeyIdentifier {
      *
      * @param val the DerValue
      */
-    public KeyIdentifier(android.sun.security.util.DerValue val) throws IOException {
+    public KeyIdentifier(DerValue val) throws IOException {
         octetString = val.getOctetString();
     }
 
@@ -83,12 +85,12 @@ public class KeyIdentifier {
     public KeyIdentifier(PublicKey pubKey)
         throws IOException
     {
-        android.sun.security.util.DerValue algAndKey = new DerValue(pubKey.getEncoded());
-        if (algAndKey.tag != android.sun.security.util.DerValue.tag_Sequence)
+        DerValue algAndKey = new DerValue(pubKey.getEncoded());
+        if (algAndKey.tag != DerValue.tag_Sequence)
             throw new IOException("PublicKey value is not a valid "
                                   + "X.509 public key");
 
-        android.sun.security.x509.AlgorithmId algid = AlgorithmId.parse(algAndKey.data.getDerValue());
+        AlgorithmId algid = AlgorithmId.parse(algAndKey.data.getDerValue());
         byte[] key = algAndKey.data.getUnalignedBitString().toByteArray();
 
         MessageDigest md = null;
@@ -126,7 +128,7 @@ public class KeyIdentifier {
      * @param out the DerOutputStream to write the object to.
      * @exception IOException
      */
-    void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    void encode(DerOutputStream out) throws IOException {
         out.putOctetString(octetString);
     }
 
@@ -149,7 +151,7 @@ public class KeyIdentifier {
             return true;
         if (!(other instanceof KeyIdentifier))
             return false;
-        return java.util.Arrays.equals(octetString,
+        return Arrays.equals(octetString,
                                        ((KeyIdentifier)other).getIdentifier());
     }
 }

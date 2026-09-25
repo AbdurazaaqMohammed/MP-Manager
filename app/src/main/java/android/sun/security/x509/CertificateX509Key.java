@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.security.PublicKey;
 import java.io.InputStream;
@@ -38,7 +40,7 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateX509Key implements CertAttrSet<String> {
     /**
@@ -70,9 +72,9 @@ public class CertificateX509Key implements CertAttrSet<String> {
      * @param in the DerInputStream to read the X509Key from.
      * @exception IOException on decoding errors.
      */
-    public CertificateX509Key(android.sun.security.util.DerInputStream in) throws IOException {
-        android.sun.security.util.DerValue val = in.getDerValue();
-        key = android.sun.security.x509.X509Key.parse(val);
+    public CertificateX509Key(DerInputStream in) throws IOException {
+        DerValue val = in.getDerValue();
+        key = X509Key.parse(val);
     }
 
     /**
@@ -82,7 +84,7 @@ public class CertificateX509Key implements CertAttrSet<String> {
      * @exception IOException on decoding errors.
      */
     public CertificateX509Key(InputStream in) throws IOException {
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(in);
+        DerValue val = new DerValue(in);
         key = X509Key.parse(val);
     }
 
@@ -101,7 +103,7 @@ public class CertificateX509Key implements CertAttrSet<String> {
      * @exception IOException on errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         tmp.write(key.getEncoded());
 
         out.write(tmp.toByteArray());
@@ -148,7 +150,7 @@ public class CertificateX509Key implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(KEY);
 
         return(elements.elements());

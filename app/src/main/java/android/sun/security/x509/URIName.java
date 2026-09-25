@@ -25,6 +25,7 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -76,15 +77,15 @@ import java.net.URISyntaxException;
  * @author Steve Hanna
  * @see GeneralName
  * @see GeneralNames
- * @see android.sun.security.x509.GeneralNameInterface
+ * @see GeneralNameInterface
  */
-public class URIName implements android.sun.security.x509.GeneralNameInterface {
+public class URIName implements GeneralNameInterface {
 
     // private attributes
     private final URI uri;
     private final String host;
-    private android.sun.security.x509.DNSName hostDNS;
-    private android.sun.security.x509.IPAddressName hostIP;
+    private DNSName hostDNS;
+    private IPAddressName hostIP;
 
     /**
      * Create the URIName object from the passed encoded Der value.
@@ -123,14 +124,14 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
                 // Verify host is a valid IPv6 address name
                 String ipV6Host = host.substring(1, host.length()-1);
                 try {
-                    hostIP = new android.sun.security.x509.IPAddressName(ipV6Host);
+                    hostIP = new IPAddressName(ipV6Host);
                 } catch (IOException ioe) {
                     throw new IOException("invalid URI name (host " +
                         "portion is not a valid IPv6 address):" + name);
                 }
             } else {
                 try {
-                    hostDNS = new android.sun.security.x509.DNSName(host);
+                    hostDNS = new DNSName(host);
                 } catch (IOException ioe) {
                     // Not a valid DNS Name; see if it is a valid IPv4
                     // IPAddressName
@@ -154,7 +155,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
      * @param value the URI name constraint
      * @throws IOException if name is not a proper URI name constraint
      */
-    public static URIName nameConstraint(android.sun.security.util.DerValue value) throws IOException {
+    public static URIName nameConstraint(DerValue value) throws IOException {
         URI uri;
         String name = value.getIA5String();
         try {
@@ -166,11 +167,11 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
         if (uri.getScheme() == null) {
             String host = uri.getSchemeSpecificPart();
             try {
-                android.sun.security.x509.DNSName hostDNS;
+                DNSName hostDNS;
                 if (host.charAt(0) == '.') {
-                    hostDNS = new android.sun.security.x509.DNSName(host.substring(1));
+                    hostDNS = new DNSName(host.substring(1));
                 } else {
-                    hostDNS = new android.sun.security.x509.DNSName(host);
+                    hostDNS = new DNSName(host);
                 }
                 return new URIName(uri, host, hostDNS);
             } catch (IOException ioe) {
@@ -183,7 +184,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
         }
     }
 
-    URIName(URI uri, String host, android.sun.security.x509.DNSName hostDNS) {
+    URIName(URI uri, String host, DNSName hostDNS) {
         this.uri = uri;
         this.host = host;
         this.hostDNS = hostDNS;
@@ -193,7 +194,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return android.sun.security.x509.GeneralNameInterface.NAME_URI;
+        return GeneralNameInterface.NAME_URI;
     }
 
     /**
@@ -202,7 +203,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
      * @param out the DER stream to encode the URIName to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
         out.putIA5String(uri.toASCIIString());
     }
 
@@ -381,7 +382,7 @@ public class URIName implements android.sun.security.x509.GeneralNameInterface {
      * @throws UnsupportedOperationException if not supported for this name type
      */
     public int subtreeDepth() throws UnsupportedOperationException {
-        android.sun.security.x509.DNSName dnsName = null;
+        DNSName dnsName = null;
         try {
             dnsName = new DNSName(host);
         } catch (IOException ioe) {

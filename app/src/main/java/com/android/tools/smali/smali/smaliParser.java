@@ -2,7 +2,6 @@
 
 package com.android.tools.smali.smali;
 
-import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
 
 

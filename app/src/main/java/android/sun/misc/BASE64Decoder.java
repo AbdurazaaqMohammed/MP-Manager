@@ -24,6 +24,7 @@
  */
 package android.sun.misc;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 
@@ -102,7 +103,7 @@ public class BASE64Decoder extends CharacterDecoder {
      * Decode one BASE64 atom into 1, 2, or 3 bytes of data.
      */
     protected void decodeAtom(PushbackInputStream inStream, OutputStream outStream, int rem)
-        throws java.io.IOException
+        throws IOException
     {
         int     i;
         byte    a = -1, b = -1, c = -1, d = -1;

@@ -31,6 +31,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateEncodingException;
 import java.security.*;
 import java.util.Date;
+import java.util.Random;
 
 import android.sun.security.pkcs.PKCS10;
 
@@ -57,7 +58,7 @@ import android.sun.security.pkcs.PKCS10;
  * @author David Brownell
  * @author Hemma Prafullchandra
  * @see PKCS10
- * @see android.sun.security.x509.X509CertImpl
+ * @see X509CertImpl
  */
 public final class CertAndKeyGen {
     /**
@@ -166,9 +167,9 @@ public final class CertAndKeyGen {
      * <code>X509Key</code>. Accordingly, the return type of this method
      * should be <code>PublicKey</code>.
      */
-    public android.sun.security.x509.X509Key getPublicKey()
+    public X509Key getPublicKey()
     {
-        if (!(publicKey instanceof android.sun.security.x509.X509Key)) {
+        if (!(publicKey instanceof X509Key)) {
             return null;
         }
         return (X509Key)publicKey;
@@ -209,32 +210,32 @@ public final class CertAndKeyGen {
      * @exception NoSuchProviderException on unrecognized providers.
      */
     public X509Certificate getSelfCertificate (
-            android.sun.security.x509.X500Name myname, Date firstDate, long validity)
+            X500Name myname, Date firstDate, long validity)
     throws CertificateException, InvalidKeyException, SignatureException,
         NoSuchAlgorithmException, NoSuchProviderException
     {
-        android.sun.security.x509.X509CertImpl cert;
+        X509CertImpl cert;
         Date            lastDate;
 
         try {
             lastDate = new Date ();
             lastDate.setTime (firstDate.getTime () + validity * 1000);
 
-            android.sun.security.x509.CertificateValidity interval =
+            CertificateValidity interval =
                                    new CertificateValidity(firstDate,lastDate);
 
-            android.sun.security.x509.X509CertInfo info = new android.sun.security.x509.X509CertInfo();
+            X509CertInfo info = new X509CertInfo();
             // Add all mandatory attributes
-            info.set(android.sun.security.x509.X509CertInfo.VERSION,
-                     new android.sun.security.x509.CertificateVersion(CertificateVersion.V3));
-            info.set(android.sun.security.x509.X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(
-                    new java.util.Random().nextInt() & 0x7fffffff));
-            android.sun.security.x509.AlgorithmId algID = AlgorithmId.getAlgorithmId(sigAlg);
-            info.set(android.sun.security.x509.X509CertInfo.ALGORITHM_ID,
+            info.set(X509CertInfo.VERSION,
+                     new CertificateVersion(CertificateVersion.V3));
+            info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(
+                    new Random().nextInt() & 0x7fffffff));
+            AlgorithmId algID = AlgorithmId.getAlgorithmId(sigAlg);
+            info.set(X509CertInfo.ALGORITHM_ID,
                      new CertificateAlgorithmId(algID));
-            info.set(android.sun.security.x509.X509CertInfo.SUBJECT, new CertificateSubjectName(myname));
-            info.set(android.sun.security.x509.X509CertInfo.KEY, new CertificateX509Key(publicKey));
-            info.set(android.sun.security.x509.X509CertInfo.VALIDITY, interval);
+            info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(myname));
+            info.set(X509CertInfo.KEY, new CertificateX509Key(publicKey));
+            info.set(X509CertInfo.VALIDITY, interval);
             info.set(X509CertInfo.ISSUER, new CertificateIssuerName(myname));
 
             cert = new X509CertImpl(info);
@@ -249,7 +250,7 @@ public final class CertAndKeyGen {
     }
 
     // Keep the old method
-    public X509Certificate getSelfCertificate (android.sun.security.x509.X500Name myname, long validity)
+    public X509Certificate getSelfCertificate (X500Name myname, long validity)
     throws CertificateException, InvalidKeyException, SignatureException,
         NoSuchAlgorithmException, NoSuchProviderException
     {

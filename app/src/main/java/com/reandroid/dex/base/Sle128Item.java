@@ -16,7 +16,6 @@
 package com.reandroid.dex.base;
 
 import com.reandroid.arsc.io.BlockReader;
-import com.reandroid.arsc.item.IntegerReference;
 import com.reandroid.dex.io.StreamUtil;
 
 import java.io.IOException;

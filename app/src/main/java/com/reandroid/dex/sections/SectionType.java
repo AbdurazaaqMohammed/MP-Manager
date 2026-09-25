@@ -59,6 +59,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 
 import org.apache.commons.collections4.Predicate;
+import org.apache.commons.collections4.Transformer;
 
 
 public abstract class SectionType<T extends SectionItem> implements Creator<T> {
@@ -805,10 +806,10 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
     public static Iterator<SectionType<?>> getSectionTypes(){
         return new ArrayIterator<>(R8_ORDER);
     }
-    public static<T1> Comparator<T1> getReadComparator(org.apache.commons.collections4.Transformer<? super T1, SectionType<?>> transformer){
+    public static<T1> Comparator<T1> getReadComparator(Transformer<? super T1, SectionType<?>> transformer){
         return comparator(READ_ORDER, transformer);
     }
-    public static<T1> Comparator<T1> comparator(SectionType<?>[] sortOrder, org.apache.commons.collections4.Transformer<? super T1, SectionType<?>> transformer){
+    public static<T1> Comparator<T1> comparator(SectionType<?>[] sortOrder, Transformer<? super T1, SectionType<?>> transformer){
         return new OrderBasedComparator<>(sortOrder, transformer);
     }
     public static SectionType<?>[] getR8Order() {
@@ -872,10 +873,10 @@ public abstract class SectionType<T extends SectionItem> implements Creator<T> {
 
 
     static class OrderBasedComparator<T1> implements Comparator<T1> {
-        private final org.apache.commons.collections4.Transformer<? super T1, SectionType<?>> transformer;
+        private final Transformer<? super T1, SectionType<?>> transformer;
         private final SectionType<?>[] sortOrder;
 
-        public OrderBasedComparator(SectionType<?>[] sortOrder, org.apache.commons.collections4.Transformer<? super T1, SectionType<?>> transformer){
+        public OrderBasedComparator(SectionType<?>[] sortOrder, Transformer<? super T1, SectionType<?>> transformer){
             this.sortOrder = sortOrder;
             this.transformer = transformer;
         }

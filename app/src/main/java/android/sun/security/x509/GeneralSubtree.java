@@ -26,6 +26,7 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.*;
 
@@ -47,7 +48,7 @@ public class GeneralSubtree {
     private static final byte TAG_MAX = 1;
     private static final int  MIN_DEFAULT = 0;
 
-    private final android.sun.security.x509.GeneralName name;
+    private final GeneralName name;
     private int         minimum = MIN_DEFAULT;
     private int         maximum = -1;
 
@@ -60,7 +61,7 @@ public class GeneralSubtree {
      * @params min the minimum BaseDistance
      * @params max the maximum BaseDistance
      */
-    public GeneralSubtree(android.sun.security.x509.GeneralName name, int min, int max) {
+    public GeneralSubtree(GeneralName name, int min, int max) {
         this.name = name;
         this.minimum = min;
         this.maximum = max;
@@ -71,24 +72,24 @@ public class GeneralSubtree {
      *
      * @param val the DER encoded from of the same.
      */
-    public GeneralSubtree(android.sun.security.util.DerValue val) throws IOException {
-        if (val.tag != android.sun.security.util.DerValue.tag_Sequence) {
+    public GeneralSubtree(DerValue val) throws IOException {
+        if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoding for GeneralSubtree.");
         }
-        name = new android.sun.security.x509.GeneralName(val.data.getDerValue(), true);
+        name = new GeneralName(val.data.getDerValue(), true);
 
         // NB. this is always encoded with the IMPLICIT tag
         // The checks only make sense if we assume implicit tagging,
         // with explicit tagging the form is always constructed.
         while (val.data.available() != 0) {
-            android.sun.security.util.DerValue opt = val.data.getDerValue();
+            DerValue opt = val.data.getDerValue();
 
             if (opt.isContextSpecific(TAG_MIN) && !opt.isConstructed()) {
-                opt.resetTag(android.sun.security.util.DerValue.tag_Integer);
+                opt.resetTag(DerValue.tag_Integer);
                 minimum = opt.getInteger();
 
             } else if (opt.isContextSpecific(TAG_MAX) && !opt.isConstructed()) {
-                opt.resetTag(android.sun.security.util.DerValue.tag_Integer);
+                opt.resetTag(DerValue.tag_Integer);
                 maximum = opt.getInteger();
             } else
                 throw new IOException("Invalid encoding of GeneralSubtree.");
@@ -186,23 +187,23 @@ public class GeneralSubtree {
      *
      * @params out the DerOutputStream to encode this object to.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        DerOutputStream seq = new android.sun.security.util.DerOutputStream();
+    public void encode(DerOutputStream out) throws IOException {
+        DerOutputStream seq = new DerOutputStream();
 
         name.encode(seq);
 
         if (minimum != MIN_DEFAULT) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putInteger(minimum);
-            seq.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            seq.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                               false, TAG_MIN), tmp);
         }
         if (maximum != -1) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putInteger(maximum);
-            seq.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            seq.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                               false, TAG_MAX), tmp);
         }
-        out.write(android.sun.security.util.DerValue.tag_Sequence, seq);
+        out.write(DerValue.tag_Sequence, seq);
     }
 }

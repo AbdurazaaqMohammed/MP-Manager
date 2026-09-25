@@ -50,7 +50,7 @@ public class OIDMap {
 
     // "user-friendly" names
     private static final String ROOT = X509CertImpl.NAME + "." +
-                                 android.sun.security.x509.X509CertInfo.NAME + "." +
+                                 X509CertInfo.NAME + "." +
                                  X509CertInfo.EXTENSIONS;
     private static final String AUTH_KEY_IDENTIFIER = ROOT + "." +
                                           AuthorityKeyIdentifierExtension.NAME;
@@ -106,7 +106,7 @@ public class OIDMap {
         { 2, 16, 840, 1, 113730, 1, 1 };
 
     /** Map ObjectIdentifier(oid) -> OIDInfo(info) */
-    private final static Map<android.sun.security.util.ObjectIdentifier,OIDInfo> oidMap;
+    private final static Map<ObjectIdentifier,OIDInfo> oidMap;
 
     /** Map String(friendly name) -> OIDInfo(info) */
     private final static Map<String,OIDInfo> nameMap;
@@ -114,53 +114,53 @@ public class OIDMap {
     static {
         oidMap = new HashMap<>();
         nameMap = new HashMap<>();
-        addInternal(SUB_KEY_IDENTIFIER, android.sun.security.x509.PKIXExtensions.SubjectKey_Id,
+        addInternal(SUB_KEY_IDENTIFIER, PKIXExtensions.SubjectKey_Id,
                     "SubjectKeyIdentifierExtension");
-        addInternal(KEY_USAGE, android.sun.security.x509.PKIXExtensions.KeyUsage_Id,
+        addInternal(KEY_USAGE, PKIXExtensions.KeyUsage_Id,
                     "KeyUsageExtension");
-        addInternal(PRIVATE_KEY_USAGE, android.sun.security.x509.PKIXExtensions.PrivateKeyUsage_Id,
+        addInternal(PRIVATE_KEY_USAGE, PKIXExtensions.PrivateKeyUsage_Id,
                     "PrivateKeyUsageExtension");
-        addInternal(SUB_ALT_NAME, android.sun.security.x509.PKIXExtensions.SubjectAlternativeName_Id,
+        addInternal(SUB_ALT_NAME, PKIXExtensions.SubjectAlternativeName_Id,
                     "SubjectAlternativeNameExtension");
-        addInternal(ISSUER_ALT_NAME, android.sun.security.x509.PKIXExtensions.IssuerAlternativeName_Id,
+        addInternal(ISSUER_ALT_NAME, PKIXExtensions.IssuerAlternativeName_Id,
                     "IssuerAlternativeNameExtension");
-        addInternal(BASIC_CONSTRAINTS, android.sun.security.x509.PKIXExtensions.BasicConstraints_Id,
+        addInternal(BASIC_CONSTRAINTS, PKIXExtensions.BasicConstraints_Id,
                     "BasicConstraintsExtension");
-        addInternal(CRL_NUMBER, android.sun.security.x509.PKIXExtensions.CRLNumber_Id,
+        addInternal(CRL_NUMBER, PKIXExtensions.CRLNumber_Id,
                     "CRLNumberExtension");
-        addInternal(CRL_REASON, android.sun.security.x509.PKIXExtensions.ReasonCode_Id,
+        addInternal(CRL_REASON, PKIXExtensions.ReasonCode_Id,
                     "CRLReasonCodeExtension");
-        addInternal(NAME_CONSTRAINTS, android.sun.security.x509.PKIXExtensions.NameConstraints_Id,
+        addInternal(NAME_CONSTRAINTS, PKIXExtensions.NameConstraints_Id,
                     "NameConstraintsExtension");
-        addInternal(POLICY_MAPPINGS, android.sun.security.x509.PKIXExtensions.PolicyMappings_Id,
+        addInternal(POLICY_MAPPINGS, PKIXExtensions.PolicyMappings_Id,
                     "PolicyMappingsExtension");
-        addInternal(AUTH_KEY_IDENTIFIER, android.sun.security.x509.PKIXExtensions.AuthorityKey_Id,
+        addInternal(AUTH_KEY_IDENTIFIER, PKIXExtensions.AuthorityKey_Id,
                     "AuthorityKeyIdentifierExtension");
-        addInternal(POLICY_CONSTRAINTS, android.sun.security.x509.PKIXExtensions.PolicyConstraints_Id,
+        addInternal(POLICY_CONSTRAINTS, PKIXExtensions.PolicyConstraints_Id,
                     "PolicyConstraintsExtension");
-        addInternal(NETSCAPE_CERT, android.sun.security.util.ObjectIdentifier.newInternal
+        addInternal(NETSCAPE_CERT, ObjectIdentifier.newInternal
                     (new int[] {2,16,840,1,113730,1,1}),
                     "NetscapeCertTypeExtension");
-        addInternal(CERT_POLICIES, android.sun.security.x509.PKIXExtensions.CertificatePolicies_Id,
+        addInternal(CERT_POLICIES, PKIXExtensions.CertificatePolicies_Id,
                     "CertificatePoliciesExtension");
-        addInternal(EXT_KEY_USAGE, android.sun.security.x509.PKIXExtensions.ExtendedKeyUsage_Id,
+        addInternal(EXT_KEY_USAGE, PKIXExtensions.ExtendedKeyUsage_Id,
                     "ExtendedKeyUsageExtension");
-        addInternal(INHIBIT_ANY_POLICY, android.sun.security.x509.PKIXExtensions.InhibitAnyPolicy_Id,
+        addInternal(INHIBIT_ANY_POLICY, PKIXExtensions.InhibitAnyPolicy_Id,
                     "InhibitAnyPolicyExtension");
-        addInternal(CRL_DIST_POINTS, android.sun.security.x509.PKIXExtensions.CRLDistributionPoints_Id,
+        addInternal(CRL_DIST_POINTS, PKIXExtensions.CRLDistributionPoints_Id,
                     "CRLDistributionPointsExtension");
-        addInternal(CERT_ISSUER, android.sun.security.x509.PKIXExtensions.CertificateIssuer_Id,
+        addInternal(CERT_ISSUER, PKIXExtensions.CertificateIssuer_Id,
                     "CertificateIssuerExtension");
-        addInternal(SUBJECT_INFO_ACCESS, android.sun.security.x509.PKIXExtensions.SubjectInfoAccess_Id,
+        addInternal(SUBJECT_INFO_ACCESS, PKIXExtensions.SubjectInfoAccess_Id,
                     "SubjectInfoAccessExtension");
-        addInternal(AUTH_INFO_ACCESS, android.sun.security.x509.PKIXExtensions.AuthInfoAccess_Id,
+        addInternal(AUTH_INFO_ACCESS, PKIXExtensions.AuthInfoAccess_Id,
                     "AuthorityInfoAccessExtension");
         addInternal(ISSUING_DIST_POINT,
-                    android.sun.security.x509.PKIXExtensions.IssuingDistributionPoint_Id,
+                    PKIXExtensions.IssuingDistributionPoint_Id,
                     "IssuingDistributionPointExtension");
-        addInternal(DELTA_CRL_INDICATOR, android.sun.security.x509.PKIXExtensions.DeltaCRLIndicator_Id,
+        addInternal(DELTA_CRL_INDICATOR, PKIXExtensions.DeltaCRLIndicator_Id,
                     "DeltaCRLIndicatorExtension");
-        addInternal(FRESHEST_CRL, android.sun.security.x509.PKIXExtensions.FreshestCRL_Id,
+        addInternal(FRESHEST_CRL, PKIXExtensions.FreshestCRL_Id,
                     "FreshestCRLExtension");
         addInternal(OCSPNOCHECK, PKIXExtensions.OCSPNoCheck_Id,
                     "OCSPNoCheckExtension");
@@ -170,7 +170,7 @@ public class OIDMap {
      * Add attributes to the table. For internal use in the static
      * initializer.
      */
-    private static void addInternal(String name, android.sun.security.util.ObjectIdentifier oid,
+    private static void addInternal(String name, ObjectIdentifier oid,
             String className) {
         OIDInfo info = new OIDInfo(name, oid, className);
         oidMap.put(oid, info);
@@ -182,7 +182,7 @@ public class OIDMap {
      */
     private static class OIDInfo {
 
-        final android.sun.security.util.ObjectIdentifier oid;
+        final ObjectIdentifier oid;
         final String name;
         final String className;
         private volatile Class clazz;
@@ -193,7 +193,7 @@ public class OIDMap {
             this.className = className;
         }
 
-        OIDInfo(String name, android.sun.security.util.ObjectIdentifier oid, Class clazz) {
+        OIDInfo(String name, ObjectIdentifier oid, Class clazz) {
             this.name = name;
             this.oid = oid;
             this.className = clazz.getName();
@@ -229,9 +229,9 @@ public class OIDMap {
      */
     public static void addAttribute(String name, String oid, Class clazz)
             throws CertificateException {
-        android.sun.security.util.ObjectIdentifier objId;
+        ObjectIdentifier objId;
         try {
-            objId = new android.sun.security.util.ObjectIdentifier(oid);
+            objId = new ObjectIdentifier(oid);
         } catch (IOException ioe) {
             throw new CertificateException
                                 ("Invalid Object identifier: " + oid);
@@ -253,7 +253,7 @@ public class OIDMap {
      * @return the user friendly name or null if no name
      * is registered for this oid.
      */
-    public static String getName(android.sun.security.util.ObjectIdentifier oid) {
+    public static String getName(ObjectIdentifier oid) {
         OIDInfo info = oidMap.get(oid);
         return (info == null) ? null : info.name;
     }
@@ -265,7 +265,7 @@ public class OIDMap {
      * @return the Object Identifier or null if no oid
      * is registered for this name.
      */
-    public static android.sun.security.util.ObjectIdentifier getOID(String name) {
+    public static ObjectIdentifier getOID(String name) {
         OIDInfo info = nameMap.get(name);
         return (info == null) ? null : info.oid;
     }
@@ -287,7 +287,7 @@ public class OIDMap {
      * @param oid the name of the object identifier to be returned.
      * @exception CertificateException if class cannot be instatiated.
      */
-    public static Class getClass(android.sun.security.util.ObjectIdentifier oid)
+    public static Class getClass(ObjectIdentifier oid)
             throws CertificateException {
         OIDInfo info = oidMap.get(oid);
         return (info == null) ? null : info.getClazz();

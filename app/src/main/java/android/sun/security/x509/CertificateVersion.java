@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -37,7 +39,7 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateVersion implements CertAttrSet<String> {
     /**
@@ -72,7 +74,7 @@ public class CertificateVersion implements CertAttrSet<String> {
     }
 
     // Construct the class from the passed DerValue
-    private void construct(android.sun.security.util.DerValue derVal) throws IOException {
+    private void construct(DerValue derVal) throws IOException {
         if (derVal.isConstructed() && derVal.isContextSpecific()) {
             derVal = derVal.data.getDerValue();
             version = derVal.getInteger();
@@ -113,9 +115,9 @@ public class CertificateVersion implements CertAttrSet<String> {
      * @param in the DerInputStream to read the CertificateVersion from.
      * @exception IOException on decoding errors.
      */
-    public CertificateVersion(android.sun.security.util.DerInputStream in) throws IOException {
+    public CertificateVersion(DerInputStream in) throws IOException {
         version = V1;
-        android.sun.security.util.DerValue derVal = in.getDerValue();
+        DerValue derVal = in.getDerValue();
 
         construct(derVal);
     }
@@ -128,7 +130,7 @@ public class CertificateVersion implements CertAttrSet<String> {
      */
     public CertificateVersion(InputStream in) throws IOException {
         version = V1;
-        DerValue derVal = new android.sun.security.util.DerValue(in);
+        DerValue derVal = new DerValue(in);
 
         construct(derVal);
     }
@@ -139,7 +141,7 @@ public class CertificateVersion implements CertAttrSet<String> {
      * @param val the Der encoded value.
      * @exception IOException on decoding errors.
      */
-    public CertificateVersion(android.sun.security.util.DerValue val) throws IOException {
+    public CertificateVersion(DerValue val) throws IOException {
         version = V1;
 
         construct(val);
@@ -163,11 +165,11 @@ public class CertificateVersion implements CertAttrSet<String> {
         if (version == V1) {
             return;
         }
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         tmp.putInteger(version);
 
-        android.sun.security.util.DerOutputStream seq = new android.sun.security.util.DerOutputStream();
-        seq.write(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT, true, (byte)0),
+        DerOutputStream seq = new DerOutputStream();
+        seq.write(DerValue.createTag(DerValue.TAG_CONTEXT, true, (byte)0),
                   tmp);
 
         out.write(seq.toByteArray());
@@ -217,7 +219,7 @@ public class CertificateVersion implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(VERSION);
 
         return (elements.elements());

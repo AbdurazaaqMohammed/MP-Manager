@@ -94,7 +94,7 @@ import android.sun.security.util.DerValue;
  *
  *
  * @see java.security.KeyStore
- * @see android.sun.security.provider.JavaKeyStore
+ * @see JavaKeyStore
  * @see KeyTool
  *
  * @since 1.2

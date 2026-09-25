@@ -19,7 +19,6 @@ import com.reandroid.archive.block.*;
 import com.reandroid.utils.collection.InstanceIterator;
 
 import java.util.Iterator;
-import java.util.List;
 
 public class V2Signer extends LengthPrefixedBlock {
     private final V2Signature v2Signature;

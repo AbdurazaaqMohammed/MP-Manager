@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
 
@@ -37,10 +39,10 @@ import java.io.IOException;
  * @author Hemma Prafullchandra
  * @see GeneralName
  * @see GeneralNames
- * @see android.sun.security.x509.GeneralNameInterface
+ * @see GeneralNameInterface
  */
-public class OIDName implements android.sun.security.x509.GeneralNameInterface {
-     private final android.sun.security.util.ObjectIdentifier oid;
+public class OIDName implements GeneralNameInterface {
+     private final ObjectIdentifier oid;
 
     /**
      * Create the OIDName object from the passed encoded Der value.
@@ -57,7 +59,7 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
      *
      * @param name the OIDName.
      */
-    public OIDName(android.sun.security.util.ObjectIdentifier oid) {
+    public OIDName(ObjectIdentifier oid) {
         this.oid = oid;
     }
 
@@ -69,7 +71,7 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
      */
     public OIDName(String name) throws IOException {
         try {
-            oid = new android.sun.security.util.ObjectIdentifier(name);
+            oid = new ObjectIdentifier(name);
         } catch (Exception e) {
             throw new IOException("Unable to create OIDName: " + e);
         }
@@ -79,7 +81,7 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return (android.sun.security.x509.GeneralNameInterface.NAME_OID);
+        return (GeneralNameInterface.NAME_OID);
     }
 
     /**
@@ -88,7 +90,7 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
      * @param out the DER stream to encode the OIDName to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
         out.putOID(oid);
     }
 
@@ -102,7 +104,7 @@ public class OIDName implements android.sun.security.x509.GeneralNameInterface {
     /**
      * Returns this OID name.
      */
-    public android.sun.security.util.ObjectIdentifier getOID() {
+    public ObjectIdentifier getOID() {
         return oid;
     }
 

@@ -112,7 +112,7 @@ import android.sun.security.pkcs.EncryptedPrivateKeyInfo;
  * @author Jan Luehe
  *
  * @see KeyProtector
- * @see java.security.KeyStoreSpi
+ * @see KeyStoreSpi
  * @see KeyTool
  *
  *

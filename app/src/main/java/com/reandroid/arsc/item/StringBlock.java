@@ -15,6 +15,8 @@
  */
 package com.reandroid.arsc.item;
 
+import android.text.TextUtils;
+
 import com.reandroid.utils.StringsUtil;
 
 import java.nio.charset.CharsetDecoder;
@@ -35,7 +37,7 @@ public abstract class StringBlock extends BlockItem implements StringReference {
         set(text, true);
     }
     public void set(String text, boolean notify){
-        if(android.text.TextUtils.isEmpty(text)){
+        if(TextUtils.isEmpty(text)){
             text = StringsUtil.EMPTY;
         }
         String old = this.mCache;

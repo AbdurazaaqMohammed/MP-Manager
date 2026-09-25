@@ -26,6 +26,9 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.BitArray;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,8 +47,8 @@ import java.util.*;
  * but is provided here for compatibility reasons.
  *
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 
 public class NetscapeCertTypeExtension extends Extension
@@ -74,11 +77,11 @@ implements CertAttrSet<String> {
     /**
      * Object identifier for the Netscape-Cert-Type extension.
      */
-    public static android.sun.security.util.ObjectIdentifier NetscapeCertType_Id;
+    public static ObjectIdentifier NetscapeCertType_Id;
 
     static {
         try {
-            NetscapeCertType_Id = new android.sun.security.util.ObjectIdentifier(CertType_data);
+            NetscapeCertType_Id = new ObjectIdentifier(CertType_data);
         } catch (IOException ioe) {
             // should not happen
         }
@@ -125,7 +128,7 @@ implements CertAttrSet<String> {
 
     // Encode this extension value
     private void encodeThis() throws IOException {
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
+        DerOutputStream os = new DerOutputStream();
         os.putTruncatedUnalignedBitString(new BitArray(this.bitString));
         this.extensionValue = os.toByteArray();
     }
@@ -160,7 +163,7 @@ implements CertAttrSet<String> {
      */
     public NetscapeCertTypeExtension(byte[] bitString) throws IOException {
         this.bitString =
-            new android.sun.security.util.BitArray(bitString.length*8, bitString).toBooleanArray();
+            new BitArray(bitString.length*8, bitString).toBooleanArray();
         this.extensionId = NetscapeCertType_Id;
         this.critical = true;
         encodeThis();
@@ -192,7 +195,7 @@ implements CertAttrSet<String> {
         this.extensionId = NetscapeCertType_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         this.bitString = val.getUnalignedBitString().toBooleanArray();
     }
 
@@ -266,7 +269,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         if (this.extensionValue == null) {
             this.extensionId = NetscapeCertType_Id;
@@ -299,7 +302,7 @@ implements CertAttrSet<String> {
      * of the KeyUsage extension as an array of booleans.
      */
     public boolean[] getKeyUsageMappedBits() {
-        android.sun.security.x509.KeyUsageExtension keyUsage = new KeyUsageExtension();
+        KeyUsageExtension keyUsage = new KeyUsageExtension();
         Boolean val = Boolean.TRUE;
 
         try {

@@ -303,7 +303,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			return menuId;
 		}
 		
-		private int defaultInsertPosition(java.util.List<String> order, String afterId) {
+		private int defaultInsertPosition(List<String> order, String afterId) {
 			if (afterId != null) {
 				int anchor = order.indexOf(afterId);
 				if (anchor >= 0) return Math.min(anchor + 1, order.size());

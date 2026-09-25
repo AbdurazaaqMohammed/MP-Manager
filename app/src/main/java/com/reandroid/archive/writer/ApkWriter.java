@@ -26,6 +26,7 @@ import com.reandroid.archive.io.ZipOutput;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.zip.Deflater;
 
 public abstract class ApkWriter<T extends ZipOutput, OUT extends OutputSource> implements Closeable {
     private final Object mLock = new Object();
@@ -36,7 +37,7 @@ public abstract class ApkWriter<T extends ZipOutput, OUT extends OutputSource> i
     private APKLogger apkLogger;
     private WriteProgress writeProgress;
     private final HeaderInterceptorChain interceptorChain;
-    private int compressionLevel = java.util.zip.Deflater.DEFAULT_COMPRESSION;
+    private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
 
     public ApkWriter(T zipOutput, InputSource[] sources){
         this.zipOutput = zipOutput;

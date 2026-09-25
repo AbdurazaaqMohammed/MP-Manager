@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -39,7 +41,7 @@ import java.util.Enumeration;
  * @author Hemma Prafullchandra
  */
 public class CertificateAlgorithmId implements CertAttrSet<String> {
-    private android.sun.security.x509.AlgorithmId algId;
+    private AlgorithmId algId;
 
     /**
      * Identifier for this attribute, to be used with the
@@ -55,7 +57,7 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      * Identifier to be used with get, set, and delete methods. When
      * using this identifier the associated object being passed in or
      * returned is an instance of AlgorithmId.
-     * @see android.sun.security.x509.AlgorithmId
+     * @see AlgorithmId
      */
     public static final String ALGORITHM = "algorithm";
 
@@ -64,7 +66,7 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      *
      * @param algId the Algorithm identifier
      */
-    public CertificateAlgorithmId(android.sun.security.x509.AlgorithmId algId) {
+    public CertificateAlgorithmId(AlgorithmId algId) {
         this.algId = algId;
     }
 
@@ -74,9 +76,9 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      * @param in the DerInputStream to read the serial number from.
      * @exception IOException on decoding errors.
      */
-    public CertificateAlgorithmId(android.sun.security.util.DerInputStream in) throws IOException {
+    public CertificateAlgorithmId(DerInputStream in) throws IOException {
         DerValue val = in.getDerValue();
-        algId = android.sun.security.x509.AlgorithmId.parse(val);
+        algId = AlgorithmId.parse(val);
     }
 
     /**
@@ -86,8 +88,8 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      * @exception IOException on decoding errors.
      */
     public CertificateAlgorithmId(InputStream in) throws IOException {
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(in);
-        algId = android.sun.security.x509.AlgorithmId.parse(val);
+        DerValue val = new DerValue(in);
+        algId = AlgorithmId.parse(val);
     }
 
     /**
@@ -106,7 +108,7 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      * @exception IOException on errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         algId.encode(tmp);
 
         out.write(tmp.toByteArray());
@@ -116,7 +118,7 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      * Set the attribute value.
      */
     public void set(String name, Object obj) throws IOException {
-        if (!(obj instanceof android.sun.security.x509.AlgorithmId)) {
+        if (!(obj instanceof AlgorithmId)) {
             throw new IOException("Attribute must be of type AlgorithmId.");
         }
         if (name.equalsIgnoreCase(ALGORITHM)) {
@@ -156,7 +158,7 @@ public class CertificateAlgorithmId implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(ALGORITHM);
         return (elements.elements());
     }

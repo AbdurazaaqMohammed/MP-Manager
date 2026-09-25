@@ -84,8 +84,8 @@ public class DistributionPointName {
     private static final byte TAG_RELATIVE_NAME = 1;
 
     // Only one of fullName and relativeName can be set
-    private android.sun.security.x509.GeneralNames fullName = null;
-    private android.sun.security.x509.RDN relativeName = null;
+    private GeneralNames fullName = null;
+    private RDN relativeName = null;
 
     // Cached hashCode value
     private volatile int hashCode;
@@ -96,7 +96,7 @@ public class DistributionPointName {
      * @param fullName the name for the distribution point.
      * @exception IllegalArgumentException if <code>fullName</code> is null.
      */
-    public DistributionPointName(android.sun.security.x509.GeneralNames fullName) {
+    public DistributionPointName(GeneralNames fullName) {
 
         if (fullName == null) {
             throw new IllegalArgumentException("fullName must not be null");
@@ -111,7 +111,7 @@ public class DistributionPointName {
      *        the name of the issuer of the CRL.
      * @exception IllegalArgumentException if <code>relativeName</code> is null.
      */
-    public DistributionPointName(android.sun.security.x509.RDN relativeName) {
+    public DistributionPointName(RDN relativeName) {
 
         if (relativeName == null) {
             throw new IllegalArgumentException("relativeName must not be null");
@@ -131,13 +131,13 @@ public class DistributionPointName {
             encoding.isConstructed()) {
 
             encoding.resetTag(DerValue.tag_Sequence);
-            fullName = new android.sun.security.x509.GeneralNames(encoding);
+            fullName = new GeneralNames(encoding);
 
         } else if (encoding.isContextSpecific(TAG_RELATIVE_NAME) &&
             encoding.isConstructed()) {
 
             encoding.resetTag(DerValue.tag_Set);
-            relativeName = new android.sun.security.x509.RDN(encoding);
+            relativeName = new RDN(encoding);
 
         } else {
             throw new IOException("Invalid encoding for DistributionPointName");

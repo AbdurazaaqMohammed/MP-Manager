@@ -494,7 +494,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         String[] parsed = splitFieldTarget(methodOrFieldName);
         if (parsed == null || getActivity() == null) return;
         PopupMenu sub = new PopupMenu(getActivity(), anchor);
-        android.view.Menu m = sub.getMenu();
+        Menu m = sub.getMenu();
         m.add(0, 23, 0, "Find all usages");
         m.add(0, 24, 1, "Find get usages");
         m.add(0, 25, 2, "Find put usages");

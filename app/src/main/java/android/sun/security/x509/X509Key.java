@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.BitArray;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.*;
@@ -64,13 +66,13 @@ public class X509Key implements PublicKey {
     private static final long serialVersionUID = -5359250853002055002L;
 
     /* The algorithm information (name, parameters, etc). */
-    protected android.sun.security.x509.AlgorithmId algid;
+    protected AlgorithmId algid;
 
     /**
      * The key bytes, without the algorithm information.
      * @deprecated Use the BitArray form which does not require keys to
      * be byte aligned.
-     * @see X509Key#setKey(android.sun.security.util.BitArray)
+     * @see X509Key#setKey(BitArray)
      * @see X509Key#getKey()
      */
     @Deprecated
@@ -84,7 +86,7 @@ public class X509Key implements PublicKey {
     private int unusedBits = 0;
 
     /* BitArray form of key */
-    private android.sun.security.util.BitArray bitStringKey = null;
+    private BitArray bitStringKey = null;
 
     /* The encoding for the key. */
     protected byte[] encodedKey;
@@ -101,7 +103,7 @@ public class X509Key implements PublicKey {
      * data is stored and transmitted losslessly, but no knowledge
      * about this particular algorithm is available.
      */
-    private X509Key(android.sun.security.x509.AlgorithmId algid, android.sun.security.util.BitArray key)
+    private X509Key(AlgorithmId algid, BitArray key)
     throws InvalidKeyException {
         this.algid = algid;
         setKey(key);
@@ -111,8 +113,8 @@ public class X509Key implements PublicKey {
     /**
      * Sets the key in the BitArray form.
      */
-    protected void setKey(android.sun.security.util.BitArray key) {
-        this.bitStringKey = (android.sun.security.util.BitArray)key.clone();
+    protected void setKey(BitArray key) {
+        this.bitStringKey = (BitArray)key.clone();
 
         /*
          * Do this to keep the byte array form consistent with
@@ -128,7 +130,7 @@ public class X509Key implements PublicKey {
      * Gets the key. The key may or may not be byte aligned.
      * @return a BitArray containing the key.
      */
-    protected android.sun.security.util.BitArray getKey() {
+    protected BitArray getKey() {
         /*
          * Do this for consistency in case a subclass
          * modifies byte[] key directly. Remove when
@@ -137,11 +139,11 @@ public class X509Key implements PublicKey {
          * modifies a non byte-aligned key (into a byte-aligned key)
          * using the deprecated byte[] key field.
          */
-        this.bitStringKey = new android.sun.security.util.BitArray(
+        this.bitStringKey = new BitArray(
                           this.key.length * 8 - this.unusedBits,
                           this.key);
 
-        return (android.sun.security.util.BitArray)bitStringKey.clone();
+        return (BitArray)bitStringKey.clone();
     }
 
     /**
@@ -158,15 +160,15 @@ public class X509Key implements PublicKey {
      * @param in the DER-encoded SubjectPublicKeyInfo value
      * @exception IOException on data format errors
      */
-    public static PublicKey parse(android.sun.security.util.DerValue in) throws IOException
+    public static PublicKey parse(DerValue in) throws IOException
     {
-        android.sun.security.x509.AlgorithmId algorithm;
+        AlgorithmId algorithm;
         PublicKey       subjectKey;
 
-        if (in.tag != android.sun.security.util.DerValue.tag_Sequence)
+        if (in.tag != DerValue.tag_Sequence)
             throw new IOException("corrupt subject key");
 
-        algorithm = android.sun.security.x509.AlgorithmId.parse(in.data.getDerValue());
+        algorithm = AlgorithmId.parse(in.data.getDerValue());
         try {
             subjectKey = buildX509Key(algorithm,
                                       in.data.getUnalignedBitString());
@@ -203,7 +205,7 @@ public class X509Key implements PublicKey {
      * specific algorithm ID or else returning this generic base class.
      * See the description above.
      */
-    static PublicKey buildX509Key(android.sun.security.x509.AlgorithmId algid, android.sun.security.util.BitArray key)
+    static PublicKey buildX509Key(AlgorithmId algid, BitArray key)
       throws IOException, InvalidKeyException
     {
         /*
@@ -211,7 +213,7 @@ public class X509Key implements PublicKey {
          * of the key, which will then be used as the input to the
          * key factory.
          */
-        android.sun.security.util.DerOutputStream x509EncodedKeyStream = new android.sun.security.util.DerOutputStream();
+        DerOutputStream x509EncodedKeyStream = new DerOutputStream();
         encode(x509EncodedKeyStream, algid, key);
         X509EncodedKeySpec x509KeySpec
             = new X509EncodedKeySpec(x509EncodedKeyStream.toByteArray());
@@ -287,14 +289,14 @@ public class X509Key implements PublicKey {
     /**
      * Returns the algorithm ID to be used with this key.
      */
-    public android.sun.security.x509.AlgorithmId getAlgorithmId() { return algid; }
+    public AlgorithmId getAlgorithmId() { return algid; }
 
     /**
      * Encode SubjectPublicKeyInfo sequence on the DER output stream.
      *
      * @exception IOException on encoding errors.
      */
-    public final void encode(android.sun.security.util.DerOutputStream out) throws IOException
+    public final void encode(DerOutputStream out) throws IOException
     {
         encode(out, this.algid, getKey());
     }
@@ -315,7 +317,7 @@ public class X509Key implements PublicKey {
         byte[] encoded = encodedKey;
         if (encoded == null) {
             try {
-                android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
+                DerOutputStream out = new DerOutputStream();
                 encode(out);
                 encoded = out.toByteArray();
             } catch (IOException e) {
@@ -378,14 +380,14 @@ public class X509Key implements PublicKey {
     public void decode(InputStream in)
     throws InvalidKeyException
     {
-        android.sun.security.util.DerValue val;
+        DerValue val;
 
         try {
-            val = new android.sun.security.util.DerValue(in);
-            if (val.tag != android.sun.security.util.DerValue.tag_Sequence)
+            val = new DerValue(in);
+            if (val.tag != DerValue.tag_Sequence)
                 throw new InvalidKeyException("invalid key format");
 
-            algid = android.sun.security.x509.AlgorithmId.parse(val.data.getDerValue());
+            algid = AlgorithmId.parse(val.data.getDerValue());
             setKey(val.data.getUnalignedBitString());
             parseKeyBits();
             if (val.data.available() != 0)
@@ -468,9 +470,9 @@ public class X509Key implements PublicKey {
     /*
      * Produce SubjectPublicKey encoding from algorithm id and key material.
      */
-    static void encode(android.sun.security.util.DerOutputStream out, AlgorithmId algid, android.sun.security.util.BitArray key)
+    static void encode(DerOutputStream out, AlgorithmId algid, BitArray key)
         throws IOException {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             algid.encode(tmp);
             tmp.putUnalignedBitString(key);
             out.write(DerValue.tag_Sequence, tmp);

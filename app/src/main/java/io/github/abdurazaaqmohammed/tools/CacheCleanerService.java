@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.tools;
 
 import android.accessibilityservice.AccessibilityService;
+import android.content.Intent;
 import android.view.accessibility.AccessibilityEvent;
 
 public class CacheCleanerService extends AccessibilityService {
@@ -19,7 +20,7 @@ public class CacheCleanerService extends AccessibilityService {
     public void onInterrupt() {
     }
 
-    public boolean onUnbind(android.content.Intent intent) {
+    public boolean onUnbind(Intent intent) {
         CacheCleaner.setActiveService(null);
         return super.onUnbind(intent);
     }

@@ -34,7 +34,6 @@ import com.android.tools.smali.util.RandomAccessFileInputStream;
 import com.android.tools.smali.util.RandomAccessFileOutputStream;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

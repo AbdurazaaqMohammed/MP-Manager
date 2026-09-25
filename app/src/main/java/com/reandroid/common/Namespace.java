@@ -15,6 +15,8 @@
  */
 package com.reandroid.common;
 
+import android.text.TextUtils;
+
 import com.reandroid.utils.ObjectsUtil;
 import com.reandroid.utils.StringsUtil;
 
@@ -70,7 +72,7 @@ public interface Namespace {
         return isValidPrefix(prefix);
     }
     static boolean isValidPrefix(String prefix) {
-        if(android.text.TextUtils.isEmpty(prefix)){
+        if(TextUtils.isEmpty(prefix)){
             return false;
         }
         char[] chars = prefix.toCharArray();

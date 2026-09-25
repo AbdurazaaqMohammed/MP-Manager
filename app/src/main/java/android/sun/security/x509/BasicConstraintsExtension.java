@@ -26,6 +26,7 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -47,8 +48,8 @@ import java.util.Enumeration;
  * </pre>
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
- * @see android.sun.security.x509.Extension
+ * @see CertAttrSet
+ * @see Extension
  */
 public class BasicConstraintsExtension extends Extension
 implements CertAttrSet<String> {
@@ -70,8 +71,8 @@ implements CertAttrSet<String> {
 
     // Encode this extension value
     private void encodeThis() throws IOException {
-        android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
-        android.sun.security.util.DerOutputStream tmp = new DerOutputStream();
+        DerOutputStream out = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         if (ca) {
             tmp.putBoolean(ca);
@@ -80,7 +81,7 @@ implements CertAttrSet<String> {
                 tmp.putInteger(pathLen);
             }
         }
-        out.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+        out.write(DerValue.tag_Sequence, tmp);
         this.extensionValue = out.toByteArray();
     }
 
@@ -106,7 +107,7 @@ implements CertAttrSet<String> {
     throws IOException {
         this.ca = ca;
         this.pathLen = len;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.BasicConstraints_Id;
+        this.extensionId = PKIXExtensions.BasicConstraints_Id;
         this.critical = critical;
         encodeThis();
     }
@@ -122,12 +123,12 @@ implements CertAttrSet<String> {
      public BasicConstraintsExtension(Boolean critical, Object value)
          throws IOException
     {
-         this.extensionId = android.sun.security.x509.PKIXExtensions.BasicConstraints_Id;
+         this.extensionId = PKIXExtensions.BasicConstraints_Id;
          this.critical = critical;
 
          this.extensionValue = (byte[]) value;
-         android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
-         if (val.tag != android.sun.security.util.DerValue.tag_Sequence) {
+         DerValue val = new DerValue(this.extensionValue);
+         if (val.tag != DerValue.tag_Sequence) {
              throw new IOException("Invalid encoding of BasicConstraints");
          }
 
@@ -135,8 +136,8 @@ implements CertAttrSet<String> {
              // non-CA cert ("cA" field is FALSE by default), return -1
              return;
          }
-         android.sun.security.util.DerValue opt = val.data.getDerValue();
-         if (opt.tag != android.sun.security.util.DerValue.tag_Boolean) {
+         DerValue opt = val.data.getDerValue();
+         if (opt.tag != DerValue.tag_Boolean) {
              // non-CA cert ("cA" field is FALSE by default), return -1
              return;
          }
@@ -151,7 +152,7 @@ implements CertAttrSet<String> {
          }
 
          opt = val.data.getDerValue();
-         if (opt.tag != android.sun.security.util.DerValue.tag_Integer) {
+         if (opt.tag != DerValue.tag_Integer) {
              throw new IOException("Invalid encoding of BasicConstraints");
          }
          this.pathLen = opt.getInteger();
@@ -188,7 +189,7 @@ implements CertAttrSet<String> {
       * @param out the DerOutputStream to encode the extension to.
       */
      public void encode(OutputStream out) throws IOException {
-         android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+         DerOutputStream tmp = new DerOutputStream();
          if (extensionValue == null) {
              this.extensionId = PKIXExtensions.BasicConstraints_Id;
              critical = ca;
@@ -254,7 +255,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(IS_CA);
         elements.addElement(PATH_LEN);
 

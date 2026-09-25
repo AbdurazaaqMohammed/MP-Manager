@@ -26,6 +26,9 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
 
@@ -37,34 +40,34 @@ public final class AccessDescription {
 
     private int myhash = -1;
 
-    private final android.sun.security.util.ObjectIdentifier accessMethod;
+    private final ObjectIdentifier accessMethod;
 
-    private final android.sun.security.x509.GeneralName accessLocation;
+    private final GeneralName accessLocation;
 
-    public static final android.sun.security.util.ObjectIdentifier Ad_OCSP_Id =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 1});
+    public static final ObjectIdentifier Ad_OCSP_Id =
+        ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 1});
 
-    public static final android.sun.security.util.ObjectIdentifier Ad_CAISSUERS_Id =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 2});
+    public static final ObjectIdentifier Ad_CAISSUERS_Id =
+        ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 2});
 
-    public static final android.sun.security.util.ObjectIdentifier Ad_TIMESTAMPING_Id =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 3});
+    public static final ObjectIdentifier Ad_TIMESTAMPING_Id =
+        ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 3});
 
-    public static final android.sun.security.util.ObjectIdentifier Ad_CAREPOSITORY_Id =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 5});
+    public static final ObjectIdentifier Ad_CAREPOSITORY_Id =
+        ObjectIdentifier.newInternal(new int[] {1, 3, 6, 1, 5, 5, 7, 48, 5});
 
-    public AccessDescription(android.sun.security.util.ObjectIdentifier accessMethod, android.sun.security.x509.GeneralName accessLocation) {
+    public AccessDescription(ObjectIdentifier accessMethod, GeneralName accessLocation) {
         this.accessMethod = accessMethod;
         this.accessLocation = accessLocation;
     }
 
-    public AccessDescription(android.sun.security.util.DerValue derValue) throws IOException {
+    public AccessDescription(DerValue derValue) throws IOException {
         DerInputStream derIn = derValue.getData();
         accessMethod = derIn.getOID();
-        accessLocation = new android.sun.security.x509.GeneralName(derIn.getDerValue());
+        accessLocation = new GeneralName(derIn.getDerValue());
     }
 
-    public android.sun.security.util.ObjectIdentifier getAccessMethod() {
+    public ObjectIdentifier getAccessMethod() {
         return accessMethod;
     }
 
@@ -72,11 +75,11 @@ public final class AccessDescription {
         return accessLocation;
     }
 
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+    public void encode(DerOutputStream out) throws IOException {
+        DerOutputStream tmp = new DerOutputStream();
         tmp.putOID(accessMethod);
         accessLocation.encode(tmp);
-        out.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+        out.write(DerValue.tag_Sequence, tmp);
     }
 
     public int hashCode() {

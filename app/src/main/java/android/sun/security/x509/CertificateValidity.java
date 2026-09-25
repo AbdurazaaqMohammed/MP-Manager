@@ -25,6 +25,8 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -37,7 +39,7 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateValidity implements CertAttrSet<String> {
     /**
@@ -68,8 +70,8 @@ public class CertificateValidity implements CertAttrSet<String> {
     }
 
     // Construct the class from the DerValue
-    private void construct(android.sun.security.util.DerValue derVal) throws IOException {
-        if (derVal.tag != android.sun.security.util.DerValue.tag_Sequence) {
+    private void construct(DerValue derVal) throws IOException {
+        if (derVal.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoded CertificateValidity, " +
                                   "starting sequence tag missing.");
         }
@@ -77,22 +79,22 @@ public class CertificateValidity implements CertAttrSet<String> {
         if (derVal.data.available() == 0)
             throw new IOException("No data encoded for CertificateValidity");
 
-        DerInputStream derIn = new android.sun.security.util.DerInputStream(derVal.toByteArray());
-        android.sun.security.util.DerValue[] seq = derIn.getSequence(2);
+        DerInputStream derIn = new DerInputStream(derVal.toByteArray());
+        DerValue[] seq = derIn.getSequence(2);
         if (seq.length != 2)
             throw new IOException("Invalid encoding for CertificateValidity");
 
-        if (seq[0].tag == android.sun.security.util.DerValue.tag_UtcTime) {
+        if (seq[0].tag == DerValue.tag_UtcTime) {
             notBefore = derVal.data.getUTCTime();
-        } else if (seq[0].tag == android.sun.security.util.DerValue.tag_GeneralizedTime) {
+        } else if (seq[0].tag == DerValue.tag_GeneralizedTime) {
             notBefore = derVal.data.getGeneralizedTime();
         } else {
             throw new IOException("Invalid encoding for CertificateValidity");
         }
 
-        if (seq[1].tag == android.sun.security.util.DerValue.tag_UtcTime) {
+        if (seq[1].tag == DerValue.tag_UtcTime) {
             notAfter = derVal.data.getUTCTime();
-        } else if (seq[1].tag == android.sun.security.util.DerValue.tag_GeneralizedTime) {
+        } else if (seq[1].tag == DerValue.tag_GeneralizedTime) {
             notAfter = derVal.data.getGeneralizedTime();
         } else {
             throw new IOException("Invalid encoding for CertificateValidity");
@@ -123,8 +125,8 @@ public class CertificateValidity implements CertAttrSet<String> {
      * @param in the DerInputStream to read the CertificateValidity from.
      * @exception IOException on decoding errors.
      */
-    public CertificateValidity(android.sun.security.util.DerInputStream in) throws IOException {
-        android.sun.security.util.DerValue derVal = in.getDerValue();
+    public CertificateValidity(DerInputStream in) throws IOException {
+        DerValue derVal = in.getDerValue();
         construct(derVal);
     }
 
@@ -152,7 +154,7 @@ public class CertificateValidity implements CertAttrSet<String> {
             throw new IOException("CertAttrSet:CertificateValidity:" +
                                   " null values to encode.\n");
         }
-        android.sun.security.util.DerOutputStream pair = new android.sun.security.util.DerOutputStream();
+        DerOutputStream pair = new DerOutputStream();
 
         if (notBefore.getTime() < YR_2050) {
             pair.putUTCTime(notBefore);
@@ -164,8 +166,8 @@ public class CertificateValidity implements CertAttrSet<String> {
         } else {
             pair.putGeneralizedTime(notAfter);
         }
-        android.sun.security.util.DerOutputStream seq = new android.sun.security.util.DerOutputStream();
-        seq.write(android.sun.security.util.DerValue.tag_Sequence, pair);
+        DerOutputStream seq = new DerOutputStream();
+        seq.write(DerValue.tag_Sequence, pair);
 
         out.write(seq.toByteArray());
     }
@@ -220,7 +222,7 @@ public class CertificateValidity implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(NOT_BEFORE);
         elements.addElement(NOT_AFTER);
 

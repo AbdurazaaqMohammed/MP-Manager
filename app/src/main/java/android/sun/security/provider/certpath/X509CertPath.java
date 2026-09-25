@@ -47,9 +47,9 @@ import android.sun.security.util.DerInputStream;
 
 
 /**
- * A {@link java.security.cert.CertPath CertPath} (certification path)
+ * A {@link CertPath CertPath} (certification path)
  * consisting exclusively of
- * {@link java.security.cert.X509Certificate X509Certificate}s.
+ * {@link X509Certificate X509Certificate}s.
  * <p>
  * By convention, X.509 <code>CertPath</code>s are stored from target
  * to trust anchor.

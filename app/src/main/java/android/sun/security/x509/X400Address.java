@@ -330,9 +330,9 @@ import android.sun.security.util.DerOutputStream;
  * @since       1.4
  * @see GeneralName
  * @see GeneralNames
- * @see android.sun.security.x509.GeneralNameInterface
+ * @see GeneralNameInterface
  */
-public class X400Address implements android.sun.security.x509.GeneralNameInterface {
+public class X400Address implements GeneralNameInterface {
 
     // Private data members
     byte[] nameValue = null;
@@ -360,7 +360,7 @@ public class X400Address implements android.sun.security.x509.GeneralNameInterfa
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return (android.sun.security.x509.GeneralNameInterface.NAME_X400);
+        return (GeneralNameInterface.NAME_X400);
     }
 
     /**

@@ -2,6 +2,7 @@ package modder.hub.dexeditor.utils;
 
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.iface.Method;
+import com.android.tools.smali.dexlib2.iface.MethodParameter;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ public final class DexUsageHelper {
         StringBuilder sb = new StringBuilder("(");
         try {
             for (Object p : m.getParameters()) {
-                sb.append(((com.android.tools.smali.dexlib2.iface.MethodParameter) p).getType());
+                sb.append(((MethodParameter) p).getType());
             }
         } catch (Exception ignored) {
         }

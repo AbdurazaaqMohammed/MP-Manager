@@ -238,7 +238,7 @@ class ObjectIdentifier implements Serializable
      * @param in DER-encoded data holding an object ID
      * @exception IOException indicates a decoding error
      */
-    public ObjectIdentifier (android.sun.security.util.DerInputStream in) throws IOException
+    public ObjectIdentifier (DerInputStream in) throws IOException
     {
         byte    type_id;
         int     bufferEnd;
@@ -253,7 +253,7 @@ class ObjectIdentifier implements Serializable
          * this value in the data stream.
          */
         type_id = (byte) in.getByte ();
-        if (type_id != android.sun.security.util.DerValue.tag_ObjectId)
+        if (type_id != DerValue.tag_ObjectId)
             throw new IOException (
                 "ObjectIdentifier() -- data isn't an object ID"
                 + " (tag = " +  type_id + ")"
@@ -269,9 +269,9 @@ class ObjectIdentifier implements Serializable
      * the tag and length have been removed/verified
      * Validity check NOT included.
      */
-    ObjectIdentifier (android.sun.security.util.DerInputBuffer buf) throws IOException
+    ObjectIdentifier (DerInputBuffer buf) throws IOException
     {
-        android.sun.security.util.DerInputStream in = new DerInputStream(buf);
+        DerInputStream in = new DerInputStream(buf);
         encoding = new byte[in.available()];
         in.getBytes(encoding);
         check(encoding);

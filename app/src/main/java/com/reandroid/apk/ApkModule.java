@@ -63,6 +63,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections4.Predicate;
+
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 
 public class ApkModule implements ApkFile, Closeable {
@@ -83,7 +85,7 @@ public class ApkModule implements ApkFile, Closeable {
     private Closeable mCloseable;
     private final List<TableBlock> mExternalFrameworks;
     private int extractNativeLibs;
-    private int compressionLevel = java.util.zip.Deflater.DEFAULT_COMPRESSION;
+    private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
 
     private final Map<Object, Object> mTagMaps;
 

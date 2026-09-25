@@ -27,6 +27,7 @@ package android.sun.security.ec;
 
 import java.io.IOException;
 
+import java.io.ObjectStreamException;
 import java.io.Serial;
 import java.security.*;
 import java.security.interfaces.*;
@@ -112,7 +113,7 @@ public final class ECPublicKeyImpl extends X509Key implements ECPublicKey {
     }
 
     @Serial
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws ObjectStreamException {
         return new KeyRep(KeyRep.Type.PUBLIC,
                         getAlgorithm(),
                         getFormat(),

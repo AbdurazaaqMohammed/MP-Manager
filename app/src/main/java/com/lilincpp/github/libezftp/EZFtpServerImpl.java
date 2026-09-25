@@ -1,8 +1,6 @@
 package com.lilincpp.github.libezftp;
 
 
-import android.util.Log;
-
 import com.lilincpp.github.libezftp.exceptions.EZFtpNoInitException;
 import com.lilincpp.github.libezftp.user.EZFtpUser;
 

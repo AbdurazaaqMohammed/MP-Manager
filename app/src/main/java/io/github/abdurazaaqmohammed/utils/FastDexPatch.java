@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import android.content.Context;
+
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
@@ -25,9 +27,11 @@ import net.lingala.zip4j.model.FileHeader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +41,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import io.github.abdurazaaqmohammed.MPManager.R;
 
 /**
  * Fast dex patching in the style of DexPatcher: work on the binary dex model,
@@ -75,7 +81,7 @@ public final class FastDexPatch {
         return disassembleClasses(null, dex, descriptors, outDir, options, logger);
     }
 
-    public static Map<String, File> disassembleClasses(android.content.Context context, DexBackedDexFile dex, Set<String> descriptors,
+    public static Map<String, File> disassembleClasses(Context context, DexBackedDexFile dex, Set<String> descriptors,
                                                        File outDir, BaksmaliOptions options,
                                                        APKLogger logger) throws IOException {
         Map<String, File> result = new LinkedHashMap<>();
@@ -87,14 +93,14 @@ public final class FastDexPatch {
             File parent = out.getParentFile();
             if (parent != null) parent.mkdirs();
             try (OutputStreamWriter writer = new OutputStreamWriter(
-                    new java.io.FileOutputStream(out), StandardCharsets.UTF_8)) {
+                    new FileOutputStream(out), StandardCharsets.UTF_8)) {
                 BaksmaliWriter bw = new BaksmaliWriter(writer);
                 def.writeTo(bw);
                 bw.close();
             }
             result.put(classDef.getType(), out);
             if (logger != null) {
-                if (context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_disassembled, classDef.getType()));
+                if (context != null) logger.logMessage(context.getString(R.string.logger_disassembled, classDef.getType()));
                 else logger.logMessage("Disassembled " + classDef.getType());
             }
         }
@@ -105,14 +111,14 @@ public final class FastDexPatch {
         return assembleMiniDex(null, smaliDir, api, logger);
     }
 
-    public static File assembleMiniDex(android.content.Context context, File smaliDir, int api, APKLogger logger) throws IOException {
+    public static File assembleMiniDex(Context context, File smaliDir, int api, APKLogger logger) throws IOException {
         File outDex = new File(smaliDir.getParentFile(), smaliDir.getName() + ".mini.dex");
         SmaliOptions options = new SmaliOptions();
         options.outputDexFile = outDex.getPath();
         options.jobs = 1;
         options.apiLevel = api;
         if (logger != null) {
-            if (context != null) logger.logMessage(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.logger_assembling));
+            if (context != null) logger.logMessage(context.getString(R.string.logger_assembling));
             else logger.logMessage("Assembling patched classes ...");
         }
         String errOut = assembleWithErrCapture(options, smaliDir.getPath());
@@ -180,13 +186,13 @@ public final class FastDexPatch {
     }
 
     private static String assembleWithErrCapture(SmaliOptions options, String input) throws IOException {
-        java.io.PrintStream oldErr = System.err;
-        java.io.ByteArrayOutputStream errBuf = new java.io.ByteArrayOutputStream();
-        java.io.PrintStream capture;
+        PrintStream oldErr = System.err;
+        ByteArrayOutputStream errBuf = new ByteArrayOutputStream();
+        PrintStream capture;
         try {
-            capture = new java.io.PrintStream(errBuf, true, StandardCharsets.UTF_8);
+            capture = new PrintStream(errBuf, true, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            capture = new java.io.PrintStream(errBuf);
+            capture = new PrintStream(errBuf);
         }
         System.setErr(capture);
         boolean ok;

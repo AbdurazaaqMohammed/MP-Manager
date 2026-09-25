@@ -26,6 +26,7 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,8 +45,8 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class IssuerAlternativeNameExtension
 extends Extension implements CertAttrSet<String> {
@@ -62,7 +63,7 @@ extends Extension implements CertAttrSet<String> {
     public static final String ISSUER_NAME = "issuer_name";
 
     // private data members
-    android.sun.security.x509.GeneralNames names = null;
+    GeneralNames names = null;
 
     // Encode this extension
     private void encodeThis() throws IOException {
@@ -70,7 +71,7 @@ extends Extension implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
+        DerOutputStream os = new DerOutputStream();
         names.encode(os);
         this.extensionValue = os.toByteArray();
     }
@@ -81,10 +82,10 @@ extends Extension implements CertAttrSet<String> {
      * @param names the GeneralNames for the issuer.
      * @exception IOException on error.
      */
-    public IssuerAlternativeNameExtension(android.sun.security.x509.GeneralNames names)
+    public IssuerAlternativeNameExtension(GeneralNames names)
     throws IOException {
         this.names = names;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.IssuerAlternativeName_Id;
+        this.extensionId = PKIXExtensions.IssuerAlternativeName_Id;
         this.critical = false;
         encodeThis();
     }
@@ -97,10 +98,10 @@ extends Extension implements CertAttrSet<String> {
      * @param names the GeneralNames for the issuer.
      * @exception IOException on error.
      */
-    public IssuerAlternativeNameExtension(Boolean critical, android.sun.security.x509.GeneralNames names)
+    public IssuerAlternativeNameExtension(Boolean critical, GeneralNames names)
     throws IOException {
         this.names = names;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.IssuerAlternativeName_Id;
+        this.extensionId = PKIXExtensions.IssuerAlternativeName_Id;
         this.critical = critical;
         encodeThis();
     }
@@ -109,9 +110,9 @@ extends Extension implements CertAttrSet<String> {
      * Create a default IssuerAlternativeNameExtension.
      */
     public IssuerAlternativeNameExtension() {
-        extensionId = android.sun.security.x509.PKIXExtensions.IssuerAlternativeName_Id;
+        extensionId = PKIXExtensions.IssuerAlternativeName_Id;
         critical = false;
-        names = new android.sun.security.x509.GeneralNames();
+        names = new GeneralNames();
     }
 
     /**
@@ -124,16 +125,16 @@ extends Extension implements CertAttrSet<String> {
      */
     public IssuerAlternativeNameExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.IssuerAlternativeName_Id;
+        this.extensionId = PKIXExtensions.IssuerAlternativeName_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         if (val.data == null) {
-            names = new android.sun.security.x509.GeneralNames();
+            names = new GeneralNames();
             return;
         }
 
-        names = new android.sun.security.x509.GeneralNames(val);
+        names = new GeneralNames(val);
     }
 
     /**
@@ -160,7 +161,7 @@ extends Extension implements CertAttrSet<String> {
      * @exception IOException on encoding error.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         if (extensionValue == null) {
             extensionId = PKIXExtensions.IssuerAlternativeName_Id;
             critical = false;
@@ -175,7 +176,7 @@ extends Extension implements CertAttrSet<String> {
      */
     public void set(String name, Object obj) throws IOException {
         if (name.equalsIgnoreCase(ISSUER_NAME)) {
-            if (!(obj instanceof android.sun.security.x509.GeneralNames)) {
+            if (!(obj instanceof GeneralNames)) {
               throw new IOException("Attribute value should be of" +
                                     " type GeneralNames.");
             }
@@ -217,7 +218,7 @@ extends Extension implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(ISSUER_NAME);
 
         return (elements.elements());

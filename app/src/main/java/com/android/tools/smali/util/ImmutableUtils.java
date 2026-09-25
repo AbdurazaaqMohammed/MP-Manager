@@ -36,7 +36,6 @@ import static java.util.Collections.unmodifiableList;
 
 import android.os.Build;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 
 import javax.annotation.Nonnull;
@@ -45,7 +44,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 public class ImmutableUtils {
     @Nonnull public static <T> List<T> nullToEmptyList(@Nullable List<T> list) {

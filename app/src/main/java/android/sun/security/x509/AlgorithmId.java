@@ -26,6 +26,10 @@
 package android.sun.security.x509;
 
 import android.sun.security.ec.ECKeyFactory;
+import android.sun.security.util.DerEncoder;
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 import android.sun.security.util.ObjectIdentifier;
 
 import java.io.*;
@@ -56,7 +60,7 @@ import java.security.*;
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
  */
-public class AlgorithmId implements Serializable, android.sun.security.util.DerEncoder {
+public class AlgorithmId implements Serializable, DerEncoder {
 
     /** use serialVersionUID from JDK 1.1. for interoperability */
     @Serial
@@ -65,7 +69,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
     /**
      * The object identitifer being used for this algorithm.
      */
-    private android.sun.security.util.ObjectIdentifier algid;
+    private ObjectIdentifier algid;
 
     // The (parsed) parameters
     private AlgorithmParameters algParams;
@@ -76,7 +80,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * DER-encoded form; subclasses can be made to automaticaly parse
      * them so there is fast access to these parameters.
      */
-    protected android.sun.security.util.DerValue params;
+    protected DerValue params;
 
 
     /**
@@ -92,7 +96,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      *
      * @param oid the identifier for the algorithm
      */
-    public AlgorithmId(android.sun.security.util.ObjectIdentifier oid) {
+    public AlgorithmId(ObjectIdentifier oid) {
         algid = oid;
     }
 
@@ -102,13 +106,13 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * @param oid the identifier for the algorithm.
      * @param algparams the associated algorithm parameters.
      */
-    public AlgorithmId(android.sun.security.util.ObjectIdentifier oid, AlgorithmParameters algparams) {
+    public AlgorithmId(ObjectIdentifier oid, AlgorithmParameters algparams) {
         algid = oid;
         algParams = algparams;
         constructedFromDer = false;
     }
 
-    private AlgorithmId(android.sun.security.util.ObjectIdentifier oid, android.sun.security.util.DerValue params)
+    private AlgorithmId(ObjectIdentifier oid, DerValue params)
             throws IOException {
         this.algid = oid;
         this.params = params;
@@ -143,7 +147,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
     /**
      * Marshal a DER-encoded "AlgorithmID" sequence on the DER stream.
      */
-    public final void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public final void encode(DerOutputStream out) throws IOException {
         derEncode(out);
     }
 
@@ -157,14 +161,14 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * @exception IOException on encoding error.
      */
     public void derEncode (OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream bytes = new android.sun.security.util.DerOutputStream();
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream bytes = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         bytes.putOID(algid);
         // Setup params from algParams since no DER encoding is given
         if (!constructedFromDer) {
             if (algParams != null) {
-                params = new android.sun.security.util.DerValue(algParams.getEncoded());
+                params = new DerValue(algParams.getEncoded());
             } else {
                 params = null;
             }
@@ -199,7 +203,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
         } else {
             bytes.putDerValue(params);
         }
-        tmp.write(android.sun.security.util.DerValue.tag_Sequence, bytes);
+        tmp.write(DerValue.tag_Sequence, bytes);
         out.write(tmp.toByteArray());
     }
 
@@ -208,7 +212,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * Returns the DER-encoded X.509 AlgorithmId as a byte array.
      */
     public final byte[] encode() throws IOException {
-        android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
+        DerOutputStream out = new DerOutputStream();
         derEncode(out);
         return out.toByteArray();
     }
@@ -220,7 +224,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * call when you do not need to ensure cross-system portability
      * of algorithm names, or need a user friendly name.
      */
-    public final android.sun.security.util.ObjectIdentifier getOID () {
+    public final ObjectIdentifier getOID () {
         return algid;
     }
 
@@ -240,7 +244,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
         if ((params != null) && algid.equals(specifiedWithECDSA_oid)) {
             try {
                 AlgorithmId paramsId =
-                        AlgorithmId.parse(new android.sun.security.util.DerValue(getEncodedParams()));
+                        AlgorithmId.parse(new DerValue(getEncodedParams()));
                 String paramsName = paramsId.getName();
                 if (paramsName.equals("SHA")) {
                     paramsName = "SHA1";
@@ -290,8 +294,8 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
         }
         if (other instanceof AlgorithmId) {
             return equals((AlgorithmId) other);
-        } else if (other instanceof android.sun.security.util.ObjectIdentifier) {
-            return equals((android.sun.security.util.ObjectIdentifier) other);
+        } else if (other instanceof ObjectIdentifier) {
+            return equals((ObjectIdentifier) other);
         } else {
             return false;
         }
@@ -301,7 +305,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * Compares two algorithm IDs for equality.  Returns true iff
      * they are the same algorithm, ignoring algorithm parameters.
      */
-    public final boolean equals(android.sun.security.util.ObjectIdentifier id) {
+    public final boolean equals(ObjectIdentifier id) {
         return algid.equals(id);
     }
 
@@ -350,24 +354,24 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      *          with some kind of special support for this algorithm.
      *          In that case, you may "narrow" the type of the ID.
      */
-    public static AlgorithmId parse(android.sun.security.util.DerValue val) throws IOException {
-        if (val.tag != android.sun.security.util.DerValue.tag_Sequence) {
+    public static AlgorithmId parse(DerValue val) throws IOException {
+        if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("algid parse error, not a sequence");
         }
 
         /*
          * Get the algorithm ID and any parameters.
          */
-        android.sun.security.util.ObjectIdentifier algid;
-        android.sun.security.util.DerValue params;
-        android.sun.security.util.DerInputStream in = val.toDerInputStream();
+        ObjectIdentifier algid;
+        DerValue params;
+        DerInputStream in = val.toDerInputStream();
 
         algid = in.getOID();
         if (in.available() == 0) {
             params = null;
         } else {
             params = in.getDerValue();
-            if (params.tag == android.sun.security.util.DerValue.tag_Null) {
+            if (params.tag == DerValue.tag_Null) {
                 if (params.length() != 0) {
                     throw new IOException("invalid NULL");
                 }
@@ -404,7 +408,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      */
     public static AlgorithmId get(String algname)
             throws NoSuchAlgorithmException {
-        android.sun.security.util.ObjectIdentifier oid;
+        ObjectIdentifier oid;
         try {
             oid = algOID(algname);
         } catch (IOException ioe) {
@@ -428,7 +432,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      */
     public static AlgorithmId get(AlgorithmParameters algparams)
             throws NoSuchAlgorithmException {
-        android.sun.security.util.ObjectIdentifier oid;
+        ObjectIdentifier oid;
         String algname = algparams.getAlgorithm();
         try {
             oid = algOID(algname);
@@ -455,13 +459,13 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * may have a different OID when used as a "Signature" algorithm than when
      * used as a "KeyPairGenerator" algorithm.
      */
-    private static android.sun.security.util.ObjectIdentifier algOID(String name) throws IOException {
+    private static ObjectIdentifier algOID(String name) throws IOException {
         // See if algname is in printable OID ("dot-dot") notation
         if (name.indexOf('.') != -1) {
             if (name.startsWith("OID.")) {
-                return new android.sun.security.util.ObjectIdentifier(name.substring("OID.".length()));
+                return new ObjectIdentifier(name.substring("OID.".length()));
             } else {
-                return new android.sun.security.util.ObjectIdentifier(name);
+                return new ObjectIdentifier(name);
             }
         }
 
@@ -588,13 +592,13 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
         return oidTable.get(name.toUpperCase(Locale.ENGLISH));
     }
 
-    private static android.sun.security.util.ObjectIdentifier oid(int ... values) {
-        return android.sun.security.util.ObjectIdentifier.newInternal(values);
+    private static ObjectIdentifier oid(int ... values) {
+        return ObjectIdentifier.newInternal(values);
     }
 
     private static boolean initOidTable = false;
-    private static Map<String, android.sun.security.util.ObjectIdentifier> oidTable;
-    private static final Map<android.sun.security.util.ObjectIdentifier,String> nameTable;
+    private static Map<String, ObjectIdentifier> oidTable;
+    private static final Map<ObjectIdentifier,String> nameTable;
 
     /*****************************************************************/
 
@@ -606,15 +610,15 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * Algorithm ID for the MD2 Message Digest Algorthm, from RFC 1319.
      * OID = 1.2.840.113549.2.2
      */
-    public static final android.sun.security.util.ObjectIdentifier MD2_oid =
-    android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 2, 2});
+    public static final ObjectIdentifier MD2_oid =
+    ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 2, 2});
 
     /**
      * Algorithm ID for the MD5 Message Digest Algorthm, from RFC 1321.
      * OID = 1.2.840.113549.2.5
      */
-    public static final android.sun.security.util.ObjectIdentifier MD5_oid =
-    android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 2, 5});
+    public static final ObjectIdentifier MD5_oid =
+    ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 2, 5});
 
     /**
      * Algorithm ID for the SHA1 Message Digest Algorithm, from FIPS 180-1.
@@ -622,17 +626,17 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * many people refer to FIPS 180 (which has an error) as defining SHA.
      * OID = 1.3.14.3.2.26. Old SHA-0 OID: 1.3.14.3.2.18.
      */
-    public static final android.sun.security.util.ObjectIdentifier SHA_oid =
-    android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 3, 14, 3, 2, 26});
+    public static final ObjectIdentifier SHA_oid =
+    ObjectIdentifier.newInternal(new int[] {1, 3, 14, 3, 2, 26});
 
-    public static final android.sun.security.util.ObjectIdentifier SHA256_oid =
-    android.sun.security.util.ObjectIdentifier.newInternal(new int[] {2, 16, 840, 1, 101, 3, 4, 2, 1});
+    public static final ObjectIdentifier SHA256_oid =
+    ObjectIdentifier.newInternal(new int[] {2, 16, 840, 1, 101, 3, 4, 2, 1});
 
-    public static final android.sun.security.util.ObjectIdentifier SHA384_oid =
-    android.sun.security.util.ObjectIdentifier.newInternal(new int[] {2, 16, 840, 1, 101, 3, 4, 2, 2});
+    public static final ObjectIdentifier SHA384_oid =
+    ObjectIdentifier.newInternal(new int[] {2, 16, 840, 1, 101, 3, 4, 2, 2});
 
-    public static final android.sun.security.util.ObjectIdentifier SHA512_oid =
-    android.sun.security.util.ObjectIdentifier.newInternal(new int[] {2, 16, 840, 1, 101, 3, 4, 2, 3});
+    public static final ObjectIdentifier SHA512_oid =
+    ObjectIdentifier.newInternal(new int[] {2, 16, 840, 1, 101, 3, 4, 2, 3});
 
     /*
      * COMMON PUBLIC KEY TYPES
@@ -646,12 +650,12 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
                                  { 1, 2, 840, 113549, 1, 1, 1 };
 
     public static final ObjectIdentifier DH_oid;
-    public static final android.sun.security.util.ObjectIdentifier DH_PKIX_oid;
-    public static final android.sun.security.util.ObjectIdentifier DSA_oid;
-    public static final android.sun.security.util.ObjectIdentifier DSA_OIW_oid;
-    public static final android.sun.security.util.ObjectIdentifier EC_oid = oid(1, 2, 840, 10045, 2, 1);
-    public static final android.sun.security.util.ObjectIdentifier RSA_oid;
-    public static final android.sun.security.util.ObjectIdentifier RSAEncryption_oid;
+    public static final ObjectIdentifier DH_PKIX_oid;
+    public static final ObjectIdentifier DSA_oid;
+    public static final ObjectIdentifier DSA_OIW_oid;
+    public static final ObjectIdentifier EC_oid = oid(1, 2, 840, 10045, 2, 1);
+    public static final ObjectIdentifier RSA_oid;
+    public static final ObjectIdentifier RSAEncryption_oid;
 
     /*
      * COMMON SIGNATURE ALGORITHMS
@@ -677,46 +681,46 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
     private static final int[] dsaWithSHA1_PKIX_data =
                                        { 1, 2, 840, 10040, 4, 3 };
 
-    public static final android.sun.security.util.ObjectIdentifier md2WithRSAEncryption_oid;
-    public static final android.sun.security.util.ObjectIdentifier md5WithRSAEncryption_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha1WithRSAEncryption_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha1WithRSAEncryption_OIW_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha256WithRSAEncryption_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha384WithRSAEncryption_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha512WithRSAEncryption_oid;
-    public static final android.sun.security.util.ObjectIdentifier shaWithDSA_OIW_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha1WithDSA_OIW_oid;
-    public static final android.sun.security.util.ObjectIdentifier sha1WithDSA_oid;
+    public static final ObjectIdentifier md2WithRSAEncryption_oid;
+    public static final ObjectIdentifier md5WithRSAEncryption_oid;
+    public static final ObjectIdentifier sha1WithRSAEncryption_oid;
+    public static final ObjectIdentifier sha1WithRSAEncryption_OIW_oid;
+    public static final ObjectIdentifier sha256WithRSAEncryption_oid;
+    public static final ObjectIdentifier sha384WithRSAEncryption_oid;
+    public static final ObjectIdentifier sha512WithRSAEncryption_oid;
+    public static final ObjectIdentifier shaWithDSA_OIW_oid;
+    public static final ObjectIdentifier sha1WithDSA_OIW_oid;
+    public static final ObjectIdentifier sha1WithDSA_oid;
 
-    public static final android.sun.security.util.ObjectIdentifier sha1WithECDSA_oid =
+    public static final ObjectIdentifier sha1WithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 1);
-    public static final android.sun.security.util.ObjectIdentifier sha224WithECDSA_oid =
+    public static final ObjectIdentifier sha224WithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 3, 1);
-    public static final android.sun.security.util.ObjectIdentifier sha256WithECDSA_oid =
+    public static final ObjectIdentifier sha256WithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 3, 2);
-    public static final android.sun.security.util.ObjectIdentifier sha384WithECDSA_oid =
+    public static final ObjectIdentifier sha384WithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 3, 3);
-    public static final android.sun.security.util.ObjectIdentifier sha512WithECDSA_oid =
+    public static final ObjectIdentifier sha512WithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 3, 4);
-    public static final android.sun.security.util.ObjectIdentifier specifiedWithECDSA_oid =
+    public static final ObjectIdentifier specifiedWithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 3);
 
     /**
      * Algorithm ID for the PBE encryption algorithms from PKCS#5 and
      * PKCS#12.
      */
-    public static final android.sun.security.util.ObjectIdentifier pbeWithMD5AndDES_oid =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[]{1, 2, 840, 113549, 1, 5, 3});
-    public static final android.sun.security.util.ObjectIdentifier pbeWithMD5AndRC2_oid =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 6});
-    public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndDES_oid =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 10});
-    public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndRC2_oid =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 11});
-    public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndDESede_oid =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 12, 1, 3});
-    public static final android.sun.security.util.ObjectIdentifier pbeWithSHA1AndRC2_40_oid =
-        android.sun.security.util.ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 12, 1, 6});
+    public static final ObjectIdentifier pbeWithMD5AndDES_oid =
+        ObjectIdentifier.newInternal(new int[]{1, 2, 840, 113549, 1, 5, 3});
+    public static final ObjectIdentifier pbeWithMD5AndRC2_oid =
+        ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 6});
+    public static final ObjectIdentifier pbeWithSHA1AndDES_oid =
+        ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 10});
+    public static final ObjectIdentifier pbeWithSHA1AndRC2_oid =
+        ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 5, 11});
+    public static final ObjectIdentifier pbeWithSHA1AndDESede_oid =
+        ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 12, 1, 3});
+    public static final ObjectIdentifier pbeWithSHA1AndRC2_40_oid =
+        ObjectIdentifier.newInternal(new int[] {1, 2, 840, 113549, 1, 12, 1, 6});
 
 
     static {
@@ -733,14 +737,14 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * certificate.
      * OID = 1.2.840.113549.1.3.1
      */
-        DH_oid = android.sun.security.util.ObjectIdentifier.newInternal(DH_data);
+        DH_oid = ObjectIdentifier.newInternal(DH_data);
 
     /**
      * Algorithm ID for the Diffie Hellman Key Agreement (DH), from RFC 3279.
      * Parameters may include public values P and G.
      * OID = 1.2.840.10046.2.1
      */
-        DH_PKIX_oid = android.sun.security.util.ObjectIdentifier.newInternal(DH_PKIX_data);
+        DH_PKIX_oid = ObjectIdentifier.newInternal(DH_PKIX_data);
 
     /**
      * Algorithm ID for the Digital Signing Algorithm (DSA), from the
@@ -750,7 +754,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * another source such as a Certificate Authority's certificate.
      * OID = 1.3.14.3.2.12
      */
-        DSA_OIW_oid = android.sun.security.util.ObjectIdentifier.newInternal(DSA_OIW_data);
+        DSA_OIW_oid = ObjectIdentifier.newInternal(DSA_OIW_data);
 
     /**
      * Algorithm ID for the Digital Signing Algorithm (DSA), from RFC 3279.
@@ -759,7 +763,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * certificate.
      * OID = 1.2.840.10040.4.1
      */
-        DSA_oid = android.sun.security.util.ObjectIdentifier.newInternal(DSA_PKIX_data);
+        DSA_oid = ObjectIdentifier.newInternal(DSA_PKIX_data);
 
     /**
      * Algorithm ID for RSA keys used for any purpose, as defined in X.509.
@@ -767,14 +771,14 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * public modulus.
      * OID = 2.5.8.1.1
      */
-        RSA_oid = android.sun.security.util.ObjectIdentifier.newInternal(RSA_data);
+        RSA_oid = ObjectIdentifier.newInternal(RSA_data);
 
     /**
      * Algorithm ID for RSA keys used with RSA encryption, as defined
      * in PKCS #1.  There are no parameters associated with this algorithm.
      * OID = 1.2.840.113549.1.1.1
      */
-        RSAEncryption_oid = android.sun.security.util.ObjectIdentifier.newInternal(RSAEncryption_data);
+        RSAEncryption_oid = ObjectIdentifier.newInternal(RSAEncryption_data);
 
     /**
      * Identifies a signing algorithm where an MD2 digest is encrypted
@@ -783,7 +787,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.2.840.113549.1.1.2
      */
         md2WithRSAEncryption_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(md2WithRSAEncryption_data);
+            ObjectIdentifier.newInternal(md2WithRSAEncryption_data);
 
     /**
      * Identifies a signing algorithm where an MD5 digest is
@@ -791,7 +795,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.2.840.113549.1.1.4
      */
         md5WithRSAEncryption_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(md5WithRSAEncryption_data);
+            ObjectIdentifier.newInternal(md5WithRSAEncryption_data);
 
     /**
      * Identifies a signing algorithm where a SHA1 digest is
@@ -799,7 +803,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.2.840.113549.1.1.5
      */
         sha1WithRSAEncryption_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(sha1WithRSAEncryption_data);
+            ObjectIdentifier.newInternal(sha1WithRSAEncryption_data);
 
     /**
      * Identifies a signing algorithm where a SHA1 digest is
@@ -807,7 +811,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.3.14.3.2.29
      */
         sha1WithRSAEncryption_OIW_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(sha1WithRSAEncryption_OIW_data);
+            ObjectIdentifier.newInternal(sha1WithRSAEncryption_OIW_data);
 
     /**
      * Identifies a signing algorithm where a SHA256 digest is
@@ -815,7 +819,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.2.840.113549.1.1.11
      */
         sha256WithRSAEncryption_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(sha256WithRSAEncryption_data);
+            ObjectIdentifier.newInternal(sha256WithRSAEncryption_data);
 
     /**
      * Identifies a signing algorithm where a SHA384 digest is
@@ -823,7 +827,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.2.840.113549.1.1.12
      */
         sha384WithRSAEncryption_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(sha384WithRSAEncryption_data);
+            ObjectIdentifier.newInternal(sha384WithRSAEncryption_data);
 
     /**
      * Identifies a signing algorithm where a SHA512 digest is
@@ -831,7 +835,7 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * OID = 1.2.840.113549.1.1.13
      */
         sha512WithRSAEncryption_oid =
-            android.sun.security.util.ObjectIdentifier.newInternal(sha512WithRSAEncryption_data);
+            ObjectIdentifier.newInternal(sha512WithRSAEncryption_data);
 
     /**
      * Identifies the FIPS 186 "Digital Signature Standard" (DSS), where a
@@ -839,21 +843,21 @@ public class AlgorithmId implements Serializable, android.sun.security.util.DerE
      * This should not be used.
      * OID = 1.3.14.3.2.13
      */
-        shaWithDSA_OIW_oid = android.sun.security.util.ObjectIdentifier.newInternal(shaWithDSA_OIW_data);
+        shaWithDSA_OIW_oid = ObjectIdentifier.newInternal(shaWithDSA_OIW_data);
 
     /**
      * Identifies the FIPS 186 "Digital Signature Standard" (DSS), where a
      * SHA1 digest is signed using the Digital Signing Algorithm (DSA).
      * OID = 1.3.14.3.2.27
      */
-        sha1WithDSA_OIW_oid = android.sun.security.util.ObjectIdentifier.newInternal(sha1WithDSA_OIW_data);
+        sha1WithDSA_OIW_oid = ObjectIdentifier.newInternal(sha1WithDSA_OIW_data);
 
     /**
      * Identifies the FIPS 186 "Digital Signature Standard" (DSS), where a
      * SHA1 digest is signed using the Digital Signing Algorithm (DSA).
      * OID = 1.2.840.10040.4.3
      */
-        sha1WithDSA_oid = android.sun.security.util.ObjectIdentifier.newInternal(dsaWithSHA1_PKIX_data);
+        sha1WithDSA_oid = ObjectIdentifier.newInternal(dsaWithSHA1_PKIX_data);
 
         nameTable = new HashMap<>();
         nameTable.put(MD5_oid, "MD5");

@@ -5,13 +5,17 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -28,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -160,15 +165,15 @@ public class NativeToolManager {
 
     public static void runJpegtranJni(Context context, int op, String src, String dst,
                                       int cropW, int cropH, int cropX, int cropY) throws Exception {
-        if (!loadJpegtranJni(context)) throw new java.io.IOException("JNI library not installed");
+        if (!loadJpegtranJni(context)) throw new IOException("JNI library not installed");
         String[] err = new String[1];
         int rc = JpegtranJni.transform(src, dst, op, cropW, cropH, cropX, cropY, err);
         if (rc != 0) {
             String message = err[0] == null || err[0].isEmpty() ? "Transform failed" : err[0];
-            throw new java.io.IOException(message);
+            throw new IOException(message);
         }
         File out = new File(dst);
-        if (!out.isFile() || out.length() == 0) throw new java.io.IOException("Empty output");
+        if (!out.isFile() || out.length() == 0) throw new IOException("Empty output");
     }
 
     private static void ensurePacks(Activity activity, String[] zips, String[] packs, int version, ReadyCallback cb) {
@@ -193,7 +198,7 @@ public class NativeToolManager {
     }
 
     private static void showUrlDialog(Activity activity, ReadyCallback cb) {
-        android.widget.EditText input = new android.widget.EditText(activity);
+        EditText input = new EditText(activity);
         input.setHint(DEFAULT_BASE_URL);
         try {
             String current = PreferenceManager.getDefaultSharedPreferences(activity)
@@ -225,7 +230,7 @@ public class NativeToolManager {
         ProgressBar bar = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);
         root.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.native_downloading))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))
@@ -294,12 +299,12 @@ public class NativeToolManager {
                     String line;
                     while ((line = br.readLine()) != null) sb.append(line);
                 }
-                org.json.JSONObject root = new org.json.JSONObject(sb.toString());
-                java.util.Iterator<String> keys = root.keys();
+                JSONObject root = new JSONObject(sb.toString());
+                Iterator<String> keys = root.keys();
                 while (keys.hasNext()) {
                     String k = keys.next();
                     if (k.equals("version")) continue;
-                    org.json.JSONObject o = root.getJSONObject(k);
+                    JSONObject o = root.getJSONObject(k);
                     out.put(k, new String[]{o.getString("sha256"), String.valueOf(o.getLong("size"))});
                 }
             }
@@ -318,7 +323,7 @@ public class NativeToolManager {
         conn.setReadTimeout(60000);
         conn.setInstanceFollowRedirects(true);
         int code = conn.getResponseCode();
-        if (code < 200 || code >= 300) throw new java.io.IOException("HTTP " + code);
+        if (code < 200 || code >= 300) throw new IOException("HTTP " + code);
         long total = conn.getContentLengthLong();
         try (InputStream in = new BufferedInputStream(conn.getInputStream());
              OutputStream os = new FileOutputStream(out)) {
@@ -362,7 +367,7 @@ public class NativeToolManager {
                 File out = new File(dest, name);
                 String canonical = out.getCanonicalPath();
                 if (!canonical.equals(destPath) && !canonical.startsWith(destPath + File.separator)) {
-                    throw new java.io.IOException("Bad zip entry: " + entry.getName());
+                    throw new IOException("Bad zip entry: " + entry.getName());
                 }
                 if (entry.isDirectory() || name.endsWith("/")) {
                     out.mkdirs();
@@ -416,9 +421,9 @@ public class NativeToolManager {
 
     public static int runJpegtran(Context context, List<String> args) throws Exception {
         File bin = jpegtranBinary(context);
-        if (!bin.isFile()) throw new java.io.IOException("jpegtran missing, reinstall native tools");
+        if (!bin.isFile()) throw new IOException("jpegtran missing, reinstall native tools");
         if (!setExecutableChecked(bin)) {
-            throw new java.io.IOException("Permission denied: cannot execute " + bin.getName()
+            throw new IOException("Permission denied: cannot execute " + bin.getName()
                     + " (" + describeFile(bin) + ")");
         }
         List<String> cmd = new ArrayList<>();
@@ -427,8 +432,8 @@ public class NativeToolManager {
         Process process;
         try {
             process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-        } catch (java.io.IOException e) {
-            throw new java.io.IOException(explainExecError(context, bin, e));
+        } catch (IOException e) {
+            throw new IOException(explainExecError(context, bin, e));
         }
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -437,8 +442,8 @@ public class NativeToolManager {
             while ((n = br.read(buf)) != -1) sb.append(buf, 0, n);
         }
         int code = process.waitFor();
-        if (code != 0 && sb.length() > 0) throw new java.io.IOException(sb.toString().trim());
-        if (code != 0) throw new java.io.IOException("jpegtran failed");
+        if (code != 0 && sb.length() > 0) throw new IOException(sb.toString().trim());
+        if (code != 0) throw new IOException("jpegtran failed");
         return code;
     }
 

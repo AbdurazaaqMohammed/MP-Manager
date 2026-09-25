@@ -15,14 +15,13 @@
  */
 package com.reandroid.apkeditor;
 
-import com.reandroid.apk.APKLogger;
 import com.reandroid.jcommand.annotations.OptionArg;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class OptionsWithFramework extends com.reandroid.apkeditor.Options {
+public class OptionsWithFramework extends Options {
 
     @OptionArg(name = "-framework-version", description = "framework_version_number")
     public Integer frameworkVersion;

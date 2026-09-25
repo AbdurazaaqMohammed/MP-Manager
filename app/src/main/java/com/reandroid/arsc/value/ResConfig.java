@@ -15,6 +15,8 @@
  */
 package com.reandroid.arsc.value;
 
+import android.text.TextUtils;
+
 import com.reandroid.arsc.item.ByteArray;
 import com.reandroid.json.JSONConvert;
 import com.reandroid.json.JSONObject;
@@ -336,7 +338,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
         return result;
     }
     public void setUnknownBytes(String hexBytes){
-        if(android.text.TextUtils.isEmpty(hexBytes)){
+        if(TextUtils.isEmpty(hexBytes)){
             return;
         }
         int length = hexBytes.length();
@@ -1275,7 +1277,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
             return null;
         }
         static<T extends Flag> T valueOf(T[] values, String name){
-            if(android.text.TextUtils.isEmpty(name)){
+            if(TextUtils.isEmpty(name)){
                 return null;
             }
             if(name.charAt(0) == '-'){
@@ -1562,7 +1564,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
             int count = 0;
             for(int i = 0; i < length; i++){
                 String qualifier = qualifiers[i];
-                if(android.text.TextUtils.isEmpty(qualifier)){
+                if(TextUtils.isEmpty(qualifier)){
                     continue;
                 }
                 tmp[count] = qualifier;
@@ -1916,7 +1918,7 @@ public class ResConfig extends ResConfigBase implements JSONConvert<JSONObject>,
             return true;
         }
         private static String[] splitQualifiers(String qualifier){
-            if(android.text.TextUtils.isEmpty(qualifier)){
+            if(TextUtils.isEmpty(qualifier)){
                 return null;
             }
             return qualifier.split("-");

@@ -26,6 +26,7 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.util.*;
 import java.io.IOException;
@@ -44,7 +45,7 @@ import java.io.IOException;
  */
 public class GeneralNames {
 
-    private final List<android.sun.security.x509.GeneralName> names;
+    private final List<GeneralName> names;
 
     /**
      * Create the GeneralNames, decoding from the passed DerValue.
@@ -52,9 +53,9 @@ public class GeneralNames {
      * @param derVal the DerValue to construct the GeneralNames from.
      * @exception IOException on error.
      */
-    public GeneralNames(android.sun.security.util.DerValue derVal) throws IOException {
+    public GeneralNames(DerValue derVal) throws IOException {
         this();
-        if (derVal.tag != android.sun.security.util.DerValue.tag_Sequence) {
+        if (derVal.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoding for GeneralNames.");
         }
         if (derVal.data.available() == 0) {
@@ -63,9 +64,9 @@ public class GeneralNames {
         }
         // Decode all the GeneralName's
         while (derVal.data.available() != 0) {
-            android.sun.security.util.DerValue encName = derVal.data.getDerValue();
+            DerValue encName = derVal.data.getDerValue();
 
-            android.sun.security.x509.GeneralName name = new android.sun.security.x509.GeneralName(encName);
+            GeneralName name = new GeneralName(encName);
             add(name);
         }
     }
@@ -77,7 +78,7 @@ public class GeneralNames {
         names = new ArrayList<>();
     }
 
-    public GeneralNames add(android.sun.security.x509.GeneralName name) {
+    public GeneralNames add(GeneralName name) {
         if (name == null) {
             throw new NullPointerException();
         }
@@ -85,7 +86,7 @@ public class GeneralNames {
         return this;
     }
 
-    public android.sun.security.x509.GeneralName get(int index) {
+    public GeneralName get(int index) {
         return names.get(index);
     }
 
@@ -97,11 +98,11 @@ public class GeneralNames {
         return names.size();
     }
 
-    public Iterator<android.sun.security.x509.GeneralName> iterator() {
+    public Iterator<GeneralName> iterator() {
         return names.iterator();
     }
 
-    public List<android.sun.security.x509.GeneralName> names() {
+    public List<GeneralName> names() {
         return names;
     }
 
@@ -111,16 +112,16 @@ public class GeneralNames {
      * @param out the DerOutputStream to write the extension to.
      * @exception IOException on error.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
         if (isEmpty()) {
             return;
         }
 
-        android.sun.security.util.DerOutputStream temp = new DerOutputStream();
+        DerOutputStream temp = new DerOutputStream();
         for (GeneralName gn : names) {
             gn.encode(temp);
         }
-        out.write(android.sun.security.util.DerValue.tag_Sequence, temp);
+        out.write(DerValue.tag_Sequence, temp);
     }
 
     /**

@@ -15,6 +15,8 @@
  */
 package com.reandroid.arsc.chunk.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.app.AndroidManifest;
 import com.reandroid.arsc.ApkFile;
 import com.reandroid.arsc.chunk.PackageBlock;
@@ -680,7 +682,7 @@ public class AndroidManifestBlock extends ResXmlDocument implements AndroidManif
         application.refresh();
     }
     public String fullClassName(String name) {
-        if (android.text.TextUtils.isEmpty(name) || name.charAt(0) != '.') {
+        if (TextUtils.isEmpty(name) || name.charAt(0) != '.') {
             return name;
         }
         String packageName = getPackageName();
@@ -690,7 +692,7 @@ public class AndroidManifestBlock extends ResXmlDocument implements AndroidManif
         return packageName + name;
     }
     public String relativeClassName(String name) {
-        if (android.text.TextUtils.isEmpty(name) || name.charAt(0) == '.') {
+        if (TextUtils.isEmpty(name) || name.charAt(0) == '.') {
             return name;
         }
         String packageName = getPackageName();

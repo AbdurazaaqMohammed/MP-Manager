@@ -1,11 +1,17 @@
 package io.github.abdurazaaqmohammed.player;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.ViewGroup;
@@ -69,10 +75,10 @@ public class ImageEditActivity extends AppCompatActivity {
         DynamicColors.applyToActivitiesIfAvailable(getApplication());
         originalPath = sessionPath;
         sessionPath = null;
-        android.net.Uri incoming = getIntent().getData();
-        if (incoming == null && android.content.Intent.ACTION_SEND.equals(getIntent().getAction())) {
+        Uri incoming = getIntent().getData();
+        if (incoming == null && Intent.ACTION_SEND.equals(getIntent().getAction())) {
             try {
-                incoming = getIntent().getParcelableExtra(android.content.Intent.EXTRA_STREAM);
+                incoming = getIntent().getParcelableExtra(Intent.EXTRA_STREAM);
             } catch (Exception ignored) {
             }
         }
@@ -88,7 +94,7 @@ public class ImageEditActivity extends AppCompatActivity {
         initEditor();
     }
 
-    private void resolveSharedImage(android.net.Uri uri) {
+    private void resolveSharedImage(Uri uri) {
         if ("file".equals(uri.getScheme())) {
             originalPath = uri.getPath();
             fromShared = false;
@@ -103,9 +109,9 @@ public class ImageEditActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 String name = "shared_image";
-                try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
                     if (cursor != null && cursor.moveToFirst()) {
-                        int idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                        int idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                         if (idx >= 0) {
                             String display = cursor.getString(idx);
                             if (display != null && !display.isEmpty()) name = display;
@@ -213,7 +219,7 @@ public class ImageEditActivity extends AppCompatActivity {
         EditText wInput = new EditText(this);
         wInput.setHint("W");
         wInput.setText("3");
-        wInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        wInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         wInput.setSingleLine(true);
         root.addView(wInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView colon = new TextView(this);
@@ -223,7 +229,7 @@ public class ImageEditActivity extends AppCompatActivity {
         EditText hInput = new EditText(this);
         hInput.setHint("H");
         hInput.setText("2");
-        hInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        hInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         hInput.setSingleLine(true);
         root.addView(hInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         new MaterialAlertDialogBuilder(this)
@@ -491,7 +497,7 @@ public class ImageEditActivity extends AppCompatActivity {
                 int h = Math.max(1, Math.min(crop[3], src.getHeight() - y));
                 out = Bitmap.createBitmap(src, x, y, w, h);
             } else {
-                android.graphics.Matrix matrix = new android.graphics.Matrix();
+                Matrix matrix = new Matrix();
                 switch (op) {
                     case "left" -> matrix.postRotate(-90);
                     case "right" -> matrix.postRotate(90);

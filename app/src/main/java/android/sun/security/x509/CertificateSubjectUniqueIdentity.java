@@ -24,6 +24,8 @@
  */
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.InputStream;
@@ -37,7 +39,7 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
     /**
@@ -51,14 +53,14 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
     public static final String NAME = "subjectID";
     public static final String ID = "id";
 
-    private android.sun.security.x509.UniqueIdentity id;
+    private UniqueIdentity id;
 
     /**
      * Default constructor for the certificate attribute.
      *
      * @param key the UniqueIdentity
      */
-    public CertificateSubjectUniqueIdentity(android.sun.security.x509.UniqueIdentity id) {
+    public CertificateSubjectUniqueIdentity(UniqueIdentity id) {
         this.id = id;
     }
 
@@ -68,9 +70,9 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
      * @param in the DerInputStream to read the UniqueIdentity from.
      * @exception IOException on decoding errors.
      */
-    public CertificateSubjectUniqueIdentity(android.sun.security.util.DerInputStream in)
+    public CertificateSubjectUniqueIdentity(DerInputStream in)
     throws IOException {
-        id = new android.sun.security.x509.UniqueIdentity(in);
+        id = new UniqueIdentity(in);
     }
 
     /**
@@ -81,8 +83,8 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
      */
     public CertificateSubjectUniqueIdentity(InputStream in)
     throws IOException {
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(in);
-        id = new android.sun.security.x509.UniqueIdentity(val);
+        DerValue val = new DerValue(in);
+        id = new UniqueIdentity(val);
     }
 
     /**
@@ -91,9 +93,9 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
      * @param in the DerValue to read the UniqueIdentity from.
      * @exception IOException on decoding errors.
      */
-    public CertificateSubjectUniqueIdentity(android.sun.security.util.DerValue val)
+    public CertificateSubjectUniqueIdentity(DerValue val)
     throws IOException {
-        id = new android.sun.security.x509.UniqueIdentity(val);
+        id = new UniqueIdentity(val);
     }
 
     /**
@@ -111,8 +113,8 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
      * @exception IOException on errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
-        id.encode(tmp, android.sun.security.util.DerValue.createTag(DerValue.TAG_CONTEXT,false,(byte)2));
+        DerOutputStream tmp = new DerOutputStream();
+        id.encode(tmp, DerValue.createTag(DerValue.TAG_CONTEXT,false,(byte)2));
 
         out.write(tmp.toByteArray());
     }
@@ -121,7 +123,7 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
      * Set the attribute value.
      */
     public void set(String name, Object obj) throws IOException {
-        if (!(obj instanceof android.sun.security.x509.UniqueIdentity)) {
+        if (!(obj instanceof UniqueIdentity)) {
             throw new IOException("Attribute must be of type UniqueIdentity.");
         }
         if (name.equalsIgnoreCase(ID)) {
@@ -161,7 +163,7 @@ public class CertificateSubjectUniqueIdentity implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(ID);
 
         return (elements.elements());

@@ -15,13 +15,15 @@
  */
 package com.reandroid.dex.key;
 
+import android.text.TextUtils;
+
 import com.reandroid.dex.smali.SmaliReader;
 import com.reandroid.utils.HexUtil;
 
 class PrimitiveKeyHelper {
 
     public static PrimitiveKey parse(String text) {
-        if (android.text.TextUtils.isEmpty(text)) {
+        if (TextUtils.isEmpty(text)) {
             return null;
         }
         char first = text.charAt(0);

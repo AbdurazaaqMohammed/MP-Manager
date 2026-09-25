@@ -31,7 +31,6 @@
 package com.android.tools.smali.util;
 
 import com.android.tools.smali.dexlib2.formatter.DexFormattedWriter;
-import com.android.tools.smali.dexlib2.iface.value.CharEncodedValue;
 
 import java.io.IOException;
 import java.io.Writer;

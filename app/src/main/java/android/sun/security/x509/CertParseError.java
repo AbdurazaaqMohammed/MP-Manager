@@ -35,7 +35,7 @@ import java.io.Serial;
  * @author David Brownell
  */
 @Deprecated
-class CertParseError extends android.sun.security.x509.CertException
+class CertParseError extends CertException
 {
     @Serial
     private static final long serialVersionUID = -4559645519017017804L;

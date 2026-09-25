@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.security.cert.PolicyQualifierInfo;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -69,7 +68,7 @@ public class PolicyInformation {
     public static final String QUALIFIERS = "qualifiers";
 
     /* The policy OID */
-    private android.sun.security.x509.CertificatePolicyId policyIdentifier;
+    private CertificatePolicyId policyIdentifier;
 
     /* A Set of java.security.cert.PolicyQualifierInfo objects */
     private Set<PolicyQualifierInfo> policyQualifiers;
@@ -83,7 +82,7 @@ public class PolicyInformation {
      *          Must not be NULL. Specify an empty Set for no qualifiers.
      * @exception IOException on decoding errors.
      */
-    public PolicyInformation(android.sun.security.x509.CertificatePolicyId policyIdentifier,
+    public PolicyInformation(CertificatePolicyId policyIdentifier,
                              Set<PolicyQualifierInfo> policyQualifiers) throws IOException {
         if (policyQualifiers == null) {
             throw new NullPointerException("policyQualifiers is null");
@@ -104,7 +103,7 @@ public class PolicyInformation {
         if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoding of PolicyInformation");
         }
-        policyIdentifier = new android.sun.security.x509.CertificatePolicyId(val.data.getDerValue());
+        policyIdentifier = new CertificatePolicyId(val.data.getDerValue());
         if (val.data.available() != 0) {
             policyQualifiers = new LinkedHashSet<>();
             DerValue opt = val.data.getDerValue();
@@ -153,7 +152,7 @@ public class PolicyInformation {
      * @return The CertificatePolicyId object containing
      *     the policyIdentifier (not a copy).
      */
-    public android.sun.security.x509.CertificatePolicyId getPolicyIdentifier() {
+    public CertificatePolicyId getPolicyIdentifier() {
         return policyIdentifier;
     }
 
@@ -188,7 +187,7 @@ public class PolicyInformation {
      */
     public void set(String name, Object obj) throws IOException {
         if (name.equalsIgnoreCase(ID)) {
-            if (obj instanceof android.sun.security.x509.CertificatePolicyId)
+            if (obj instanceof CertificatePolicyId)
                 policyIdentifier = (CertificatePolicyId)obj;
             else
                 throw new IOException("Attribute value must be instance " +
@@ -237,7 +236,7 @@ public class PolicyInformation {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(ID);
         elements.addElement(QUALIFIERS);
 

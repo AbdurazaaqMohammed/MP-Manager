@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.BitArray;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -42,8 +44,8 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class KeyUsageExtension extends Extension
 implements CertAttrSet<String> {
@@ -72,8 +74,8 @@ implements CertAttrSet<String> {
 
     // Encode this extension value
     private void encodeThis() throws IOException {
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
-        os.putTruncatedUnalignedBitString(new android.sun.security.util.BitArray(this.bitString));
+        DerOutputStream os = new DerOutputStream();
+        os.putTruncatedUnalignedBitString(new BitArray(this.bitString));
         this.extensionValue = os.toByteArray();
     }
 
@@ -107,8 +109,8 @@ implements CertAttrSet<String> {
      */
     public KeyUsageExtension(byte[] bitString) throws IOException {
         this.bitString =
-            new android.sun.security.util.BitArray(bitString.length*8,bitString).toBooleanArray();
-        this.extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
+            new BitArray(bitString.length*8,bitString).toBooleanArray();
+        this.extensionId = PKIXExtensions.KeyUsage_Id;
         this.critical = true;
         encodeThis();
     }
@@ -121,7 +123,7 @@ implements CertAttrSet<String> {
      */
     public KeyUsageExtension(boolean[] bitString) throws IOException {
         this.bitString = bitString;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
+        this.extensionId = PKIXExtensions.KeyUsage_Id;
         this.critical = true;
         encodeThis();
     }
@@ -132,9 +134,9 @@ implements CertAttrSet<String> {
      *
      * @param bitString the bits to be set for the extension.
      */
-    public KeyUsageExtension(android.sun.security.util.BitArray bitString) throws IOException {
+    public KeyUsageExtension(BitArray bitString) throws IOException {
         this.bitString = bitString.toBooleanArray();
-        this.extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
+        this.extensionId = PKIXExtensions.KeyUsage_Id;
         this.critical = true;
         encodeThis();
     }
@@ -151,7 +153,7 @@ implements CertAttrSet<String> {
      */
     public KeyUsageExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
+        this.extensionId = PKIXExtensions.KeyUsage_Id;
         this.critical = critical;
         /*
          * The following check should be activated again after
@@ -163,12 +165,12 @@ implements CertAttrSet<String> {
          * }
          */
         byte[] extValue = (byte[]) value;
-        if (extValue[0] == android.sun.security.util.DerValue.tag_OctetString) {
-            this.extensionValue = new android.sun.security.util.DerValue(extValue).getOctetString();
+        if (extValue[0] == DerValue.tag_OctetString) {
+            this.extensionValue = new DerValue(extValue).getOctetString();
         } else {
             this.extensionValue = extValue;
         }
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         this.bitString = val.getUnalignedBitString().toBooleanArray();
     }
 
@@ -176,7 +178,7 @@ implements CertAttrSet<String> {
      * Create a default key usage.
      */
     public KeyUsageExtension() {
-        extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
+        extensionId = PKIXExtensions.KeyUsage_Id;
         critical = true;
         bitString = new boolean[0];
     }
@@ -319,7 +321,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-       DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+       DerOutputStream tmp = new DerOutputStream();
 
        if (this.extensionValue == null) {
            this.extensionId = PKIXExtensions.KeyUsage_Id;
@@ -335,7 +337,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(DIGITAL_SIGNATURE);
         elements.addElement(NON_REPUDIATION);
         elements.addElement(KEY_ENCIPHERMENT);

@@ -1,5 +1,8 @@
 package io.github.abdurazaaqmohammed.utils;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class JpegtranJni {
     public static final int OP_ROT_90 = 0;
     public static final int OP_ROT_270 = 1;
@@ -10,7 +13,7 @@ public class JpegtranJni {
     public static final int OP_TRANSPOSE = 6;
     public static final int OP_TRANSVERSE = 7;
 
-    private static final java.util.Set<String> loadedPaths = new java.util.HashSet<>();
+    private static final Set<String> loadedPaths = new HashSet<>();
 
     public static synchronized boolean load(String absolutePath) {
         if (absolutePath == null) return false;

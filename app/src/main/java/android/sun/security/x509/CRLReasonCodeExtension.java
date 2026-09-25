@@ -27,6 +27,7 @@ package android.sun.security.x509;
 
 import android.os.Build;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -58,8 +59,8 @@ import java.util.Enumeration;
  *    aACompromise           (10) }
  * </pre>
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class CRLReasonCodeExtension extends Extension
         implements CertAttrSet<String> {
@@ -91,7 +92,7 @@ public class CRLReasonCodeExtension extends Extension
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream dos = new DerOutputStream();
+        DerOutputStream dos = new DerOutputStream();
         dos.putEnumerated(reasonCode);
         this.extensionValue = dos.toByteArray();
     }
@@ -114,7 +115,7 @@ public class CRLReasonCodeExtension extends Extension
      */
     public CRLReasonCodeExtension(boolean critical, int reason)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.ReasonCode_Id;
+        this.extensionId = PKIXExtensions.ReasonCode_Id;
         this.critical = critical;
         this.reasonCode = reason;
         encodeThis();
@@ -130,10 +131,10 @@ public class CRLReasonCodeExtension extends Extension
      */
     public CRLReasonCodeExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.ReasonCode_Id;
+        this.extensionId = PKIXExtensions.ReasonCode_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         this.reasonCode = val.getEnumerated();
     }
 
@@ -192,7 +193,7 @@ public class CRLReasonCodeExtension extends Extension
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         if (this.extensionValue == null) {
             this.extensionId = PKIXExtensions.ReasonCode_Id;
@@ -208,7 +209,7 @@ public class CRLReasonCodeExtension extends Extension
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(REASON);
 
         return elements.elements();

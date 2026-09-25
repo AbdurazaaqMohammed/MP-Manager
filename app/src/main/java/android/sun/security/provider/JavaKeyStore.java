@@ -44,7 +44,7 @@ import android.sun.misc.IOUtils;
  * @author Jan Luehe
  * @author David Brownell
  * @see KeyProtector
- * @see java.security.KeyStoreSpi
+ * @see KeyStoreSpi
  * @see KeyTool
  * @since 1.2
  */

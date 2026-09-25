@@ -2,6 +2,9 @@ package com.antik.DexPatcher;
 
 import static com.antik.DexPatcher.MethodT.patchLauncher.patchStartupLauncher;
 
+import com.android.tools.smali.dexlib2.iface.Field;
+import com.android.tools.smali.dexlib2.immutable.ImmutableField;
+import com.android.tools.smali.dexlib2.immutable.value.ImmutableStringEncodedValue;
 import com.antik.AntikEnv;
 import com.antik.DexPatcher.MethodT.patchM;
 import com.reandroid.apk.ApkModule;
@@ -56,11 +59,11 @@ public class DexPatcher {
 
                 for (ClassDef c : l_df.getClasses()) {
                     if ("Lcom/pairip/PairipLog;".equals(c.getType())) {
-                        List<com.android.tools.smali.dexlib2.iface.Field> s_fs = new ArrayList<>();
-                        for (com.android.tools.smali.dexlib2.iface.Field f : c.getStaticFields()) {
+                        List<Field> s_fs = new ArrayList<>();
+                        for (Field f : c.getStaticFields()) {
                             if ("DIR_PATH".equals(f.getName())) {
                                 String n_v = "/data/data/" + pkg + "/dictionary";
-                                s_fs.add(new com.android.tools.smali.dexlib2.immutable.ImmutableField(f.getDefiningClass(), f.getName(), f.getType(), f.getAccessFlags(), new com.android.tools.smali.dexlib2.immutable.value.ImmutableStringEncodedValue(n_v), f.getAnnotations(), f.getHiddenApiRestrictions()));
+                                s_fs.add(new ImmutableField(f.getDefiningClass(), f.getName(), f.getType(), f.getAccessFlags(), new ImmutableStringEncodedValue(n_v), f.getAnnotations(), f.getHiddenApiRestrictions()));
                             } else {
                                 s_fs.add(f);
                             }
@@ -100,7 +103,7 @@ public class DexPatcher {
                 if (cd.getAccessFlags() != 1) continue;
 
                 boolean o_t = true;
-                for (com.android.tools.smali.dexlib2.iface.Field f : cd.getFields()) {
+                for (Field f : cd.getFields()) {
                     if (f.getAccessFlags() != 9) {
                         o_t = false;
                         break;

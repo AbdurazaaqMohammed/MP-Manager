@@ -1,11 +1,14 @@
 package io.github.abdurazaaqmohammed.arsc;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -32,6 +35,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TypeBlock;
 import com.reandroid.arsc.container.SpecTypePair;
@@ -185,7 +189,7 @@ public class ArscEditorActivity extends AppCompatActivity {
         filterWrap.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(12);
         filterWrap.setPadding(pad, pad, pad, 0);
-        com.google.android.material.textfield.TextInputLayout box = UiFields.box(this, "Filter");
+        TextInputLayout box = UiFields.box(this, "Filter");
         filterInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
         filterInput.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
@@ -496,12 +500,12 @@ public class ArscEditorActivity extends AppCompatActivity {
             }
             boolTv.setText(Boolean.toString(current), false);
             boolTv.setInputType(InputType.TYPE_NULL);
-            com.google.android.material.textfield.TextInputLayout boolBox = UiFields.box(this, "Value");
+            TextInputLayout boolBox = UiFields.box(this, "Value");
             boolBox.addView(boolTv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             root.addView(boolBox);
             input = boolTv;
         } else {
-            com.google.android.material.textfield.TextInputLayout box = UiFields.box(this, "Value");
+            TextInputLayout box = UiFields.box(this, "Value");
             EditText field = UiFields.field(box,
                     type == ValueType.STRING ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE : InputType.TYPE_CLASS_TEXT);
             String current = "";
@@ -567,13 +571,13 @@ public class ArscEditorActivity extends AppCompatActivity {
         int pad = dp(16);
         root.setPadding(pad, pad / 2, pad, 0);
 
-        com.google.android.material.textfield.TextInputLayout box = UiFields.box(this, "Search");
+        TextInputLayout box = UiFields.box(this, "Search");
         MaterialAutoCompleteTextView query = new MaterialAutoCompleteTextView(this);
         query.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, loadHistory()));
         query.setThreshold(1);
         query.setInputType(InputType.TYPE_CLASS_TEXT);
         box.addView(query, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        box.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_DROPDOWN_MENU);
+        box.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
         root.addView(box);
         query.setOnClickListener(v -> query.showDropDown());
         query.setOnFocusChangeListener((v, hasFocus) -> {
@@ -730,8 +734,8 @@ public class ArscEditorActivity extends AppCompatActivity {
 
     void finishWithApkResult() {
         if (data != null && data.apkFile != null && savedThisSession && data.arscFile != null) {
-            android.content.Intent result = new android.content.Intent();
-            result.setData(android.net.Uri.fromFile(data.arscFile));
+            Intent result = new Intent();
+            result.setData(Uri.fromFile(data.arscFile));
             setResult(757, result);
         }
         finish();
@@ -817,7 +821,7 @@ public class ArscEditorActivity extends AppCompatActivity {
                 TextView name = new TextView(ArscEditorActivity.this);
                 name.setTextSize(16);
                 name.setSingleLine(true);
-                name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                name.setEllipsize(TextUtils.TruncateAt.END);
                 LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 row.setLayoutParams(np);
                 np.leftMargin = dp(12);
@@ -841,11 +845,11 @@ public class ArscEditorActivity extends AppCompatActivity {
                 TextView name = new TextView(ArscEditorActivity.this);
                 name.setTextSize(15);
                 name.setSingleLine(true);
-                name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                name.setEllipsize(TextUtils.TruncateAt.END);
                 TextView value = new TextView(ArscEditorActivity.this);
                 value.setTextSize(13);
                 value.setSingleLine(true);
-                value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                value.setEllipsize(TextUtils.TruncateAt.END);
                 LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 row.setLayoutParams(cp);
                 col.addView(name);
@@ -861,7 +865,7 @@ public class ArscEditorActivity extends AppCompatActivity {
             int pad = dp(16);
             text.setPadding(pad, dp(14), pad, dp(14));
             text.setSingleLine(true);
-            text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            text.setEllipsize(TextUtils.TruncateAt.END);
             text.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             text.setBackgroundResource(tv.resourceId);
             return new Holder(text, null, text, null);

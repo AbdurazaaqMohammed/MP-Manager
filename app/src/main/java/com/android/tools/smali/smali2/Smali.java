@@ -37,16 +37,10 @@ package com.android.tools.smali.smali2;
 
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.writer.builder.DexBuilder;
-import com.android.tools.smali.smali.SmaliOptions;
-import com.android.tools.smali.smali.smaliFlexLexer;
 import com.android.tools.smali.smali.*;
 import com.android.tools.smali.dexlib2.*;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.StringReader;
 import org.antlr.runtime.CommonTokenStream;
 import org.antlr.runtime.RecognitionException;

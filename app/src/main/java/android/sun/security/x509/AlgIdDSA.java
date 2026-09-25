@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.Debug;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -66,9 +68,9 @@ import java.security.interfaces.DSAParams;
  * DSAPublicKey usableKey = kf.generatePublic(ks);
  * </pre></code>
  *
- * @see java.security.interfaces.DSAParams
+ * @see DSAParams
  * @see java.security.interfaces.DSAPublicKey
- * @see java.security.KeyFactory
+ * @see KeyFactory
  * @see java.security.spec.DSAPublicKeySpec
  *
  * @author David Brownell
@@ -108,7 +110,7 @@ class AlgIdDSA extends AlgorithmId implements DSAParams
      * Construct an AlgIdDSA from an X.509 encoded byte array.
      */
     public AlgIdDSA (byte[] encodedAlg) throws IOException
-        { super (new android.sun.security.util.DerValue(encodedAlg).getOID()); }
+        { super (new DerValue(encodedAlg).getOID()); }
 
     /**
      * Constructs a DSS/DSA Algorithm ID from unsigned integers that
@@ -172,12 +174,12 @@ class AlgIdDSA extends AlgorithmId implements DSAParams
     private void initializeParams ()
     throws IOException
     {
-        android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
+        DerOutputStream out = new DerOutputStream();
 
         out.putInteger(p);
         out.putInteger(q);
         out.putInteger(g);
-        params = new android.sun.security.util.DerValue(android.sun.security.util.DerValue.tag_Sequence,out.toByteArray ());
+        params = new DerValue(DerValue.tag_Sequence,out.toByteArray ());
     }
 
     /**
@@ -189,7 +191,7 @@ class AlgIdDSA extends AlgorithmId implements DSAParams
     {
         if (params == null)
             throw new IOException("DSA alg params are null");
-        if (params.tag != android.sun.security.util.DerValue.tag_Sequence)
+        if (params.tag != DerValue.tag_Sequence)
             throw new  IOException("DSA alg parsing error");
 
         params.data.reset ();
@@ -219,9 +221,9 @@ class AlgIdDSA extends AlgorithmId implements DSAParams
             return " null\n";
         else
             return
-                "\n    p:\n" + android.sun.security.util.Debug.toHexString(p) +
-                "\n    q:\n" + android.sun.security.util.Debug.toHexString(q) +
-                "\n    g:\n" + android.sun.security.util.Debug.toHexString(g) +
+                "\n    p:\n" + Debug.toHexString(p) +
+                "\n    q:\n" + Debug.toHexString(q) +
+                "\n    g:\n" + Debug.toHexString(g) +
                 "\n";
     }
 }

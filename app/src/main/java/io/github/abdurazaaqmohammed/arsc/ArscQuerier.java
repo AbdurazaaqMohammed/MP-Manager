@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.arsc;
 
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
@@ -21,6 +22,7 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.model.ResourceEntry;
 
@@ -187,12 +189,12 @@ public final class ArscQuerier {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
         root.setPadding(pad, pad / 2, pad, 0);
-        com.google.android.material.textfield.TextInputLayout inputBox = UiFields.box(activity, "Query");
+        TextInputLayout inputBox = UiFields.box(activity, "Query");
         EditText input = UiFields.field(inputBox, InputType.TYPE_CLASS_TEXT);
         root.addView(inputBox);
         TextView result = new TextView(activity);
         result.setTextSize(14);
-        result.setTypeface(android.graphics.Typeface.MONOSPACE);
+        result.setTypeface(Typeface.MONOSPACE);
         result.setTextIsSelectable(true);
         LinearLayout.LayoutParams resultParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         resultParams.topMargin = pad / 2;
@@ -240,7 +242,7 @@ public final class ArscQuerier {
         TextView helpTitle = new TextView(activity);
         helpTitle.setText(activity.getString(R.string.querier_help_title));
         helpTitle.setTextSize(18);
-        helpTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        helpTitle.setTypeface(null, Typeface.BOLD);
         LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         helpParams.topMargin = pad;
         root.addView(helpTitle, helpParams);

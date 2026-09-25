@@ -63,8 +63,8 @@ import android.sun.security.util.DerValue;
  *          accessLocation        GeneralName  }
  * </pre>
  * <p>
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 
 public class SubjectInfoAccessExtension extends Extension
@@ -86,7 +86,7 @@ public class SubjectInfoAccessExtension extends Extension
     /**
      * The List of AccessDescription objects.
      */
-    private List<android.sun.security.x509.AccessDescription> accessDescriptions;
+    private List<AccessDescription> accessDescriptions;
 
     /**
      * Create an SubjectInfoAccessExtension from a List of
@@ -96,8 +96,8 @@ public class SubjectInfoAccessExtension extends Extension
      * @throws IOException on error
      */
     public SubjectInfoAccessExtension(
-            List<android.sun.security.x509.AccessDescription> accessDescriptions) throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectInfoAccess_Id;
+            List<AccessDescription> accessDescriptions) throws IOException {
+        this.extensionId = PKIXExtensions.SubjectInfoAccess_Id;
         this.critical = false;
         this.accessDescriptions = accessDescriptions;
         encodeThis();
@@ -112,7 +112,7 @@ public class SubjectInfoAccessExtension extends Extension
      */
     public SubjectInfoAccessExtension(Boolean critical, Object value)
             throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.SubjectInfoAccess_Id;
+        this.extensionId = PKIXExtensions.SubjectInfoAccess_Id;
         this.critical = critical;
 
         if (!(value instanceof byte[])) {
@@ -128,7 +128,7 @@ public class SubjectInfoAccessExtension extends Extension
         accessDescriptions = new ArrayList<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
-            android.sun.security.x509.AccessDescription accessDescription = new android.sun.security.x509.AccessDescription(seq);
+            AccessDescription accessDescription = new AccessDescription(seq);
             accessDescriptions.add(accessDescription);
         }
     }
@@ -136,7 +136,7 @@ public class SubjectInfoAccessExtension extends Extension
     /**
      * Return the list of AccessDescription objects.
      */
-    public List<android.sun.security.x509.AccessDescription> getAccessDescriptions() {
+    public List<AccessDescription> getAccessDescriptions() {
         return accessDescriptions;
     }
 
@@ -172,7 +172,7 @@ public class SubjectInfoAccessExtension extends Extension
             if (!(obj instanceof List)) {
                 throw new IOException("Attribute value should be of type List.");
             }
-            accessDescriptions = (List<android.sun.security.x509.AccessDescription>)obj;
+            accessDescriptions = (List<AccessDescription>)obj;
         } else {
             throw new IOException("Attribute name [" + name +
                                 "] not recognized by " +
@@ -213,7 +213,7 @@ public class SubjectInfoAccessExtension extends Extension
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(DESCRIPTIONS);
         return elements.elements();
     }

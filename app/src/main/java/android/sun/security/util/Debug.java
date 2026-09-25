@@ -26,6 +26,7 @@
 package android.sun.security.util;
 
 import java.math.BigInteger;
+import java.security.AccessController;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.Locale;
@@ -44,10 +45,10 @@ public class Debug {
     private static String args;
 
     static {
-        args = java.security.AccessController.doPrivileged
+        args = AccessController.doPrivileged
                 (new GetPropertyAction("java.security.debug"));
 
-        String args2 = java.security.AccessController.doPrivileged
+        String args2 = AccessController.doPrivileged
                 (new GetPropertyAction("java.security.auth.debug"));
 
         if (args == null) {

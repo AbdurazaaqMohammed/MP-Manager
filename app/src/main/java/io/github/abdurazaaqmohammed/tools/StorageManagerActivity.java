@@ -1,8 +1,12 @@
 package io.github.abdurazaaqmohammed.tools;
 
+import android.annotation.TargetApi;
+import android.app.ProgressDialog;
 import android.app.usage.StorageStatsManager;
 import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
@@ -11,6 +15,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
@@ -18,8 +23,12 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.os.storage.StorageManager;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.LruCache;
+import android.util.Size;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -44,7 +53,11 @@ import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -60,6 +73,7 @@ import java.util.concurrent.Executors;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
@@ -301,7 +315,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                 ScrollView scroll = new ScrollView(StorageManagerActivity.this);
                 TextView body = new TextView(StorageManagerActivity.this);
                 body.setText(text.trim());
-                body.setTypeface(android.graphics.Typeface.MONOSPACE);
+                body.setTypeface(Typeface.MONOSPACE);
                 body.setTextIsSelectable(true);
                 int p = dp(16);
                 body.setPadding(p, p, p, p);
@@ -311,7 +325,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                         .setView(scroll)
                         .setPositiveButton(getString(android.R.string.copy), (d, w) -> {
                             try {
-                                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                                 cm.setPrimaryClip(ClipData.newPlainText("rootcheck", body.getText().toString()));
                                 Extensions.showMessage(StorageManagerActivity.this, getString(R.string.copied));
                             } catch (Exception ignored) {
@@ -338,15 +352,15 @@ public class StorageManagerActivity extends AppCompatActivity {
         Extensions.showMessage(this, getString(R.string.storage_testing_rw));
         new Thread(() -> {
             StringBuilder out = new StringBuilder();
-            java.io.File local = null;
-            java.io.File back = null;
+            File local = null;
+            File back = null;
             String remote = "/data/local/tmp/mpman_roundtrip_test";
             try {
                 RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
                 String canary = "MPManager roundtrip " + System.currentTimeMillis() + " 0123456789 abcdefgh";
-                local = new java.io.File(getCacheDir(), "roundtrip_src.tmp");
-                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(local)) {
-                    fos.write(canary.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                local = new File(getCacheDir(), "roundtrip_src.tmp");
+                try (FileOutputStream fos = new FileOutputStream(local)) {
+                    fos.write(canary.getBytes(StandardCharsets.UTF_8));
                 }
                 try {
                     rm.streamToRoot(local, remote);
@@ -356,18 +370,18 @@ public class StorageManagerActivity extends AppCompatActivity {
                     throw new Exception("stop");
                 }
                 try {
-                    back = new java.io.File(getCacheDir(), "roundtrip_back.tmp");
-                    try (java.io.FileOutputStream fos = new java.io.FileOutputStream(back)) {
+                    back = new File(getCacheDir(), "roundtrip_back.tmp");
+                    try (FileOutputStream fos = new FileOutputStream(back)) {
                         rm.streamFromRoot(remote, fos, 65536L);
                     }
-                    java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-                    try (java.io.FileInputStream fis = new java.io.FileInputStream(back)) {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    try (FileInputStream fis = new FileInputStream(back)) {
                         byte[] buf = new byte[8192];
                         int n;
                         while ((n = fis.read(buf)) != -1) bos.write(buf, 0, n);
                     }
                     byte[] data = bos.toByteArray();
-                    String readBack = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+                    String readBack = new String(data, StandardCharsets.UTF_8);
                     out.append("roundtrip read: OK\n");
                     out.append("roundtrip match: ").append(canary.equals(readBack) ? "YES" : "NO (got " + data.length + " bytes)").append("\n");
                 } catch (Exception e) {
@@ -441,13 +455,13 @@ public class StorageManagerActivity extends AppCompatActivity {
     }
 
     private void startAutoClear(List<CacheCleaner.QueueItem> targets) {
-        android.app.ProgressDialog progress = new android.app.ProgressDialog(this);
+        ProgressDialog progress = new ProgressDialog(this);
         progress.setTitle(getString(R.string.storage_autoclearing));
-        progress.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL);
+        progress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progress.setMax(targets.size());
         progress.setProgress(0);
         progress.setCancelable(false);
-        progress.setButton(android.content.DialogInterface.BUTTON_NEGATIVE, getString(android.R.string.cancel), (d, w) -> CacheCleaner.stop());
+        progress.setButton(DialogInterface.BUTTON_NEGATIVE, getString(android.R.string.cancel), (d, w) -> CacheCleaner.stop());
         progress.show();
         boolean started = CacheCleaner.start(this, targets, new CacheCleaner.Listener() {
             public void onAppStarted(String label, int index, int total) {
@@ -489,7 +503,7 @@ public class StorageManagerActivity extends AppCompatActivity {
         TextView t = new TextView(this);
         t.setText(text);
         t.setTextSize(18);
-        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTypeface(null, Typeface.BOLD);
         t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, dp(16), 0, dp(8));
@@ -513,7 +527,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                     inner.setPadding(dp(12), dp(12), dp(12), dp(12));
                     TextView name = new TextView(this);
                     name.setText(si.name + "  " + si.path);
-                    name.setTypeface(null, android.graphics.Typeface.BOLD);
+                    name.setTypeface(null, Typeface.BOLD);
                     inner.addView(name);
                     ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
                     bar.setMax(100);
@@ -703,7 +717,7 @@ public class StorageManagerActivity extends AppCompatActivity {
         label.setText(name + "  " + FileSize.getHumanReadableFileSize(value) + "  " + pct + "%");
         label.setTextSize(14);
         if (name.equals(typeFilter)) {
-            label.setTypeface(null, android.graphics.Typeface.BOLD);
+            label.setTypeface(null, Typeface.BOLD);
             label.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLUE));
         }
         row.addView(label);
@@ -762,9 +776,9 @@ public class StorageManagerActivity extends AppCompatActivity {
             }
             if ("Videos".equals(bucket)) {
                 if (Build.VERSION.SDK_INT >= 29) {
-                    return ThumbnailUtils.createVideoThumbnail(file, new android.util.Size(144, 144), null);
+                    return ThumbnailUtils.createVideoThumbnail(file, new Size(144, 144), null);
                 }
-                return ThumbnailUtils.createVideoThumbnail(file.getAbsolutePath(), android.provider.MediaStore.Images.Thumbnails.MINI_KIND);
+                return ThumbnailUtils.createVideoThumbnail(file.getAbsolutePath(), MediaStore.Images.Thumbnails.MINI_KIND);
             }
         } catch (Exception ignored) {
         }
@@ -811,7 +825,7 @@ public class StorageManagerActivity extends AppCompatActivity {
                     tp.setMargins(cp, 0, cp, 0);
                     text.setLayoutParams(tp);
                     TextView name = new TextView(StorageManagerActivity.this);
-                    name.setTypeface(null, android.graphics.Typeface.BOLD);
+                    name.setTypeface(null, Typeface.BOLD);
                     name.setTextColor(onSurface);
                     text.addView(name);
                     TextView path = new TextView(StorageManagerActivity.this);
@@ -918,7 +932,7 @@ public class StorageManagerActivity extends AppCompatActivity {
 
     private boolean deleteOneFile(File file) {
         try {
-            io.github.abdurazaaqmohammed.utils.AccessManager.delete(StorageManagerActivity.this, file.getAbsolutePath(), true);
+            AccessManager.delete(StorageManagerActivity.this, file.getAbsolutePath(), true);
         } catch (Exception ignored) {
         }
         if (file.exists()) {
@@ -1023,13 +1037,13 @@ public class StorageManagerActivity extends AppCompatActivity {
         };
     }
 
-    @android.annotation.TargetApi(26)
+    @TargetApi(26)
     private long queryCacheBytes26(ApplicationInfo app) {
         try {
             StorageStatsManager stats = (StorageStatsManager) getSystemService(Context.STORAGE_STATS_SERVICE);
             StorageManager sm = (StorageManager) getSystemService(Context.STORAGE_SERVICE);
             if (stats == null || sm == null) return -1;
-            return stats.queryStatsForPackage(sm.getUuidForPath(new File(app.sourceDir)), app.packageName, android.os.Process.myUserHandle()).getCacheBytes();
+            return stats.queryStatsForPackage(sm.getUuidForPath(new File(app.sourceDir)), app.packageName, Process.myUserHandle()).getCacheBytes();
         } catch (Exception e) {
             return -1;
         }
@@ -1226,7 +1240,7 @@ public class StorageManagerActivity extends AppCompatActivity {
 
     private void openAppInfo(String pkg) {
         try {
-            Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
             startActivity(intent);
         } catch (Exception e) {
             Extensions.showMessage(this, getString(R.string.storage_cannot_open));

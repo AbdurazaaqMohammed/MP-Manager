@@ -15,6 +15,8 @@
  */
 package com.reandroid.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.utils.ObjectsUtil;
 import com.reandroid.xml.kxml2.KXmlParser;
 import com.reandroid.xml.kxml2.KXmlSerializer;
@@ -38,7 +40,7 @@ public class XMLUtil {
         }
     }
     public static String decodeEntityRef(String entityRef) {
-        if (android.text.TextUtils.isEmpty(entityRef)) {
+        if (TextUtils.isEmpty(entityRef)) {
             return entityRef;
         }
         String decode;

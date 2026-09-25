@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 import android.sun.security.util.ObjectIdentifier;
 
@@ -75,15 +77,15 @@ public class Extension /* implements java.security.cert.Extension */ {
     /**
      * Constructs an extension from a DER encoded array of bytes.
      */
-    public Extension(android.sun.security.util.DerValue derVal) throws IOException {
+    public Extension(DerValue derVal) throws IOException {
 
-        android.sun.security.util.DerInputStream in = derVal.toDerInputStream();
+        DerInputStream in = derVal.toDerInputStream();
 
         // Object identifier
         extensionId = in.getOID();
 
         // If the criticality flag was false, it will not have been encoded.
-        android.sun.security.util.DerValue val = in.getDerValue();
+        DerValue val = in.getDerValue();
         if (val.tag == DerValue.tag_Boolean) {
             critical = val.getBoolean();
 
@@ -109,7 +111,7 @@ public class Extension /* implements java.security.cert.Extension */ {
         this.critical = critical;
         // passed in a DER encoded octet string, strip off the tag
         // and length
-        android.sun.security.util.DerValue inDerVal = new android.sun.security.util.DerValue(extensionValue);
+        DerValue inDerVal = new DerValue(extensionValue);
         this.extensionValue = inDerVal.getOctetString();
     }
 
@@ -148,8 +150,8 @@ public class Extension /* implements java.security.cert.Extension */ {
             throw new NullPointerException();
         }
 
-        android.sun.security.util.DerOutputStream dos1 = new android.sun.security.util.DerOutputStream();
-        android.sun.security.util.DerOutputStream dos2 = new android.sun.security.util.DerOutputStream();
+        DerOutputStream dos1 = new DerOutputStream();
+        DerOutputStream dos2 = new DerOutputStream();
 
         dos1.putOID(extensionId);
         if (critical) {
@@ -157,7 +159,7 @@ public class Extension /* implements java.security.cert.Extension */ {
         }
         dos1.putOctetString(extensionValue);
 
-        dos2.write(android.sun.security.util.DerValue.tag_Sequence, dos1);
+        dos2.write(DerValue.tag_Sequence, dos1);
         out.write(dos2.toByteArray());
     }
 
@@ -167,21 +169,21 @@ public class Extension /* implements java.security.cert.Extension */ {
      * @param out the DerOutputStream to write the extension to.
      * @exception IOException on encoding errors
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
 
         if (extensionId == null)
             throw new IOException("Null OID to encode for the extension!");
         if (extensionValue == null)
             throw new IOException("No value to encode for the extension!");
 
-        android.sun.security.util.DerOutputStream dos = new android.sun.security.util.DerOutputStream();
+        DerOutputStream dos = new DerOutputStream();
 
         dos.putOID(extensionId);
         if (critical)
             dos.putBoolean(critical);
         dos.putOctetString(extensionValue);
 
-        out.write(android.sun.security.util.DerValue.tag_Sequence, dos);
+        out.write(DerValue.tag_Sequence, dos);
     }
 
     /**

@@ -25,6 +25,7 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ import javax.security.auth.x500.X500Principal;
 
 import android.sun.misc.HexDumpEncoder;
 import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 /**
  * <p>Abstract class for a revoked certificate in a CRL.
@@ -77,9 +79,9 @@ import android.sun.security.util.DerValue;
 
 public class X509CRLEntryImpl extends X509CRLEntry {
 
-    private android.sun.security.x509.SerialNumber serialNumber = null;
+    private SerialNumber serialNumber = null;
     private Date revocationDate = null;
-    private android.sun.security.x509.CRLExtensions extensions = null;
+    private CRLExtensions extensions = null;
     private byte[] revokedCert = null;
     private X500Principal certIssuer;
 
@@ -94,7 +96,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      * @param date the Date on which revocation took place.
      */
     public X509CRLEntryImpl(BigInteger num, Date date) {
-        this.serialNumber = new android.sun.security.x509.SerialNumber(num);
+        this.serialNumber = new SerialNumber(num);
         this.revocationDate = date;
     }
 
@@ -108,8 +110,8 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      * @param crlEntryExts the extensions for this entry.
      */
     public X509CRLEntryImpl(BigInteger num, Date date,
-                           android.sun.security.x509.CRLExtensions crlEntryExts) {
-        this.serialNumber = new android.sun.security.x509.SerialNumber(num);
+                           CRLExtensions crlEntryExts) {
+        this.serialNumber = new SerialNumber(num);
         this.revocationDate = date;
         this.extensions = crlEntryExts;
     }
@@ -122,7 +124,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      */
     public X509CRLEntryImpl(byte[] revokedCert) throws CRLException {
         try {
-            parse(new android.sun.security.util.DerValue(revokedCert));
+            parse(new DerValue(revokedCert));
         } catch (IOException e) {
             this.revokedCert = null;
             throw new CRLException("Parsing error: " + e);
@@ -162,10 +164,10 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      * certificate is written.
      * @exception CRLException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream outStrm) throws CRLException {
+    public void encode(DerOutputStream outStrm) throws CRLException {
         try {
             if (revokedCert == null) {
-                android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+                DerOutputStream tmp = new DerOutputStream();
                 // sequence { serialNumber, revocationDate, extensions }
                 serialNumber.encode(tmp);
 
@@ -178,8 +180,8 @@ public class X509CRLEntryImpl extends X509CRLEntry {
                 if (extensions != null)
                     extensions.encode(tmp, isExplicit);
 
-                android.sun.security.util.DerOutputStream seq = new DerOutputStream();
-                seq.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+                DerOutputStream seq = new DerOutputStream();
+                seq.write(DerValue.tag_Sequence, tmp);
 
                 revokedCert = seq.toByteArray();
             }
@@ -197,7 +199,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      */
     public byte[] getEncoded() throws CRLException {
         if (revokedCert == null)
-            this.encode(new android.sun.security.util.DerOutputStream());
+            this.encode(new DerOutputStream());
         return revokedCert.clone();
     }
 
@@ -241,11 +243,11 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      */
     @Override
     public CRLReason getRevocationReason() {
-        android.sun.security.x509.Extension ext = getExtension(android.sun.security.x509.PKIXExtensions.ReasonCode_Id);
+        Extension ext = getExtension(PKIXExtensions.ReasonCode_Id);
         if (ext == null) {
             return null;
         }
-        android.sun.security.x509.CRLReasonCodeExtension rcExt = (android.sun.security.x509.CRLReasonCodeExtension) ext;
+        CRLReasonCodeExtension rcExt = (CRLReasonCodeExtension) ext;
         return rcExt.getReasonCode();
     }
 
@@ -259,11 +261,11 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             if (ext == null) {
                 return null;
             }
-            android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(ext);
+            DerValue val = new DerValue(ext);
             byte[] data = val.getOctetString();
 
-            android.sun.security.x509.CRLReasonCodeExtension rcExt =
-                new android.sun.security.x509.CRLReasonCodeExtension(Boolean.FALSE, data);
+            CRLReasonCodeExtension rcExt =
+                new CRLReasonCodeExtension(Boolean.FALSE, data);
             return rcExt.getReasonCode();
         } catch (IOException ioe) {
             return null;
@@ -277,10 +279,10 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      * @throws IOException on error
      */
     public Integer getReasonCode() throws IOException {
-        Object obj = getExtension(android.sun.security.x509.PKIXExtensions.ReasonCode_Id);
+        Object obj = getExtension(PKIXExtensions.ReasonCode_Id);
         if (obj == null)
             return null;
-        android.sun.security.x509.CRLReasonCodeExtension reasonCode = (CRLReasonCodeExtension)obj;
+        CRLReasonCodeExtension reasonCode = (CRLReasonCodeExtension)obj;
         return (Integer)(reasonCode.get(CRLReasonCodeExtension.REASON));
     }
 
@@ -305,13 +307,13 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             sb.append("\n    CRL Entry Extensions: ").append(objs.length);
             for (int i = 0; i < objs.length; i++) {
                 sb.append("\n    [").append(i + 1).append("]: ");
-                android.sun.security.x509.Extension ext = (android.sun.security.x509.Extension)objs[i];
+                Extension ext = (Extension)objs[i];
                 try {
-                    if (android.sun.security.x509.OIDMap.getClass(ext.getExtensionId()) == null) {
+                    if (OIDMap.getClass(ext.getExtensionId()) == null) {
                         sb.append(ext);
                         byte[] extValue = ext.getExtensionValue();
                         if (extValue != null) {
-                            android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
+                            DerOutputStream out = new DerOutputStream();
                             out.putOctetString(extValue);
                             extValue = out.toByteArray();
                             HexDumpEncoder enc = new HexDumpEncoder();
@@ -351,7 +353,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             return null;
         }
         Set<String> extSet = new HashSet<>();
-        for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
+        for (Extension ex : extensions.getAllExtensions()) {
             if (ex.isCritical()) {
                 extSet.add(ex.getExtensionId().toString());
             }
@@ -372,7 +374,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             return null;
         }
         Set<String> extSet = new HashSet<>();
-        for (android.sun.security.x509.Extension ex : extensions.getAllExtensions()) {
+        for (Extension ex : extensions.getAllExtensions()) {
             if (!ex.isCritical()) {
                 extSet.add(ex.getExtensionId().toString());
             }
@@ -396,14 +398,14 @@ public class X509CRLEntryImpl extends X509CRLEntry {
         if (extensions == null)
             return null;
         try {
-            String extAlias = android.sun.security.x509.OIDMap.getName(new android.sun.security.util.ObjectIdentifier(oid));
-            android.sun.security.x509.Extension crlExt = null;
+            String extAlias = OIDMap.getName(new ObjectIdentifier(oid));
+            Extension crlExt = null;
 
             if (extAlias == null) { // may be unknown
-                android.sun.security.util.ObjectIdentifier findOID = new android.sun.security.util.ObjectIdentifier(oid);
-                android.sun.security.x509.Extension ex = null;
-                android.sun.security.util.ObjectIdentifier inCertOID;
-                for (Enumeration<android.sun.security.x509.Extension> e = extensions.getElements();
+                ObjectIdentifier findOID = new ObjectIdentifier(oid);
+                Extension ex = null;
+                ObjectIdentifier inCertOID;
+                for (Enumeration<Extension> e = extensions.getElements();
                      e.hasMoreElements();) {
                     ex = e.nextElement();
                     inCertOID = ex.getExtensionId();
@@ -420,7 +422,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
             if (extData == null)
                 return null;
 
-            android.sun.security.util.DerOutputStream out = new android.sun.security.util.DerOutputStream();
+            DerOutputStream out = new DerOutputStream();
             out.putOctetString(extData);
             return out.toByteArray();
         } catch (Exception e) {
@@ -434,7 +436,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      * @param oid ObjectIdentifier of extension desired
      * @returns Extension of type <extension> or null, if not found
      */
-    public android.sun.security.x509.Extension getExtension(android.sun.security.util.ObjectIdentifier oid) {
+    public Extension getExtension(ObjectIdentifier oid) {
         if (extensions == null)
             return null;
 
@@ -443,10 +445,10 @@ public class X509CRLEntryImpl extends X509CRLEntry {
         return extensions.get(OIDMap.getName(oid));
     }
 
-    private void parse(android.sun.security.util.DerValue derVal)
+    private void parse(DerValue derVal)
     throws CRLException, IOException {
 
-        if (derVal.tag != android.sun.security.util.DerValue.tag_Sequence) {
+        if (derVal.tag != DerValue.tag_Sequence) {
             throw new CRLException("Invalid encoded RevokedCertificate, " +
                                   "starting sequence tag missing.");
         }
@@ -455,15 +457,15 @@ public class X509CRLEntryImpl extends X509CRLEntry {
 
         revokedCert = derVal.toByteArray();
         // serial number
-        android.sun.security.util.DerInputStream in = derVal.toDerInputStream();
-        android.sun.security.util.DerValue val = in.getDerValue();
+        DerInputStream in = derVal.toDerInputStream();
+        DerValue val = in.getDerValue();
         this.serialNumber = new SerialNumber(val);
 
         // revocationDate
         int nextByte = derVal.data.peekByte();
-        if ((byte)nextByte == android.sun.security.util.DerValue.tag_UtcTime) {
+        if ((byte)nextByte == DerValue.tag_UtcTime) {
             this.revocationDate = derVal.data.getUTCTime();
-        } else if ((byte)nextByte == android.sun.security.util.DerValue.tag_GeneralizedTime) {
+        } else if ((byte)nextByte == DerValue.tag_GeneralizedTime) {
             this.revocationDate = derVal.data.getGeneralizedTime();
         } else
             throw new CRLException("Invalid encoding for revocation date");
@@ -494,7 +496,7 @@ public class X509CRLEntryImpl extends X509CRLEntry {
      *
      * @return the CertificateIssuerExtension, or null if it does not exist
      */
-    android.sun.security.x509.CertificateIssuerExtension getCertificateIssuerExtension() {
+    CertificateIssuerExtension getCertificateIssuerExtension() {
         return (CertificateIssuerExtension)
             getExtension(PKIXExtensions.CertificateIssuer_Id);
     }

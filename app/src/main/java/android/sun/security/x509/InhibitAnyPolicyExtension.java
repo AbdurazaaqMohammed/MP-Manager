@@ -58,8 +58,8 @@ import android.sun.security.util.ObjectIdentifier;
  * SkipCerts ::= INTEGER (0..MAX)
  * </pre></code>
  * @author Anne Anderson
- * @see android.sun.security.x509.CertAttrSet
- * @see android.sun.security.x509.Extension
+ * @see CertAttrSet
+ * @see Extension
  */
 public class InhibitAnyPolicyExtension extends Extension
 implements CertAttrSet<String> {
@@ -113,7 +113,7 @@ implements CertAttrSet<String> {
             this.skipCerts = Integer.MAX_VALUE;
         else
             this.skipCerts = skipCerts;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.InhibitAnyPolicy_Id;
+        this.extensionId = PKIXExtensions.InhibitAnyPolicy_Id;
         critical = true;
         encodeThis();
     }
@@ -130,7 +130,7 @@ implements CertAttrSet<String> {
     public InhibitAnyPolicyExtension(Boolean critical, Object value)
         throws IOException {
 
-        this.extensionId = android.sun.security.x509.PKIXExtensions.InhibitAnyPolicy_Id;
+        this.extensionId = PKIXExtensions.InhibitAnyPolicy_Id;
 
         if (!critical)
             throw new IOException("Criticality cannot be false for " +
@@ -246,7 +246,7 @@ implements CertAttrSet<String> {
      * @returns enumeration of elements
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(SKIP_CERTS);
         return (elements.elements());
     }

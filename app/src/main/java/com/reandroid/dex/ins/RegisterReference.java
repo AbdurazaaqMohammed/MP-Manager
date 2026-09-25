@@ -16,7 +16,6 @@
 package com.reandroid.dex.ins;
 
 import com.reandroid.dex.common.Register;
-import com.reandroid.dex.common.RegisterFormat;
 import com.reandroid.dex.common.RegisterType;
 import com.reandroid.dex.common.RegistersTable;
 

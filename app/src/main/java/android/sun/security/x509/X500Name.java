@@ -30,6 +30,7 @@ import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 import android.sun.security.util.ObjectIdentifier;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -864,7 +865,7 @@ public class X500Name implements GeneralNameInterface, Principal {
      */
     private void parseDN(String dname, Map<String, String> keywordMap)
             throws IOException {
-        if (android.text.TextUtils.isEmpty(dname)) {
+        if (TextUtils.isEmpty(dname)) {
             names = new RDN[0];
             return;
         }

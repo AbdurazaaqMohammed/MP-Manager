@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -39,7 +41,7 @@ import javax.security.auth.x500.X500Principal;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateSubjectName implements CertAttrSet<String> {
     /**
@@ -58,7 +60,7 @@ public class CertificateSubjectName implements CertAttrSet<String> {
     public static final String DN_PRINCIPAL = "x500principal";
 
     // Private data member
-    private android.sun.security.x509.X500Name dnName;
+    private X500Name dnName;
 
     // cached X500Principal version of the name
     private X500Principal dnPrincipal;
@@ -68,7 +70,7 @@ public class CertificateSubjectName implements CertAttrSet<String> {
      *
      * @param name the X500Name
      */
-    public CertificateSubjectName(android.sun.security.x509.X500Name name) {
+    public CertificateSubjectName(X500Name name) {
         this.dnName = name;
     }
 
@@ -78,8 +80,8 @@ public class CertificateSubjectName implements CertAttrSet<String> {
      * @param in the DerInputStream to read the X500Name from.
      * @exception IOException on decoding errors.
      */
-    public CertificateSubjectName(android.sun.security.util.DerInputStream in) throws IOException {
-        dnName = new android.sun.security.x509.X500Name(in);
+    public CertificateSubjectName(DerInputStream in) throws IOException {
+        dnName = new X500Name(in);
     }
 
     /**
@@ -89,8 +91,8 @@ public class CertificateSubjectName implements CertAttrSet<String> {
      * @exception IOException on decoding errors.
      */
     public CertificateSubjectName(InputStream in) throws IOException {
-        DerValue derVal = new android.sun.security.util.DerValue(in);
-        dnName = new android.sun.security.x509.X500Name(derVal);
+        DerValue derVal = new DerValue(in);
+        dnName = new X500Name(derVal);
     }
 
     /**
@@ -108,7 +110,7 @@ public class CertificateSubjectName implements CertAttrSet<String> {
      * @exception IOException on errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         dnName.encode(tmp);
 
         out.write(tmp.toByteArray());
@@ -118,7 +120,7 @@ public class CertificateSubjectName implements CertAttrSet<String> {
      * Set the attribute value.
      */
     public void set(String name, Object obj) throws IOException {
-        if (!(obj instanceof android.sun.security.x509.X500Name)) {
+        if (!(obj instanceof X500Name)) {
             throw new IOException("Attribute must be of type X500Name.");
         }
         if (name.equalsIgnoreCase(DN_NAME)) {
@@ -165,7 +167,7 @@ public class CertificateSubjectName implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(DN_NAME);
 
         return(elements.elements());

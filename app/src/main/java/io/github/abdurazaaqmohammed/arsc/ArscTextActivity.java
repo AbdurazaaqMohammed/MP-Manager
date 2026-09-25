@@ -1,11 +1,13 @@
 package io.github.abdurazaaqmohammed.arsc;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -29,15 +31,18 @@ import java.util.Iterator;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.rosemoe.sora.event.ContentChangeEvent;
 import io.github.rosemoe.sora.event.ScrollEvent;
 import io.github.rosemoe.sora.event.SelectionChangeEvent;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
+import modder.hub.dexeditor.views.TextActionWindow;
 
 public class ArscTextActivity extends AppCompatActivity {
 
@@ -186,8 +191,8 @@ public class ArscTextActivity extends AppCompatActivity {
 
             public void onPreferencesRequested() {
                 try {
-                    startActivity(new android.content.Intent(ArscTextActivity.this,
-                            io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity.class));
+                    startActivity(new Intent(ArscTextActivity.this,
+                            EditorSettingsActivity.class));
                 } catch (Exception ignored) {
                 }
             }
@@ -350,9 +355,9 @@ public class ArscTextActivity extends AppCompatActivity {
         loadBlockText();
     }
 
-    public void bindSelectionMenu(modder.hub.dexeditor.views.TextActionWindow window) {
+    public void bindSelectionMenu(TextActionWindow window) {
         if (window == null) return;
-        window.setArscIdHandler(new modder.hub.dexeditor.views.TextActionWindow.ArscIdHandler() {
+        window.setArscIdHandler(new TextActionWindow.ArscIdHandler() {
             @Override
             public boolean isArscIdAvailable(String selectedText) {
                 return resolveArscEntry(selectedText) != null;
@@ -542,7 +547,7 @@ public class ArscTextActivity extends AppCompatActivity {
             popup.setBackgroundDrawable(new ColorDrawable(0xFFFFFFFF));
         }
         try {
-            if (io.github.abdurazaaqmohammed.utils.LegacyUtils.aboveSdk20) popup.setElevation(dp(8));
+            if (LegacyUtils.aboveSdk20) popup.setElevation(dp(8));
         } catch (Exception ignored) {
         }
         popup.setOutsideTouchable(true);
@@ -588,7 +593,7 @@ public class ArscTextActivity extends AppCompatActivity {
         row.setText(text == null ? "" : text);
         row.setTextSize(15);
         row.setSingleLine(true);
-        row.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        row.setEllipsize(TextUtils.TruncateAt.END);
         int h = dp(12);
         int w = dp(16);
         row.setPadding(w, h, w, h);

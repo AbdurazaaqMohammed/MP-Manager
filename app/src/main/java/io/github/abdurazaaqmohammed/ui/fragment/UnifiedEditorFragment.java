@@ -27,6 +27,7 @@ import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import io.github.abdurazaaqmohammed.arsc.ArscTextActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
@@ -536,7 +537,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         editor.replaceComponent(EditorTextActionWindow.class, new TextActionWindow(editor, new TextActionCallback(className)));
         try {
             Activity act = getActivity();
-            if (act instanceof io.github.abdurazaaqmohammed.arsc.ArscTextActivity arscActivity) {
+            if (act instanceof ArscTextActivity arscActivity) {
                 Object comp = editor.getComponent(EditorTextActionWindow.class);
                 if (comp instanceof TextActionWindow arscWindow) arscActivity.bindSelectionMenu(arscWindow);
             }

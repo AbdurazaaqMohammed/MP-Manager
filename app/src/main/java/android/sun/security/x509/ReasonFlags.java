@@ -25,7 +25,10 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.BitArray;
 import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.util.Enumeration;
@@ -119,7 +122,7 @@ public class ReasonFlags {
      * @param reasons the bits to be set for the ReasonFlags.
      */
     public ReasonFlags(byte[] reasons) {
-        bitString = new android.sun.security.util.BitArray(reasons.length*8, reasons).toBooleanArray();
+        bitString = new BitArray(reasons.length*8, reasons).toBooleanArray();
     }
 
     /**
@@ -136,7 +139,7 @@ public class ReasonFlags {
      *
      * @param reasons the bits to be set for the ReasonFlags.
      */
-    public ReasonFlags(android.sun.security.util.BitArray reasons) {
+    public ReasonFlags(BitArray reasons) {
         this.bitString = reasons.toBooleanArray();
     }
 
@@ -147,7 +150,7 @@ public class ReasonFlags {
      * @exception IOException on decoding errors.
      */
     public ReasonFlags(DerInputStream in) throws IOException {
-        android.sun.security.util.DerValue derVal = in.getDerValue();
+        DerValue derVal = in.getDerValue();
         this.bitString = derVal.getUnalignedBitString(true).toBooleanArray();
     }
 
@@ -157,7 +160,7 @@ public class ReasonFlags {
      * @param derVal the DerValue decoded from the stream.
      * @exception IOException on decoding errors.
      */
-    public ReasonFlags(android.sun.security.util.DerValue derVal) throws IOException {
+    public ReasonFlags(DerValue derVal) throws IOException {
         this.bitString = derVal.getUnalignedBitString(true).toBooleanArray();
     }
 
@@ -222,8 +225,8 @@ public class ReasonFlags {
      * @param out the DerOutputStream to write the extension to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        out.putTruncatedUnalignedBitString(new android.sun.security.util.BitArray(this.bitString));
+    public void encode(DerOutputStream out) throws IOException {
+        out.putTruncatedUnalignedBitString(new BitArray(this.bitString));
     }
 
     /**
@@ -231,7 +234,7 @@ public class ReasonFlags {
      * attribute.
      */
     public Enumeration<String> getElements () {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         for (String name : NAMES) {
             elements.addElement(name);
         }

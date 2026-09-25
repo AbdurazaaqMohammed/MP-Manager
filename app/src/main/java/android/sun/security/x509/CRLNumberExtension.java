@@ -25,6 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.Debug;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
@@ -42,8 +45,8 @@ import java.util.Enumeration;
  * another CRL.
  *
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class CRLNumberExtension extends Extension
 implements CertAttrSet<String> {
@@ -66,7 +69,7 @@ implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
+        DerOutputStream os = new DerOutputStream();
         os.putInteger(this.crlNumber);
         this.extensionValue = os.toByteArray();
     }
@@ -78,7 +81,7 @@ implements CertAttrSet<String> {
      * @param crlNum the value to be set for the extension.
      */
     public CRLNumberExtension(int crlNum) throws IOException {
-        this(android.sun.security.x509.PKIXExtensions.CRLNumber_Id, false, BigInteger.valueOf(crlNum),
+        this(PKIXExtensions.CRLNumber_Id, false, BigInteger.valueOf(crlNum),
         NAME, LABEL);
     }
 
@@ -89,13 +92,13 @@ implements CertAttrSet<String> {
      * @param crlNum the value to be set for the extension.
      */
     public CRLNumberExtension(BigInteger crlNum) throws IOException {
-        this(android.sun.security.x509.PKIXExtensions.CRLNumber_Id, false, crlNum, NAME, LABEL);
+        this(PKIXExtensions.CRLNumber_Id, false, crlNum, NAME, LABEL);
     }
 
     /**
      * Creates the extension (also called by the subclass).
      */
-    protected CRLNumberExtension(android.sun.security.util.ObjectIdentifier extensionId,
+    protected CRLNumberExtension(ObjectIdentifier extensionId,
                                  boolean isCritical, BigInteger crlNum, String extensionName,
                                  String extensionLabel) throws IOException {
 
@@ -117,20 +120,20 @@ implements CertAttrSet<String> {
      */
     public CRLNumberExtension(Boolean critical, Object value)
     throws IOException {
-        this(android.sun.security.x509.PKIXExtensions.CRLNumber_Id, critical, value, NAME, LABEL);
+        this(PKIXExtensions.CRLNumber_Id, critical, value, NAME, LABEL);
     }
 
     /**
      * Creates the extension (also called by the subclass).
      */
-    protected CRLNumberExtension(android.sun.security.util.ObjectIdentifier extensionId,
+    protected CRLNumberExtension(ObjectIdentifier extensionId,
                                  Boolean critical, Object value, String extensionName,
                                  String extensionLabel) throws IOException {
 
         this.extensionId = extensionId;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         this.crlNumber = val.getBigInteger();
         this.extensionName = extensionName;
         this.extensionLabel = extensionLabel;
@@ -183,7 +186,7 @@ implements CertAttrSet<String> {
      */
     public String toString() {
         return (super.toString() + extensionLabel + ": " +
-                   ((crlNumber == null) ? "" : android.sun.security.util.Debug.toHexString(crlNumber))
+                   ((crlNumber == null) ? "" : Debug.toHexString(crlNumber))
                    + "\n");
     }
 
@@ -194,7 +197,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-       android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+       DerOutputStream tmp = new DerOutputStream();
         encode(out, PKIXExtensions.CRLNumber_Id, true);
     }
 
@@ -205,7 +208,7 @@ implements CertAttrSet<String> {
     protected void encode(OutputStream out, ObjectIdentifier extensionId,
         boolean isCritical) throws IOException {
 
-       android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+       DerOutputStream tmp = new DerOutputStream();
 
        if (this.extensionValue == null) {
            this.extensionId = extensionId;
@@ -221,7 +224,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(NUMBER);
         return (elements.elements());
     }

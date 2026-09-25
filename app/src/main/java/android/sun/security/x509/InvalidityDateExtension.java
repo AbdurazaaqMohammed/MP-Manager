@@ -26,6 +26,7 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -73,7 +74,7 @@ public class InvalidityDateExtension extends Extension
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream dos = new android.sun.security.util.DerOutputStream();
+        DerOutputStream dos = new DerOutputStream();
         dos.putGeneralizedTime(date);
         this.extensionValue = dos.toByteArray();
     }
@@ -96,7 +97,7 @@ public class InvalidityDateExtension extends Extension
      */
     public InvalidityDateExtension(boolean critical, Date date)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.InvalidityDate_Id;
+        this.extensionId = PKIXExtensions.InvalidityDate_Id;
         this.critical = critical;
         this.date = date;
         encodeThis();
@@ -112,10 +113,10 @@ public class InvalidityDateExtension extends Extension
      */
     public InvalidityDateExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.InvalidityDate_Id;
+        this.extensionId = PKIXExtensions.InvalidityDate_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
+        DerValue val = new DerValue(this.extensionValue);
         this.date = val.getGeneralizedTime();
     }
 
@@ -178,7 +179,7 @@ public class InvalidityDateExtension extends Extension
      * @exception IOException on encoding errors
      */
     public void encode(OutputStream out) throws IOException {
-        DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         if (this.extensionValue == null) {
             this.extensionId = PKIXExtensions.InvalidityDate_Id;
@@ -194,7 +195,7 @@ public class InvalidityDateExtension extends Extension
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(DATE);
 
         return elements.elements();

@@ -25,6 +25,8 @@
 
 package android.sun.security.action;
 
+import java.security.PrivilegedAction;
+
 /**
  * A convenience class for retrieving the string value of a system
  * property as a privileged action.
@@ -47,7 +49,7 @@ package android.sun.security.action;
  */
 
 public class GetPropertyAction
-        implements java.security.PrivilegedAction<String> {
+        implements PrivilegedAction<String> {
     private final String theProp;
     private String defaultVal;
 

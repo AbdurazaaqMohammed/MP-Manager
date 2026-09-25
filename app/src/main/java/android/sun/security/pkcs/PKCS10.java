@@ -36,6 +36,7 @@ import java.security.InvalidKeyException;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.PublicKey;
+import java.util.Arrays;
 
 import android.sun.misc.BASE64Encoder;
 
@@ -329,7 +330,7 @@ public class PKCS10 {
         if (otherEncoded == null)
             return false;
 
-        return java.util.Arrays.equals(encoded, otherEncoded);
+        return Arrays.equals(encoded, otherEncoded);
     }
 
     /**

@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.tools;
 
 import android.accessibilityservice.AccessibilityService;
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class CacheCleaner {
     public static class QueueItem {
@@ -89,7 +91,7 @@ public class CacheCleaner {
     public static void openAccessibilitySettings(Context context) {
         try {
             Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            if (!(context instanceof android.app.Activity)) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (!(context instanceof Activity)) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         } catch (Exception ignored) {
         }
@@ -314,7 +316,7 @@ public class CacheCleaner {
 
     private static void performBack() {
         try {
-            android.accessibilityservice.AccessibilityService svc = activeService;
+            AccessibilityService svc = activeService;
             if (svc != null) svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
         } catch (Exception ignored) {
         }
@@ -330,7 +332,7 @@ public class CacheCleaner {
         List<AccessibilityNodeInfo> all = new ArrayList<>();
         collectTextNodes(root, all);
         for (AccessibilityNodeInfo node : all) {
-            String text = nodeText(node).toLowerCase(java.util.Locale.ROOT);
+            String text = nodeText(node).toLowerCase(Locale.ROOT);
             if (text.isEmpty()) continue;
             if (containsAny(text, CLEAR_WORDS) && containsAny(text, CACHE_WORDS)) continue;
             if (!containsAny(text, STORAGE_WORDS)) continue;
@@ -344,7 +346,7 @@ public class CacheCleaner {
         List<AccessibilityNodeInfo> all = new ArrayList<>();
         collectTextNodes(root, all);
         for (AccessibilityNodeInfo node : all) {
-            String text = nodeText(node).toLowerCase(java.util.Locale.ROOT);
+            String text = nodeText(node).toLowerCase(Locale.ROOT);
             if (text.isEmpty()) continue;
             if (!containsAny(text, CLEAR_WORDS)) continue;
             if (!containsAny(text, CACHE_WORDS)) continue;

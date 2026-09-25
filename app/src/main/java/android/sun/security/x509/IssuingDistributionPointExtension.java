@@ -90,12 +90,12 @@ public class IssuingDistributionPointExtension extends Extension
     /*
      * The distribution point name for the CRL.
      */
-    private android.sun.security.x509.DistributionPointName distributionPoint = null;
+    private DistributionPointName distributionPoint = null;
 
     /*
      * The scope settings for the CRL.
      */
-    private android.sun.security.x509.ReasonFlags revocationReasons = null;
+    private ReasonFlags revocationReasons = null;
     private boolean hasOnlyUserCerts = false;
     private boolean hasOnlyCACerts = false;
     private boolean hasOnlyAttributeCerts = false;
@@ -134,7 +134,7 @@ public class IssuingDistributionPointExtension extends Extension
      * @throws IOException on encoding error.
      */
     public IssuingDistributionPointExtension(
-            android.sun.security.x509.DistributionPointName distributionPoint, android.sun.security.x509.ReasonFlags revocationReasons,
+            DistributionPointName distributionPoint, ReasonFlags revocationReasons,
             boolean hasOnlyUserCerts, boolean hasOnlyCACerts,
             boolean hasOnlyAttributeCerts, boolean isIndirectCRL)
             throws IOException {
@@ -145,7 +145,7 @@ public class IssuingDistributionPointExtension extends Extension
                 "Only one of hasOnlyUserCerts, hasOnlyCACerts, " +
                 "hasOnlyAttributeCerts may be set to true");
         }
-        this.extensionId = android.sun.security.x509.PKIXExtensions.IssuingDistributionPoint_Id;
+        this.extensionId = PKIXExtensions.IssuingDistributionPoint_Id;
         this.critical = true;
         this.distributionPoint = distributionPoint;
         this.revocationReasons = revocationReasons;
@@ -166,7 +166,7 @@ public class IssuingDistributionPointExtension extends Extension
      */
     public IssuingDistributionPointExtension(Boolean critical, Object value)
             throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.IssuingDistributionPoint_Id;
+        this.extensionId = PKIXExtensions.IssuingDistributionPoint_Id;
         this.critical = critical;
 
         if (!(value instanceof byte[])) {
@@ -192,7 +192,7 @@ public class IssuingDistributionPointExtension extends Extension
             if (opt.isContextSpecific(TAG_DISTRIBUTION_POINT) &&
                 opt.isConstructed()) {
                 distributionPoint =
-                    new android.sun.security.x509.DistributionPointName(opt.data.getDerValue());
+                    new DistributionPointName(opt.data.getDerValue());
             } else if (opt.isContextSpecific(TAG_ONLY_USER_CERTS) &&
                        !opt.isConstructed()) {
                 opt.resetTag(DerValue.tag_Boolean);
@@ -203,7 +203,7 @@ public class IssuingDistributionPointExtension extends Extension
                 hasOnlyCACerts = opt.getBoolean();
             } else if (opt.isContextSpecific(TAG_ONLY_SOME_REASONS) &&
                        !opt.isConstructed()) {
-                revocationReasons = new android.sun.security.x509.ReasonFlags(opt); // expects tag implicit
+                revocationReasons = new ReasonFlags(opt); // expects tag implicit
             } else if (opt.isContextSpecific(TAG_INDIRECT_CRL) &&
                        !opt.isConstructed()) {
                 opt.resetTag(DerValue.tag_Boolean);
@@ -249,7 +249,7 @@ public class IssuingDistributionPointExtension extends Extension
      */
     public void set(String name, Object obj) throws IOException {
         if (name.equalsIgnoreCase(POINT)) {
-            if (!(obj instanceof android.sun.security.x509.DistributionPointName)) {
+            if (!(obj instanceof DistributionPointName)) {
                 throw new IOException(
                     "Attribute value should be of type DistributionPointName.");
             }
@@ -362,7 +362,7 @@ public class IssuingDistributionPointExtension extends Extension
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(POINT);
         elements.addElement(REASONS);
         elements.addElement(ONLY_USER_CERTS);

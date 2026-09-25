@@ -25,6 +25,7 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -52,7 +53,7 @@ import java.io.IOException;
 public class GeneralName {
 
     // Private data members
-    private android.sun.security.x509.GeneralNameInterface name = null;
+    private GeneralNameInterface name = null;
 
     /**
      * Default constructor for the class.
@@ -60,7 +61,7 @@ public class GeneralName {
      * @param name the selected CHOICE from the list.
      * @throws NullPointerException if name is null
      */
-    public GeneralName(android.sun.security.x509.GeneralNameInterface name) {
+    public GeneralName(GeneralNameInterface name) {
         if (name == null) {
             throw new NullPointerException("GeneralName must not be null");
         }
@@ -72,7 +73,7 @@ public class GeneralName {
      *
      * @param encName the DER encoded GeneralName.
      */
-    public GeneralName(android.sun.security.util.DerValue encName) throws IOException {
+    public GeneralName(DerValue encName) throws IOException {
         this(encName, false);
     }
 
@@ -82,69 +83,69 @@ public class GeneralName {
      * @param encName the DER encoded GeneralName.
      * @param nameConstraint true if general name is a name constraint
      */
-    public GeneralName(android.sun.security.util.DerValue encName, boolean nameConstraint)
+    public GeneralName(DerValue encName, boolean nameConstraint)
         throws IOException {
         short tag = (byte)(encName.tag & 0x1f);
 
         // All names except for NAME_DIRECTORY should be encoded with the
         // IMPLICIT tag.
         switch (tag) {
-        case android.sun.security.x509.GeneralNameInterface.NAME_ANY:
+        case GeneralNameInterface.NAME_ANY:
             if (encName.isContextSpecific() && encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_Sequence);
+                encName.resetTag(DerValue.tag_Sequence);
                 name = new OtherName(encName);
             } else {
                 throw new IOException("Invalid encoding of Other-Name");
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_RFC822:
+        case GeneralNameInterface.NAME_RFC822:
             if (encName.isContextSpecific() && !encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_IA5String);
+                encName.resetTag(DerValue.tag_IA5String);
                 name = new RFC822Name(encName);
             } else {
                 throw new IOException("Invalid encoding of RFC822 name");
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_DNS:
+        case GeneralNameInterface.NAME_DNS:
             if (encName.isContextSpecific() && !encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_IA5String);
+                encName.resetTag(DerValue.tag_IA5String);
                 name = new DNSName(encName);
             } else {
                 throw new IOException("Invalid encoding of DNS name");
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_URI:
+        case GeneralNameInterface.NAME_URI:
             if (encName.isContextSpecific() && !encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_IA5String);
-                name = (nameConstraint ? android.sun.security.x509.URIName.nameConstraint(encName) :
+                encName.resetTag(DerValue.tag_IA5String);
+                name = (nameConstraint ? URIName.nameConstraint(encName) :
                         new URIName(encName));
             } else {
                 throw new IOException("Invalid encoding of URI");
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_IP:
+        case GeneralNameInterface.NAME_IP:
             if (encName.isContextSpecific() && !encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_OctetString);
+                encName.resetTag(DerValue.tag_OctetString);
                 name = new IPAddressName(encName);
             } else {
                 throw new IOException("Invalid encoding of IP address");
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_OID:
+        case GeneralNameInterface.NAME_OID:
             if (encName.isContextSpecific() && !encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_ObjectId);
+                encName.resetTag(DerValue.tag_ObjectId);
                 name = new OIDName(encName);
             } else {
                 throw new IOException("Invalid encoding of OID name");
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_DIRECTORY:
+        case GeneralNameInterface.NAME_DIRECTORY:
             if (encName.isContextSpecific() && encName.isConstructed()) {
                 name = new X500Name(encName.getData());
             } else {
@@ -152,9 +153,9 @@ public class GeneralName {
             }
             break;
 
-        case android.sun.security.x509.GeneralNameInterface.NAME_EDI:
+        case GeneralNameInterface.NAME_EDI:
             if (encName.isContextSpecific() && encName.isConstructed()) {
-                encName.resetTag(android.sun.security.util.DerValue.tag_Sequence);
+                encName.resetTag(DerValue.tag_Sequence);
                 name = new EDIPartyName(encName);
             } else {
                 throw new IOException("Invalid encoding of EDI name");
@@ -177,7 +178,7 @@ public class GeneralName {
     /**
      * Return the GeneralNameInterface name.
      */
-    public android.sun.security.x509.GeneralNameInterface getName() {
+    public GeneralNameInterface getName() {
         //XXXX May want to consider cloning this
         return name;
     }
@@ -201,9 +202,9 @@ public class GeneralName {
         }
         if (!(other instanceof GeneralName))
             return false;
-        android.sun.security.x509.GeneralNameInterface otherGNI = ((GeneralName)other).name;
+        GeneralNameInterface otherGNI = ((GeneralName)other).name;
         try {
-            return name.constrains(otherGNI) == android.sun.security.x509.GeneralNameInterface.NAME_MATCH;
+            return name.constrains(otherGNI) == GeneralNameInterface.NAME_MATCH;
         } catch (UnsupportedOperationException ioe) {
             return false;
         }
@@ -224,25 +225,25 @@ public class GeneralName {
      * @param out the DerOutputStream to encode the the GeneralName to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+    public void encode(DerOutputStream out) throws IOException {
+        DerOutputStream tmp = new DerOutputStream();
         name.encode(tmp);
         int nameType = name.getType();
-        if (nameType == android.sun.security.x509.GeneralNameInterface.NAME_ANY ||
-            nameType == android.sun.security.x509.GeneralNameInterface.NAME_X400 ||
-            nameType == android.sun.security.x509.GeneralNameInterface.NAME_EDI) {
+        if (nameType == GeneralNameInterface.NAME_ANY ||
+            nameType == GeneralNameInterface.NAME_X400 ||
+            nameType == GeneralNameInterface.NAME_EDI) {
 
             // implicit, constructed form
-            out.writeImplicit(android.sun.security.util.DerValue.createTag(DerValue.TAG_CONTEXT,
+            out.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                               true, (byte)nameType), tmp);
         } else if (nameType == GeneralNameInterface.NAME_DIRECTORY) {
             // explicit, constructed form since underlying tag is CHOICE
             // (see X.680 section 30.6, part c)
-            out.write(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            out.write(DerValue.createTag(DerValue.TAG_CONTEXT,
                                          true, (byte)nameType), tmp);
         } else {
             // implicit, primitive form
-            out.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            out.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                               false, (byte)nameType), tmp);
         }
     }

@@ -1,11 +1,11 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
-import android.content.res.Resources;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
-import android.util.TypedValue;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -140,7 +140,7 @@ public final class SearchHistoryDropdown {
             text.setText(it.query);
             text.setTextSize(15);
             text.setSingleLine(true);
-            text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            text.setEllipsize(TextUtils.TruncateAt.END);
             LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             ImageView del = new ImageView(context);
             try {
@@ -152,7 +152,7 @@ public final class SearchHistoryDropdown {
             LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(s, s);
             del.setPadding(pad / 2, pad / 2, pad / 2, pad / 2);
             try {
-                del.setImageTintList(android.content.res.ColorStateList.valueOf(0xFF888888));
+                del.setImageTintList(ColorStateList.valueOf(0xFF888888));
             } catch (Exception ignored) {
             }
             del.setOnClickListener(v -> {

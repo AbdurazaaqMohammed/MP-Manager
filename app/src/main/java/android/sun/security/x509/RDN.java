@@ -26,6 +26,9 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -63,10 +66,10 @@ import java.util.*;
 public class RDN {
 
     // currently not private, accessed directly from X500Name
-    final android.sun.security.x509.AVA[] assertion;
+    final AVA[] assertion;
 
     // cached immutable List of the AVAs
-    private volatile List<android.sun.security.x509.AVA> avaList;
+    private volatile List<AVA> avaList;
 
     // cache canonical String form
     private volatile String canonicalString;
@@ -102,7 +105,7 @@ public class RDN {
         int quoteCount = 0;
         int searchOffset = 0;
         int avaOffset = 0;
-        List<android.sun.security.x509.AVA> avaVec = new ArrayList<>(3);
+        List<AVA> avaVec = new ArrayList<>(3);
         int nextPlus = name.indexOf('+');
         while (nextPlus >= 0) {
             quoteCount += X500Name.countQuotes(name, searchOffset, nextPlus);
@@ -124,7 +127,7 @@ public class RDN {
                 }
 
                 // Parse AVA, and store it in vector
-                android.sun.security.x509.AVA ava = new android.sun.security.x509.AVA(new StringReader(avaString), keywordMap);
+                AVA ava = new AVA(new StringReader(avaString), keywordMap);
                 avaVec.add(ava);
 
                 // Increase the offset
@@ -142,7 +145,7 @@ public class RDN {
         if (avaString.length() == 0) {
             throw new IOException("empty AVA in RDN \"" + name + "\"");
         }
-        android.sun.security.x509.AVA ava = new android.sun.security.x509.AVA(new StringReader(avaString), keywordMap);
+        AVA ava = new AVA(new StringReader(avaString), keywordMap);
         avaVec.add(ava);
 
         assertion = avaVec.toArray(new AVA[0]);
@@ -182,7 +185,7 @@ public class RDN {
         }
         int searchOffset = 0;
         int avaOffset = 0;
-        List<android.sun.security.x509.AVA> avaVec = new ArrayList<>(3);
+        List<AVA> avaVec = new ArrayList<>(3);
         int nextPlus = name.indexOf('+');
         while (nextPlus >= 0) {
             /*
@@ -202,8 +205,8 @@ public class RDN {
                 }
 
                 // Parse AVA, and store it in vector
-                android.sun.security.x509.AVA ava = new android.sun.security.x509.AVA
-                    (new StringReader(avaString), android.sun.security.x509.AVA.RFC2253, keywordMap);
+                AVA ava = new AVA
+                    (new StringReader(avaString), AVA.RFC2253, keywordMap);
                 avaVec.add(ava);
 
                 // Increase the offset
@@ -218,7 +221,7 @@ public class RDN {
         if (avaString.length() == 0) {
             throw new IOException("empty AVA in RDN \"" + name + "\"");
         }
-        android.sun.security.x509.AVA ava = new android.sun.security.x509.AVA(new StringReader(avaString), android.sun.security.x509.AVA.RFC2253, keywordMap);
+        AVA ava = new AVA(new StringReader(avaString), AVA.RFC2253, keywordMap);
         avaVec.add(ava);
 
         assertion = avaVec.toArray(new AVA[0]);
@@ -231,16 +234,16 @@ public class RDN {
      * @param value a DER-encoded value holding an RDN.
      * @throws IOException on parsing error.
      */
-    RDN(android.sun.security.util.DerValue rdn) throws IOException {
-        if (rdn.tag != android.sun.security.util.DerValue.tag_Set) {
+    RDN(DerValue rdn) throws IOException {
+        if (rdn.tag != DerValue.tag_Set) {
             throw new IOException("X500 RDN");
         }
-        DerInputStream dis = new android.sun.security.util.DerInputStream(rdn.toByteArray());
-        android.sun.security.util.DerValue[] avaset = dis.getSet(5);
+        DerInputStream dis = new DerInputStream(rdn.toByteArray());
+        DerValue[] avaset = dis.getSet(5);
 
-        assertion = new android.sun.security.x509.AVA[avaset.length];
+        assertion = new AVA[avaset.length];
         for (int i = 0; i < avaset.length; i++) {
-            assertion[i] = new android.sun.security.x509.AVA(avaset[i]);
+            assertion[i] = new AVA(avaset[i]);
         }
     }
 
@@ -250,16 +253,16 @@ public class RDN {
      *
      * @param i number of AVAs to be in RDN
      */
-    RDN(int i) { assertion = new android.sun.security.x509.AVA[i]; }
+    RDN(int i) { assertion = new AVA[i]; }
 
-    public RDN(android.sun.security.x509.AVA ava) {
+    public RDN(AVA ava) {
         if (ava == null) {
             throw new NullPointerException();
         }
-        assertion = new android.sun.security.x509.AVA[] { ava };
+        assertion = new AVA[] { ava };
     }
 
-    public RDN(android.sun.security.x509.AVA[] avas) {
+    public RDN(AVA[] avas) {
         assertion = avas.clone();
         for (AVA ava : assertion) {
             if (ava == null) {
@@ -271,8 +274,8 @@ public class RDN {
     /**
      * Return an immutable List of the AVAs in this RDN.
      */
-    public List<android.sun.security.x509.AVA> avas() {
-        List<android.sun.security.x509.AVA> list = avaList;
+    public List<AVA> avas() {
+        List<AVA> list = avaList;
         if (list == null) {
             list = Collections.unmodifiableList(Arrays.asList(assertion));
             avaList = list;
@@ -318,7 +321,7 @@ public class RDN {
      * @params oid ObjectIdentifier of attribute to be found
      * @returns DerValue of attribute value; null if attribute does not exist
      */
-    android.sun.security.util.DerValue findAttribute(android.sun.security.util.ObjectIdentifier oid) {
+    DerValue findAttribute(ObjectIdentifier oid) {
         for (AVA ava : assertion) {
             if (ava.oid.equals(oid)) {
                 return ava.value;
@@ -333,8 +336,8 @@ public class RDN {
      * @param out DerOutputStream to which RDN is to be written
      * @throws IOException on error
      */
-    void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        out.putOrderedSetOf(android.sun.security.util.DerValue.tag_Set, assertion);
+    void encode(DerOutputStream out) throws IOException {
+        out.putOrderedSetOf(DerValue.tag_Set, assertion);
     }
 
     /*
@@ -452,9 +455,9 @@ public class RDN {
         } else {
             // order the string type AVA's alphabetically,
             // followed by the oid type AVA's numerically
-            List<android.sun.security.x509.AVA> avaList = new ArrayList<>(assertion.length);
+            List<AVA> avaList = new ArrayList<>(assertion.length);
             Collections.addAll(avaList, assertion);
-            java.util.Collections.sort(avaList, AVAComparator.getInstance());
+            Collections.sort(avaList, AVAComparator.getInstance());
 
             for (int i = 0; i < avaList.size(); i++) {
                 if (i > 0) {
@@ -468,15 +471,15 @@ public class RDN {
 
 }
 
-class AVAComparator implements Comparator<android.sun.security.x509.AVA> {
+class AVAComparator implements Comparator<AVA> {
 
-    private static final Comparator<android.sun.security.x509.AVA> INSTANCE = new AVAComparator();
+    private static final Comparator<AVA> INSTANCE = new AVAComparator();
 
     private AVAComparator() {
         // empty
     }
 
-    static Comparator<android.sun.security.x509.AVA> getInstance() {
+    static Comparator<AVA> getInstance() {
         return INSTANCE;
     }
 
@@ -484,7 +487,7 @@ class AVAComparator implements Comparator<android.sun.security.x509.AVA> {
      * AVA's containing a standard keyword are ordered alphabetically,
      * followed by AVA's containing an OID keyword, ordered numerically
      */
-    public int compare(android.sun.security.x509.AVA a1, AVA a2) {
+    public int compare(AVA a1, AVA a2) {
         boolean a1Has2253 = a1.hasRFC2253Keyword();
         boolean a2Has2253 = a2.hasRFC2253Keyword();
 

@@ -32,7 +32,6 @@ import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 import android.sun.security.x509.AlgorithmId;
-import android.sun.security.pkcs.ParsingException;
 
 
 /**

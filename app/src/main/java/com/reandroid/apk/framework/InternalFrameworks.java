@@ -15,15 +15,8 @@
  */
 package com.reandroid.apk.framework;
 
-import android.content.Context;
-import android.content.res.Resources;
-import android.os.Environment;
-
-import androidx.core.content.res.ResourcesCompat;
-
 import com.reandroid.apk.AndroidFrameworks;
 import com.reandroid.apk.FrameworkApk;
-import com.reandroid.utils.io.FileUtil;
 
 import java.io.File;
 import java.io.IOException;

@@ -15,6 +15,8 @@
  */
 package com.reandroid.arsc.chunk.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.arsc.coder.XmlSanitizer;
 import com.reandroid.arsc.refactor.ResourceMergeOption;
 import com.reandroid.json.JSONObject;
@@ -132,7 +134,7 @@ public class ResXmlTextNode extends ResXmlNode implements Text {
     }
     public void append(String text) {
         String exist = getText();
-        if (android.text.TextUtils.isEmpty(exist)) {
+        if (TextUtils.isEmpty(exist)) {
             exist = mIndentText;
         }
         if (exist == null && isIndent(text)) {

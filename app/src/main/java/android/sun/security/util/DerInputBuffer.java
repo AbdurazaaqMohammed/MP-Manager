@@ -216,7 +216,7 @@ class DerInputBuffer extends ByteArrayInputStream implements Cloneable {
      * Returns the bit string which takes up the rest of this buffer.
      * The bit string need not be byte-aligned.
      */
-    android.sun.security.util.BitArray getUnalignedBitString() throws IOException {
+    BitArray getUnalignedBitString() throws IOException {
         if (pos >= count)
             return null;
         /*
@@ -234,7 +234,7 @@ class DerInputBuffer extends ByteArrayInputStream implements Cloneable {
 
         System.arraycopy(buf, pos + 1, bits, 0, len - 1);
 
-        android.sun.security.util.BitArray bitArray = new BitArray(length, bits);
+        BitArray bitArray = new BitArray(length, bits);
         pos = count;
         return bitArray;
     }

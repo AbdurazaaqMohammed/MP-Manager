@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,9 +10,13 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
@@ -513,7 +518,7 @@ public final class ApkZipAlignUtil {
                                   Map<String, File> replacements,
                                   Map<String, Integer> methods,
                                   Map<String, File> additions,
-                                  java.util.Set<String> skip) throws IOException {
+                                  Set<String> skip) throws IOException {
         List<CDEntry> entries = readCentralDirectory(inputApk);
         List<File> tmps = new ArrayList<>();
         try (RandomAccessFile raf = new RandomAccessFile(inputApk, "r");
@@ -618,10 +623,10 @@ public final class ApkZipAlignUtil {
         File tmp = new File(tmpDir, ".deflate" + System.nanoTime() + ".tmp");
         tmps.add(tmp);
         CRC32 crc = new CRC32();
-        try (InputStream in = new java.io.FileInputStream(file);
+        try (InputStream in = new FileInputStream(file);
              FileOutputStream fos = new FileOutputStream(tmp);
-             java.util.zip.DeflaterOutputStream dos = new java.util.zip.DeflaterOutputStream(fos,
-                     new java.util.zip.Deflater(java.util.zip.Deflater.DEFAULT_COMPRESSION, true))) {
+             DeflaterOutputStream dos = new DeflaterOutputStream(fos,
+                     new Deflater(Deflater.DEFAULT_COMPRESSION, true))) {
             byte[] buf = new byte[65536];
             int n;
             while ((n = in.read(buf)) != -1) {
@@ -659,7 +664,7 @@ public final class ApkZipAlignUtil {
 
     private static int crcOfFile(File file) throws IOException {
         CRC32 crc = new CRC32();
-        try (InputStream in = new java.io.FileInputStream(file)) {
+        try (InputStream in = new FileInputStream(file)) {
             byte[] buf = new byte[65536];
             int n;
             while ((n = in.read(buf)) != -1) crc.update(buf, 0, n);
@@ -668,7 +673,7 @@ public final class ApkZipAlignUtil {
     }
 
     private static void copyFileBytes(File file, OutputStream out) throws IOException {
-        try (InputStream in = new java.io.FileInputStream(file)) {
+        try (InputStream in = new FileInputStream(file)) {
             byte[] buf = new byte[65536];
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
@@ -676,14 +681,14 @@ public final class ApkZipAlignUtil {
     }
 
     private static int[] dosTime(long millis) {
-        java.util.Calendar cal = java.util.Calendar.getInstance();
+        Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(millis);
-        int time = (cal.get(java.util.Calendar.HOUR_OF_DAY) << 11)
-                | (cal.get(java.util.Calendar.MINUTE) << 5)
-                | (cal.get(java.util.Calendar.SECOND) / 2);
-        int date = ((cal.get(java.util.Calendar.YEAR) - 1980) << 9)
-                | ((cal.get(java.util.Calendar.MONTH) + 1) << 5)
-                | cal.get(java.util.Calendar.DAY_OF_MONTH);
+        int time = (cal.get(Calendar.HOUR_OF_DAY) << 11)
+                | (cal.get(Calendar.MINUTE) << 5)
+                | (cal.get(Calendar.SECOND) / 2);
+        int date = ((cal.get(Calendar.YEAR) - 1980) << 9)
+                | ((cal.get(Calendar.MONTH) + 1) << 5)
+                | cal.get(Calendar.DAY_OF_MONTH);
         return new int[]{time, date};
     }
 
@@ -703,7 +708,7 @@ public final class ApkZipAlignUtil {
             if (tmp.renameTo(dst)) return;
         }
         // renameTo fallback: stream copy (Windows rename quirks)
-        try (InputStream in = new java.io.FileInputStream(tmp);
+        try (InputStream in = new FileInputStream(tmp);
              OutputStream out = new FileOutputStream(dst)) {
             byte[] buf = new byte[65536];
             int n;

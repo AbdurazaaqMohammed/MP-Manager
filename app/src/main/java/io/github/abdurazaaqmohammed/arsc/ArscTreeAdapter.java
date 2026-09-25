@@ -7,6 +7,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -279,7 +280,7 @@ public class ArscTreeAdapter extends RecyclerView.Adapter<ArscTreeAdapter.Holder
         TextView name = new TextView(context);
         name.setTextSize(14);
         name.setSingleLine(true);
-        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        name.setEllipsize(TextUtils.TruncateAt.END);
         name.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, 0xFF000000));
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         nameParams.leftMargin = (int) (6 * density);

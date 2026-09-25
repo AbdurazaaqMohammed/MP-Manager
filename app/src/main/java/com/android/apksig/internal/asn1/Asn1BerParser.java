@@ -17,6 +17,8 @@
 
 package com.android.apksig.internal.asn1;
 
+import android.os.Build;
+
 import com.android.apksig.internal.asn1.ber.BerDataValue;
 import com.android.apksig.internal.asn1.ber.BerDataValueFormatException;
 import com.android.apksig.internal.asn1.ber.BerDataValueReader;
@@ -25,7 +27,6 @@ import com.android.apksig.internal.asn1.ber.ByteBufferBerDataValueReader;
 import com.android.apksig.internal.compat.ClassCompat;
 import com.android.apksig.internal.util.ByteBufferUtils;
 
-import java.io.IOException;
 import java.io.Serial;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -337,7 +338,7 @@ public final class Asn1BerParser {
     private static Class<?> getElementType(Field field)
             throws Asn1DecodingException, ClassNotFoundException {
         String type;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             type = field.getGenericType().getTypeName();
         } else type = field.getGenericType().toString();
         int delimiterIndex =  type.indexOf('<');

@@ -25,6 +25,7 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -47,8 +48,8 @@ import java.util.*;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class PolicyMappingsExtension extends Extension
 implements CertAttrSet<String> {
@@ -64,7 +65,7 @@ implements CertAttrSet<String> {
     public static final String MAP = "map";
 
     // Private data members
-    private List<android.sun.security.x509.CertificatePolicyMap> maps;
+    private List<CertificatePolicyMap> maps;
 
     // Encode this extension value
     private void encodeThis() throws IOException {
@@ -72,14 +73,14 @@ implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream os = new android.sun.security.util.DerOutputStream();
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream os = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
-        for (android.sun.security.x509.CertificatePolicyMap map : maps) {
+        for (CertificatePolicyMap map : maps) {
             map.encode(tmp);
         }
 
-        os.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+        os.write(DerValue.tag_Sequence, tmp);
         this.extensionValue = os.toByteArray();
     }
 
@@ -88,10 +89,10 @@ implements CertAttrSet<String> {
      *
      * @param maps the List of CertificatePolicyMap.
      */
-    public PolicyMappingsExtension(List<android.sun.security.x509.CertificatePolicyMap> map)
+    public PolicyMappingsExtension(List<CertificatePolicyMap> map)
             throws IOException {
         this.maps = map;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyMappings_Id;
+        this.extensionId = PKIXExtensions.PolicyMappings_Id;
         this.critical = false;
         encodeThis();
     }
@@ -100,7 +101,7 @@ implements CertAttrSet<String> {
      * Create a default PolicyMappingsExtension.
      */
     public PolicyMappingsExtension() {
-        extensionId = android.sun.security.x509.PKIXExtensions.KeyUsage_Id;
+        extensionId = PKIXExtensions.KeyUsage_Id;
         critical = false;
         maps = new ArrayList<>();
     }
@@ -115,19 +116,19 @@ implements CertAttrSet<String> {
      */
     public PolicyMappingsExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.PolicyMappings_Id;
+        this.extensionId = PKIXExtensions.PolicyMappings_Id;
         this.critical = critical;
 
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(this.extensionValue);
-        if (val.tag != android.sun.security.util.DerValue.tag_Sequence) {
+        DerValue val = new DerValue(this.extensionValue);
+        if (val.tag != DerValue.tag_Sequence) {
             throw new IOException("Invalid encoding for " +
                                   "PolicyMappingsExtension.");
         }
         maps = new ArrayList<>();
         while (val.data.available() != 0) {
             DerValue seq = val.data.getDerValue();
-            android.sun.security.x509.CertificatePolicyMap map = new android.sun.security.x509.CertificatePolicyMap(seq);
+            CertificatePolicyMap map = new CertificatePolicyMap(seq);
             maps.add(map);
         }
     }
@@ -149,7 +150,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         if (extensionValue == null) {
             extensionId = PKIXExtensions.PolicyMappings_Id;
             critical = false;
@@ -206,7 +207,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements () {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(MAP);
 
         return elements.elements();

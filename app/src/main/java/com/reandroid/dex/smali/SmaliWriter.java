@@ -15,6 +15,8 @@
  */
 package com.reandroid.dex.smali;
 
+import android.text.TextUtils;
+
 import com.reandroid.dex.common.DexUtils;
 import com.reandroid.dex.common.Modifier;
 import com.reandroid.dex.common.Register;
@@ -293,7 +295,7 @@ public class SmaliWriter implements Appendable, Closeable {
             } catch (IOException ignored) {}
         }
         StringBuilder comment = this.comment;
-        if (android.text.TextUtils.isEmpty(comment)) {
+        if (TextUtils.isEmpty(comment)) {
             comment = new StringBuilder();
             this.comment = comment;
             if (this.indent != 0 || this.columnNumber != 0) {

@@ -4,11 +4,18 @@ import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.chunk.TypeBlock;
 import com.reandroid.arsc.container.SpecTypePair;
+import com.reandroid.arsc.item.TableString;
 import com.reandroid.arsc.model.ResourceEntry;
+import com.reandroid.arsc.pool.TableStringPool;
 import com.reandroid.arsc.value.Entry;
 import com.reandroid.arsc.value.ResValue;
 import com.reandroid.arsc.value.ValueType;
 import com.reandroid.graphics.AndroidColor;
+
+import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +33,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.xml.parsers.DocumentBuilderFactory;
 
 public class ArscData {
 
@@ -134,7 +144,7 @@ public class ArscData {
 
     public static List<ResourceEntry> resourcesOf(TypeBlock tb) {
         List<ResourceEntry> out = new ArrayList<>();
-        java.util.HashSet<Integer> seen = new java.util.HashSet<>();
+        HashSet<Integer> seen = new HashSet<>();
         try {
             for (Entry e : tb.listEntries(true)) {
                 if (e == null || e.isNull()) continue;
@@ -879,18 +889,18 @@ public class ArscData {
     }
 
     public int importStringsXml(File xml) throws Exception {
-        javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(false);
-        org.w3c.dom.Document doc;
+        Document doc;
         try (InputStream in = new FileInputStream(xml)) {
             doc = dbf.newDocumentBuilder().parse(in);
         }
-        org.w3c.dom.NodeList nodes = doc.getElementsByTagName("string");
+        NodeList nodes = doc.getElementsByTagName("string");
         int applied = 0;
         for (int i = 0; i < nodes.getLength(); i++) {
             org.w3c.dom.Node n = nodes.item(i);
             if (n == null || n.getNodeType() != org.w3c.dom.Node.ELEMENT_NODE) continue;
-            org.w3c.dom.Element el = (org.w3c.dom.Element) n;
+            Element el = (Element) n;
             String name = el.getAttribute("name");
             if (name == null || name.isEmpty()) continue;
             String value = el.getTextContent();
@@ -1167,14 +1177,14 @@ public class ArscData {
     public List<PoolString> poolStrings(String filter) {
         List<PoolString> out = new ArrayList<>();
         try {
-            com.reandroid.arsc.pool.TableStringPool pool = table.getTableStringPool();
+            TableStringPool pool = table.getTableStringPool();
             if (pool == null) return out;
             String lq = filter == null ? "" : filter.toLowerCase(Locale.US);
             int n = pool.size();
             for (int i = 0; i < n; i++) {
                 String s;
                 try {
-                    com.reandroid.arsc.item.TableString ts = pool.get(i);
+                    TableString ts = pool.get(i);
                     s = ts == null ? null : ts.get();
                 } catch (Exception e) {
                     continue;
@@ -1191,9 +1201,9 @@ public class ArscData {
 
     public boolean setPoolString(int index, String text) {
         try {
-            com.reandroid.arsc.pool.TableStringPool pool = table.getTableStringPool();
+            TableStringPool pool = table.getTableStringPool();
             if (pool == null) return false;
-            com.reandroid.arsc.item.TableString ts = pool.get(index);
+            TableString ts = pool.get(index);
             if (ts == null) return false;
             ts.set(text == null ? "" : text);
             return true;
@@ -1206,7 +1216,7 @@ public class ArscData {
     public static final int TEXT_ENTRY_CAP = 5000;
 
     public static String typeBlockText(TypeBlock tb, int cap) {
-        org.json.JSONObject obj = new org.json.JSONObject();
+        JSONObject obj = new JSONObject();
         try {
             List<Entry> entries = tb.listEntries(true);
             int n = 0;
@@ -1237,14 +1247,14 @@ public class ArscData {
     }
 
     public TextApplyResult applyTypeBlockText(TypeBlock tb, String text) throws Exception {
-        org.json.JSONObject obj = new org.json.JSONObject(text);
+        JSONObject obj = new JSONObject(text);
         TextApplyResult r = new TextApplyResult();
         Iterator<String> keys = obj.keys();
         while (keys.hasNext()) {
             String name = keys.next();
             if (name == null || name.isEmpty()) continue;
             Object v = obj.opt(name);
-            String vs = (v == null || v == org.json.JSONObject.NULL) ? "" : v.toString();
+            String vs = (v == null || v == JSONObject.NULL) ? "" : v.toString();
             Entry en = null;
             boolean isNew = false;
             try {

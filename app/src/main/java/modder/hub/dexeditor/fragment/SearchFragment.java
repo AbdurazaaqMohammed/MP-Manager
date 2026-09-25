@@ -103,6 +103,8 @@ import com.android.tools.smali.dexlib2.dexbacked.*;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
+import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.adapter.TreeAdapter;
@@ -470,22 +472,22 @@ public class SearchFragment extends Fragment {
 
         tvExcludeList.setOnClickListener(v -> showExcludeListDialog());
         historyBtn.setOnClickListener(v -> {
-            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
-                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX);
+            List<SearchHistoryHelper.Item> hist =
+                    SearchHistoryHelper.load(requireContext(), SearchHistoryHelper.KEY_DEX);
             if (hist.isEmpty()) {
                 Extensions.showMessage(requireActivity(), "No history");
                 return;
             }
-            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(requireContext(), etFind, hist,
-                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+            SearchHistoryDropdown.show(requireContext(), etFind, hist,
+                    new SearchHistoryDropdown.Listener() {
                         @Override
                         public void onSelect(String query) {
                             etFind.setText(query);
                             etFind.setSelection(query.length());
                         }
                         @Override
-                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
-                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, items);
+                        public void onChanged(List<SearchHistoryHelper.Item> items) {
+                            SearchHistoryHelper.save(requireContext(), SearchHistoryHelper.KEY_DEX, items);
                         }
                     });
         });
@@ -552,7 +554,7 @@ public class SearchFragment extends Fragment {
                     return; }
             }
             lastSearchQuery = query; lastSearchType = type;
-            if (!query.trim().isEmpty()) io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, query);
+            if (!query.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, query);
             if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
             lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
             List<String> scopeClasses = null;
@@ -589,22 +591,22 @@ public class SearchFragment extends Fragment {
         cbRegex.setChecked(lastIsRegex);
         cbExactlyMatch.setChecked(lastExactlyMatch);
         historyBtn.setOnClickListener(v -> {
-            java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> hist =
-                    io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.load(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX);
+            List<SearchHistoryHelper.Item> hist =
+                    SearchHistoryHelper.load(requireContext(), SearchHistoryHelper.KEY_DEX);
             if (hist.isEmpty()) {
                 Extensions.showMessage(requireActivity(), "No history");
                 return;
             }
-            io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.show(requireContext(), etFind, hist,
-                    new io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown.Listener() {
+            SearchHistoryDropdown.show(requireContext(), etFind, hist,
+                    new SearchHistoryDropdown.Listener() {
                         @Override
                         public void onSelect(String query) {
                             etFind.setText(query);
                             etFind.setSelection(query.length());
                         }
                         @Override
-                        public void onChanged(java.util.List<io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.Item> items) {
-                            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.save(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, items);
+                        public void onChanged(List<SearchHistoryHelper.Item> items) {
+                            SearchHistoryHelper.save(requireContext(), SearchHistoryHelper.KEY_DEX, items);
                         }
                     });
         });
@@ -634,7 +636,7 @@ public class SearchFragment extends Fragment {
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
                     lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked();
-                    if (!find.trim().isEmpty()) io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, find);
+                    if (!find.trim().isEmpty()) SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, find);
                     List<String> scopeClasses = new ArrayList<>();
                     collectClassFullNames(searchResults, scopeClasses);
                     new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
@@ -693,7 +695,7 @@ public class SearchFragment extends Fragment {
         lastIsRegex = false;
         lastExactlyMatch = false;
         try {
-            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, lastSearchQuery);
+            SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, lastSearchQuery);
         } catch (Exception ignored) {
         }
         searchResults.clear();
@@ -732,7 +734,7 @@ public class SearchFragment extends Fragment {
         lastIsRegex = false;
         lastExactlyMatch = false;
         try {
-            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, lastSearchQuery);
+            SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, lastSearchQuery);
         } catch (Exception ignored) {
         }
         searchResults.clear();
@@ -756,7 +758,7 @@ public class SearchFragment extends Fragment {
         lastIsRegex = false;
         lastExactlyMatch = false;
         try {
-            io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.push(requireContext(), io.github.abdurazaaqmohammed.utils.SearchHistoryHelper.KEY_DEX, lastSearchQuery);
+            SearchHistoryHelper.push(requireContext(), SearchHistoryHelper.KEY_DEX, lastSearchQuery);
         } catch (Exception ignored) {
         }
         searchResults.clear();

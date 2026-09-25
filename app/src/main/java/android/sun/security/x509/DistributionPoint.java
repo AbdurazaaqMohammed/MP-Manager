@@ -127,14 +127,14 @@ public class DistributionPoint {
     private static final byte TAG_REL_NAME = 1;
 
     // only one of fullName and relativeName can be set
-    private android.sun.security.x509.GeneralNames fullName;
-    private android.sun.security.x509.RDN relativeName;
+    private GeneralNames fullName;
+    private RDN relativeName;
 
     // reasonFlags or null
     private boolean[] reasonFlags;
 
     // crlIssuer or null
-    private android.sun.security.x509.GeneralNames crlIssuer;
+    private GeneralNames crlIssuer;
 
     // cached hashCode value
     private volatile int hashCode;
@@ -148,8 +148,8 @@ public class DistributionPoint {
      * @param issuer the name(s) of the CRL issuer for the CRL at this
      *        distribution point; may be null
      */
-    public DistributionPoint(android.sun.security.x509.GeneralNames fullName, boolean[] reasonFlags,
-                             android.sun.security.x509.GeneralNames crlIssuer) {
+    public DistributionPoint(GeneralNames fullName, boolean[] reasonFlags,
+                             GeneralNames crlIssuer) {
         if ((fullName == null) && (crlIssuer == null)) {
             throw new IllegalArgumentException
                         ("fullName and crlIssuer may not both be null");
@@ -170,8 +170,8 @@ public class DistributionPoint {
      * @param issuer the name(s) of the CRL issuer for the CRL at this
      *        distribution point; may not be null or empty.
      */
-    public DistributionPoint(android.sun.security.x509.RDN relativeName, boolean[] reasonFlags,
-                             android.sun.security.x509.GeneralNames crlIssuer) {
+    public DistributionPoint(RDN relativeName, boolean[] reasonFlags,
+                             GeneralNames crlIssuer) {
         if ((relativeName == null) && (crlIssuer == null)) {
             throw new IllegalArgumentException
                         ("relativeName and crlIssuer may not both be null");
@@ -207,11 +207,11 @@ public class DistributionPoint {
                 if (distPnt.isContextSpecific(TAG_FULL_NAME)
                         && distPnt.isConstructed()) {
                     distPnt.resetTag(DerValue.tag_Sequence);
-                    fullName = new android.sun.security.x509.GeneralNames(distPnt);
+                    fullName = new GeneralNames(distPnt);
                 } else if (distPnt.isContextSpecific(TAG_REL_NAME)
                         && distPnt.isConstructed()) {
                     distPnt.resetTag(DerValue.tag_Set);
-                    relativeName = new android.sun.security.x509.RDN(distPnt);
+                    relativeName = new RDN(distPnt);
                 } else {
                     throw new IOException("Invalid DistributionPointName in "
                                           + "DistributionPoint");
@@ -231,7 +231,7 @@ public class DistributionPoint {
                                           "DistributionPoint.");
                 }
                 opt.resetTag(DerValue.tag_Sequence);
-                crlIssuer = new android.sun.security.x509.GeneralNames(opt);
+                crlIssuer = new GeneralNames(opt);
             } else {
                 throw new IOException("Invalid encoding of " +
                                       "DistributionPoint.");
@@ -246,7 +246,7 @@ public class DistributionPoint {
     /**
      * Return the full distribution point name or null if not set.
      */
-    public android.sun.security.x509.GeneralNames getFullName() {
+    public GeneralNames getFullName() {
         return fullName;
     }
 

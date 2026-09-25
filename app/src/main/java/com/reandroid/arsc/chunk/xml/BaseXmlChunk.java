@@ -15,6 +15,8 @@
  */
 package com.reandroid.arsc.chunk.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.arsc.chunk.ChunkType;
 import com.reandroid.arsc.base.Block;
 import com.reandroid.arsc.chunk.Chunk;
@@ -171,7 +173,7 @@ class BaseXmlChunk extends Chunk<XmlNodeHeader> {
         return getString(getCommentReference());
     }
     public void setComment(String comment) {
-        if (android.text.TextUtils.isEmpty(comment)) {
+        if (TextUtils.isEmpty(comment)) {
             setCommentReference(NULL_REFERENCE);
         } else {
             String old = getComment();

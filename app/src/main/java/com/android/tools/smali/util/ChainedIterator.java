@@ -30,7 +30,6 @@
 
 package com.android.tools.smali.util;
 
-import java.lang.Iterable;
 import java.util.Iterator;
 
 /**

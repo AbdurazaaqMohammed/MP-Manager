@@ -15,6 +15,8 @@
  */
 package com.reandroid.xml;
 
+import android.text.TextUtils;
+
 import com.reandroid.utils.ObjectsUtil;
 
 public interface Span {
@@ -49,7 +51,7 @@ public interface Span {
         return raw.substring(0, i);
     }
     static String splitAttribute(String tagWithAttribute) {
-        if (android.text.TextUtils.isEmpty(tagWithAttribute)) {
+        if (TextUtils.isEmpty(tagWithAttribute)) {
             return null;
         }
         if (tagWithAttribute.charAt(0) == ' ') {

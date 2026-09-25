@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 
@@ -41,9 +43,9 @@ import java.io.IOException;
  * @author Hemma Prafullchandra
  * @see GeneralName
  * @see GeneralNames
- * @see android.sun.security.x509.GeneralNameInterface
+ * @see GeneralNameInterface
  */
-public class EDIPartyName implements android.sun.security.x509.GeneralNameInterface {
+public class EDIPartyName implements GeneralNameInterface {
 
     // Private data members
     private static final byte TAG_ASSIGNER = 0;
@@ -80,16 +82,16 @@ public class EDIPartyName implements android.sun.security.x509.GeneralNameInterf
      * @param derValue the encoded DER EDIPartyName.
      * @exception IOException on error.
      */
-    public EDIPartyName(android.sun.security.util.DerValue derValue) throws IOException {
-        android.sun.security.util.DerInputStream in = new android.sun.security.util.DerInputStream(derValue.toByteArray());
-        android.sun.security.util.DerValue[] seq = in.getSequence(2);
+    public EDIPartyName(DerValue derValue) throws IOException {
+        DerInputStream in = new DerInputStream(derValue.toByteArray());
+        DerValue[] seq = in.getSequence(2);
 
         int len = seq.length;
         if (len < 1 || len > 2)
             throw new IOException("Invalid encoding of EDIPartyName");
 
-        for (android.sun.security.util.DerValue value : seq) {
-            android.sun.security.util.DerValue opt = value;
+        for (DerValue value : seq) {
+            DerValue opt = value;
             if (opt.isContextSpecific(TAG_ASSIGNER) &&
                     !opt.isConstructed()) {
                 if (assigner != null)
@@ -113,7 +115,7 @@ public class EDIPartyName implements android.sun.security.x509.GeneralNameInterf
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return (android.sun.security.x509.GeneralNameInterface.NAME_EDI);
+        return (GeneralNameInterface.NAME_EDI);
     }
 
     /**
@@ -122,15 +124,15 @@ public class EDIPartyName implements android.sun.security.x509.GeneralNameInterf
      * @param out the DER stream to encode the EDIPartyName to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tagged = new DerOutputStream();
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+    public void encode(DerOutputStream out) throws IOException {
+        DerOutputStream tagged = new DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
 
         if (assigner != null) {
-            android.sun.security.util.DerOutputStream tmp2 = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp2 = new DerOutputStream();
             // XXX - shd check is chars fit into PrintableString
             tmp2.putPrintableString(assigner);
-            tagged.write(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            tagged.write(DerValue.createTag(DerValue.TAG_CONTEXT,
                                  false, TAG_ASSIGNER), tmp2);
         }
         if (party == null)
@@ -138,10 +140,10 @@ public class EDIPartyName implements android.sun.security.x509.GeneralNameInterf
 
         // XXX - shd check is chars fit into PrintableString
         tmp.putPrintableString(party);
-        tagged.write(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+        tagged.write(DerValue.createTag(DerValue.TAG_CONTEXT,
                                  false, TAG_PARTYNAME), tmp);
 
-        out.write(android.sun.security.util.DerValue.tag_Sequence, tagged);
+        out.write(DerValue.tag_Sequence, tagged);
     }
 
     /**

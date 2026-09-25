@@ -25,7 +25,9 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
+import android.text.TextUtils;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -38,9 +40,9 @@ import java.util.Locale;
  * @author Hemma Prafullchandra
  * @see GeneralName
  * @see GeneralNames
- * @see android.sun.security.x509.GeneralNameInterface
+ * @see GeneralNameInterface
  */
-public class RFC822Name implements android.sun.security.x509.GeneralNameInterface
+public class RFC822Name implements GeneralNameInterface
 {
     private final String name;
 
@@ -79,7 +81,7 @@ public class RFC822Name implements android.sun.security.x509.GeneralNameInterfac
      * @throws IOException if name is not valid
      */
     public void parseName(String name) throws IOException {
-        if (android.text.TextUtils.isEmpty(name)) {
+        if (TextUtils.isEmpty(name)) {
             throw new IOException("RFC822Name may not be null or empty");
         }
         // See if domain is a valid domain name
@@ -100,7 +102,7 @@ public class RFC822Name implements android.sun.security.x509.GeneralNameInterfac
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return (android.sun.security.x509.GeneralNameInterface.NAME_RFC822);
+        return (GeneralNameInterface.NAME_RFC822);
     }
 
     /**
@@ -116,7 +118,7 @@ public class RFC822Name implements android.sun.security.x509.GeneralNameInterfac
      * @param out the DER stream to encode the RFC822Name to.
      * @exception IOException on encoding errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
         out.putIA5String(name);
     }
 
@@ -178,7 +180,7 @@ public class RFC822Name implements android.sun.security.x509.GeneralNameInterfac
      * @throws UnsupportedOperationException if name is not exact match, but narrowing and widening are
      *          not supported for this name type.
      */
-    public int constrains(android.sun.security.x509.GeneralNameInterface inputName) throws UnsupportedOperationException {
+    public int constrains(GeneralNameInterface inputName) throws UnsupportedOperationException {
         int constraintType;
         if (inputName == null)
             constraintType = NAME_DIFF_TYPE;

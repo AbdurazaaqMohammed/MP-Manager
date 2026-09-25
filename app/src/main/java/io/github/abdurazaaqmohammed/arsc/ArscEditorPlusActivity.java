@@ -331,7 +331,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
         cbMatchCase.setVisibility(textType ? View.VISIBLE : View.GONE);
         cbRegex.setVisibility(textType ? View.VISIBLE : View.GONE);
         historyBtn.setOnClickListener(v -> {
-            java.util.List<SearchHistoryHelper.Item> hist = SearchHistoryHelper.load(this, SearchHistoryHelper.KEY_ARSC_PLUS);
+            List<SearchHistoryHelper.Item> hist = SearchHistoryHelper.load(this, SearchHistoryHelper.KEY_ARSC_PLUS);
             if (hist.isEmpty()) {
                 Extensions.showMessage(this, "No history");
                 return;
@@ -343,7 +343,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
                     etFind.setSelection(query.length());
                 }
                 @Override
-                public void onChanged(java.util.List<SearchHistoryHelper.Item> items) {
+                public void onChanged(List<SearchHistoryHelper.Item> items) {
                     SearchHistoryHelper.save(ArscEditorPlusActivity.this, SearchHistoryHelper.KEY_ARSC_PLUS, items);
                 }
             });
@@ -366,8 +366,8 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
             boolean regex = cbRegex.isChecked();
             if (regex && !q.isEmpty() && (picked.equals("xml") || picked.equals("string"))) {
                 try {
-                    if (matchCase) java.util.regex.Pattern.compile(q);
-                    else java.util.regex.Pattern.compile(q, java.util.regex.Pattern.CASE_INSENSITIVE);
+                    if (matchCase) Pattern.compile(q);
+                    else Pattern.compile(q, Pattern.CASE_INSENSITIVE);
                 } catch (Exception e) {
                     Extensions.showMessage(this, R.string.bad_regex);
                     return;

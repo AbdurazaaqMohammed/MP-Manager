@@ -5,11 +5,14 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Looper;
 import android.os.Process;
 import android.provider.Settings;
 import android.text.TextUtils;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import io.github.ratul.topactivity.utils.PermissionUtil;
 
 public class RootPermissionHelper {
     private static final String ACCESSIBILITY_SERVICE = "io.github.ratul.topactivity.services.AccessibilityMonitoringService";
@@ -111,7 +114,7 @@ public class RootPermissionHelper {
     private static boolean shizukuGrant(Context context, String command) {
         try {
             if (!isShizukuShellReady(context)) return false;
-            if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
                 return ShizukuManager.shellOkFast(context, command, 15);
             }
             return ShizukuManager.shellOk(context, command, 15);
@@ -193,7 +196,7 @@ public class RootPermissionHelper {
         if (hasUsageAccess(activity)) return true;
         if (grantUsageAccessViaRoot(activity) && hasUsageAccess(activity)) return true;
         try {
-            io.github.ratul.topactivity.utils.PermissionUtil.requestUsageStatsPermission(activity);
+            PermissionUtil.requestUsageStatsPermission(activity);
         } catch (Exception ignored) {
         }
         return false;

@@ -26,6 +26,8 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,10 +40,10 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
-    private android.sun.security.x509.UniqueIdentity id;
+    private UniqueIdentity id;
 
     /**
      * Identifier for this attribute, to be used with the
@@ -59,7 +61,7 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      *
      * @param key the UniqueIdentity
      */
-    public CertificateIssuerUniqueIdentity(android.sun.security.x509.UniqueIdentity id) {
+    public CertificateIssuerUniqueIdentity(UniqueIdentity id) {
         this.id = id;
     }
 
@@ -71,7 +73,7 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      */
     public CertificateIssuerUniqueIdentity(DerInputStream in)
     throws IOException {
-        id = new android.sun.security.x509.UniqueIdentity(in);
+        id = new UniqueIdentity(in);
     }
 
     /**
@@ -82,8 +84,8 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      */
     public CertificateIssuerUniqueIdentity(InputStream in)
     throws IOException {
-        android.sun.security.util.DerValue val = new android.sun.security.util.DerValue(in);
-        id = new android.sun.security.x509.UniqueIdentity(val);
+        DerValue val = new DerValue(in);
+        id = new UniqueIdentity(val);
     }
 
     /**
@@ -92,9 +94,9 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      * @param in the DerValue to read the UniqueIdentity from.
      * @exception IOException on decoding errors.
      */
-    public CertificateIssuerUniqueIdentity(android.sun.security.util.DerValue val)
+    public CertificateIssuerUniqueIdentity(DerValue val)
     throws IOException {
-        id = new android.sun.security.x509.UniqueIdentity(val);
+        id = new UniqueIdentity(val);
     }
 
     /**
@@ -112,8 +114,8 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      * @exception IOException on errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
-        id.encode(tmp, android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,false,(byte)1));
+        DerOutputStream tmp = new DerOutputStream();
+        id.encode(tmp, DerValue.createTag(DerValue.TAG_CONTEXT,false,(byte)1));
 
         out.write(tmp.toByteArray());
     }
@@ -122,7 +124,7 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      * Set the attribute value.
      */
     public void set(String name, Object obj) throws IOException {
-        if (!(obj instanceof android.sun.security.x509.UniqueIdentity)) {
+        if (!(obj instanceof UniqueIdentity)) {
             throw new IOException("Attribute must be of type UniqueIdentity.");
         }
         if (name.equalsIgnoreCase(ID)) {
@@ -162,7 +164,7 @@ public class CertificateIssuerUniqueIdentity implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(ID);
 
         return (elements.elements());

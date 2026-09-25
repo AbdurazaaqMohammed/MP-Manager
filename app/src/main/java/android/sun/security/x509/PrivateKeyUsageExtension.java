@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
 
 import java.io.IOException;
@@ -55,8 +57,8 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class PrivateKeyUsageExtension extends Extension
 implements CertAttrSet<String> {
@@ -85,19 +87,19 @@ implements CertAttrSet<String> {
             this.extensionValue = null;
             return;
         }
-        android.sun.security.util.DerOutputStream seq = new android.sun.security.util.DerOutputStream();
+        DerOutputStream seq = new DerOutputStream();
 
-        android.sun.security.util.DerOutputStream tagged = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tagged = new DerOutputStream();
         if (notBefore != null) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putGeneralizedTime(notBefore);
-            tagged.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            tagged.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                                  false, TAG_BEFORE), tmp);
         }
         if (notAfter != null) {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putGeneralizedTime(notAfter);
-            tagged.writeImplicit(android.sun.security.util.DerValue.createTag(android.sun.security.util.DerValue.TAG_CONTEXT,
+            tagged.writeImplicit(DerValue.createTag(DerValue.TAG_CONTEXT,
                                  false, TAG_AFTER), tmp);
         }
         seq.write(DerValue.tag_Sequence, tagged);
@@ -117,7 +119,7 @@ implements CertAttrSet<String> {
         this.notBefore = notBefore;
         this.notAfter = notAfter;
 
-        this.extensionId = android.sun.security.x509.PKIXExtensions.PrivateKeyUsage_Id;
+        this.extensionId = PKIXExtensions.PrivateKeyUsage_Id;
         this.critical = false;
         encodeThis();
     }
@@ -133,12 +135,12 @@ implements CertAttrSet<String> {
      */
     public PrivateKeyUsageExtension(Boolean critical, Object value)
     throws CertificateException, IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.PrivateKeyUsage_Id;
+        this.extensionId = PKIXExtensions.PrivateKeyUsage_Id;
         this.critical = critical;
 
         this.extensionValue = (byte[]) value;
-        android.sun.security.util.DerInputStream str = new android.sun.security.util.DerInputStream(this.extensionValue);
-        android.sun.security.util.DerValue[] seq = str.getSequence(2);
+        DerInputStream str = new DerInputStream(this.extensionValue);
+        DerValue[] seq = str.getSequence(2);
 
         // NB. this is always encoded with the IMPLICIT tag
         // The checks only make sense if we assume implicit tagging,
@@ -151,7 +153,7 @@ implements CertAttrSet<String> {
                             "Duplicate notBefore in PrivateKeyUsage.");
                 }
                 opt.resetTag(DerValue.tag_GeneralizedTime);
-                str = new android.sun.security.util.DerInputStream(opt.toByteArray());
+                str = new DerInputStream(opt.toByteArray());
                 notBefore = str.getGeneralizedTime();
 
             } else if (opt.isContextSpecific(TAG_AFTER) &&
@@ -161,7 +163,7 @@ implements CertAttrSet<String> {
                             "Duplicate notAfter in PrivateKeyUsage.");
                 }
                 opt.resetTag(DerValue.tag_GeneralizedTime);
-                str = new android.sun.security.util.DerInputStream(opt.toByteArray());
+                str = new DerInputStream(opt.toByteArray());
                 notAfter = str.getGeneralizedTime();
             } else
                 throw new IOException("Invalid encoding of " +
@@ -226,7 +228,7 @@ implements CertAttrSet<String> {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-        android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         if (extensionValue == null) {
             extensionId = PKIXExtensions.PrivateKeyUsage_Id;
             critical = false;
@@ -292,7 +294,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(NOT_BEFORE);
         elements.addElement(NOT_AFTER);
 

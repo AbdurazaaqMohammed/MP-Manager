@@ -26,13 +26,13 @@
 package android.sun.security.x509;
 
 import java.io.IOException;
-import java.lang.Integer;
 import java.net.InetAddress;
 import java.util.Arrays;
 import android.sun.misc.HexDumpEncoder;
 import android.sun.security.util.BitArray;
 import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
+import android.text.TextUtils;
 
 /**
  * This class implements the IPAddressName as required by the GeneralNames
@@ -60,14 +60,14 @@ import android.sun.security.util.DerValue;
  * 10.9.8.0/255.255.255.0.
  * <p>
  * @see GeneralName
- * @see android.sun.security.x509.GeneralNameInterface
+ * @see GeneralNameInterface
  * @see GeneralNames
  *
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
  */
-public class IPAddressName implements android.sun.security.x509.GeneralNameInterface {
+public class IPAddressName implements GeneralNameInterface {
     private byte[] address;
     private final boolean isIPv4;
     private String name;
@@ -125,7 +125,7 @@ public class IPAddressName implements android.sun.security.x509.GeneralNameInter
      */
     public IPAddressName(String name) throws IOException {
 
-        if (android.text.TextUtils.isEmpty(name)) {
+        if (TextUtils.isEmpty(name)) {
             throw new IOException("IPAddress cannot be null or empty");
         }
         if (name.charAt(name.length() - 1) == '/') {

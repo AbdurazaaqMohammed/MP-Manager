@@ -25,6 +25,8 @@
 
 package android.sun.security.x509;
 
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 import android.sun.security.util.ObjectIdentifier;
 
 import java.io.IOException;
@@ -37,14 +39,14 @@ import java.io.IOException;
  * @author Hemma Prafullchandra
  */
 public class CertificatePolicyId {
-    private final android.sun.security.util.ObjectIdentifier id;
+    private final ObjectIdentifier id;
 
     /**
      * Create a CertificatePolicyId with the ObjectIdentifier.
      *
      * @param id the ObjectIdentifier for the policy id.
      */
-    public CertificatePolicyId(android.sun.security.util.ObjectIdentifier id) {
+    public CertificatePolicyId(ObjectIdentifier id) {
         this.id = id;
     }
 
@@ -53,7 +55,7 @@ public class CertificatePolicyId {
      *
      * @param val the DER encoded value for the same.
      */
-    public CertificatePolicyId(android.sun.security.util.DerValue val) throws IOException {
+    public CertificatePolicyId(DerValue val) throws IOException {
         this.id = val.getOID();
     }
 
@@ -80,7 +82,7 @@ public class CertificatePolicyId {
      * @param out the DerOutputStream to write the object to.
      * @exception IOException on errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out) throws IOException {
+    public void encode(DerOutputStream out) throws IOException {
         out.putOID(id);
     }
 

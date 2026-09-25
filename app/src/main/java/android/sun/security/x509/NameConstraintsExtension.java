@@ -29,6 +29,7 @@ package android.sun.security.x509;
 import android.sun.security.pkcs.PKCS9Attribute;
 import android.sun.security.util.DerOutputStream;
 import android.sun.security.util.DerValue;
+import android.sun.security.util.ObjectIdentifier;
 
 import androidx.annotation.NonNull;
 
@@ -440,7 +441,7 @@ public class NameConstraintsExtension extends Extension implements CertAttrSet<S
     @SuppressWarnings("deprecation")
     public boolean verifyRFC822SpecialCase(X500Name subject) throws IOException {
         for (AVA ava : subject.allAvas()) {
-            android.sun.security.util.ObjectIdentifier attrOID = ava.getObjectIdentifier();
+            ObjectIdentifier attrOID = ava.getObjectIdentifier();
             if (attrOID.equals(PKCS9Attribute.EMAIL_ADDRESS_OID)) {
                 String attrValue = ava.getValueString();
                 if (attrValue != null) {

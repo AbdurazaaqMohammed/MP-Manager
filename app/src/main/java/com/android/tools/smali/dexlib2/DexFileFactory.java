@@ -30,8 +30,6 @@
 
 package com.android.tools.smali.dexlib2;
 
-import static java.util.Collections.unmodifiableList;
-
 import com.android.tools.smali.dexlib2.iface.DexFile;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer.DexEntry;

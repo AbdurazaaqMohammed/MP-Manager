@@ -21,6 +21,9 @@ import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
 import java.util.Locale;
 
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
+
 public class FileUtils {
     public static final String[] IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif", ".heic", ".heif"};
     public static final String[] VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".3gp", ".mov", ".ts", ".m4v", ".flv", ".wmv"};
@@ -161,8 +164,8 @@ public class FileUtils {
     }
 
     public static InputStream getInputStream(File file) throws IOException {
-        if (file instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile) {
-            file = io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps.materialize(null, file);
+        if (file instanceof ShizukuFile) {
+            file = ShizukuFileOps.materialize(null, file);
         }
         return LegacyUtils.supportsFileChannel ?
                 Files.newInputStream(file.toPath(), StandardOpenOption.READ)

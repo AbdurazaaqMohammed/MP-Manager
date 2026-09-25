@@ -17,11 +17,9 @@ package com.reandroid.archive;
 
 import com.reandroid.archive.io.ArchiveByteEntrySource;
 import com.reandroid.archive.io.ZipByteInput;
-import com.reandroid.utils.io.FileUtil;
 import com.reandroid.utils.io.IOUtil;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 

@@ -26,6 +26,8 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
+import android.text.TextUtils;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -48,7 +50,7 @@ import java.util.Locale;
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
  */
-public class DNSName implements android.sun.security.x509.GeneralNameInterface {
+public class DNSName implements GeneralNameInterface {
     private final String name;
 
     private static final String alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -61,7 +63,7 @@ public class DNSName implements android.sun.security.x509.GeneralNameInterface {
      * @param derValue the encoded DER DNSName.
      * @exception IOException on error.
      */
-    public DNSName(android.sun.security.util.DerValue derValue) throws IOException {
+    public DNSName(DerValue derValue) throws IOException {
         name = derValue.getIA5String();
     }
 
@@ -72,7 +74,7 @@ public class DNSName implements android.sun.security.x509.GeneralNameInterface {
      * @throws IOException if the name is not a valid DNSName subjectAltName
      */
     public DNSName(String name) throws IOException {
-        if (android.text.TextUtils.isEmpty(name))
+        if (TextUtils.isEmpty(name))
             throw new IOException("DNS name must not be null");
         if (name.indexOf(' ') != -1)
             throw new IOException("DNS names or NameConstraints with blank components are not permitted");
@@ -106,7 +108,7 @@ public class DNSName implements android.sun.security.x509.GeneralNameInterface {
      * Return the type of the GeneralName.
      */
     public int getType() {
-        return (android.sun.security.x509.GeneralNameInterface.NAME_DNS);
+        return (GeneralNameInterface.NAME_DNS);
     }
 
     /**

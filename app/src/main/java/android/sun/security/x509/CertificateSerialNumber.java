@@ -24,7 +24,9 @@
  */
 package android.sun.security.x509;
 
+import android.sun.security.util.DerInputStream;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,7 +39,7 @@ import java.util.Enumeration;
  *
  * @author Amit Kapoor
  * @author Hemma Prafullchandra
- * @see android.sun.security.x509.CertAttrSet
+ * @see CertAttrSet
  */
 public class CertificateSerialNumber implements CertAttrSet<String> {
     /**
@@ -52,7 +54,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
     public static final String NAME = "serialNumber";
     public static final String NUMBER = "number";
 
-    private android.sun.security.x509.SerialNumber serial;
+    private SerialNumber serial;
 
     /**
      * Default constructor for the certificate attribute.
@@ -60,7 +62,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * @param serial the serial number for the certificate.
      */
     public CertificateSerialNumber(BigInteger num) {
-      this.serial = new android.sun.security.x509.SerialNumber(num);
+      this.serial = new SerialNumber(num);
     }
 
     /**
@@ -69,7 +71,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * @param serial the serial number for the certificate.
      */
     public CertificateSerialNumber(int num) {
-      this.serial = new android.sun.security.x509.SerialNumber(num);
+      this.serial = new SerialNumber(num);
     }
 
     /**
@@ -78,8 +80,8 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * @param in the DerInputStream to read the serial number from.
      * @exception IOException on decoding errors.
      */
-    public CertificateSerialNumber(android.sun.security.util.DerInputStream in) throws IOException {
-        serial = new android.sun.security.x509.SerialNumber(in);
+    public CertificateSerialNumber(DerInputStream in) throws IOException {
+        serial = new SerialNumber(in);
     }
 
     /**
@@ -89,7 +91,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * @exception IOException on decoding errors.
      */
     public CertificateSerialNumber(InputStream in) throws IOException {
-        serial = new android.sun.security.x509.SerialNumber(in);
+        serial = new SerialNumber(in);
     }
 
     /**
@@ -98,8 +100,8 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * @param val the DER encoded value.
      * @exception IOException on decoding errors.
      */
-    public CertificateSerialNumber(android.sun.security.util.DerValue val) throws IOException {
-        serial = new android.sun.security.x509.SerialNumber(val);
+    public CertificateSerialNumber(DerValue val) throws IOException {
+        serial = new SerialNumber(val);
     }
 
     /**
@@ -117,7 +119,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * @exception IOException on errors.
      */
     public void encode(OutputStream out) throws IOException {
-        DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+        DerOutputStream tmp = new DerOutputStream();
         serial.encode(tmp);
 
         out.write(tmp.toByteArray());
@@ -127,7 +129,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * Set the attribute value.
      */
     public void set(String name, Object obj) throws IOException {
-        if (!(obj instanceof android.sun.security.x509.SerialNumber)) {
+        if (!(obj instanceof SerialNumber)) {
             throw new IOException("Attribute must be of type SerialNumber.");
         }
         if (name.equalsIgnoreCase(NUMBER)) {
@@ -167,7 +169,7 @@ public class CertificateSerialNumber implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(NUMBER);
 
         return (elements.elements());

@@ -74,7 +74,7 @@ public class DeltaCRLIndicatorExtension extends CRLNumberExtension {
      * @param crlNum the value to be set for the extension.
      */
     public DeltaCRLIndicatorExtension(int crlNum) throws IOException {
-        super(android.sun.security.x509.PKIXExtensions.DeltaCRLIndicator_Id, true,
+        super(PKIXExtensions.DeltaCRLIndicator_Id, true,
             BigInteger.valueOf(crlNum), NAME, LABEL);
     }
 
@@ -85,7 +85,7 @@ public class DeltaCRLIndicatorExtension extends CRLNumberExtension {
      * @param crlNum the value to be set for the extension.
      */
     public DeltaCRLIndicatorExtension(BigInteger crlNum) throws IOException {
-        super(android.sun.security.x509.PKIXExtensions.DeltaCRLIndicator_Id, true, crlNum, NAME, LABEL);
+        super(PKIXExtensions.DeltaCRLIndicator_Id, true, crlNum, NAME, LABEL);
     }
 
     /**
@@ -98,7 +98,7 @@ public class DeltaCRLIndicatorExtension extends CRLNumberExtension {
      */
     public DeltaCRLIndicatorExtension(Boolean critical, Object value)
     throws IOException {
-        super(android.sun.security.x509.PKIXExtensions.DeltaCRLIndicator_Id, critical,
+        super(PKIXExtensions.DeltaCRLIndicator_Id, critical,
             value, NAME, LABEL);
     }
 
@@ -109,7 +109,7 @@ public class DeltaCRLIndicatorExtension extends CRLNumberExtension {
      * @exception IOException on encoding errors.
      */
     public void encode(OutputStream out) throws IOException {
-       android.sun.security.util.DerOutputStream tmp = new DerOutputStream();
+       DerOutputStream tmp = new DerOutputStream();
         super.encode(out, PKIXExtensions.DeltaCRLIndicator_Id, true);
     }
 }

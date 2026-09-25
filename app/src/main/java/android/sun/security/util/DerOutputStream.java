@@ -53,7 +53,7 @@ import java.util.Locale;
  * @author Hemma Prafullchandra
  */
 public class DerOutputStream
-extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
+extends ByteArrayOutputStream implements DerEncoder {
     /**
      * Construct an DER output stream.
      *
@@ -122,7 +122,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
     /**
      * Marshals pre-encoded DER value onto the output stream.
      */
-    public void putDerValue(android.sun.security.util.DerValue val) throws IOException {
+    public void putDerValue(DerValue val) throws IOException {
         val.encode(this);
     }
 
@@ -138,7 +138,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * Marshals a DER boolean on the output stream.
      */
     public void putBoolean(boolean val) throws IOException {
-        write(android.sun.security.util.DerValue.tag_Boolean);
+        write(DerValue.tag_Boolean);
         putLength(1);
         if (val) {
             write(0xff);
@@ -152,7 +152,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * @param i the enumerated value.
      */
     public void putEnumerated(int i) throws IOException {
-        write(android.sun.security.util.DerValue.tag_Enumerated);
+        write(DerValue.tag_Enumerated);
         putIntegerContents(i);
     }
 
@@ -162,7 +162,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * @param i the integer in the form of a BigInteger.
      */
     public void putInteger(BigInteger i) throws IOException {
-        write(android.sun.security.util.DerValue.tag_Integer);
+        write(DerValue.tag_Integer);
         byte[]    buf = i.toByteArray(); // least number  of bytes
         putLength(buf.length);
         write(buf, 0, buf.length);
@@ -181,7 +181,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * @param i the integer.
      */
     public void putInteger(int i) throws IOException {
-        write(android.sun.security.util.DerValue.tag_Integer);
+        write(DerValue.tag_Integer);
         putIntegerContents(i);
     }
 
@@ -236,7 +236,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * @param bits the bit string, MSB first
      */
     public void putBitString(byte[] bits) throws IOException {
-        write(android.sun.security.util.DerValue.tag_BitString);
+        write(DerValue.tag_BitString);
         putLength(bits.length + 1);
         write(0);               // all of last octet is used
         write(bits);
@@ -248,10 +248,10 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      *
      * @param bits the bit string, MSB first
      */
-    public void putUnalignedBitString(android.sun.security.util.BitArray ba) throws IOException {
+    public void putUnalignedBitString(BitArray ba) throws IOException {
         byte[] bits = ba.toByteArray();
 
-        write(android.sun.security.util.DerValue.tag_BitString);
+        write(DerValue.tag_BitString);
         putLength(bits.length + 1);
         write(bits.length*8 - ba.length()); // excess bits in last octet
         write(bits);
@@ -273,7 +273,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * @param octets the octet string
      */
     public void putOctetString(byte[] octets) throws IOException {
-        write(android.sun.security.util.DerValue.tag_OctetString, octets);
+        write(DerValue.tag_OctetString, octets);
     }
 
     /**
@@ -281,7 +281,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * often used to indicate optional values which have been omitted.
      */
     public void putNull() throws IOException {
-        write(android.sun.security.util.DerValue.tag_Null);
+        write(DerValue.tag_Null);
         putLength(0);
     }
 
@@ -298,14 +298,14 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * the ASN.1 "SEQUENCE" (zero to N values) and "SEQUENCE OF"
      * (one to N values) constructs.
      */
-    public void putSequence(android.sun.security.util.DerValue[] seq) throws IOException {
+    public void putSequence(DerValue[] seq) throws IOException {
         DerOutputStream bytes = new DerOutputStream();
         int i;
 
         for (i = 0; i < seq.length; i++)
             seq[i].encode(bytes);
 
-        write(android.sun.security.util.DerValue.tag_Sequence, bytes);
+        write(DerValue.tag_Sequence, bytes);
     }
 
     /**
@@ -315,14 +315,14 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      *
      * For DER encoding, use orderedPutSet() or orderedPutSetOf().
      */
-    public void putSet(android.sun.security.util.DerValue[] set) throws IOException {
+    public void putSet(DerValue[] set) throws IOException {
         DerOutputStream bytes = new DerOutputStream();
         int i;
 
         for (i = 0; i < set.length; i++)
             set[i].encode(bytes);
 
-        write(android.sun.security.util.DerValue.tag_Set, bytes);
+        write(DerValue.tag_Set, bytes);
     }
 
     /**
@@ -335,7 +335,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * This method supports the ASN.1 "SET OF" construct, but not
      * "SET", which uses a different order.
      */
-    public void putOrderedSetOf(byte tag, android.sun.security.util.DerEncoder[] set) throws IOException {
+    public void putOrderedSetOf(byte tag, DerEncoder[] set) throws IOException {
         putOrderedSet(tag, set, lexOrder);
     }
 
@@ -349,7 +349,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * This method supports the ASN.1 "SET" construct, but not
      * "SET OF", which uses a different order.
      */
-    public void putOrderedSet(byte tag, android.sun.security.util.DerEncoder[] set) throws IOException {
+    public void putOrderedSet(byte tag, DerEncoder[] set) throws IOException {
         putOrderedSet(tag, set, tagOrder);
     }
 
@@ -357,13 +357,13 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      *  Lexicographical order comparison on byte arrays, for ordering
      *  elements of a SET OF objects in DER encoding.
      */
-    private static final android.sun.security.util.ByteArrayLexOrder lexOrder = new ByteArrayLexOrder();
+    private static final ByteArrayLexOrder lexOrder = new ByteArrayLexOrder();
 
     /**
      *  Tag order comparison on byte arrays, for ordering elements of
      *  SET objects in DER encoding.
      */
-    private static final android.sun.security.util.ByteArrayTagOrder tagOrder = new ByteArrayTagOrder();
+    private static final ByteArrayTagOrder tagOrder = new ByteArrayTagOrder();
 
     /**
      * Marshals a the contents of a set on the output stream with the
@@ -399,14 +399,14 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * Marshals a string as a DER encoded UTF8String.
      */
     public void putUTF8String(String s) throws IOException {
-        writeString(s, android.sun.security.util.DerValue.tag_UTF8String, "UTF8");
+        writeString(s, DerValue.tag_UTF8String, "UTF8");
     }
 
     /**
      * Marshals a string as a DER encoded PrintableString.
      */
     public void putPrintableString(String s) throws IOException {
-        writeString(s, android.sun.security.util.DerValue.tag_PrintableString, "ASCII");
+        writeString(s, DerValue.tag_PrintableString, "ASCII");
     }
 
     /**
@@ -417,28 +417,28 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
          * Works for characters that are defined in both ASCII and
          * T61.
          */
-        writeString(s, android.sun.security.util.DerValue.tag_T61String, "ISO-8859-1");
+        writeString(s, DerValue.tag_T61String, "ISO-8859-1");
     }
 
     /**
      * Marshals a string as a DER encoded IA5String.
      */
     public void putIA5String(String s) throws IOException {
-        writeString(s, android.sun.security.util.DerValue.tag_IA5String, "ASCII");
+        writeString(s, DerValue.tag_IA5String, "ASCII");
     }
 
     /**
      * Marshals a string as a DER encoded BMPString.
      */
     public void putBMPString(String s) throws IOException {
-        writeString(s, android.sun.security.util.DerValue.tag_BMPString, "UnicodeBigUnmarked");
+        writeString(s, DerValue.tag_BMPString, "UnicodeBigUnmarked");
     }
 
     /**
      * Marshals a string as a DER encoded GeneralString.
      */
     public void putGeneralString(String s) throws IOException {
-        writeString(s, android.sun.security.util.DerValue.tag_GeneralString, "ASCII");
+        writeString(s, DerValue.tag_GeneralString, "ASCII");
     }
 
     /**
@@ -465,7 +465,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * and with seconds (even if seconds=0) as per RFC 3280.
      */
     public void putUTCTime(Date d) throws IOException {
-        putTime(d, android.sun.security.util.DerValue.tag_UtcTime);
+        putTime(d, DerValue.tag_UtcTime);
     }
 
     /**
@@ -475,7 +475,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
      * and with seconds (even if seconds=0) as per RFC 3280.
      */
     public void putGeneralizedTime(Date d) throws IOException {
-        putTime(d, android.sun.security.util.DerValue.tag_GeneralizedTime);
+        putTime(d, DerValue.tag_GeneralizedTime);
     }
 
     /**
@@ -494,7 +494,7 @@ extends ByteArrayOutputStream implements android.sun.security.util.DerEncoder {
         TimeZone tz = TimeZone.getTimeZone("GMT");
         String pattern = null;
 
-        if (tag == android.sun.security.util.DerValue.tag_UtcTime) {
+        if (tag == DerValue.tag_UtcTime) {
             pattern = "yyMMddHHmmss'Z'";
         } else {
             tag = DerValue.tag_GeneralizedTime;

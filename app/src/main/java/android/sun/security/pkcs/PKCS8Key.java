@@ -25,7 +25,9 @@
 
 package android.sun.security.pkcs;
 
+import android.sun.security.util.Debug;
 import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 import android.sun.security.x509.AlgorithmId;
 
 import java.io.*;
@@ -80,7 +82,7 @@ public class PKCS8Key implements PrivateKey {
      * data is stored and transmitted losslessly, but no knowledge
      * about this particular algorithm is available.
      */
-    private PKCS8Key (android.sun.security.x509.AlgorithmId algid, byte[] key)
+    private PKCS8Key (AlgorithmId algid, byte[] key)
     throws InvalidKeyException {
         this.algid = algid;
         this.key = key;
@@ -90,7 +92,7 @@ public class PKCS8Key implements PrivateKey {
     /*
      * Binary backwards compatibility. New uses should call parseKey().
      */
-    public static PKCS8Key parse (android.sun.security.util.DerValue in) throws IOException {
+    public static PKCS8Key parse (DerValue in) throws IOException {
         PrivateKey key;
 
         key = parseKey(in);
@@ -114,23 +116,23 @@ public class PKCS8Key implements PrivateKey {
      * @param in the DER-encoded SubjectPublicKeyInfo value
      * @exception IOException on data format errors
      */
-    public static PrivateKey parseKey (android.sun.security.util.DerValue in) throws IOException
+    public static PrivateKey parseKey (DerValue in) throws IOException
     {
-        android.sun.security.x509.AlgorithmId algorithm;
+        AlgorithmId algorithm;
         PrivateKey privKey;
 
-        if (in.tag != android.sun.security.util.DerValue.tag_Sequence)
+        if (in.tag != DerValue.tag_Sequence)
             throw new IOException ("corrupt private key");
 
         BigInteger parsedVersion = in.data.getBigInteger();
         if (!version.equals(parsedVersion)) {
             throw new IOException("version mismatch: (supported: " +
-                                  android.sun.security.util.Debug.toHexString(version) +
+                                  Debug.toHexString(version) +
                                   ", parsed: " +
-                                  android.sun.security.util.Debug.toHexString(parsedVersion));
+                                  Debug.toHexString(parsedVersion));
         }
 
-        algorithm = android.sun.security.x509.AlgorithmId.parse (in.data.getDerValue ());
+        algorithm = AlgorithmId.parse (in.data.getDerValue ());
 
         try {
             privKey = buildPKCS8Key (algorithm, in.data.getOctetString ());
@@ -167,7 +169,7 @@ public class PKCS8Key implements PrivateKey {
      * specific algorithm ID or else returning this generic base class.
      * See the description above.
      */
-    static PrivateKey buildPKCS8Key (android.sun.security.x509.AlgorithmId algid, byte[] key)
+    static PrivateKey buildPKCS8Key (AlgorithmId algid, byte[] key)
     throws IOException, InvalidKeyException
     {
         /*
@@ -175,7 +177,7 @@ public class PKCS8Key implements PrivateKey {
          * of the key, which will then be used as the input to the
          * key factory.
          */
-        android.sun.security.util.DerOutputStream pkcs8EncodedKeyStream = new android.sun.security.util.DerOutputStream();
+        DerOutputStream pkcs8EncodedKeyStream = new DerOutputStream();
         encode(pkcs8EncodedKeyStream, algid, key);
         PKCS8EncodedKeySpec pkcs8KeySpec
             = new PKCS8EncodedKeySpec(pkcs8EncodedKeyStream.toByteArray());
@@ -252,7 +254,7 @@ public class PKCS8Key implements PrivateKey {
     /**
      * Returns the algorithm ID to be used with this key.
      */
-    public android.sun.security.x509.AlgorithmId getAlgorithmId () { return algid; }
+    public AlgorithmId getAlgorithmId () { return algid; }
 
     /**
      * PKCS#8 sequence on the DER output stream.
@@ -289,9 +291,9 @@ public class PKCS8Key implements PrivateKey {
     public byte[] encode() throws InvalidKeyException {
         if (encodedKey == null) {
             try {
-                android.sun.security.util.DerOutputStream out;
+                DerOutputStream out;
 
-                out = new android.sun.security.util.DerOutputStream();
+                out = new DerOutputStream();
                 encode (out);
                 encodedKey = out.toByteArray();
 
@@ -332,22 +334,22 @@ public class PKCS8Key implements PrivateKey {
      */
     public void decode(InputStream in) throws InvalidKeyException
     {
-        android.sun.security.util.DerValue val;
+        DerValue val;
 
         try {
-            val = new android.sun.security.util.DerValue(in);
-            if (val.tag != android.sun.security.util.DerValue.tag_Sequence)
+            val = new DerValue(in);
+            if (val.tag != DerValue.tag_Sequence)
                 throw new InvalidKeyException ("invalid key format");
 
 
             BigInteger version = val.data.getBigInteger();
             if (!version.equals(PKCS8Key.version)) {
                 throw new IOException("version mismatch: (supported: " +
-                                      android.sun.security.util.Debug.toHexString(PKCS8Key.version) +
+                                      Debug.toHexString(PKCS8Key.version) +
                                       ", parsed: " +
-                                      android.sun.security.util.Debug.toHexString(version));
+                                      Debug.toHexString(version));
             }
-            algid = android.sun.security.x509.AlgorithmId.parse (val.data.getDerValue ());
+            algid = AlgorithmId.parse (val.data.getDerValue ());
             key = val.data.getOctetString ();
             parseKeyBits ();
 
@@ -367,7 +369,7 @@ public class PKCS8Key implements PrivateKey {
     }
 
     @Serial
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws ObjectStreamException {
         return new KeyRep(KeyRep.Type.PRIVATE,
                         getAlgorithm(),
                         getFormat(),
@@ -395,13 +397,13 @@ public class PKCS8Key implements PrivateKey {
     /*
      * Produce PKCS#8 encoding from algorithm id and key material.
      */
-    static void encode(android.sun.security.util.DerOutputStream out, android.sun.security.x509.AlgorithmId algid, byte[] key)
+    static void encode(DerOutputStream out, AlgorithmId algid, byte[] key)
         throws IOException {
-            android.sun.security.util.DerOutputStream tmp = new android.sun.security.util.DerOutputStream();
+            DerOutputStream tmp = new DerOutputStream();
             tmp.putInteger(version);
             algid.encode(tmp);
             tmp.putOctetString(key);
-            out.write(android.sun.security.util.DerValue.tag_Sequence, tmp);
+            out.write(DerValue.tag_Sequence, tmp);
     }
 
     /**

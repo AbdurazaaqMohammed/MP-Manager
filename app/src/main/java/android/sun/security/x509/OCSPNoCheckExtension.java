@@ -45,8 +45,8 @@ import java.util.Enumeration;
  * </pre>
  *
  * @author Xuelei Fan
- * @see android.sun.security.x509.Extension
- * @see android.sun.security.x509.CertAttrSet
+ * @see Extension
+ * @see CertAttrSet
  */
 public class OCSPNoCheckExtension extends Extension
     implements CertAttrSet<String> {
@@ -66,7 +66,7 @@ public class OCSPNoCheckExtension extends Extension
      * Create a OCSPNoCheckExtension
      */
     public OCSPNoCheckExtension() throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.OCSPNoCheck_Id;
+        this.extensionId = PKIXExtensions.OCSPNoCheck_Id;
         this.critical = false;
         this.extensionValue = new byte[0];
     }

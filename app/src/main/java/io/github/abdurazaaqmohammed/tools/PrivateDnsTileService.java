@@ -2,7 +2,10 @@ package io.github.abdurazaaqmohammed.tools;
 
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
+import android.content.Context;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.widget.Toast;
@@ -44,7 +47,7 @@ public class PrivateDnsTileService extends TileService {
                 applied = null;
             }
             final DnsManager.DnsProfile result = applied;
-            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            new Handler(Looper.getMainLooper()).post(() -> {
                 if (result != null) {
                     Toast.makeText(this, getString(R.string.dns_applied, result.name), Toast.LENGTH_SHORT).show();
                 } else {
@@ -81,7 +84,7 @@ public class PrivateDnsTileService extends TileService {
         }
     }
 
-    public static void requestUpdate(android.content.Context context) {
+    public static void requestUpdate(Context context) {
         try {
             if (Build.VERSION.SDK_INT >= 24) {
                 TileService.requestListeningState(context, new ComponentName(context, PrivateDnsTileService.class));

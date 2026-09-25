@@ -166,7 +166,7 @@ implements CertAttrSet<String> {
     public ExtendedKeyUsageExtension(Boolean critical, Vector<ObjectIdentifier> keyUsages)
     throws IOException {
         this.keyUsages = keyUsages;
-        this.extensionId = android.sun.security.x509.PKIXExtensions.ExtendedKeyUsage_Id;
+        this.extensionId = PKIXExtensions.ExtendedKeyUsage_Id;
         this.critical = critical;
         encodeThis();
     }
@@ -181,7 +181,7 @@ implements CertAttrSet<String> {
      */
     public ExtendedKeyUsageExtension(Boolean critical, Object value)
     throws IOException {
-        this.extensionId = android.sun.security.x509.PKIXExtensions.ExtendedKeyUsage_Id;
+        this.extensionId = PKIXExtensions.ExtendedKeyUsage_Id;
         this.critical = critical;
         this.extensionValue = (byte[]) value;
         DerValue val = new DerValue(this.extensionValue);
@@ -288,7 +288,7 @@ implements CertAttrSet<String> {
      * attribute.
      */
     public Enumeration<String> getElements() {
-        android.sun.security.x509.AttributeNameEnumeration elements = new AttributeNameEnumeration();
+        AttributeNameEnumeration elements = new AttributeNameEnumeration();
         elements.addElement(USAGES);
 
         return (elements.elements());

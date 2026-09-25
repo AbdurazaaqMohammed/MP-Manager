@@ -25,6 +25,8 @@
 
 package android.sun.security.action;
 
+import java.security.PrivilegedAction;
+
 /**
  * A convenience class for retrieving the boolean value of a system property
  * as a privileged action.
@@ -47,7 +49,7 @@ package android.sun.security.action;
  */
 
 public class GetBooleanAction
-        implements java.security.PrivilegedAction<Boolean> {
+        implements PrivilegedAction<Boolean> {
     private final String theProp;
 
     /**

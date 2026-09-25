@@ -25,6 +25,9 @@
 package android.sun.security.x509;
 
 import android.sun.security.util.BitArray;
+import android.sun.security.util.DerInputStream;
+import android.sun.security.util.DerOutputStream;
+import android.sun.security.util.DerValue;
 
 import java.io.IOException;
 
@@ -36,14 +39,14 @@ import java.io.IOException;
  */
 public class UniqueIdentity {
     // Private data members
-    private final android.sun.security.util.BitArray id;
+    private final BitArray id;
 
     /**
      * The default constructor for this class.
      *
      * @param id the byte array containing the unique identifier.
      */
-    public UniqueIdentity(android.sun.security.util.BitArray id) {
+    public UniqueIdentity(BitArray id) {
         this.id = id;
     }
 
@@ -62,8 +65,8 @@ public class UniqueIdentity {
      * @param in the DerInputStream to read the UniqueIdentity from.
      * @exception IOException on decoding errors.
      */
-    public UniqueIdentity(android.sun.security.util.DerInputStream in) throws IOException {
-        android.sun.security.util.DerValue derVal = in.getDerValue();
+    public UniqueIdentity(DerInputStream in) throws IOException {
+        DerValue derVal = in.getDerValue();
         id = derVal.getUnalignedBitString(true);
     }
 
@@ -74,7 +77,7 @@ public class UniqueIdentity {
      * @param tag the tag the value is encoded under.
      * @exception IOException on decoding errors.
      */
-    public UniqueIdentity(android.sun.security.util.DerValue derVal) throws IOException {
+    public UniqueIdentity(DerValue derVal) throws IOException {
         id = derVal.getUnalignedBitString(true);
     }
 
@@ -92,7 +95,7 @@ public class UniqueIdentity {
      * @param tag enocode it under the following tag.
      * @exception IOException on errors.
      */
-    public void encode(android.sun.security.util.DerOutputStream out, byte tag) throws IOException {
+    public void encode(DerOutputStream out, byte tag) throws IOException {
         byte[] bytes = id.toByteArray();
         int excessBits = bytes.length*8 - id.length();
 
