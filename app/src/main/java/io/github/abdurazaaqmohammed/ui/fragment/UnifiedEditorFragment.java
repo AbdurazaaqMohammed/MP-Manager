@@ -802,7 +802,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         switch (label) {
             case "Search": return getString(R.string.search);
             case "Copy":
-            case "Copy selection": return getString(R.string.copy);
+            case "Copy selection": return getString(android.R.string.copy);
             case "Cut":
             case "Cut selection": return getString(R.string.cut);
             case "Paste":

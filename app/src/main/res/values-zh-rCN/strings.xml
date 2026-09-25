@@ -1350,7 +1350,6 @@ Layout Inspector
     <string name="convert_to_camelcase">转换为驼峰式</string>
     <string name="increase_indent">增加缩进</string>
     <string name="decrease_indent">减少缩进</string>
-    <string name="copy">复制</string>
     <string name="cut">剪切</string>
     <string name="paste">粘贴</string>
     <string name="insert_text">插入文本</string>
@@ -1360,7 +1359,7 @@ Layout Inspector
     <string name="reload_file">重新加载文件</string>
     <string name="overriding_methods_found">找到 %1$d 个重写方法。是否要搜索重写方法的用法？</string>
     <string name="only_this_method">仅此方法</string>
-    <string name="clearing_method">正在清空方法...</string>
+    <string name="clearing_method">正在清空方法…</string>
     <string name="search_resources">搜索资源</string>
     <string name="pick_a_search_type">选择搜索类型</string>
     <string name="font">字体</string>

@@ -1321,7 +1321,6 @@
     <string name="convert_to_camelcase">Преобразовать в camelCase</string>
     <string name="increase_indent">Увеличить отступ</string>
     <string name="decrease_indent">Уменьшить отступ</string>
-    <string name="copy">Копировать</string>
     <string name="cut">Вырезать</string>
     <string name="paste">Вставить</string>
     <string name="insert_text">Вставить текст</string>
