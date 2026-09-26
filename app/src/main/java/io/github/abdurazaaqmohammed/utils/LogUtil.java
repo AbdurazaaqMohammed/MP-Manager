@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.app.Activity;
-import android.os.Environment;
 import android.os.Handler;
 import android.widget.TextView;
 
@@ -9,7 +8,6 @@ import androidx.preference.PreferenceManager;
 
 import com.reandroid.apk.APKLogger;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -19,10 +17,7 @@ public class LogUtil {
         try {
             FileWriter fw;
             if(saveLog) {
-                File folder = new File(new File(Environment.getExternalStorageDirectory(), "MP Manager"), "logs");
-                folder.mkdirs();
-                File logFile = new File(folder, "log_" + System.currentTimeMillis() + ".txt");
-                fw = new FileWriter(logFile, true);
+                fw = new FileWriter(AppLogs.newLogFile("log"), true);
             } else fw = null;
             return new APKLogger() {
                 @Override
@@ -33,6 +28,9 @@ public class LogUtil {
 
                 @Override
                 public void logError(String s, Throwable throwable) {
+                    try {
+                        AppLogs.writeCrash(throwable, context);
+                    } catch (Exception ignored) {}
                     new ErrorUtil(context).showError(throwable);
                     if(saveLog) try {
                         fw.write(s);
@@ -50,7 +48,11 @@ public class LogUtil {
                 @Override
                 public void close() { try { if (fw != null) fw.close(); } catch (IOException ignored) { } }
             };
-        } catch (IOException e) { return new APKLogger() {
+        } catch (IOException e) {
+            try {
+                AppLogs.writeCrash(e, context);
+            } catch (Exception ignored) {}
+            return new APKLogger() {
             @Override
             public void logMessage(String s) {
                 handler.post(() -> textView.setText(s));

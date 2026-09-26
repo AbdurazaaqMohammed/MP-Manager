@@ -32,6 +32,7 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.multidex.MultiDexApplication;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.AppLogs;
 import io.github.ratul.topactivity.manager.NotificationUiManager;
 import io.github.ratul.topactivity.ui.ClipboardActivity;
 
@@ -56,6 +57,7 @@ public class App extends MultiDexApplication {
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
         instance = this;
+        AppLogs.install(base);
     }
 
     @Override

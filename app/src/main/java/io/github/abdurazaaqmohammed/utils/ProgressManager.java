@@ -5,7 +5,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
@@ -22,7 +21,6 @@ import androidx.preference.PreferenceManager;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.apk.APKLogger;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -105,14 +103,12 @@ public class ProgressManager {
         boolean saveLog = PreferenceManager.getDefaultSharedPreferences(activity).getBoolean("logEnabled", false);
         FileWriter fw = null;
         if (saveLog) try {
-            File folder = new File(new File(Environment.getExternalStorageDirectory(), "MP Manager"), "logs");
-            folder.mkdirs();
-            fw = new FileWriter(new File(folder, "log_" + System.currentTimeMillis() + ".txt"), true);
+            fw = new FileWriter(AppLogs.newLogFile("log"), true);
         } catch (IOException ignored) {}
         FileWriter logFw = fw;
         return new APKLogger() {
             @Override public void logMessage(String s) { setText(s); if (logFw != null) try { logFw.write(s + "\n"); } catch (IOException ignored) {} }
-            @Override public void logError(String s, Throwable t) { new ErrorUtil(activity).showError(t); if (logFw != null) try { logFw.write(s + "\n"); for (StackTraceElement e : t.getStackTrace()) logFw.write(e.toString() + "\n"); } catch (IOException ignored) {} }
+            @Override public void logError(String s, Throwable t) { try { AppLogs.writeCrash(t, activity); } catch (Exception ignored) {} new ErrorUtil(activity).showError(t); if (logFw != null) try { logFw.write(s + "\n"); for (StackTraceElement e : t.getStackTrace()) logFw.write(e.toString() + "\n"); } catch (IOException ignored) {} }
             @Override public void logVerbose(String s) { setText((s)); if (logFw != null) try { logFw.write(s + "\n"); } catch (IOException ignored) {} }
             @Override public void close() { if (logFw != null) try { logFw.close(); } catch (IOException ignored) {} }
         };

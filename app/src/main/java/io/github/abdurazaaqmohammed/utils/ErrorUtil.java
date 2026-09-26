@@ -30,20 +30,22 @@ public class ErrorUtil {
                 .setMessage(s)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.copy_log, (dialog, which) -> copyText(s));
-       context.runOnUiThread(b::show);// b.show();
+        context.runOnUiThread(b::show);
     }
 
     public void showError(Throwable e) {
+        try {
+            AppLogs.writeCrash(e, context);
+        } catch (Exception ignored) {}
         final String mainErr = e.toString();
         StringBuilder stackTrace = new StringBuilder(mainErr).append('\n');
         for (StackTraceElement line : e.getStackTrace()) stackTrace.append(line).append('\n');
-        /*StringBuilder fullLog = new StringBuilder*/(stackTrace).append('\n')
+        stackTrace.append('\n')
                 .append("SDK ").append(Build.VERSION.SDK_INT).append('\n')
                 .append("MP Manager ").append('v');
         String currentVer;
         try {
-            //currentVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
-            currentVer = "1.0";
+            currentVer = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
         } catch (Exception ex) {
             currentVer = "1.0";
         }
@@ -51,13 +53,7 @@ public class ErrorUtil {
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(android.R.string.copy, (dialog, which) -> copyText(stackTrace));
-                //.setPositiveButton("Create issue", (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/AbdurazaaqMohammed/MP-Manager/issues/new?title=Crash%20Report&body=" + fullLog))));
         context.runOnUiThread(() -> {
-//            TextView msg = new TextView(context);
-//            msg.setText(stackTrace);
-//            ScrollView sv = new ScrollView(context);
-//            msg.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (int) (context.getResources().getDisplayMetrics().heightPixels * 0.6)));
-//            sv.addView(msg);
             (b.setTitle(mainErr).setMessage(stackTrace)).show();
         });
     }

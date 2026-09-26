@@ -241,7 +241,7 @@ public class OverlayInjectorUtil {
 
     private static void debugInit(Context context) {
         try {
-            debugFile = new File(context.getCacheDir(),
+            debugFile = new File(AppLogs.getLogsDir(),
                     "overlay_debug_" + System.currentTimeMillis() + ".log");
             FileWriter fw = new FileWriter(debugFile);
             fw.write("overlay injector debug log\n");
