@@ -704,33 +704,35 @@ public class MainActivity extends AppCompatActivity {
     public void setMultiSelectModeUI(boolean enabled) {
         if (multiSelectUIActive == enabled) return;
         multiSelectUIActive = enabled;
-        LinearLayout bottomBar = findViewById(R.id.bottomBar);
-        int[] defaultIds = {R.id.backButton, R.id.forwardButton, R.id.syncPaneButton, R.id.upButton};
-        ImageView addButton = findViewById(R.id.addButton);
-        if (enabled) {
-            if (multiSelectButtons[0] == null) buildMultiSelectButtons();
-            for (int id : defaultIds) findViewById(id).setVisibility(View.GONE);
-            addButton.setVisibility(View.VISIBLE);
-            addButton.setContentDescription(rss.getString(R.string.exit));
-            if (LegacyUtils.aboveSdk20) animateAddButtonRotation(10000);
-            else addButton.animate().rotation(45f).setDuration(500).setInterpolator(new DecelerateInterpolator()).start();
-            int addIndex = bottomBar.indexOfChild(addButton);
-            bottomBar.addView(multiSelectButtons[0], addIndex);
-            bottomBar.addView(multiSelectButtons[1], addIndex + 1);
-            addIndex = bottomBar.indexOfChild(addButton);
-            bottomBar.addView(multiSelectButtons[2], addIndex + 1);
-            bottomBar.addView(multiSelectButtons[3], addIndex + 2);
-            for (ImageButton button : multiSelectButtons) {
-                button.setOnTouchListener(bottomBarTouchListener);
+        handler.post(() -> {
+            LinearLayout bottomBar = findViewById(R.id.bottomBar);
+            int[] defaultIds = {R.id.backButton, R.id.forwardButton, R.id.syncPaneButton, R.id.upButton};
+            ImageView addButton = findViewById(R.id.addButton);
+            if (enabled) {
+                if (multiSelectButtons[0] == null) buildMultiSelectButtons();
+                for (int id : defaultIds) findViewById(id).setVisibility(View.GONE);
+                addButton.setVisibility(View.VISIBLE);
+                addButton.setContentDescription(rss.getString(R.string.exit));
+                if (LegacyUtils.aboveSdk20) animateAddButtonRotation(10000);
+                else addButton.animate().rotation(45f).setDuration(500).setInterpolator(new DecelerateInterpolator()).start();
+                int addIndex = bottomBar.indexOfChild(addButton);
+                bottomBar.addView(multiSelectButtons[0], addIndex);
+                bottomBar.addView(multiSelectButtons[1], addIndex + 1);
+                addIndex = bottomBar.indexOfChild(addButton);
+                bottomBar.addView(multiSelectButtons[2], addIndex + 1);
+                bottomBar.addView(multiSelectButtons[3], addIndex + 2);
+                for (ImageButton button : multiSelectButtons) {
+                    button.setOnTouchListener(bottomBarTouchListener);
+                }
+            } else {
+                for (ImageButton button : multiSelectButtons) bottomBar.removeView(button);
+                for (int id : defaultIds) findViewById(id).setVisibility(View.VISIBLE);
+                addButton.setVisibility(View.VISIBLE);
+                addButton.setContentDescription(rss.getString(R.string.newFileOrFolder));
+                if(LegacyUtils.aboveSdk20) animateAddButtonRotation(0);
+                else addButton.animate().rotation(0f).setDuration(500).setInterpolator(new DecelerateInterpolator()).start();
             }
-        } else {
-            for (ImageButton button : multiSelectButtons) bottomBar.removeView(button);
-            for (int id : defaultIds) findViewById(id).setVisibility(View.VISIBLE);
-            addButton.setVisibility(View.VISIBLE);
-            addButton.setContentDescription(rss.getString(R.string.newFileOrFolder));
-            if(LegacyUtils.aboveSdk20) animateAddButtonRotation(0);
-            else addButton.animate().rotation(0f).setDuration(500).setInterpolator(new DecelerateInterpolator()).start();
-        }
+        });
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -2953,6 +2955,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void reloadCurrentFolder() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            handler.post(this::reloadCurrentFolder);
+            return;
+        }
         boolean isPane1 = lastPaneSelected == 1;
         loadFolderInPane(isPane1 ? pane1Folder : pane2Folder, isPane1);
     }
