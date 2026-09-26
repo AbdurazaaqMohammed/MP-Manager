@@ -46,6 +46,8 @@ public class PlayerManager {
     private int skipDuration = 10000;
     private Surface videoSurface;
     private boolean isVideo;
+    private int lastVideoWidth;
+    private int lastVideoHeight;
     private int resumePosition;
     private boolean videoBackgroundPlay;
     private int uiVisibleCount;
@@ -441,6 +443,8 @@ public class PlayerManager {
         });
         newPlayer.setOnVideoSizeChangedListener((mp, w, h) -> {
             if (mp != mediaPlayer) return;
+            lastVideoWidth = w;
+            lastVideoHeight = h;
             if (videoSizeChangedListener != null) videoSizeChangedListener.onVideoSizeChanged(w, h);
         });
 
@@ -550,6 +554,8 @@ public class PlayerManager {
     private VideoSizeChangedListener videoSizeChangedListener;
     public void setVideoSizeChangedListener(VideoSizeChangedListener l) { this.videoSizeChangedListener = l; }
     public interface VideoSizeChangedListener { void onVideoSizeChanged(int width, int height); }
+    public int getLastVideoWidth() { return lastVideoWidth; }
+    public int getLastVideoHeight() { return lastVideoHeight; }
 
     public static MediaItem buildMediaItem(Context context, String filePath) {
         Uri uri = Uri.fromFile(new File(filePath));

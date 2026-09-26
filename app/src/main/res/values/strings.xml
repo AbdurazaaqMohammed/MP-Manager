@@ -564,6 +564,11 @@ Layout Inspector
     <string name="speed">Speed</string>
     <string name="mute">mute</string>
     <string name="queue">queue</string>
+    <string name="aspect_ratio">Aspect ratio</string>
+    <string name="unlock">Unlock</string>
+    <string name="aspect_fit">Fit</string>
+    <string name="aspect_fill">Fill</string>
+    <string name="aspect_mode">Aspect: %1$s</string>
     <string name="set_point_a">Set Point A</string>
     <string name="set_point_b">Set Point B</string>
     <string name="clear_ab_repeat">Clear AB Repeat</string>

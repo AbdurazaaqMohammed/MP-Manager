@@ -22,6 +22,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -31,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MediaPlayerActivity extends AppCompatActivity implements
         PlayerManager.PlaybackCallback,
@@ -44,7 +46,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     private View toolbar;
     private ImageView artworkView;
     private TextView trackTitle, trackArtist, trackAlbum, currentTime, totalTime, speedLabel, errorMessage, bufferingIndicator;
-    private ImageButton btnPlayPause, btnNext, btnPrevious, btnRewind, btnFastForward, btnRepeat, btnShuffle, btnMute, btnQueue, btnLock, btnSettings;
+    private ImageButton btnPlayPause, btnNext, btnPrevious, btnRewind, btnFastForward, btnRepeat, btnShuffle, btnMute, btnQueue, btnLock, btnSettings, btnAspect, btnUnlock;
     private Button btnSetA, btnSetB;
     private ImageButton btnClearAB;
     private SeekBar seekBar, speedSeekBar, volumeSeekBar;
@@ -54,10 +56,15 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     private boolean controlsVisible = true;
     private boolean userIsSeeking;
     private boolean pausedForBackground;
+    private int videoW;
+    private int videoH;
+    private int aspectMode;
+    private int fitRetryCount;
     private SharedPreferences prefs;
     private GestureDetector gestureDetector;
     private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable autoHideRunnable = this::hideControls;
+    private final Runnable autoHideUnlockRunnable = this::hideUnlock;
 
     public static void open(Activity activity) {
         Intent intent = new Intent(activity, MediaPlayerActivity.class);
@@ -131,6 +138,8 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         btnQueue = findViewById(R.id.btnQueue);
         btnLock = findViewById(R.id.btnLock);
         btnSettings = findViewById(R.id.btnSettings);
+        btnAspect = findViewById(R.id.btnAspect);
+        btnUnlock = findViewById(R.id.btnUnlock);
         btnSetA = findViewById(R.id.btnSetA);
         btnSetB = findViewById(R.id.btnSetB);
         btnClearAB = findViewById(R.id.btnClearAB);
@@ -139,6 +148,13 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         speedSeekBar = findViewById(R.id.speedSeekBar);
         volumeSeekBar = findViewById(R.id.volumeSeekBar);
         queueList = findViewById(R.id.queueList);
+        videoW = playerManager.getLastVideoWidth();
+        videoH = playerManager.getLastVideoHeight();
+        aspectMode = prefs.getInt("video_aspect_mode", 0);
+        videoContainer.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
+            if (r - l != orr - ol || b - t != ob - ot) fitVideo();
+        });
+        videoContainer.post(this::fitVideo);
     }
 
     private void setupControls() {
@@ -167,15 +183,11 @@ public class MediaPlayerActivity extends AppCompatActivity implements
                     : R.drawable.volume_up_24px);
         });
 
-        btnLock.setOnClickListener(v -> {
-            controlsLocked = !controlsLocked;
-            btnLock.setImageResource(controlsLocked
-                    ? R.drawable.lock_24px
-                    : R.drawable.lock_open_24px);
-            btnLock.setColorFilter(controlsLocked ? 0xFFFF4444 : 0xFFFFFFFF);
-            if (controlsLocked) hideControls();
-            else showControlsTemporarily();
-        });
+        btnLock.setOnClickListener(v -> setLocked(!controlsLocked));
+
+        btnUnlock.setOnClickListener(v -> setLocked(false));
+
+        btnAspect.setOnClickListener(v -> cycleAspectMode());
 
         btnSettings.setOnClickListener(v -> showPlayerSettings());
 
@@ -260,7 +272,10 @@ public class MediaPlayerActivity extends AppCompatActivity implements
             @Override
             public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
                 if (playerManager.isPlayingVideo()) {
-                    if (controlsLocked) return true;
+                    if (controlsLocked) {
+                        showUnlockOnly();
+                        return true;
+                    }
                     if (controlsVisible) hideControls();
                     else showControlsTemporarily();
                 }
@@ -290,6 +305,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     }
 
     private void showControls() {
+        if (controlsLocked) return;
         controlsVisible = true;
         toolbar.setVisibility(View.VISIBLE);
         controlsContainer.setVisibility(View.VISIBLE);
@@ -305,6 +321,79 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         controlsContainer.setVisibility(View.GONE);
         queueList.setVisibility(View.GONE);
         autoHideHandler.removeCallbacks(autoHideRunnable);
+        hideUnlock();
+    }
+
+    private void showUnlockOnly() {
+        controlsVisible = false;
+        toolbar.setVisibility(View.GONE);
+        controlsContainer.setVisibility(View.GONE);
+        queueList.setVisibility(View.GONE);
+        btnUnlock.setVisibility(View.VISIBLE);
+        autoHideHandler.removeCallbacks(autoHideRunnable);
+        autoHideHandler.removeCallbacks(autoHideUnlockRunnable);
+        autoHideHandler.postDelayed(autoHideUnlockRunnable, 3000);
+    }
+
+    private void hideUnlock() {
+        autoHideHandler.removeCallbacks(autoHideUnlockRunnable);
+        if (btnUnlock != null) btnUnlock.setVisibility(View.GONE);
+    }
+
+    private void setLocked(boolean locked) {
+        controlsLocked = locked;
+        hideUnlock();
+        btnLock.setImageResource(locked
+                ? R.drawable.lock_24px
+                : R.drawable.lock_open_24px);
+        btnLock.setColorFilter(locked ? 0xFFFF4444 : 0xFFFFFFFF);
+        if (locked) hideControls();
+        else showControlsTemporarily();
+    }
+
+    private void cycleAspectMode() {
+        aspectMode = (aspectMode + 1) % 4;
+        prefs.edit().putInt("video_aspect_mode", aspectMode).apply();
+        fitVideo();
+        Toast.makeText(this, getString(R.string.aspect_mode, aspectName()), Toast.LENGTH_SHORT).show();
+        showControlsTemporarily();
+    }
+
+    private String aspectName() {
+        switch (aspectMode) {
+            case 1: return getString(R.string.aspect_fill);
+            case 2: return "16:9";
+            case 3: return "4:3";
+            default: return getString(R.string.aspect_fit);
+        }
+    }
+
+    private void fitVideo() {
+        if (videoW <= 0 || videoH <= 0 || surfaceView == null || videoContainer == null) return;
+        if (videoContainer.getVisibility() != View.VISIBLE || !playerManager.isPlayingVideo()) return;
+        int cw = videoContainer.getWidth();
+        int ch = videoContainer.getHeight();
+        if (cw <= 0 || ch <= 0) {
+            if (fitRetryCount++ < 20) videoContainer.postDelayed(this::fitVideo, 100);
+            return;
+        }
+        fitRetryCount = 0;
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) surfaceView.getLayoutParams();
+        if (aspectMode == 1) {
+            params.width = FrameLayout.LayoutParams.MATCH_PARENT;
+            params.height = FrameLayout.LayoutParams.MATCH_PARENT;
+        } else {
+            float target = aspectMode == 2 ? 16f / 9f : aspectMode == 3 ? 4f / 3f : (float) videoW / videoH;
+            float containerRatio = (float) cw / ch;
+            if (target > containerRatio) {
+                params.width = FrameLayout.LayoutParams.MATCH_PARENT;
+                params.height = (int) (cw / target);
+            } else {
+                params.height = FrameLayout.LayoutParams.MATCH_PARENT;
+                params.width = (int) (ch * target);
+            }
+        }
+        surfaceView.setLayoutParams(params);
     }
 
     private void showControlsTemporarily() {
@@ -348,9 +437,12 @@ public class MediaPlayerActivity extends AppCompatActivity implements
         if (playerManager.getState() == PlayerManager.PlayState.ERROR || playerManager.getState() == PlayerManager.PlayState.STOPPED) {
             playerManager.play();
         }
+        surfaceView.post(this::fitVideo);
     }
 
-    @Override public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {}
+    @Override public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+        fitVideo();
+    }
     @Override public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
         playerManager.setSurface(null);
     }
@@ -514,17 +606,9 @@ public class MediaPlayerActivity extends AppCompatActivity implements
     public void onVideoSizeChanged(int width, int height) {
         runOnUiThread(() -> {
             if (width > 0 && height > 0) {
-                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) surfaceView.getLayoutParams();
-                float videoRatio = (float) width / height;
-                float containerRatio = (float) videoContainer.getWidth() / videoContainer.getHeight();
-                if (videoRatio > containerRatio) {
-                    params.width = FrameLayout.LayoutParams.MATCH_PARENT;
-                    params.height = (int) (videoContainer.getWidth() / videoRatio);
-                } else {
-                    params.height = FrameLayout.LayoutParams.MATCH_PARENT;
-                    params.width = (int) (videoContainer.getHeight() * videoRatio);
-                }
-                surfaceView.setLayoutParams(params);
+                videoW = width;
+                videoH = height;
+                fitVideo();
             }
         });
     }
@@ -581,6 +665,7 @@ public class MediaPlayerActivity extends AppCompatActivity implements
             pausedForBackground = false;
         }
         startService(new Intent(this, MusicService.class));
+        videoContainer.post(this::fitVideo);
     }
 
     @Override

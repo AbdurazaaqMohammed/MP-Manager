@@ -291,6 +291,14 @@
                 android:src="@drawable/queue_music_24px"
                 android:contentDescription="@string/queue" />
 
+            <ImageButton
+                android:id="@+id/btnAspect"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/aspect_ratio_24px"
+                android:contentDescription="@string/aspect_ratio" />
+
         </LinearLayout>
 
         <LinearLayout
@@ -349,5 +357,15 @@
         android:layout_gravity="bottom"
         android:visibility="gone"
          />
+
+    <ImageButton
+        android:id="@+id/btnUnlock"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/lock_open_24px"
+        android:contentDescription="@string/unlock"
+        android:visibility="gone" />
 
 </FrameLayout>
