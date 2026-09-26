@@ -64,7 +64,7 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
         holder.label.setCompoundDrawablePadding(Extensions.dp2px(context, 8));
 
         boolean disabled = (FileMenuOrder.MOVE.equals(item.id()) && context.pane1Folder == context.pane2Folder)
-                || ((FileMenuOrder.COMPRESS.equals(item.id()) || FileMenuOrder.BOOKMARK.equals(item.id())) && isInZip);
+                || ((FileMenuOrder.COMPRESS.equals(item.id()) || FileMenuOrder.BOOKMARK.equals(item.id()) || FileMenuOrder.CMD.equals(item.id())) && isInZip);
         holder.itemView.setAlpha(disabled ? 0.38f : 1f);
         holder.itemView.setOnClickListener(v -> {
             if (listener == null) return;
