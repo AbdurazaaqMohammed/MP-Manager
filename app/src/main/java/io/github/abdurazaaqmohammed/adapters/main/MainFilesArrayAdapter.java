@@ -1571,7 +1571,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         renameInput.setText(fileName);
         renameInput.requestFocus();
         renameInput.post(() -> {
-            renameInput.setSelection(0, fileName.indexOf(FilenameUtils.getExtension(fileName)) - 1);
+            renameInput.setSelection(0, (isInZip ? !entry.isDirectory() : file.isFile()) && fileName.contains(".") ? fileName.indexOf(FilenameUtils.getExtension(fileName)) - 1 : fileName.length());
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null) imm.showSoftInput(renameInput, InputMethodManager.SHOW_IMPLICIT);
         });
