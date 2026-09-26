@@ -332,6 +332,7 @@ public class MainActivity extends AppCompatActivity {
     private Animator addButtonRotationAnimator;
     private TabLayout bookmarksTabs;
     private ViewPager2 bookmarksPager;
+    private TabLayoutMediator bookmarksMediator;
     private ListView bookmarksList, historyList;
     private final List<String> bookmarkGroups = new ArrayList<>();
     private View.OnTouchListener bookmarksSwipeDownCloseListener;
@@ -400,13 +401,32 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<File> getBookmarks() {
         if (bookmarks == null) {
             bookmarks = new ArrayList<>();
-            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-            String[] savedBookmarks = settings.getString("bookmarks", "").replace("[", "").replace("]", "").split(", ");
-            for (String bookmark : savedBookmarks) {
-                if (!TextUtils.isEmpty(bookmark)) {
-                    File bookmarked = new File(bookmark);
-                    if (bookmarked.exists()) bookmarks.add(bookmarked);
+            try {
+                String raw = PreferenceManager.getDefaultSharedPreferences(this).getString("bookmarks", "");
+                if (raw == null) raw = "";
+                raw = raw.trim();
+                if (raw.startsWith("[\"")) {
+                    List<String> paths = new Gson().fromJson(raw,
+                            new TypeToken<List<String>>() {}.getType());
+                    if (paths != null) {
+                        for (String path : paths) {
+                            if (!TextUtils.isEmpty(path)) {
+                                File bookmarked = new File(path);
+                                if (bookmarked.exists()) bookmarks.add(bookmarked);
+                            }
+                        }
+                    }
+                } else {
+                    String[] savedBookmarks = raw.replace("[", "").replace("]", "").split(", ");
+                    for (String bookmark : savedBookmarks) {
+                        bookmark = bookmark.trim();
+                        if (!TextUtils.isEmpty(bookmark)) {
+                            File bookmarked = new File(bookmark);
+                            if (bookmarked.exists()) bookmarks.add(bookmarked);
+                        }
+                    }
                 }
+            } catch (Exception ignored) {
             }
         }
         return bookmarks;
@@ -434,8 +454,8 @@ public class MainActivity extends AppCompatActivity {
             saveGroupBookmarks(group, items);
             refreshGroupList(group);
         } else {
-            bookmarks.add(file);
-            bookmarksAdapter.notifyDataSetChanged();
+            getBookmarks().add(file);
+            if (bookmarksAdapter != null) bookmarksAdapter.notifyDataSetChanged();
         }
         refreshSidebar(getSidebarSectionOrder());
         Extensions.showMessage(this, rss.getString(R.string.added_to_bookmarks, file));
@@ -835,8 +855,10 @@ public class MainActivity extends AppCompatActivity {
         reduceDragSensitivity(bookmarksPager);
 
         bookmarksTabs.removeAllTabs();
-        new TabLayoutMediator(bookmarksTabs, bookmarksPager,
-                (tab, position) -> tab.setText(titles.get(position))).attach();
+        if (bookmarksMediator != null) bookmarksMediator.detach();
+        bookmarksMediator = new TabLayoutMediator(bookmarksTabs, bookmarksPager,
+                (tab, position) -> tab.setText(titles.get(position)));
+        bookmarksMediator.attach();
 
         int lastTab = PreferenceManager.getDefaultSharedPreferences(this).getInt("bookmarks_last_tab", 0);
         if (bookmarksTabs.getTabAt(lastTab) != null) bookmarksTabs.getTabAt(lastTab).select();
@@ -1281,7 +1303,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             List<String> groups = new Gson().fromJson(json,
                     new TypeToken<List<String>>() {}.getType());
-            bookmarkGroups.addAll(groups);
+            if (groups != null) bookmarkGroups.addAll(groups);
         } catch (Exception ignored) {
         }
     }
@@ -1298,7 +1320,10 @@ public class MainActivity extends AppCompatActivity {
         try {
             List<String> paths = new Gson().fromJson(json,
                     new TypeToken<List<String>>() {}.getType());
-            for (String path : paths) out.add(new File(path));
+            if (paths == null) return out;
+            for (String path : paths) {
+                if (!TextUtils.isEmpty(path)) out.add(new File(path));
+            }
         } catch (Exception ignored) {
         }
         return out;
@@ -1567,17 +1592,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshSidebar(List<String> sectionOrder) {
         if (sidebarAdapter == null) return;
-        Map<String, List<File>> groups = new LinkedHashMap<>();
-        for (String group : bookmarkGroups) groups.put(group, loadGroupBookmarks(group));
-        List<StorageUtil.StorageInfo> storage = new ArrayList<>();
         try {
-            storage = StorageUtil.getStorageInfos(this);
+            Map<String, List<File>> groups = new LinkedHashMap<>();
+            for (String group : bookmarkGroups) groups.put(group, loadGroupBookmarks(group));
+            List<StorageUtil.StorageInfo> storage = new ArrayList<>();
+            try {
+                storage = StorageUtil.getStorageInfos(this);
+            } catch (Exception ignored) {
+            }
+            sidebarAdapter.setData(sectionOrder,
+                    PreferenceManager.getDefaultSharedPreferences(this).getBoolean("sidebar_show_bookmarks", true),
+                    PreferenceManager.getDefaultSharedPreferences(this).getBoolean("sidebar_show_bookmark_groups", false),
+                    storage, getBookmarks(), groups, bookmarkLabels);
         } catch (Exception ignored) {
         }
-        sidebarAdapter.setData(sectionOrder,
-                PreferenceManager.getDefaultSharedPreferences(this).getBoolean("sidebar_show_bookmarks", true),
-                PreferenceManager.getDefaultSharedPreferences(this).getBoolean("sidebar_show_bookmark_groups", false),
-                storage, getBookmarks(), groups, bookmarkLabels);
     }
 
     private void openSidebarEntry(SidebarAdapter.SidebarEntry entry) {
