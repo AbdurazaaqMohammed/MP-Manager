@@ -170,6 +170,7 @@ import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
+import io.github.abdurazaaqmohammed.adapters.main.FileMenuOrder;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
 import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
@@ -3877,6 +3878,11 @@ public class MainActivity extends AppCompatActivity {
 
         root.findViewById(R.id.customizeMenuBtn).setOnClickListener(v ->
                 FileMenuCustomizer.show(this));
+
+        CompoundButton fileMenuTwoColumnSwitch = root.findViewById(R.id.fileMenuTwoColumnSwitch);
+        fileMenuTwoColumnSwitch.setChecked(FileMenuOrder.isTwoColumn(this));
+        fileMenuTwoColumnSwitch.setOnCheckedChangeListener((v, checked) ->
+                FileMenuOrder.setTwoColumn(this, checked));
 
         AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
         List<String> levels = new ArrayList<>();

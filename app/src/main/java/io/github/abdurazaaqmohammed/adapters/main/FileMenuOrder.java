@@ -47,6 +47,22 @@ public final class FileMenuOrder {
     private FileMenuOrder() {
     }
 
+    public static boolean isTwoColumn(Context context) {
+        try {
+            return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("filemenu_two_column", true);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    public static void setTwoColumn(Context context, boolean twoColumn) {
+        try {
+            PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putBoolean("filemenu_two_column", twoColumn).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
     public static List<String> load(Context context) {
         List<String> order = new ArrayList<>();
         try {

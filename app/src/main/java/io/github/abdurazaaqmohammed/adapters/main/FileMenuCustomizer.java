@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,9 +9,14 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.color.MaterialColors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,18 +42,27 @@ public final class FileMenuCustomizer {
         }
 
         RecyclerView list = new RecyclerView(context);
-        list.setLayoutManager(new LinearLayoutManager(context));
-        list.setClipToPadding(false);
+        final boolean twoColumn = FileMenuOrder.isTwoColumn(context);
         int pad = (int) (4 * context.getResources().getDisplayMetrics().density + 0.5f);
-        list.setPadding(0, pad, 0, pad);
-        OrderAdapter adapter = new OrderAdapter(context, items);
+        if (twoColumn) {
+            list.setLayoutManager(new GridLayoutManager(context, 2));
+            float density = context.getResources().getDisplayMetrics().density;
+            int edge = (int) (12 * density + 0.5f);
+            list.setPadding(edge, pad, edge, pad);
+        } else {
+            list.setLayoutManager(new LinearLayoutManager(context));
+            list.setPadding(0, pad, 0, pad);
+        }
+        list.setClipToPadding(false);
+        OrderAdapter adapter = new OrderAdapter(context, items, twoColumn);
         list.setAdapter(adapter);
 
         ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.Callback() {
             @Override
             public int getMovementFlags(@NonNull RecyclerView recyclerView,
                                         @NonNull RecyclerView.ViewHolder viewHolder) {
-                int drag = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
+                int drag = ItemTouchHelper.UP | ItemTouchHelper.DOWN
+                        | (twoColumn ? (ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) : 0);
                 return makeMovementFlags(drag, 0);
             }
 
@@ -95,24 +110,33 @@ public final class FileMenuCustomizer {
     private static class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.Holder> {
         private final MainActivity context;
         private final List<FileMenuOrder.MenuItem> items;
+        private final boolean grid;
 
-        OrderAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items) {
+        OrderAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean grid) {
             this.context = context;
             this.items = items;
+            this.grid = grid;
         }
 
         @NonNull
         @Override
         public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View row = LayoutInflater.from(context).inflate(R.layout.item_file_menu_action, parent, false);
-            return new Holder(row, row.findViewById(R.id.menuItemIcon), row.findViewById(R.id.menuItemLabel));
+            View row = LayoutInflater.from(context).inflate(grid ? R.layout.item_file_menu_action_grid : R.layout.item_file_menu_action, parent, false);
+            return new Holder(row, row.findViewById(R.id.menuItemLabel));
         }
 
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             FileMenuOrder.MenuItem item = items.get(position);
             holder.label.setText(item.label());
-            holder.icon.setImageResource(FileMenuOrder.iconFor(context, item.id(), false, false));
+            Drawable drawable = ResourcesCompat.getDrawable(context.getResources(), FileMenuOrder.iconFor(context, item.id(), false, false), null);
+            if (drawable != null) {
+                int i = Extensions.dp2px(context, 24);
+                drawable.setBounds(0, 0, i, i);
+                DrawableCompat.setTint(drawable, MaterialColors.getColor(holder.label, com.google.android.material.R.attr.colorPrimary));
+            }
+            holder.label.setCompoundDrawablesRelative(drawable, null, null, null);
+            holder.label.setCompoundDrawablePadding(Extensions.dp2px(context, 4));
         }
 
         @Override
@@ -121,12 +145,10 @@ public final class FileMenuCustomizer {
         }
 
         static class Holder extends RecyclerView.ViewHolder {
-            final ImageView icon;
             final TextView label;
 
-            Holder(@NonNull View itemView, ImageView icon, TextView label) {
+            Holder(@NonNull View itemView, TextView label) {
                 super(itemView);
-                this.icon = icon;
                 this.label = label;
             }
         }

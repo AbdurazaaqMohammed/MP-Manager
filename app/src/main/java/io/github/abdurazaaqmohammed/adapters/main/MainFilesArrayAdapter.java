@@ -38,6 +38,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -373,13 +374,29 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
 
-                BottomSheetDialog menuSheet = new BottomSheetDialog(context);
+                final boolean twoColumnMenu = FileMenuOrder.isTwoColumn(context);
                 View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
                 ((TextView) menuView.findViewById(R.id.fileMenuTitle)).setText(fileName);
                 RecyclerView menuList = menuView.findViewById(R.id.fileMenuList);
-                menuList.setLayoutManager(new LinearLayoutManager(context));
-                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, position1 -> {
-                    menuSheet.dismiss();
+                final BottomSheetDialog menuSheet;
+                final AlertDialog menuDialog;
+                if (twoColumnMenu) {
+                    View handle = menuView.findViewById(R.id.fileMenuHandle);
+                    if (handle != null) handle.setVisibility(View.GONE);
+                    menuList.setLayoutManager(new GridLayoutManager(context, 2));
+                    float density = context.getResources().getDisplayMetrics().density;
+                    int edge = (int) (12 * density + 0.5f);
+                    menuList.setPadding(edge, menuList.getPaddingTop(), edge, menuList.getPaddingBottom());
+                    menuSheet = null;
+                    menuDialog = new MaterialAlertDialogBuilder(context).setView(menuView).create();
+                } else {
+                    menuList.setLayoutManager(new LinearLayoutManager(context));
+                    menuSheet = new BottomSheetDialog(context);
+                    menuDialog = null;
+                }
+                menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, twoColumnMenu, position1 -> {
+                    if (menuSheet != null) menuSheet.dismiss();
+                    if (menuDialog != null) menuDialog.dismiss();
                     try {
                         String actionId = itemIds[position1];
                         switch (actionId) {
@@ -538,8 +555,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         new ErrorUtil(context).showError(e);
                     }
                 }));
-                menuSheet.setContentView(menuView);
-                context.runOnUiThread(menuSheet::show);
+                if (menuSheet != null) {
+                    menuSheet.setContentView(menuView);
+                    context.runOnUiThread(menuSheet::show);
+                } else {
+                    context.runOnUiThread(menuDialog::show);
+                }
                 return true;
             };
             context.handler.post(() -> {
@@ -1899,7 +1920,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
                     } finally {
-                        context.reloadCurrentFolder();
+                        context.handler.post(context::reloadCurrentFolder);
                         if (finalStageTmp != null && !finalToRoot) Util.deleteDir(finalStageTmp);
                         else if (finalStageTmp != null && finalToRoot && !finalOutput.equals(outputZip)) {
                             // Keep only the delivered archive; drop staged sources.
@@ -1916,7 +1937,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         ArchiveUtil.create(finalOutput, finalSources);
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
-                        context.reloadCurrentFolder();
+                        context.handler.post(context::reloadCurrentFolder);
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
@@ -1924,10 +1945,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         if (finalStageTmp != null) Util.deleteDir(finalStageTmp);
                     }
                 }
-            }).start();
-        });
-        pm.setText(context.rss.getString(R.string.compressing));
-        context.handler.post(compressDialog::show);
+        }).start();
     }
 
     private void updateFolderCountOnMainScreen(int position) {

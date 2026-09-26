@@ -721,6 +721,7 @@ Layout Inspector
     <string name="preserve_mtime">Keep original date when copying</string>
     <string name="customize_file_menu">File menu order</string>
     <string name="customize_file_menu_hint">Long-press to drag items anywhere</string>
+    <string name="two_column_file_menu">2 column file menu</string>
     <string name="root_denied_msg">Root not available with this su command</string>
     <string name="preview_sample_name">example_document.pdf</string>
     <string name="use_actual_mime">Use actual MIME type</string>
