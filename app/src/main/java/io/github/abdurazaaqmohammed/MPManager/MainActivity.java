@@ -3119,7 +3119,8 @@ public class MainActivity extends AppCompatActivity {
             filter.addAction(Intent.ACTION_MEDIA_EJECT);
             filter.addAction(Intent.ACTION_MEDIA_BAD_REMOVAL);
             filter.addDataScheme("file");
-            registerReceiver(storageRefreshReceiver, filter);
+            if (Build.VERSION.SDK_INT > 32) registerReceiver(storageRefreshReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            else registerReceiver(storageRefreshReceiver, filter);
         } catch (Exception ignored) {
         }
     }

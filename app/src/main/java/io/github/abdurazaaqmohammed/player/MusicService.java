@@ -63,12 +63,21 @@ public class MusicService extends Service implements PlayerManager.PlaybackCallb
         });
         mediaSession.setActive(true);
 
-        registerReceiver(notificationReceiver, new IntentFilter(ACTION_PLAY_PAUSE));
-        registerReceiver(notificationReceiver, new IntentFilter(ACTION_NEXT));
-        registerReceiver(notificationReceiver, new IntentFilter(ACTION_PREV));
-        registerReceiver(notificationReceiver, new IntentFilter(ACTION_STOP));
-        registerReceiver(notificationReceiver, new IntentFilter(ACTION_CLOSE));
-        registerReceiver(notificationReceiver, new IntentFilter(ACTION_REFRESH));
+        if (Build.VERSION.SDK_INT > 32) {
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_PLAY_PAUSE), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_NEXT), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_PREV), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_STOP), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_CLOSE), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_REFRESH), Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_PLAY_PAUSE));
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_NEXT));
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_PREV));
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_STOP));
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_CLOSE));
+            registerReceiver(notificationReceiver, new IntentFilter(ACTION_REFRESH));
+        }
     }
 
     @Override
