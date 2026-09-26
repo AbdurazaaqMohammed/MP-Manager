@@ -1,12 +1,10 @@
 package io.github.ratul.topactivity.utils;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.Settings;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -19,7 +17,12 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.ratul.topactivity.extensions.ActivityExtensions;
 
 public class PermissionUtil {
-    public static boolean requestMissingPermissions(AppCompatActivity c) {
+    @FunctionalInterface
+    public interface NotificationPermissionRequest {
+        void request(Runnable onResult);
+    }
+
+    public static boolean requestMissingPermissions(AppCompatActivity c, NotificationPermissionRequest notificationPermissionRequest) {
         boolean needsOverlay = DatabaseUtil.getServiceMode().equals("0") && !ActivityExtensions.isSystemOverlayGranted(c);
 
         List<Request> requests = new ArrayList<>();
@@ -30,7 +33,7 @@ public class PermissionUtil {
             requests.add(onDone -> requestSystemOverlayPermission(c, onDone));
         }
         if (!ActivityExtensions.isNotificationGranted(c)) {
-            requests.add(onDone -> requestNotificationPermission(c, onDone));
+            requests.add(notificationPermissionRequest::request);
         }
         if (ActivityExtensions.isAccessibilityNotStarted()) {
             requests.add(onDone -> requestAccessibilityPermission(c, onDone));
@@ -48,19 +51,6 @@ public class PermissionUtil {
     private static void runSequentially(List<Request> requests, int index) {
         if (index >= requests.size()) return;
         requests.get(index).show(() -> runSequentially(requests, index + 1));
-    }
-
-    public static void requestNotificationPermission(AppCompatActivity c) {
-        requestNotificationPermission(c, null);
-    }
-
-    public static void requestNotificationPermission(AppCompatActivity c, Runnable onDismiss) {
-        c.registerForActivityResult(
-                new ActivityResultContracts.RequestPermission(),
-                isGranted -> {
-                    if (onDismiss != null) onDismiss.run();
-                }
-        ).launch(Manifest.permission.POST_NOTIFICATIONS);
     }
 
     public static void requestSystemOverlayPermission(AppCompatActivity c) {

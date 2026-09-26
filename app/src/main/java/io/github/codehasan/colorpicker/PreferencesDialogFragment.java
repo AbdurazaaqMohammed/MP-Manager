@@ -13,6 +13,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 
 public class PreferencesDialogFragment extends DialogFragment {
 
+    private static final String TAG_PREFERENCES = "color_picker_preferences";
+
     @NonNull
     @Override
     public AlertDialog onCreateDialog(Bundle savedInstanceState) {
@@ -21,6 +23,16 @@ public class PreferencesDialogFragment extends DialogFragment {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setView(R.layout.color_picker_settings)
                 .create();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (getChildFragmentManager().findFragmentByTag(TAG_PREFERENCES) == null) {
+            getChildFragmentManager().beginTransaction()
+                    .replace(R.id.fcv, new PreferencesFragment(), TAG_PREFERENCES)
+                    .commit();
+        }
     }
 
     public static class PreferencesFragment extends PreferenceFragmentCompat {

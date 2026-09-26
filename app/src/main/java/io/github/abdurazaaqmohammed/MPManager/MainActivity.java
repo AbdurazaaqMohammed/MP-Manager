@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.MPManager;
 
 import static io.github.abdurazaaqmohammed.utils.FileUtils.doesNotHaveStoragePerm;
-import static io.github.ratul.topactivity.utils.PermissionUtil.requestMissingPermissions;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -205,6 +204,7 @@ import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.github.codehasan.colorpicker.services.ColorPickerService;
+import io.github.ratul.topactivity.extensions.ActivityExtensions;
 import io.github.ratul.topactivity.manager.ServiceManager;
 import io.github.ratul.topactivity.repository.DataRepository;
 import io.github.ratul.topactivity.services.PackageMonitoringService;
@@ -1638,8 +1638,8 @@ public class MainActivity extends AppCompatActivity {
                                 PermissionUtil.requestSystemOverlayPermission(MainActivity.this);
                                 return;
                             }
-                            if (!Extensions.canShowNotification(MainActivity.this)) {
-                                PermissionUtil.requestNotificationPermission(MainActivity.this);
+                            if (!ActivityExtensions.isNotificationGranted(MainActivity.this)) {
+                                requestNotificationPermission(() -> { });
                                 return;
                             }
                             colorPickerLauncher.launch(mediaProjectionManager.createScreenCaptureIntent());
@@ -1657,7 +1657,7 @@ public class MainActivity extends AppCompatActivity {
                     RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
                 } catch (Exception ignored) {
                 }
-                if (!requestMissingPermissions(this)) return;
+                if (!PermissionUtil.requestMissingPermissions(this, this::requestNotificationPermission)) return;
                 DataRepository.getInstance().updateStatus(true);
                 Intent intent = new Intent(this, PackageMonitoringService.class);
                 startService(intent);
@@ -1666,6 +1666,15 @@ public class MainActivity extends AppCompatActivity {
                 DataRepository.getInstance().updateData(getPackageName(), this.getClass().getName());
                 break;
         }
+    }
+
+    private void requestNotificationPermission(Runnable onResult) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            if (onResult != null) onResult.run();
+            return;
+        }
+        notificationPermissionContinuation = onResult;
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
     }
 
     private boolean handleSidebarDrag(DragEvent event) {
@@ -1791,6 +1800,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
+    private Runnable notificationPermissionContinuation;
+    private final ActivityResultLauncher<String> notificationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                Runnable continuation = notificationPermissionContinuation;
+                notificationPermissionContinuation = null;
+                if (continuation != null) continuation.run();
+            });
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
