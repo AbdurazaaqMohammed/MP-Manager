@@ -399,7 +399,7 @@ public class NativeToolManager {
         }
         if (f.canExecute()) return true;
         try {
-            Process chmod = new ProcessBuilder("sh", "-c", "chmod 700 '" + f.getAbsolutePath().replace("'", "") + "'").start();
+            Process chmod = new ProcessBuilder("sh", "-c", "chmod 700 " + RootManager.quoteForSh(f.getAbsolutePath())).start();
             chmod.waitFor();
         } catch (Exception ignored) {
         }
@@ -480,7 +480,7 @@ public class NativeToolManager {
         File bin = jpegtranBinary(context);
         sb.append("binary: ").append(describeFile(bin)).append("\n");
         try {
-            Process ls = new ProcessBuilder("sh", "-c", "ls -Z '" + bin.getAbsolutePath().replace("'", "") + "' 2>&1").start();
+            Process ls = new ProcessBuilder("sh", "-c", "ls -Z " + RootManager.quoteForSh(bin.getAbsolutePath()) + " 2>&1").start();
             StringBuilder out = new StringBuilder();
             try (BufferedReader br = new BufferedReader(new InputStreamReader(ls.getInputStream()))) {
                 char[] buf = new char[1024];
@@ -495,7 +495,7 @@ public class NativeToolManager {
         try {
             String libDir = context.getApplicationInfo().nativeLibraryDir;
             sb.append("libDir: ").append(libDir).append("\n");
-            Process ls = new ProcessBuilder("sh", "-c", "ls -Z '" + libDir.replace("'", "") + "' 2>&1 | head -5").start();
+            Process ls = new ProcessBuilder("sh", "-c", "ls -Z " + RootManager.quoteForSh(libDir) + " 2>&1 | head -5").start();
             StringBuilder out = new StringBuilder();
             try (BufferedReader br = new BufferedReader(new InputStreamReader(ls.getInputStream()))) {
                 char[] buf = new char[1024];

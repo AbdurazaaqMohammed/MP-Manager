@@ -174,9 +174,11 @@ public class DnsManager {
             } catch (Exception ignored) {
             }
             if (rm.isRootAvailable() && rm.getWorkingMode() == RootManager.WorkingMode.ROOT) {
-                String host = profile.hostname == null ? "" : profile.hostname.replace("'", "");
-                RootManager.ShellResult r1 = rm.execute("settings put global private_dns_mode " + profile.mode, 10);
-                RootManager.ShellResult r2 = rm.execute("settings put global private_dns_specifier '" + host + "'", 10);
+                String mode = validDnsMode(profile.mode);
+                String host = validDnsHostname(profile.hostname);
+                if (mode == null || host == null) return false;
+                RootManager.ShellResult r1 = rm.execute("settings put global private_dns_mode " + RootManager.quoteForSh(mode), 10);
+                RootManager.ShellResult r2 = rm.execute("settings put global private_dns_specifier " + RootManager.quoteForSh(host), 10);
                 if (r1.isSuccess() && r2.isSuccess()) {
                     rememberActive(context, profile.id);
                     requestTileRefresh(context);
@@ -200,11 +202,26 @@ public class DnsManager {
     private static boolean runShizukuSettingsPut(Context context, String key, String value) {
         try {
             if (!ShizukuManager.ready()) return false;
-            String safe = value == null ? "" : value.replace("'", "");
-            return ShizukuManager.shellOk(context, "settings put global " + key + " '" + safe + "'", 10);
+            if (!"private_dns_mode".equals(key) && !"private_dns_specifier".equals(key)) return false;
+            String checked = "private_dns_mode".equals(key) ? validDnsMode(value) : validDnsHostname(value);
+            if (checked == null) return false;
+            return ShizukuManager.shellOk(context, "settings put global " + key + " " + RootManager.quoteForSh(checked), 10);
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private static String validDnsMode(String mode) {
+        if ("off".equals(mode) || "opportunistic".equals(mode) || "hostname".equals(mode)) return mode;
+        return null;
+    }
+
+    private static String validDnsHostname(String hostname) {
+        if (hostname == null) return "";
+        String h = hostname.trim();
+        if (h.isEmpty()) return "";
+        if (h.length() > 253 || !h.matches("^[A-Za-z0-9]+([-.][A-Za-z0-9]+)*\\.?$")) return null;
+        return h;
     }
 
     public static DnsProfile applyNextProfile(Context context) {

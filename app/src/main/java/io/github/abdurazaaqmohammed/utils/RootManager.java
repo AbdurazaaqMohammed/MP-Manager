@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,8 +40,7 @@ public class RootManager {
     private BufferedReader suStdout;
     private final Object lock = new Object();
 
-    // Shell argument pattern: alphanumeric, dash, underscore, dot, slash, space, colon
-    private static final Pattern SAFE_ARG = Pattern.compile("^[a-zA-Z0-9_./\\-: ]+$");
+    private static final Pattern SAFE_ARG = Pattern.compile("^[a-zA-Z0-9_./\\-:]+$");
     private static final Pattern LS_LONG_LINE = Pattern.compile("^(\\S+)\\s+(?:\\d+\\s+)?\\S+\\s+\\S+\\s+(\\d+)\\s+((?:[A-Z][a-z]{2}\\s+\\d{1,2}|\\d{4}-\\d{2}-\\d{2})\\s+\\S+)\\s+(.*)$");
 
     // Directories that should never be deleted (absolute block)
@@ -567,19 +568,25 @@ public class RootManager {
     }
 
     public void delete(String path) throws IOException {
+        if (path == null || path.isEmpty()) {
+            throw new IOException("Refusing to delete empty path");
+        }
         if (isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
-        ShellResult result = executeFs("rm -rf " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("rm -rf -- " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
         invalidateListCache();
     }
 
     public void deleteFile(String path) throws IOException {
+        if (path == null || path.isEmpty()) {
+            throw new IOException("Refusing to delete empty path");
+        }
         if (isPathBlocked(path)) {
             throw new IOException("Blocked: refusing to delete critical path: " + path);
         }
-        ShellResult result = executeFs("rm -f " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("rm -f -- " + escapeShellArg(path), 30);
         if (!result.isSuccess()) throw new IOException("delete failed: " + result.error);
         invalidateListCache();
     }
@@ -628,9 +635,11 @@ public class RootManager {
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
-                stdin.writeBytes("cat > " + escapeShellArg(path) + " << 'ENDOFFILE'\n");
-                stdin.writeBytes(content);
-                stdin.writeBytes("\nENDOFFILE\n");
+                String delimiter = "ENDOFFILE_" + UUID.randomUUID().toString().replace("-", "");
+                if (content == null) content = "";
+                stdin.writeBytes("cat > " + escapeShellArg(path) + " << '" + delimiter + "'\n");
+                stdin.write(content.getBytes(StandardCharsets.UTF_8));
+                stdin.writeBytes("\n" + delimiter + "\n");
                 stdin.writeBytes("exit\n");
                 stdin.flush();
 
@@ -665,9 +674,11 @@ public class RootManager {
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{suBinary()});
                 DataOutputStream stdin = new DataOutputStream(process.getOutputStream());
-                stdin.writeBytes("cat >> " + escapeShellArg(path) + " << 'ENDOFFILE'\n");
-                stdin.writeBytes(content);
-                stdin.writeBytes("\nENDOFFILE\n");
+                String delimiter = "ENDOFFILE_" + UUID.randomUUID().toString().replace("-", "");
+                if (content == null) content = "";
+                stdin.writeBytes("cat >> " + escapeShellArg(path) + " << '" + delimiter + "'\n");
+                stdin.write(content.getBytes(StandardCharsets.UTF_8));
+                stdin.writeBytes("\n" + delimiter + "\n");
                 stdin.writeBytes("exit\n");
                 stdin.flush();
 
@@ -926,6 +937,22 @@ public class RootManager {
     public void restoreAppData(String packageName, String archivePath) throws IOException {
         if (!isPackageNameValid(packageName)) {
             throw new IOException("Invalid package name: " + packageName);
+        }
+        ShellResult listResult = execute("tar -tf " + escapeShellArg(archivePath) + " 2>/dev/null", 60);
+        if (!listResult.isSuccess()) {
+            throw new IOException("Cannot list archive: " + listResult.error);
+        }
+        for (String member : listResult.output.split("\n")) {
+            String m = member.trim();
+            if (m.isEmpty() || m.equals(".") || m.equals("./")) continue;
+            if (m.startsWith("/")) {
+                throw new IOException("Blocked: archive contains absolute entry: " + m);
+            }
+            for (String seg : m.split("/")) {
+                if (seg.equals("..")) {
+                    throw new IOException("Blocked: archive contains parent entry: " + m);
+                }
+            }
         }
         ShellResult result = execute("tar -xf " + escapeShellArg(archivePath) + " -C /data/data", 120);
         if (!result.isSuccess()) throw new IOException("restore failed: " + result.error);

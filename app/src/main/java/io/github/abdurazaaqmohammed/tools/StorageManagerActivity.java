@@ -1175,11 +1175,8 @@ public class StorageManagerActivity extends AppCompatActivity {
                                 script.append(" ").append(RootManager.escapeShellArg(dir));
                             }
                             script.append("; do [ -d \"$d\" ] || continue; ");
-                            script.append("for f in \"$d\"/* \"$d\"/.*; do ");
-                            script.append("case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; ");
-                            script.append("[ -e \"$f\" ] || [ -L \"$f\" ] || continue; ");
-                            script.append("rm -rf \"$f\" 2>/dev/null || exit 3; ");
-                            script.append("done; done; ");
+                            script.append("find \"$d\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null || exit 3; ");
+                            script.append("done; ");
                             script.append("echo ALLDONE");
                             RootManager.ShellResult r = rm.executeFs(script.toString(), 30);
                             boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("ALLDONE");
