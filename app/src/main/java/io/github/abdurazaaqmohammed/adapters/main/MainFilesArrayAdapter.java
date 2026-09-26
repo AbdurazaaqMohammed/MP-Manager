@@ -536,14 +536,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, getFilesToDisplay(multi, finalPosition).toString());
                                         break;
                                     case FileMenuOrder.SHARE:
-                                        withReadableCopy(file, readable -> {
+                                        if (isInZip) {
+                                            shareZipEntry(item, fileName);
+                                        } else withReadableCopy(file, readable -> {
                                             Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
                                             String shareMime = MimeUtil.getMimeTypeForAction(context, readable);
                                             context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
                                         });
                                         break;
                                     case FileMenuOrder.OPEN_WITH:
-                                        showOpenWithDialog(file, fileName);
+                                        if (isInZip) {
+                                            openWithZipEntry(item, fileName);
+                                        } else showOpenWithDialog(file, fileName);
                                         break;
                                     case FileMenuOrder.BOOKMARK:
                                         if (!isInZip) context.addBookmark(file);
@@ -893,6 +897,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     private void showOpenWithDialog(File file, String fileName) {
+        if (file == null) {
+            Extensions.showMessage(context, R.string.cannot_open_item);
+            return;
+        }
         List<String> actionNames = new ArrayList<>(Arrays.asList(
                 context.getString(R.string.text_editor),
                 context.getString(R.string.archive_viewer),
@@ -1393,7 +1401,71 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         void onReady(File readable) throws Exception;
     }
 
+    private File stageZipEntry(ZipEntryInfo zipEntry) throws IOException {
+        if (zipEntry == null || zipEntry.isDirectory() || zipEntry.getFullPath() == null) throw new IOException(context.getString(R.string.cannot_open_item));
+        File out = new File(context.getCacheDir(), "zip_entry_" + System.currentTimeMillis() + "_" + zipEntry.getName().replaceAll("[^a-zA-Z0-9._-]", "_"));
+        try (ZipFile zf = new ZipFile(zipEntry.getZipFile())) {
+            FileHeader fh = zf.getFileHeader(zipEntry.getFullPath());
+            if (fh == null || fh.isDirectory()) throw new IOException(context.getString(R.string.cannot_open_item));
+            try (InputStream is = zf.getInputStream(fh);
+                 FileOutputStream fos = new FileOutputStream(out)) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+            }
+        }
+        return out;
+    }
+
+    private void shareZipEntry(Object item, String fileName) {
+        if (!(item instanceof ZipEntryInfo)) {
+            Extensions.showMessage(context, R.string.cannot_open_item);
+            return;
+        }
+        new Thread(() -> {
+            try {
+                File staged = stageZipEntry((ZipEntryInfo) item);
+                context.handler.post(() -> {
+                    try {
+                        Uri uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", staged);
+                        String shareMime = MimeUtil.getMimeTypeForAction(context, staged);
+                        context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType(shareMime != null ? shareMime : "application/octet-stream").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share " + fileName));
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
+    private void openWithZipEntry(Object item, String fileName) {
+        if (!(item instanceof ZipEntryInfo)) {
+            Extensions.showMessage(context, R.string.cannot_open_item);
+            return;
+        }
+        new Thread(() -> {
+            try {
+                File staged = stageZipEntry((ZipEntryInfo) item);
+                context.handler.post(() -> {
+                    try {
+                        showOpenWithDialog(staged, fileName);
+                    } catch (Exception e) {
+                        new ErrorUtil(context).showError(e);
+                    }
+                });
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
     private void withReadableCopy(File file, ReadableCallback cb) {
+        if (file == null) {
+            Extensions.showMessage(context, R.string.cannot_open_item);
+            return;
+        }
         try {
             if (file != null && file.exists() && file.canRead()) {
                 cb.onReady(file);
