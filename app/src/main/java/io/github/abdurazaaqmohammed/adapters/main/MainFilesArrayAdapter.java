@@ -1067,6 +1067,50 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         context.startActivity(intent);
     }
 
+    private boolean tryLaunchDefaultApp(Uri uri, String mime) {
+        if (mime == null) return false;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        String def = prefs.getString(defaultAppKey(mime), null);
+        if (def == null) return false;
+        ComponentName cn = ComponentName.unflattenFromString(def);
+        if (cn == null) return false;
+        PackageManager pm = context.getPackageManager();
+        try {
+            pm.getActivityInfo(cn, 0);
+            Intent probe = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime);
+            probe.setComponent(cn);
+            List<ResolveInfo> stillThere = pm.queryIntentActivities(probe, 0);
+            if (!stillThere.isEmpty()) {
+                probe.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                context.startActivity(probe);
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        prefs.edit().remove(defaultAppKey(mime)).apply();
+        return false;
+    }
+
+    private void openWithDefaultOrDialog(File file, String fileName) {
+        withReadableCopy(file, readable -> {
+            Uri uri;
+            try {
+                uri = FileProvider.getUriForFile(context, "io.github.abdurazaaqmohammed.MPManager.provider", readable);
+            } catch (Exception e) {
+                showOpenWithDialog(readable, fileName);
+                return;
+            }
+            String actionMime = MimeUtil.getMimeTypeForAction(context, readable);
+            if (actionMime == null) actionMime = "application/octet-stream";
+            if (tryLaunchDefaultApp(uri, actionMime)) return;
+            String real = MimeUtil.getRealMimeType(readable);
+            if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) return;
+            String reported = MimeUtil.getReportedMimeType(context, readable);
+            if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return;
+            showOpenWithDialog(readable, fileName);
+        });
+    }
+
     private void showAppsForMime(File file, String fileName, boolean useActual) {
         Uri uri;
         try {
@@ -1080,26 +1124,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         if (mime == null) mime = "application/octet-stream";
         final String chosenMime = mime;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        String def = prefs.getString(defaultAppKey(chosenMime), null);
         PackageManager pm = context.getPackageManager();
-        if (def != null) {
-            ComponentName cn = ComponentName.unflattenFromString(def);
-            if (cn != null) {
-                try {
-                    pm.getActivityInfo(cn, 0);
-                    Intent probe = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, chosenMime);
-                    probe.setComponent(cn);
-                    List<ResolveInfo> stillThere = pm.queryIntentActivities(probe, 0);
-                    if (!stillThere.isEmpty()) {
-                        probe.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        context.startActivity(probe);
-                        return;
-                    }
-                } catch (Exception ignored) {
-                }
-                prefs.edit().remove(defaultAppKey(chosenMime)).apply();
-            }
-        }
         List<ResolveInfo> apps = pm.queryIntentActivities(
                 new Intent(Intent.ACTION_VIEW).setDataAndType(uri, chosenMime),
                 PackageManager.MATCH_DEFAULT_ONLY);
@@ -1392,7 +1417,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             } else if (fileName.endsWith(".dex")) {
                 fileOps.showDexOptionsDialog(file, null, null, fileName);
             } else {
-                showOpenWithDialog(file, fileName);
+                openWithDefaultOrDialog(file, fileName);
             }
         }
     }
