@@ -59,7 +59,7 @@ public class UpdateUtil {
                         currentVer = null;
                     }
                     boolean newVer = false;
-                    char[] curr = TextUtils.isEmpty(currentVer) ? new char[] { '1', '0', '7' }
+                    char[] curr = TextUtils.isEmpty(currentVer) ? new char[] { '1', '0', '9' }
                             : currentVer.replace(".", "").toCharArray();
                     char[] latest = latestVersion.replace(".", "").toCharArray();
 
