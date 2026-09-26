@@ -1792,14 +1792,34 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         compressDialog.setNegativeButton(context.rss.getString(android.R.string.cancel), null);
         ProgressManager pm = new ProgressManager(context, true);
         compressDialog.setPositiveButton(context.rss.getString(R.string.compress), (dialog4, which) -> {
-            pm.show();
-            new Thread(() -> {
-                String name = ((TextInputEditText) compressView.findViewById(R.id.filename_compress_edittext)).getText().toString().trim();
-                if (name.isEmpty()) name = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
-                String format = ((AutoCompleteTextView) compressView.findViewById(R.id.compress_format)).getText().toString().trim();
-                if (!format.startsWith(".")) format = "." + format;
-                if (!name.toLowerCase(Locale.ENGLISH).endsWith(format)) name += format;
-                File outputZip = new File(parentFile2, name);
+            String name = ((TextInputEditText) compressView.findViewById(R.id.filename_compress_edittext)).getText().toString().trim();
+            if (name.isEmpty()) name = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
+            String format = ((AutoCompleteTextView) compressView.findViewById(R.id.compress_format)).getText().toString().trim();
+            if (!format.startsWith(".")) format = "." + format;
+            if (!name.toLowerCase(Locale.ENGLISH).endsWith(format)) name += format;
+            File outputZip = new File(parentFile2, name);
+            if (outputZip.exists()) {
+                File existing = outputZip;
+                String existingFormat = format;
+                dialogUtil.getDialogBuilder()
+                        .setTitle(context.rss.getString(R.string.output_exists_title))
+                        .setMessage(context.rss.getString(R.string.output_exists_msg, existing.getName()))
+                        .setPositiveButton(context.rss.getString(R.string.create_new_file), (d, w) -> runCompress(FileUtils.getUnusedFile(existing), existingFormat, file, fileName, multi, compressView, pm))
+                        .setNeutralButton(context.rss.getString(R.string.add_to_existing), (d, w) -> runCompress(existing, existingFormat, file, fileName, multi, compressView, pm))
+                        .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                        .show();
+                return;
+            }
+            runCompress(outputZip, format, file, fileName, multi, compressView, pm);
+        });
+        pm.setText(context.rss.getString(R.string.compressing));
+        context.handler.post(compressDialog::show);
+    }
+
+    private void runCompress(File outputZip, String format, File file, String fileName, boolean multi, View compressView, ProgressManager pm) {
+        pm.show();
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        new Thread(() -> {
 
                 List<File> sources = new ArrayList<>();
                 if (multi) {

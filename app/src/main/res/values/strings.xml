@@ -78,6 +78,10 @@
     <string name="replace_all">Replace All</string>
     <string name="update_and_replace">Update and replace</string>
     <string name="skip_all">Skip all</string>
+    <string name="output_exists_title">File already exists</string>
+    <string name="output_exists_msg">\"%1$s\" already exists.</string>
+    <string name="add_to_existing">Add to existing</string>
+    <string name="create_new_file">Create new</string>
     <string name="confirm_add_to_zip_f">Are you sure you want to add %1$s to %2$s?</string>
     <string name="plus_n_more">and %1$d more</string>
     <string name="pw_zip">Password (no encryption if empty)</string>

@@ -79,6 +79,10 @@
     <string name="replace_all">Заменить всё</string>
     <string name="update_and_replace">Обновить и заменить</string>
     <string name="skip_all">Пропустить всё</string>
+    <string name="output_exists_title">Файл уже существует</string>
+    <string name="output_exists_msg">«%1$s» уже существует.</string>
+    <string name="add_to_existing">Добавить в существующий</string>
+    <string name="create_new_file">Создать новый</string>
     <string name="confirm_add_to_zip_f">Вы уверены, что хотите добавить %1$s в %2$s?</string>
     <string name="plus_n_more">и ещё %1$d</string>
     <string name="pw_zip">Пароль (если пусто — без шифрования)</string>
