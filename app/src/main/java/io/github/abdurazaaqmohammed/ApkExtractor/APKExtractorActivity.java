@@ -1208,6 +1208,7 @@ public class APKExtractorActivity extends AppCompatActivity {
     private void share(boolean antisplit, List<Integer> itemsToProcess) {
         ProgressManager pm = new ProgressManager(this, true).show();
         ArrayList<Uri> fileUris = new ArrayList<>();
+        ArrayList<File> mergedFiles = new ArrayList<>();
 
         new Thread(() -> {
             String authority = "io.github.abdurazaaqmohammed.MPManager.provider";
@@ -1220,9 +1221,14 @@ public class APKExtractorActivity extends AppCompatActivity {
                         try (ApkBundle bundle = new ApkBundle()) {
                             bundle.loadApkDirectory(new File(ai.filePath).getParentFile());
                             APKLogger logger = pm.getLogger();
-                            bundle.setAPKLogger(logger);
-                            fileUris.add(FileProvider.getUriForFile(this, authority, MergeUtil.mergeBundle(bundle)));
-                            logger.close();
+                            try {
+                                bundle.setAPKLogger(logger);
+                                File merged = MergeUtil.mergeBundle(bundle);
+                                fileUris.add(FileProvider.getUriForFile(this, authority, merged));
+                                mergedFiles.add(merged);
+                            } finally {
+                                logger.close();
+                            }
                         }
                     } else {
                         File[] files = new File(ai.filePath).getParentFile().listFiles();
@@ -1244,13 +1250,35 @@ public class APKExtractorActivity extends AppCompatActivity {
             pm.dismiss();
 
             if (fileUris.isEmpty()) return;
-            Intent intent= new Intent(Intent.ACTION_SEND_MULTIPLE)
-                    .setType("application/vnd.android.package-archive")
-                    .putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(intent, rss.getString(R.string.share_apk)));
+            if (!mergedFiles.isEmpty() && signApk && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("autosign", true)) {
+                handler.post(() -> SignWrapper.requireAuth(this, sw -> {
+                    ProgressManager signPm = new ProgressManager(this, true);
+                    signPm.show();
+                    new Thread(() -> {
+                        try {
+                            for (File f : mergedFiles) {
+                                signPm.setText(getString(R.string.signing, f.getName()));
+                                sw.signApk(f);
+                            }
+                            signPm.dismiss();
+                            handler.post(() -> fireMultipleShareIntent(fileUris));
+                        } catch (Exception e) {
+                            signPm.dismiss();
+                            new ErrorUtil(this).showError(e);
+                        }
+                    }).start();
+                }));
+            } else fireMultipleShareIntent(fileUris);
 
         }).start();
+    }
+
+    private void fireMultipleShareIntent(ArrayList<Uri> fileUris) {
+        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE)
+                .setType("application/vnd.android.package-archive")
+                .putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, rss.getString(R.string.share_apk)));
     }
 
     public void share(int pos, boolean antisplit) {
@@ -1297,24 +1325,47 @@ public class APKExtractorActivity extends AppCompatActivity {
 
                 pm.dismiss();
 
-                Intent intent;
-                if (isMultiple) {
-                    intent = new Intent(Intent.ACTION_SEND_MULTIPLE)
-                            .setType("application/vnd.android.package-archive")
-                            .putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris);
-                } else {
-                    Uri u = FileProvider.getUriForFile(this, "io.github.abdurazaaqmohammed.MPManager.provider", toShare[0]);
-                    intent = new Intent(Intent.ACTION_SEND)
-                            .setType("application/vnd.android.package-archive")
-                            .putExtra(Intent.EXTRA_STREAM, u);
-                }
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(Intent.createChooser(intent, rss.getString(R.string.share_apk)));
+                final boolean shareMultiple = isMultiple;
+                boolean merged = split && antisplit && toShare[0] != null;
+                if (merged && signApk && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("autosign", true)) {
+                    File toSign = toShare[0];
+                    handler.post(() -> SignWrapper.requireAuth(this, sw -> {
+                        ProgressManager signPm = new ProgressManager(this, true);
+                        signPm.setText(getString(R.string.signing, toSign.getName()));
+                        signPm.show();
+                        new Thread(() -> {
+                            try {
+                                sw.signApk(toSign);
+                                signPm.dismiss();
+                                handler.post(() -> fireSingleShareIntent(fileUris, shareMultiple, toSign));
+                            } catch (Exception e) {
+                                signPm.dismiss();
+                                new ErrorUtil(this).showError(e);
+                            }
+                        }).start();
+                    }));
+                } else fireSingleShareIntent(fileUris, shareMultiple, toShare[0]);
             } catch (Exception e) {
                 pm.dismiss();
                 new ErrorUtil(APKExtractorActivity.this).showError(e);
             }
         }).start();
+    }
+
+    private void fireSingleShareIntent(ArrayList<Uri> fileUris, boolean isMultiple, File single) {
+        Intent intent;
+        if (isMultiple) {
+            intent = new Intent(Intent.ACTION_SEND_MULTIPLE)
+                    .setType("application/vnd.android.package-archive")
+                    .putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris);
+        } else {
+            Uri u = FileProvider.getUriForFile(this, "io.github.abdurazaaqmohammed.MPManager.provider", single);
+            intent = new Intent(Intent.ACTION_SEND)
+                    .setType("application/vnd.android.package-archive")
+                    .putExtra(Intent.EXTRA_STREAM, u);
+        }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, rss.getString(R.string.share_apk)));
     }
 
     public void styleAlertDialog(AlertDialog ad) {
