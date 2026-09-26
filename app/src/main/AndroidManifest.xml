@@ -236,6 +236,7 @@
              <activity
                  android:name="io.github.abdurazaaqmohammed.player.ImageEditActivity"
                  android:exported="true"
+                 android:label="@string/image_editor"
                  android:configChanges="orientation|screenSize|keyboardHidden"
                  android:windowSoftInputMode="adjustResize|stateHidden"
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
@@ -254,6 +255,7 @@
              <activity
                  android:name="io.github.abdurazaaqmohammed.player.SaveSharedActivity"
                  android:exported="true"
+                 android:label="@string/save"
                  android:configChanges="orientation|screenSize|keyboardHidden"
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
                  <intent-filter>
