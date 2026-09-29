@@ -98,6 +98,7 @@ import modder.hub.dexeditor.GraphDot.Method;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import modder.hub.dexeditor.activity.AIOverViewActivity;
 import modder.hub.dexeditor.activity.DexEditorActivity;
+import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.smali.Smali2Java;
 import modder.hub.dexeditor.smali.SmaliFieldAccessParser;
 import modder.hub.dexeditor.smali.SmaliMethodBody;
@@ -647,7 +648,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 }
                 String newSmali = sb.toString();
                 try {
-                    ClassDef newDef = Smali.assemble(newSmali, new SmaliOptions(), activity.dexVersion);
+                    ClassDef newDef = Smali.assemble(newSmali, SharedSmaliUtils.ASSEMBLE_OPTIONS, activity.dexVersion);
                     DexEditorActivity.classTree.saveClassDef(newDef);
                 } catch (Throwable e) {
                     DexEditorActivity.classTree.saveSmali(slashClass, newSmali);

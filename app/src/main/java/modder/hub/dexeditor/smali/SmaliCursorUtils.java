@@ -67,6 +67,15 @@ public class SmaliCursorUtils {
         }
     }
 
+    private static CharSequence cachedTextRef;
+    private static int cachedLine = -1;
+    private static int cachedLength = -1;
+    private static MethodInfo cachedResult;
+
+    private static boolean isCacheHit(CharSequence text, int cursorLine) {
+        return cachedTextRef == text && cachedLine == cursorLine && cachedLength == text.length() && cachedResult != null;
+    }
+
     public static String getCurrentMethodOrFieldName(CharSequence text, int cursorLine) {
         MethodInfo method = getMethodInfo(text, cursorLine);
         if (method != null && method.name != null) {
@@ -78,9 +87,18 @@ public class SmaliCursorUtils {
     }
 
     public static MethodInfo getMethodInfo(CharSequence text, int cursorLine) {
+        if (isCacheHit(text, cursorLine)) {
+            return cachedResult;
+        }
         MethodInfo info = new MethodInfo();
         int lineCount = getLineCount(text);
-        if (cursorLine < 0 || cursorLine >= lineCount) return null;
+        if (cursorLine < 0 || cursorLine >= lineCount) {
+            cachedTextRef = text;
+            cachedLine = cursorLine;
+            cachedLength = text.length();
+            cachedResult = null;
+            return null;
+        }
 
         // Search upwards for .method
         for (int i = cursorLine; i >= 0; i--) {
@@ -105,11 +123,21 @@ public class SmaliCursorUtils {
             }
             // If we hit another .end method while going up, we are not inside a method
             if (i < cursorLine && trimmed.startsWith(".end method")) {
+                cachedTextRef = text;
+                cachedLine = cursorLine;
+                cachedLength = text.length();
+                cachedResult = null;
                 return null;
             }
         }
         
-        if (info.startLine == -1) return null;
+        if (info.startLine == -1) {
+            cachedTextRef = text;
+            cachedLine = cursorLine;
+            cachedLength = text.length();
+            cachedResult = null;
+            return null;
+        }
         
         // Search downwards for .end method
         for (int j = info.startLine + 1; j < lineCount; j++) {
@@ -120,6 +148,10 @@ public class SmaliCursorUtils {
                 info.endLine = j;
                 // Cursor must be within [startLine, endLine]
                 if (cursorLine <= j) {
+                    cachedTextRef = text;
+                    cachedLine = cursorLine;
+                    cachedLength = text.length();
+                    cachedResult = info;
                     return info;
                 }
                 break;
@@ -128,6 +160,10 @@ public class SmaliCursorUtils {
             if (trimmed.startsWith(".method ")) break;
         }
         
+        cachedTextRef = text;
+        cachedLine = cursorLine;
+        cachedLength = text.length();
+        cachedResult = null;
         return null;
     }
     

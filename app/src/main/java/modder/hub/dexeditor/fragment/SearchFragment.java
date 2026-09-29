@@ -109,6 +109,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.adapter.TreeAdapter;
 import modder.hub.dexeditor.model.TreeNode;
+import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.utils.DexUsageHelper;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.TreeHelper;
@@ -875,7 +876,7 @@ public class SearchFragment extends Fragment {
                 }
                 pendingSmaliClasses.addAll(pendingKeys);
                 final int total = classesToSearch.size();
-                int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+                int numThreads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors() - 1));
                 executor = Executors.newFixedThreadPool(numThreads);
                 for (final ClassDef classDef : classesToSearch) {
                     if (isStopped) break;
@@ -1320,7 +1321,6 @@ public class SearchFragment extends Fragment {
         private final AtomicInteger replacedCount = new AtomicInteger(0);
         private final AtomicInteger affectedClasses = new AtomicInteger(0);
         private final AtomicInteger processedCount = new AtomicInteger(0);
-        private final BaksmaliOptions baksmaliOptions = new BaksmaliOptions();
         private final Map<String, String> openTabsContent = new HashMap<>();
         private final Map<String, String> replacedTabsContent = new ConcurrentHashMap<>();
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -1378,7 +1378,7 @@ public class SearchFragment extends Fragment {
                 }
             }
 
-            int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
+            int numThreads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors() - 1));
             ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
             new Thread(() -> {
@@ -1414,6 +1414,16 @@ public class SearchFragment extends Fragment {
                                 if (classDef != null) {
                                     originalText = generateSmali(classDef);
                                 }
+                            }
+
+                            if (originalText != null && type.equals("Smali") && !isRegex
+                                    && (matchCase ? !originalText.contains(findQuery) : containsIgnoreCaseStatic(originalText, findQuery))) {
+                                final int processed0 = processedCount.incrementAndGet();
+                                mainHandler.post(() -> {
+                                    progressDialog.setMax(total);
+                                    progressDialog.setProgress(processed0);
+                                });
+                                return;
                             }
 
                             if (originalText != null) {
@@ -1487,8 +1497,8 @@ public class SearchFragment extends Fragment {
 
                                 if (countInClass > 0) {
                                     try {
-                                        ClassDef newDef = Smali.assemble(modifiedText, new SmaliOptions(), dexVersion);
-                                        DexEditorActivity.classTree.saveClassDef(newDef);
+                                        ClassDef newDef = Smali.assemble(modifiedText, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion);
+                                        DexEditorActivity.classTree.saveClassDefIfChanged(newDef, modifiedText);
                                     } catch (Exception e) {
                                         DexEditorActivity.classTree.saveSmali(className, modifiedText);
                                         String errorMsg = e.getMessage();
@@ -1548,11 +1558,20 @@ public class SearchFragment extends Fragment {
             return count;
         }
 
+        private static boolean containsIgnoreCaseStatic(String str, String search) {
+            if (str == null || search == null) return false;
+            final int length = search.length();
+            if (length == 0) return true;
+            for (int i = str.length() - length; i >= 0; i--)
+                if (str.regionMatches(true, i, search, 0, length)) return true;
+            return false;
+        }
+
         private String generateSmali(ClassDef classDef) throws Exception {
             if (DexEditorActivity.classTree != null) return DexEditorActivity.classTree.getSmaliByType(classDef);
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new StringWriter(16 * 1024);
             BaksmaliWriter bw = new BaksmaliWriter(sw);
-            new ClassDefinition(baksmaliOptions, classDef).writeTo(bw);
+            new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(bw);
             bw.close();
             return sw.toString();
         }
@@ -1627,18 +1646,9 @@ public class SearchFragment extends Fragment {
      * 3. Efficient Matching: Case-insensitive search without new string allocations.
      */
     private static class SearchTask {
-        private static final ThreadLocal<BaksmaliOptions> OPTIONS_THREAD_LOCAL = new ThreadLocal<>() {
-            @Override
-            protected BaksmaliOptions initialValue() {
-                return new BaksmaliOptions();
-            }
-        };
-        private static final ThreadLocal<StringBuilder> BUFFER_THREAD_LOCAL = new ThreadLocal<>() {
-            @Override
-            protected StringBuilder initialValue() {
-                return new StringBuilder(64 * 1024);
-            }
-        };
+        private static final Object POOL_MATCH_CACHE_LOCK = new Object();
+        private static final Map<DexBackedDexFile, char[]> POOL_TEXT_CACHE = new ConcurrentHashMap<>();
+        private static final Map<DexBackedDexFile, ConcurrentHashMap<String, Boolean>> POOL_MATCH_CACHE = new ConcurrentHashMap<>();
 
         private final WeakReference<SearchFragment> fragmentRef;
         private final String query, path, type, highlightQuery;
@@ -1649,7 +1659,6 @@ public class SearchFragment extends Fragment {
         private final AtomicInteger foundCount = new AtomicInteger(0), processedCount = new AtomicInteger(0);
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
         private final Map<String, String> openEditorsContent = new HashMap<>();
-        private final Map<Integer, Boolean> dexMatchCache = new ConcurrentHashMap<>();
         private final Set<String> smaliKeywords = new HashSet<>();
         private AlertProgress progressDialog;
         private volatile boolean isStopped = false, warningShown = false, hasConfirmedLargeSearch = false;
@@ -1759,6 +1768,14 @@ public class SearchFragment extends Fragment {
                     return;
                 }
 
+                try {
+                    POOL_TEXT_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
+                    synchronized (POOL_MATCH_CACHE_LOCK) {
+                        POOL_MATCH_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
+                    }
+                } catch (Exception ignored) {
+                }
+
                 // Building the list of classes to search based on the scope
                 List<ClassDef> classesToSearch = new ArrayList<>();
                 if (scopeClasses != null) {
@@ -1780,7 +1797,7 @@ public class SearchFragment extends Fragment {
                     tempFilterPath = tempFilterPath.substring(0, tempFilterPath.length() - 1);
                 final String filterPath = tempFilterPath;
 
-                int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+                int numThreads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors() - 1));
                 executor = Executors.newFixedThreadPool(numThreads);
                 final int finalTotal = total;
 
@@ -2141,21 +2158,19 @@ public class SearchFragment extends Fragment {
         }
 
         private void finalizeResults(List<TreeNode> results) {
-            // Sort and build tree in background
             List<TreeNode> tree;
             if (results.isEmpty()) {
                 tree = new ArrayList<>();
             } else {
-                // To avoid ConcurrentModificationException if a thread is still finishing
                 List<TreeNode> snapshot;
-                synchronized (Collections.unmodifiableList(results)) {
+                synchronized (results) {
                     snapshot = new ArrayList<>(results);
                 }
                 
-                Collections.sort(snapshot, Comparator.comparing(TreeNode::getFullName));
+                snapshot.sort(Comparator.comparing(TreeNode::getFullName));
 
                 tree = buildTreeStructure(snapshot);
-                Collections.sort(tree, (n1, n2) -> {
+                tree.sort((n1, n2) -> {
                     if (n1.isDirectory() != n2.isDirectory()) return n1.isDirectory() ? -1 : 1;
                     return n1.getName().compareTo(n2.getName());
                 });
@@ -2215,21 +2230,60 @@ public class SearchFragment extends Fragment {
         }
 
         private boolean checkDexPool(DexBackedDexFile dex, String query, boolean matchCase) {
-            int dexId = System.identityHashCode(dex);
-            Boolean cached = dexMatchCache.get(dexId);
+            ConcurrentHashMap<String, Boolean> matchCache;
+            synchronized (POOL_MATCH_CACHE_LOCK) {
+                matchCache = POOL_MATCH_CACHE.computeIfAbsent(dex, k -> new ConcurrentHashMap<>());
+            }
+            String key = matchCase + "\u0000" + query;
+            Boolean cached = matchCache.get(key);
             if (cached != null) return cached;
 
-            boolean found = false;
-            List<String> pool = dex.getStringSection();
-            int count = pool.size();
-            for (int i = 0; i < count; i++) {
-                if (contains(pool.get(i), query, matchCase)) {
-                    found = true;
-                    break;
+            char[] text = POOL_TEXT_CACHE.computeIfAbsent(dex, k -> {
+                List<String> pool = k.getStringSection();
+                int count = pool.size();
+                StringBuilder sb = new StringBuilder(Math.max(1024, count * 32));
+                for (int i = 0; i < count; i++) {
+                    String s = pool.get(i);
+                    if (s != null) {
+                        sb.append(s).append('\n');
+                    }
+                }
+                return sb.toString().toCharArray();
+            });
+
+            boolean found = regionContains(text, query, matchCase);
+            matchCache.put(key, found);
+            return found;
+        }
+
+        private static boolean regionContains(char[] text, String query, boolean matchCase) {
+            int len = query.length();
+            int limit = text.length - len;
+            if (limit < 0) return false;
+            char first = query.charAt(0);
+            char firstLower = Character.toLowerCase(first);
+            char firstUpper = Character.toUpperCase(first);
+            for (int i = 0; i <= limit; i++) {
+                char c = text[i];
+                if (c != first && c != firstLower && c != firstUpper) continue;
+                if (regionMatchesAt(text, i, query, matchCase)) return true;
+            }
+            return false;
+        }
+
+        private static boolean regionMatchesAt(char[] text, int offset, String query, boolean matchCase) {
+            int len = query.length();
+            for (int j = 0; j < len; j++) {
+                char a = text[offset + j];
+                char b = query.charAt(j);
+                if (a != b) {
+                    if (matchCase) return false;
+                    if (Character.toLowerCase(a) != Character.toLowerCase(b) && Character.toUpperCase(a) != Character.toUpperCase(b)) {
+                        return false;
+                    }
                 }
             }
-            dexMatchCache.put(dexId, found);
-            return found;
+            return true;
         }
 
         private boolean contains(String text, String query, boolean matchCase) {
@@ -2237,29 +2291,18 @@ public class SearchFragment extends Fragment {
         }
 
         private String generateSmaliOptimized(ClassDef classDef) throws Exception {
-            StringBuilder sb = BUFFER_THREAD_LOCAL.get();
-            if (sb == null) return "";
-            sb.setLength(0);
+            StringWriter sw = new StringWriter(16 * 1024);
+            BaksmaliWriter bw = new BaksmaliWriter(sw);
+            new ClassDefinition(SharedSmaliUtils.OPTIONS, classDef).writeTo(bw);
+            bw.close();
+            String body = sw.toString();
 
-            // Consistent with ClassTree.getSmaliByType header
             String dexFileName = "unknown.dex";
             if (DexEditorActivity.classTree != null) {
                 dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
             }
-            sb.append("# ").append(dexFileName).append("\n\n");
-
-            Writer writer = new Writer() {
-                @Override public void write(@NonNull char[] c, int o, int l) { sb.append(c, o, l); }
-                @Override public void flush() {}
-                @Override public void close() {}
-            };
-
-            BaksmaliWriter bw = new BaksmaliWriter(writer);
-            BaksmaliOptions options = OPTIONS_THREAD_LOCAL.get();
-            if (options == null) options = new BaksmaliOptions();
-
-            new ClassDefinition(options, classDef).writeTo(bw);
-            bw.close();
+            StringBuilder sb = new StringBuilder(body.length() + 32);
+            sb.append("# ").append(dexFileName).append("\n\n").append(body);
             return sb.toString();
         }
 
@@ -2269,13 +2312,13 @@ public class SearchFragment extends Fragment {
                 String typeKey = type.substring(1, type.length() - 1);
                 String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(typeKey);
                 if (pending != null) {
-                    // Ensure header consistency even for pending smali
                     if (pending.trim().startsWith("# ")) {
                         pending = pending.replaceFirst("(?s)^#.*?\\n\\n", "");
                     }
                     String dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
                     return "# " + dexFileName + "\n\n" + pending;
                 }
+                return DexEditorActivity.classTree.getSmaliByType(classDef);
             }
             return generateSmaliOptimized(classDef);
         }

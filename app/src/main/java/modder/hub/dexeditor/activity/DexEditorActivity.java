@@ -119,6 +119,7 @@ import modder.hub.dexeditor.fragment.GraphFragment;
 import modder.hub.dexeditor.fragment.SearchFragment;
 import modder.hub.dexeditor.fragment.SmaliMethodFieldListFragment;
 import modder.hub.dexeditor.model.TreeNode;
+import modder.hub.dexeditor.smali.SharedSmaliUtils;
 import modder.hub.dexeditor.smali.Smali2Java;
 import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.smali.SmaliInstructionHelper;
@@ -1467,7 +1468,22 @@ public class DexEditorActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 final String code = fragment.getEditor().getText().toString();
-                classTree.saveClassDef(Smali.assemble(code, new SmaliOptions(), dexVersion));
+                if (classTree.isSameAsCachedSmali(tab.className, code)) {
+                    runOnUiThread(() -> {
+                        pd.dismiss();
+                        tab.isModified = false;
+                        tab.content = code;
+                        tab.originalContent = code;
+                        int currentIndex = tabs.indexOf(tab);
+                        if (currentIndex != -1) {
+                            tabsAdapter.notifyItemChanged(currentIndex + 1);
+                        }
+                        handleUndoRedo();
+                        if (onSaved != null) onSaved.run();
+                    });
+                    return;
+                }
+                classTree.saveClassDefIfChanged(Smali.assemble(code, SharedSmaliUtils.ASSEMBLE_OPTIONS, dexVersion), code);
                 runOnUiThread(() -> {
                     pd.dismiss();
                     tab.isModified = false;
@@ -2302,7 +2318,10 @@ public class DexEditorActivity extends AppCompatActivity {
             }
 
             new Thread(() -> {
-                List<ClassDef> classes = new ArrayList<>(classTree.classMap.values());
+                List<ClassDef> classes;
+                synchronized (classTree.classMap) {
+                    classes = new ArrayList<>(classTree.classMap.values());
+                }
                 int total = classes.size();
                 int processed = 0, replacedCount = 0, affectedClasses = 0;
                 final Map<String, String> updatedTabs = new HashMap<>();
@@ -2331,8 +2350,8 @@ public class DexEditorActivity extends AppCompatActivity {
                         if (countInClass > 0) {
                             String modified = sb.toString();
                             try {
-                                ClassDef newDef = Smali.assemble(modified, new SmaliOptions(), activity.dexVersion);
-                                classTree.saveClassDef(newDef);
+                                ClassDef newDef = Smali.assemble(modified, SharedSmaliUtils.ASSEMBLE_OPTIONS, activity.dexVersion);
+                                classTree.saveClassDefIfChanged(newDef, modified);
                             } catch (Exception e) {
                                 classTree.saveSmali(className, modified);
                             }

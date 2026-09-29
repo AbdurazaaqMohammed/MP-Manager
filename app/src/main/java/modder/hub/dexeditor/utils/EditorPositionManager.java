@@ -36,6 +36,8 @@
 package modder.hub.dexeditor.utils;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.File;
@@ -46,10 +48,18 @@ import java.util.Map;
 // Author - @developer-krushna
 public class EditorPositionManager {
     private static final String FILE_NAME = "editor_positions.json";
+    private static final long PERSIST_DELAY_MS = 1500;
     private static EditorPositionManager instance;
     private final File file;
     private Map<String, Position> positions = new HashMap<>();
     private final Gson gson = new Gson();
+    private final Handler persistHandler = new Handler(Looper.getMainLooper());
+    private final Runnable persistRunnable = new Runnable() {
+        @Override
+        public void run() {
+            persistNow();
+        }
+    };
 
     public static class Position {
         public final int lineno;
@@ -92,10 +102,15 @@ public class EditorPositionManager {
 
     public void savePosition(String className, int lineno, int column) {
         positions.put(className, new Position(lineno, column));
-        persist();
+        schedulePersist();
     }
 
-    private void persist() {
+    private void schedulePersist() {
+        persistHandler.removeCallbacks(persistRunnable);
+        persistHandler.postDelayed(persistRunnable, PERSIST_DELAY_MS);
+    }
+
+    private void persistNow() {
         String json = gson.toJson(positions);
         FileUtil.writeFile(file.getAbsolutePath(), json);
     }
@@ -107,11 +122,13 @@ public class EditorPositionManager {
     public void removePosition(String className) {
         if (positions.containsKey(className)) {
             positions.remove(className);
-            persist();
+            persistHandler.removeCallbacks(persistRunnable);
+            persistNow();
         }
     }
 
     public void clear() {
+        persistHandler.removeCallbacks(persistRunnable);
         if (file.exists()) {
             file.delete();
         }

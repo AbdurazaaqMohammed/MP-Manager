@@ -31,6 +31,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -92,13 +93,14 @@ public class FileUtil {
         if (!isExistFile(sourcePath)) return;
         createNewFile(destPath);
 
-        try (FileInputStream fis = new FileInputStream(sourcePath); FileOutputStream fos = new FileOutputStream(destPath, false)) {
-
-            byte[] buff = new byte[1024];
-            int length = 0;
-
-            while ((length = fis.read(buff)) > 0) {
-                fos.write(buff, 0, length);
+        try (FileInputStream fis = new FileInputStream(sourcePath);
+             FileOutputStream fos = new FileOutputStream(destPath, false);
+             FileChannel in = fis.getChannel();
+             FileChannel out = fos.getChannel()) {
+            long size = in.size();
+            long pos = 0;
+            while (pos < size) {
+                pos += out.transferFrom(in, pos, size - pos);
             }
         } catch (IOException e) {
             e.printStackTrace();
