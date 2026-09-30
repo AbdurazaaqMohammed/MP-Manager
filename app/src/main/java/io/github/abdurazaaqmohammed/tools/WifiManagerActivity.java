@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
 import android.net.ConnectivityManager;
@@ -43,18 +42,15 @@ import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.DynamicColors;
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
@@ -77,7 +73,7 @@ import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.WifiPasswordUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class WifiManagerActivity extends BaseActivity {
+public class WifiManagerActivity extends ToolbarPage {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LinearLayout dnsList;
     private TextView dnsCurrent;
@@ -91,7 +87,6 @@ public class WifiManagerActivity extends BaseActivity {
     private TextView passCount;
 
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         showPass = !prefs.getBoolean("wifi_hide_pass", false);
         Intent launching = getIntent();
@@ -107,23 +102,9 @@ public class WifiManagerActivity extends BaseActivity {
             finish();
             return;
         }
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
-        MaterialToolbar toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(getString(R.string.wifi_manager));
-        toolbar.setSubtitle(getString(R.string.wifi_subtitle));
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> finish());
-        root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(16);
-        box.setPadding(pad, pad, pad, pad);
-        scroll.addView(box, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setContentView(root);
+        super.onCreate(savedInstanceState);
+        toolbar().setSubtitle(getString(R.string.wifi_subtitle));
+        LinearLayout box = contentBox();
         buildConnection(box);
         buildDns(box);
         buildPasswords(box);
@@ -132,6 +113,10 @@ public class WifiManagerActivity extends BaseActivity {
         refreshDns();
         refreshUsage();
         loadPasswords();
+    }
+
+    protected CharSequence pageTitle() {
+        return getString(R.string.wifi_manager);
     }
 
     private int dp(int v) {
@@ -143,7 +128,7 @@ public class WifiManagerActivity extends BaseActivity {
         t.setText(text);
         t.setTextSize(18);
         t.setTypeface(null, Typeface.BOLD);
-        t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        t.setTextColor(ThemeAttrs.onSurface(this));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, dp(16), 0, dp(8));
         box.addView(t, p);
@@ -156,8 +141,8 @@ public class WifiManagerActivity extends BaseActivity {
         t.setTypeface(Typeface.MONOSPACE);
         t.setTextIsSelectable(true);
         t.setPadding(dp(12), dp(12), dp(12), dp(12));
-        t.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#14000000")));
-        t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        t.setBackgroundColor(ThemeAttrs.surfaceVariant(this));
+        t.setTextColor(ThemeAttrs.onSurface(this));
         box.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return t;
     }
@@ -324,7 +309,7 @@ public class WifiManagerActivity extends BaseActivity {
         try {
             boolean rooted = RootManager.getInstance(this).isRootAvailable();
             if (!rooted) return;
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(getString(R.string.wifi_grant_title))
                     .setMessage(getString(R.string.wifi_grant_msg))
                     .setPositiveButton(getString(R.string.grant), (d, w) -> new Thread(() -> {
@@ -348,7 +333,7 @@ public class WifiManagerActivity extends BaseActivity {
         TextInputLayout hostBox = UiFields.box(this, getString(R.string.wifi_hostname_hint));
         EditText host = UiFields.field(hostBox, InputType.TYPE_CLASS_TEXT);
         form.addView(hostBox);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.wifi_new_profile))
                 .setView(form)
                 .setPositiveButton(getString(R.string.save), (d, w) -> {
@@ -384,7 +369,7 @@ public class WifiManagerActivity extends BaseActivity {
             } catch (Exception ignored) {
             }
         }
-        new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.wifi_tile_title)).setMessage(msg).setPositiveButton(android.R.string.ok, null).show();
+        UIKit.dialog(this).setTitle(getString(R.string.wifi_tile_title)).setMessage(msg).setPositiveButton(android.R.string.ok, null).show();
     }
 
     private static class PassHolder {
@@ -439,8 +424,8 @@ public class WifiManagerActivity extends BaseActivity {
             return false;
         });
         box.addView(passList, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(300)));
-        int onSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
-        int onVariant = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY);
+        int onSurface = ThemeAttrs.onSurface(this);
+        int onVariant = ThemeAttrs.onSurfaceVariant(this);
         float density = getResources().getDisplayMetrics().density;
         passAdapter = new BaseAdapter() {
             public int getCount() {
@@ -606,7 +591,7 @@ public class WifiManagerActivity extends BaseActivity {
             secView.setGravity(Gravity.CENTER);
             secView.setTextIsSelectable(true);
             qrBox.addView(secView);
-            new MaterialAlertDialogBuilder(this).setTitle(getString(R.string.wifi_share_wifi)).setView(qrBox)
+            UIKit.dialog(this).setTitle(getString(R.string.wifi_share_wifi)).setView(qrBox)
                     .setPositiveButton(getString(R.string.share), (d, w) -> shareWifiText(config))
                     .setNeutralButton(getString(R.string.wifi_save_image), (d, w) -> new Thread(() -> {
                         try {

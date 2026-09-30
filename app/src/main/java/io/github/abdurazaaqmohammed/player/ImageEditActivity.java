@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.player;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -14,6 +15,7 @@ import android.provider.OpenableColumns;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.Menu;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -23,14 +25,12 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.DynamicColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -48,7 +48,7 @@ import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 
-public class ImageEditActivity extends BaseActivity {
+public class ImageEditActivity extends ToolbarPage {
 
     static String sessionPath;
 
@@ -64,11 +64,37 @@ public class ImageEditActivity extends BaseActivity {
     private boolean fromShared;
     private int imgW;
     private int imgH;
-    private MaterialToolbar toolbar;
+    private boolean editorReady;
+
+    @Override
+    protected View createBody(Context c) {
+        LinearLayout main = new LinearLayout(c);
+        main.setOrientation(LinearLayout.VERTICAL);
+        infoView = new TextView(c);
+        infoView.setTextSize(12);
+        int pad = dpPx(12);
+        infoView.setPadding(pad, pad / 2, pad, 0);
+        main.addView(infoView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        FrameLayout stage = new FrameLayout(c);
+        preview = new ImageView(c);
+        preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        preview.setAdjustViewBounds(false);
+        stage.addView(preview, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        overlay = new CropOverlayView(c);
+        stage.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        overlay.setCropListener(rect -> updateInfo());
+        stage.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) resetCropToFull();
+        });
+        main.addView(stage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        main.addView(buildAspectRow(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        main.addView(buildOpsRow(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        main.addView(buildMetaRow(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return main;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         originalPath = sessionPath;
         sessionPath = null;
         Uri incoming = getIntent().getData();
@@ -79,15 +105,36 @@ public class ImageEditActivity extends BaseActivity {
             }
         }
         if (originalPath == null && incoming != null) {
+            super.onCreate(savedInstanceState);
             resolveSharedImage(incoming);
             return;
         }
         if (originalPath == null || !new File(originalPath).isFile()) {
+            super.onCreate(savedInstanceState);
             finish();
             return;
         }
+        super.onCreate(savedInstanceState);
         initEditor();
-        initEditor();
+    }
+
+    protected CharSequence pageTitle() {
+        return originalPath == null ? getString(R.string.image_editor) : new File(originalPath).getName();
+    }
+
+    private void initEditor() {
+        if (editorReady) return;
+        editorReady = true;
+        String lower = originalPath.toLowerCase(Locale.US);
+        isJpeg = lower.endsWith(".jpg") || lower.endsWith(".jpeg");
+        toolbar().setSubtitle(R.string.image_editor);
+        Menu toolbarMenu = toolbar().getMenu();
+        toolbarMenu.add(0, 1, 0, R.string.save).setIcon(R.drawable.save_24px).setShowAsAction(1);
+        toolbar().setOnMenuItemClickListener(item -> {
+            saveAndFinish();
+            return true;
+        });
+        prepareWorkingCopy();
     }
 
     private void resolveSharedImage(Uri uri) {
@@ -136,47 +183,6 @@ public class ImageEditActivity extends BaseActivity {
                 });
             }
         }).start();
-    }
-
-    private void initEditor() {
-        String lower = originalPath.toLowerCase(Locale.US);
-        isJpeg = lower.endsWith(".jpg") || lower.endsWith(".jpeg");
-        LinearLayout main = new LinearLayout(this);
-        main.setOrientation(LinearLayout.VERTICAL);
-        toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(new File(originalPath).getName());
-        toolbar.setSubtitle(R.string.image_editor);
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
-        Menu toolbarMenu = toolbar.getMenu();
-        toolbarMenu.add(0, 1, 0, R.string.save).setIcon(R.drawable.save_24px).setShowAsAction(1);
-        toolbar.setOnMenuItemClickListener(item -> {
-            saveAndFinish();
-            return true;
-        });
-        main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        infoView = new TextView(this);
-        infoView.setTextSize(12);
-        int pad = dp(12);
-        infoView.setPadding(pad, pad / 2, pad, 0);
-        main.addView(infoView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        FrameLayout stage = new FrameLayout(this);
-        preview = new ImageView(this);
-        preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        preview.setAdjustViewBounds(false);
-        stage.addView(preview, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        overlay = new CropOverlayView(this);
-        stage.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        overlay.setCropListener(rect -> updateInfo());
-        stage.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
-            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) resetCropToFull();
-        });
-        main.addView(stage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        main.addView(buildAspectRow(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        main.addView(buildOpsRow(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        main.addView(buildMetaRow(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        setContentView(main);
-        prepareWorkingCopy();
     }
 
     private LinearLayout buildAspectRow() {
@@ -228,7 +234,7 @@ public class ImageEditActivity extends BaseActivity {
         hInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         hInput.setSingleLine(true);
         root.addView(hInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.img_aspect))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -553,7 +559,7 @@ public class ImageEditActivity extends BaseActivity {
             showError(getString(R.string.img_no_exif));
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.img_exif))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -583,7 +589,7 @@ public class ImageEditActivity extends BaseActivity {
             showError(getString(R.string.img_only_jpeg));
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.img_strip_meta))
                 .setMessage(getString(R.string.img_strip_msg))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -623,7 +629,7 @@ public class ImageEditActivity extends BaseActivity {
             return;
         }
         if (hasCrop() && isJpeg && !allowLossyCrop && !NativeToolManager.loadJpegtranJni(this)) {
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(getString(R.string.img_crop_quality))
                     .setMessage(getString(R.string.img_crop_msg))
                     .setNegativeButton(android.R.string.cancel, null)
@@ -725,7 +731,7 @@ public class ImageEditActivity extends BaseActivity {
             finish();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.unsaved_changes))
                 .setMessage(getString(R.string.save_before_exit))
                 .setPositiveButton(getString(R.string.save), (d, w) -> saveAndFinish())

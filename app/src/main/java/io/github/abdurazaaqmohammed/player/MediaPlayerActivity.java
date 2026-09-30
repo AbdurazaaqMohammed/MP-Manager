@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
@@ -22,10 +21,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -344,7 +344,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         btnLock.setImageResource(locked
                 ? R.drawable.lock_24px
                 : R.drawable.lock_open_24px);
-        btnLock.setColorFilter(locked ? 0xFFFF4444 : 0xFFFFFFFF);
+        btnLock.setColorFilter(locked ? ThemeAttrs.error(this) : ThemeAttrs.onSurface(this));
         if (locked) hideControls();
         else showControlsTemporarily();
     }
@@ -353,7 +353,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         aspectMode = (aspectMode + 1) % 4;
         prefs.edit().putInt("video_aspect_mode", aspectMode).apply();
         fitVideo();
-        Toast.makeText(this, getString(R.string.aspect_mode, aspectName()), Toast.LENGTH_SHORT).show();
+        UIKit.toast(this, getString(R.string.aspect_mode, aspectName()));
         showControlsTemporarily();
     }
 
@@ -615,7 +615,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         String[] items = {getString(R.string.keep_screen_on, (playerManager.isKeepScreenOn() ? "ON" : "OFF")),
                 getString(R.string.skip_duration_X, (playerManager.getSkipDuration() / 1000)),
                 getString(R.string.close_player)};
-        new AlertDialog.Builder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.player_settings)
                 .setItems(items, (d, which) -> {
                     switch (which) {
@@ -626,7 +626,7 @@ public class MediaPlayerActivity extends BaseActivity implements
                         case 1:
                             int[] durations = {5000, 10000, 15000, 30000};
                             String[] labels = {"5s", "10s", "15s", "30s"};
-                            new AlertDialog.Builder(this)
+                            UIKit.dialog(this)
                                     .setTitle(R.string.skip_duration)
                                     .setSingleChoiceItems(labels, -1, (d2, w) -> {
                                         if (w >= 0 && w < durations.length) {

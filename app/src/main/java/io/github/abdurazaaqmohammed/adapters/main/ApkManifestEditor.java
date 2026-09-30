@@ -54,6 +54,7 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -377,7 +378,7 @@ public class ApkManifestEditor {
                             0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                     label.setLayoutParams(lp);
                     label.setSingleLine(false);
-                    ColorUtil.setTextViewColor(label, Color.WHITE);
+                    ColorUtil.setTextViewColor(label, ThemeAttrs.onSurface(context));
 
                     editBtn = new ImageView(context);
                     editBtn.setTag("btn");

@@ -72,6 +72,8 @@ import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.ref.WeakReference;
@@ -271,7 +273,7 @@ public class SearchFragment extends Fragment {
         }
 
         if (!modifiedTabs.isEmpty()) {
-            new MaterialAlertDialogBuilder(requireContext())
+            UIKit.dialog(requireContext())
                     .setTitle(R.string.info)
                     .setMessage(R.string.save_code)
                     .setPositiveButton(R.string.save_and_continue, (dialog, which) -> {
@@ -415,7 +417,7 @@ public class SearchFragment extends Fragment {
         layout.addView(UiFields.wrap(requireContext(), etExcludes, null, 0));
         layout.addView(tvExplanation);
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        MaterialAlertDialogBuilder builder = UIKit.dialog(requireContext());
         builder.setTitle(R.string.exclude_list);
         builder.setView(layout);
         builder.setPositiveButton(android.R.string.ok, (dialog, which) -> prefs.edit().putString("exclude_list", etExcludes.getText().toString()).apply());
@@ -532,7 +534,7 @@ public class SearchFragment extends Fragment {
             }
         });
 
-        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+        AlertDialog dialog = UIKit.dialog(requireContext())
                 .setTitle(android.R.string.search_go)
                 .setView(dialogView)
                 .setPositiveButton(android.R.string.ok, null)
@@ -631,7 +633,7 @@ public class SearchFragment extends Fragment {
         });
 
         // Setting up the replace dialog with options like regex and match case
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(R.string.replace)
                 .setView(dialogView)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -1620,7 +1622,7 @@ public class SearchFragment extends Fragment {
                 }
             }
 
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity)
+            MaterialAlertDialogBuilder builder = UIKit.dialog(activity)
                     .setTitle(R.string.replacement_errors)
                     .setMessage(sb.toString())
                     .setNegativeButton(android.R.string.cancel, null);
@@ -2432,7 +2434,7 @@ public class SearchFragment extends Fragment {
         private void showWarningDialog() {
             SearchFragment fragment = fragmentRef.get();
             if (fragment == null) return;
-            new MaterialAlertDialogBuilder(fragment.requireContext())
+            UIKit.dialog(fragment.requireContext())
                     .setTitle(R.string.warning)
                     .setMessage(R.string.kres)
                     .setPositiveButton(R.string.cont, (dialog, which) -> {

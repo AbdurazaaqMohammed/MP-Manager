@@ -34,6 +34,7 @@
 
 package mt.signature.generate;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -172,7 +173,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
         initializeViews(view);
         initializeLogic();
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        MaterialAlertDialogBuilder builder = UIKit.dialog(requireContext());
         builder.setView(view);
         builder.setPositiveButton("Generate Key", (dialog, which) -> {
             generateKeys();
@@ -329,7 +330,7 @@ public class KeyStoreMakerDialog extends DialogFragment {
                     mainHandler.post(() -> {
                         progress.dismiss();
                         /*String message = e.toString();
-                        new MaterialAlertDialogBuilder(c)
+                        UIKit.dialog(c)
                                 .setTitle("Error")
                                 .setMessage(message)
                                 .setPositiveButton(android.R.string.ok, null)

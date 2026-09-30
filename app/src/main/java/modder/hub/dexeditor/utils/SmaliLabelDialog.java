@@ -49,6 +49,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
 import android.text.*;
@@ -122,11 +123,10 @@ public class SmaliLabelDialog extends Dialog {
 
 			// Create spannable string for partial formatting
 			SpannableString spannable = new SpannableString(item);
-			
+
 			// Apply line number highlighting
 			if (lineNumber == highlightLineNumber) {
-                int highlightColor = 0xFF42A5F5;
-                spannable.setSpan(new ForegroundColorSpan(highlightColor),
+				spannable.setSpan(new ForegroundColorSpan(ThemeAttrs.accent(getContext())),
 				0, item.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 			}
 			

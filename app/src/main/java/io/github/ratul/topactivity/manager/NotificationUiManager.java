@@ -16,6 +16,7 @@
  */
 package io.github.ratul.topactivity.manager;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -92,7 +93,7 @@ public class NotificationUiManager {
                 R.drawable.ic_cancel, stopLabel, actionStopPendingIntent()
         );
 
-        Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)
+        Notification notification = UIKit.notify(context, CHANNEL_ID)
                 .setContentTitle(pkg)
                 .setSmallIcon(R.drawable.ic_logo)
                 .setContentText(cls)

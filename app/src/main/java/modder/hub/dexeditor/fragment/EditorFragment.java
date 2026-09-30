@@ -52,13 +52,14 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 import org.eclipse.tm4e.core.registry.IGrammarSource;
 import org.eclipse.tm4e.core.registry.IThemeSource;
@@ -713,7 +714,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         intent.addCategory("android.intent.category.DEFAULT");
         intent.setType("text/plain");
         final List<ResolveInfo> resolveInfoList = packageManager.queryIntentActivities(intent, 0);
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        MaterialAlertDialogBuilder builder = UIKit.dialog(requireContext());
         builder.setTitle("Available system translations");
         String[] appNames = new String[resolveInfoList.size()];
         final String[] selectedPackage = {""};
@@ -732,7 +733,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         builder.setSingleChoiceItems(appNames, selectedIndex, (dialog, which) -> selectedPackage[0] = resolveInfoList.get(which).activityInfo.packageName);
         builder.setPositiveButton("Save", (dialog, which) -> {
             if (selectedPackage[0].isEmpty()) {
-                Toast.makeText(requireContext(), "No app selected", Toast.LENGTH_SHORT).show();
+                UIKit.toast(requireContext(), "No app selected");
                 return;
             }
             preferencesEditor.putString("selectedPackage", selectedPackage[0]);

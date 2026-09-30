@@ -13,7 +13,6 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONObject;
 
@@ -40,6 +39,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class NativeToolManager {
 
@@ -188,7 +188,7 @@ public class NativeToolManager {
         long totalBytes = 0;
         for (int i : missing) totalBytes += 12L * 1024 * 1024;
         final long approx = totalBytes;
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.native_required))
                 .setMessage(activity.getString(R.string.native_need_download, String.valueOf(approx / 1024 / 1024)))
                 .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))
@@ -207,7 +207,7 @@ public class NativeToolManager {
         } catch (Exception ignored) {
         }
         input.setSingleLine(false);
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.native_pack_server))
                 .setMessage(activity.getString(R.string.native_pack_msg))
                 .setView(input)
@@ -230,7 +230,7 @@ public class NativeToolManager {
         ProgressBar bar = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);
         root.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        AlertDialog dialog = UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.native_downloading))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, (d, w) -> cb.onError(activity.getString(R.string.op_cancelled)))

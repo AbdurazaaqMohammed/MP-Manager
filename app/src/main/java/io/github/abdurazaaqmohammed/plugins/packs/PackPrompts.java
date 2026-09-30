@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.plugins.packs;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
@@ -13,7 +14,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.File;
 import java.util.List;
@@ -95,11 +95,11 @@ public final class PackPrompts {
     private static void startDownload(Activity activity, PackDescriptor pack, Runnable onInstalled, View action) {
         long downloadId = PackManager.enqueueDownload(activity, pack);
         if (downloadId < 0) {
-            Toast.makeText(activity, "Download URL is missing", Toast.LENGTH_SHORT).show();
+            UIKit.toast(activity, "Download URL is missing");
             if (action != null) action.setEnabled(true);
             return;
         }
-        Toast.makeText(activity, "Downloading " + pack.title + "…", Toast.LENGTH_SHORT).show();
+        UIKit.toast(activity, "Downloading " + pack.title + "…");
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -119,7 +119,7 @@ public final class PackPrompts {
                 } catch (Exception ignored) {
                 }
                 if (!ok) {
-                    Toast.makeText(activity, "Download failed", Toast.LENGTH_SHORT).show();
+                    UIKit.toast(activity, "Download failed");
                     if (action != null) {
                         try {
                             activity.runOnUiThread(() -> action.setEnabled(true));
@@ -133,10 +133,10 @@ public final class PackPrompts {
                     String error = PackManager.installDownloadedPack(activity, pack, downloaded);
                     activity.runOnUiThread(() -> {
                         if (error == null) {
-                            Toast.makeText(activity, pack.title + " installed", Toast.LENGTH_SHORT).show();
+                            UIKit.toast(activity, pack.title + " installed");
                             if (onInstalled != null) onInstalled.run();
                         } else {
-                            Toast.makeText(activity, error, Toast.LENGTH_LONG).show();
+                            UIKit.toast(activity, error, true);
                             if (action != null) action.setEnabled(true);
                         }
                     });

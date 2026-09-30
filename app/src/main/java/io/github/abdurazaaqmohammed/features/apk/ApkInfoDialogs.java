@@ -67,7 +67,6 @@ import com.android.apksig.ApkVerifier;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
@@ -124,6 +123,7 @@ import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
 import mt.modder.hub.apkCloner.util.ApkCloner;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * APK info + decompile option dialogs extracted from ApkToolsHandler.
@@ -231,7 +231,7 @@ public class ApkInfoDialogs {
         vrd.setChecked(settings.getBoolean("vrd", true));
         vrd.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("vrd", isChecked).apply());
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        AlertDialog.Builder builder = UIKit.dialog(context);
         builder.setTitle(R.string.decompile_options)
                 .setView(dialogView)
                 .setPositiveButton(R.string.decompile, (d, which) -> {
@@ -483,7 +483,7 @@ public class ApkInfoDialogs {
                                                     }); else doOpt.run();
                                                 };
                                                 if (deepOpt[0]) {
-                                                    new MaterialAlertDialogBuilder(context)
+                                                    UIKit.dialog(context)
                                                             .setTitle(context.rss.getString(R.string.deep_optimize))
                                                             .setMessage(context.rss.getString(R.string.deep_optimize_warning))
                                                             .setPositiveButton(context.rss.getString(R.string.opt), (dialog8, which5) -> startOpt.run())

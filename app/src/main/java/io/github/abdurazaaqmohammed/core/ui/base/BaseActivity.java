@@ -7,6 +7,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.color.DynamicColors;
 
+import io.github.abdurazaaqmohammed.core.ui.theme.ActiveTheme;
+import io.github.abdurazaaqmohammed.core.ui.theme.PaletteInjector;
+import io.github.abdurazaaqmohammed.core.ui.theme.ThemePalette;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 
 /**
@@ -21,10 +24,27 @@ public abstract class BaseActivity extends AppCompatActivity {
         // Theme must be set before super.onCreate so inflation uses it.
         ThemeRegistry.applySaved(this);
         super.onCreate(savedInstanceState);
+        // Dynamic colours only for themes that declare no palette of their own,
+        // which is what makes system_default follow the wallpaper. A theme with
+        // colours opts out, the way MT Manager does, so a blue wallpaper cannot
+        // tint a theme that never asked to be tinted.
+        if (!hasOwnPalette()) {
+            try {
+                DynamicColors.applyToActivityIfAvailable(this);
+            } catch (Exception ignored) {
+            }
+        }
+        // After dynamic colours, never before: Material applies its own overlay
+        // and would otherwise win the ?attr/color* attributes.
         try {
-            DynamicColors.applyToActivityIfAvailable(this);
+            PaletteInjector.applyTo(this);
         } catch (Exception ignored) {
         }
+    }
+
+    private static boolean hasOwnPalette() {
+        ThemePalette palette = ActiveTheme.get();
+        return palette != null && palette.hasColors();
     }
 
     /**

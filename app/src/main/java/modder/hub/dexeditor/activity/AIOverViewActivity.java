@@ -37,6 +37,8 @@
 package modder.hub.dexeditor.activity;
 
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -48,7 +50,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 
@@ -70,7 +71,7 @@ Author @developer-krushna
 Code fixed comments by ChatGPT
 */
 
-public class AIOverViewActivity extends AppCompatActivity {
+public class AIOverViewActivity extends BaseActivity {
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
     private AppBarLayout appBarLayout;
     private CoordinatorLayout coordinatorLayout;
@@ -142,7 +143,7 @@ public class AIOverViewActivity extends AppCompatActivity {
         boxed.setLayoutParams(params);
         container.addView(boxed);
 
-        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = UIKit.dialog(this)
                 .setTitle("Edit Prompt")
                 .setView(container)
                 .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {

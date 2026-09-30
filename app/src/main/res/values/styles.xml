@@ -8,12 +8,20 @@
         <item name="android:navigationBarColor">@android:color/black</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MyApp.MaterialAlertDialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.MyApp.BottomSheet</item>
+        <item name="popupMenuStyle">@style/Widget.MyApp.PopupMenu</item>
+        <item name="snackbarStyle">@style/Widget.MyApp.Snackbar</item>
     </style>
     <style name="Theme.MyApp.Dark" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MyApp.MaterialAlertDialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.MyApp.BottomSheet</item>
+        <item name="popupMenuStyle">@style/Widget.MyApp.PopupMenu</item>
+        <item name="snackbarStyle">@style/Widget.MyApp.Snackbar</item>
     </style>
 
     <style name="Theme.MyApp.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
@@ -21,6 +29,24 @@
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MyApp.MaterialAlertDialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.MyApp.BottomSheet</item>
+        <item name="popupMenuStyle">@style/Widget.MyApp.PopupMenu</item>
+        <item name="snackbarStyle">@style/Widget.MyApp.Snackbar</item>
+    </style>
+
+    <style name="ThemeOverlay.MyApp.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog" />
+    <style name="ThemeOverlay.MyApp.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog" />
+    <style name="Widget.MyApp.PopupMenu" parent="Widget.Material3.PopupMenu" />
+    <style name="Widget.MyApp.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="backgroundTint">?attr/colorSurfaceVariant</item>
+    </style>
+
+    <style name="ThemeOverlay.MyApp.SystemDefault" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MyApp.MaterialAlertDialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.MyApp.BottomSheet</item>
+        <item name="popupMenuStyle">@style/Widget.MyApp.PopupMenu</item>
+        <item name="snackbarStyle">@style/Widget.MyApp.Snackbar</item>
     </style>
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.MaterialComponents.Dark.ActionBar" />
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.MaterialComponents">

@@ -37,7 +37,6 @@ package modder.hub.dexeditor.views;
 
 import android.animation.LayoutTransition;
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -48,10 +47,11 @@ import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion;
 import io.github.rosemoe.sora.widget.component.CompletionLayout;
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
@@ -119,7 +119,7 @@ public class CustomCompletionLayout implements CompletionLayout {
 		// Setup background
 		GradientDrawable gd = new GradientDrawable();
 		gd.setCornerRadius(0);
-		gd.setColor(Color.WHITE);
+		gd.setColor(ThemeAttrs.surface(context));
 		rootLayout.setBackground(gd);
 		
 		setRootViewOutlineProvider(rootView);
@@ -132,7 +132,7 @@ public class CustomCompletionLayout implements CompletionLayout {
                 editorAutoCompletion.select(position);
             } catch (Exception e) {
                 e.printStackTrace(System.err);
-                Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT).show();
+                UIKit.toast(context, e.toString());
             }
         });
 		
@@ -144,7 +144,7 @@ public class CustomCompletionLayout implements CompletionLayout {
 		GradientDrawable gd = new GradientDrawable();
 		gd.setCornerRadius(0);
 		gd.setStroke(1, colorScheme.getColor(EditorColorScheme.COMPLETION_WND_CORNER));
-		gd.setColor(Color.WHITE);
+		gd.setColor(ThemeAttrs.surface(rootView.getContext()));
 		rootView.setBackground(gd);
 		
 		setRootViewOutlineProvider(rootView);

@@ -4,7 +4,6 @@ import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.text.format.Formatter;
@@ -20,8 +19,6 @@ import android.widget.TextView;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-import com.google.android.material.color.MaterialColors;
-
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
@@ -32,6 +29,7 @@ import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -87,11 +85,11 @@ public class FilePropertiesDialog {
         }
         if (!hasIcon) {
             propIcon.setImageResource(isFolder ? R.drawable.folder_24px : R.drawable.baseline_insert_drive_file_24);
-            propIcon.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+            propIcon.setColorFilter(ThemeAttrs.accent(context));
         }
         GradientDrawable iconBg = new GradientDrawable();
         iconBg.setShape(GradientDrawable.OVAL);
-        iconBg.setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, Color.GRAY));
+        iconBg.setColor(ThemeAttrs.surfaceVariant(context));
         propIcon.setBackground(iconBg);
         int iconPad = dp(10);
         propIcon.setPadding(iconPad, iconPad, iconPad, iconPad);
@@ -317,7 +315,7 @@ public class FilePropertiesDialog {
         TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
-        labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        labelView.setTextColor(ThemeAttrs.accent(context));
         labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
 
         TextView valueView = new TextView(context);

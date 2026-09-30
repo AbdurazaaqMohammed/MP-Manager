@@ -207,6 +207,8 @@ public class InspectOverlayManager {
         InspectOverlayView(Context context, InspectOverlayManager manager) {
             super(context);
             this.manager = manager;
+            io.github.abdurazaaqmohammed.core.ui.util.OverlayTheme theme =
+                    io.github.abdurazaaqmohammed.core.ui.UIKit.overlay(context);
 
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(2f);
@@ -215,11 +217,11 @@ public class InspectOverlayManager {
             fillPaint.setStyle(Paint.Style.FILL);
             fillPaint.setColor(Color.TRANSPARENT);
 
-            textPaint.setColor(Color.WHITE);
+            textPaint.setColor(theme.fg());
             textPaint.setTextSize(12f);
             textPaint.setFakeBoldText(true);
 
-            textBgPaint.setColor(Color.argb(180, 0, 0, 0));
+            textBgPaint.setColor(Color.argb(180, Color.red(theme.bg()), Color.green(theme.bg()), Color.blue(theme.bg())));
 
             highlightPaint.setStyle(Paint.Style.STROKE);
             highlightPaint.setStrokeWidth(4f);

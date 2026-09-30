@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -32,6 +33,10 @@ import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.theme.ActiveTheme;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
+import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
+import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -54,7 +59,7 @@ public class FileIconLoader {
     public FileIconLoader(MainActivity context, boolean isInZip) {
         this.context = context;
         this.isInZip = isInZip;
-        ensureCachedIcons(context.getResources(), context.theme);
+        ensureCachedIcons(context, context.getResources());
     }
 
     public static Drawable getCachedApkIcon() {
@@ -166,34 +171,39 @@ public class FileIconLoader {
         });
     }
 
-    private static void ensureCachedIcons(Resources res, int theme) {
+    private static void ensureCachedIcons(Context context, Resources res) {
         float density = res.getDisplayMetrics().density;
         int bucket = (int) (density * 4);
-        if (cachedIconTheme == theme && cachedIconBucket == bucket) return;
-        cachedIconTheme = theme;
+        if (cachedIconTheme == ThemeRegistry.getCurrentId(context).hashCode() && cachedIconBucket == bucket) return;
+        cachedIconTheme = ThemeRegistry.getCurrentId(context).hashCode();
         cachedIconBucket = bucket;
-        cachedFolderIcon  = badge(res, density, R.drawable.ic_folder_mt, 0xFF252525, false);
-        cachedApkIcon     = badge(res, density, R.drawable.apk_document_24px, 0xFF2E7D32, true);
-        cachedImageIcon   = badge(res, density, R.drawable.image_24px, 0xFF6A1B9A, true);
-        cachedVideoIcon   = badge(res, density, R.drawable.video_24px, 0xFFC62828, true);
-        cachedMusicIcon   = badge(res, density, R.drawable.music_24px, 0xFF00897B, true);
-        cachedArscIcon    = badge(res, density, R.drawable.stacks_24px, 0xFF9A6A00, true);
-        cachedDexIcon     = badge(res, density, R.drawable.code_24px, 0xFF549395, true);
-        cachedArchiveIcon = badge(res, density, R.drawable.baseline_folder_zip_24, 0xFFE65100, true);
-        cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, 0xFFAD1457, true);
-        cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, 0xFF1565C0, true);
+        // MT Manager draws every badge the same flat dark grey with a grey glyph
+        // on top, so only the glyph shape distinguishes the types. Both the badge
+        // and the glyph follow the theme, which is why they are re-read whenever
+        // the theme id or density changes.
+        int glyph = ThemeAttrs.onSurface(context);
+        cachedFolderIcon  = badge(res, density, R.drawable.ic_folder_mt, ThemeAttrs.iconFolder(context), glyph);
+        cachedApkIcon     = badge(res, density, R.drawable.apk_document_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedImageIcon   = badge(res, density, R.drawable.image_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedVideoIcon   = badge(res, density, R.drawable.video_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedMusicIcon   = badge(res, density, R.drawable.music_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedArscIcon    = badge(res, density, R.drawable.stacks_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedDexIcon     = badge(res, density, R.drawable.code_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedArchiveIcon = badge(res, density, R.drawable.baseline_folder_zip_24, ThemeAttrs.iconFile(context), glyph);
+        cachedPdfIcon     = badge(res, density, R.drawable.pdf_24px, ThemeAttrs.iconFile(context), glyph);
+        cachedTextIcon    = badge(res, density, R.drawable.baseline_text_snippet_24, ThemeAttrs.iconFile(context), glyph);
         cachedFileIcon    = badge(res, density, R.drawable.baseline_insert_drive_file_24,
-                theme == R.style.Theme_MyApp_Light ? 0xFF616161 : 0xFF424242, true);
+                ThemeAttrs.iconFile(context), glyph);
     }
 
-    private static Drawable badge(Resources res, float density, int glyphId, int bgColor, boolean whiteGlyph) {
+    private static Drawable badge(Resources res, float density, int glyphId, int bgColor, int glyphColor) {
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(6 * density);
         bg.setColor(bgColor);
         Drawable glyph = ResourcesCompat.getDrawable(res, glyphId, null);
         if (glyph != null) {
             glyph = glyph.mutate();
-            if (whiteGlyph) DrawableCompat.setTint(glyph, Color.WHITE);
+            DrawableCompat.setTint(glyph, glyphColor);
         } else {
             glyph = new ColorDrawable(Color.TRANSPARENT);
         }

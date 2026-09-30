@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.arsc;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -31,7 +32,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -40,8 +42,6 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.color.DynamicColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -77,7 +77,7 @@ import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class ArscEditorPlusActivity extends BaseActivity {
+public class ArscEditorPlusActivity extends ToolbarPage {
 
     public static final String MODE_PLUS = "plus";
     public static final String MODE_EDITOR = "editor";
@@ -91,7 +91,6 @@ public class ArscEditorPlusActivity extends BaseActivity {
     boolean batchRemove = false;
     boolean savedThisSession = false;
 
-    private MaterialToolbar toolbar;
     private TabLayout tabs;
     private ViewPager2 pager;
     static final int REQ_TEXT = 1757;
@@ -123,6 +122,53 @@ public class ArscEditorPlusActivity extends BaseActivity {
     private TextView batchLabel;
 
     @Override
+    protected View createBody(Context c) {
+        LinearLayout main = new LinearLayout(c);
+        main.setOrientation(LinearLayout.VERTICAL);
+        tabs = new TabLayout(c);
+        main.addView(tabs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        explorerPage = buildExplorerPage();
+        historyPage = buildHistoryPage();
+        searchPage = buildSearchPage();
+        stringsPage = buildStringsPage();
+        pager = new ViewPager2(c);
+        pager.setOffscreenPageLimit(3);
+        pager.setAdapter(new PagesAdapter(Arrays.asList(explorerPage, historyPage, searchPage, stringsPage)));
+        main.addView(pager, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        String[] titles = {getString(R.string.explorer), getString(R.string.history_tab), getString(R.string.search_tab), getString(R.string.strings_tab)};
+        new TabLayoutMediator(tabs, pager, (tab, position) -> tab.setText(titles[position])).attach();
+        batchBar = new LinearLayout(c);
+        batchBar.setOrientation(LinearLayout.HORIZONTAL);
+        batchBar.setGravity(Gravity.CENTER_VERTICAL);
+        int pad = dpPx(8);
+        batchBar.setPadding(pad, pad, pad, pad);
+        batchBar.setVisibility(View.GONE);
+        MaterialButton batchCancel = new MaterialButton(c);
+        batchCancel.setText("✕");
+        batchCancel.setOnClickListener(v -> exitBatchMode());
+        MaterialButton batchSelect = new MaterialButton(c);
+        batchSelect.setText("⛶");
+        batchSelect.setOnClickListener(v -> {
+            explorerAdapter.selectAll(true);
+            updateBatchLabel();
+        });
+        batchLabel = new TextView(c);
+        batchLabel.setTextSize(14);
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        labelParams.leftMargin = pad;
+        MaterialButton batchGo = new MaterialButton(c);
+        batchGo.setText(R.string.save);
+        batchGo.setOnClickListener(v -> onBatchGo());
+        batchBar.addView(batchCancel);
+        batchBar.addView(batchSelect);
+        batchBar.addView(batchLabel, labelParams);
+        batchBar.addView(batchGo);
+        batchGo.setTag("go");
+        main.addView(batchBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return main;
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mode = getIntent().getStringExtra("arscMode");
@@ -134,19 +180,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
             finish();
             return;
         }
-        buildShell(new File(path).getName());
-        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
-    }
-
-    private void buildShell(String fileName) {
-        FrameLayout root = new FrameLayout(this);
-        LinearLayout main = new LinearLayout(this);
-        main.setOrientation(LinearLayout.VERTICAL);
-        toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(modeTitle());
-        toolbar.setSubtitle(fileName);
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        MaterialToolbar toolbar = toolbar();
+        toolbar.setSubtitle(new File(path).getName());
         Menu menu = toolbar.getMenu();
         menu.add(0, R.id.arsc_menu_save, 0, "Save").setIcon(R.drawable.save_24px).setShowAsAction(1);
         menu.add(0, R.id.arsc_menu_more, 0, "More").setIcon(R.drawable.baseline_more_vert_24).setShowAsAction(1);
@@ -158,50 +193,12 @@ public class ArscEditorPlusActivity extends BaseActivity {
             showMainMenu();
             return true;
         });
-        main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        tabs = new TabLayout(this);
-        main.addView(tabs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        explorerPage = buildExplorerPage();
-        historyPage = buildHistoryPage();
-        searchPage = buildSearchPage();
-        stringsPage = buildStringsPage();
-        pager = new ViewPager2(this);
-        pager.setOffscreenPageLimit(3);
-        pager.setAdapter(new PagesAdapter(Arrays.asList(explorerPage, historyPage, searchPage, stringsPage)));
-        main.addView(pager, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        String[] titles = {getString(R.string.explorer), getString(R.string.history_tab), getString(R.string.search_tab), getString(R.string.strings_tab)};
-        new TabLayoutMediator(tabs, pager, (tab, position) -> tab.setText(titles[position])).attach();
-        batchBar = new LinearLayout(this);
-        batchBar.setOrientation(LinearLayout.HORIZONTAL);
-        batchBar.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dp(8);
-        batchBar.setPadding(pad, pad, pad, pad);
-        batchBar.setVisibility(View.GONE);
-        MaterialButton batchCancel = new MaterialButton(this);
-        batchCancel.setText("✕");
-        batchCancel.setOnClickListener(v -> exitBatchMode());
-        MaterialButton batchSelect = new MaterialButton(this);
-        batchSelect.setText("⛶");
-        batchSelect.setOnClickListener(v -> {
-            explorerAdapter.selectAll(true);
-            updateBatchLabel();
-        });
-        batchLabel = new TextView(this);
-        batchLabel.setTextSize(14);
-        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        labelParams.leftMargin = pad;
-        MaterialButton batchGo = new MaterialButton(this);
-        batchGo.setText(R.string.save);
-        batchGo.setOnClickListener(v -> onBatchGo());
-        batchBar.addView(batchCancel);
-        batchBar.addView(batchSelect);
-        batchBar.addView(batchLabel, labelParams);
-        batchBar.addView(batchGo);
-        batchGo.setTag("go");
-        main.addView(batchBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(main, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        setContentView(root);
         if (MODE_TRANSLATE.equals(mode)) pager.setCurrentItem(3, false);
+        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+    }
+
+    protected CharSequence pageTitle() {
+        return modeTitle();
     }
 
     private String modeTitle() {
@@ -344,7 +341,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 }
             });
         });
-        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = UIKit.dialog(this)
                 .setTitle(R.string.search_resources)
                 .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -502,7 +499,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         root.addView(cbCase);
         root.addView(cbRegex);
         root.addView(cbExact);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.filter_strings)
                 .setView(root)
                 .setNegativeButton(R.string.clear, (d, w) -> {
@@ -553,7 +550,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         root.addView(cbCase);
         root.addView(cbRegex);
         root.addView(cbExact);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.replace_in_all_strings)
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -618,7 +615,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         input.setText(stringsAdapter.pendingValue(re));
         input.setSingleLine(false);
         String name = re.getName();
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(name)
                 .setView(UiFields.wrap(this, input, "Value", 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -696,7 +693,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
     void markDirty() {
         dirty = true;
-        toolbar.setSubtitle((data != null && data.arscFile != null ? data.arscFile.getName() : "") + " *");
+        toolbar().setSubtitle((data != null && data.arscFile != null ? data.arscFile.getName() : "") + " *");
     }
 
     private void saveNow() {
@@ -715,7 +712,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     dirty = false;
                     if (data.apkFile != null) savedThisSession = true;
-                    toolbar.setSubtitle(data.arscFile.getName());
+                    toolbar().setSubtitle(data.arscFile.getName());
                     rebuildTree();
                     refreshStrings();
                     historyAdapter.refresh();
@@ -740,11 +737,11 @@ public class ArscEditorPlusActivity extends BaseActivity {
     }
 
     private void showMainMenu() {
-        View anchor = toolbar.findViewById(R.id.arsc_menu_more);
+        View anchor = toolbar().findViewById(R.id.arsc_menu_more);
 
         PopupMenu menu = anchor != null
                 ? new PopupMenu(this, anchor)
-                : new PopupMenu(this, toolbar, Gravity.END);
+                : new PopupMenu(this, toolbar(), Gravity.END);
 
         menu.inflate(R.menu.arsc_plus_menu);
 
@@ -805,7 +802,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
             finishWithApkResult();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.unsaved_changes)
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> saveNow(this::finishWithApkResult))
@@ -834,7 +831,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         preview.setPadding(pad, pad, pad, pad);
         ScrollView scroll = new ScrollView(this);
         scroll.addView(preview);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(re.getType() + "/" + re.getName())
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -903,7 +900,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
             root.addView(box);
             input = field;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.edit_X, re.getName()))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -954,7 +951,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         }
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.translatex, re.getName()))
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1043,7 +1040,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
 
     private void confirmDeleteConfig(TypeBlock tb) {
         String label = ArscData.configLabel(tb);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.deletex, label))
                 .setMessage(R.string.delete_entry_info)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1093,7 +1090,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         input.setText(prefix);
         input.setSelection(prefix.length());
         input.setSingleLine(true);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.add_to_x, type))
                 .setView(UiFields.wrap(this, input, getString(R.string.name), 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1121,7 +1118,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
     }
 
     private void confirmDeleteType(String pkgName, String type) {
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.deletex, type))
                 .setMessage(R.string.delete_entry_info)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1304,7 +1301,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         }
         if (batchRemove) {
             final List<ResourceEntry> entries = all;
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(getString(R.string.delete_x_entries, entries.size()))
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(R.string .delete, (d, w) -> {
@@ -1357,7 +1354,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         EditText input = new EditText(this);
         input.setText("arsc_export");
         input.setSingleLine(true);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.export_name)
                 .setView(UiFields.wrap(this, input, getString(R.string.name), 16))
                 .setNegativeButton(android.R.string.cancel, null)

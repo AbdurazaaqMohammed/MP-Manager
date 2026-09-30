@@ -45,7 +45,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
@@ -89,6 +88,8 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
@@ -376,7 +377,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             holder.fileNameView.setText(fileName = (position == 0 ? ".." : file.getName()));
         }
 
-        convertView.setBackgroundColor(selectedPositions.contains(position) ? Color.DKGRAY : Color.TRANSPARENT);
+        convertView.setBackgroundColor(selectedPositions.contains(position) ? ThemeAttrs.selection(context) : Color.TRANSPARENT);
         int finalPosition = position;
         new Thread(() -> {
             View.OnClickListener originalClickListener;
@@ -560,7 +561,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     int edge = (int) (12 * density + 0.5f);
                     menuList.setPadding(edge, menuList.getPaddingTop(), edge, menuList.getPaddingBottom());
                     menuSheet = null;
-                    menuDialog = new MaterialAlertDialogBuilder(context).setView(menuView).create();
+                    menuDialog = UIKit.dialog(context).setView(menuView).create();
                 } else {
                     menuList.setLayoutManager(new LinearLayoutManager(context));
                     menuSheet = new BottomSheetDialog(context);

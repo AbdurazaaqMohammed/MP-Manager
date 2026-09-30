@@ -35,7 +35,6 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.io.File;
@@ -48,6 +47,7 @@ import java.util.UUID;
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 public class MergeUtil {
     public static class Options {
         public boolean autosign = true;
@@ -224,7 +224,7 @@ public class MergeUtil {
             if (checked) applyDeviceSelection.run();
         });
 
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle("AntiSplit")
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)

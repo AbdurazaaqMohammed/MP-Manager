@@ -20,7 +20,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.apkeditor.Util;
 
 import net.lingala.zip4j.ZipFile;
@@ -404,7 +403,7 @@ public class FileOperationsHelper {
             input.setText(defaultName);
             input.setSelection(0, defaultName.length());
             input.requestFocus();
-            MaterialAlertDialogBuilder builder = dialogUtil.getDialogBuilder()
+            AlertDialog.Builder builder = dialogUtil.getDialogBuilder()
                     .setTitle(context.rss.getString(R.string.enter_name_for_copy))
                     .setView(view)
                     .setPositiveButton(android.R.string.ok, (d, w) -> {

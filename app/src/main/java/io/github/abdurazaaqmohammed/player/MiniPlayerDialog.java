@@ -11,10 +11,10 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class MiniPlayerDialog {
 
@@ -92,7 +92,7 @@ public class MiniPlayerDialog {
             @Override public void onStopTrackingTouch(SeekBar sb) {}
         });
 
-        dialog = new MaterialAlertDialogBuilder(activity)
+        dialog = UIKit.dialog(activity)
                 .setView(view)
                 .setOnDismissListener(d -> {
                     isShowing = false;

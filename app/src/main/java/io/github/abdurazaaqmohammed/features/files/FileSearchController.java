@@ -23,7 +23,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -44,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * File search + find-in-files dialogs extracted from MainActivity.
@@ -229,7 +229,7 @@ public class FileSearchController {
         scope.setText(startDir.getPath());
         scope.setTextSize(12);
         root.addView(scope);
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.find_in_files))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)

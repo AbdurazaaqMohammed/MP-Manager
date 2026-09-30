@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -34,6 +33,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.theme.ActiveTheme;
+import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
+import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 
@@ -51,7 +53,7 @@ public class PickerIconLoader {
 
     public PickerIconLoader(Context context) {
         this.context = context;
-        ensureCachedIcons(context.getResources());
+        ensureCachedIcons(context, context.getResources());
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
@@ -138,12 +140,11 @@ public class PickerIconLoader {
         });
     }
 
-    private static void ensureCachedIcons(Resources res) {
-        boolean night = (res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                == Configuration.UI_MODE_NIGHT_YES;
-        if (cachedNight == night && cachedFolderIcon != null) return;
-        cachedNight = night;
-        int color = night ? Color.WHITE : Color.BLACK;
+    private static void ensureCachedIcons(Context context, Resources res) {
+        boolean light = ActiveTheme.isLight(context);
+        if (cachedNight == light && cachedFolderIcon != null) return;
+        cachedNight = light;
+        int color = light ? Color.BLACK : Color.WHITE;
         cachedFolderIcon  = tintAndCache(res, R.drawable.folder_24px, color);
         cachedApkIcon     = tintAndCache(res, R.drawable.apk_document_24px, color);
         cachedImageIcon   = tintAndCache(res, R.drawable.image_24px, color);

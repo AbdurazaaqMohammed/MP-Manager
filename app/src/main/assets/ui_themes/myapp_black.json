@@ -1,0 +1,17 @@
+{
+  "name": "Black",
+  "nightMode": "dark",
+  "colors": {
+    "background": "#000000",
+    "surface": "#000000",
+    "surfaceVariant": "#000000",
+    "surfaceContainer": "#000000",
+    "toolbar": "#000000",
+    "onSurface": "#B0B0B0",
+    "onSurfaceVariant": "#707070",
+    "outline": "#303030",
+    "selection": "#1B2E3A",
+    "primary": "#1976D2",
+    "onPrimary": "#FFFFFF"
+  }
+}

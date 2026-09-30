@@ -29,7 +29,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,6 +49,7 @@ import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class ImageViewerActivity extends BaseActivity {
 
@@ -135,7 +135,7 @@ public class ImageViewerActivity extends BaseActivity {
                 currName = currPath.substring(currPath.lastIndexOf(File.separatorChar) + 1);
                 sb.append(currName);
             }
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(R.string.confirm)
                     .setMessage(getString(R.string.confirm_delete_f, sb))
                     .setNegativeButton(android.R.string.cancel, null)
@@ -341,7 +341,7 @@ public class ImageViewerActivity extends BaseActivity {
             sb.append("(No EXIF data available)\n");
         }
 
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.image_properties)
                 .setMessage(sb)
                 .setPositiveButton(android.R.string.ok, null)
@@ -524,7 +524,7 @@ public class ImageViewerActivity extends BaseActivity {
                 text.setText(report.trim());
                 ScrollView scroll = new ScrollView(this);
                 scroll.addView(text);
-                new MaterialAlertDialogBuilder(this)
+                UIKit.dialog(this)
                         .setTitle(getString(R.string.native_required))
                         .setView(scroll)
                         .setPositiveButton(android.R.string.ok, null)

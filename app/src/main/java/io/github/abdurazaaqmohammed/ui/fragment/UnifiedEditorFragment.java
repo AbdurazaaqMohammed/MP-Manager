@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -28,6 +27,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.arsc.ArscTextActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.theme.ActiveTheme;
+import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
@@ -42,7 +44,6 @@ import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.eclipse.tm4e.core.registry.IGrammarSource;
 import org.eclipse.tm4e.core.registry.IThemeSource;
@@ -1132,7 +1133,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void showSyntaxDialog() {
         final String[] syntaxes = requireContext().getResources().getStringArray(R.array.editor_syntaxes);
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(R.string.choose_syntax)
                 .setItems(syntaxes, (dialog, which) -> Extensions.showMessage(requireActivity(), getString(R.string.syntax_set_to, syntaxes[which])))
                 .show();
@@ -1141,7 +1142,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     public void showJumpToLineDialog() {
         EditText input = new EditText(requireContext());
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(R.string.jump_to_line)
                 .setView(UiFields.wrap(requireContext(), input, getString(R.string.jump_to_line), 16))
                 .setPositiveButton(R.string.go, (dialog, which) -> {
@@ -1159,7 +1160,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private void showCharsetDialog(boolean reload) {
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(getString(reload ? R.string.reload_with_charset : R.string.set_encoding))
                 .setItems(CHARSETS, (dialog, which) -> {
                     currentCharset = CHARSETS[which];
@@ -1169,7 +1170,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     private void showLinebreakDialog() {
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(R.string.set_linebreak_type)
                 .setItems(LINEBREAKS, (dialog, which) -> {
                     LineSeparator ls = which == 0 ? LineSeparator.LF : which == 1 ? LineSeparator.CRLF : LineSeparator.CR;
@@ -1185,7 +1186,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         int chars = text.length();
         int words = text.isEmpty() ? 0 : text.trim().split("\\s+").length;
         int lines = editor.getLineCount();
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(R.string.stats)
                 .setMessage(getString(R.string.statss, bytes, chars, words, lines))
                 .setPositiveButton(android.R.string.ok, null)
@@ -1432,7 +1433,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         intent.addCategory("android.intent.category.DEFAULT");
         intent.setType("text/plain");
         final List<ResolveInfo> resolveInfoList = packageManager.queryIntentActivities(intent, 0);
-        new MaterialAlertDialogBuilder(requireContext())
+        UIKit.dialog(requireContext())
                 .setTitle(R.string.available_tl)
                 .setSingleChoiceItems(resolveInfoList.stream()
                         .map(ri -> ri.activityInfo.applicationInfo.loadLabel(packageManager) + " - " + ri.loadLabel(packageManager))
@@ -1456,9 +1457,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         try {
             initTMStatic(context);
             ThemeRegistry registry = ThemeRegistry.getInstance();
-            boolean dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-            int theme = PreferenceManager.getDefaultSharedPreferences(context).getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-            String themeName = theme == R.style.Theme_MyApp_Light ? "light.json" : "dark.json";
+            String themeName = ActiveTheme.isLight(context) ? "light.json" : "dark.json";
             IThemeSource themeSource = null;
             try {
                 themeSource = IThemeSource.fromInputStream(context.getAssets().open( "themes/" + themeName), themeName, null);

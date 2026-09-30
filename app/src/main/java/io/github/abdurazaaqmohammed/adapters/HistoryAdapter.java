@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.adapters;
 
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +19,7 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 
 public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
@@ -64,7 +64,7 @@ public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
         fileIconView.setImageDrawable(ResourcesCompat.getDrawable(context.rss,
                 entry.isZip() ? R.drawable.baseline_folder_zip_24 : R.drawable.folder__61764____the_noun_project,
                 context.getTheme()));
-        ColorUtil.changeImageColor(fileIconView.getDrawable(), (context.theme == R.style.Theme_MyApp_Light) ? Color.BLACK : Color.WHITE);
+        ColorUtil.changeImageColor(fileIconView.getDrawable(), ThemeAttrs.onSurface(context));
         return convertView;
     }
 }

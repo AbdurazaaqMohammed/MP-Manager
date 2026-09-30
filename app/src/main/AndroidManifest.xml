@@ -96,13 +96,8 @@
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.ToolsHubActivity"
-            android:exported="true"
-            android:label="Tools Kit">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:label="Tools Kit" />
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.ToolRunnerActivity"

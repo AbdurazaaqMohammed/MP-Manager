@@ -21,7 +21,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
 import java.util.Collections;
@@ -37,6 +36,7 @@ import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -495,7 +495,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             callbacks.onEntryLongPressed(entry, v);
             return true;
         });
-        int surfaceColor = MaterialColors.getColor(view, com.google.android.material.R.attr.colorSurfaceContainer, Color.TRANSPARENT);
+        int surfaceColor = ThemeAttrs.surfaceVariant(view.getContext());
         if (view instanceof MaterialCardView card) card.setCardBackgroundColor(surfaceColor);
         return view;
     }

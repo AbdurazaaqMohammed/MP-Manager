@@ -14,7 +14,6 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
@@ -42,6 +41,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class ToolsHubActivity extends BaseActivity {
     private RecyclerView grid;
@@ -103,13 +103,13 @@ public class ToolsHubActivity extends BaseActivity {
     }
 
     private void refreshCatalog() {
-        Toast.makeText(this, "Refreshing pack catalog…", Toast.LENGTH_SHORT).show();
+        UIKit.toast(this, "Refreshing pack catalog…");
         PackCatalog.refreshAsync(this, fresh -> runOnUiThread(() -> {
             if (fresh != null && !fresh.isEmpty()) {
                 catalog = fresh;
-                Toast.makeText(this, "Catalog updated", Toast.LENGTH_SHORT).show();
+                UIKit.toast(this, "Catalog updated");
             } else {
-                Toast.makeText(this, "Could not refresh, keeping cached catalog", Toast.LENGTH_SHORT).show();
+                UIKit.toast(this, "Could not refresh, keeping cached catalog");
             }
             rebuildPacks();
         }));
@@ -176,7 +176,7 @@ public class ToolsHubActivity extends BaseActivity {
             msg.append("\n\nCertificate (SHA-256):\n").append(shortDigest(digest));
             msg.append("\n\nStatus: ").append(trusted ? "Trusted" : "Not trusted");
             androidx.appcompat.app.AlertDialog.Builder builder =
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                    UIKit.dialog(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
@@ -267,7 +267,7 @@ public class ToolsHubActivity extends BaseActivity {
         if (installed) {
             remove.setVisibility(View.VISIBLE);
             remove.setOnClickListener(v -> {
-                new androidx.appcompat.app.AlertDialog.Builder(this)
+                UIKit.dialog(this)
                         .setTitle(pack.title)
                         .setMessage("Remove this pack and its " + pack.tools.size() + " tools?")
                         .setNegativeButton(android.R.string.cancel, null)
@@ -342,16 +342,14 @@ public class ToolsHubActivity extends BaseActivity {
 
     private void createToolShortcut(PackDescriptor.ToolMeta tool) {
         if (android.os.Build.VERSION.SDK_INT < 26) {
-            Toast.makeText(this, getString(R.string.plugin_shortcut_old_android),
-                    Toast.LENGTH_SHORT).show();
+            UIKit.toast(this, getString(R.string.plugin_shortcut_old_android));
             return;
         }
         try {
             android.content.pm.ShortcutManager sm =
                     getSystemService(android.content.pm.ShortcutManager.class);
             if (sm == null || !sm.isRequestPinShortcutSupported()) {
-                Toast.makeText(this, getString(R.string.plugin_shortcut_unsupported),
-                        Toast.LENGTH_SHORT).show();
+                UIKit.toast(this, getString(R.string.plugin_shortcut_unsupported));
                 return;
             }
             Intent intent = new Intent(this, ToolRunnerActivity.class);
@@ -367,8 +365,7 @@ public class ToolsHubActivity extends BaseActivity {
                             .setIntent(intent)
                             .build();
             sm.requestPinShortcut(info, null);
-            Toast.makeText(this, getString(R.string.plugin_shortcut_done),
-                    Toast.LENGTH_SHORT).show();
+            UIKit.toast(this, getString(R.string.plugin_shortcut_done));
         } catch (Exception ignored) {
         }
     }
@@ -384,17 +381,17 @@ public class ToolsHubActivity extends BaseActivity {
             if (files == null || files.length == 0 || files[0] == null) return;
             File picked = new File(files[0]);
             if (!picked.getName().toLowerCase().endsWith(".apk")) {
-                Toast.makeText(this, "Not an APK file", Toast.LENGTH_SHORT).show();
+                UIKit.toast(this, "Not an APK file");
                 return;
             }
             new Thread(() -> {
                 String error = PackManager.installFromFile(this, pack, picked);
                 runOnUiThread(() -> {
                     if (error == null) {
-                        Toast.makeText(this, pack.title + " installed", Toast.LENGTH_SHORT).show();
+                        UIKit.toast(this, pack.title + " installed");
                         rebuildPacks();
                     } else {
-                        Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                        UIKit.toast(this, error, true);
                     }
                 });
             }).start();

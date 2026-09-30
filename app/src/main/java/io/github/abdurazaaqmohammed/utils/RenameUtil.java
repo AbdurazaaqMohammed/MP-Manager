@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -19,8 +18,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
 import net.lingala.zip4j.ZipFile;
@@ -45,6 +42,8 @@ import java.util.regex.Pattern;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 
 public class RenameUtil {
 
@@ -93,7 +92,7 @@ public class RenameUtil {
             view.findViewById(quickButtonIds[i]).setOnClickListener(v -> insertAtCursor(patternInput, token));
         }
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setTitle(context.rss.getString(R.string.rename_numitems, items.size()))
+        AlertDialog.Builder builder = UIKit.dialog(context).setTitle(context.rss.getString(R.string.rename_numitems, items.size()))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.preview, null)
@@ -124,7 +123,7 @@ public class RenameUtil {
         container.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (420 * context.getResources().getDisplayMetrics().density + 0.5f)));
         container.addView(listView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle(context.getString(R.string.rename_preview))
                 .setView(container)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -398,7 +397,7 @@ public class RenameUtil {
             super(context, R.layout.item_rename_preview, plans);
             this.ctx = context;
             this.plans = plans;
-            this.defaultColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE);
+            this.defaultColor = ThemeAttrs.accent(context);
         }
 
         @NonNull
@@ -411,7 +410,7 @@ public class RenameUtil {
             oldView.setText(p.originalName);
             if (p.error != null) {
                 newView.setText(ctx.getString(R.string.error_x, p.error));
-                newView.setTextColor(0xFFE53935);
+                newView.setTextColor(ThemeAttrs.error(ctx));
             } else if (p.noop) {
                 newView.setText(ctx.getString(R.string.x_unchanged, p.newName));
                 newView.setTextColor(defaultColor);

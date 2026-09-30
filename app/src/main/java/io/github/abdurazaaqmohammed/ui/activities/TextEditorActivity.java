@@ -23,8 +23,6 @@ import com.apk.axml.ResourceTableParser;
 import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
 import com.apk.axml.serializableItems.ResEntry;
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -39,6 +37,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
@@ -327,8 +327,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             EditorTab tab = tabs.get(position);
             holder.title.setText(getTabLabel(tab));
             holder.title.setTextColor(position == currentIndex
-                    ? MaterialColors.getColor(holder.title, com.google.android.material.R.attr.colorPrimary, Color.BLUE)
-                    : MaterialColors.getColor(holder.title, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+                    ? ThemeAttrs.accent(TextEditorActivity.this)
+                    : ThemeAttrs.onSurface(TextEditorActivity.this));
             holder.close.setOnClickListener(v -> {
                 int pos = holder.getBindingAdapterPosition();
                 if (pos >= 0) closeTab(pos);
@@ -578,7 +578,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             File cachedFile = isFromFile ? new File(getCacheDir(), (tab.file.getPath()).replace(File.separator, ".")) : null;
             if (cachedFile != null && cachedFile.exists() && cachedFile.length() != tab.file.length()) {
                 final String fileText = readTabText(tab);
-                runOnUiThread(() -> new MaterialAlertDialogBuilder(this).setMessage(R.string.rest_chang).setTitle(R.string.unsaved_changes_found)
+                runOnUiThread(() -> UIKit.dialog(this).setMessage(R.string.rest_chang).setTitle(R.string.unsaved_changes_found)
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                             try {
                                 FileUtils.copyFile(cachedFile, tab.file);
@@ -654,7 +654,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             removeTab(position);
             return;
         }
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
+        UIKit.dialog(this).setTitle(R.string.changes_made)
                 .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                     if (position == currentIndex) saveFile(() -> removeTabRef(tab)); // editor holds the latest text
                     else saveTabText(tab, tab.content, () -> removeTabRef(tab));       // content was stashed when switching away
@@ -680,7 +680,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         if (tab.file != null && tab.rootOriginalPath != null) {
             if (RootStaging.needsWriteConfirm(tab.rootOriginalPath)) {
                 String target = tab.rootOriginalPath;
-                new MaterialAlertDialogBuilder(this)
+                UIKit.dialog(this)
                         .setTitle(getString(R.string.editor_write_system))
                         .setMessage(getString(R.string.editor_write_system_msg, target))
                         .setPositiveButton(android.R.string.ok, (d, w) -> saveTabTextRoot(tab, text, onDone))
@@ -724,7 +724,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             try {
                 if (text.isEmpty() && originalKnownNonEmpty(tab)) {
                     String target = tab.rootOriginalPath;
-                    runOnUiThread(() -> new MaterialAlertDialogBuilder(this)
+                    runOnUiThread(() -> UIKit.dialog(this)
                             .setTitle(getString(R.string.editor_overwrite_empty))
                             .setMessage(getString(R.string.editor_overwrite_empty_msg, target))
                             .setPositiveButton(getString(R.string.editor_overwrite), (d, w) -> new Thread(() -> doRootWriteBack(tab, text, onDone)).start())
@@ -831,7 +831,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     public void onCloseRequested() {
         EditorTab t = getCurrentTab();
         if (t != null && t.modified) {
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
+            UIKit.dialog(this).setTitle(R.string.changes_made)
                     .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                         saveFile(() -> {
                             manualFinish = true;
@@ -884,7 +884,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         UnifiedEditorFragment f = getFragment();
         EditorTab t = getCurrentTab();
         if (t != null && t.modified && f != null && f.getEditor() != null) {
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.changes_made)
+            UIKit.dialog(this).setTitle(R.string.changes_made)
                     .setPositiveButton(R.string.save_and_exit, (dialog, which) -> {
                         saveFile(() -> {
                             manualFinish = true;

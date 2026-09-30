@@ -1,6 +1,5 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -13,11 +12,11 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 
 public class PermissionsEditorHelper {
@@ -53,7 +52,7 @@ public class PermissionsEditorHelper {
         colHeader.setText(R.string.read_write_exec);
         colHeader.setTypeface(Typeface.MONOSPACE);
         colHeader.setTextSize(12);
-        colHeader.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+        colHeader.setTextColor(ThemeAttrs.onSurfaceVariant(context));
         colHeader.setPadding(dp(8), 0, 0, dp(4));
         root.addView(colHeader);
 
@@ -103,7 +102,7 @@ public class PermissionsEditorHelper {
         symbolicPreview.setText(getSymbolicString());
         symbolicPreview.setTypeface(Typeface.MONOSPACE);
         symbolicPreview.setTextSize(14);
-        symbolicPreview.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        symbolicPreview.setTextColor(ThemeAttrs.accent(context));
         symbolicPreview.setPadding(0, dp(8), 0, dp(4));
         root.addView(symbolicPreview);
 
@@ -247,7 +246,7 @@ public class PermissionsEditorHelper {
         labelView.setText(label);
         labelView.setTextSize(13);
         labelView.setTypeface(Typeface.MONOSPACE);
-        labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+        labelView.setTextColor(ThemeAttrs.onSurfaceVariant(context));
         labelView.setPadding(dp(8), 0, dp(4), 0);
         labelView.setLayoutParams(new LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.WRAP_CONTENT));
 

@@ -19,12 +19,12 @@ import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import io.github.abdurazaaqmohammed.adapters.BottomBarButtonAdapter;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
@@ -109,7 +109,7 @@ public class EditorSettingsActivity extends BaseActivity {
 
                         @Override
                         public void onDelete(int position) {
-                            new MaterialAlertDialogBuilder(getContext())
+                            UIKit.dialog(getContext())
                                     .setTitle(R.string.delete_button)
                                     .setMessage(getString(R.string.confirm_delete_f, "this button"))
                                     .setPositiveButton(R.string.delete, (dialog, which) -> {
@@ -123,7 +123,7 @@ public class EditorSettingsActivity extends BaseActivity {
                     });
             listView.setAdapter(adapter);
 
-            new MaterialAlertDialogBuilder(getContext())
+            UIKit.dialog(getContext())
                     .setTitle(R.string.manage_bottom_bar)
                     .setView(listView)
                     .setPositiveButton(R.string.add, (dialog, which) -> showAddEditButtonDialog(finalArray, -1, null, () -> {
@@ -214,7 +214,7 @@ public class EditorSettingsActivity extends BaseActivity {
                 longDataInput2.setText(existing.optString("longData2", ""));
             }
 
-            new MaterialAlertDialogBuilder(getContext())
+            UIKit.dialog(getContext())
                     .setTitle(existing == null ? getContext().getString(R.string.edsettings_add) : getContext().getString(R.string.edsettings_edit))
                     .setView(scrollView)
                     .setPositiveButton(getContext().getString(R.string.save), (dialog, which) -> {

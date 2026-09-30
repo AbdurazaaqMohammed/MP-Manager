@@ -13,7 +13,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,6 +28,7 @@ import net.lingala.zip4j.model.FileHeader;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -55,7 +55,7 @@ public class ChecksumDialogs {
         TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
-        labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+        labelView.setTextColor(ThemeAttrs.onSurfaceVariant(context));
         labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
 
         TextView valueView = new TextView(context);
@@ -63,7 +63,7 @@ public class ChecksumDialogs {
         valueView.setTypeface(Typeface.MONOSPACE);
         valueView.setTextSize(12);
         valueView.setTextIsSelectable(true);
-        valueView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, Color.WHITE));
+        valueView.setTextColor(ThemeAttrs.onSurface(context));
         valueView.setOnLongClickListener(v -> {
             CopyUtil.copyToClipboard(context, valueView.getText());
             return true;
@@ -73,7 +73,7 @@ public class ChecksumDialogs {
         ImageButton copyButton = new ImageButton(context);
         copyButton.setImageResource(R.drawable.baseline_content_copy_24);
         copyButton.setBackgroundColor(Color.TRANSPARENT);
-        copyButton.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        copyButton.setColorFilter(ThemeAttrs.accent(context));
         int pad = dp(8);
         copyButton.setPadding(pad, pad, pad, pad);
         copyButton.setContentDescription(context.getString(android.R.string.copy));
@@ -92,7 +92,7 @@ public class ChecksumDialogs {
         header.setText(fileName);
         header.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
         header.setTypeface(null, Typeface.BOLD);
-        header.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        header.setTextColor(ThemeAttrs.accent(context));
         header.setPadding(0, dp(10), 0, dp(4));
         container.addView(header);
     }
@@ -105,7 +105,7 @@ public class ChecksumDialogs {
         TextView title = new TextView(context);
         title.setText(R.string.verify);
         title.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
-        title.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        title.setTextColor(ThemeAttrs.accent(context));
         title.setPadding(0, dp(10), 0, dp(4));
         container.addView(title);
         EditText input = new EditText(context);
@@ -147,10 +147,10 @@ public class ChecksumDialogs {
             }
             if (match != null) {
                 result.setText(context.getString(R.string.hash_match, match));
-                result.setTextColor(Color.rgb(0x4C, 0xAF, 0x50));
+                result.setTextColor(ThemeAttrs.accent(context));
             } else {
                 result.setText(context.getString(R.string.hash_no_match));
-                result.setTextColor(Color.rgb(0xF4, 0x43, 0x36));
+                result.setTextColor(ThemeAttrs.error(context));
             }
         });
     }
@@ -308,7 +308,7 @@ public class ChecksumDialogs {
     }
 
     private void addVerifyRow(LinearLayout container, HashUtil.CheckResult r) {
-        int color = r.valid ? Color.rgb(0x4C, 0xAF, 0x50) : Color.rgb(0xF4, 0x43, 0x36);
+        int color = r.valid ? ThemeAttrs.accent(context) : ThemeAttrs.error(context);
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.TOP);
@@ -406,7 +406,7 @@ public class ChecksumDialogs {
                         String a = h1.get(algo);
                         String b = h2.get(algo);
                         boolean same = a != null && a.equals(b);
-                        int color = same ? Color.rgb(0x4C, 0xAF, 0x50) : Color.rgb(0xF4, 0x43, 0x36);
+                        int color = same ? ThemeAttrs.accent(context) : ThemeAttrs.error(context);
                         LinearLayout row = new LinearLayout(context);
                         row.setOrientation(LinearLayout.HORIZONTAL);
                         row.setGravity(Gravity.TOP);

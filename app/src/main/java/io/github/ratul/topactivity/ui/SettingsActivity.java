@@ -16,6 +16,7 @@
  */
 package io.github.ratul.topactivity.ui;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -228,7 +229,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void showPermissionDialog(@StringRes int titleRes, String message, Runnable onSettings) {
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(titleRes)
                 .setMessage(message)
                 .setPositiveButton(R.string.settings, (dialog, which) -> {

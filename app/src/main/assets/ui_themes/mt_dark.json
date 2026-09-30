@@ -1,0 +1,19 @@
+{
+  "name": "MT Dark",
+  "nightMode": "dark",
+  "colors": {
+    "toolbar": "#151515",
+    "background": "#303030",
+    "surface": "#303030",
+    "surfaceVariant": "#303030",
+    "surfaceContainer": "#303030",
+    "onSurface": "#CDCDCD",
+    "onSurfaceVariant": "#C5C5C5",
+    "outline": "#151515",
+    "selection": "#224452",
+    "primary": "#1976D2",
+    "onPrimary": "#FFFFFF",
+    "iconFolder": "#151515",
+    "iconFile": "#151515"
+  }
+}

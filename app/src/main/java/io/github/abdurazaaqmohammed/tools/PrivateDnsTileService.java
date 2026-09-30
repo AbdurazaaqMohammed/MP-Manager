@@ -8,10 +8,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
-import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.DnsManager;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class PrivateDnsTileService extends TileService {
     public void onStartListening() {
@@ -49,9 +49,9 @@ public class PrivateDnsTileService extends TileService {
             final DnsManager.DnsProfile result = applied;
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (result != null) {
-                    Toast.makeText(this, getString(R.string.dns_applied, result.name), Toast.LENGTH_SHORT).show();
+                    UIKit.toast(this, getString(R.string.dns_applied, result.name));
                 } else {
-                    Toast.makeText(this, getString(R.string.dns_switch_failed), Toast.LENGTH_SHORT).show();
+                    UIKit.toast(this, getString(R.string.dns_switch_failed));
                 }
                 refresh();
             });

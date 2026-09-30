@@ -23,7 +23,6 @@ import androidx.fragment.app.DialogFragment;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -34,6 +33,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.commandhelper.ProfileManager;
 import io.github.abdurazaaqmohammed.commandhelper.ProfileManager.Profile;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 
 public class CommandHelperSettingsDialog extends DialogFragment {
     private ProfileManager profileManager;
@@ -70,7 +71,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
 
         View sep = new View(getActivity());
         sep.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
-        sep.setBackgroundColor(0x1A000000);
+        sep.setBackgroundColor(ThemeAttrs.outline(getActivity()));
         root.addView(sep);
 
         TextView profilesTitle = new TextView(getActivity());
@@ -106,7 +107,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
         addBtn.setOnClickListener(v -> showAddDialog());
         root.addView(addBtn);
 
-        return new MaterialAlertDialogBuilder(getActivity())
+        return UIKit.dialog(getActivity())
                 .setTitle(R.string.settings)
                 .setView(root)
                 .setPositiveButton(R.string.close, null)
@@ -138,7 +139,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
     }
 
     private void showProfileDialog(int index, String existingName, String existingCommand) {
-        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(getActivity());
+        AlertDialog.Builder builder = UIKit.dialog(getActivity());
         builder.setTitle(index < 0 ? R.string.add_profile : R.string.edit_profile);
         LinearLayout layout = new LinearLayout(getActivity());
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -167,7 +168,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
         layout.addView(placeholderHelpBtn);
         placeholderHelpBtn.setOnClickListener(v -> {
             Context ctx = getContext();
-            MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(ctx);
+            AlertDialog.Builder dialogBuilder = UIKit.dialog(ctx);
             dialogBuilder.setTitle(R.string.command_template_placeholders);
 
             LinearLayout container = new LinearLayout(ctx);
@@ -240,7 +241,7 @@ public class CommandHelperSettingsDialog extends DialogFragment {
     }
 
     private void showDeleteDialog(int index) {
-        new MaterialAlertDialogBuilder(getActivity())
+        UIKit.dialog(getActivity())
                 .setTitle(R.string.delete_profile)
                 .setMessage(getContext().getString(R.string.delete_confirm, profiles.get(index).name))
                 .setPositiveButton(R.string.save, (d, w) -> {

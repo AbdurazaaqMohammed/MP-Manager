@@ -2,7 +2,6 @@ package io.github.abdurazaaqmohammed.ui;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -15,8 +14,6 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.common.io.Files;
 
 import java.nio.charset.StandardCharsets;
@@ -25,6 +22,8 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 
@@ -45,7 +44,7 @@ public class UIHelper {
             //license.replaceFirst("[<\\[](?:yyyy|year)[]>]\\s+[\\[<]name of (?:author|copyright owner)[>\\]]", copyright[which])).
         } catch (Exception ignored) {
         }
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle(lib.name)
                 .setMessage(message.toString())
                 .setPositiveButton(context.rss.getString(R.string.github), (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lib.url))))
@@ -118,13 +117,13 @@ public class UIHelper {
             licenseText.setText(lib.licenseName);
             if (licenseText.getBackground() instanceof GradientDrawable) {
                 ((GradientDrawable) licenseText.getBackground()).setColor(
-                        MaterialColors.getColor(context, com.google.android.material.R.attr.colorSecondaryContainer, Color.TRANSPARENT));
+                        ThemeAttrs.surfaceVariant(context));
             }
             row.setOnClickListener(v -> showLibraryDialog(lib));
             libsContainer.addView(row);
         }
 
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setPositiveButton(context.rss.getString(R.string.close), null)
                 .setView(aboutView)
                 .show();
@@ -172,9 +171,9 @@ public class UIHelper {
     }
 
     public void styleEditText(EditText editText) {
-        editText.setBackgroundColor(Color.TRANSPARENT);
-        editText.setTextColor(Color.WHITE);
-        editText.setHintTextColor(Color.GRAY);
+        editText.setBackgroundColor(ThemeAttrs.surface(context));
+        editText.setTextColor(ThemeAttrs.onSurface(context));
+        editText.setHintTextColor(ThemeAttrs.onSurfaceVariant(context));
     }
 
     public void scrollTextView(TextView textView) {
@@ -189,8 +188,8 @@ public class UIHelper {
     public TextView getTitle(String text) {
         TextView title = new TextView(context);
         title.setText(text);
-        title.setBackgroundColor(Color.TRANSPARENT);
-        title.setTextColor(Color.WHITE);
+        title.setBackgroundColor(ThemeAttrs.surface(context));
+        title.setTextColor(ThemeAttrs.onSurface(context));
         title.setTextSize(20);
         title.setTypeface(null, Typeface.BOLD);
         title.setPadding(16,16,16,16);
@@ -220,7 +219,7 @@ public class UIHelper {
                     LinearLayout.LayoutParams.WRAP_CONTENT
             ));
             textView.setText(label);
-            textView.setTextColor(Color.WHITE);
+            textView.setTextColor(ThemeAttrs.onSurface(context));
             textView.setPadding(10, 10, 10, 10);
             firstVerticalLayout.addView(textView);
         }
@@ -238,7 +237,7 @@ public class UIHelper {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
             ));
-            textView.setTextColor(Color.WHITE);
+            textView.setTextColor(ThemeAttrs.onSurface(context));
             textView.setPadding(10, 10, 10, 10);
             secondVerticalLayout.addView(textView);
         }

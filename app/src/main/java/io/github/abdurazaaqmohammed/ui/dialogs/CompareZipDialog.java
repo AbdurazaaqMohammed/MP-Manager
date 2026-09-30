@@ -8,7 +8,6 @@ import android.widget.ListView;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -24,6 +23,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class CompareZipDialog {
     private final Activity context;
@@ -117,7 +117,7 @@ public class CompareZipDialog {
             }
         });
 
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle(R.string.zip_differences)
                 .setView(listView)
                 .setPositiveButton(android.R.string.ok, null)

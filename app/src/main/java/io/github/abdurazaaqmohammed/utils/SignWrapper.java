@@ -20,7 +20,6 @@ import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkSigner;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.bouncycastle.jcajce.provider.keystore.pkcs12.PKCS12KeyStoreSpi;
 
@@ -45,6 +44,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class SignWrapper {
 
@@ -149,7 +149,7 @@ public class SignWrapper {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
         layout.addView(UiFields.wrap(activity, pwInput, null, 0));
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.enter_password))
                 .setView(layout)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {

@@ -20,7 +20,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.apkeditor.Util;
 
 import net.lingala.zip4j.ZipFile;
@@ -79,6 +78,7 @@ import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * DEX/ARSC toolkit extracted from FileOperationsHelper.
@@ -282,7 +282,7 @@ public class DexTools {
         }
         File tempFolder = session.outputDir;
         List<String> dexNames = new ArrayList<>(dexFiles);
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        AlertDialog.Builder builder = UIKit.dialog(context);
         builder.setTitle(context.rss.getString(R.string.fo_multidex));
         CharSequence[] fileNames = new CharSequence[dexNames.size()];
         for (int j = 0; j < dexNames.size(); j++) fileNames[j] = dexNames.get(j);

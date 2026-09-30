@@ -77,6 +77,12 @@ public final class ThemeRegistry {
                     .edit().putString(PREF_KEY, id).apply();
         } catch (Exception ignored) {
         }
+        // Swap the palette immediately: a caller that reads colours before the
+        // recreate lands must not see the previous theme's values.
+        try {
+            ActiveTheme.set(ThemeStore.byId(context, id));
+        } catch (Exception ignored) {
+        }
         try {
             AppCompatDelegate.setDefaultNightMode(modeFor(context, id));
         } catch (Exception ignored) {
@@ -104,9 +110,37 @@ public final class ThemeRegistry {
         return com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar;
     }
 
+    /**
+     * Installs the active theme's palette. Called from applySaved before
+     * setTheme so Services/floating windows see the right colours, and again
+     * after setCurrentId so a switch takes effect without waiting for the
+     * recreate to finish.
+     */
+    public static void activatePalette(Context context) {
+        try {
+            registerJsonThemes(context);
+            ActiveTheme.set(ThemeStore.byId(context, getCurrentId(context)));
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Registers a JsonThemePlugin per assets/ui_themes/*.json. Needs a Context
+     * to reach assets, so it runs from applySaved rather than ensureBuiltIns.
+     */
+    private static void registerJsonThemes(Context context) {
+        if (context == null) return;
+        for (ThemePalette palette : ThemeStore.all(context)) {
+            if (!PLUGINS.containsKey(palette.id())) {
+                PLUGINS.put(palette.id(), new JsonThemePlugin(palette));
+            }
+        }
+    }
+
     /** Called by BaseActivity before super.onCreate(). */
     public static void applySaved(Activity activity) {
         ensureBuiltIns();
+        activatePalette(activity);
         ThemePlugin plugin;
         synchronized (ThemeRegistry.class) {
             plugin = PLUGINS.get(getCurrentId(activity));

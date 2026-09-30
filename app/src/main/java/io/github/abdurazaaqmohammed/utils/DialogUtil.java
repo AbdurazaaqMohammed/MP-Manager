@@ -2,8 +2,9 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.app.Activity;
 
-import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class DialogUtil {
     private final Activity context;
@@ -13,10 +14,10 @@ public class DialogUtil {
     }
 
     public MaterialAlertDialogBuilder getDialogBuilder() {
-        return new MaterialAlertDialogBuilder(context);
+        return UIKit.dialog(context);
     }
 
-    public void styleAlertDialog(AlertDialog ad) {
+    public void styleAlertDialog(androidx.appcompat.app.AlertDialog ad) {
         context.runOnUiThread(ad::show);
     }
 }

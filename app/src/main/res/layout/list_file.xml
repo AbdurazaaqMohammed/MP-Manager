@@ -23,6 +23,7 @@
             android:id="@+id/fileName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
             android:textStyle="bold"
             android:contentDescription="@string/filename"/>
@@ -31,7 +32,7 @@
             android:id="@+id/fileDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="10sp"
             android:contentDescription="@string/file_info_cd"/>
     </LinearLayout>

@@ -25,6 +25,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class ProgressManager {
     private final AppCompatActivity activity;
@@ -55,7 +56,7 @@ public class ProgressManager {
             pb.setIndeterminate(indeterminate);
             if (currentText != null) ((TextView) v.findViewById(R.id.dialogTitle)).setText(currentText);
             if (!indeterminate && maxVal > 0) { pb.setMax(maxVal); pb.setProgress(progressVal); }
-            dialog = new MaterialAlertDialogBuilder(activity).setView(v).show();
+            dialog = UIKit.dialog(activity).setView(v).show();
         });
         return this;
     }
@@ -138,15 +139,16 @@ public class ProgressManager {
     }
 
     private NotificationCompat.Builder buildNotif() {
-        NotificationCompat.Builder b = new NotificationCompat.Builder(activity, CHANNEL_ID)
+        NotificationCompat.Builder b = UIKit.notify(activity, CHANNEL_ID)
                 .setContentTitle(activity.getString(R.string.app_name))
                 .setContentText(currentText != null ? currentText : activity.getString(R.string.progress_working))
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)
+                .setOnlyAlertOnce(true)
                 .setContentIntent(PendingIntent.getActivity(activity, 0, new Intent(activity, activity.getClass()), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         if (!indeterminate && maxVal > 0) b.setProgress(maxVal, progressVal, false);
         else b.setProgress(0, 0, true);
-        return b;
+        return b.setColorized(true);
     }
 
     private void cancelNotification() {

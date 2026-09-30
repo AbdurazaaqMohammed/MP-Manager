@@ -47,6 +47,7 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -68,7 +69,7 @@ public class AlertProgress {
 
     public AlertProgress(Activity activity) {
         this.activity = activity;
-        process = new MaterialAlertDialogBuilder(activity);
+        process = UIKit.dialog(activity);
         View view = View.inflate(activity, R.layout.progress_dlg, null);
         textview_mesage = view.findViewById(R.id.message);
         progress = view.findViewById(R.id.progress);

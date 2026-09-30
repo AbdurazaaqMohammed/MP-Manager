@@ -39,9 +39,7 @@ package modder.hub.dexeditor.activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -55,6 +53,8 @@ import java.util.HashMap;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.plugins.ext.EditorAction;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
@@ -67,7 +67,7 @@ Author @developer-krushna
 Code fixed comments by ChatGPT
 */
 
-public class EditFloatingMenusActivity extends AppCompatActivity implements StartDragListener {
+public class EditFloatingMenusActivity extends BaseActivity implements StartDragListener {
 
     private ItemTouchHelper touchHelper;
 
@@ -94,7 +94,7 @@ public class EditFloatingMenusActivity extends AppCompatActivity implements Star
 
     private void initializeLogic() {
         setTitle(getString(R.string.edit_floating_menus));
-        Toast.makeText(this, R.string.menu_seq, Toast.LENGTH_LONG).show();
+        UIKit.toast(this, getString(R.string.menu_seq), true);
         _load_shortcut_keys();
     }
 

@@ -41,7 +41,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.widget.Toast;
 
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
@@ -51,6 +50,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
 /*
@@ -115,7 +115,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	private boolean validateAndSetApiKey(Preference preference, String apiKey) {
 		apiKey = apiKey.trim();
 		if (apiKey.isEmpty()) {
-			Toast.makeText(getActivity(), "Input key", Toast.LENGTH_SHORT).show();
+			UIKit.toast(getActivity(), "Input key");
 			return false;
 		}
 		preference.setSummary(formatApiKeySummary(apiKey));
@@ -132,7 +132,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 			startActivity(new Intent(Intent.ACTION_VIEW, 
 			Uri.parse("https://aistudio.google.com/app/u/1/apikey")));
 		} catch (Exception e) {
-			Toast.makeText(getActivity(), "No browser found", Toast.LENGTH_SHORT).show();
+			UIKit.toast(getActivity(), "No browser found");
 		}
 	}
 	

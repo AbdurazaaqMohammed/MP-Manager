@@ -93,6 +93,8 @@ import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import modder.hub.dexeditor.GraphDot.DrawFlowDiagram;
 import modder.hub.dexeditor.GraphDot.Method;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -190,7 +192,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
         Menu menu = toolbar.getMenu();
         MenuItem searchItem = menu.findItem(R.id.search);
-        int tint = getTheme() == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE;
+        int tint = ThemeAttrs.onSurface(requireContext());
         DrawableCompat.setTint(menu.findItem(R.id.strings_list).getIcon(), tint);
         DrawableCompat.setTint(menu.findItem(R.id.close).getIcon(), tint);
         DrawableCompat.setTint(searchItem.getIcon(), tint);
@@ -378,6 +380,10 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         }
     }
 
+    private int highlightColor() {
+        return ThemeAttrs.accent(getActivity() != null ? getActivity() : requireContext());
+    }
+
     @NonNull
 	private GradientDrawable createHolderBackground(int color) {
         GradientDrawable drawable = new GradientDrawable();
@@ -532,7 +538,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         final String proto = parsed[1];
         final String sClass = slashClass;
         if (overrideCount > 0) {
-            new MaterialAlertDialogBuilder(requireContext())
+            UIKit.dialog(requireContext())
                     .setTitle(R.string.find_usages)
                     .setMessage(getString(R.string.overriding_methods_found, overrideCount))
                     .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -969,7 +975,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 if(dynamicBackground != null) {
                     if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
-                        dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                        dynamicBackground.setColor(highlightColor());
                     } else {
                         dynamicBackground.setColor(Color.TRANSPARENT);
                     }
@@ -983,7 +989,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 if(dynamicBackground != null) {
                     if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
-                        dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                        dynamicBackground.setColor(highlightColor());
                     } else {
                         dynamicBackground.setColor(Color.TRANSPARENT);
                     }
@@ -1002,7 +1008,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                 if(dynamicBackground != null) {
                     if (editorLineNumber >= startLine && editorLineNumber <= endLine) {
-                    dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                    dynamicBackground.setColor(highlightColor());
                 } else {
                     dynamicBackground.setColor(Color.TRANSPARENT);
                 }
@@ -1323,7 +1329,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             }
             if(dynamicBackground != null) {
                 if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
-                    dynamicBackground.setColor(Color.parseColor("#67C1DF"));
+                    dynamicBackground.setColor(highlightColor());
                 } else {
                     dynamicBackground.setColor(Color.TRANSPARENT);
                 }

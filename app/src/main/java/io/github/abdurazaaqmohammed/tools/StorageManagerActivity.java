@@ -14,7 +14,6 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
@@ -42,16 +41,14 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.DynamicColors;
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -80,7 +77,7 @@ import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class StorageManagerActivity extends BaseActivity {
+public class StorageManagerActivity extends ToolbarPage {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LinearLayout volumeBox;
     private LinearLayout typeBox;
@@ -133,23 +130,8 @@ public class StorageManagerActivity extends BaseActivity {
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
-        MaterialToolbar toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(getString(R.string.storage_manager));
-        toolbar.setSubtitle(getString(R.string.storage_free_up));
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> finish());
-        root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(16);
-        box.setPadding(pad, pad, pad, pad);
-        scroll.addView(box, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setContentView(root);
+        toolbar().setSubtitle(getString(R.string.storage_free_up));
+        LinearLayout box = contentBox();
         section(box, getString(R.string.storage_volumes));
         volumeBox = new LinearLayout(this);
         volumeBox.setOrientation(LinearLayout.VERTICAL);
@@ -279,6 +261,10 @@ public class StorageManagerActivity extends BaseActivity {
         refreshVolumes();
     }
 
+    protected CharSequence pageTitle() {
+        return getString(R.string.storage_manager);
+    }
+
     private void showRootCheck(MaterialButton button) {
         button.setEnabled(false);
         Extensions.showMessage(this, getString(R.string.storage_probing_root));
@@ -316,7 +302,7 @@ public class StorageManagerActivity extends BaseActivity {
                 int p = dp(16);
                 body.setPadding(p, p, p, p);
                 scroll.addView(body);
-                new MaterialAlertDialogBuilder(StorageManagerActivity.this)
+                UIKit.dialog(StorageManagerActivity.this)
                         .setTitle(getString(R.string.storage_root_check))
                         .setView(scroll)
                         .setPositiveButton(getString(android.R.string.copy), (d, w) -> {
@@ -422,7 +408,7 @@ public class StorageManagerActivity extends BaseActivity {
         }
         if (!CacheCleaner.isServiceEnabled(this)) {
             boolean elevated = RootPermissionHelper.hasElevatedShell(this);
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(getString(R.string.storage_enable_autoclear))
                     .setMessage(elevated ? getString(R.string.storage_autoclear_need_elevated) : getString(R.string.storage_autoclear_need))
                     .setPositiveButton(elevated ? getString(R.string.storage_enable_auto) : getString(R.string.storage_open_settings), (d, w) -> {
@@ -442,7 +428,7 @@ public class StorageManagerActivity extends BaseActivity {
                     .show();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(selectedOnly ? getString(R.string.storage_auto_selected) : getString(R.string.storage_auto_all))
                 .setMessage(getString(R.string.storage_autoclear_apps, targets.size()))
                 .setPositiveButton(getString(R.string.start), (d, w) -> startAutoClear(targets))
@@ -500,7 +486,7 @@ public class StorageManagerActivity extends BaseActivity {
         t.setText(text);
         t.setTextSize(18);
         t.setTypeface(null, Typeface.BOLD);
-        t.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        t.setTextColor(ThemeAttrs.onSurface(this));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, dp(16), 0, dp(8));
         box.addView(t, p);
@@ -714,7 +700,7 @@ public class StorageManagerActivity extends BaseActivity {
         label.setTextSize(14);
         if (name.equals(typeFilter)) {
             label.setTypeface(null, Typeface.BOLD);
-            label.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLUE));
+            label.setTextColor(ThemeAttrs.accent(this));
         }
         row.addView(label);
         ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -784,8 +770,8 @@ public class StorageManagerActivity extends BaseActivity {
     private BaseAdapter fileAdapter() {
         ensureThumbCache();
         float density = getResources().getDisplayMetrics().density;
-        int onSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
-        int onVariant = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY);
+        int onSurface = ThemeAttrs.onSurface(this);
+        int onVariant = ThemeAttrs.onSurfaceVariant(this);
         return new BaseAdapter() {
             public int getCount() {
                 return largeVisible.size();
@@ -948,7 +934,7 @@ public class StorageManagerActivity extends BaseActivity {
         if (targets.isEmpty()) return;
         long total = 0;
         for (FileRow row : targets) total += row.size;
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.storage_delete_n_files, targets.size()))
                 .setMessage(getString(R.string.storage_will_be_freed, FileSize.getHumanReadableFileSize(total)))
                 .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
@@ -970,7 +956,7 @@ public class StorageManagerActivity extends BaseActivity {
     }
 
     private void confirmDeleteFile(File file) {
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.delete))
                 .setMessage(file.getAbsolutePath() + "\n" + FileSize.getHumanReadableFileSize(file.length()))
                 .setPositiveButton(getString(R.string.delete), (d, w) -> new Thread(() -> {
@@ -989,8 +975,8 @@ public class StorageManagerActivity extends BaseActivity {
 
     private BaseAdapter cacheAdapter() {
         float density = getResources().getDisplayMetrics().density;
-        int onSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
-        int onVariant = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY);
+        int onSurface = ThemeAttrs.onSurface(this);
+        int onVariant = ThemeAttrs.onSurfaceVariant(this);
         return new BaseAdapter() {
             public int getCount() {
                 return cacheRows.size();
@@ -1143,7 +1129,7 @@ public class StorageManagerActivity extends BaseActivity {
             return;
         }
         if (!RootPermissionHelper.isRootShellReady(this)) {
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(getString(R.string.storage_root_needed))
                     .setMessage(getString(R.string.storage_root_need_msg))
                     .setPositiveButton(getString(R.string.storage_use_autoclear), (d, w) -> autoClearCaches(selectedOnly))
@@ -1151,7 +1137,7 @@ public class StorageManagerActivity extends BaseActivity {
                     .show();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(selectedOnly ? getString(R.string.storage_clear_sel) : getString(R.string.storage_clear_all_caches))
                 .setMessage(getString(R.string.storage_apps_n, targets.size()))
                 .setPositiveButton(getString(R.string.clear), (d, w) -> new Thread(() -> {
@@ -1217,7 +1203,7 @@ public class StorageManagerActivity extends BaseActivity {
                                 if (i > 0) names.append(", ");
                                 names.append(failedPkgs.get(i));
                             }
-                            new MaterialAlertDialogBuilder(StorageManagerActivity.this)
+                            UIKit.dialog(StorageManagerActivity.this)
                                     .setTitle(getString(R.string.storage_some_not_cleared))
                                     .setMessage(getString(R.string.storage_apps_failed, failedPkgs.size(), names.length() == 0 ? "" : ": " + names, errText.isEmpty() ? "" : "\n\n" + errText))
                                     .setPositiveButton(android.R.string.ok, null)

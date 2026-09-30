@@ -20,7 +20,6 @@ import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -28,8 +27,9 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle;
 
 import org.apache.commons.io.FilenameUtils;
@@ -125,7 +125,7 @@ public class FilePickerDialog {
             View textInputLayout = LayoutInflater.from(context).inflate(R.layout.material_edittext, null);
             EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
             input.setText(((TextView) v).getText());
-            AlertDialog ad = new MaterialAlertDialogBuilder(context)
+            AlertDialog ad = UIKit.dialog(context)
                     .setTitle(R.string.path)
                     .setView(textInputLayout)
                     .setNegativeButton(android.R.string.cancel, null)
@@ -152,7 +152,7 @@ public class FilePickerDialog {
             });
         });
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context)
+        AlertDialog.Builder builder = UIKit.dialog(context)
                 .setTitle(title != null ? title : context.getString(R.string.select))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null);
@@ -273,7 +273,7 @@ public class FilePickerDialog {
         content.setOrientation(LinearLayout.VERTICAL);
         content.addView(group);
         content.addView(directionToggle);
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle(R.string.sort_by)
                 .setView(content)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -324,7 +324,7 @@ public class FilePickerDialog {
     private void returnSelection() {
         if (selectedPaths.isEmpty()) {
             if(context instanceof Activity a) Extensions.showMessage(a, R.string.select_none);
-            else Toast.makeText(context, R.string.select_none, Toast.LENGTH_SHORT).show();
+            else UIKit.toast(context, context.getString(R.string.select_none));
             return;
         }
         if (listener != null) listener.onFileSelected(selectedPaths.toArray(new String[0]));
@@ -360,7 +360,7 @@ public class FilePickerDialog {
             iconLoader.setupFileView(f, holder.fileIconView, holder.fileDateView);
             holder.fileNameView.setText(f.getName());
             boolean selected = selectedPaths.contains(f.getAbsolutePath());
-            holder.itemView.setBackgroundColor(selected ? Color.DKGRAY : Color.TRANSPARENT);
+            holder.itemView.setBackgroundColor(selected ? ThemeAttrs.selection(context) : Color.TRANSPARENT);
             holder.itemView.setOnClickListener(v -> handleClick(f));
             holder.itemView.setOnLongClickListener(v -> handleLongClick(f));
         }

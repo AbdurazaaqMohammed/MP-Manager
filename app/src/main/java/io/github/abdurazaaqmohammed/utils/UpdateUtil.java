@@ -14,7 +14,6 @@ import android.util.DisplayMetrics;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textview.MaterialTextView;
 
 import java.io.BufferedReader;
@@ -29,6 +28,7 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class UpdateUtil {
     public static void checkForUpdates(boolean toast, MainActivity context) {
@@ -94,7 +94,7 @@ public class UpdateUtil {
 
                         String finalLatestVersion = latestVersion;
                         context.handler.post(() -> {
-                            AlertDialog alertDialog = new MaterialAlertDialogBuilder(context)
+                            AlertDialog alertDialog = UIKit.dialog(context)
                                     .setTitle(rss.getString(R.string.new_ver, finalLatestVersion)).setView(tv)
                                     .setPositiveButton(rss.getString(R.string.download), (dialog, which) -> {
                                         DownloadManager.Request request = new DownloadManager.Request(

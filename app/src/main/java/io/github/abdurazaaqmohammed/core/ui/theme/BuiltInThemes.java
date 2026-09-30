@@ -17,20 +17,27 @@ public final class BuiltInThemes {
     public static final String LIGHT_ID = "myapp_light";
     public static final String DARK_ID = "myapp_dark";
     public static final String BLACK_ID = "myapp_black";
+    public static final String MT_DARK_ID = "mt_dark";
 
     private BuiltInThemes() {
     }
 
+    /**
+     * Registers the JSON themes in assets/ui_themes. system_default has no file:
+     * it is the "no palette, follow the system" entry.
+     */
     public static void registerAll() {
         ThemeRegistry.register(new Simple(SYSTEM_DEFAULT_ID, "System default",
                 com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar,
                 AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM));
-        ThemeRegistry.register(new Simple(LIGHT_ID, "Light",
-                R.style.Theme_MyApp_Light, AppCompatDelegate.MODE_NIGHT_NO));
-        ThemeRegistry.register(new Simple(DARK_ID, "Dark",
-                R.style.Theme_MyApp_Dark, AppCompatDelegate.MODE_NIGHT_YES));
-        ThemeRegistry.register(new Simple(BLACK_ID, "Black",
-                R.style.Theme_MyApp_Black, AppCompatDelegate.MODE_NIGHT_YES));
+    }
+
+    private static String readAll(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        return out.toString("UTF-8");
     }
 
     private static final class Simple implements ThemePlugin {

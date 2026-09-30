@@ -55,7 +55,6 @@ import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkBundle;
@@ -96,6 +95,7 @@ import io.github.abdurazaaqmohammed.utils.CompareUtils;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class APKExtractorActivity extends BaseActivity {
     private final AppRecyclerViewAdapter[] appAdapter = new AppRecyclerViewAdapter[2];
@@ -168,7 +168,7 @@ public class APKExtractorActivity extends BaseActivity {
         return () -> {
             if(pm != null) pm.dismiss();
             if (!errorOccurred)
-                styleAlertDialog(new MaterialAlertDialogBuilder(this)
+                styleAlertDialog(UIKit.dialog(this)
                         .setTitle(R.string.info)
                         .setMessage(rss.getString(R.string.success_saved, outputPath))
                         .setNegativeButton(R.string.locate, (dialog, which) -> {
@@ -238,7 +238,7 @@ public class APKExtractorActivity extends BaseActivity {
             signToggle.setChecked(signApk);
             signToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
-                    styleAlertDialog(new MaterialAlertDialogBuilder(this)
+                    styleAlertDialog(UIKit.dialog(this)
                             .setTitle(rss.getString(R.string.warning))
                             .setMessage(rss.getString(R.string.warn_sign))
                             .setNegativeButton(rss.getString(android.R.string.cancel), (dialog, which) -> {
@@ -384,7 +384,7 @@ public class APKExtractorActivity extends BaseActivity {
             title.setText(rss.getString(R.string.settings));
             title.setTextSize(25);
             styleAlertDialog(
-                    new MaterialAlertDialogBuilder(this)
+                    UIKit.dialog(this)
                             .setCustomTitle(title)
                             .setView(settingsMenu)
                             .setPositiveButton(rss.getString(R.string.close), (dialog, which) -> dialog.dismiss())
@@ -538,7 +538,7 @@ public class APKExtractorActivity extends BaseActivity {
             ListView gridView = dialogView.findViewById(R.id.extractOptionsGrid);
             gridView.setAdapter(new ExtractOptionAdapter(this, display, icons));
 
-            AlertDialog alertDialog = new MaterialAlertDialogBuilder(this)
+            AlertDialog alertDialog = UIKit.dialog(this)
                     .setView(dialogView)
                     .setNegativeButton(rss.getString(android.R.string.cancel), (d, w) -> getCurrentAdapter().clearSelection())
                     .create();
@@ -588,7 +588,7 @@ public class APKExtractorActivity extends BaseActivity {
 
         findViewById(R.id.filterButton).setOnClickListener(v -> {
             String[] display = new String[] { getString(R.string.name), getString(R.string.last_updated_date), getString(R.string.first_install_date) };
-            AlertDialog ad = new MaterialAlertDialogBuilder(this)
+            AlertDialog ad = UIKit.dialog(this)
                     .setSingleChoiceItems(display, sortMode, (dialog, which) -> {
                         sortMode = which;
                         Comparator<AppInfo> comparator = sortMode == 0 ? CompareUtils::compareAppInfoByName : ((p1, p2) -> {
@@ -789,7 +789,7 @@ public class APKExtractorActivity extends BaseActivity {
                             }
                         }
                         CharSequence[] displayArr = new CharSequence[splitties.size()];
-                        styleAlertDialog(new MaterialAlertDialogBuilder(this)
+                        styleAlertDialog(UIKit.dialog(this)
                                 .setSingleChoiceItems(splitties.toArray(displayArr), -1, (dialog, which) -> {
                                     if (ask) {
                                         File f = superSplit = splitting.get(which);
@@ -831,7 +831,7 @@ public class APKExtractorActivity extends BaseActivity {
                                 }*/ //why this not working
                                 List<String> labelsList = Arrays.asList(labels);
 
-                                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+                                AlertDialog.Builder builder = UIKit.dialog(this);
 
                                 View dialogView = getLayoutInflater().inflate(R.layout.dialog_label_search, null);
                                 EditText searchEt = dialogView.findViewById(R.id.searchEt);
@@ -871,7 +871,7 @@ public class APKExtractorActivity extends BaseActivity {
                         } catch (Exception e) { new ErrorUtil(APKExtractorActivity.this).showError(e); }
                         break;
                     case 200: // Clear app data (root)
-                        new MaterialAlertDialogBuilder(this)
+                        UIKit.dialog(this)
                                 .setTitle(R.string.clear_app_data)
                                 .setMessage(getString(R.string.clear_all_data_for, ai.name))
                                 .setPositiveButton(R.string.clear_app_data, (d, w) -> executeRootAction("Clear data", () -> rootManager.clearAppData(packageName), packageName))
@@ -879,7 +879,7 @@ public class APKExtractorActivity extends BaseActivity {
                                 .show();
                         break;
                     case 201: // Force stop (root)
-                        new MaterialAlertDialogBuilder(this)
+                        UIKit.dialog(this)
                                 .setTitle(R.string.force_stop)
                                 .setMessage(getString(R.string.force_stop_x, ai.name))
                                 .setPositiveButton(R.string.force_stop, (d, w) -> executeRootAction("Force stop", () -> rootManager.forceStopApp(packageName), packageName))
@@ -890,7 +890,7 @@ public class APKExtractorActivity extends BaseActivity {
                         executeRootAction("Enable app", () -> rootManager.enableApp(packageName), packageName);
                         break;
                     case 203: // Disable app (root)
-                        new MaterialAlertDialogBuilder(this)
+                        UIKit.dialog(this)
                                 .setTitle(R.string.disable_app)
                                 .setMessage(getString(R.string.disable_x, ai.name))
                                 .setPositiveButton(R.string.disable, (d, w) -> executeRootAction("Disable app", () -> rootManager.disableApp(packageName), packageName))
@@ -898,7 +898,7 @@ public class APKExtractorActivity extends BaseActivity {
                                 .show();
                         break;
                     case 204: // uninstall (root)
-                        new MaterialAlertDialogBuilder(this)
+                        UIKit.dialog(this)
                                 .setTitle(R.string.root_uninstall)
                                 .setMessage(rss.getString(R.string.uninstall_root, ai.name))
                                 .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> rootManager.uninstallSilent(packageName), packageName))

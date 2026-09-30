@@ -16,7 +16,6 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.color.MaterialColors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -133,7 +133,7 @@ public final class FileMenuCustomizer {
             if (drawable != null) {
                 int i = Extensions.dp2px(context, 24);
                 drawable.setBounds(0, 0, i, i);
-                DrawableCompat.setTint(drawable, MaterialColors.getColor(holder.label, com.google.android.material.R.attr.colorPrimary));
+                DrawableCompat.setTint(drawable, ThemeAttrs.accent(holder.label.getContext()));
             }
             holder.label.setCompoundDrawablesRelative(drawable, null, null, null);
             holder.label.setCompoundDrawablePadding(Extensions.dp2px(context, 4));

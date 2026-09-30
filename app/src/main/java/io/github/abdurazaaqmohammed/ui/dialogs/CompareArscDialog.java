@@ -4,7 +4,6 @@ import android.content.Context;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
 
@@ -16,6 +15,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class CompareArscDialog {
     private final Context context;
@@ -73,7 +73,7 @@ public class CompareArscDialog {
         ListView listView = new ListView(context);
         listView.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, differences));
 
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle(R.string.arsc_differences)
                 .setView(listView)
                 .setPositiveButton(android.R.string.ok, null)

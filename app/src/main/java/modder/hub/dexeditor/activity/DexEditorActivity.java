@@ -39,7 +39,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.LightingColorFilter;
 import android.net.Uri;
@@ -103,6 +102,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -144,7 +146,7 @@ import com.android.tools.smali.dexlib2.iface.ClassDef;
  * Re-sequenced and refactored for better clarity and utility.
  * Author: @developer-krushna
  */
-public class DexEditorActivity extends AppCompatActivity {
+public class DexEditorActivity extends BaseActivity {
 
     // --- Constants and Static State ---
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
@@ -198,9 +200,6 @@ public class DexEditorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-        setTheme(theme);
         setContentView(R.layout.dex_editor);
 
         initialize(savedInstanceState);
@@ -278,7 +277,7 @@ public class DexEditorActivity extends AppCompatActivity {
         drawerToolbar = findViewById(R.id.drawer_toolbar);
         drawerToolbar.setOverflowIcon(ContextCompat.getDrawable(this, R.drawable.ic_more_mt));
         if (drawerToolbar.getOverflowIcon() != null) {
-            DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), Color.WHITE);
+            DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), ThemeAttrs.onSurface(this));
         }
         setupDrawerToolbar();
 
@@ -787,7 +786,7 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         if (tab.isModified) {
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(R.string.warning)
                     .setMessage(getString(R.string.class_mod, tab.title))
                     .setPositiveButton(R.string.save, (d, w) -> saveTab(tab, () -> {
@@ -862,7 +861,7 @@ public class DexEditorActivity extends AppCompatActivity {
         String hint = "1⋯" + smaliEditor.getLineCount();
         editText.setHint(hint);
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder builder = UIKit.dialog(this)
                 .setTitle(R.string.jump_to_line)
                 .setView(view)
                 .setPositiveButton(android.R.string.ok, null)
@@ -913,14 +912,14 @@ public class DexEditorActivity extends AppCompatActivity {
             if (undo != null) {
                 undo.setEnabled(fragment.getEditor().canUndo());
                 if (undo.getIcon() != null) {
-                    DrawableCompat.setTint(undo.getIcon(), Color.WHITE);
+                    DrawableCompat.setTint(undo.getIcon(), ThemeAttrs.onSurface(this));
                     undo.getIcon().setAlpha(undo.isEnabled() ? 255 : 100);
                 }
             }
             if (redo != null) {
                 redo.setEnabled(fragment.getEditor().canRedo());
                 if (redo.getIcon() != null) {
-                    DrawableCompat.setTint(redo.getIcon(), Color.WHITE);
+                    DrawableCompat.setTint(redo.getIcon(), ThemeAttrs.onSurface(this));
                     redo.getIcon().setAlpha(redo.isEnabled() ? 255 : 100);
                 }
             }
@@ -1299,7 +1298,7 @@ public class DexEditorActivity extends AppCompatActivity {
             swRemoveDebugLocal.setEnabled(false);
         }
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        MaterialAlertDialogBuilder builder = UIKit.dialog(this);
         builder.setView(dialogView);
         builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
             sessionOptions.dexVersion = spinnerDexVersion.getSelectedItem().toString();
@@ -1396,7 +1395,7 @@ public class DexEditorActivity extends AppCompatActivity {
             if (tab.isModified) modifiedTabs.add(tab);
         }
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        MaterialAlertDialogBuilder builder = UIKit.dialog(this);
         builder.setTitle(R.string.unsaved_changes);
 
         if (!modifiedTabs.isEmpty()) {
@@ -1607,8 +1606,8 @@ public class DexEditorActivity extends AppCompatActivity {
         // Remove fabLayout from its parent (the root of multiple_fabs.xml) before adding to fabDelete's parent
         ((ViewGroup) fabLayout.getParent()).removeView(fabLayout);
         ((ViewGroup) fabDelete.getParent()).addView(fabLayout);
-        fabClear.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
-        fabInvertSelect.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
+        fabClear.setBackgroundTintList(ColorStateList.valueOf(ThemeAttrs.surfaceVariant(this)));
+        fabInvertSelect.setBackgroundTintList(ColorStateList.valueOf(ThemeAttrs.surfaceVariant(this)));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             fabClear.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
             fabInvertSelect.setImageTintList(ColorStateList.valueOf(0XFFFFFFFF));
@@ -1723,6 +1722,8 @@ public class DexEditorActivity extends AppCompatActivity {
         Menu menu = drawerToolbar.getMenu();
         int index = currentTabIndex;
         int count = tabs.size();
+        int enabledColor = ThemeAttrs.onSurface(this);
+        int disabledColor = ThemeAttrs.outline(this);
 
         menu.findItem(0).setEnabled(index != -1 && count > 1);
         menu.findItem(1).setEnabled(count > 0);
@@ -1730,16 +1731,16 @@ public class DexEditorActivity extends AppCompatActivity {
 
         MenuItem closeAbove = menu.findItem(3);
         closeAbove.setEnabled(index > 0);
-        UIHelper.setMenuItemColor(closeAbove, closeAbove.isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(closeAbove, closeAbove.isEnabled() ? enabledColor : disabledColor);
 
         MenuItem closeBelow = menu.findItem(4);
         closeBelow.setEnabled(index != -1 && index < count - 1);
-        UIHelper.setMenuItemColor(closeBelow, closeBelow.isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(closeBelow, closeBelow.isEnabled() ? enabledColor : disabledColor);
 
         // Also update other items color if needed
-        UIHelper.setMenuItemColor(menu.findItem(0), menu.findItem(0).isEnabled() ? Color.BLACK : Color.GRAY);
-        UIHelper.setMenuItemColor(menu.findItem(1), menu.findItem(1).isEnabled() ? Color.BLACK : Color.GRAY);
-        UIHelper.setMenuItemColor(menu.findItem(2), menu.findItem(2).isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(menu.findItem(0), menu.findItem(0).isEnabled() ? enabledColor : disabledColor);
+        UIHelper.setMenuItemColor(menu.findItem(1), menu.findItem(1).isEnabled() ? enabledColor : disabledColor);
+        UIHelper.setMenuItemColor(menu.findItem(2), menu.findItem(2).isEnabled() ? enabledColor : disabledColor);
     }
 
     public static class EditorTab {
@@ -2042,10 +2043,8 @@ public class DexEditorActivity extends AppCompatActivity {
 
                     // holder trick so the click listener can reference the adapter it belongs to
                     final StringAdapter[] holder = new StringAdapter[1];
-                    boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-                    int theme = requireActivity().getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
 
-                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), ThemeAttrs.onSurface(requireContext()));
                     holder[0] = stringAdapter;
 
                     btnReload.setOnClickListener(v -> {
@@ -2083,7 +2082,7 @@ public class DexEditorActivity extends AppCompatActivity {
         container.addView(UiFields.wrap(this, editText, getString(R.string.edit_string), 0));
         container.setLayoutParams(params);
 
-        final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        final AlertDialog dialog = UIKit.dialog(this)
                 .setTitle(R.string.edit_string)
                 .setView(container)
                 .setPositiveButton(android.R.string.ok, null)
@@ -2118,7 +2117,7 @@ public class DexEditorActivity extends AppCompatActivity {
         container.setLayoutParams(params);
         container.addView(UiFields.wrap(this, editText, null, 0));
 
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.filter_strings)
                 .setView(container)
                 .setPositiveButton(R.string.apply, (d, w) -> adapter.setFilter(editText.getText().toString()))
@@ -2144,7 +2143,7 @@ public class DexEditorActivity extends AppCompatActivity {
         container.addView(UiFields.wrap(this, etReplace, null, 0));
         container.addView(swMatchCase);
 
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.replace_in_all_strings)
                 .setView(container)
                 .setPositiveButton(R.string.replace, (d, w) -> {
@@ -2455,7 +2454,7 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         private void handleUiThreadError(Exception e) {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(DexEditorActivity.this);
+            MaterialAlertDialogBuilder builder = UIKit.dialog(DexEditorActivity.this);
             builder.setTitle(getString(R.string.error));
             builder.setMessage(getString(R.string.ui_update_failed, e.getMessage()));
             builder.setPositiveButton(android.R.string.ok, null);
@@ -2463,7 +2462,7 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         private void showErrorDialog(final Exception e) {
-            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(DexEditorActivity.this);
+            MaterialAlertDialogBuilder builder = UIKit.dialog(DexEditorActivity.this);
             builder.setTitle(getString(R.string.error));
             builder.setMessage(getString(R.string.failed_to_process_dex_files, e.getMessage()));
             builder.setPositiveButton(R.string.go_back, (dialog, which) -> finish());
@@ -2553,7 +2552,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
                             runOnUiThread(() -> {
                                 // detect compile error from spceific classes and navigate to the class for fix
-                                new MaterialAlertDialogBuilder(DexEditorActivity.this)
+                                UIKit.dialog(DexEditorActivity.this)
                                         .setTitle(R.string.compile_error)
                                         .setMessage("Class: " + faultyClass + "\n\n" + error)
                                         .setPositiveButton(R.string.fix, (d, w) -> {
@@ -2689,14 +2688,12 @@ public class DexEditorActivity extends AppCompatActivity {
             if (position == 0) {
                 isSelected = viewPager.getVisibility() != View.VISIBLE;
                 holder.title.setText(R.string.dex_editor_plus);
-                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-                int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-                holder.title.setTextColor(isSelected ? skyColor : theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                holder.title.setTextColor(isSelected ? skyColor : ThemeAttrs.onSurface(DexEditorActivity.this));
                 holder.path.setVisibility(View.GONE);
                 holder.icon.setImageResource(R.drawable.ic_home);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : Color.BLACK));
-                } else holder.icon.setColorFilter(new LightingColorFilter(Color.BLACK, isSelected ? skyColor : Color.BLACK));
+                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : ThemeAttrs.onSurface(DexEditorActivity.this)));
+                } else holder.icon.setColorFilter(new LightingColorFilter(Color.BLACK, isSelected ? skyColor : ThemeAttrs.onSurface(DexEditorActivity.this)));
                 holder.mainView.setOnClickListener(v -> {
                     drawerLayout.closeDrawer(GravityCompat.START);
                     v.postDelayed(this::hideEditor, 250);
@@ -2708,9 +2705,7 @@ public class DexEditorActivity extends AppCompatActivity {
                 EditorTab tab = tabs.get(tabIndex);
                 isSelected = (viewPager.getVisibility() == View.VISIBLE && tabIndex == currentTabIndex);
                 holder.title.setText((tab.isModified ? "*" : "") + tab.title); // highlight the spcific edited classes with star
-                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-                int theme = getIntent().getIntExtra("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light);
-                holder.title.setTextColor(isSelected ? skyColor : theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                holder.title.setTextColor(isSelected ? skyColor : ThemeAttrs.onSurface(DexEditorActivity.this));
 
                 holder.path.setVisibility(View.VISIBLE);
                 holder.path.setText(tab.className);
@@ -2722,8 +2717,8 @@ public class DexEditorActivity extends AppCompatActivity {
                     holder.icon.setImageResource(R.drawable.ic_edit_mt);
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : Color.BLACK));
-                } else holder.icon.setColorFilter(new LightingColorFilter(Color.BLACK, isSelected ? skyColor : Color.BLACK));
+                    holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : ThemeAttrs.onSurface(DexEditorActivity.this)));
+                } else holder.icon.setColorFilter(new LightingColorFilter(Color.BLACK, isSelected ? skyColor : ThemeAttrs.onSurface(DexEditorActivity.this)));
 
                 holder.mainView.setOnClickListener(v -> {
                     int currentPos = holder.getBindingAdapterPosition();
@@ -2803,11 +2798,9 @@ public class DexEditorActivity extends AppCompatActivity {
                     }
                 });
             }
-            if (isSelected) holder.mainView.setBackgroundColor(Color.parseColor("#E1F5FE"));
+            if (isSelected) holder.mainView.setBackgroundColor(ThemeAttrs.selection(DexEditorActivity.this));
             else {
-                TypedValue tv = new TypedValue();
-                getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, tv, true);
-                holder.mainView.setBackgroundColor(tv.data);
+                holder.mainView.setBackgroundColor(ThemeAttrs.surface(DexEditorActivity.this));
             }
         }
 

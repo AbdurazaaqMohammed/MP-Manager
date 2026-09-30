@@ -12,7 +12,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
-import com.google.android.material.color.MaterialColors;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -22,6 +21,7 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 
@@ -85,7 +85,7 @@ public class BookmarksAdapter extends ArrayAdapter<File> {
 
         boolean batch = callbacks != null && callbacks.isBatchMode();
         convertView.setBackgroundColor(batch && callbacks.isBatchSelected(position)
-                ? MaterialColors.getColor(convertView, com.google.android.material.R.attr.colorPrimaryContainer, Color.LTGRAY)
+                ? ThemeAttrs.selection(context)
                 : Color.TRANSPARENT);
 
         boolean dragging = callbacks != null && callbacks.isDragging();

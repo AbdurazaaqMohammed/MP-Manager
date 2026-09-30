@@ -1,19 +1,13 @@
 package io.github.abdurazaaqmohammed.tools;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
-
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.color.MaterialColors;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
@@ -25,36 +19,26 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
  * scaffold, renders the installed {@link ToolPlugin} for the requested id, or
  * shows the {@link PackPrompts} install prompt when the pack is missing.
  */
-public class ToolRunnerActivity extends BaseActivity {
+public class ToolRunnerActivity extends ToolbarPage {
     private final List<ToolPlugin> activePlugins = new ArrayList<>();
+    private String toolId;
 
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        String toolId = getIntent().getStringExtra("tool_id");
+    protected CharSequence pageTitle() {
         String toolTitle = getIntent().getStringExtra("tool_title");
         if (toolTitle == null || toolTitle.isEmpty()) {
             ToolRegistry.ToolItem found = ToolRegistry.findById(this, toolId);
             toolTitle = found == null ? "Tool" : found.title();
         }
+        return toolTitle;
+    }
+
+    protected void onCreate(Bundle savedInstanceState) {
+        toolId = getIntent().getStringExtra("tool_id");
+        super.onCreate(savedInstanceState);
         if (toolId == null) {
             toolId = "calc";
         }
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
-        MaterialToolbar toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(toolTitle);
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> finish());
-        root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(16);
-        box.setPadding(pad, pad, pad, pad);
-        scroll.addView(box, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setContentView(root);
+        LinearLayout box = contentBox();
         try {
             ToolPlugin custom = PluginRegistry.findCustom(toolId);
             if (custom != null) {
@@ -67,8 +51,7 @@ public class ToolRunnerActivity extends BaseActivity {
             }
         } catch (Exception ignored) {
         }
-        final String id = toolId;
-        PackPrompts.showForTool(this, box, id, () -> {
+        PackPrompts.showForTool(this, box, toolId, () -> {
             try {
                 recreate();
             } catch (Exception ignored) {
@@ -113,9 +96,5 @@ public class ToolRunnerActivity extends BaseActivity {
             } catch (Exception ignored) {
             }
         }
-    }
-
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
     }
 }

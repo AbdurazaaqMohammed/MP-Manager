@@ -13,6 +13,7 @@
  */
 package io.github.codehasan.colorpicker.services;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Notification;
@@ -588,11 +589,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
     private void copyToClipboard(String label, String text) {
         ClipData clip = ClipData.newPlainText(label, text);
         clipboard.setPrimaryClip(clip);
-        Toast.makeText(
-                this,
-                getString(R.string.copied_to_clipboard, label),
-                Toast.LENGTH_SHORT
-        ).show();
+        UIKit.toast(this, getString(R.string.copied_to_clipboard, label));
     }
 
     @Override
@@ -624,7 +621,7 @@ public class ColorPickerService extends Service implements MagnifierView.OnInter
             );
             getSystemService(NotificationManager.class).createNotificationChannel(chan);
         }
-        return new NotificationCompat.Builder(this, channelId)
+        return UIKit.notify(this, channelId)
                 .setContentTitle(getString(R.string.color_picker_active))
                 .setSmallIcon(R.drawable.ic_logo)
                 .build();

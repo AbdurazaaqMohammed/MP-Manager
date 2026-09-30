@@ -1,5 +1,6 @@
 package io.github.codehasan.colorpicker;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -18,7 +19,7 @@ public class PreferencesDialogFragment extends DialogFragment {
     @NonNull
     @Override
     public AlertDialog onCreateDialog(Bundle savedInstanceState) {
-        return new MaterialAlertDialogBuilder(requireActivity())
+        return UIKit.dialog(requireActivity())
                 .setPositiveButton(android.R.string.ok, null)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setView(R.layout.color_picker_settings)

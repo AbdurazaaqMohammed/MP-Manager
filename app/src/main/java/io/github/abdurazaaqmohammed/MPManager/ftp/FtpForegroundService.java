@@ -8,9 +8,9 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
-import androidx.core.app.NotificationCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class FtpForegroundService extends Service {
     private static final String CHANNEL_ID = "TaskChannel";
@@ -30,7 +30,7 @@ public class FtpForegroundService extends Service {
         PendingIntent copyPendingIntent = PendingIntent.getBroadcast(this, 1, copyIntent, PendingIntent.FLAG_IMMUTABLE);
 
 
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+        Notification notification = UIKit.notify(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.ftp_server))
                 .setContentText(getString(R.string.ftp_running_at, ip))
                 .setSmallIcon(R.drawable.cloud_upload_24px)

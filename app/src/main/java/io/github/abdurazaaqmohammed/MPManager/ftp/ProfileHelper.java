@@ -1,8 +1,9 @@
 package io.github.abdurazaaqmohammed.MPManager.ftp;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,7 +69,7 @@ public class ProfileHelper {
                 if (convertView == null)
                     convertView = LayoutInflater.from(context).inflate(R.layout.dropdownitem, parent, false);
                 TextView view = (TextView) convertView;
-                view.setTextColor(context.theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
+                view.setTextColor(ThemeAttrs.onSurface(context));
                 view.setText(values[position]);
                 view.setOnClickListener(v -> {
                     profileSpinner.dismissDropDown();
@@ -126,7 +127,7 @@ public class ProfileHelper {
     }
 
     private void showProfileManagementDialog(boolean isServer) {
-        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
+        MaterialAlertDialogBuilder builder = UIKit.dialog(context);
         builder.setTitle(context.rss.getString(R.string.manage_profiles));
 
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_profile_management, null);
@@ -158,7 +159,7 @@ public class ProfileHelper {
         boolean isEdit = profile != null;
         String dialogTitle = context.rss.getString(isEdit ? R.string.edit_profile : R.string.add_profile);
 
-        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
+        MaterialAlertDialogBuilder builder = UIKit.dialog(context);
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_profile_edit, null);
 
         EditText nameInput = view.findViewById(R.id.profile_name);

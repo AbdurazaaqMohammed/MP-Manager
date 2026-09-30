@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.arsc;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Handler;
@@ -200,7 +201,7 @@ public final class ArscQuerier {
         resultParams.topMargin = pad / 2;
         root.addView(result, resultParams);
 
-        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        AlertDialog dialog = UIKit.dialog(activity)
                 .setCustomTitle(titleRow)
                 .setView(root)
                 .setNeutralButton(activity.getString(R.string.querier_search_string), null)
@@ -252,7 +253,7 @@ public final class ArscQuerier {
         root.addView(help);
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(root);
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.querier_title))
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)

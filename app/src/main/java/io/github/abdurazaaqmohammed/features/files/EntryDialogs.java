@@ -17,7 +17,6 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
 
@@ -53,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * Rename/delete/compress entry dialogs extracted from MainFilesArrayAdapter.
@@ -104,7 +104,7 @@ public class EntryDialogs {
             RenameUtil.showMultiRenameDialog(context, state.selectedPositions(), isInZip, values, pane1, state.currentZipPath());
             return;
         }
-        MaterialAlertDialogBuilder renameDialog = dialogUtil.getDialogBuilder();
+        AlertDialog.Builder renameDialog = dialogUtil.getDialogBuilder();
         View rnm = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
         EditText renameInput = rnm.findViewById(R.id.m_et_edittext);
         renameInput.setText(fileName);
@@ -184,7 +184,7 @@ public class EntryDialogs {
         Object[] values = state.values();
         boolean isInZip = state.isInZip();
         ProgressManager pm = new ProgressManager(context, true);
-        MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
+        AlertDialog.Builder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean[] sign = new boolean[1];
@@ -281,7 +281,7 @@ public class EntryDialogs {
                     }
                 }
                 if (inKeyDir) {
-                    new MaterialAlertDialogBuilder(context)
+                    UIKit.dialog(context)
                             .setTitle(R.string.warning_dangerous_directory)
                             .setMessage(R.string.warn_delete_s)
                             .setPositiveButton(R.string.delete, (d, w) -> {
@@ -311,7 +311,7 @@ public class EntryDialogs {
         }
         File parentFile2 = file.getParentFile();
         String parentFileName = parentFile2.getName();
-        MaterialAlertDialogBuilder compressDialog = dialogUtil.getDialogBuilder();
+        AlertDialog.Builder compressDialog = dialogUtil.getDialogBuilder();
         compressDialog.setTitle(context.rss.getString(R.string.compress));
         View compressView = LayoutInflater.from(context).inflate(R.layout.compress_dialog, null);
 

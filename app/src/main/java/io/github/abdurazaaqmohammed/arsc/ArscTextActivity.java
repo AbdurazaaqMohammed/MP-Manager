@@ -1,7 +1,7 @@
 package io.github.abdurazaaqmohammed.arsc;
 
+import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -10,6 +10,7 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -18,12 +19,12 @@ import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.DynamicColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.TypeBlock;
 import com.reandroid.arsc.model.ResourceEntry;
 
@@ -44,7 +45,7 @@ import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import modder.hub.dexeditor.views.TextActionWindow;
 
-public class ArscTextActivity extends BaseActivity {
+public class ArscTextActivity extends ToolbarPage {
 
     static ArscData sessionData;
     static TypeBlock sessionBlock;
@@ -53,7 +54,6 @@ public class ArscTextActivity extends BaseActivity {
 
     private ArscData data;
     private TypeBlock block;
-    private MaterialToolbar toolbar;
     private UnifiedEditorFragment fragment;
     private ImageButton btnUndo;
     private ImageButton btnRedo;
@@ -92,8 +92,14 @@ public class ArscTextActivity extends BaseActivity {
     }
 
     @Override
+    protected View createBody(Context c) {
+        FrameLayout holder = new FrameLayout(c);
+        holder.setId(R.id.arsc_text_editor_container);
+        return holder;
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         data = sessionData;
         block = sessionBlock;
         final String title = sessionTitle;
@@ -102,13 +108,7 @@ public class ArscTextActivity extends BaseActivity {
             finish();
             return;
         }
-        LinearLayout main = new LinearLayout(this);
-        main.setOrientation(LinearLayout.VERTICAL);
-        toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(title == null ? "Text" : title);
-        toolbar.setSubtitle(data.arscFile == null ? "" : data.arscFile.getName());
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        super.onCreate(savedInstanceState);
         LinearLayout barButtons = new LinearLayout(this);
         barButtons.setOrientation(LinearLayout.HORIZONTAL);
         barButtons.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -156,13 +156,9 @@ public class ArscTextActivity extends BaseActivity {
         barButtons.addView(btnSave);
         barButtons.addView(btnEdit);
         barButtons.addView(btnFile);
-        toolbar.addView(barButtons, new MaterialToolbar.LayoutParams(
+        toolbar().addView(barButtons, new MaterialToolbar.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END));
-        main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        FrameLayout holder = new FrameLayout(this);
-        holder.setId(R.id.arsc_text_editor_container);
-        main.addView(holder, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setContentView(main);
+        toolbar().setSubtitle(data.arscFile == null ? "" : data.arscFile.getName());
         fragment = UnifiedEditorFragment.newInstance(null, "ArscText", null, UnifiedEditorFragment.TYPE_TEXT);
         getSupportFragmentManager().beginTransaction().replace(R.id.arsc_text_editor_container, fragment).commit();
         getSupportFragmentManager().executePendingTransactions();
@@ -196,6 +192,10 @@ public class ArscTextActivity extends BaseActivity {
         final TypeBlock tb = block;
         currentHighlight = highlight;
         loadBlockText();
+    }
+
+    protected CharSequence pageTitle() {
+        return sessionTitle == null ? "Text" : sessionTitle;
     }
 
     private void loadBlockText() {
@@ -301,7 +301,7 @@ public class ArscTextActivity extends BaseActivity {
             finishWithResult();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(R.string.unsaved_changes)
                 .setMessage(R.string.save_before_exit)
                 .setPositiveButton(R.string.save, (d, w) -> applyText(this::finishWithResult))
@@ -320,7 +320,7 @@ public class ArscTextActivity extends BaseActivity {
         if (bufferDirty) {
             final TypeBlock target = tb;
             final String hl = highlightName;
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(R.string.unsaved_changes)
                     .setMessage(R.string.save_before_exit)
                     .setPositiveButton(R.string.save, (d, w) -> applyText(() -> openBlockNow(target, hl)))
@@ -345,7 +345,7 @@ public class ArscTextActivity extends BaseActivity {
                 if (tb.getPackageBlock() != null) pkg = tb.getPackageBlock().getName();
             } catch (Exception ignored) {
             }
-            toolbar.setTitle(pkg.isEmpty() ? label : pkg + "/" + label);
+            toolbar().setTitle(pkg.isEmpty() ? label : pkg + "/" + label);
         } catch (Exception ignored) {
         }
         loadBlockText();

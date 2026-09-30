@@ -16,7 +16,6 @@ import android.widget.LinearLayout;
 import androidx.annotation.RequiresApi;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -26,6 +25,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.util.ArrayList;
 import java.util.List;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * Bottom-bar multi-select mode UI extracted from MainActivity.
@@ -115,7 +115,7 @@ public class MultiSelectController {
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectAll(); },
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.invertSelection(); },
                 v -> { for (MainFilesArrayAdapter a : activeMultiSelectAdapters()) a.selectSameType(); },
-                v -> new MaterialAlertDialogBuilder(activity)
+                v -> UIKit.dialog(activity)
                         .setTitle(R.string.multi_select)
                         .setMessage(activity.getString(R.string.multiselect_hint))
                         .setPositiveButton(android.R.string.ok, null)

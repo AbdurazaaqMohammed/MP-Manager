@@ -20,7 +20,6 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -31,6 +30,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.commandhelper.ProfileManager;
 import io.github.abdurazaaqmohammed.commandhelper.ProfileManager.Profile;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 
 public class CommandHelper {
 
@@ -45,7 +46,7 @@ public class CommandHelper {
         ProfileManager chPm = new ProfileManager(context);
         List<Profile> profiles = chPm.getProfiles();
         if (profiles.isEmpty()) {
-            new MaterialAlertDialogBuilder(context)
+            UIKit.dialog(context)
                     .setTitle(R.string.no_profiles)
                     .setMessage(R.string.no_profiles_msg)
                     .setPositiveButton(R.string.settings, (d, w) -> new CommandHelperSettingsDialog().show(context.getSupportFragmentManager(), "CommandHelperSettings"))
@@ -58,7 +59,7 @@ public class CommandHelper {
     }
 
     private void showMultiFileCommandDialog(List<Profile> profiles, ArrayList<String> filePaths, ProfileManager chPm) {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        AlertDialog.Builder builder = UIKit.dialog(context);
         builder.setTitle(R.string.multiple_files);
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -90,7 +91,7 @@ public class CommandHelper {
         boolean autoCopy = prefs.getBoolean("auto_copy", false);
         int lastProfileIdx = Math.min(prefs.getInt("last_profile_idx", 0), profiles.size() - 1);
         if (lastProfileIdx < 0) lastProfileIdx = 0;
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        AlertDialog.Builder builder = UIKit.dialog(context);
         builder.setTitle(R.string.command_helper);
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -279,7 +280,7 @@ public class CommandHelper {
         try {
             context.getPackageManager().getPackageInfo("com.termux", PackageManager.GET_ACTIVITIES);
         } catch (PackageManager.NameNotFoundException e) {
-            new MaterialAlertDialogBuilder(context)
+            UIKit.dialog(context)
                     .setTitle(R.string.command_helper)
                     .setMessage(R.string.termux_no)
                     .setNegativeButton(android.R.string.cancel, null)
@@ -296,7 +297,7 @@ public class CommandHelper {
         try {
             context.startService(intent);
         } catch (SecurityException e) {
-            new MaterialAlertDialogBuilder(context).setMessage(R.string.termux_perm).setTitle(context.rss.getString(R.string.permissions)).setPositiveButton(android.R.string.ok, (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
+            UIKit.dialog(context).setMessage(R.string.termux_perm).setTitle(context.rss.getString(R.string.permissions)).setPositiveButton(android.R.string.ok, (dialog, which) -> context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName())))).setNegativeButton(android.R.string.cancel, null).show();
         } catch (IllegalStateException ise) {
             // This can happen if Termux is force stopped even if you granted draw over other apps permission
             context.startActivity(new Intent().setClassName("com.termux", "com.termux.app.TermuxActivity"));
@@ -313,7 +314,7 @@ public class CommandHelper {
     private View divider() {
         View v = new View(context);
         v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
-        v.setBackgroundColor(0x1A000000);
+        v.setBackgroundColor(ThemeAttrs.outline(context));
         v.setMinimumHeight(1);
         return v;
     }

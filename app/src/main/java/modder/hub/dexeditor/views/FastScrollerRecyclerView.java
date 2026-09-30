@@ -15,6 +15,8 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
+
 /*
  Author : @developer-krushna (Krushna Chandra)
  Idea Extracted From MT Manager
@@ -68,7 +70,9 @@ public class FastScrollerRecyclerView extends RecyclerView {
         this.scrollerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         float density = context.getResources().getDisplayMetrics().density;
-        this.thumbColor = 0xDD666666; // Standard grey
+        int surface = ThemeAttrs.surface(context);
+        boolean lightSurface = (Color.red(surface) + Color.green(surface) + Color.blue(surface)) / 3 > 127;
+        this.thumbColor = lightSurface ? 0xDD444444 : 0xFFBDBDBD;
         this.thumbWidth = 8.0f * density;
         this.thumbHeight = 52.0f * density;
 
@@ -192,7 +196,7 @@ public class FastScrollerRecyclerView extends RecyclerView {
         }
 
         // 2. Draw Thumb
-        int activeColor = isDragging ? 0xFF1E88E5 : thumbColor; // Blue if dragging
+        int activeColor = isDragging ? ThemeAttrs.accent(getContext()) : thumbColor;
         int thumbAlpha = (int) (Color.alpha(activeColor) * alphaMultiplier);
         scrollerPaint.setColor((thumbAlpha << 24) | (activeColor & 0x00FFFFFF));
 

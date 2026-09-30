@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -30,7 +32,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -38,6 +39,7 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
 import io.github.abdurazaaqmohammed.adapters.main.FileMenuOrder;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -48,6 +50,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.ui.dialogs.ThemePickerDialog;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -76,20 +79,34 @@ public class SettingsController {
         this.activity = activity;
     }
 
+    /**
+     * Which of the four hard-coded buttons to light up. Imported themes have no
+     * button of their own, so they fall back to the light arm (kept on the
+     * fallback side of the ternary in showSettingsDialog's caller chain).
+     */
+    private int checkedThemeButton() {
+        String id = ThemeRegistry.getCurrentId(activity);
+        if (BuiltInThemes.SYSTEM_DEFAULT_ID.equals(id)) return R.id.systemThemeButton;
+        if (BuiltInThemes.DARK_ID.equals(id)) return R.id.darkThemeButton;
+        if (BuiltInThemes.BLACK_ID.equals(id)) return R.id.blackThemeButton;
+        if (BuiltInThemes.MT_DARK_ID.equals(id)) return R.id.darkThemeButton;
+        return R.id.lightThemeButton;
+    }
+
     public void showSettingsDialog() {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
         ScrollView settingsDialog = (ScrollView) LayoutInflater.from(activity).inflate(R.layout.dialog_settings, null);
 
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
-        themeButtons.check(
-                activity.isSystemTheme() ? R.id.systemThemeButton
-                        : activity.theme == R.style.Theme_MyApp_Light ? R.id.lightThemeButton
-                                : activity.theme == R.style.Theme_MyApp_Dark ? R.id.darkThemeButton
-                                        : R.id.blackThemeButton);
+        themeButtons.check(checkedThemeButton());
+        settingsDialog.findViewById(R.id.moreThemesButton)
+                .setOnClickListener(v -> ThemePickerDialog.show(activity));
         for (int i = 0; i < themeButtons.getChildCount(); i++) {
             View child = themeButtons.getChildAt(i);
             if (child instanceof MaterialButton) {
                 child.setOnLongClickListener(v3 -> {
+                    // Built-ins just show their name; an imported theme is not
+                    // reachable from this group, so deletion lives in the picker.
                     int buttonId = v3.getId();
                     if (buttonId == R.id.lightThemeButton) {
                         Extensions.showMessage(activity, R.string.light_theme);
@@ -105,15 +122,19 @@ public class SettingsController {
             }
         }
 
+        // Guard against re-entry: check() below re-fires this same listener.
+        final boolean[] suppress = {false};
         themeButtons.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (isChecked) {
+            if (!isChecked || suppress[0]) return;
+            suppress[0] = true;
+            try {
                 String pluginId;
                 boolean system = false;
                 if (checkedId == R.id.lightThemeButton) {
                     themeButtons.check(R.id.lightThemeButton);
                     pluginId = BuiltInThemes.LIGHT_ID;
                 } else if (checkedId == R.id.darkThemeButton) {
-                    themeButtons.findViewById(R.id.darkThemeButton);
+                    themeButtons.check(R.id.darkThemeButton);
                     pluginId = BuiltInThemes.DARK_ID;
                 } else if (checkedId == R.id.blackThemeButton) {
                     themeButtons.check(R.id.blackThemeButton);
@@ -129,7 +150,14 @@ public class SettingsController {
                 activity.theme = ThemeRegistry.currentStyleRes(activity);
                 // Keep legacy int pref in sync for any remaining readers.
                 settings.edit().putInt("theme", activity.theme).apply();
-                activity.recreate();
+                // setCurrentId -> setDefaultNightMode already triggers a rebuild on some
+                // devices; recreating here from inside the click callback races it and
+                // leaves the old theme on screen. Post it instead.
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    if (!activity.isFinishing() && !activity.isDestroyed()) activity.recreate();
+                });
+            } finally {
+                suppress[0] = false;
             }
         });
 
@@ -187,7 +215,7 @@ public class SettingsController {
         checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, activity));
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> activity.uiHelper.showAboutDialog());
         setupPluginSettings(settingsDialog, settings);
-        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(activity).setTitle(activity.getString(R.string.settings)).setView(settingsDialog).create();
+        AlertDialog settingsAlert = UIKit.dialog(activity).setTitle(activity.getString(R.string.settings)).setView(settingsDialog).create();
         settingsAlert.setOnDismissListener(d -> {
             saveSuCommand(settingsDialog);
             saveDateFormat(settingsDialog);
@@ -805,7 +833,7 @@ public class SettingsController {
 
         String[] options = {activity.getString(R.string.reboot), activity.getString(R.string.reboot_recovery), activity.getString(R.string.reboot_bootloader), activity.getString(R.string.power_off)};
 
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(R.string.reboot_options)
                 .setItems(options, (dialog, which) -> {
                     String message;
@@ -816,7 +844,7 @@ public class SettingsController {
                         case 3: message = activity.getString(R.string.power_off_the_device); break;
                         default: return;
                     }
-                    new MaterialAlertDialogBuilder(activity)
+                    UIKit.dialog(activity)
                             .setTitle(options[which])
                             .setMessage(message)
                             .setPositiveButton(activity.getString(R.string.confirm), (d2, w2) -> {

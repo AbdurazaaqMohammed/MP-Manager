@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.arsc;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -25,15 +26,14 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.base.scaffold.ToolbarPage;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.color.DynamicColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.arsc.chunk.PackageBlock;
@@ -57,7 +57,7 @@ import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class ArscEditorActivity extends BaseActivity {
+public class ArscEditorActivity extends ToolbarPage {
 
     private static final String HIST_KEY = "arsc_simple_search_hist";
 
@@ -65,7 +65,6 @@ public class ArscEditorActivity extends BaseActivity {
     boolean dirty = false;
     boolean savedThisSession = false;
 
-    private MaterialToolbar toolbar;
     private String fileName = "resources.arsc";
     private LinearLayout filterWrap;
     private EditText filterInput;
@@ -146,6 +145,34 @@ public class ArscEditorActivity extends BaseActivity {
 
 
     @Override
+    protected View createBody(Context c) {
+        LinearLayout main = new LinearLayout(c);
+        main.setOrientation(LinearLayout.VERTICAL);
+        filterWrap = new LinearLayout(c);
+        filterWrap.setOrientation(LinearLayout.VERTICAL);
+        int pad = dpPx(12);
+        filterWrap.setPadding(pad, pad, pad, 0);
+        TextInputLayout box = UiFields.box(c, "Filter");
+        filterInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
+        filterInput.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int cc) { }
+            public void onTextChanged(CharSequence s, int a, int b, int cc) { render(false); }
+            public void afterTextChanged(Editable s) { }
+        });
+        filterWrap.addView(box);
+        filterWrap.setVisibility(View.GONE);
+        main.addView(filterWrap, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        rv = new RecyclerView(c);
+        rv.setLayoutManager(new LinearLayoutManager(c));
+        rv.addItemDecoration(new DividerItemDecoration(c, DividerItemDecoration.VERTICAL));
+        adapter = new SimpleAdapter();
+        rv.setAdapter(adapter);
+        main.addView(rv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        return main;
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         String path = getIntent().getStringExtra("path");
@@ -156,22 +183,11 @@ public class ArscEditorActivity extends BaseActivity {
             return;
         }
         fileName = new File(path).getName();
-        buildShell();
-        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
-    }
-
-    private void buildShell() {
-        LinearLayout main = new LinearLayout(this);
-        main.setOrientation(LinearLayout.VERTICAL);
-        toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(getString(R.string.arsc_editor));
-        toolbar.setSubtitle(fileName);
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
-        Menu menu = toolbar.getMenu();
+        toolbar().setSubtitle(fileName);
+        Menu menu = toolbar().getMenu();
         menu.add(0, R.id.arsc_menu_save, 0, getString(R.string.arsc_save)).setIcon(R.drawable.save_24px).setShowAsAction(1);
         menu.add(0, R.id.arsc_menu_more, 0, getString(R.string.arsc_more)).setIcon(R.drawable.baseline_more_vert_24).setShowAsAction(1);
-        toolbar.setOnMenuItemClickListener(item -> {
+        toolbar().setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.arsc_menu_save) {
                 saveNow();
                 return true;
@@ -179,30 +195,11 @@ public class ArscEditorActivity extends BaseActivity {
             showMainMenu();
             return true;
         });
-        main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        loadAsync(new File(path), apkPath == null ? null : new File(apkPath), entryPath);
+    }
 
-        filterWrap = new LinearLayout(this);
-        filterWrap.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(12);
-        filterWrap.setPadding(pad, pad, pad, 0);
-        TextInputLayout box = UiFields.box(this, "Filter");
-        filterInput = UiFields.field(box, InputType.TYPE_CLASS_TEXT);
-        filterInput.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
-            public void onTextChanged(CharSequence s, int a, int b, int c) { render(false); }
-            public void afterTextChanged(Editable s) { }
-        });
-        filterWrap.addView(box);
-        filterWrap.setVisibility(View.GONE);
-        main.addView(filterWrap, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        rv = new RecyclerView(this);
-        rv.setLayoutManager(new LinearLayoutManager(this));
-        rv.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
-        adapter = new SimpleAdapter();
-        rv.setAdapter(adapter);
-        main.addView(rv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setContentView(main);
+    protected CharSequence pageTitle() {
+        return getString(R.string.arsc_editor);
     }
 
     private void loadAsync(File arsc, File apk, String entryPath) {
@@ -250,7 +247,7 @@ public class ArscEditorActivity extends BaseActivity {
     private void render(boolean clearFilter) {
         Screen s = current();
         if (s == null) return;
-        toolbar.setTitle(s.title());
+        toolbar().setTitle(s.title());
         if (filterWrap != null) filterWrap.setVisibility(s.filterable() ? View.VISIBLE : View.GONE);
         String filter = filterInput.getText() == null ? "" : filterInput.getText().toString();
         if (s instanceof Root) {
@@ -452,7 +449,7 @@ public class ArscEditorActivity extends BaseActivity {
         preview.setPadding(pad, pad, pad, pad);
         ScrollView scroll = new ScrollView(this);
         scroll.addView(preview);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(title)
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -521,7 +518,7 @@ public class ArscEditorActivity extends BaseActivity {
             resolvedName = "entry";
         }
         final String entryName = resolvedName;
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.arsc_edit_x, entryName))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -545,7 +542,7 @@ public class ArscEditorActivity extends BaseActivity {
         EditText input = new EditText(this);
         input.setText(ps.text);
         input.setSingleLine(false);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(String.format(Locale.US, "String %04X", ps.index & 0xFFFF))
                 .setView(UiFields.wrap(this, input, "Value", 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -596,7 +593,7 @@ public class ArscEditorActivity extends BaseActivity {
         groupParams.topMargin = dp(8);
         root.addView(group, groupParams);
 
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.arsc_search_value))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -617,7 +614,7 @@ public class ArscEditorActivity extends BaseActivity {
         input.setHint(getString(R.string.arsc_hex_hint));
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setSingleLine(true);
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.arsc_search_id))
                 .setView(UiFields.wrap(this, input, "Hex ID", 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -698,7 +695,7 @@ public class ArscEditorActivity extends BaseActivity {
 
     void markDirty() {
         dirty = true;
-        toolbar.setSubtitle(fileName + " *");
+        toolbar().setSubtitle(fileName + " *");
     }
 
     private void saveNow() {
@@ -717,7 +714,7 @@ public class ArscEditorActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     dirty = false;
                     if (data.apkFile != null) savedThisSession = true;
-                    toolbar.setSubtitle(fileName);
+                    toolbar().setSubtitle(fileName);
                     render(false);
                     Extensions.showMessage(this, getString(R.string.arsc_saved));
                     if (onDone != null) onDone.run();
@@ -738,10 +735,10 @@ public class ArscEditorActivity extends BaseActivity {
     }
 
     private void showMainMenu() {
-        View anchor = toolbar.findViewById(R.id.arsc_menu_more);
+        View anchor = toolbar().findViewById(R.id.arsc_menu_more);
         PopupMenu menu = anchor != null
                 ? new PopupMenu(this, anchor)
-                : new PopupMenu(this, toolbar, Gravity.END);
+                : new PopupMenu(this, toolbar(), Gravity.END);
         String s = getString(R.string.backup);
         menu.getMenu().add(s);
         menu.getMenu().add(R.string.exit);
@@ -771,7 +768,7 @@ public class ArscEditorActivity extends BaseActivity {
             finishWithApkResult();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.unsaved_changes))
                 .setMessage(getString(R.string.save_before_exit))
                 .setPositiveButton(getString(R.string.save), (d, w) -> saveNow(this::finishWithApkResult))

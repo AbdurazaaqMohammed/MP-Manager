@@ -22,13 +22,14 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.commandhelper.ProfileManager.Profile;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 
 public class SettingsDialogFragment extends DialogFragment {
 
@@ -59,7 +60,7 @@ public class SettingsDialogFragment extends DialogFragment {
 
         View sep = new View(getActivity());
         sep.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
-        sep.setBackgroundColor(0x1A000000);
+        sep.setBackgroundColor(ThemeAttrs.outline(getActivity()));
         root.addView(sep);
 
         TextView profilesTitle = new TextView(getActivity());
@@ -95,7 +96,7 @@ public class SettingsDialogFragment extends DialogFragment {
         addBtn.setOnClickListener(v -> showAddDialog());
         root.addView(addBtn);
 
-        return new MaterialAlertDialogBuilder(getActivity())
+        return UIKit.dialog(getActivity())
                 .setTitle(R.string.settings)
                 .setView(root)
                 .setPositiveButton(R.string.close, null)
@@ -125,7 +126,7 @@ public class SettingsDialogFragment extends DialogFragment {
     }
 
     private void showProfileDialog(int index, String existingName, String existingCommand) {
-        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(getActivity());
+        AlertDialog.Builder builder = UIKit.dialog(getActivity());
         builder.setTitle(index < 0 ? R.string.add_profile : R.string.edit_profile);
         LinearLayout layout = new LinearLayout(getActivity());
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -162,7 +163,7 @@ public class SettingsDialogFragment extends DialogFragment {
     }
 
     private void showDeleteDialog(int index) {
-        new MaterialAlertDialogBuilder(getActivity())
+        UIKit.dialog(getActivity())
                 .setTitle(R.string.delete_profile)
                 .setMessage(R.string.delete_confirm)
                 .setPositiveButton(R.string.save, (d, w) -> {

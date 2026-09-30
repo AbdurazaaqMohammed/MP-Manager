@@ -64,6 +64,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.plugins.ext.CodeEditorHandle;
 import io.github.abdurazaaqmohammed.plugins.ext.EditorAction;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
@@ -168,7 +170,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		// Set background
 		GradientDrawable backgroundDrawable = new GradientDrawable();
 		backgroundDrawable.setCornerRadius(codeEditor.getDpUnit() * 5.0f);
-		backgroundDrawable.setColor(-1);
+		backgroundDrawable.setColor(ThemeAttrs.surface(codeEditor.getContext()));
 		rootContainer.setBackground(backgroundDrawable);
 		
 		setContentView(rootContainer);
@@ -948,7 +950,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			intent.setData(Uri.parse(normalizedUrl));
 			context.startActivity(intent);
 		} catch (Exception e) {
-			Toast.makeText(context, "No browser available", Toast.LENGTH_SHORT).show();
+			UIKit.toast(context, "No browser available");
 		}
 	}
 	

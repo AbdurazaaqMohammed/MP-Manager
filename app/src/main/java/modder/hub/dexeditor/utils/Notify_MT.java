@@ -45,6 +45,8 @@ import android.content.Context;
 import android.view.WindowManager;
 import android.widget.TextView;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+
 /*
 Author @developer-krushna
 */
@@ -56,7 +58,7 @@ public class Notify_MT {
 	
 	public static void Notify(Context context, String title_mt, String message_mt, String cancel_mt) {
 		try {
-			final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+			final MaterialAlertDialogBuilder builder = UIKit.dialog(context);
 			builder.setTitle(title_mt);
 			builder.setMessage(message_mt);
 			builder.setPositiveButton(cancel_mt, (dia, which) -> {

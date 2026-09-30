@@ -10,7 +10,6 @@ import android.widget.TextView;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.ZipParameters;
@@ -28,6 +27,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * Re-injects editor-modified files back into the open APK/ZIP.
@@ -80,7 +80,7 @@ public class ApkResultHandler {
                     autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
                     autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                     ll.findViewById(R.id.sign_settings).setOnClickListener(activity.uiHelper.showSignSettingsDialog());
-                    new MaterialAlertDialogBuilder(activity)
+                    UIKit.dialog(activity)
                         .setTitle(activity.getString(R.string.file_modified))
                         .setView(ll)
                         .setPositiveButton(activity.getString(R.string.yes), (dialog, which) -> {

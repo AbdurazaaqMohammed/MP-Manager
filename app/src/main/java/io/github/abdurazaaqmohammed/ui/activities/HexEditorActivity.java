@@ -33,8 +33,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,6 +48,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -366,13 +366,13 @@ public class HexEditorActivity extends BaseActivity {
         for (int i = 0; i < labels.length; i++) {
             TextView label = new TextView(this);
             label.setText(labels[i]);
-            label.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.WHITE));
+            label.setTextColor(ThemeAttrs.onSurface(this));
             label.setTextSize(18);
             label.setPadding(0, dp(10), 0, dp(2));
             rows.addView(label);
 
             TextView value = new TextView(this);
-            value.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+            value.setTextColor(ThemeAttrs.onSurfaceVariant(this));
             value.setTextSize(15);
             value.setTextIsSelectable(true);
             value.setPadding(0, 0, 0, dp(4));
@@ -569,7 +569,7 @@ public class HexEditorActivity extends BaseActivity {
         }
         String[] options = {getString(R.string.hex_paste_hex), getString(R.string.hex_paste_dec), getString(R.string.hex_paste_bin),
                 getString(R.string.hex_paste_ascii), getString(R.string.hex_paste_b64)};
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.hex_paste_from))
                 .setItems(options, (d, w) -> promptPasteInput(w))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -582,7 +582,7 @@ public class HexEditorActivity extends BaseActivity {
         input.setMinLines(3);
         input.setGravity(Gravity.TOP);
         input.setText(getClipboardText());
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.hex_paste_from_x, formats[formatIndex]))
                 .setView(UiFields.wrap(this, input, getString(R.string.hex_paste_bytes), 16))
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -660,7 +660,7 @@ public class HexEditorActivity extends BaseActivity {
             return;
         }
         if (RootStaging.needsWriteConfirm(rootOriginalPath)) {
-            new MaterialAlertDialogBuilder(this)
+            UIKit.dialog(this)
                     .setTitle(getString(R.string.editor_write_system))
                     .setMessage(getString(R.string.editor_write_system_msg, rootOriginalPath))
                     .setPositiveButton(android.R.string.ok, (d, w) -> saveChangesRoot())
@@ -718,7 +718,7 @@ public class HexEditorActivity extends BaseActivity {
 
     private void revertChanges() {
         if (mods.isEmpty()) return;
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.hex_revert))
                 .setMessage(getString(R.string.hex_revert_msg))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -736,7 +736,7 @@ public class HexEditorActivity extends BaseActivity {
         EditText input = new EditText(this);
         input.setHint(getString(R.string.hex_offset_hint));
         input.setText(String.format(Locale.US, "%X", cursorPos));
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.hex_go_offset))
                 .setView(UiFields.wrap(this, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -755,7 +755,7 @@ public class HexEditorActivity extends BaseActivity {
             finish();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle(getString(R.string.hex_unsaved))
                 .setMessage(getString(R.string.hex_discard_unsaved))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -810,15 +810,15 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private int getPrimaryColor() {
-        return MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLUE);
+        return ThemeAttrs.accent(this);
     }
 
     private int getOnPrimaryColor() {
-        return MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimary, Color.WHITE);
+        return ThemeAttrs.onPrimary(this);
     }
 
     private int getPrimaryContainerColor() {
-        return MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer, Color.LTGRAY);
+        return ThemeAttrs.surfaceVariant(this);
     }
 
     private class HexRowAdapter extends RecyclerView.Adapter<HexRowAdapter.ViewHolder> {

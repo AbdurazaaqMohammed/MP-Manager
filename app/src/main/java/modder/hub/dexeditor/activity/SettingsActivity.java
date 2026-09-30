@@ -39,19 +39,19 @@ package modder.hub.dexeditor.activity;
 
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import modder.hub.dexeditor.fragment.SettingsFragment;
 
 /*
 Author @developer-krushna
 */
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseActivity {
 
     @Override
 	protected void onCreate(Bundle _savedInstanceState) {

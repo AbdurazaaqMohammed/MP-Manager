@@ -20,6 +20,8 @@ import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.graphics.Color;
 import android.os.Build;
 import android.text.TextUtils;
@@ -53,6 +55,7 @@ public class ViewInspectorDialog extends Dialog {
 
     private final ClipboardManager clipboardManager;
     private final InspectOverlayManager overlayManager;
+    private final io.github.abdurazaaqmohammed.core.ui.util.OverlayTheme theme;
     private ViewNodeSnapshot rootSnapshot;
     private int[] currentPath;
     private ViewInfo viewInfo;
@@ -69,9 +72,14 @@ public class ViewInspectorDialog extends Dialog {
                                InspectOverlayManager overlayManager) {
         super(context, R.style.inspectorDialogTheme); //, R.style.AppTheme
         this.overlayManager = overlayManager;
+        this.theme = UIKit.overlay(context);
         this.clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
         applyFoundView(found);
         overlayManager.setInfoDialog(this);
+    }
+
+    private static int withAlpha(int color, int alpha) {
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color));
     }
 
     private void applyFoundView(AccessibilityMonitoringService.FoundView found) {
@@ -156,7 +164,7 @@ public class ViewInspectorDialog extends Dialog {
     private View createContentView(Context context) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.argb(225, 20, 20, 20));
+        root.setBackgroundColor(withAlpha(theme.bg(), 225));
         root.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -165,10 +173,10 @@ public class ViewInspectorDialog extends Dialog {
         TextView header = new TextView(context);
         header.setText(context.getString(R.string.view_info));
         header.setTextSize(16f);
-        header.setTextColor(Color.WHITE);
+        header.setTextColor(theme.fg());
         header.setGravity(Gravity.CENTER);
         header.setPadding(0, 14, 0, 14);
-        header.setBackgroundColor(Color.argb(255, 30, 30, 30));
+        header.setBackgroundColor(withAlpha(theme.bg(), 255));
         header.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -209,7 +217,7 @@ public class ViewInspectorDialog extends Dialog {
         LinearLayout bar = new LinearLayout(context);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER);
-        bar.setBackgroundColor(Color.argb(255, 30, 30, 30));
+        bar.setBackgroundColor(withAlpha(theme.bg(), 255));
         bar.setPadding(8, 12, 8, 12);
         bar.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -250,7 +258,7 @@ public class ViewInspectorDialog extends Dialog {
         TextView title = new TextView(context);
         title.setText(context.getString(R.string.view_children));
         title.setTextSize(13f);
-        title.setTextColor(Color.argb(180, 255, 255, 255));
+        title.setTextColor(withAlpha(theme.fg(), 180));
         title.setPadding(0, 16, 0, 6);
         section.addView(title);
 
@@ -259,7 +267,7 @@ public class ViewInspectorDialog extends Dialog {
             TextView empty = new TextView(context);
             empty.setText(context.getString(R.string.no_children));
             empty.setTextSize(13f);
-            empty.setTextColor(Color.argb(150, 255, 255, 255));
+            empty.setTextColor(withAlpha(theme.fg(), 150));
             empty.setPadding(0, 4, 0, 8);
             section.addView(empty);
             return section;
@@ -283,7 +291,7 @@ public class ViewInspectorDialog extends Dialog {
             View divider = new View(context);
             divider.setLayoutParams(new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, 1));
-            divider.setBackgroundColor(Color.argb(40, 255, 255, 255));
+            divider.setBackgroundColor(withAlpha(theme.fg(), 40));
             section.addView(divider);
         }
         return section;
@@ -469,7 +477,7 @@ public class ViewInspectorDialog extends Dialog {
         TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextSize(12f);
-        labelView.setTextColor(Color.argb(180, 255, 255, 255));
+        labelView.setTextColor(withAlpha(theme.fg(), 180));
         container.addView(labelView);
 
         LinearLayout valueContainer = new LinearLayout(context);
@@ -493,7 +501,7 @@ public class ViewInspectorDialog extends Dialog {
             valueView.setTextColor(ContextCompat.getColor(context, R.color.md_theme_primary));
             container.setOnClickListener(v -> navigateToParent());
         } else {
-            valueView.setTextColor(Color.WHITE);
+            valueView.setTextColor(theme.fg());
             valueView.setTextIsSelectable(true);
         }
         valueContainer.addView(valueView);
@@ -522,7 +530,7 @@ public class ViewInspectorDialog extends Dialog {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 1
         ));
-        divider.setBackgroundColor(Color.argb(50, 255, 255, 255));
+        divider.setBackgroundColor(withAlpha(theme.fg(), 50));
         container.addView(divider);
 
         return container;

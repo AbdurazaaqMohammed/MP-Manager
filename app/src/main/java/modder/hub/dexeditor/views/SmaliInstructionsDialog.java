@@ -48,7 +48,6 @@ import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -56,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class SmaliInstructionsDialog {
 	private final Context context;
@@ -109,7 +109,7 @@ public class SmaliInstructionsDialog {
 
 		if (!TextUtils.isEmpty(currentQuery)) filterInstructions(currentQuery);
 
-		new MaterialAlertDialogBuilder(context)
+		UIKit.dialog(context)
 				.setView(view)
 				.setPositiveButton(android.R.string.ok, null)
 				.show();

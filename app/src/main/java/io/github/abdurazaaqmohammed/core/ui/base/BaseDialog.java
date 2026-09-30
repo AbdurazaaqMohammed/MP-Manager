@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+
 /**
  * Single place for dialog construction. Keeps MaterialAlertDialogBuilder
  * usage and view inflation consistent across features.
@@ -19,7 +21,7 @@ public final class BaseDialog {
     }
 
     public static MaterialAlertDialogBuilder builder(@NonNull Context context) {
-        return new MaterialAlertDialogBuilder(context);
+        return UIKit.dialog(context);
     }
 
     public static View inflate(@NonNull Context context, @LayoutRes int layout) {

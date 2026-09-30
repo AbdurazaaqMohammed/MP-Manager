@@ -50,6 +50,7 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 // Author - @developer-krushna
@@ -76,7 +77,7 @@ public class AlertCircularProgress {
         View view = View.inflate(context, R.layout.circular_progress, null);
         progressMessage = view.findViewById(R.id.progress_message);
         progressTitle = view.findViewById(R.id.progress_title);
-        alertDialog = new MaterialAlertDialogBuilder(activity)
+        alertDialog = UIKit.dialog(activity)
                 .setCancelable(false)
                 .setView(view)
                 .create();

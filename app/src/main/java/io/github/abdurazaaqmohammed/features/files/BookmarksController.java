@@ -19,7 +19,6 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.android.material.textfield.TextInputEditText;
@@ -40,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * Bookmarks drawer UI: lists, groups, pager, labels, batch ops, drag reorder.
@@ -247,7 +247,7 @@ public class BookmarksController {
         targets.add(activity.rss.getString(R.string.bookmarks));
         targets.addAll(bookmarkGroups);
         int[] selected = {0};
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.rss.getString(R.string.bookmarks))
                 .setSingleChoiceItems(targets.toArray(new String[0]), 0, (d, w) -> selected[0] = w)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -353,7 +353,7 @@ public class BookmarksController {
     private void showAddGroupDialog() {
         EditText input = new EditText(activity);
         input.setHint(activity.rss.getString(R.string.group_name));
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
             .setTitle(activity.rss.getString(R.string.add_group))
             .setView(UiFields.wrap(activity, input, null, 16))
             .setNegativeButton(android.R.string.cancel, null)
@@ -428,7 +428,7 @@ public class BookmarksController {
             }
         });
 
-        AlertDialog heightDialog = new MaterialAlertDialogBuilder(activity)
+        AlertDialog heightDialog = UIKit.dialog(activity)
                 .setTitle(activity.getString(R.string.adjust_height))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -494,7 +494,7 @@ public class BookmarksController {
         TextInputEditText pathInput = view.findViewById(R.id.bookmarkPathInput);
         nameInput.setText(controller.labelOf(file));
         pathInput.setText(file.getPath());
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.rss.getString(R.string.edit_bookmark))
                 .setView(view)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -525,7 +525,7 @@ public class BookmarksController {
         }
         List<Integer> indices = bookmarkTargetIndices(controller);
         int[] selected = {0};
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(activity.rss.getString(R.string.move))
                 .setSingleChoiceItems(targets.toArray(new String[0]), 0, (d, w) -> selected[0] = w)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -554,7 +554,7 @@ public class BookmarksController {
     }
 
     private void confirmDeleteBookmark(BookmarkListController controller, int position) {
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setMessage(activity.rss.getString(R.string.confirm_delete_bookmark, controller.items.get(position)))
                 .setTitle(R.string.warning)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -612,7 +612,7 @@ public class BookmarksController {
         List<Integer> positions = new ArrayList<>(batchSelected);
         Collections.sort(positions);
         int[] selected = {0};
-        new MaterialAlertDialogBuilder(activity)
+        UIKit.dialog(activity)
                 .setTitle(copy ? activity.rss.getString(android.R.string.copy) : activity.rss.getString(R.string.move))
                 .setSingleChoiceItems(targets.toArray(new String[0]), 0, (d, w) -> selected[0] = w)
                 .setNegativeButton(android.R.string.cancel, null)

@@ -33,6 +33,14 @@
     <string name="dark_theme">Dark theme</string>
     <string name="light_theme">Light theme</string>
     <string name="system_theme">System theme</string>
+    <string name="more_themes">More themes…</string>
+    <string name="choose_theme">Choose theme</string>
+    <string name="import_theme_json">Import theme JSON…</string>
+    <string name="delete_theme">Delete</string>
+    <string name="theme_imported">Theme imported</string>
+    <string name="theme_import_failed">Not a valid theme JSON</string>
+    <string name="theme_deleted">Theme deleted</string>
+    <string name="theme_delete_failed">Built-in themes cannot be deleted</string>
     <string name="func">Functionality</string>
     <string name="pkg_name_save">Save files with package name instead of app name</string>
     <string name="split">Split</string>

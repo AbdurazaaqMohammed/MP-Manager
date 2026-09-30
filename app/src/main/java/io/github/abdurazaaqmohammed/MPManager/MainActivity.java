@@ -20,7 +20,6 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RotateDrawable;
@@ -79,6 +78,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
+import io.github.abdurazaaqmohammed.core.ui.theme.ActiveTheme;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.PopupMenus;
@@ -118,8 +120,6 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.color.DynamicColors;
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.tabs.TabLayout;
@@ -408,6 +408,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (io.github.abdurazaaqmohammed.ui.dialogs.ThemePickerDialog
+                .handleImportResult(this, requestCode, resultCode, data)) {
+            return;
+        }
         if (requestCode == 9021) {
             if (resultCode == RESULT_OK && data != null && data.getData() != null
                     && overlayImageCallback != null) {
@@ -681,6 +685,17 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }});
 
     private void setupSystemBars() {
+        // "main" owns the window-inset padding, so on API 35+ (where
+        // setStatusBarColor is a no-op and the bar is transparent) its background
+        // is what shows through behind the status bar. Make that the app-bar
+        // colour. The bottom bar and the navigation bar stay on the surface
+        // colour, which is what MT Manager paints them; the two list panes carry
+        // the surface colour themselves.
+        int chrome = ThemeAttrs.toolbar(this);
+        int surface = ThemeAttrs.surface(this);
+        findViewById(R.id.main).setBackgroundColor(chrome);
+        findViewById(R.id.topBar).setBackgroundColor(chrome);
+        findViewById(R.id.bottomBar).setBackgroundColor(surface);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -697,14 +712,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             return insets;
         });
 
-        boolean lightBars = theme == R.style.Theme_MyApp_Light;
+        boolean lightBars = ActiveTheme.isLight(this);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            int surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
-            getWindow().setStatusBarColor(surfaceColor);
-            getWindow().setNavigationBarColor(surfaceColor);
+            // No-op for targetSdk 35+, but still the only way on older releases.
+            getWindow().setStatusBarColor(chrome);
+            getWindow().setNavigationBarColor(surface);
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
                 // Old devices can't render dark status bar icons; use a dark bar so icons stay visible
-                int darkBar = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, surfaceColor);
+                int darkBar = ThemeAttrs.accent(this);
                 getWindow().setStatusBarColor(darkBar);
                 getWindow().setNavigationBarColor(darkBar);
             }
@@ -1484,7 +1499,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
                 content.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
 
-                new MaterialAlertDialogBuilder(this)
+                UIKit.dialog(this)
                         .setTitle(getString(R.string.build_options))
                         .setView(content)
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -1683,7 +1698,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ShizukuShell.onBinderReceived(() -> runOnUiThread(() -> {
             if (ShizukuShell.isGranted()) loadFolderInPane(folder, pane1, false);
         }));
-        new MaterialAlertDialogBuilder(this)
+        UIKit.dialog(this)
                 .setTitle("Shizuku")
                 .setMessage(message)
                 .setPositiveButton(positiveLabel, (d, w) -> onPositive.run())

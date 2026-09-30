@@ -1,5 +1,6 @@
 package io.github.ratul.topactivity.utils;
 
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -94,7 +95,7 @@ public class PermissionUtil {
     }
 
     public static void showPermissionDialog(@StringRes int titleRes, String message, Runnable onSettings, Runnable onDismiss, Context c) {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(c)
+        MaterialAlertDialogBuilder builder = UIKit.dialog(c)
                 .setTitle(titleRes)
                 .setMessage(message)
                 .setPositiveButton(R.string.settings, (dialog, which) -> {

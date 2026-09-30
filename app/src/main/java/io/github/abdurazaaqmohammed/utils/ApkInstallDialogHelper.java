@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class ApkInstallDialogHelper {
 
@@ -211,7 +212,7 @@ public class ApkInstallDialogHelper {
     private void showInstallCompleteDialog(CharSequence appName, File apkFile) {
         String packageName = getPackageNameForApk(apkFile);
 
-        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(activity)
+        MaterialAlertDialogBuilder b = UIKit.dialog(activity)
             .setTitle(R.string.installation_complete)
             .setMessage(activity.getString(R.string.installed_successfully, appName))
             .setPositiveButton(R.string.launch, (d, w) -> {

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Runtime palette seam.
+
+  Every colour below is a placeholder. At runtime PaletteInjector builds a binary
+  resource table that overrides these entries with the active JSON theme's values,
+  and then ThemeOverlay.App.Palette is applied with force=true after
+  DynamicColors so the Material attributes resolve to them. The overlay is only
+  applied when that injection succeeded, so on API < 30 (or on any injection
+  failure) these placeholders stay unused and the platform Material You colours
+  are preserved.
+
+  The literal values here are MT Manager's dark theme, measured off the app on an
+  API 36 device; they are not the source of truth but keep a build with injection
+  disabled looking like mt_dark rather than like a random Material You tint.
+-->
+<resources>
+
+    <color name="mp_background">#303030</color>
+    <color name="mp_surface">#303030</color>
+    <color name="mp_surface_variant">#303030</color>
+    <color name="mp_surface_container">#303030</color>
+    <color name="mp_toolbar">#151515</color>
+    <color name="mp_on_surface">#CDCDCD</color>
+    <color name="mp_on_surface_variant">#C5C5C5</color>
+    <color name="mp_outline">#151515</color>
+    <color name="mp_primary">#1976D2</color>
+    <color name="mp_on_primary">#FFFFFF</color>
+    <color name="mp_error">#CF6679</color>
+
+    <!--
+      Material's tonal surface ladder is collapsed onto the single container role:
+      MT Manager paints its list, menus and settings on the same flat #303030, so
+      keeping the ladder would reintroduce tints MT does not have.
+    -->
+    <style name="ThemeOverlay.App.Palette" parent="">
+        <item name="android:colorBackground">@color/mp_background</item>
+
+        <item name="colorSurface">@color/mp_surface</item>
+        <item name="colorSurfaceDim">@color/mp_surface</item>
+        <item name="colorSurfaceVariant">@color/mp_surface_variant</item>
+        <item name="colorSurfaceContainer">@color/mp_surface_container</item>
+        <item name="colorSurfaceContainerLow">@color/mp_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/mp_surface_container</item>
+        <item name="colorSurfaceContainerHighest">@color/mp_surface_container</item>
+        <item name="colorSurfaceContainerLowest">@color/mp_surface_container</item>
+        <item name="colorSurfaceBright">@color/mp_surface_container</item>
+
+        <item name="colorOnSurface">@color/mp_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/mp_on_surface_variant</item>
+        <item name="colorControlNormal">@color/mp_on_surface_variant</item>
+
+        <item name="colorOutline">@color/mp_outline</item>
+        <item name="colorOutlineVariant">@color/mp_outline</item>
+
+        <item name="colorPrimary">@color/mp_primary</item>
+        <item name="colorOnPrimary">@color/mp_on_primary</item>
+        <item name="colorError">@color/mp_error</item>
+    </style>
+
+</resources>

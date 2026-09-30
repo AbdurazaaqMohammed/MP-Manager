@@ -44,7 +44,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.apk.axml.aXMLDecoder;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
@@ -115,6 +114,7 @@ import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 /**
  * File-open workflows extracted from MainFilesArrayAdapter:
@@ -647,7 +647,7 @@ public class FileOpener {
                     InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm != null) imm.showSoftInput(tv, InputMethodManager.SHOW_IMPLICIT);
                 });
-                new MaterialAlertDialogBuilder(context)
+                UIKit.dialog(context)
                 .setTitle(R.string.restore_backup)
                 .setView(et)
                 .setPositiveButton(R.string.restore, (dialog, which) -> {

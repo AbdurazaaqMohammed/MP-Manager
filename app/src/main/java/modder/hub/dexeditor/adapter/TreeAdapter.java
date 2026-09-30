@@ -52,7 +52,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.widget.CompoundButtonCompat;
@@ -60,6 +59,8 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -643,7 +644,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     }
 
     private void showDeletedPrompt(TreeNode node, int position) {
-        new MaterialAlertDialogBuilder(context)
+        UIKit.dialog(context)
                 .setTitle(R.string.class_deleted)
                 .setMessage(context.getString(R.string.class_del, context.getString(isHistory ? R.string.history : R.string.search_results)))
                 .setPositiveButton(context.getString(R.string.remove), (dialog, which) -> {
@@ -875,7 +876,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                     }
                     break;
                 default:
-                    Toast.makeText(context, title + " not implemented yet", Toast.LENGTH_SHORT).show();
+                    UIKit.toast(context, title + " not implemented yet");
                     break;
             }
             return true;
@@ -884,7 +885,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     }
 
     private void showDeleteDialog(TreeNode node, int position) {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+        MaterialAlertDialogBuilder builder = UIKit.dialog(context);
         builder.setTitle(R.string.delete);
 
 

@@ -23,6 +23,7 @@ import androidx.core.app.NotificationCompat;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class MusicService extends Service implements PlayerManager.PlaybackCallback {
 
@@ -171,7 +172,7 @@ public class MusicService extends Service implements PlayerManager.PlaybackCallb
                 .setShowCancelButton(true)
                 .setCancelButtonIntent(closeIntent);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = UIKit.notify(this, CHANNEL_ID)
                 .setSmallIcon(playing ? android.R.drawable.ic_media_play : android.R.drawable.ic_media_pause)
                 .setContentTitle(item.title)
                 .setContentText(item.artist != null ? item.artist : getString(R.string.music_unknown_artist))

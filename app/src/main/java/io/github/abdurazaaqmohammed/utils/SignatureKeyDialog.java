@@ -23,7 +23,6 @@ import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.archive.ArchiveFile;
 import com.reandroid.archive.InputSource;
 
@@ -47,6 +46,7 @@ import java.util.concurrent.Executor;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import mt.signature.generate.KeyStoreMakerDialog;
+import io.github.abdurazaaqmohammed.core.ui.UIKit;
 
 public class SignatureKeyDialog {
 
@@ -161,7 +161,7 @@ public class SignatureKeyDialog {
 
         ScrollView scrollView = new ScrollView(activity);
         scrollView.addView(view);
-        AlertDialog ad = new MaterialAlertDialogBuilder(activity)
+        AlertDialog ad = UIKit.dialog(activity)
                 .setTitle(R.string.signature_key)
                 .setView(scrollView)
                 .setPositiveButton(android.R.string.ok, (d, which) -> {
