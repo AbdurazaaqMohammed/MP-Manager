@@ -49,6 +49,7 @@ android {
 }
 
 dependencies {
+    implementation project(':sdk')
     //implementation files('libs/APKEditor-1.4.8.jar')
     implementation 'androidx.exifinterface:exifinterface:1.3.6'
     implementation("androidx.multidex:multidex:2.0.1")

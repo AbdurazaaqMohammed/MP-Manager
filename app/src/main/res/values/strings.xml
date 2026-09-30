@@ -108,6 +108,7 @@
     <string name="files_to_delete">Files To Delete</string>
     <string name="add">Add</string>
     <string name="about">About</string>
+    <string name="plugins_section">Plugins</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_description">A free dual pane, Material Design file manager for Android with focus on APKs and the goal to be an open source alternative to MT Manager.</string>
     <string name="about_by_author">by %1$s</string>
@@ -846,7 +847,13 @@ Layout Inspector
     <string name="sidebar_extract">Extract APK</string>
     <string name="sidebar_layout_inspector">Layout Inspector</string>
     <string name="sidebar_wifi">Wi-Fi Manager</string>
-    <string name="sidebar_tools">Tools Kit</string>
+    <string name="sidebar_tools">Plugins</string>
+    <string name="plugin_open">Open</string>
+    <string name="plugin_create_shortcut">Create shortcut</string>
+    <string name="plugin_expand">Expand</string>
+    <string name="plugin_shortcut_done">Shortcut request sent</string>
+    <string name="plugin_shortcut_unsupported">Launcher does not allow shortcuts</string>
+    <string name="plugin_shortcut_old_android">Shortcuts need Android 8 or newer</string>
     <string name="color_stop">Stop</string>
     <string name="color_start">Start</string>
     <string name="storage_manager">Storage Manager</string>

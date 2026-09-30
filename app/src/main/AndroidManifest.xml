@@ -52,6 +52,25 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-permission-sdk-23 android:name="moe.shizuku.manager.permission.API_V23" />
 
+    <!-- External plugin discovery (out-of-process plugins expose these actions). -->
+    <queries>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SIDEBAR_OPEN" />
+        </intent>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SETTING_CONFIG" />
+        </intent>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.FILE_MENU" />
+        </intent>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EDITOR_ACTION" />
+        </intent>
+        <intent>
+            <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
+        </intent>
+    </queries>
+
        <application
            android:requestLegacyExternalStorage="true"
            android:enableOnBackInvokedCallback="false"
@@ -227,8 +246,18 @@
                android:enabled="true"
                android:exported="false"
                android:foregroundServiceType="mediaProjection" />
-           <receiver android:name=".ftp.StopReceiver" android:exported="false" />
-           <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
+            <receiver android:name=".ftp.StopReceiver" android:exported="false" />
+            <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
+            <receiver
+                android:name="io.github.abdurazaaqmohammed.plugins.ipc.PluginPackageReceiver"
+                android:exported="false">
+                <intent-filter>
+                    <action android:name="android.intent.action.PACKAGE_ADDED" />
+                    <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                    <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                    <data android:scheme="package" />
+                </intent-filter>
+            </receiver>
              <activity
                  android:name="io.github.abdurazaaqmohammed.player.ImageViewerActivity"
                  android:configChanges="orientation|screenSize|keyboardHidden"

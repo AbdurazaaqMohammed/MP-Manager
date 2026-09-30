@@ -7,3 +7,12 @@ dependencyResolutionManagement {
 }
 rootProject.name = "MP Manager"
 include ':app'
+include ':sdk'
+include ':packs:pack-math'
+include ':packs:pack-text'
+include ':packs:pack-time'
+include ':packs:pack-random'
+include ':packs:pack-device'
+include ':packs:pack-media'
+include ':packs:pack-network'
+include ':samples:plugin-sample'

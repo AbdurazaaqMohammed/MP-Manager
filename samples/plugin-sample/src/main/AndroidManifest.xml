@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sample external plugin for MP-Manager. Copy this module as a starter:
+     own applicationId/UID/permissions, one exported activity per area. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:label="MP Sample Plugin"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <activity
+            android:name=".SidebarActivity"
+            android:exported="true"
+            android:label="Sample Sidebar">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SIDEBAR_OPEN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.sidebar" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Sample Sidebar" />
+        </activity>
+
+        <activity
+            android:name=".SettingActivity"
+            android:exported="true"
+            android:label="Sample Setting">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SETTING_CONFIG" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.demo" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Sample Toggle" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.SETTING_KEY"
+                android:value="plugin.sample.demo_enabled" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.SETTING_TYPE"
+                android:value="boolean" />
+        </activity>
+
+        <activity
+            android:name=".FileActionActivity"
+            android:exported="true"
+            android:label="Sample Hash">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.FILE_MENU" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.hash" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Sample Hash" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.FILE_MIME"
+                android:value="text/*" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.FILE_PATTERN"
+                android:value=".*\.txt" />
+        </activity>
+
+        <activity
+            android:name=".EditorActivity"
+            android:exported="true"
+            android:label="Sample Uppercase">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EDITOR_ACTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.uppercase" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="SAMPLE UPPERCASE" />
+        </activity>
+
+        <activity
+            android:name=".ApkActivity"
+            android:exported="true"
+            android:label="Sample APK Scan">
+            <intent-filter>
+                <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.PLUGIN_ID"
+                android:value="sample.apkscan" />
+            <meta-data
+                android:name="io.github.abdurazaaqmohammed.MPManager.TITLE"
+                android:value="Sample APK Scan" />
+        </activity>
+
+    </application>
+
+</manifest>

@@ -1,0 +1,36 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.abdurazaaqmohammed.packs.time'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'io.github.abdurazaaqmohammed.packs.time'
+        minSdk 19
+        multiDexEnabled true
+        versionCode 2
+        versionName '1.1'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    compileOnly project(':sdk')
+    compileOnly 'com.google.android.material:material:1.12.0'
+    compileOnly 'androidx.core:core:1.13.0'
+    compileOnly 'com.google.code.gson:gson:2.14.0'
+}

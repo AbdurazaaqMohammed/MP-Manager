@@ -807,7 +807,7 @@
     <string name="sidebar_extract">Извлечь APK</string>
     <string name="sidebar_layout_inspector">Инспектор компоновки</string>
     <string name="sidebar_wifi">Менеджер Wi-Fi</string>
-    <string name="sidebar_tools">Набор инструментов</string>
+    <string name="sidebar_tools">Плагины</string>
     <string name="color_stop">Стоп</string>
     <string name="color_start">Старт</string>
     <string name="storage_manager">Менеджер хранилища</string>

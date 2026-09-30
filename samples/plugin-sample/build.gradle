@@ -1,0 +1,29 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdk 36
+    namespace 'com.example.mpextsample'
+    defaultConfig {
+        applicationId "com.example.mpextsample"
+        minSdk 21
+        targetSdk 37
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Host contracts only; never bundle the SDK into the APK.
+    compileOnly project(':sdk')
+}
