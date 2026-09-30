@@ -22,7 +22,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.core.content.FileProvider;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -51,7 +51,7 @@ import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class ImageViewerActivity extends AppCompatActivity {
+public class ImageViewerActivity extends BaseActivity {
 
     private RecyclerView pager;
     private TextView titleText, subtitleText, counterText;
@@ -104,9 +104,6 @@ public class ImageViewerActivity extends AppCompatActivity {
     }
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        int themeId = PreferenceManager.getDefaultSharedPreferences(this).getInt("theme", 0);
-        if (themeId != 0) setTheme(themeId);
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
 

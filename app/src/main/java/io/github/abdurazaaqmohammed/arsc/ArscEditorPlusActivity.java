@@ -31,7 +31,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -77,7 +77,7 @@ import io.github.abdurazaaqmohammed.utils.SearchHistoryDropdown;
 import io.github.abdurazaaqmohammed.utils.SearchHistoryHelper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class ArscEditorPlusActivity extends AppCompatActivity {
+public class ArscEditorPlusActivity extends BaseActivity {
 
     public static final String MODE_PLUS = "plus";
     public static final String MODE_EDITOR = "editor";
@@ -124,11 +124,7 @@ public class ArscEditorPlusActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        setTheme(getIntent().getIntExtra("theme", prefs.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light)));
         super.onCreate(savedInstanceState);
-        DynamicColors.applyToActivitiesIfAvailable(getApplication());
         mode = getIntent().getStringExtra("arscMode");
         if (mode == null) mode = MODE_PLUS;
         String path = getIntent().getStringExtra("path");

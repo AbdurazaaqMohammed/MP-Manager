@@ -33,6 +33,10 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
+import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -245,12 +249,64 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "wifi": addTool(id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
                 case "tools": addTool(id, R.string.sidebar_tools, R.drawable.tools_24px); break;
                 case "settings": addTool(id, R.string.settings, R.drawable.baseline_settings_24); break;
+                default: {
+                    // Third-party sidebar actions (ids unknown to the switch).
+                    SidebarAction inProc = ExtensionRegistry.findSidebar(id);
+                    if (inProc != null) {
+                        addToolEntry(id, inProc);
+                        break;
+                    }
+                    ExternalActions.Entry ext =
+                            ExternalActions.findById(ExternalActions.sidebarEntries(context), id);
+                    if (ext != null) addExternalTool(ext);
+                    break;
+                }
             }
+        }
+        // External (out-of-process) actions discovered after the saved order
+        // was written are appended once, then round-trip like built-ins.
+        for (ExternalActions.Entry e : ExternalActions.sidebarEntries(context)) {
+            if (e == null || e.id == null) continue;
+            boolean present = false;
+            for (SidebarEntry se : entries) {
+                if (se.type == EntryType.TOOL && e.id.equals(se.id())) {
+                    present = true;
+                    break;
+                }
+            }
+            if (!present) addExternalTool(e);
+        }
+        // Actions installed after the saved order was written are appended once;
+        // from then on they round-trip through toolOrder like built-ins.
+        for (SidebarAction ext : ExtensionRegistry.sidebarActions()) {
+            if (ext == null || ext.id() == null) continue;
+            boolean present = false;
+            for (SidebarEntry e : entries) {
+                if (e.type == EntryType.TOOL && ext.id().equals(e.id())) {
+                    present = true;
+                    break;
+                }
+            }
+            if (!present) addToolEntry(ext.id(), ext);
         }
     }
 
     private void addTool(String id, int text, int icon) {
         SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "tools", id, context.getString(text), icon, null, null);
+        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
+    }
+
+    private void addToolEntry(String id, SidebarAction ext) {
+        String label = ext.title() == null || ext.title().isEmpty() ? id : ext.title();
+        int icon = ExtensionIcons.resId(context, ext.iconName(), R.drawable.tools_24px);
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "tools", id, label, icon, null, null);
+        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
+    }
+
+    private void addExternalTool(ExternalActions.Entry e) {
+        String label = e.title == null || e.title.isEmpty() ? e.id : e.title;
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "tools", e.id,
+                label, R.drawable.tools_24px, null, null);
         if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
     }
 

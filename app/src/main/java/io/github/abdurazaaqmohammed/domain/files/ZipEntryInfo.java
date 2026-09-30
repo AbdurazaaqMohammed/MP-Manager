@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.adapters;
+package io.github.abdurazaaqmohammed.domain.files;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
@@ -6,6 +6,12 @@ import net.lingala.zip4j.model.FileHeader;
 import java.io.File;
 import java.io.InputStream;
 import java.util.zip.CRC32;
+
+/**
+ * Value holder for one zip entry. Moved here from the adapters package;
+ * {@code io.github.abdurazaaqmohammed.adapters.ZipEntryInfo} remains as a
+ * deprecated subclass until its last usages migrate.
+ */
 public class ZipEntryInfo {
     private final String name;
     private final String fullPath;

@@ -2,7 +2,7 @@ package io.github.abdurazaaqmohammed.ApkExtractor;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import android.content.ComponentName;
@@ -97,7 +97,7 @@ import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 
-public class APKExtractorActivity extends AppCompatActivity {
+public class APKExtractorActivity extends BaseActivity {
     private final AppRecyclerViewAdapter[] appAdapter = new AppRecyclerViewAdapter[2];
     public APKLogger logger;
     public boolean ask = false;
@@ -185,11 +185,6 @@ public class APKExtractorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        SharedPreferences themeSettings = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode
-                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        setTheme(theme = themeSettings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
-
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         handler = new Handler(Looper.getMainLooper());
         setContentView(R.layout.activity_extractor);

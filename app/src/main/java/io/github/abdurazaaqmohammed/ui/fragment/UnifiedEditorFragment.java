@@ -97,6 +97,9 @@ import modder.hub.dexeditor.utils.CustomAutoComplete;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SmaliLabelDialog;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 
@@ -124,6 +127,17 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     };
 
     private CodeEditor editor;
+    private TextActionWindow currentActionWindow;
+    private final ActivityResultLauncher<Intent> externalEditorLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                try {
+                    if (currentActionWindow != null) {
+                        currentActionWindow.applyExternalEditorResult(
+                                result.getResultCode(), result.getData());
+                    }
+                } catch (Exception ignored) {
+                }
+            });
     private LinearLayout bottomBarLayout, searchPanel, replacePanel, linearHeader;
     private EditText searchInput, replaceInput;
     private View btnFind, btnReplaceToggle, btnSearchMenu, btnStopSearch;
@@ -534,7 +548,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 reloadText();
             }
         }
-        editor.replaceComponent(EditorTextActionWindow.class, new TextActionWindow(editor, new TextActionCallback(className)));
+        TextActionWindow actionWindow = new TextActionWindow(editor, new TextActionCallback(className));
+        actionWindow.setExternalRunner(this::launchExternalEditor);
+        editor.replaceComponent(EditorTextActionWindow.class, actionWindow);
+        currentActionWindow = actionWindow;
         try {
             Activity act = getActivity();
             if (act instanceof ArscTextActivity arscActivity) {
@@ -616,6 +633,14 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     public CodeEditor getEditor() { return editor; }
+
+    /** Result-launcher bridge for external editor plugins (see TextActionWindow). */
+    private void launchExternalEditor(Intent intent) {
+        try {
+            externalEditorLauncher.launch(intent);
+        } catch (Exception ignored) {
+        }
+    }
     public String getCode() { return editor.getText().toString(); }
     public String getClassName() { return className; }
     public int getType() { return type; }

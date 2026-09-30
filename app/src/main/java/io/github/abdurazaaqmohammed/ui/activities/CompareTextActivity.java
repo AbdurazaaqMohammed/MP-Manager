@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.webkit.WebView;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 
 import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
@@ -20,7 +20,7 @@ import java.util.zip.ZipFile;
 
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 
-public class CompareTextActivity extends AppCompatActivity {
+public class CompareTextActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

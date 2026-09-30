@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
-import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 
 public class MimeUtil {
 

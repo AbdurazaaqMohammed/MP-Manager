@@ -46,7 +46,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -77,7 +77,7 @@ import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.WifiPasswordUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class WifiManagerActivity extends AppCompatActivity {
+public class WifiManagerActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LinearLayout dnsList;
     private TextView dnsCurrent;
@@ -91,11 +91,8 @@ public class WifiManagerActivity extends AppCompatActivity {
     private TextView passCount;
 
     protected void onCreate(Bundle savedInstanceState) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        setTheme(prefs.getInt("theme", dark ? io.github.abdurazaaqmohammed.MPManager.R.style.Theme_MyApp_Dark : io.github.abdurazaaqmohammed.MPManager.R.style.Theme_MyApp_Light));
         super.onCreate(savedInstanceState);
-        DynamicColors.applyToActivitiesIfAvailable(getApplication());
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         showPass = !prefs.getBoolean("wifi_hide_pass", false);
         Intent launching = getIntent();
         if (launching != null && DnsManager.APPLY_ACTION.equals(launching.getAction())) {

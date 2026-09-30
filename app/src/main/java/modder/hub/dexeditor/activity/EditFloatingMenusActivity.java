@@ -55,6 +55,9 @@ import java.util.HashMap;
 import java.util.Objects;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.ext.EditorAction;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import modder.hub.dexeditor.updateSoraMenu.ItemMoveCallback;
 import modder.hub.dexeditor.updateSoraMenu.RecyclerViewAdapter;
 import modder.hub.dexeditor.updateSoraMenu.StartDragListener;
@@ -138,6 +141,26 @@ public class EditFloatingMenusActivity extends AppCompatActivity implements Star
         if (menu_items == null) menu_items = new ArrayList<>();
         boolean changed = insertMissingButton(menu_items, "id_btn", "ID", "panel_btn_paste");
         changed |= insertMissingButton(menu_items, "goto_id_btn", "Goto ID", "id_btn");
+        // Third-party editor actions: appended once so users can reorder,
+        // disable, or hide them in this editor like built-ins.
+        try {
+            for (EditorAction ext : ExtensionRegistry.editorActions()) {
+                if (ext == null || ext.id() == null) continue;
+                String title = ext.title() == null || ext.title().isEmpty() ? ext.id() : ext.title();
+                changed |= insertMissingButton(menu_items, ext.id(), title, null);
+            }
+        } catch (Exception ignored) {
+        }
+        // External (out-of-process) editor actions, same treatment.
+        try {
+            for (ExternalActions.Entry e
+                    : ExternalActions.editorEntries(EditFloatingMenusActivity.this)) {
+                if (e == null || e.id == null) continue;
+                String title = e.title == null || e.title.isEmpty() ? e.id : e.title;
+                changed |= insertMissingButton(menu_items, e.id, title, null);
+            }
+        } catch (Exception ignored) {
+        }
         if (changed) {
             prefs.edit().putString("menu_order", new Gson().toJson(menu_items)).apply();
         }

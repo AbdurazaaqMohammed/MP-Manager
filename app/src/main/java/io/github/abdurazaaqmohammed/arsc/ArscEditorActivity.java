@@ -25,7 +25,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -57,7 +57,7 @@ import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class ArscEditorActivity extends AppCompatActivity {
+public class ArscEditorActivity extends BaseActivity {
 
     private static final String HIST_KEY = "arsc_simple_search_hist";
 
@@ -147,11 +147,7 @@ public class ArscEditorActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        setTheme(getIntent().getIntExtra("theme", prefs.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light)));
         super.onCreate(savedInstanceState);
-        DynamicColors.applyToActivitiesIfAvailable(getApplication());
         String path = getIntent().getStringExtra("path");
         String apkPath = getIntent().getStringExtra("apkPath");
         String entryPath = getIntent().getStringExtra("zipEntryPath");

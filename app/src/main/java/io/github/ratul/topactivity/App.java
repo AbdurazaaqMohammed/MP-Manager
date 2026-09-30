@@ -32,6 +32,7 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.multidex.MultiDexApplication;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.app.ServiceLocator;
 import io.github.abdurazaaqmohammed.utils.AppLogs;
 import io.github.ratul.topactivity.manager.NotificationUiManager;
 import io.github.ratul.topactivity.ui.ClipboardActivity;
@@ -64,6 +65,13 @@ public class App extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        ServiceLocator.init(this);
+        try {
+            // Tools (except a few built-ins like Storage Manager) ship as
+            // downloadable packs now; load whatever the user installed.
+            io.github.abdurazaaqmohammed.plugins.packs.PackManager.loadInstalledPacks(this);
+        } catch (Exception ignored) {
+        }
         clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

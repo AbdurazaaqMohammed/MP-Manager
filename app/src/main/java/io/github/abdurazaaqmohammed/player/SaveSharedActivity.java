@@ -11,7 +11,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
@@ -29,19 +29,13 @@ import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class SaveSharedActivity extends AppCompatActivity {
+public class SaveSharedActivity extends BaseActivity {
 
     private final List<Uri> pendingUris = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        setTheme(prefs.getInt("theme", dark
-                ? io.github.abdurazaaqmohammed.MPManager.R.style.Theme_MyApp_Dark
-                : io.github.abdurazaaqmohammed.MPManager.R.style.Theme_MyApp_Light));
         super.onCreate(savedInstanceState);
-        DynamicColors.applyToActivitiesIfAvailable(getApplication());
         Intent intent = getIntent();
         String action = intent == null ? null : intent.getAction();
         if (Intent.ACTION_SEND.equals(action)) {

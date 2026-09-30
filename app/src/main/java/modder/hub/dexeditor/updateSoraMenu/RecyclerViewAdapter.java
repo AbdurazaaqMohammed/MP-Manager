@@ -128,6 +128,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 		
 		if (buttonIcons.containsKey(id)) {
 			holder.imageView.setImageResource(buttonIcons.get(id));
+		} else {
+			holder.imageView.setImageResource(R.drawable.ic_setting_mt);
 		}
 		
 		holder.disableSwitch.setChecked(!disabled);

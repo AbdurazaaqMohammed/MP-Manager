@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 
 public final class FileMenuOrder {
 
@@ -79,6 +82,21 @@ public final class FileMenuOrder {
         for (String id : DEFAULT_ORDER) {
             if (!order.contains(id)) order.add(id);
         }
+        // Third-party actions join the order list so they show up in the
+        // "File menu order" organizer and keep user arrangement across loads.
+        try {
+            for (String id : ExtensionRegistry.fileMenuIds()) {
+                if (id != null && !order.contains(id)) order.add(id);
+            }
+        } catch (Exception ignored) {
+        }
+        // External (out-of-process) actions likewise persist and organize.
+        try {
+            for (String id : ExternalActions.fileMenuIds(context)) {
+                if (id != null && !order.contains(id)) order.add(id);
+            }
+        } catch (Exception ignored) {
+        }
         return order;
     }
 
@@ -133,7 +151,21 @@ public final class FileMenuOrder {
             case BATCH_CROP -> context.getString(R.string.crop_images);
             case BATCH_EXIF -> context.getString(R.string.set_exif_tags);
             case BATCH_STRIP_META -> context.getString(R.string.remove_metadata);
-            default -> id;
+            default -> {
+                String pluginTitle = null;
+                try {
+                    pluginTitle = ExtensionRegistry.fileMenuTitle(id);
+                } catch (Exception ignored) {
+                }
+                if ((pluginTitle == null || pluginTitle.isEmpty())
+                        && id != null && id.startsWith("ext:")) {
+                    try {
+                        pluginTitle = ExternalActions.fileMenuLabel(context, id);
+                    } catch (Exception ignored) {
+                    }
+                }
+                yield pluginTitle == null || pluginTitle.isEmpty() ? id : pluginTitle;
+            }
         };
     }
 
@@ -157,7 +189,19 @@ public final class FileMenuOrder {
             case BATCH_CROP -> R.drawable.edit_24px;
             case BATCH_EXIF -> R.drawable.baseline_text_snippet_24;
             case BATCH_STRIP_META -> R.drawable.baseline_delete_24;
-            default -> 0;
+            default -> {
+                try {
+                    int icon = ExtensionIcons.resId(context,
+                            ExtensionRegistry.fileMenuIconName(id), 0);
+                    // External plugins cannot ship icons; mark with the tools glyph.
+                    if (icon == 0 && id != null && id.startsWith("ext:")) {
+                        icon = R.drawable.tools_24px;
+                    }
+                    yield icon;
+                } catch (Exception ignored) {
+                    yield 0;
+                }
+            }
         };
     }
 

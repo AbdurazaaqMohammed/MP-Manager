@@ -26,7 +26,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -34,7 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
-public class MediaPlayerActivity extends AppCompatActivity implements
+public class MediaPlayerActivity extends BaseActivity implements
         PlayerManager.PlaybackCallback,
         PlayerManager.VideoSizeChangedListener,
         SurfaceHolder.Callback {
@@ -81,8 +81,6 @@ public class MediaPlayerActivity extends AppCompatActivity implements
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        int themeId = PreferenceManager.getDefaultSharedPreferences(this).getInt("theme", 0);
-        if (themeId != 0) setTheme(themeId);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media_player);
 

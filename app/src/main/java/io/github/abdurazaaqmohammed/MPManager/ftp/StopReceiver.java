@@ -4,16 +4,16 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.features.files.FtpController;
 
 public class StopReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Intent stopIntent = new Intent(context, FtpForegroundService.class);
         context.stopService(stopIntent);
-        if(MainActivity.ftpServer != null) {
-            MainActivity.ftpServer.stop();
-            MainActivity.ftpServer = null;
+        if(FtpController.ftpServer != null) {
+            FtpController.ftpServer.stop();
+            FtpController.ftpServer = null;
         }
         Intent uiIntent = new Intent("io.github.abdurazaaqmohammed.FTP_STOPPED");
         context.sendBroadcast(uiIntent);

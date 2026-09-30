@@ -15,7 +15,7 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
@@ -28,18 +28,11 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.BottomBarButtonAdapter;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
-public class EditorSettingsActivity extends AppCompatActivity {
+public class EditorSettingsActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        SharedPreferences settings = androidx.preference.PreferenceManager
-                .getDefaultSharedPreferences(this);
-        boolean dark = (getResources().getConfiguration().uiMode
-                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        setTheme(settings.getInt("theme", dark ? R.style.Theme_MyApp_Dark : R.style.Theme_MyApp_Light));
-
-
         getSupportFragmentManager()
                 .beginTransaction()
                 .replace(android.R.id.content, new SettingsFragment())

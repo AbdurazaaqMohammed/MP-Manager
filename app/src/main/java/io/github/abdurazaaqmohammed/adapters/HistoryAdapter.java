@@ -19,18 +19,19 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 
-public class HistoryAdapter extends ArrayAdapter<MainActivity.NavigationHistoryEntry> {
+public class HistoryAdapter extends ArrayAdapter<NavigationHistoryEntry> {
     private final MainActivity context;
 
-    public HistoryAdapter(MainActivity context, List<MainActivity.NavigationHistoryEntry> values) {
+    public HistoryAdapter(MainActivity context, List<NavigationHistoryEntry> values) {
         super(context, android.R.layout.simple_list_item_1, new ArrayList<>());
         this.context = context;
         if (values != null) addAll(values);
     }
 
-    public void setData(List<MainActivity.NavigationHistoryEntry> values) {
+    public void setData(List<NavigationHistoryEntry> values) {
         setNotifyOnChange(false);
         clear();
         if (values != null) addAll(values);
@@ -43,7 +44,7 @@ public class HistoryAdapter extends ArrayAdapter<MainActivity.NavigationHistoryE
         if (convertView == null) {
             convertView = LayoutInflater.from(context).inflate(R.layout.list_file, parent, false);
         }
-        MainActivity.NavigationHistoryEntry entry = getItem(position);
+        NavigationHistoryEntry entry = getItem(position);
         if (entry == null) return convertView;
         TextView fileNameView = convertView.findViewById(R.id.fileName);
         ImageView fileIconView = convertView.findViewById(R.id.fileIcon);

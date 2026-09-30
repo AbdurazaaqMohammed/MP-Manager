@@ -64,6 +64,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.ext.CodeEditorHandle;
+import io.github.abdurazaaqmohammed.plugins.ext.EditorAction;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import modder.hub.dexeditor.activity.*;
 
 /*
@@ -300,6 +308,19 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		private String menuTitleFor(String menuId) {
 			if ("id_btn".equals(menuId)) return "ID";
 			if ("goto_id_btn".equals(menuId)) return "Goto ID";
+			try {
+				String pluginTitle = ExtensionRegistry.editorTitle(menuId);
+				if (pluginTitle != null && !pluginTitle.isEmpty()) return pluginTitle;
+			} catch (Exception ignored) {
+			}
+			try {
+				ExternalActions.Entry entry = ExternalActions.findById(
+						ExternalActions.editorEntries(codeEditor.getContext()), menuId);
+				if (entry != null && entry.title != null && !entry.title.isEmpty()) {
+					return entry.title;
+				}
+			} catch (Exception ignored) {
+			}
 			return menuId;
 		}
 		
@@ -351,25 +372,52 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		// Create buttons in JSON-defined order
 		for (String buttonId : menuItems) {
 			ButtonConfig config = allButtons.get(buttonId);
+			String pluginTitle = null;
+			int pluginIcon = 0;
 			if (config == null) {
-				continue; // Skip unknown button IDs
+				// Third-party editor action: installed pack first, then
+				// external (out-of-process) plugin (icon always generic —
+				// plugin resources are not usable in-process).
+				EditorAction ext = null;
+				ExternalActions.Entry entry = null;
+				try {
+					ext = ExtensionRegistry.findEditor(buttonId);
+				} catch (Exception ignored) {
+				}
+				if (ext == null) {
+					try {
+						entry = ExternalActions.findById(
+								ExternalActions.editorEntries(context), buttonId);
+					} catch (Exception ignored) {
+					}
+				}
+				if (ext == null && entry == null) {
+					continue; // Skip unknown button IDs
+				}
+				if (ext != null) {
+					pluginTitle = ext.title() == null || ext.title().isEmpty() ? buttonId : ext.title();
+					pluginIcon = ExtensionIcons.resId(context, ext.iconName(), R.drawable.ic_setting_mt);
+				} else {
+					pluginTitle = entry.title == null || entry.title.isEmpty() ? buttonId : entry.title;
+					pluginIcon = R.drawable.ic_setting_mt;
+				}
 			}
-			
+
 			ImageButton button = new ImageButton(context);
 			button.setTag(buttonId);
 			button.setLayoutParams(params);
 			button.setBackgroundResource(outValue.resourceId);
-			button.setImageResource(config.iconRes);
+			button.setImageResource(config == null ? pluginIcon : config.iconRes);
 			button.setOnClickListener(this);
-			
+
 			if ("translate_btn".equals(buttonId)) {
 				button.setOnLongClickListener(this);
 			}
-			
+
 			container.addView(button);
 			buttonMap.put(buttonId, button);
-			
-			setTooltipText(button, context.getString(config.tooltipRes));
+
+			setTooltipText(button, config == null ? pluginTitle : context.getString(config.tooltipRes));
 		}
 		
 		// Initialize all button variables
@@ -405,7 +453,11 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		String buttonId = (String) view.getTag();
 		Cursor cursor = this.codeEditor.getCursor();
 		if (buttonId == null) return;
-		
+		if (runPluginAction(buttonId)) {
+			dismiss();
+			return;
+		}
+
 		switch (buttonId) {
 			case "panel_btn_select_all":
 			this.codeEditor.selectAll();
@@ -489,6 +541,80 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			break;
 		}
 		dismiss();
+	}
+
+	private java.util.function.Consumer<Intent> externalRunner;
+
+	/** Bridge for external editor plugins (set by the hosting fragment). */
+	public void setExternalRunner(java.util.function.Consumer<Intent> runner) {
+		this.externalRunner = runner;
+	}
+
+	private boolean runPluginAction(String buttonId) {
+		EditorAction ext = null;
+		try {
+			ext = ExtensionRegistry.findEditor(buttonId);
+		} catch (Exception ignored) {
+		}
+		if (ext != null) {
+			try {
+				ext.run(new CodeEditorHandle(this.codeEditor));
+			} catch (Exception ignored) {
+			}
+			return true;
+		}
+		// External (out-of-process) editor action: send text out, apply the
+		// returned replacement. Needs the fragment's result launcher bridge.
+		if (externalRunner == null) return false;
+		ExternalActions.Entry found = null;
+		try {
+			Context ctx = codeEditor.getContext();
+			found = ExternalActions.findById(ExternalActions.editorEntries(ctx), buttonId);
+		} catch (Exception ignored) {
+		}
+		if (found == null) return false;
+		final ExternalActions.Entry entry = found;
+		try {
+			Context ctx = codeEditor.getContext();
+			if (!(ctx instanceof android.app.Activity)) return false;
+			android.app.Activity activity = (android.app.Activity) ctx;
+			CodeEditorHandle handle = new CodeEditorHandle(this.codeEditor);
+			Intent intent = PluginHost.explicitIntent(entry.plugin,
+					PluginContracts.ACTION_EDITOR);
+			intent.putExtra(PluginContracts.EXTRA_PLUGIN_ID, entry.plugin.pluginId);
+			intent.putExtra(PluginContracts.EXTRA_SELECTED_TEXT, handle.selectedText());
+			String full = handle.fullText();
+			if (full != null && full.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+					<= PluginContracts.MAX_FULL_TEXT_BYTES) {
+				intent.putExtra(PluginContracts.EXTRA_FULL_TEXT, full);
+			}
+			PluginTrust.ensureTrusted(activity, entry.plugin, () -> {
+				try {
+					externalRunner.accept(intent);
+				} catch (Exception ignored) {
+				}
+			});
+		} catch (Exception ignored) {
+			return false;
+		}
+		return true;
+	}
+
+	/** Applies an external editor plugin result (called by the fragment). */
+	public void applyExternalEditorResult(int resultCode, Intent data) {
+		try {
+			if (resultCode != android.app.Activity.RESULT_OK || data == null) return;
+			CodeEditorHandle handle = new CodeEditorHandle(this.codeEditor);
+			if (data.hasExtra(PluginContracts.EXTRA_REPLACE_SELECTION)) {
+				String replacement = data.getStringExtra(PluginContracts.EXTRA_REPLACE_SELECTION);
+				if (replacement != null) handle.replaceSelection(replacement);
+			}
+			if (data.hasExtra(PluginContracts.EXTRA_SET_FULL_TEXT)) {
+				String full = data.getStringExtra(PluginContracts.EXTRA_SET_FULL_TEXT);
+				if (full != null) handle.setFullText(full);
+			}
+		} catch (Exception ignored) {
+		}
 	}
 	
 	@Override

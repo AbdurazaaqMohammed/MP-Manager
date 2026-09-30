@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.adapters.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 
 public class RenameUtil {
 
