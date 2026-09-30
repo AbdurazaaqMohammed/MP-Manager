@@ -95,7 +95,7 @@ public class SmaliCompiler implements DexEncoder {
 //            smaliOptions.markersListFile = marker.getAbsolutePath();
 //        }
         if(smaliOptions.jobs <= 0){
-            smaliOptions.jobs = 1;
+            smaliOptions.jobs = Runtime.getRuntime().availableProcessors();
         }
         if (this.minSdkVersion != null) {
             smaliOptions.apiLevel = this.minSdkVersion;
@@ -105,9 +105,7 @@ public class SmaliCompiler implements DexEncoder {
         } catch (RecognitionException e) {
             throw new RuntimeException(e);
         }
-//        if(!success){
-//            throw new IOException("Failed to build smali, check the logs");
-//        }
+        writeStamp(dexCacheFile);
         return new FileInputSource(dexCacheFile, dexCacheFile.getName());
     }
     private InputSource buildWithInternalLib(String progress, File classesDir, File dexCacheFile) throws IOException {
@@ -124,6 +122,7 @@ public class SmaliCompiler implements DexEncoder {
         dexFile.refreshFull();
         dexFile.write(dexCacheFile);
         dexFile.close();
+        writeStamp(dexCacheFile);
         return new FileInputSource(dexCacheFile, dexCacheFile.getName());
     }
 
@@ -131,7 +130,11 @@ public class SmaliCompiler implements DexEncoder {
         if(buildOptions.noCache || !dexCacheFile.isFile()){
             return true;
         }
-        long dexMod = dexCacheFile.lastModified();
+        File stampFile = new File(dexCacheFile.getParentFile(), dexCacheFile.getName() + ".stamp");
+        if(!stampFile.isFile()){
+            return true;
+        }
+        long dexMod = stampFile.lastModified();
         return isModified(classesDir, dexMod);
     }
     private boolean isModified(File dir, long dexMod){
@@ -146,8 +149,14 @@ public class SmaliCompiler implements DexEncoder {
             return false;
         }
         for(File file : files){
-            if(isModified(file, dexMod)){
-                return true;
+            if(file.isDirectory()){
+                if(isModified(file, dexMod)){
+                    return true;
+                }
+            }else if(file.isFile() && file.getName().endsWith(".smali")){
+                if(file.lastModified() > dexMod){
+                    return true;
+                }
             }
         }
         return false;
@@ -156,6 +165,13 @@ public class SmaliCompiler implements DexEncoder {
         File mainDir = classesDir.getParentFile().getParentFile();
         File dir = new File(mainDir, SmaliUtil.CACHE_DIR);
         return new File(dir, SmaliUtil.getDexFileName(SmaliUtil.getDexNumber(classesDir.getName())));
+    }
+    private static void writeStamp(File dexCacheFile){
+        File stampFile = new File(dexCacheFile.getParentFile(), dexCacheFile.getName() + ".stamp");
+        try {
+            new java.io.FileOutputStream(stampFile).close();
+        } catch (IOException ignored) {
+        }
     }
     private List<File> listClassesDirectories(File smaliDir){
         List<File> results = new ArrayList<>();

@@ -336,8 +336,7 @@ public class SmaliFileNameFactory {
                 throw new IllegalStateException("The suffix can only be set once");
             }
             String physicalName = getPhysicalNameWithSuffix(suffix);
-            File file = new File(parent.file, physicalName).getCanonicalFile();
-            this.physicalName = file.getName();
+            this.physicalName = physicalName;
             createIfNeeded();
         }
 
@@ -388,18 +387,25 @@ public class SmaliFileNameFactory {
                 suffix++;
 
                 String entryPhysicalName = entry.getPhysicalNameWithSuffix(suffix);
-                File entryFile = new File(this.file, entryPhysicalName);
-                entryPhysicalName = entryFile.getCanonicalFile().getName();
+                String physicalKey = isCaseInsensitiveDirectory() ? entryPhysicalName.toLowerCase() : entryPhysicalName;
 
-                if (!this.physicalToEntry.containsKey(entryPhysicalName)) {
+                if (!this.physicalToEntry.containsKey(physicalKey)) {
                     entry.setSuffix(suffix);
                     lastSuffixMap.put(normalizedChildName, suffix);
-                    physicalToEntry.put(entry.getPhysicalName(), entry);
+                    physicalToEntry.put(isCaseInsensitiveDirectory() ? entry.getPhysicalName().toLowerCase() : entry.getPhysicalName(), entry);
                     break;
                 }
             }
             entries.add(entry);
             return entry;
+        }
+
+        private boolean isCaseInsensitiveDirectory() {
+            try {
+                return !isCaseSensitive();
+            } catch (IllegalStateException ignored) {
+                return false;
+            }
         }
 
         @Override
@@ -414,7 +420,7 @@ public class SmaliFileNameFactory {
         protected void createIfNeeded() throws IOException {
             String physicalName = getPhysicalName();
             if (parent != null && physicalName != null) {
-                file = new File(parent.file, physicalName).getCanonicalFile();
+                file = new File(parent.file, physicalName);
                 file.mkdirs();
             }
         }
@@ -454,12 +460,7 @@ public class SmaliFileNameFactory {
         }
 
         @Override
-        protected void createIfNeeded() throws IOException {
-            String physicalName = getPhysicalName();
-            if (parent != null && physicalName != null) {
-                File file = new File(parent.file, physicalName).getCanonicalFile();
-                file.createNewFile();
-            }
+        protected void createIfNeeded() {
         }
     }
 

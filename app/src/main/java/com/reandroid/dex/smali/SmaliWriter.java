@@ -29,6 +29,7 @@ import com.reandroid.utils.HexUtil;
 import com.reandroid.utils.StringsUtil;
 import com.reandroid.utils.io.FileUtil;
 
+import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -87,7 +88,7 @@ public class SmaliWriter implements Appendable, Closeable {
         setWriter(FileUtil.outputStream(file));
     }
     public void setWriter(OutputStream outputStream) {
-        setWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+        setWriter(new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), 16 * 1024));
         this.outputStream = outputStream;
     }
     public void setWriter(Writer writer) {

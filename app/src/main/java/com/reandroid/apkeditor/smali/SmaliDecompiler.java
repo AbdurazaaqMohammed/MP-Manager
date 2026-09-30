@@ -28,9 +28,11 @@ import com.reandroid.apk.DexFileInputSource;
 import com.reandroid.apkeditor.decompile.DecompileOptions;
 import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.dex.key.TypeKey;
+import com.reandroid.dex.model.DexClass;
 import com.reandroid.dex.model.DexClassRepository;
 import com.reandroid.dex.model.DexDirectory;
 import com.reandroid.dex.model.DexFile;
+import com.reandroid.dex.model.DexMethod;
 import com.reandroid.dex.sections.MapItem;
 import com.reandroid.dex.sections.MapList;
 import com.reandroid.dex.sections.SectionType;
@@ -107,6 +109,7 @@ public class SmaliDecompiler implements DexDecoder {
 
         File smali = toSmaliRoot(mainDirectory);
         SmaliWriterSetting setting = getSmaliWriterSetting(directory);
+        warmUpComments(directory);
         directory.writeSmali(setting, smali, this::logBaksmaliDex);
         setting.clearClassComments();
         setting.clearMethodComments();
@@ -150,7 +153,7 @@ public class SmaliDecompiler implements DexDecoder {
         //options.dumpMarkers = decompileOptions.dexMarkers;
         //options.setCommentProvider(getComment());
         DexBackedDexFile dexFile = getInputDexFile(inputSource, options);
-        Baksmali.disassembleDexFile(dexFile, dir, 1, options);
+        Baksmali.disassembleDexFile(dexFile, dir, Runtime.getRuntime().availableProcessors(), options);
         writeDexCache(inputSource, mainDir);
     }
     private void disassembleWithInternalDexLib(DexFileInputSource inputSource, File mainDir) throws IOException {
@@ -168,7 +171,7 @@ public class SmaliDecompiler implements DexDecoder {
 
         SmaliWriterSetting setting = getSmaliWriterSetting(dexFile);
         File dir = new File(toSmaliRoot(mainDir), dexFile.buildSmaliDirectoryName());
-        dexFile.writeSmali(setting, dir);
+        dexFile.writeSmali(setting, dir, Runtime.getRuntime().availableProcessors());
         if (!mDexForCommentLoaded) {
             setting.clearClassComments();
             setting.clearMethodComments();
@@ -246,6 +249,23 @@ public class SmaliDecompiler implements DexDecoder {
             }
         }
         return setting;
+    }
+    private void warmUpComments(DexClassRepository classRepository) {
+        if (!decompileOptions.containsCommentLevel(DecompileOptions.COMMENT_LEVEL_DETAIL)) {
+            return;
+        }
+        Iterator<DexClass> iterator = classRepository.getDexClasses();
+        while (iterator.hasNext()) {
+            DexClass dexClass = iterator.next();
+            try {
+                TypeKey typeKey = dexClass.getKey();
+                classRepository.getDexClass(typeKey);
+                for (Iterator<DexMethod> m = dexClass.declaredMethods(); m.hasNext(); ) {
+                    m.next();
+                }
+            } catch (Throwable ignored) {
+            }
+        }
     }
     public SmaliWriterSetting getSmaliWriterSetting() {
         SmaliWriterSetting setting = this.smaliWriterSetting;

@@ -24,17 +24,39 @@ import com.reandroid.dex.id.ClassId;
 import com.reandroid.dex.id.StringId;
 import com.reandroid.dex.key.Key;
 import com.reandroid.dex.key.TypeKey;
-import com.reandroid.dex.sections.*;
-import com.reandroid.dex.smali.*;
+import com.reandroid.dex.sections.DexContainerBlock;
+import com.reandroid.dex.sections.DexLayoutBlock;
+import com.reandroid.dex.sections.MapList;
+import com.reandroid.dex.sections.Marker;
+import com.reandroid.dex.sections.MergeOptions;
+import com.reandroid.dex.sections.Section;
+import com.reandroid.dex.sections.SectionType;
+import com.reandroid.dex.smali.SmaliFileNameFactory;
+import com.reandroid.dex.smali.SmaliReader;
+import com.reandroid.dex.smali.SmaliReaderSetting;
+import com.reandroid.dex.smali.SmaliWriter;
+import com.reandroid.dex.smali.SmaliWriterSetting;
 import com.reandroid.dex.smali.model.SmaliClass;
 import com.reandroid.utils.ObjectsUtil;
-import com.reandroid.utils.collection.*;
+import com.reandroid.utils.collection.ArrayCollection;
+import com.reandroid.utils.collection.CollectionUtil;
+import com.reandroid.utils.collection.ComputeIterator;
+import com.reandroid.utils.collection.IterableIterator;
+import com.reandroid.utils.collection.SingleIterator;
 import com.reandroid.utils.io.FileByteSource;
 import com.reandroid.utils.io.FileIterator;
 
-import java.io.*;
-import java.util.Iterator;
 import org.apache.commons.collections4.Predicate;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DexLayout implements DexClassModule, Closeable,
         Iterable<DexClass> {
@@ -290,15 +312,31 @@ public class DexLayout implements DexClassModule, Closeable,
         if (!dir.isDirectory()) {
             throw new FileNotFoundException("No such directory: " + dir);
         }
+        List<File> files = new ArrayList<>();
         FileIterator iterator = new FileIterator(dir, FileIterator.getExtensionFilter(".smali"));
+        while (iterator.hasNext()) {
+            files.add(iterator.next());
+        }
+        if (files.isEmpty()) {
+            sort();
+            shrink();
+            return;
+        }
+        int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
+        if (cores <= 1 || files.size() < 512) {
+            parseSmaliFilesSequential(readerSetting, files);
+            return;
+        }
+        parseSmaliFilesParallel(readerSetting, files, cores);
+    }
+    private void parseSmaliFilesSequential(SmaliReaderSetting readerSetting, List<File> files) throws IOException {
         FileByteSource byteSource = new FileByteSource();
         SmaliReader reader = new SmaliReader(byteSource);
         reader.setReaderSetting(readerSetting);
         DexLayoutBlock layout = getDexLayoutBlock();
         Section<ClassId> classIdSection = null;
-        while (iterator.hasNext()) {
+        for (File file : files) {
             reader.reset();
-            File file = iterator.next();
             byteSource.setFile(file);
             reader.setOrigin(Origin.createNew(file));
             SmaliClass smaliClass = new SmaliClass();
@@ -314,6 +352,100 @@ public class DexLayout implements DexClassModule, Closeable,
         }
         sort();
         shrink();
+    }
+    private void parseSmaliFilesParallel(SmaliReaderSetting readerSetting, List<File> files, int threads) throws IOException {
+        int queueCapacity = threads * 4;
+        if (queueCapacity > files.size()) {
+            queueCapacity = files.size();
+        }
+        java.util.concurrent.BlockingQueue<SmaliClass> queue =
+                new java.util.concurrent.ArrayBlockingQueue<>(queueCapacity);
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicInteger producerCount =
+                new java.util.concurrent.atomic.AtomicInteger(threads);
+        java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+        Thread consumer = new Thread(() -> {
+            try {
+                while (true) {
+                    SmaliClass smaliClass = queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    if (smaliClass != null) {
+                        if (failure.get() == null) {
+                            internSmaliClass(smaliClass);
+                        }
+                        continue;
+                    }
+                    if (producerCount.get() == 0) {
+                        break;
+                    }
+                }
+            } catch (Throwable e) {
+                failure.compareAndSet(null, e);
+            } finally {
+                done.countDown();
+            }
+        }, "smali-parse-intern");
+        consumer.start();
+        Thread[] producers = new Thread[threads];
+        for (int t = 0; t < threads; t++) {
+            final int index = t;
+            producers[t] = new Thread(() -> {
+                int count = 0;
+                try {
+                    for (File file : files) {
+                        if (count++ % threads != index || failure.get() != null) {
+                            continue;
+                        }
+                        SmaliReader reader = SmaliReader.of(file);
+                        reader.setReaderSetting(readerSetting);
+                        SmaliClass smaliClass = new SmaliClass();
+                        smaliClass.parse(reader);
+                        while (!queue.offer(smaliClass, 200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                            if (failure.get() != null) {
+                                break;
+                            }
+                        }
+                    }
+                } catch (Throwable e) {
+                    failure.compareAndSet(null, e);
+                } finally {
+                    producerCount.decrementAndGet();
+                }
+            }, "smali-parse-" + t);
+            producers[t].start();
+        }
+        for (Thread producer : producers) {
+            try {
+                producer.join();
+            } catch (InterruptedException ignored) {
+            }
+        }
+        try {
+            done.await();
+        } catch (InterruptedException ignored) {
+        }
+        IOException error = null;
+        Throwable thrown = failure.get();
+        if (thrown != null) {
+            if (thrown instanceof IOException) {
+                error = (IOException) thrown;
+            } else {
+                error = new IOException(thrown);
+            }
+        }
+        if (error != null) {
+            throw error;
+        }
+        sort();
+        shrink();
+    }
+    private void internSmaliClass(SmaliClass smaliClass) throws IOException {
+        Section<ClassId> classIdSection = getSection(SectionType.CLASS_ID);
+        if (classIdSection != null && classIdSection.contains(smaliClass.getKey())) {
+            throw new IOException(smaliClass.getOrigin() + " Class: "
+                    + smaliClass.getKey() + " has already been interned");
+        }
+        getDexLayoutBlock().fromSmali(smaliClass);
     }
 
     public void parseSmaliFile(File file) throws IOException {
@@ -353,6 +485,70 @@ public class DexLayout implements DexClassModule, Closeable,
         }
     }
     public void writeSmali(SmaliWriterSetting writerSetting, File root) throws IOException {
+        writeSmali(writerSetting, root, Runtime.getRuntime().availableProcessors());
+    }
+    public void writeSmali(SmaliWriterSetting writerSetting, File root, int threads) throws IOException {
+        if (threads <= 1) {
+            writeSmaliSequential(writerSetting, root);
+            return;
+        }
+        SmaliFileNameFactory fileNameFactory = new SmaliFileNameFactory(root);
+        ArrayCollection<ClassId> classIds = new ArrayCollection<>();
+        Iterator<ClassId> iterator = getItems(SectionType.CLASS_ID);
+        while (iterator.hasNext()) {
+            classIds.add(iterator.next());
+        }
+        int size = classIds.size();
+        if (size == 0) {
+            return;
+        }
+        AtomicInteger next = new AtomicInteger(0);
+        AtomicInteger failure = new AtomicInteger(0);
+        IOException[] error = new IOException[1];
+        Thread[] workers = new Thread[threads];
+        for (int t = 0; t < threads; t++) {
+            workers[t] = new Thread(() -> {
+                while (failure.get() == 0) {
+                    int index = next.getAndIncrement();
+                    if (index >= size) {
+                        return;
+                    }
+                    ClassId classId = classIds.get(index);
+                    try {
+                        File file = fileNameFactory.getUniqueFilenameForClass(classId.getKey());
+                        SmaliWriter writer = new SmaliWriter(writerSetting);
+                        try {
+                            writer.setWriter(new FileOutputStream(file));
+                            classId.append(writer);
+                        } finally {
+                            try {
+                                writer.close();
+                            } catch (IOException ignored) {
+                            }
+                        }
+                    } catch (IOException ex) {
+                        if (failure.compareAndSet(0, 1)) {
+                            error[0] = ex;
+                        }
+                        return;
+                    }
+                }
+            }, "smali-writer-" + t);
+        }
+        for (Thread worker : workers) {
+            worker.start();
+        }
+        for (Thread worker : workers) {
+            try {
+                worker.join();
+            } catch (InterruptedException ignored) {
+            }
+        }
+        if (error[0] != null) {
+            throw error[0];
+        }
+    }
+    private void writeSmaliSequential(SmaliWriterSetting writerSetting, File root) throws IOException {
         SmaliFileNameFactory fileNameFactory = new SmaliFileNameFactory(root);
         Iterator<ClassId> iterator = getItems(SectionType.CLASS_ID);
         while (iterator.hasNext()) {

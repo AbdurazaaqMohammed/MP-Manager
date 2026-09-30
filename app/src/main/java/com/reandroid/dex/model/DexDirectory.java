@@ -678,11 +678,56 @@ public class DexDirectory implements Iterable<DexFile>, Closeable,
     }
     public void writeSmali(SmaliWriterSetting writerSetting, File root,
                            Predicate<? super DexFile> predicate) throws IOException {
+        int threads = Math.max(2, Runtime.getRuntime().availableProcessors());
+        ArrayCollection<DexFile> targets = new ArrayCollection<>();
         for (DexFile dexFile : this) {
             if (predicate == null || predicate.evaluate(dexFile)) {
-                File dir = new File(root, dexFile.buildSmaliDirectoryName());
-                dexFile.writeSmali(writerSetting, dir);
+                targets.add(dexFile);
             }
+        }
+        int total = targets.size();
+        if (total == 0) {
+            return;
+        }
+        if (total == 1) {
+            targets.get(0).writeSmali(writerSetting, new File(root,
+                    targets.get(0).buildSmaliDirectoryName()), threads);
+            return;
+        }
+        java.util.concurrent.ExecutorService executor =
+                java.util.concurrent.Executors.newFixedThreadPool(threads);
+        java.util.List<java.util.concurrent.Future<?>> futures =
+                new java.util.ArrayList<>(total);
+        IOException[] error = new IOException[1];
+        for (DexFile dexFile : targets) {
+            futures.add(executor.submit(() -> {
+                try {
+                    File dir = new File(root, dexFile.buildSmaliDirectoryName());
+                    dexFile.writeSmali(writerSetting, dir, Math.max(1, threads / total));
+                } catch (IOException ex) {
+                    if (error[0] == null) {
+                        error[0] = ex;
+                    }
+                }
+                return null;
+            }));
+        }
+        executor.shutdown();
+        for (java.util.concurrent.Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (java.util.concurrent.ExecutionException ex) {
+                executor.shutdownNow();
+                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                throw cause instanceof IOException ? (IOException) cause : new IOException(cause);
+            } catch (InterruptedException ex) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+                throw new IOException(ex);
+            }
+        }
+        if (error[0] != null) {
+            throw error[0];
         }
     }
 

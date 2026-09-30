@@ -307,13 +307,16 @@ public class DexFile implements Closeable, DexClassRepository, Iterable<DexLayou
         }
     }
     public void writeSmali(SmaliWriterSetting writerSetting, File root) throws IOException {
+        writeSmali(writerSetting, root, 1);
+    }
+    public void writeSmali(SmaliWriterSetting writerSetting, File root, int threads) throws IOException {
         requireNotClosed();
         DexFileInfo fileInfo = DexFileInfo.fromDex(this);
         fileInfo.saveToDirectory(root);
         if (!isMultiLayout()) {
             DexLayout first = getFirst();
             if (first != null) {
-                first.writeSmali(writerSetting, root);
+                first.writeSmali(writerSetting, root, threads);
             }
         } else {
             int size = size();
@@ -321,7 +324,7 @@ public class DexFile implements Closeable, DexClassRepository, Iterable<DexLayou
                 DexLayout dexLayout = getLayout(i);
                 String name = DexLayout.DIRECTORY_PREFIX + i;
                 File dir = new File(root, name);
-                dexLayout.writeSmali(writerSetting, dir);
+                dexLayout.writeSmali(writerSetting, dir, threads);
             }
         }
     }

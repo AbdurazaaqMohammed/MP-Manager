@@ -122,8 +122,11 @@ public abstract class InputSource {
             dir.mkdirs();
         }
         FileOutputStream outputStream = new FileOutputStream(file);
-        write(outputStream);
-        outputStream.close();
+        try {
+            write(new java.io.BufferedOutputStream(outputStream, 64 * 1024));
+        } finally {
+            outputStream.close();
+        }
     }
     public long write(OutputStream outputStream) throws IOException {
         return write(outputStream, openStream());

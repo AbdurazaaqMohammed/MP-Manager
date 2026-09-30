@@ -21,13 +21,18 @@ import com.reandroid.utils.io.FileUtil;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ZipFileInput extends ZipInput {
     private final File file;
     private FileChannel fileChannel;
     private InputStream mCurrentInputStream;
+    private final List<WorkerChannel> workerChannels;
+    private ThreadLocal<FileChannel> workerLocal;
     public ZipFileInput(File file){
         this.file = file;
+        this.workerChannels = new ArrayList<>();
     }
 
     public File getFile(){
@@ -52,13 +57,32 @@ public class ZipFileInput extends ZipInput {
     }
     @Override
     public InputStream getInputStream(long offset, long length) throws IOException {
+        Thread thread = Thread.currentThread();
+        if(thread instanceof ZipReadWorker){
+            return getWorkerInputStream(thread, offset, length);
+        }
         closeCurrentInputStream();
         FileChannel fileChannel = getFileChannel();
         fileChannel.position(offset);
         mCurrentInputStream = new FileChannelInputStream(fileChannel, length);
         return mCurrentInputStream;
     }
-
+    private InputStream getWorkerInputStream(Thread thread, long offset, long length) throws IOException {
+        FileChannel channel;
+        synchronized (workerChannels){
+            if(workerLocal == null){
+                workerLocal = new ThreadLocal<>();
+            }
+            channel = workerLocal.get();
+            if(channel == null){
+                channel = FileUtil.openReadChannel(file);
+                workerChannels.add(new WorkerChannel(thread, channel));
+                workerLocal.set(channel);
+            }
+        }
+        channel.position(offset);
+        return new FileChannelInputStream(channel, length, 32 * 1024);
+    }
     @Override
     public byte[] getFooter(int minLength) throws IOException {
         long position = getLength();
@@ -87,6 +111,17 @@ public class ZipFileInput extends ZipInput {
     public void close() throws IOException {
         closeCurrentInputStream();
         closeChannel();
+    }
+    public void closeWorkers(){
+        List<WorkerChannel> workers;
+        synchronized (workerChannels){
+            workers = new ArrayList<>(workerChannels);
+            workerChannels.clear();
+            workerLocal = null;
+        }
+        for(WorkerChannel worker : workers){
+            worker.close();
+        }
     }
     @Override
     public boolean isOpen(){
@@ -119,5 +154,20 @@ public class ZipFileInput extends ZipInput {
     @Override
     public String toString(){
         return "File: " + this.file;
+    }
+
+    private static final class WorkerChannel {
+        private final Thread thread;
+        private final FileChannel channel;
+        WorkerChannel(Thread thread, FileChannel channel){
+            this.thread = thread;
+            this.channel = channel;
+        }
+        void close(){
+            try{
+                channel.close();
+            }catch (IOException ignored){
+            }
+        }
     }
 }

@@ -68,12 +68,52 @@ public abstract class ApkModuleDecoder extends ApkModuleCoder{
     public void extractRootFiles(File mainDirectory) throws IOException {
         logMessage("Extracting root files ...");
         File rootDir = new File(mainDirectory, ApkUtil.ROOT_NAME);
+        List<InputSource> remaining = new java.util.ArrayList<>();
         for(InputSource inputSource:apkModule.getInputSources()){
             if(containsDecodedPath(inputSource.getAlias())){
                 continue;
             }
-            extractRootFile(rootDir, inputSource);
-            addDecodedPath(inputSource.getAlias());
+            remaining.add(inputSource);
+        }
+        int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
+        java.util.concurrent.ExecutorService executor = cores <= 1 ? null
+                : java.util.concurrent.Executors.newFixedThreadPool(cores, r -> new com.reandroid.archive.io.ZipReadWorker(r));
+        java.util.List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicReference<IOException> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        for(InputSource inputSource:remaining){
+            Runnable task = () -> {
+                try{
+                    if(failure.get() == null){
+                        extractRootFile(rootDir, inputSource);
+                        addDecodedPath(inputSource.getAlias());
+                    }
+                }catch (IOException e){
+                    failure.compareAndSet(null, e);
+                }
+            };
+            if(executor != null){
+                futures.add(executor.submit(task));
+            }else {
+                task.run();
+            }
+        }
+        if(executor != null){
+            executor.shutdown();
+            for(java.util.concurrent.Future<?> future:futures){
+                try{
+                    future.get();
+                }catch (InterruptedException ie){
+                    Thread.currentThread().interrupt();
+                }catch (java.util.concurrent.ExecutionException ee){
+                    if(ee.getCause() instanceof IOException){
+                        failure.compareAndSet(null, (IOException) ee.getCause());
+                    }
+                }
+            }
+        }
+        IOException error = failure.get();
+        if(error != null){
+            throw error;
         }
     }
     public void decodeDexProfile(File mainDirectory) throws IOException {
