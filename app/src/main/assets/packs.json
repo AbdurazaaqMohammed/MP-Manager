@@ -112,7 +112,7 @@
         },
         {
           "id": "devicehub",
-          "title": "Device Hub",
+          "title": "Device Info",
           "subtitle": "Battery, CPU, sensors, storage"
         }
       ]
