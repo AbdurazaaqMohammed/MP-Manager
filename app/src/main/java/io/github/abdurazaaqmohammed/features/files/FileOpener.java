@@ -82,6 +82,9 @@ import javax.xml.transform.stream.StreamResult;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
+import io.github.abdurazaaqmohammed.adapters.main.ApkToolsHandler;
+import io.github.abdurazaaqmohammed.adapters.main.ChecksumDialogs;
+import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
@@ -123,18 +126,18 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
  */
 public class FileOpener {
 
-    private final io.github.abdurazaaqmohammed.MPManager.MainActivity context;
-    private final io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil;
+    private final MainActivity context;
+    private final DialogUtil dialogUtil;
     private final boolean pane1;
-    private final io.github.abdurazaaqmohammed.adapters.main.ApkToolsHandler apkTools;
-    private final io.github.abdurazaaqmohammed.adapters.main.ChecksumDialogs checksumDialogs;
-    private final io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper fileOps;
+    private final ApkToolsHandler apkTools;
+    private final ChecksumDialogs checksumDialogs;
+    private final FileOperationsHelper fileOps;
 
-    public FileOpener(io.github.abdurazaaqmohammed.MPManager.MainActivity context,
-                        io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil, boolean pane1,
-                        io.github.abdurazaaqmohammed.adapters.main.ApkToolsHandler apkTools,
-                        io.github.abdurazaaqmohammed.adapters.main.ChecksumDialogs checksumDialogs,
-                        io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper fileOps) {
+    public FileOpener(MainActivity context,
+                      DialogUtil dialogUtil, boolean pane1,
+                      ApkToolsHandler apkTools,
+                      ChecksumDialogs checksumDialogs,
+                      FileOperationsHelper fileOps) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.pane1 = pane1;
@@ -144,7 +147,7 @@ public class FileOpener {
     }
 
     public interface ReadableCallback {
-        void onReady(java.io.File readable) throws Exception;
+        void onReady(File readable) throws Exception;
     }
 
     public void openWithForFile(File file, String fileName) {

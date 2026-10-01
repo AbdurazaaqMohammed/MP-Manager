@@ -6,6 +6,8 @@ import android.util.TypedValue;
 
 import androidx.annotation.AttrRes;
 
+import com.google.android.material.R;
+
 /**
  * Resolve theme attributes instead of hardcoding Color.WHITE / Color.TRANSPARENT
  * (see legacy UIHelper.getTitle/styleEditText). One place to change surface colors.
@@ -31,10 +33,10 @@ public final class ThemeAttrs {
     }
 
     public static int onSurface(Context context) {
-        return resolve(context, com.google.android.material.R.attr.colorOnSurface, Color.WHITE);
+        return resolve(context, R.attr.colorOnSurface, Color.WHITE);
     }
 
     public static int surface(Context context) {
-        return resolve(context, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
+        return resolve(context, R.attr.colorSurface, Color.TRANSPARENT);
     }
 }

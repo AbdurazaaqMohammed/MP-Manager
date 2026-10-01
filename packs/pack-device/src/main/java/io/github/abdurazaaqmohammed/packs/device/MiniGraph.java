@@ -7,6 +7,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.view.View;
 
+import java.text.DecimalFormat;
+
 /**
  * Tiny scrolling line graph for live monitors. Fixed capacity ring buffer,
  * autoscaled, no dependencies.
@@ -91,7 +93,7 @@ public class MiniGraph extends View {
         }
         float peak = 0;
         for (int i = 0; i < count; i++) peak = Math.max(peak, buf[i]);
-        c.drawText("peak " + new java.text.DecimalFormat("0.#").format(peak),
+        c.drawText("peak " + new DecimalFormat("0.#").format(peak),
                 pad, pad + dp(8), text);
     }
 }

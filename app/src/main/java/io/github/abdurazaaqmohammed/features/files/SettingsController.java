@@ -1,13 +1,17 @@
 package io.github.abdurazaaqmohammed.features.files;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
@@ -219,8 +224,8 @@ public class SettingsController {
         float density = activity.getResources().getDisplayMetrics().density;
         int pad = (int) (16 * density);
 
-        com.google.android.material.card.MaterialCardView card =
-                new com.google.android.material.card.MaterialCardView(activity);
+        MaterialCardView card =
+                new MaterialCardView(activity);
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cardParams.bottomMargin = (int) (5 * density);
@@ -236,7 +241,7 @@ public class SettingsController {
         TextView header = new TextView(activity);
         header.setText(activity.getString(R.string.plugins_section));
         header.setTextSize(16);
-        header.setTypeface(null, android.graphics.Typeface.BOLD);
+        header.setTypeface(null, Typeface.BOLD);
         box.addView(header);
 
         if (toggles != null) {
@@ -244,7 +249,7 @@ public class SettingsController {
                 if (toggle == null || toggle.key() == null) continue;
                 LinearLayout row = new LinearLayout(activity);
                 row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
                 LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 rowParams.topMargin = (int) (8 * density);
@@ -319,7 +324,7 @@ public class SettingsController {
                 if (!isAction) {
                     LinearLayout row = new LinearLayout(activity);
                     row.setOrientation(LinearLayout.HORIZONTAL);
-                    row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
                     LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                     rowParams.topMargin = (int) (8 * density);
@@ -369,9 +374,9 @@ public class SettingsController {
             PluginTrust.ensureTrusted(activity, e.plugin, () ->
                     activity.launchExternalSetting(intent, result -> {
                         try {
-                            if (isAction || result.getResultCode() != android.app.Activity.RESULT_OK
+                            if (isAction || result.getResultCode() != Activity.RESULT_OK
                                     || result.getData() == null) return;
-                            android.os.Bundle extras = result.getData().getExtras();
+                            Bundle extras = result.getData().getExtras();
                             if (extras == null || !extras.containsKey(PluginContracts.EXTRA_VALUE)) return;
                             Object v = extras.get(PluginContracts.EXTRA_VALUE);
                             if (v instanceof Boolean) {

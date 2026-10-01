@@ -36,6 +36,7 @@
 
 package modder.hub.dexeditor.views;
 
+import android.app.Activity;
 import android.net.*;
 import android.os.*;
 import android.text.*;
@@ -59,7 +60,9 @@ import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -543,10 +546,10 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		dismiss();
 	}
 
-	private java.util.function.Consumer<Intent> externalRunner;
+	private Consumer<Intent> externalRunner;
 
 	/** Bridge for external editor plugins (set by the hosting fragment). */
-	public void setExternalRunner(java.util.function.Consumer<Intent> runner) {
+	public void setExternalRunner(Consumer<Intent> runner) {
 		this.externalRunner = runner;
 	}
 
@@ -576,15 +579,15 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		final ExternalActions.Entry entry = found;
 		try {
 			Context ctx = codeEditor.getContext();
-			if (!(ctx instanceof android.app.Activity)) return false;
-			android.app.Activity activity = (android.app.Activity) ctx;
+			if (!(ctx instanceof Activity)) return false;
+			Activity activity = (Activity) ctx;
 			CodeEditorHandle handle = new CodeEditorHandle(this.codeEditor);
 			Intent intent = PluginHost.explicitIntent(entry.plugin,
 					PluginContracts.ACTION_EDITOR);
 			intent.putExtra(PluginContracts.EXTRA_PLUGIN_ID, entry.plugin.pluginId);
 			intent.putExtra(PluginContracts.EXTRA_SELECTED_TEXT, handle.selectedText());
 			String full = handle.fullText();
-			if (full != null && full.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+			if (full != null && full.getBytes(StandardCharsets.UTF_8).length
 					<= PluginContracts.MAX_FULL_TEXT_BYTES) {
 				intent.putExtra(PluginContracts.EXTRA_FULL_TEXT, full);
 			}
@@ -603,7 +606,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	/** Applies an external editor plugin result (called by the fragment). */
 	public void applyExternalEditorResult(int resultCode, Intent data) {
 		try {
-			if (resultCode != android.app.Activity.RESULT_OK || data == null) return;
+			if (resultCode != Activity.RESULT_OK || data == null) return;
 			CodeEditorHandle handle = new CodeEditorHandle(this.codeEditor);
 			if (data.hasExtra(PluginContracts.EXTRA_REPLACE_SELECTION)) {
 				String replacement = data.getStringExtra(PluginContracts.EXTRA_REPLACE_SELECTION);

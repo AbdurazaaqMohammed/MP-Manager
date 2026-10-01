@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
+import android.text.ClipboardManager;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -75,12 +76,12 @@ public class FtpController {
         TextView ipTv = view.findViewById(R.id.ip);
         ipTv.setText(activity.rss.getString(R.string.ip, ipString));
         ipTv.setOnLongClickListener(v -> {
-            ((android.text.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
+            ((ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
             Extensions.showMessage(activity, activity.rss.getString(R.string.copied));
             return false;
         });
         view.findViewById(R.id.copy).setOnClickListener(v -> {
-            ((android.text.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
+            ((ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE)).setText(ipString);
             Extensions.showMessage(activity, activity.rss.getString(R.string.copied));
         });
         view.findViewById(R.id.share).setOnClickListener(v -> activity.startActivity(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, ipString).setType("text/plain")));

@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.features.files;
 
 import android.content.SharedPreferences;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -15,6 +16,7 @@ import android.widget.SeekBar;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
@@ -35,6 +37,7 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,7 +56,7 @@ public class BookmarksController {
     private ArrayList<File> bookmarks;
     private final List<String> bookmarkGroups = new ArrayList<>();
     private View.OnTouchListener bookmarksSwipeDownCloseListener;
-    private final Map<String, String> bookmarkLabels = new java.util.HashMap<>();
+    private final Map<String, String> bookmarkLabels = new HashMap<>();
     private BookmarkListController mainBookmarkController;
     private final Map<String, BookmarkListController> groupControllers = new LinkedHashMap<>();
     private BookmarkListController batchController;
@@ -335,14 +338,14 @@ public class BookmarksController {
     }
 
     private void showBookmarksBarMenu(View anchor) {
-        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(activity, anchor);
+        PopupMenu popup = new PopupMenu(activity, anchor);
         String ag = activity.rss.getString(R.string.add_group);
         String ah = activity.rss.getString(R.string.adjust_height);
         popup.getMenu().add(ag);
         popup.getMenu().add(ah);
         popup.setOnMenuItemClickListener(item -> {
             CharSequence title = item.getTitle();
-            if (android.text.TextUtils.isEmpty(title)) ;
+            if (TextUtils.isEmpty(title)) ;
             else if (ag.contentEquals(title)) showAddGroupDialog();
             else showAdjustHeightDialog();
             return true;
@@ -467,7 +470,7 @@ public class BookmarksController {
     }
 
     private void showBookmarkItemMenu(BookmarkListController controller, int position, View anchor) {
-        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(activity, anchor);
+        PopupMenu popup = new PopupMenu(activity, anchor);
         String edit = activity.rss.getString(R.string.edit_bookmark);
         String move = activity.rss.getString(R.string.move);
         String delete = activity.rss.getString(R.string.delete);

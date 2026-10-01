@@ -19,6 +19,7 @@ import com.reandroid.archive.ArchiveInfo;
 import com.reandroid.archive.InputSource;
 import com.reandroid.archive.ZipEntryMap;
 import com.reandroid.archive.block.ApkSignatureBlock;
+import com.reandroid.archive.io.ZipReadWorker;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.dex.model.DexDirectory;
@@ -30,10 +31,16 @@ import com.reandroid.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class ApkModuleDecoder extends ApkModuleCoder{
     private final ApkModule apkModule;
@@ -68,7 +75,7 @@ public abstract class ApkModuleDecoder extends ApkModuleCoder{
     public void extractRootFiles(File mainDirectory) throws IOException {
         logMessage("Extracting root files ...");
         File rootDir = new File(mainDirectory, ApkUtil.ROOT_NAME);
-        List<InputSource> remaining = new java.util.ArrayList<>();
+        List<InputSource> remaining = new ArrayList<>();
         for(InputSource inputSource:apkModule.getInputSources()){
             if(containsDecodedPath(inputSource.getAlias())){
                 continue;
@@ -76,10 +83,10 @@ public abstract class ApkModuleDecoder extends ApkModuleCoder{
             remaining.add(inputSource);
         }
         int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
-        java.util.concurrent.ExecutorService executor = cores <= 1 ? null
-                : java.util.concurrent.Executors.newFixedThreadPool(cores, r -> new com.reandroid.archive.io.ZipReadWorker(r));
-        java.util.List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
-        java.util.concurrent.atomic.AtomicReference<IOException> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        ExecutorService executor = cores <= 1 ? null
+                : Executors.newFixedThreadPool(cores, r -> new ZipReadWorker(r));
+        List<Future<?>> futures = new ArrayList<>();
+        AtomicReference<IOException> failure = new AtomicReference<>();
         for(InputSource inputSource:remaining){
             Runnable task = () -> {
                 try{
@@ -99,12 +106,12 @@ public abstract class ApkModuleDecoder extends ApkModuleCoder{
         }
         if(executor != null){
             executor.shutdown();
-            for(java.util.concurrent.Future<?> future:futures){
+            for(Future<?> future:futures){
                 try{
                     future.get();
                 }catch (InterruptedException ie){
                     Thread.currentThread().interrupt();
-                }catch (java.util.concurrent.ExecutionException ee){
+                }catch (ExecutionException ee){
                     if(ee.getCause() instanceof IOException){
                         failure.compareAndSet(null, (IOException) ee.getCause());
                     }

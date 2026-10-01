@@ -128,14 +128,14 @@ import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
  */
 public class ApkOverlayTools {
 
-    private final io.github.abdurazaaqmohammed.MPManager.MainActivity context;
-    private final io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil;
-    private final io.github.abdurazaaqmohammed.ui.UIHelper uiHelper;
+    private final MainActivity context;
+    private final DialogUtil dialogUtil;
+    private final UIHelper uiHelper;
     private final boolean pane1;
 
-    public ApkOverlayTools(io.github.abdurazaaqmohammed.MPManager.MainActivity context,
-                               io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil,
-                               io.github.abdurazaaqmohammed.ui.UIHelper uiHelper, boolean pane1) {
+    public ApkOverlayTools(MainActivity context,
+                           DialogUtil dialogUtil,
+                           UIHelper uiHelper, boolean pane1) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.uiHelper = uiHelper;

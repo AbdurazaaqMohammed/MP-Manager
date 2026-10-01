@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -245,8 +246,8 @@ public class OverlaySmaliAuditTest {
         o.rainbowAnim = false;
         o.animColorA = 0xFF123456;
         o.animColorB = 0xFF654321;
-        o.animExtraColors = new ArrayList<>(java.util.Arrays.asList(0xFF111111, 0xFF222222, 0xFF333333));
-        btn.btnAnimColors = new ArrayList<>(java.util.Arrays.asList(0xFF445566, 0xFF778899));
+        o.animExtraColors = new ArrayList<>(Arrays.asList(0xFF111111, 0xFF222222, 0xFF333333));
+        btn.btnAnimColors = new ArrayList<>(Arrays.asList(0xFF445566, 0xFF778899));
         btn.btnAnimSpeedMs = 111;
         btn.btnAnimRainbow = false;
         String smali2 = OverlayInjectorUtil.dialogHelperSmali(
@@ -283,7 +284,7 @@ public class OverlaySmaliAuditTest {
         w.btnBorderColor = 5;
         w.btnPaddingDp = 6;
         w.btnAnim = true;
-        w.btnAnimColors = new ArrayList<>(java.util.Arrays.asList(7, 8));
+        w.btnAnimColors = new ArrayList<>(Arrays.asList(7, 8));
         w.btnAnimSpeedMs = 111;
         w.btnAnimRainbow = true;
         w.leftDp = 9;

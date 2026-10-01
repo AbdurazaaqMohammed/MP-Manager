@@ -123,7 +123,7 @@ public abstract class InputSource {
         }
         FileOutputStream outputStream = new FileOutputStream(file);
         try {
-            write(new java.io.BufferedOutputStream(outputStream, 64 * 1024));
+            write(new BufferedOutputStream(outputStream, 64 * 1024));
         } finally {
             outputStream.close();
         }

@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.Context;
@@ -325,10 +326,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             String msg = data == null ? null : data.getStringExtra(
                                     PluginContracts.EXTRA_MESSAGE);
                             if (msg == null || msg.isEmpty()) {
-                                msg = result.getResultCode() == android.app.Activity.RESULT_OK
+                                msg = result.getResultCode() == Activity.RESULT_OK
                                         ? "Done" : "Cancelled";
                             }
-                            io.github.codehasan.colorpicker.extensions.Extensions.showMessage(context, msg);
+                            Extensions.showMessage(context, msg);
                         } catch (Exception ignored) {
                         }
                     }));

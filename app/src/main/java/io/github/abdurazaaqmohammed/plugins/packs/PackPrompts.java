@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.plugins.packs;
 
+import android.R;
 import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
@@ -14,6 +15,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
 
 import java.io.File;
 import java.util.List;
@@ -74,10 +77,10 @@ public final class PackPrompts {
             action.setEnabled(false);
             Runnable doDownload = () -> startDownload(activity, pack, onInstalled, action);
             if (!pack.hasChecksum()) {
-                new androidx.appcompat.app.AlertDialog.Builder(activity)
+                new AlertDialog.Builder(activity)
                         .setTitle(pack.title)
                         .setMessage("No checksum is published for this pack build. Install only if you trust the source. Continue?")
-                        .setNegativeButton(android.R.string.cancel, (d, w) -> action.setEnabled(true))
+                        .setNegativeButton(R.string.cancel, (d, w) -> action.setEnabled(true))
                         .setPositiveButton("Download", (d, w) -> doDownload.run())
                         .show();
             } else {

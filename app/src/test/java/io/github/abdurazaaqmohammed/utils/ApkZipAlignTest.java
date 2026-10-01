@@ -12,6 +12,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -165,9 +168,9 @@ public class ApkZipAlignTest {
      * fails with "Malformed ZIP entry".
      */
     private static void assertLocalNamesMatchCentralDirectory(File apk) throws Exception {
-        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(apk, "r");
+        try (RandomAccessFile raf = new RandomAccessFile(apk, "r");
              ZipFile zf = new ZipFile(apk)) {
-            java.util.Enumeration<? extends ZipEntry> en = zf.entries();
+            Enumeration<? extends ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
                 ZipEntry ze = en.nextElement();
                 long off = localOffsetOf(raf, apk, ze.getName());
@@ -177,13 +180,13 @@ public class ApkZipAlignTest {
                 int nameLen = u16(h, 26);
                 byte[] nameBytes = new byte[nameLen];
                 raf.readFully(nameBytes);
-                String localName = new String(nameBytes, java.nio.charset.StandardCharsets.UTF_8);
+                String localName = new String(nameBytes, StandardCharsets.UTF_8);
                 assertEquals("local name of " + ze.getName(), ze.getName(), localName);
             }
         }
     }
 
-    private static long localOffsetOf(java.io.RandomAccessFile raf, File apk, String name) throws Exception {
+    private static long localOffsetOf(RandomAccessFile raf, File apk, String name) throws Exception {
         long fileLen = raf.length();
         long searchStart = Math.max(0, fileLen - 70000);
         int len = (int) (fileLen - searchStart);
@@ -207,7 +210,7 @@ public class ApkZipAlignTest {
             int nl = u16(h, 28), el = u16(h, 30), cl = u16(h, 32);
             byte[] nm = new byte[nl];
             raf.readFully(nm);
-            String entryName = new String(nm, java.nio.charset.StandardCharsets.UTF_8);
+            String entryName = new String(nm, StandardCharsets.UTF_8);
             if (entryName.equals(name)) return u32(h, 42);
             pos += 46 + nl + el + cl;
         }

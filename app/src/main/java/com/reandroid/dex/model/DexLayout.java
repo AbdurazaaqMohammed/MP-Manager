@@ -56,7 +56,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DexLayout implements DexClassModule, Closeable,
         Iterable<DexClass> {
@@ -358,17 +363,17 @@ public class DexLayout implements DexClassModule, Closeable,
         if (queueCapacity > files.size()) {
             queueCapacity = files.size();
         }
-        java.util.concurrent.BlockingQueue<SmaliClass> queue =
-                new java.util.concurrent.ArrayBlockingQueue<>(queueCapacity);
-        java.util.concurrent.atomic.AtomicReference<Throwable> failure =
-                new java.util.concurrent.atomic.AtomicReference<>();
-        java.util.concurrent.atomic.AtomicInteger producerCount =
-                new java.util.concurrent.atomic.AtomicInteger(threads);
-        java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+        BlockingQueue<SmaliClass> queue =
+                new ArrayBlockingQueue<>(queueCapacity);
+        AtomicReference<Throwable> failure =
+                new AtomicReference<>();
+        AtomicInteger producerCount =
+                new AtomicInteger(threads);
+        CountDownLatch done = new CountDownLatch(1);
         Thread consumer = new Thread(() -> {
             try {
                 while (true) {
-                    SmaliClass smaliClass = queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    SmaliClass smaliClass = queue.poll(200, TimeUnit.MILLISECONDS);
                     if (smaliClass != null) {
                         if (failure.get() == null) {
                             internSmaliClass(smaliClass);
@@ -400,7 +405,7 @@ public class DexLayout implements DexClassModule, Closeable,
                         reader.setReaderSetting(readerSetting);
                         SmaliClass smaliClass = new SmaliClass();
                         smaliClass.parse(reader);
-                        while (!queue.offer(smaliClass, 200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                        while (!queue.offer(smaliClass, 200, TimeUnit.MILLISECONDS)) {
                             if (failure.get() != null) {
                                 break;
                             }

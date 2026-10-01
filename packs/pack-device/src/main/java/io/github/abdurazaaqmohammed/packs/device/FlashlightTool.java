@@ -10,6 +10,7 @@ import android.hardware.camera2.CameraManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -87,7 +88,7 @@ public class FlashlightTool extends BaseToolPlugin {
         exit.setText("Turn off screen light");
         exit.setBackgroundColor(Color.parseColor("#CC000000"));
         exit.setTextColor(Color.WHITE);
-        FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+        FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         int m = ToolViewFactory.dp(context, 24);
         ep.setMargins(m, m, m, ToolViewFactory.dp(context, 48));
         root.addView(exit, ep);

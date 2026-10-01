@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.plugins.ipc;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.MimeTypeMap;
 
 import androidx.core.content.FileProvider;
 
@@ -210,7 +211,7 @@ public final class ExternalActions {
     private static String mimeOf(Context context, File file) {
         try {
             String type = context.getContentResolver().getType(
-                    android.net.Uri.fromFile(file));
+                    Uri.fromFile(file));
             if (type != null) return type;
         } catch (Exception ignored) {
         }
@@ -219,7 +220,7 @@ public final class ExternalActions {
             int dot = name.lastIndexOf('.');
             if (dot >= 0) {
                 String ext = name.substring(dot + 1).toLowerCase();
-                String guessed = android.webkit.MimeTypeMap.getSingleton()
+                String guessed = MimeTypeMap.getSingleton()
                         .getMimeTypeFromExtension(ext);
                 if (guessed != null) return guessed;
             }

@@ -1,13 +1,20 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.FeatureInfo;
 import android.content.pm.PackageManager;
+import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.TrafficStats;
@@ -18,21 +25,28 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.os.SystemClock;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.util.DisplayMetrics;
+import android.util.Size;
+import android.view.Display;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Scanner;
 
 /**
  * Static system readers backing the Device Hub tabs. Everything is guarded:
@@ -118,7 +132,7 @@ public final class DeviceSys {
             });
             killer.setDaemon(true);
             killer.start();
-            java.util.Scanner s = new java.util.Scanner(p.getInputStream()).useDelimiter("\\A");
+            Scanner s = new Scanner(p.getInputStream()).useDelimiter("\\A");
             String out = s.hasNext() ? s.next() : "";
             int rc = p.waitFor();
             return new ShellResult(out.trim(), rc == 0);
@@ -359,9 +373,9 @@ public final class DeviceSys {
     public static MemInfo memory(Context context) {
         MemInfo mi = new MemInfo();
         try {
-            android.app.ActivityManager am =
-                    (android.app.ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-            android.app.ActivityManager.MemoryInfo info = new android.app.ActivityManager.MemoryInfo();
+            ActivityManager am =
+                    (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
             am.getMemoryInfo(info);
             mi.total = info.totalMem;
             mi.avail = info.availMem;
@@ -413,10 +427,10 @@ public final class DeviceSys {
         }
         try {
             if (Build.VERSION.SDK_INT >= 24) {
-                android.os.storage.StorageManager sm =
-                        (android.os.storage.StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+                StorageManager sm =
+                        (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
                 if (sm != null) {
-                    for (android.os.storage.StorageVolume sv : sm.getStorageVolumes()) {
+                    for (StorageVolume sv : sm.getStorageVolumes()) {
                         try {
                             File dir = sv.getDirectory();
                             if (dir == null) continue;
@@ -597,7 +611,7 @@ public final class DeviceSys {
 
     // ---------- display ----------
 
-    public static float refreshRate(android.view.Display display) {
+    public static float refreshRate(Display display) {
         try {
             if (Build.VERSION.SDK_INT >= 23) {
                 Object r = display.getClass().getMethod("getRefreshRate").invoke(display);
@@ -608,7 +622,7 @@ public final class DeviceSys {
         return Float.NaN;
     }
 
-    public static String displayModes(android.view.Display display) {
+    public static String displayModes(Display display) {
         try {
             if (Build.VERSION.SDK_INT >= 23) {
                 Object modes = display.getClass().getMethod("getSupportedModes").invoke(display);
@@ -634,7 +648,7 @@ public final class DeviceSys {
         return "";
     }
 
-    public static String hdrCaps(android.view.Display display) {
+    public static String hdrCaps(Display display) {
         try {
             if (Build.VERSION.SDK_INT >= 24) {
                 Object caps = display.getClass().getMethod("getHdrCapabilities").invoke(display);
@@ -681,23 +695,23 @@ public final class DeviceSys {
         List<CameraInfo> out = new ArrayList<>();
         try {
             if (Build.VERSION.SDK_INT >= 21) {
-                android.hardware.camera2.CameraManager cm =
-                        (android.hardware.camera2.CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+                CameraManager cm =
+                        (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
                 if (cm == null) return out;
                 for (String id : cm.getCameraIdList()) {
                     try {
-                        android.hardware.camera2.CameraCharacteristics c = cm.getCameraCharacteristics(id);
+                        CameraCharacteristics c = cm.getCameraCharacteristics(id);
                         CameraInfo ci = new CameraInfo();
                         ci.id = id;
-                        Integer facing = c.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING);
+                        Integer facing = c.get(CameraCharacteristics.LENS_FACING);
                         ci.facing = facing != null && facing == 1 ? "Front"
                                 : facing != null && facing == 0 ? "Back" : "External";
                         try {
-                            android.util.Size[] sizes = c.get(android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-                                    .getOutputSizes(android.graphics.ImageFormat.JPEG);
+                            Size[] sizes = c.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                                    .getOutputSizes(ImageFormat.JPEG);
                             long max = 0;
                             if (sizes != null) {
-                                for (android.util.Size s : sizes) {
+                                for (Size s : sizes) {
                                     max = Math.max(max, (long) s.getWidth() * s.getHeight());
                                 }
                             }
@@ -707,13 +721,13 @@ public final class DeviceSys {
                             ci.megapixels = UNKNOWN;
                         }
                         try {
-                            Boolean flash = c.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                            Boolean flash = c.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
                             ci.flash = Boolean.TRUE.equals(flash) ? "Yes" : "No";
                         } catch (Exception ignored) {
                             ci.flash = UNKNOWN;
                         }
                         try {
-                            Integer level = c.get(android.hardware.camera2.CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
+                            Integer level = c.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
                             ci.level = level == null ? UNKNOWN : "Level " + level;
                         } catch (Exception ignored) {
                             ci.level = UNKNOWN;
@@ -746,9 +760,9 @@ public final class DeviceSys {
         List<String> out = new ArrayList<>();
         try {
             if (Build.VERSION.SDK_INT >= 21) {
-                android.media.MediaCodecList list = new android.media.MediaCodecList(
-                        android.media.MediaCodecList.ALL_CODECS);
-                for (android.media.MediaCodecInfo info : list.getCodecInfos()) {
+                MediaCodecList list = new MediaCodecList(
+                        MediaCodecList.ALL_CODECS);
+                for (MediaCodecInfo info : list.getCodecInfos()) {
                     try {
                         out.add((info.isEncoder() ? "ENC " : "DEC ") + info.getName());
                     } catch (Exception ignored) {
@@ -765,9 +779,9 @@ public final class DeviceSys {
         List<String> out = new ArrayList<>();
         try {
             PackageManager pm = context.getPackageManager();
-            android.content.pm.FeatureInfo[] feats = pm.getSystemAvailableFeatures();
+            FeatureInfo[] feats = pm.getSystemAvailableFeatures();
             if (feats != null) {
-                for (android.content.pm.FeatureInfo f : feats) {
+                for (FeatureInfo f : feats) {
                     if (f != null && f.name != null) out.add(f.name);
                 }
             }
@@ -810,14 +824,14 @@ public final class DeviceSys {
     public static List<String> ipAddresses() {
         List<String> out = new ArrayList<>();
         try {
-            java.util.Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
+            Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
             while (ifs.hasMoreElements()) {
                 NetworkInterface ni = ifs.nextElement();
                 try {
                     if (!ni.isUp() || ni.isLoopback()) continue;
-                    java.util.Enumeration<java.net.InetAddress> addrs = ni.getInetAddresses();
+                    Enumeration<InetAddress> addrs = ni.getInetAddresses();
                     while (addrs.hasMoreElements()) {
-                        java.net.InetAddress a = addrs.nextElement();
+                        InetAddress a = addrs.nextElement();
                         if (a.isLoopbackAddress() || a.isLinkLocalAddress()) continue;
                         out.add(ni.getName() + ": " + a.getHostAddress());
                     }

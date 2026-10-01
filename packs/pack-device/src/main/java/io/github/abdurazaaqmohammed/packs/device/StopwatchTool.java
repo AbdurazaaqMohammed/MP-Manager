@@ -8,6 +8,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -88,11 +89,11 @@ public class StopwatchTool extends BaseToolPlugin {
             if (running) {
                 accum = elapsed();
                 running = false;
-                ((android.widget.Button) v).setText("Start");
+                ((Button) v).setText("Start");
             } else {
                 base = SystemClock.elapsedRealtime();
                 running = true;
-                ((android.widget.Button) v).setText("Pause");
+                ((Button) v).setText("Pause");
                 handler.post(tick);
             }
         });

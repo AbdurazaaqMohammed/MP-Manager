@@ -31,6 +31,7 @@ import com.reandroid.utils.io.FileUtil;
 import org.antlr.runtime.RecognitionException;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -169,7 +170,7 @@ public class SmaliCompiler implements DexEncoder {
     private static void writeStamp(File dexCacheFile){
         File stampFile = new File(dexCacheFile.getParentFile(), dexCacheFile.getName() + ".stamp");
         try {
-            new java.io.FileOutputStream(stampFile).close();
+            new FileOutputStream(stampFile).close();
         } catch (IOException ignored) {
         }
     }

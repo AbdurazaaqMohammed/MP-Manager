@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.core.ui.base;
 
+import android.view.View;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -31,7 +33,7 @@ public abstract class BaseListAdapter<T, VH extends RecyclerView.ViewHolder>
     }
 
     public static abstract class BaseViewHolder extends RecyclerView.ViewHolder {
-        public BaseViewHolder(@NonNull android.view.View itemView) {
+        public BaseViewHolder(@NonNull View itemView) {
             super(itemView);
         }
     }

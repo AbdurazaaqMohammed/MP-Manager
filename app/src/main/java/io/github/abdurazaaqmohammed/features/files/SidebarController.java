@@ -40,6 +40,7 @@ import io.github.abdurazaaqmohammed.utils.StorageUtil;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,7 @@ public class SidebarController {
                 boolean collapsed = !sidebarAdapter.isCollapsed(entry.section());
                 sidebarAdapter.setCollapsed(entry.section(), collapsed);
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-                Set<String> saved = new java.util.HashSet<>(prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet()));
+                Set<String> saved = new HashSet<>(prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet()));
                 if (collapsed) saved.add(entry.section());
                 else saved.remove(entry.section());
                 prefs.edit().putStringSet("sidebar_collapsed_sections", saved).apply();
@@ -166,7 +167,7 @@ public class SidebarController {
         }
         sidebarAdapter.setToolOrder(toolOrder);
         sidebarAdapter.setHiddenItems(prefs.getStringSet("sidebar_hidden_items", Collections.emptySet()));
-        java.util.Set<String> collapsed = prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet());
+        Set<String> collapsed = prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet());
         for (String section : new String[]{"storage", "bookmarks", "tools"}) {
             sidebarAdapter.setCollapsedState(section, collapsed.contains(section));
         }

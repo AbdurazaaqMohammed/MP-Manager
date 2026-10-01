@@ -21,6 +21,7 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -80,7 +81,7 @@ public class XMLFactory {
     }
     public static XmlSerializer newSerializer(OutputStream outputStream) throws IOException{
         XmlSerializer serializer = newSerializer();
-        serializer.setOutput(new java.io.BufferedOutputStream(outputStream, 32 * 1024), "utf-8");
+        serializer.setOutput(new BufferedOutputStream(outputStream, 32 * 1024), "utf-8");
         return serializer;
     }
     public static XmlSerializer newSerializer(OutputStream outputStream, String encoding) throws IOException{
@@ -88,7 +89,7 @@ public class XMLFactory {
         if (encoding == null) {
             encoding = "utf-8";
         }
-        serializer.setOutput(new java.io.BufferedOutputStream(outputStream, 32 * 1024), encoding);
+        serializer.setOutput(new BufferedOutputStream(outputStream, 32 * 1024), encoding);
         return serializer;
     }
     public static XmlSerializer newSerializer(){

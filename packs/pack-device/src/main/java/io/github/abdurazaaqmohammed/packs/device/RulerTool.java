@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -75,9 +77,9 @@ public class RulerTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         try {
-            if (context instanceof android.app.Activity) {
-                ((android.app.Activity) context).setRequestedOrientation(
-                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            if (context instanceof Activity) {
+                ((Activity) context).setRequestedOrientation(
+                        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
             }
         } catch (Exception ignored) {
         }

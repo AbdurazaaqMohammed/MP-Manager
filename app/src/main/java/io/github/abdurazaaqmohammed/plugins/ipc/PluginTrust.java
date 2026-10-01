@@ -1,6 +1,9 @@
 package io.github.abdurazaaqmohammed.plugins.ipc;
 
+import android.R;
 import android.app.Activity;
+
+import androidx.appcompat.app.AlertDialog;
 
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.ExternalPlugin;
 
@@ -53,10 +56,10 @@ public final class PluginTrust {
                         + " permissions. Allow it to integrate with MP-Manager?");
             }
             msg.append("\n\nCertificate (SHA-256):\n").append(fingerprint(digest));
-            new androidx.appcompat.app.AlertDialog.Builder(activity)
+            new AlertDialog.Builder(activity)
                     .setTitle(title)
                     .setMessage(msg.toString())
-                    .setNegativeButton(android.R.string.cancel, null)
+                    .setNegativeButton(R.string.cancel, null)
                     .setPositiveButton("Allow", (d, w) -> {
                         try {
                             String fresh = PluginHost.certDigest(activity, plugin.packageName);

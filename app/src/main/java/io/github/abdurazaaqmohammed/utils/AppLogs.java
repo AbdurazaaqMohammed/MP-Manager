@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Process;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -92,7 +93,7 @@ public class AppLogs {
                 }
             }
             try {
-                android.os.Process.killProcess(android.os.Process.myPid());
+                Process.killProcess(Process.myPid());
             } catch (Exception ignored) {
             }
             try {

@@ -52,6 +52,14 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor;
+import io.github.abdurazaaqmohammed.plugins.ext.ApkJob;
+import io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction;
+import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
+import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
+import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
 import io.github.abdurazaaqmohammed.utils.SignatureStripUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -130,19 +138,19 @@ import mt.modder.hub.apkCloner.util.ApkCloner;
  */
 public class ApkInfoDialogs {
 
-    private final io.github.abdurazaaqmohammed.MPManager.MainActivity context;
-    private final io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil;
-    private final io.github.abdurazaaqmohammed.ui.UIHelper uiHelper;
+    private final MainActivity context;
+    private final DialogUtil dialogUtil;
+    private final UIHelper uiHelper;
     private final boolean pane1;
-    private final io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor manifestEditor;
+    private final ApkManifestEditor manifestEditor;
     private final ApkSignatureTools signatures;
     private final ApkOverlayTools overlay;
 
-    public ApkInfoDialogs(io.github.abdurazaaqmohammed.MPManager.MainActivity context,
-                              io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil,
-                              io.github.abdurazaaqmohammed.ui.UIHelper uiHelper, boolean pane1,
-                              io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor manifestEditor,
-                              ApkSignatureTools signatures, ApkOverlayTools overlay) {
+    public ApkInfoDialogs(MainActivity context,
+                          DialogUtil dialogUtil,
+                          UIHelper uiHelper, boolean pane1,
+                          ApkManifestEditor manifestEditor,
+                          ApkSignatureTools signatures, ApkOverlayTools overlay) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.uiHelper = uiHelper;
@@ -351,18 +359,18 @@ public class ApkInfoDialogs {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton(R.string.more, (dialog, which) -> {
-                    java.util.List<String> moreTitles = new java.util.ArrayList<>(java.util.Arrays.asList(new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)}));
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)}));
                     // Third-party APK actions appended after the 14 built-ins.
-                    final java.util.List<io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction> pluginMore =
-                            io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry.apkActions();
-                    for (io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction ext : pluginMore) {
+                    final List<ApkMoreAction> pluginMore =
+                            ExtensionRegistry.apkActions();
+                    for (ApkMoreAction ext : pluginMore) {
                         if (ext == null) continue;
                         moreTitles.add(ext.title() == null || ext.title().isEmpty() ? ext.id() : ext.title());
                     }
                     // External (out-of-process) APK actions, fire-and-forget.
-                    final java.util.List<io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry> externalApk =
-                            io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.apkEntries(context);
-                    for (io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry e : externalApk) {
+                    final List<ExternalActions.Entry> externalApk =
+                            ExternalActions.apkEntries(context);
+                    for (ExternalActions.Entry e : externalApk) {
                         if (e == null) continue;
                         moreTitles.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
                     }
@@ -688,28 +696,28 @@ public class ApkInfoDialogs {
                         // Third-party APK action: indices 0-13 are built-ins above.
                         int pluginIndex = which1 - 14;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
-                            io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction ext = pluginMore.get(pluginIndex);
+                            ApkMoreAction ext = pluginMore.get(pluginIndex);
                             if (ext != null) {
                                 try {
-                                    ext.run(new io.github.abdurazaaqmohammed.plugins.ext.ApkJob(context, file, fileName, filePath));
+                                    ext.run(new ApkJob(context, file, fileName, filePath));
                                 } catch (Exception ignored) {
                                 }
                             }
                         } else {
                             int extIndex = which1 - 14 - pluginMore.size();
                             if (extIndex >= 0 && extIndex < externalApk.size()) {
-                                io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry found =
+                                ExternalActions.Entry found =
                                         externalApk.get(extIndex);
                                 if (found != null) {
                                     try {
-                                        android.net.Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                                        Uri apkUri = FileProvider.getUriForFile(
                                                 context, context.getPackageName() + ".provider", file);
-                                        android.content.Intent extIntent = io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.explicitIntent(
-                                                found.plugin, io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.ACTION_APK);
+                                        Intent extIntent = PluginHost.explicitIntent(
+                                                found.plugin, PluginContracts.ACTION_APK);
                                         extIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                                        extIntent.putExtra(io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.EXTRA_PLUGIN_ID,
+                                        extIntent.putExtra(PluginContracts.EXTRA_PLUGIN_ID,
                                                 found.plugin.pluginId);
-                                        extIntent.putExtra(io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.EXTRA_APK_NAME,
+                                        extIntent.putExtra(PluginContracts.EXTRA_APK_NAME,
                                                 fileName);
                                         extIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                                         try {
@@ -717,7 +725,7 @@ public class ApkInfoDialogs {
                                                     Intent.FLAG_GRANT_READ_URI_PERMISSION);
                                         } catch (Exception ignored) {
                                         }
-                                        io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust.ensureTrusted(
+                                        PluginTrust.ensureTrusted(
                                                 context, found.plugin, () -> {
                                                     try {
                                                         context.startActivity(extIntent);

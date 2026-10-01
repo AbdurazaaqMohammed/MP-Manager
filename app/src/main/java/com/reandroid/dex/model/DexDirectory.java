@@ -43,8 +43,14 @@ import com.reandroid.utils.collection.IterableIterator;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import org.apache.commons.collections4.Predicate;
 
 public class DexDirectory implements Iterable<DexFile>, Closeable,
@@ -694,10 +700,10 @@ public class DexDirectory implements Iterable<DexFile>, Closeable,
                     targets.get(0).buildSmaliDirectoryName()), threads);
             return;
         }
-        java.util.concurrent.ExecutorService executor =
-                java.util.concurrent.Executors.newFixedThreadPool(threads);
-        java.util.List<java.util.concurrent.Future<?>> futures =
-                new java.util.ArrayList<>(total);
+        ExecutorService executor =
+                Executors.newFixedThreadPool(threads);
+        List<Future<?>> futures =
+                new ArrayList<>(total);
         IOException[] error = new IOException[1];
         for (DexFile dexFile : targets) {
             futures.add(executor.submit(() -> {
@@ -713,10 +719,10 @@ public class DexDirectory implements Iterable<DexFile>, Closeable,
             }));
         }
         executor.shutdown();
-        for (java.util.concurrent.Future<?> future : futures) {
+        for (Future<?> future : futures) {
             try {
                 future.get();
-            } catch (java.util.concurrent.ExecutionException ex) {
+            } catch (ExecutionException ex) {
                 executor.shutdownNow();
                 Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                 throw cause instanceof IOException ? (IOException) cause : new IOException(cause);

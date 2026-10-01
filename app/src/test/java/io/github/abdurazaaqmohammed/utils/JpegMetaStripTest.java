@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -95,7 +96,7 @@ public class JpegMetaStripTest {
             JpegMetaStrip.strip(new byte[]{0x42, 0x4D, 0x00});
             fail("expected IOException");
         } catch (Exception e) {
-            assertTrue(e instanceof java.io.IOException);
+            assertTrue(e instanceof IOException);
         }
     }
 
@@ -105,7 +106,7 @@ public class JpegMetaStripTest {
             JpegMetaStrip.strip(new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF});
             fail("expected IOException");
         } catch (Exception e) {
-            assertTrue(e instanceof java.io.IOException);
+            assertTrue(e instanceof IOException);
         }
     }
 

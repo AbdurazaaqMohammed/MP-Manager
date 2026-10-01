@@ -9,11 +9,14 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.PopupMenu;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -49,7 +52,7 @@ public class SortFilterController {
 
     public void setupFilterBar() {
         LinearLayout topBar = activity.findViewById(R.id.topBar);
-        com.google.android.material.textfield.TextInputLayout filterBox =
+        TextInputLayout filterBox =
                 UiFields.box(activity, "Filter...");
         EditText filterBar = UiFields.field(filterBox, 0);
         filterBox.setVisibility(View.GONE);
@@ -200,7 +203,7 @@ public class SortFilterController {
         FileSorting.sortZipEntries(entries, folderPath, prefs.sortBy(folderPath), prefs.sortReverse(folderPath));
     }
 
-    public static void forceShowIcons(android.widget.PopupMenu popupMenu) {
+    public static void forceShowIcons(PopupMenu popupMenu) {
         PopupMenus.forceShowIcons(popupMenu);
     }
 }

@@ -43,7 +43,7 @@ import java.security.PrivilegedAction;
  * </pre>
  *
  * @author Roland Schemers
- * @see java.security.PrivilegedAction
+ * @see PrivilegedAction
  * @see java.security.AccessController
  * @since 1.2
  */

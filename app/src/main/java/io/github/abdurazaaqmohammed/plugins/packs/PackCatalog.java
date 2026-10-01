@@ -1,15 +1,22 @@
 package io.github.abdurazaaqmohammed.plugins.packs;
 
 import android.content.Context;
+import android.util.Base64;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,7 +96,7 @@ public final class PackCatalog {
             conn.connect();
             if (conn.getResponseCode() != 200) return null;
             try (InputStream is = conn.getInputStream();
-                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
@@ -110,16 +117,16 @@ public final class PackCatalog {
     /** RSA/SHA-256 verification of the catalog bytes. Fail closed. */
     static boolean verifySignature(byte[] data, String sigB64) {
         try {
-            byte[] keyBytes = android.util.Base64.decode(CATALOG_PUBLIC_KEY_B64,
-                    android.util.Base64.DEFAULT);
-            java.security.spec.X509EncodedKeySpec spec =
-                    new java.security.spec.X509EncodedKeySpec(keyBytes);
-            java.security.PublicKey key =
-                    java.security.KeyFactory.getInstance("RSA").generatePublic(spec);
-            java.security.Signature sig = java.security.Signature.getInstance("SHA256withRSA");
+            byte[] keyBytes = Base64.decode(CATALOG_PUBLIC_KEY_B64,
+                    Base64.DEFAULT);
+            X509EncodedKeySpec spec =
+                    new X509EncodedKeySpec(keyBytes);
+            PublicKey key =
+                    KeyFactory.getInstance("RSA").generatePublic(spec);
+            Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initVerify(key);
             sig.update(data);
-            byte[] raw = android.util.Base64.decode(sigB64.trim(), android.util.Base64.DEFAULT);
+            byte[] raw = Base64.decode(sigB64.trim(), Base64.DEFAULT);
             return sig.verify(raw);
         } catch (Exception ignored) {
             return false;
@@ -185,7 +192,7 @@ public final class PackCatalog {
     }
 
     private static void writeFile(File f, String body) {
-        try (java.io.FileWriter w = new java.io.FileWriter(f)) {
+        try (FileWriter w = new FileWriter(f)) {
             w.write(body);
         } catch (Exception ignored) {
         }

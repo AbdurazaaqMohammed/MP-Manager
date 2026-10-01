@@ -13,7 +13,9 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
@@ -65,7 +67,7 @@ public class ApkSignFlowTest {
         Assume.assumeTrue("keytool failed: " + new String(out), rc == 0);
 
         KeyStore ks = KeyStore.getInstance("JKS");
-        try (InputStream is = new java.io.FileInputStream(keystore)) {
+        try (InputStream is = new FileInputStream(keystore)) {
             ks.load(is, "pass123".toCharArray());
         }
         PrivateKey key = (PrivateKey) ks.getKey("test", "pass123".toCharArray());
@@ -97,7 +99,7 @@ public class ApkSignFlowTest {
     private static byte[] minimalBinaryManifest() throws Exception {
         String[] strings = {"android", "http://schemas.android.com/apk/res/android",
                 "manifest", "minSdkVersion", "package", "test.example", "uses-sdk", "24"};
-        java.io.ByteArrayOutputStream stringData = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream stringData = new ByteArrayOutputStream();
         int[] offsets = new int[strings.length];
         for (int i = 0; i < strings.length; i++) {
             offsets[i] = stringData.size();
@@ -110,7 +112,7 @@ public class ApkSignFlowTest {
         }
         while (stringData.size() % 4 != 0) stringData.write(0);
 
-        java.io.ByteArrayOutputStream pool = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream pool = new ByteArrayOutputStream();
         writeU16(pool, 0x0001);
         writeU16(pool, 28);
         int poolSizePos = pool.size();
@@ -124,7 +126,7 @@ public class ApkSignFlowTest {
         pool.write(stringData.toByteArray());
         patchU32(pool, poolSizePos, pool.size());
 
-        java.io.ByteArrayOutputStream xml = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream xml = new ByteArrayOutputStream();
         writeU16(xml, 0x0003);
         writeU16(xml, 8);
         int xmlSizePos = xml.size();
@@ -159,7 +161,7 @@ public class ApkSignFlowTest {
         return xml.toByteArray();
     }
 
-    private static void writeStartElement(java.io.ByteArrayOutputStream out, long ns, int name,
+    private static void writeStartElement(ByteArrayOutputStream out, long ns, int name,
                                           int attrCount) throws Exception {
         writeU16(out, 0x0102);
         writeU16(out, 16);
@@ -176,7 +178,7 @@ public class ApkSignFlowTest {
         writeU16(out, 0);
     }
 
-    private static void writeAttr(java.io.ByteArrayOutputStream out, long ns, int name,
+    private static void writeAttr(ByteArrayOutputStream out, long ns, int name,
                                   int raw, int type, int data) throws Exception {
         writeU32(out, ns);
         writeU32(out, name);
@@ -187,7 +189,7 @@ public class ApkSignFlowTest {
         writeU32(out, data & 0xFFFFFFFFL);
     }
 
-    private static void writeEndElement(java.io.ByteArrayOutputStream out, long ns, int name) throws Exception {
+    private static void writeEndElement(ByteArrayOutputStream out, long ns, int name) throws Exception {
         writeU16(out, 0x0103);
         writeU16(out, 16);
         writeU32(out, 24);
@@ -197,12 +199,12 @@ public class ApkSignFlowTest {
         writeU32(out, name);
     }
 
-    private static void writeU16(java.io.ByteArrayOutputStream out, int v) {
+    private static void writeU16(ByteArrayOutputStream out, int v) {
         out.write(v & 0xFF);
         out.write((v >>> 8) & 0xFF);
     }
 
-    private static void writeLen8(java.io.ByteArrayOutputStream out, int v) throws Exception {
+    private static void writeLen8(ByteArrayOutputStream out, int v) throws Exception {
         if (v < 0 || v > 32767) throw new IllegalArgumentException("string too long");
         if (v < 128) {
             out.write(v);
@@ -212,14 +214,14 @@ public class ApkSignFlowTest {
         }
     }
 
-    private static void writeU32(java.io.ByteArrayOutputStream out, long v) {
+    private static void writeU32(ByteArrayOutputStream out, long v) {
         out.write((int) (v & 0xFF));
         out.write((int) ((v >>> 8) & 0xFF));
         out.write((int) ((v >>> 16) & 0xFF));
         out.write((int) ((v >>> 24) & 0xFF));
     }
 
-    private static void patchU32(java.io.ByteArrayOutputStream out, int pos, int v) {
+    private static void patchU32(ByteArrayOutputStream out, int pos, int v) {
         byte[] b = out.toByteArray();
         b[pos] = (byte) (v & 0xFF);
         b[pos + 1] = (byte) ((v >>> 8) & 0xFF);
@@ -239,7 +241,7 @@ public class ApkSignFlowTest {
     }
 
     private static byte[] readAll(InputStream is) throws Exception {
-        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         byte[] buf = new byte[65536];
         int n;
         while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);

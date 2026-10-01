@@ -14,6 +14,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -137,7 +138,7 @@ public class MultiSelectController {
             ImageButton button = new ImageButton(activity);
             button.setImageResource(icons[i]);
             button.setBackgroundResource(bg);
-            androidx.core.graphics.drawable.DrawableCompat.setTint(button.getDrawable(), color);
+            DrawableCompat.setTint(button.getDrawable(), color);
             button.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             button.setPadding(ay, ay, ay, ay);
             button.setOnClickListener(listeners[i]);

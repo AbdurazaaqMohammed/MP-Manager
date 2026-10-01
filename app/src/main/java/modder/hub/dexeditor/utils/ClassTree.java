@@ -102,6 +102,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -752,7 +753,7 @@ public class ClassTree {
                     if (threadException[0] != null) break;
                 } catch (Exception e) {
                     Throwable cause = e;
-                    if (e instanceof java.util.concurrent.ExecutionException && e.getCause() != null) {
+                    if (e instanceof ExecutionException && e.getCause() != null) {
                         cause = e.getCause();
                     }
                     synchronized (threadException) {

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.plugins.tools.common;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -14,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textfield.TextInputLayout;
@@ -50,7 +53,7 @@ public final class ToolViewFactory {
         title.setTextSize(20);
         title.setGravity(Gravity.CENTER);
         title.setTextColor(MaterialColors.getColor(box.getContext(),
-                com.google.android.material.R.attr.colorOnSurface, 0xFF000000));
+                R.attr.colorOnSurface, 0xFF000000));
         box.addView(title);
     }
 
@@ -61,9 +64,9 @@ public final class ToolViewFactory {
         output.setTypeface(Typeface.MONOSPACE);
         output.setPadding(dp(context, 12), dp(context, 12), dp(context, 12), dp(context, 12));
         output.setBackgroundColor(MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#14000000")));
+                R.attr.colorSurfaceContainerHigh, Color.parseColor("#14000000")));
         output.setTextColor(MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+                R.attr.colorOnSurface, Color.BLACK));
         try {
             output.setTextIsSelectable(true);
         } catch (Exception ignored) {
@@ -95,7 +98,7 @@ public final class ToolViewFactory {
         t.setTextSize(14);
         t.setAlpha(0.8f);
         t.setTextColor(MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+                R.attr.colorOnSurfaceVariant, Color.GRAY));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, dp(context, 8), 0, dp(context, 4));
@@ -124,9 +127,9 @@ public final class ToolViewFactory {
 
     public static void copyText(Context context, String label, String value) {
         try {
-            android.content.ClipboardManager cm =
-                    (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            cm.setPrimaryClip(android.content.ClipData.newPlainText(label, value));
+            ClipboardManager cm =
+                    (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(ClipData.newPlainText(label, value));
             toast(context, "Copied");
         } catch (Exception e) {
             toast(context, "Copy failed");

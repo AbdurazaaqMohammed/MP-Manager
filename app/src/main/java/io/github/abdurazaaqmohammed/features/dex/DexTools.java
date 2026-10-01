@@ -87,16 +87,16 @@ public class DexTools {
 
     /** Opens a staged file with the Open-With dialog. */
     public interface OpenWith {
-        void open(java.io.File file, String fileName);
+        void open(File file, String fileName);
     }
 
-    private final io.github.abdurazaaqmohammed.MPManager.MainActivity context;
-    private final io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil;
+    private final MainActivity context;
+    private final DialogUtil dialogUtil;
     private final boolean pane1;
     private final OpenWith openWith;
 
-    public DexTools(io.github.abdurazaaqmohammed.MPManager.MainActivity context,
-                      io.github.abdurazaaqmohammed.utils.DialogUtil dialogUtil, boolean pane1, OpenWith openWith) {
+    public DexTools(MainActivity context,
+                    DialogUtil dialogUtil, boolean pane1, OpenWith openWith) {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.pane1 = pane1;

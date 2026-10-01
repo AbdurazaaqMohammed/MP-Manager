@@ -1,12 +1,20 @@
 package io.github.abdurazaaqmohammed.tools;
 
 import android.content.Intent;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
 import android.content.res.ColorStateList;
+import android.graphics.drawable.Icon;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -18,6 +26,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.widget.ImageViewCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,9 +39,11 @@ import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
@@ -51,7 +63,7 @@ public class ToolsHubActivity extends BaseActivity {
     private List<PackDescriptor> catalog = new ArrayList<>();
     private MaterialToolbar toolbar;
     private String currentQuery = "";
-    private final java.util.Set<String> expandedPacks = new java.util.HashSet<>();
+    private final Set<String> expandedPacks = new HashSet<>();
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,8 +72,8 @@ public class ToolsHubActivity extends BaseActivity {
         toolbar.setSubtitle("Loading");
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
-        toolbar.getMenu().add("Theme").setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_NEVER);
-        toolbar.getMenu().add("Refresh packs").setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_NEVER);
+        toolbar.getMenu().add("Theme").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        toolbar.getMenu().add("Refresh packs").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         toolbar.setOnMenuItemClickListener(item -> {
             if ("Refresh packs".contentEquals(item.getTitle())) {
                 refreshCatalog();
@@ -175,16 +187,16 @@ public class ToolsHubActivity extends BaseActivity {
             msg.append(ext.packageName);
             msg.append("\n\nCertificate (SHA-256):\n").append(shortDigest(digest));
             msg.append("\n\nStatus: ").append(trusted ? "Trusted" : "Not trusted");
-            androidx.appcompat.app.AlertDialog.Builder builder =
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
+            AlertDialog.Builder builder =
+                    new AlertDialog.Builder(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
                             .setNeutralButton("App info", (d, w) -> {
                                 try {
-                                    android.content.Intent info = new android.content.Intent(
-                                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                            android.net.Uri.parse("package:" + ext.packageName));
+                                    Intent info = new Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.parse("package:" + ext.packageName));
                                     startActivity(info);
                                 } catch (Exception ignored) {
                                 }
@@ -241,7 +253,7 @@ public class ToolsHubActivity extends BaseActivity {
         ImageButton expand = card.findViewById(R.id.pack_expand);
         expand.setImageResource(expanded
                 ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px);
-        android.view.View.OnClickListener toggle = v -> {
+        View.OnClickListener toggle = v -> {
             if (expandedPacks.contains(pack.id)) expandedPacks.remove(pack.id);
             else expandedPacks.add(pack.id);
             bindPackCard(card, pack);
@@ -267,7 +279,7 @@ public class ToolsHubActivity extends BaseActivity {
         if (installed) {
             remove.setVisibility(View.VISIBLE);
             remove.setOnClickListener(v -> {
-                new androidx.appcompat.app.AlertDialog.Builder(this)
+                new AlertDialog.Builder(this)
                         .setTitle(pack.title)
                         .setMessage("Remove this pack and its " + pack.tools.size() + " tools?")
                         .setNegativeButton(android.R.string.cancel, null)
@@ -341,14 +353,14 @@ public class ToolsHubActivity extends BaseActivity {
     }
 
     private void createToolShortcut(PackDescriptor.ToolMeta tool) {
-        if (android.os.Build.VERSION.SDK_INT < 26) {
+        if (Build.VERSION.SDK_INT < 26) {
             Toast.makeText(this, getString(R.string.plugin_shortcut_old_android),
                     Toast.LENGTH_SHORT).show();
             return;
         }
         try {
-            android.content.pm.ShortcutManager sm =
-                    getSystemService(android.content.pm.ShortcutManager.class);
+            ShortcutManager sm =
+                    getSystemService(ShortcutManager.class);
             if (sm == null || !sm.isRequestPinShortcutSupported()) {
                 Toast.makeText(this, getString(R.string.plugin_shortcut_unsupported),
                         Toast.LENGTH_SHORT).show();
@@ -358,11 +370,11 @@ public class ToolsHubActivity extends BaseActivity {
             intent.setAction("io.github.abdurazaaqmohammed.MPManager.TOOL_" + tool.id);
             intent.putExtra("tool_id", tool.id);
             intent.putExtra("tool_title", tool.title);
-            android.content.pm.ShortcutInfo info =
-                    new android.content.pm.ShortcutInfo.Builder(this, "tool_" + tool.id)
+            ShortcutInfo info =
+                    new ShortcutInfo.Builder(this, "tool_" + tool.id)
                             .setShortLabel(tool.title)
                             .setLongLabel(tool.title + " — " + tool.subtitle)
-                            .setIcon(android.graphics.drawable.Icon.createWithResource(
+                            .setIcon(Icon.createWithResource(
                                     this, R.drawable.tools_24px))
                             .setIntent(intent)
                             .build();
@@ -377,7 +389,7 @@ public class ToolsHubActivity extends BaseActivity {
         FilePickerDialog.Properties props = new FilePickerDialog.Properties();
         props.selection_mode = FilePickerDialog.SINGLE_MODE;
         props.selection_type = FilePickerDialog.FILE_SELECT;
-        props.root = android.os.Environment.getExternalStorageDirectory();
+        props.root = Environment.getExternalStorageDirectory();
         FilePickerDialog picker = new FilePickerDialog(this, props);
         picker.setTitle("Pick " + pack.id + ".apk");
         picker.setDialogSelectionListener(files -> {

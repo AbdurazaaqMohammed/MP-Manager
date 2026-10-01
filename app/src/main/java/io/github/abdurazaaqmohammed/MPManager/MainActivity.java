@@ -171,6 +171,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
@@ -626,10 +627,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     };
     private boolean isServiceBound = false;
-    private java.util.function.Consumer<ActivityResult> pendingExternalFile;
-    private java.util.function.Consumer<ActivityResult> pendingExternalSetting;
+    private Consumer<ActivityResult> pendingExternalFile;
+    private Consumer<ActivityResult> pendingExternalSetting;
     private final ActivityResultLauncher<Intent> externalFileLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-        java.util.function.Consumer<ActivityResult> cb = pendingExternalFile;
+        Consumer<ActivityResult> cb = pendingExternalFile;
         pendingExternalFile = null;
         if (cb != null) {
             try {
@@ -639,7 +640,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     });
     private final ActivityResultLauncher<Intent> externalSettingLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-        java.util.function.Consumer<ActivityResult> cb = pendingExternalSetting;
+        Consumer<ActivityResult> cb = pendingExternalSetting;
         pendingExternalSetting = null;
         if (cb != null) {
             try {
@@ -650,7 +651,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     });
 
     /** Launches an external file-plugin activity; result goes to cb (may be null). */
-    public void launchExternalFile(Intent intent, java.util.function.Consumer<ActivityResult> cb) {
+    public void launchExternalFile(Intent intent, Consumer<ActivityResult> cb) {
         try {
             pendingExternalFile = cb;
             externalFileLauncher.launch(intent);
@@ -660,7 +661,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     /** Launches an external setting config activity; result goes to cb (may be null). */
-    public void launchExternalSetting(Intent intent, java.util.function.Consumer<ActivityResult> cb) {
+    public void launchExternalSetting(Intent intent, Consumer<ActivityResult> cb) {
         try {
             pendingExternalSetting = cb;
             externalSettingLauncher.launch(intent);

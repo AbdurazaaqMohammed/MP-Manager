@@ -62,7 +62,7 @@ public class MetronomeTool extends BaseToolPlugin {
         box.addView(bpmBar);
         metronomeFlash = new View(context);
         metronomeFlash.setBackgroundColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.parseColor("#1B73E8")));
-        box.addView(metronomeFlash, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
+        box.addView(metronomeFlash, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
         TextView beatText = ToolViewFactory.makeOutput(box);
         beatText.setGravity(Gravity.CENTER);
         beatText.setText("Stopped");

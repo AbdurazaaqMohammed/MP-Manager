@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.domain.math;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -71,7 +72,7 @@ public final class Primes {
         List<Integer> out = new ArrayList<>();
         if (n < 2) return out;
         boolean[] sieve = new boolean[n + 1];
-        java.util.Arrays.fill(sieve, true);
+        Arrays.fill(sieve, true);
         sieve[0] = false;
         sieve[1] = false;
         for (int i = 2; i * i <= n; i++) {

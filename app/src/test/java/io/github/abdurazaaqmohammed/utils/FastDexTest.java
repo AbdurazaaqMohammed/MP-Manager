@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 
 /**
  * Verifies the DexPatcher-style fast pipeline: assemble a tiny dex, describe
@@ -140,7 +141,7 @@ public class FastDexTest {
 
         String patched = content.replaceFirst(
                 "\\.method protected onCreate\\(Landroid/os/Bundle;\\)V",
-                java.util.regex.Matcher.quoteReplacement(
+                Matcher.quoteReplacement(
                         ".method private onCreate$mpmanager(Landroid/os/Bundle;)V"));
         assertNotEquals(patched, content);
         try (FileWriter w = new FileWriter(bSmali)) {

@@ -182,7 +182,7 @@ public final class PackManager {
      * Returns null on success, otherwise an error message.
      */
     public static synchronized String installDownloadedPack(Context context, PackDescriptor pack, File downloaded) {
-        return installDownloadedPack(context, pack, downloaded, true);
+        return installDownloadedPack(context, pack, downloaded, false/*true*/);
     }
 
     /**

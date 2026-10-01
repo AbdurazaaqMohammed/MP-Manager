@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.plugins.api;
 
 import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
 
 import io.github.abdurazaaqmohammed.tools.ToolRegistry;
 
@@ -52,7 +54,7 @@ public final class PluginRegistry {
         if (item == null) return null;
         return new BaseToolPlugin(item.id(), item.title(), item.subtitle(), item.category()) {
             @Override public int iconRes(Context ctx) { return item.iconRes(); }
-            @Override public android.view.View createView(Context ctx, android.view.ViewGroup container) {
+            @Override public View createView(Context ctx, ViewGroup container) {
                 // Legacy tools are still rendered by ToolRunnerActivity branches.
                 // Returning null signals "use legacy path".
                 return null;
