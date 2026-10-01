@@ -15,10 +15,16 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
+import android.view.Display;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -31,6 +37,7 @@ import com.google.android.material.tabs.TabLayout;
 
 import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
+import io.github.abdurazaaqmohammed.plugins.tools.common.PagedShell;
 import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 
 import java.text.DecimalFormat;
@@ -52,13 +59,9 @@ public class DeviceHubTool extends BaseToolPlugin {
             "Network", "Sensors", "System", "Thermal", "Root", "Apps"};
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final View[] pages = new View[TABS.length];
-    private final boolean[] built = new boolean[TABS.length];
     private final Runnable[] live = new Runnable[TABS.length];
-    private int current;
     private boolean stopped;
-    private TabLayout tabLayout;
-    private FrameLayout pageHolder;
+    private PagedShell shell;
 
     private SensorManager sensorManager;
     private SensorEventListener activeListener;
@@ -184,74 +187,27 @@ public class DeviceHubTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         stopped = false;
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-        LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Device Info");
-        tabLayout = new TabLayout(context);
-        tabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
-        for (String title : TABS) tabLayout.addTab(tabLayout.newTab().setText(title));
-        box.addView(tabLayout, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        ScrollView scroll = new ScrollView(context);
-        pageHolder = new FrameLayout(context);
-        scroll.addView(pageHolder, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        final android.view.GestureDetector swipe =
-                new android.view.GestureDetector(context,
-                        new android.view.GestureDetector.SimpleOnGestureListener() {
-                            @Override
-                            public boolean onFling(android.view.MotionEvent e1,
-                                                   android.view.MotionEvent e2,
-                                                   float vx, float vy) {
-                                try {
-                                    float dx = e2.getX() - e1.getX();
-                                    float dy = e2.getY() - e1.getY();
-                                    if (Math.abs(dx) > Math.abs(dy) * 1.5f
-                                            && Math.abs(dx) > ToolViewFactory.dp(context, 90)
-                                            && Math.abs(vx) > 400) {
-                                        int next = current + (dx < 0 ? 1 : -1);
-                                        if (next < 0) next = TABS.length - 1;
-                                        if (next >= TABS.length) next = 0;
-                                        TabLayout.Tab tab = tabLayout.getTabAt(next);
-                                        if (tab != null) tab.select();
-                                        else showTab(context, next);
-                                        return true;
-                                    }
-                                } catch (Exception ignored) {
-                                }
-                                return false;
-                            }
-                        });
-        scroll.setOnTouchListener((v, e) -> {
+        TabLayout tabs = new TabLayout(context);
+        tabs.setTabMode(TabLayout.MODE_SCROLLABLE);
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        MaterialButton refreshBtn = new MaterialButton(context, null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        refreshBtn.setText("Refresh");
+        row.addView(refreshBtn, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        MaterialButton copyBtn = new MaterialButton(context, null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        copyBtn.setText("Copy report");
+        row.addView(copyBtn, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        refreshBtn.setOnClickListener(v -> {
             try {
-                swipe.onTouchEvent(e);
+                int cur = shell == null ? 0 : shell.current();
+                if (cur >= 0 && cur < live.length && live[cur] != null) live[cur].run();
+                ToolViewFactory.toast(context, "Refreshed");
             } catch (Exception ignored) {
             }
-            return false;
-        });
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        box.addView(scroll, sp);
-        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            public void onTabSelected(TabLayout.Tab tab) {
-                showTab(context, tab == null ? 0 : tab.getPosition());
-            }
-
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
-
-            public void onTabReselected(TabLayout.Tab tab) {
-                showTab(context, tab == null ? 0 : tab.getPosition());
-            }
-        });
-        showTab(context, 0);
-        handler.postDelayed(tick, 1500);
-        LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton refreshBtn = ToolViewFactory.makeRowButton(row, "Refresh", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy report", 1f);
-        refreshBtn.setOnClickListener(v -> {
-            built[current] = false;
-            showTab(context, current);
-            ToolViewFactory.toast(context, "Refreshed");
         });
         copyBtn.setOnClickListener(v -> {
             ToolViewFactory.toast(context, "Building report…");
@@ -260,69 +216,93 @@ public class DeviceHubTool extends BaseToolPlugin {
                 handler.post(() -> ToolViewFactory.copyText(context, "device-hub", report));
             });
         });
-        return box;
+        java.util.List<PagedShell.Page> pages = new ArrayList<>();
+        for (int i = 0; i < TABS.length; i++) {
+            final int index = i;
+            pages.add(new PagedShell.Page() {
+                @Override
+                public String title() {
+                    return TABS[index];
+                }
+
+                @Override
+                public View build(Context ctx) {
+                    View inner;
+                    switch (index) {
+                        case 0:
+                            inner = tabOverview(ctx);
+                            break;
+                        case 1:
+                            inner = tabCpu(ctx);
+                            break;
+                        case 2:
+                            inner = tabGpu(ctx);
+                            break;
+                        case 3:
+                            inner = tabMemory(ctx);
+                            break;
+                        case 4:
+                            inner = tabStorage(ctx);
+                            break;
+                        case 5:
+                            inner = tabBattery(ctx);
+                            break;
+                        case 6:
+                            inner = tabNetwork(ctx);
+                            break;
+                        case 7:
+                            inner = tabSensors(ctx);
+                            break;
+                        case 8:
+                            inner = tabSystem(ctx);
+                            break;
+                        case 9:
+                            inner = tabThermal(ctx);
+                            break;
+                        case 10:
+                            inner = tabRoot(ctx);
+                            break;
+                        default:
+                            inner = tabApps(ctx);
+                            break;
+                    }
+                    ScrollView scroll = new ScrollView(ctx);
+                    scroll.addView(inner, new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT));
+                    return scroll;
+                }
+
+                @Override
+                public void shown() {
+                    try {
+                        if (index >= 0 && index < live.length && live[index] != null) {
+                            live[index].run();
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+        shell = new PagedShell(context, pages, tabs, row, 0);
+        shell.mediate(tabs);
+        handler.postDelayed(tick, 1500);
+        return shell.view();
     }
 
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
             try {
-                if (!stopped && current >= 0 && current < live.length
-                        && live[current] != null && pages[current] != null
-                        && pages[current].getParent() != null) {
-                    live[current].run();
+                int cur = shell == null ? -1 : shell.current();
+                if (!stopped && cur >= 0 && cur < live.length && live[cur] != null) {
+                    live[cur].run();
                 }
             } catch (Exception ignored) {
             }
             if (!stopped) handler.postDelayed(this, 2000);
         }
     };
-
-    private void showTab(Context context, int index) {
-        if (index < 0 || index >= TABS.length) index = 0;
-        current = index;
-        if (!built[index]) {
-            built[index] = true;
-            pages[index] = buildTab(context, index);
-        }
-        pageHolder.removeAllViews();
-        if (pages[index] != null) pageHolder.addView(pages[index]);
-        if (live[index] != null) {
-            try {
-                live[index].run();
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    private View buildTab(Context context, int index) {
-        switch (index) {
-            case 0:
-                return tabOverview(context);
-            case 1:
-                return tabCpu(context);
-            case 2:
-                return tabGpu(context);
-            case 3:
-                return tabMemory(context);
-            case 4:
-                return tabStorage(context);
-            case 5:
-                return tabBattery(context);
-            case 6:
-                return tabNetwork(context);
-            case 7:
-                return tabSensors(context);
-            case 8:
-                return tabSystem(context);
-            case 9:
-                return tabThermal(context);
-            case 10:
-                return tabRoot(context);
-            default:
-                return tabApps(context);
-        }
-    }
 
     // ---------- tabs ----------
 
@@ -432,7 +412,7 @@ public class DeviceHubTool extends BaseToolPlugin {
             b.append("Cores: ").append(cores).append('\n');
             if (Build.VERSION.SDK_INT >= 21) {
                 try {
-                    b.append("ABI: ").append(android.text.TextUtils.join(", ", Build.SUPPORTED_ABIS)).append('\n');
+                    b.append("ABI: ").append(TextUtils.join(", ", Build.SUPPORTED_ABIS)).append('\n');
                 } catch (Exception ignored) {
                 }
             }
@@ -519,10 +499,10 @@ public class DeviceHubTool extends BaseToolPlugin {
                     + " × " + new DecimalFormat("0.0").format(dm.ydpi) + " dpi");
         }
         try {
-            android.view.WindowManager wm =
-                    (android.view.WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            WindowManager wm =
+                    (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
             if (wm != null) {
-                android.view.Display display = wm.getDefaultDisplay();
+                Display display = wm.getDefaultDisplay();
                 float hz = DeviceSys.refreshRate(display);
                 kv(context, disp, "Refresh rate",
                         Float.isNaN(hz) ? DeviceSys.UNKNOWN : new DecimalFormat("0.#").format(hz) + " Hz");
@@ -809,7 +789,7 @@ public class DeviceHubTool extends BaseToolPlugin {
         kv(context, os, "Kernel", System.getProperty("os.version"));
         kv(context, os, "Uptime", DeviceSys.uptime());
         kv(context, os, "ABIs", Build.VERSION.SDK_INT >= 21
-                ? android.text.TextUtils.join(", ", Build.SUPPORTED_ABIS) : Build.CPU_ABI);
+                ? TextUtils.join(", ", Build.SUPPORTED_ABIS) : Build.CPU_ABI);
         kv(context, os, "Device", Build.BRAND + " " + Build.DEVICE + "  •  " + Build.PRODUCT);
         kv(context, os, "Hardware", Build.HARDWARE + "  •  " + Build.BOARD
                 + "  •  " + Build.BOOTLOADER);
@@ -959,9 +939,9 @@ public class DeviceHubTool extends BaseToolPlugin {
             }
             int adb = -1;
             try {
-                adb = android.provider.Settings.Global.getInt(
+                adb = Settings.Global.getInt(
                         context.getContentResolver(),
-                        android.provider.Settings.Global.ADB_ENABLED, -1);
+                        Settings.Global.ADB_ENABLED, -1);
             } catch (Exception ignored) {
             }
             if (adb >= 0) b.append("adb_enabled = ").append(adb).append('\n');
@@ -1129,7 +1109,7 @@ public class DeviceHubTool extends BaseToolPlugin {
                     .append(Build.FINGERPRINT).append('\n');
             r.append("\n=== CPU ===\nCores: ").append(DeviceSys.cpuCount()).append('\n');
             if (Build.VERSION.SDK_INT >= 21) {
-                r.append("ABI: ").append(android.text.TextUtils.join(", ", Build.SUPPORTED_ABIS)).append('\n');
+                r.append("ABI: ").append(TextUtils.join(", ", Build.SUPPORTED_ABIS)).append('\n');
             }
             for (Map.Entry<String, String> e : DeviceSys.cpuInfo().entrySet()) {
                 r.append(e.getKey()).append(": ").append(e.getValue()).append('\n');
@@ -1185,8 +1165,18 @@ public class DeviceHubTool extends BaseToolPlugin {
     }
 
     @Override
+    public boolean fillViewport() {
+        return true;
+    }
+
+    @Override
     public void onDestroy() {
         stopped = true;
+        try {
+            if (shell != null) shell.destroy();
+        } catch (Exception ignored) {
+        }
+        shell = null;
         try {
             handler.removeCallbacksAndMessages(null);
         } catch (Exception ignored) {
