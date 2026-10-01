@@ -154,7 +154,19 @@ public class FileOpener {
         showOpenWithDialog(file, fileName);
     }
 
+    public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
+        showOpenWithDialog(file, fileName, zipFile, zipEntryPath);
+    }
+
     public void showOpenWithDialog(File file, String fileName) {
+        showOpenWithDialog(file, fileName, null, null);
+    }
+
+    /**
+     * @param zipFile       the archive a {@code file} was staged from, or null for normal files
+     * @param zipEntryPath  the entry path inside {@code zipFile}, or null
+     */
+    public void showOpenWithDialog(File file, String fileName, File zipFile, String zipEntryPath) {
         if (file == null) {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
@@ -179,7 +191,7 @@ public class FileOpener {
                         Extensions.showMessage(context, R.string.cannot_open_item);
                         return;
                     }
-                    openTextEditorRootAware(file);
+                    openTextEditor(file, zipFile, zipEntryPath);
                 },
                 () -> {
                     String lowerName = fileName.toLowerCase(Locale.ROOT);
@@ -724,12 +736,13 @@ public class FileOpener {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
         }
+        final ZipEntryInfo entry = (ZipEntryInfo) item;
         new Thread(() -> {
             try {
-                File staged = stageZipEntry((ZipEntryInfo) item);
+                File staged = stageZipEntry(entry);
                 context.handler.post(() -> {
                     try {
-                        showOpenWithDialog(staged, fileName);
+                        showOpenWithDialog(staged, fileName, entry.getZipFile(), entry.getFullPath());
                     } catch (Exception e) {
                         new ErrorUtil(context).showError(e);
                     }
@@ -789,6 +802,23 @@ public class FileOpener {
         withReadableCopy(file, readable ->
                 context.startActivity(rootAwareEditorIntent(readable, file)
                         .putExtra("path", readable.getAbsolutePath())));
+    }
+
+    /**
+     * Opens {@code file} in the built-in text editor. When the file was staged out of an
+     * archive, the archive and entry path are forwarded (with request code 757) so the
+     * editor returns through {@code handleModifiedFileResult} and MainActivity can offer to
+     * add the edit back to the archive.
+     */
+    private void openTextEditor(File file, File zipFile, String zipEntryPath) {
+        if (zipFile != null && zipEntryPath != null && !zipEntryPath.isEmpty()) {
+            context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                    .putExtra("zf", zipFile.getPath())
+                    .putExtra("zipEntryPath", zipEntryPath)
+                    .putExtra("path", file.getAbsolutePath()), 757);
+            return;
+        }
+        openTextEditorRootAware(file);
     }
 
     private void openHexEditorRootAware(File file) {

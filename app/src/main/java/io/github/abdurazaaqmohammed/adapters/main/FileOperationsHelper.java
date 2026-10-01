@@ -102,7 +102,17 @@ public class FileOperationsHelper {
         this.context = context;
         this.dialogUtil = dialogUtil;
         this.adapter = adapter;
-        this.dex = new DexTools(context, dialogUtil, adapter.pane1, adapter::openWithForFile);
+        this.dex = new DexTools(context, dialogUtil, adapter.pane1, new DexTools.OpenWith() {
+            @Override
+            public void open(File file, String fileName) {
+                adapter.openWithForFile(file, fileName);
+            }
+
+            @Override
+            public void open(File file, String fileName, File zipFile, String zipEntryPath) {
+                adapter.openWithForFile(file, fileName, zipFile, zipEntryPath);
+            }
+        });
     }
 
     public void showDexOptionsDialog(File dexFile, File zipFile, String entryPath, String displayName) {

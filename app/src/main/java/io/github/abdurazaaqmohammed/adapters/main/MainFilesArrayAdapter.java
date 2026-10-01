@@ -264,6 +264,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         fileOpener.openWithForFile(file, fileName);
     }
 
+    /** Zip-aware variant so editors launched from an archive know the entry's source. */
+    public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
+        fileOpener.openWithForFile(file, fileName, zipFile, zipEntryPath);
+    }
+
     @Override
     public int getItemCount() { return values.length; }
 

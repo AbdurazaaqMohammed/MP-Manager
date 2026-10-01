@@ -1406,12 +1406,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
-        if (files == null || (files.length == 0 && shizukuDir)) {
+        // A folder the app cannot read may still be listable (read-only) through the shell:
+        // Android/data on API 30+, plus browsable system paths like /storage/emulated and
+        // /system. Retry via Shizuku, then root, when the app got nothing or an empty
+        // listing from a folder it cannot write to (an empty listing there means the OS hid
+        // the contents rather than the folder really being empty).
+        boolean appListingIncomplete = files == null || (files.length == 0 && !canWriteNormally(folder));
+        if (appListingIncomplete) {
             File[] viaShizuku = ShizukuFile.tryList(this, folder);
-            if (viaShizuku != null) files = viaShizuku;
+            if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) files = viaShizuku;
         }
-        if (files == null) {
-            if (shizukuDir) showShizukuGuideOnce(folder, pane1);
+        if (files == null || (files.length == 0 && appListingIncomplete)) {
+            if (shizukuDir && files == null) showShizukuGuideOnce(folder, pane1);
             boolean elevated = AccessManager.fileOpsOn(this);
             if (!elevated) {
                 try {
@@ -1420,12 +1426,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             }
             if (elevated) {
-            files = AccessManager.listWithStat(this, folderPath);
-
-                if (files != null) {
-                    files = Arrays.stream(files)
+                File[] viaRoot = AccessManager.listWithStat(this, folderPath);
+                if (viaRoot != null) {
+                    viaRoot = Arrays.stream(viaRoot)
                             .filter(this::isNotHidden)
                             .toArray(File[]::new);
+                    if (viaRoot.length > 0 || files == null) files = viaRoot;
                 }
             }
             if (files == null) {
@@ -1632,6 +1638,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private boolean canListViaRoot(File folder) {
         try {
             return AccessManager.fileOpsOn(this) && folder != null && AccessManager.exists(this, folder.getAbsolutePath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * True when the app uid itself can write to this directory. Read-only corners such as
+     * /storage/emulated or /system report false here, which is the signal that an empty
+     * listing means "hidden by the OS" and deserves an elevated/Shizuku retry.
+     */
+    private static boolean canWriteNormally(File folder) {
+        try {
+            return folder != null && folder.canWrite();
         } catch (Exception e) {
             return false;
         }

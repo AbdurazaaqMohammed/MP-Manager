@@ -88,6 +88,15 @@ public class DexTools {
     /** Opens a staged file with the Open-With dialog. */
     public interface OpenWith {
         void open(File file, String fileName);
+
+        /**
+         * Zip-aware variant used for files staged out of an archive. The default
+         * keeps existing callers working; the host implements it so the built-in
+         * text editor can offer to add the edited file back to the archive.
+         */
+        default void open(File file, String fileName, File zipFile, String zipEntryPath) {
+            open(file, fileName);
+        }
     }
 
     private final MainActivity context;
@@ -539,7 +548,7 @@ public class DexTools {
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
             } else {
                 FileUtils.copyFile(is, tempFile);
-                context.handler.post(() -> openWith.open(tempFile, name));
+                context.handler.post(() -> openWith.open(tempFile, name, zipFile, fullPath));
             }
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
