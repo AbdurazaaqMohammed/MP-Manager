@@ -36,9 +36,9 @@ public final class ShizukuFileOps {
         }
     }
 
-    /** True when either side of the operation lives in Android/data. */
+    /** True when either side of the operation lives in Android/data or is a Shizuku-backed file. */
     public static boolean involvesShizukuPath(File src, File dest) {
-        return ShizukuFile.isAndroidDataPath(src) || ShizukuFile.isAndroidDataPath(dest);
+        return ShizukuFile.isShizukuPath(src) || ShizukuFile.isShizukuPath(dest);
     }
 
     /**

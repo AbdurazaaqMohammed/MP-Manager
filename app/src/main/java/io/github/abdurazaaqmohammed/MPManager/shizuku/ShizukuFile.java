@@ -11,9 +11,10 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
 
 /**
  * A java.io.File wrapper that performs its filesystem operations through Shizuku (shell uid).
- * Only intended for paths under /storage/emulated/0/Android/data which regular apps cannot
- * list on Android 11+. Subclassing File keeps MainActivity/adapters working unchanged via
- * polymorphism, mirroring the FTPFileWrapper approach used for FTP paths.
+ * Used for paths a regular app cannot list: /storage/emulated/0/Android/data on Android 11+,
+ * but also other shell-readable directories such as /storage/emulated and /system. Reading
+ * works even where the app can never write. Subclassing File keeps MainActivity/adapters
+ * working unchanged via polymorphism, mirroring the FTPFileWrapper approach used for FTP paths.
  */
 public class ShizukuFile extends File {
 
@@ -48,16 +49,23 @@ public class ShizukuFile extends File {
         return f != null && isAndroidDataPath(f.getAbsolutePath());
     }
 
+    /** True when the file is backed by Shizuku (an Android/data path or any ShizukuFile). */
+    public static boolean isShizukuPath(File f) {
+        return f instanceof ShizukuFile || isAndroidDataPath(f);
+    }
+
     /**
-     * Entry point used by MainActivity when File.listFiles() fails (Android/data on API 30+).
-     * Returns null untouched when this path is not Android/data or Shizuku is not usable,
-     * so existing behavior is preserved.
+     * Entry point used by MainActivity when File.listFiles() returns null or an empty array
+     * (Android/data on API 30+, /storage/emulated, /system, ...). Lists via the shell when
+     * Shizuku is usable; returns null otherwise so existing behavior is preserved. Entries
+     * carry their real type/size from {@code ls}, so callers can render them read-only.
      */
     public static File[] tryList(Context context, File folder) {
-        if (!isAndroidDataPath(folder)) return null;
+        if (folder == null) return null;
         if (!ShizukuShell.isGranted()) return null;
+        String path = folder.getAbsolutePath();
         List<ShizukuFile> out = new ArrayList<>();
-        if (folder.getAbsolutePath().equals(ANDROID_DATA)) {
+        if (path.equals(ANDROID_DATA)) {
             // List installed packages that have an external data dir: fast and stable.
             ShizukuShell.Result r = ShizukuShell.exec("ls " + ANDROID_DATA);
             if (!r.success && r.exitCode != 0) return null;
@@ -67,10 +75,10 @@ public class ShizukuFile extends File {
             }
             return out.toArray(new ShizukuFile[0]);
         }
-        ShizukuShell.Result r = ShizukuShell.exec("ls -lA " + RootManager.escapeShellArg(folder.getAbsolutePath()));
+        ShizukuShell.Result r = ShizukuShell.exec("ls -lA " + RootManager.escapeShellArg(path));
         if (!r.success) return null;
         for (String line : r.stdout.split("\n")) {
-            ShizukuFile f = parseLsLine(folder.getAbsolutePath(), line);
+            ShizukuFile f = parseLsLine(path, line);
             if (f != null) out.add(f);
         }
         return out.toArray(new ShizukuFile[0]);
