@@ -96,12 +96,8 @@
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.ToolsHubActivity"
-            android:exported="true"
-            android:label="Tools Kit">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            android:exported="false"
+            android:label="Plugins">
         </activity>
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
@@ -248,6 +244,11 @@
                android:foregroundServiceType="mediaProjection" />
             <receiver android:name=".ftp.StopReceiver" android:exported="false" />
             <receiver android:name=".ftp.CopyReceiver" android:exported="false" />
+            <service
+                android:name="io.github.abdurazaaqmohammed.tools.ScreenCaptureService"
+                android:enabled="true"
+                android:exported="false"
+                android:foregroundServiceType="mediaProjection" />
             <receiver
                 android:name="io.github.abdurazaaqmohammed.plugins.ipc.PluginPackageReceiver"
                 android:exported="false">
@@ -281,10 +282,23 @@
                      <data android:mimeType="image/*" />
                  </intent-filter>
              </activity>
-             <activity
-                 android:name="io.github.abdurazaaqmohammed.player.SaveSharedActivity"
-                 android:exported="true"
-                 android:label="@string/save"
+              <activity
+                  android:name="io.github.abdurazaaqmohammed.player.LocateActivity"
+                  android:exported="true"
+                  android:label="Locate"
+                  android:configChanges="orientation|screenSize|keyboardHidden"
+                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+                  <intent-filter>
+                      <action android:name="android.intent.action.SEND" />
+                      <action android:name="android.intent.action.VIEW" />
+                      <category android:name="android.intent.category.DEFAULT" />
+                      <data android:mimeType="*/*" />
+                  </intent-filter>
+              </activity>
+              <activity
+                  android:name="io.github.abdurazaaqmohammed.player.SaveSharedActivity"
+                  android:exported="true"
+                  android:label="@string/save"
                  android:configChanges="orientation|screenSize|keyboardHidden"
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
                  <intent-filter>
