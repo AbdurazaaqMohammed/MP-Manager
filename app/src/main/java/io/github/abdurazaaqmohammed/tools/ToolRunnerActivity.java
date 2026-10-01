@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.tools;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -58,10 +59,18 @@ public class ToolRunnerActivity extends BaseActivity {
         try {
             ToolPlugin custom = PluginRegistry.findCustom(toolId);
             if (custom != null) {
-                android.view.View content = custom.createView(this, box);
+                View content = custom.createView(this, box);
                 if (content != null) {
                     box.addView(content);
                     trackPlugin(custom);
+                    boolean fill = false;
+                    try {
+                        fill = custom.fillViewport();
+                    } catch (Exception ignored) {
+                    }
+                    if (fill) {
+                        fitViewport(scroll, box, content, pad);
+                    }
                     return;
                 }
             }
@@ -117,5 +126,39 @@ public class ToolRunnerActivity extends BaseActivity {
 
     private int dp(int v) {
         return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    private void fitViewport(android.widget.ScrollView scroll, LinearLayout box,
+                             View content, int pad) {
+        try {
+            final int[] tries = new int[]{0};
+            Runnable fit = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        int viewport = scroll.getHeight();
+                        if (viewport > 0) {
+                            ViewGroup.LayoutParams blp = box.getLayoutParams();
+                            blp.height = viewport;
+                            box.setLayoutParams(blp);
+                            ViewGroup.LayoutParams clp = content.getLayoutParams();
+                            clp.height = Math.max(0, viewport - pad * 2);
+                            content.setLayoutParams(clp);
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    if (tries[0] < 25) {
+                        tries[0]++;
+                        try {
+                            scroll.postDelayed(this, 200);
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            };
+            scroll.post(fit);
+        } catch (Exception ignored) {
+        }
     }
 }
