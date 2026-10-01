@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.plugins.api;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -31,10 +32,20 @@ public interface ToolPlugin {
     }
 
     /** NFC tag intents and similar, forwarded by the host. Default no-op. */
-    default void onNewIntent(android.content.Intent intent) {
+    default void onNewIntent(Intent intent) {
     }
 
     /** Activity results (e.g. external scanners), forwarded by the host. */
-    default void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
+    default void onActivityResult(int requestCode, int resultCode, Intent data) {
+    }
+
+    /**
+     * When true, the host sizes this tool to exactly fill the viewport
+     * (viewport height minus host padding) instead of scrolling it.
+     * For paged tools with their own fixed bars and inner scrolling.
+     * Default false keeps legacy scrolling behavior.
+     */
+    default boolean fillViewport() {
+        return false;
     }
 }
