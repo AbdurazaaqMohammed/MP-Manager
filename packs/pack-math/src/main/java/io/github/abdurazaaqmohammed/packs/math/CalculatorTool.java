@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
@@ -17,11 +18,13 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.navigation.NavigationBarView;
 
 import io.github.abdurazaaqmohammed.domain.math.ExpressionEvaluator;
 import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
+import io.github.abdurazaaqmohammed.plugins.tools.common.PagedShell;
 import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 
 import java.util.ArrayList;
@@ -46,9 +49,17 @@ public class CalculatorTool extends BaseToolPlugin {
             "quadratic", "matrix", "triangle", "geometry", "fraction", "prime",
             "gpa", "pace", "fuel", "ohm", "resistor"};
 
+    private static final String[] GROUP_NAMES = {"Finance", "Convert", "Algebra"};
+
+    private static String[][] groupIds() {
+        return new String[][]{FINANCE, CONVERT, ALGEBRA};
+    }
+
     private Context host;
-    private FrameLayout content;
     private View calcPage;
+    private final FrameLayout[] groupHolders =
+            new FrameLayout[]{null, null, null};
+    private PagedShell shell;
     private final List<ToolPlugin> hosted = new ArrayList<>();
 
     private final StringBuilder expr = new StringBuilder();
@@ -62,7 +73,7 @@ public class CalculatorTool extends BaseToolPlugin {
     private boolean sciShown;
 
     public CalculatorTool() {
-        super("calc", "Calculator", "Calculate science expressions", ToolCategories.MATH);
+        super("calc", "Calculator", "Calculator, finance, converters, algebra", ToolCategories.MATH);
     }
 
     private static ToolPlugin newTool(String id) {
@@ -121,10 +132,6 @@ public class CalculatorTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         host = context;
-        LinearLayout box = ToolViewFactory.container(context);
-        content = new FrameLayout(context);
-        box.addView(content, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         BottomNavigationView nav = new BottomNavigationView(context);
         Menu menu = nav.getMenu();
         navItem(context, menu, NAV_CALC, "Calculator",
@@ -140,21 +147,102 @@ public class CalculatorTool extends BaseToolPlugin {
                 new String[]{"functions_24px", "sigma_24px", "ic_grid"},
                 android.R.drawable.ic_menu_help);
         nav.setLabelVisibilityMode(
-                com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED);
+                NavigationBarView.LABEL_VISIBILITY_LABELED);
         nav.setSelectedItemId(NAV_CALC);
+        java.util.List<PagedShell.Page> pages = new ArrayList<>();
+        pages.add(new PagedShell.Page() {
+            @Override
+            public String title() {
+                return "Calculator";
+            }
+
+            @Override
+            public View build(Context ctx) {
+                if (calcPage == null) calcPage = buildCalc(ctx);
+                ScrollView sc = new ScrollView(ctx);
+                sc.addView(detach(calcPage), new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT));
+                return sc;
+            }
+        });
+        for (int g = 0; g < 3; g++) {
+            final int group = g;
+            pages.add(new PagedShell.Page() {
+                @Override
+                public String title() {
+                    return GROUP_NAMES[group];
+                }
+
+                @Override
+                public View build(Context ctx) {
+                    if (groupHolders[group] == null) {
+                        groupHolders[group] = new FrameLayout(ctx);
+                    }
+                    return groupHolders[group];
+                }
+
+                @Override
+                public void shown() {
+                    try {
+                        if (groupHolders[group] != null
+                                && groupHolders[group].getChildCount() == 0) {
+                            showMenu(group);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                @Override
+                public void hidden() {
+                    try {
+                        destroyHosted();
+                        if (groupHolders[group] != null) groupHolders[group].removeAllViews();
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                @Override
+                public void destroy() {
+                    try {
+                        destroyHosted();
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+        shell = new PagedShell(context, pages, null, nav, 0);
         nav.setOnItemSelectedListener(item -> {
-            destroyHosted();
             int id = item.getItemId();
-            if (id == NAV_CALC) showCalc();
-            else if (id == NAV_FINANCE) showMenu("Finance", FINANCE);
-            else if (id == NAV_CONVERT) showMenu("Convert", CONVERT);
-            else showMenu("Algebra", ALGEBRA);
+            showTab(id == NAV_FINANCE ? 1 : id == NAV_CONVERT ? 2 : id == NAV_ALGEBRA ? 3 : 0);
             return true;
         });
-        box.addView(nav, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        showCalc();
-        return box;
+        shell.onSelect(position -> {
+            try {
+                int id = position == 1 ? NAV_FINANCE : position == 2 ? NAV_CONVERT
+                        : position == 3 ? NAV_ALGEBRA : NAV_CALC;
+                if (nav.getSelectedItemId() != id) nav.setSelectedItemId(id);
+            } catch (Exception ignored) {
+            }
+        });
+        return shell.view();
+    }
+
+    private static View detach(View v) {
+        try {
+            if (v != null && v.getParent() instanceof ViewGroup) {
+                ((ViewGroup) v.getParent()).removeView(v);
+            }
+        } catch (Exception ignored) {
+        }
+        return v;
+    }
+
+    private void showTab(int index) {
+        try {
+            if (shell != null) shell.select(index);
+        } catch (Exception ignored) {
+        }
     }
 
     private static void navItem(Context context, Menu menu, int id, String title,
@@ -175,12 +263,6 @@ public class CalculatorTool extends BaseToolPlugin {
         }
     }
 
-    private void showCalc() {
-        if (calcPage == null) calcPage = buildCalc(host);
-        content.removeAllViews();
-        content.addView(calcPage);
-    }
-
     private void destroyHosted() {
         for (ToolPlugin p : hosted) {
             try {
@@ -191,10 +273,12 @@ public class CalculatorTool extends BaseToolPlugin {
         hosted.clear();
     }
 
-    private void showMenu(String group, String[] ids) {
+    private void showMenu(int group) {
+        String[] ids = groupIds()[group];
+        String name = GROUP_NAMES[group];
         LinearLayout page = new LinearLayout(host);
         page.setOrientation(LinearLayout.VERTICAL);
-        ToolViewFactory.addLabel(page, group + " tools");
+        ToolViewFactory.addLabel(page, name + " tools");
         for (String id : ids) {
             ToolPlugin tool = newTool(id);
             if (tool == null) continue;
@@ -246,25 +330,27 @@ public class CalculatorTool extends BaseToolPlugin {
             row.addView(chev);
             card.addView(row);
             final ToolPlugin open = tool;
-            final String groupName = group;
-            card.setOnClickListener(v -> showTool(groupName, open));
+            final int groupIndex = group;
+            card.setOnClickListener(v -> showTool(groupIndex, open));
             page.addView(card);
         }
-        content.removeAllViews();
-        content.addView(page);
+        ScrollView sc = new ScrollView(host);
+        sc.addView(page, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        groupHolders[group].removeAllViews();
+        groupHolders[group].addView(sc, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
-    private void showTool(String group, ToolPlugin tool) {
+    private void showTool(int group, ToolPlugin tool) {
         LinearLayout page = new LinearLayout(host);
         page.setOrientation(LinearLayout.VERTICAL);
         MaterialButton back = new MaterialButton(host, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        back.setText("‹ " + group);
+        back.setText("‹ " +  GROUP_NAMES[group]);
         back.setOnClickListener(v -> {
             destroyHosted();
-            if (NAV_FINANCE == currentGroup(group)) showMenu("Finance", FINANCE);
-            else if (NAV_CONVERT == currentGroup(group)) showMenu("Convert", CONVERT);
-            else showMenu("Algebra", ALGEBRA);
+            showMenu(group);
         });
         page.addView(back, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -277,14 +363,12 @@ public class CalculatorTool extends BaseToolPlugin {
             err.setText("Could not open tool");
             page.addView(err);
         }
-        content.removeAllViews();
-        content.addView(page);
-    }
-
-    private static int currentGroup(String group) {
-        if ("Finance".equals(group)) return NAV_FINANCE;
-        if ("Convert".equals(group)) return NAV_CONVERT;
-        return NAV_ALGEBRA;
+        ScrollView sc = new ScrollView(host);
+        sc.addView(page, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        groupHolders[group].removeAllViews();
+        groupHolders[group].addView(sc, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     // ---------- calculator page ----------
@@ -562,8 +646,18 @@ public class CalculatorTool extends BaseToolPlugin {
     }
 
     @Override
+    public boolean fillViewport() {
+        return true;
+    }
+
+    @Override
     public void onDestroy() {
         destroyHosted();
+        try {
+            if (shell != null) shell.destroy();
+        } catch (Exception ignored) {
+        }
+        shell = null;
         calcPage = null;
         exprView = null;
         resultView = null;
