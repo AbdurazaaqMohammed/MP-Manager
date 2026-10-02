@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -23,7 +23,7 @@ import java.text.DecimalFormat;
 public class BmiTool extends BaseToolPlugin {
 
     public BmiTool() {
-        super("bmi", "BMI Calculator", "Calculate body mass index", ToolCategories.TIME);
+        super("bmi", "BMI Calculator", "Calculate body mass index", ToolCategories.MATH);
     }
 
     @Override

@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -27,7 +27,7 @@ import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 public class WaterTool extends BaseToolPlugin {
 
     public WaterTool() {
-        super("water", "Water Tracker", "Log daily water intake", ToolCategories.TIME);
+        super("water", "Water Tracker", "Log daily water intake", ToolCategories.MATH);
     }
 
     @Override

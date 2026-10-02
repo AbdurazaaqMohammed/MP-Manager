@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -16,31 +16,30 @@ import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 
 /**
- * Extraction of ToolRunnerActivity.buildDateAdd().
+ * Extraction of ToolRunnerActivity.buildAgeCalc().
  */
-public class DateAddTool extends BaseToolPlugin {
+public class AgeCalcTool extends BaseToolPlugin {
 
-    public DateAddTool() {
-        super("dateadd", "Date Adder", "Add or subtract days", ToolCategories.TIME);
+    public AgeCalcTool() {
+        super("agecalc", "Age Calculator", "Exact age and birthdays", ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Date Adder");
-        EditText dateInput = ToolViewFactory.makeInput(box, "Start yyyy-MM-dd", InputType.TYPE_CLASS_DATETIME);
-        dateInput.setText(DateTime.todayIso());
-        EditText daysInput = ToolViewFactory.makeInput(box, "Days to add (negative subtracts)",
-                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        daysInput.setText("30");
+        ToolViewFactory.addTitle(box, "Age Calculator");
+        ToolViewFactory.addLabel(box, "Use yyyy-MM-dd.");
+        EditText birthInput = ToolViewFactory.makeInput(box, "Birth date", InputType.TYPE_CLASS_DATETIME);
+        birthInput.setText("2000-01-01");
         TextView output = ToolViewFactory.makeOutput(box);
         MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
         goBtn.setOnClickListener(v -> {
             try {
-                int n = Integer.parseInt(daysInput.getText().toString().trim());
-                output.setText(DateTime.addDays(dateInput.getText().toString(), n));
+                output.setText(DateTime.ageDetails(birthInput.getText().toString()));
+            } catch (IllegalArgumentException e) {
+                output.setText("Birth date is in the future");
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText("Use yyyy-MM-dd");
             }
         });
         return box;

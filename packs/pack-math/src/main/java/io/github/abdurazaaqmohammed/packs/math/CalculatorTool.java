@@ -41,6 +41,7 @@ public class CalculatorTool extends BaseToolPlugin {
     private static final int NAV_FINANCE = 2;
     private static final int NAV_CONVERT = 3;
     private static final int NAV_ALGEBRA = 4;
+    private static final int NAV_GENERAL = 5;
 
     private static final String[] FINANCE = {
             "emi", "compound", "savings", "gst", "tip", "discount", "percent", "unitprice"};
@@ -48,17 +49,20 @@ public class CalculatorTool extends BaseToolPlugin {
     private static final String[] ALGEBRA = {
             "quadratic", "matrix", "triangle", "geometry", "fraction", "prime",
             "gpa", "pace", "fuel", "ohm", "resistor"};
+    private static final String[] GENERAL = {
+            "datediff", "agecalc", "dateadd", "timecalc", "eventcount", "sleep",
+            "water", "bmi", "bmr", "bodyfat"};
 
-    private static final String[] GROUP_NAMES = {"Finance", "Convert", "Algebra"};
+    private static final String[] GROUP_NAMES = {"Finance", "Convert", "Algebra", "General"};
 
     private static String[][] groupIds() {
-        return new String[][]{FINANCE, CONVERT, ALGEBRA};
+        return new String[][]{FINANCE, CONVERT, ALGEBRA, GENERAL};
     }
 
     private Context host;
     private View calcPage;
     private final FrameLayout[] groupHolders =
-            new FrameLayout[]{null, null, null};
+            new FrameLayout[]{null, null, null, null};
     private PagedShell shell;
     private final List<ToolPlugin> hosted = new ArrayList<>();
 
@@ -73,7 +77,7 @@ public class CalculatorTool extends BaseToolPlugin {
     private boolean sciShown;
 
     public CalculatorTool() {
-        super("calc", "Calculator", "Calculator, finance, converters, algebra", ToolCategories.MATH);
+        super("calc", "Calculator", "Calculator, finance, converters, algebra, general", ToolCategories.MATH);
     }
 
     private static ToolPlugin newTool(String id) {
@@ -124,6 +128,26 @@ public class CalculatorTool extends BaseToolPlugin {
                 return new OhmTool();
             case "resistor":
                 return new ResistorTool();
+            case "datediff":
+                return new DateDiffTool();
+            case "agecalc":
+                return new AgeCalcTool();
+            case "dateadd":
+                return new DateAddTool();
+            case "timecalc":
+                return new TimeCalcTool();
+            case "eventcount":
+                return new EventCountTool();
+            case "bmi":
+                return new BmiTool();
+            case "bmr":
+                return new BmrTool();
+            case "bodyfat":
+                return new BodyFatTool();
+            case "water":
+                return new WaterTool();
+            case "sleep":
+                return new SleepTool();
             default:
                 return null;
         }
@@ -138,7 +162,7 @@ public class CalculatorTool extends BaseToolPlugin {
                 new String[]{"calculate_24px", "calculator_24px", "hex_keyboard_24px"},
                 android.R.drawable.ic_menu_edit);
         navItem(context, menu, NAV_FINANCE, "Finance",
-                new String[]{"payments_24px", "account_balance_24px", "tag_24px"},
+                new String[]{"attach_money_24px", "account_balance_24px", "tag_24px"},
                 android.R.drawable.ic_menu_info_details);
         navItem(context, menu, NAV_CONVERT, "Convert",
                 new String[]{"swap_horiz_24px", "baseline_swap_horiz_24"},
@@ -146,6 +170,9 @@ public class CalculatorTool extends BaseToolPlugin {
         navItem(context, menu, NAV_ALGEBRA, "Algebra",
                 new String[]{"functions_24px", "sigma_24px", "ic_grid"},
                 android.R.drawable.ic_menu_help);
+        navItem(context, menu, NAV_GENERAL, "General",
+                new String[]{"schedule_24px", "ic_grid"},
+                android.R.drawable.ic_menu_agenda);
         nav.setLabelVisibilityMode(
                 NavigationBarView.LABEL_VISIBILITY_LABELED);
         nav.setSelectedItemId(NAV_CALC);
@@ -166,7 +193,7 @@ public class CalculatorTool extends BaseToolPlugin {
                 return sc;
             }
         });
-        for (int g = 0; g < 3; g++) {
+        for (int g = 0; g < 4; g++) {
             final int group = g;
             pages.add(new PagedShell.Page() {
                 @Override
@@ -214,13 +241,13 @@ public class CalculatorTool extends BaseToolPlugin {
         shell = new PagedShell(context, pages, null, nav, 0);
         nav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
-            showTab(id == NAV_FINANCE ? 1 : id == NAV_CONVERT ? 2 : id == NAV_ALGEBRA ? 3 : 0);
+            showTab(id == NAV_FINANCE ? 1 : id == NAV_CONVERT ? 2 : id == NAV_ALGEBRA ? 3 : id == NAV_GENERAL ? 4 : 0);
             return true;
         });
         shell.onSelect(position -> {
             try {
                 int id = position == 1 ? NAV_FINANCE : position == 2 ? NAV_CONVERT
-                        : position == 3 ? NAV_ALGEBRA : NAV_CALC;
+                        : position == 3 ? NAV_ALGEBRA : position == 4 ? NAV_GENERAL : NAV_CALC;
                 if (nav.getSelectedItemId() != id) nav.setSelectedItemId(id);
             } catch (Exception ignored) {
             }

@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -21,7 +21,7 @@ import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 public class DateDiffTool extends BaseToolPlugin {
 
     public DateDiffTool() {
-        super("datediff", "Date Difference", "Days and age between dates", ToolCategories.TIME);
+        super("datediff", "Date Difference", "Days and age between dates", ToolCategories.MATH);
     }
 
     @Override

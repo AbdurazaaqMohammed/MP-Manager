@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.os.Handler;
@@ -32,7 +32,7 @@ public class EventCountTool extends BaseToolPlugin {
     private boolean active;
 
     public EventCountTool() {
-        super("eventcount", "Event Countdown", "Countdown to events live", ToolCategories.TIME);
+        super("eventcount", "Event Countdown", "Countdown to events live", ToolCategories.MATH);
     }
 
     @Override

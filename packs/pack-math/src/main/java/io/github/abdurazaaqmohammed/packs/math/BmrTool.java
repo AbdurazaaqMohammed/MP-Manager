@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -27,7 +27,7 @@ import java.text.DecimalFormat;
 public class BmrTool extends BaseToolPlugin {
 
     public BmrTool() {
-        super("bmr", "Calorie Calculator", "BMR, TDEE, calories", ToolCategories.TIME);
+        super("bmr", "Calorie Calculator", "BMR, TDEE, calories", ToolCategories.MATH);
     }
 
     @Override

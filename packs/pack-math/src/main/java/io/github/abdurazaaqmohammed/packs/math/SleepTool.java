@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -24,7 +24,7 @@ import java.util.List;
 public class SleepTool extends BaseToolPlugin {
 
     public SleepTool() {
-        super("sleep", "Sleep Cycles", "Bedtimes in 90-minute cycles", ToolCategories.TIME);
+        super("sleep", "Sleep Cycles", "Bedtimes in 90-minute cycles", ToolCategories.MATH);
     }
 
     @Override

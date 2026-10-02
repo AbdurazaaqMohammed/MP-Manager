@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -25,7 +25,7 @@ import java.text.DecimalFormat;
 public class BodyFatTool extends BaseToolPlugin {
 
     public BodyFatTool() {
-        super("bodyfat", "Body Fat Estimator", "Estimate with US Navy method", ToolCategories.TIME);
+        super("bodyfat", "Body Fat Estimator", "Estimate with US Navy method", ToolCategories.MATH);
     }
 
     @Override

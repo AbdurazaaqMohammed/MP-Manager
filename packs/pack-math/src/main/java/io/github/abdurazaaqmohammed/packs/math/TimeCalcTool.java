@@ -1,4 +1,4 @@
-package io.github.abdurazaaqmohammed.packs.time;
+package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
 import android.text.InputType;
@@ -23,7 +23,7 @@ import java.text.DecimalFormat;
 public class TimeCalcTool extends BaseToolPlugin {
 
     public TimeCalcTool() {
-        super("timecalc", "Duration Calculator", "Add or subtract durations", ToolCategories.TIME);
+        super("timecalc", "Duration Calculator", "Add or subtract durations", ToolCategories.MATH);
     }
 
     @Override

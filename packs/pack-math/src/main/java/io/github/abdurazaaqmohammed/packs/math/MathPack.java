@@ -19,7 +19,7 @@ public class MathPack implements ToolPack {
 
     @Override
     public int version() {
-        return 3;
+        return 6;
     }
 
     @Override
@@ -48,6 +48,17 @@ public class MathPack implements ToolPack {
                 new FuelTool(),
                 new PaceTool(),
                 new OhmTool(),
-                new ResistorTool());
+                new ResistorTool(),
+                new DateDiffTool(),
+                new AgeCalcTool(),
+                new DateAddTool(),
+                new TimeCalcTool(),
+                new EventCountTool(),
+                new TallyTool(),
+                new BmiTool(),
+                new BmrTool(),
+                new BodyFatTool(),
+                new WaterTool(),
+                new SleepTool());
     }
 }
