@@ -234,10 +234,14 @@ public class ImageViewerActivity extends BaseActivity {
             imagePaths.add(startFile.getAbsolutePath());
             return;
         }
+        String startPath = startFile.getAbsolutePath();
         for (File f : files) {
-            if (f.isFile() && FileUtils.isImageFile(f.getName())) {
+            if (f.isFile() && (FileUtils.isImageFile(f.getName()) || f.getAbsolutePath().equals(startPath))) {
                 imagePaths.add(f.getAbsolutePath());
             }
+        }
+        if (!imagePaths.contains(startPath)) {
+            imagePaths.add(startPath);
         }
     }
 
