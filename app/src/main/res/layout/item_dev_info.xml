@@ -19,7 +19,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Build your own plugins"
+            android:text="@string/dev_info_title"
             android:textAppearance="?attr/textAppearanceTitleSmall"
             android:textColor="?attr/colorOnSurface" />
 
@@ -27,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Running out of tools? Anyone can make more.\n\nPlugins are regular apps. Install one and it turns up here — the first time, you will be asked to match its certificate fingerprint with the one the developer published, and you will hear about it again if that ever changes without warning.\n\nA plugin can put an item in your sidebar, add a setting, add a file-menu action, add a button to the text editor, or add an entry to the APK dialog. Whatever it wires up, it runs as its own app with its own permissions — so a calculator plugin cannot read your files unless you hand it storage access yourself.\n\nFancy making one? Copy samples/plugin-sample, say what you plug into in your manifest, and follow the contract strings in PluginContracts. No forms, no review queue — publish the APK wherever you like and share the fingerprint."
+            android:text="@string/dev_info_body"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 

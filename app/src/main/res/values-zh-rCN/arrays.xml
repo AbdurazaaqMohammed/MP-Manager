@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 仅覆盖需要翻译的显示用数组；framework_versions / *_values 为
+         内部键值，不翻译，故不重复声明。 -->
+
+    <string-array name="theme_entries">
+        <item>Dracula</item>
+        <item>Eclipse</item>
+        <item>VS2019</item>
+        <item>GitHub</item>
+        <item>NotepadXX</item>
+    </string-array>
+
+    <string-array name="install_locations">
+        <item>自动</item>
+        <item>仅内部存储</item>
+        <item>优先外部存储</item>
+        <item>默认</item>
+    </string-array>
+
+    <string-array name="font_styles">
+        <item>常规</item>
+        <item>等宽</item>
+    </string-array>
+
+    <string-array name="pref_magnifier_size_entries">
+        <item>大</item>
+        <item>中</item>
+        <item>小</item>
+    </string-array>
+
+    <string-array name="pref_capture_range_entries">
+        <item>大</item>
+        <item>中</item>
+        <item>小</item>
+    </string-array>
+
+    <string-array name="pref_capture_speed_entries">
+        <item>快</item>
+        <item>正常</item>
+        <item>慢</item>
+    </string-array>
+</resources>

@@ -294,23 +294,23 @@ public class ImageViewerActivity extends BaseActivity {
         File file = new File(path);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("File: ").append(file.getName()).append("\n");
-        sb.append("Path: ").append(file.getAbsolutePath()).append("\n");
-        sb.append("Size: ").append(formatFileSize(file.length())).append("\n");
+        sb.append(getString(R.string.label_file)).append(file.getName()).append("\n");
+        sb.append(getString(R.string.label_path)).append(file.getAbsolutePath()).append("\n");
+        sb.append(getString(R.string.label_size)).append(formatFileSize(file.length())).append("\n");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        sb.append("Modified: ").append(sdf.format(new Date(file.lastModified()))).append("\n");
+        sb.append(getString(R.string.label_modified)).append(sdf.format(new Date(file.lastModified()))).append("\n");
 
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inJustDecodeBounds = true;
         BitmapFactory.decodeFile(path, opts);
         if (opts.outWidth > 0 && opts.outHeight > 0) {
-            sb.append("Resolution: ").append(opts.outWidth).append("x").append(opts.outHeight).append(" px\n");
+            sb.append(getString(R.string.label_resolution)).append(opts.outWidth).append("x").append(opts.outHeight).append(" px\n");
         }
 
         try {
             ExifInterface exif = new ExifInterface(path);
-            sb.append("\n--- EXIF Data ---\n");
+            sb.append(getString(R.string.exif_header));
             String[] exifTags = {
                 ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL,
                 ExifInterface.TAG_DATETIME, ExifInterface.TAG_EXPOSURE_TIME,
@@ -335,10 +335,10 @@ public class ImageViewerActivity extends BaseActivity {
 
             float[] latLong = new float[2];
             if (exif.getLatLong(latLong)) {
-                sb.append("GPS Coordinates: ").append(latLong[0]).append(", ").append(latLong[1]).append("\n");
+                sb.append(getString(R.string.gps_coordinates)).append(latLong[0]).append(", ").append(latLong[1]).append("\n");
             }
         } catch (IOException e) {
-            sb.append("(No EXIF data available)\n");
+            sb.append(getString(R.string.no_exif_data));
         }
 
         new MaterialAlertDialogBuilder(this)

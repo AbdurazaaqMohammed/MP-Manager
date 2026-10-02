@@ -215,12 +215,14 @@ public class FtpFilesArrayAdapter extends RecyclerView.Adapter<FtpFilesArrayAdap
 
     private void copyToLocal(FTPFileWrapper file, boolean isMove) {
         if (file.isDirectory()) {
-            Extensions.showMessage(context, "Directory copy not fully supported yet");
+            Extensions.showMessage(context, context.rss.getString(R.string.ftp_dir_copy_unsupported));
             return;
         }
         File destFolder = pane1 ? context.pane2Folder : context.pane1Folder;
         String destPath = destFolder.getAbsolutePath() + "/" + file.getName();
-        Extensions.showMessage(context, (isMove ? "Moving " : "Copying ") + file.getName() + " to " + destFolder.getName());
+        Extensions.showMessage(context, isMove
+                ? context.rss.getString(R.string.ftp_moving_to, file.getName(), destFolder.getName())
+                : context.rss.getString(R.string.ftp_copying_to, file.getName(), destFolder.getName()));
 
         ftpClient.downloadFile(file.getFtpFile(), destPath, new OnEZFtpDataTransferCallback() {
             @Override

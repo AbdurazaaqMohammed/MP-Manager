@@ -73,7 +73,8 @@ public class FileSearchController {
         advancedSearchToggle.setOnClickListener(v -> {
             boolean isVisible = advancedSearchLayout.getVisibility() == View.VISIBLE;
             advancedSearchLayout.setVisibility(isVisible ? View.GONE : View.VISIBLE);
-            advancedSearchToggle.setText(isVisible ? "Advanced Search ▼" : "Advanced Search ▲");
+            advancedSearchToggle.setText(isVisible ? activity.rss.getString(R.string.advanced_search) + " ▼"
+                    : activity.rss.getString(R.string.advanced_search) + " ▲");
         });
 
         List<SearchHistoryHelper.Item> historyItems =
@@ -258,7 +259,7 @@ public class FileSearchController {
             List<ContentHit> hits = FileSearch.findInFiles(startDir, query, matchCase, regex,
                     scanned -> {
                         if (scanned % 50 == 0 && pm.dialog != null && pm.dialog.isShowing()) {
-                            pm.setText(scanned + " files…");
+                            activity.handler.post(() -> pm.setText(activity.rss.getString(R.string.files_scanned_fmt, scanned)));
                         }
                     });
             pm.dismiss();

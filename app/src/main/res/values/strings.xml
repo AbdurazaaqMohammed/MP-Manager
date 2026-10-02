@@ -1413,4 +1413,218 @@ Layout Inspector
         <item>CSS</item>
         <item>Markdown</item>
     </string-array>
+    <!-- ===== smali / text editor menu (menu/editor_menu.xml) ===== -->
+    <string name="ed_menu_navigation">Navigation</string>
+    <string name="ed_menu_undo">Undo</string>
+    <string name="ed_menu_redo">Redo</string>
+    <string name="ed_menu_edit">Edit</string>
+    <string name="ed_menu_copy_line">Copy line</string>
+    <string name="ed_menu_cut_line">Cut line</string>
+    <string name="ed_menu_delete_line">Delete line</string>
+    <string name="ed_menu_empty_line">Empty line</string>
+    <string name="ed_menu_replace_line">Replace line</string>
+    <string name="ed_menu_duplicate_line">Duplicate line</string>
+    <string name="ed_menu_uppercase">Convert to uppercase</string>
+    <string name="ed_menu_lowercase">Convert to lowercase</string>
+    <string name="ed_menu_increase_indent">Increase Indent</string>
+    <string name="ed_menu_decrease_indent">Decrease Indent</string>
+    <string name="ed_menu_toggle_comment">Toggle comment</string>
+    <string name="ed_menu_more">More</string>
+    <string name="ed_menu_smali2java">Smali to Java</string>
+    <string name="ed_menu_instruction_query">Instructions query</string>
+    <string name="ed_menu_jump_to_line">Jump to line</string>
+    <string name="ed_menu_wrap_word">Wrap word</string>
+    <string name="ed_menu_read_only">Read-only mode</string>
+    <string name="ed_menu_preference">Preference</string>
+    <string name="smali_show_strings">Show Strings</string>
+
+    <!-- ===== plugins / tools hub ===== -->
+    <string name="tools_hub_title">Plugins</string>
+    <string name="tools_hub_search_hint">Search tools</string>
+    <string name="tools_hub_packs_header">Tool packs</string>
+    <string name="pack_action_get">Get</string>
+    <string name="pack_remove">Remove pack</string>
+    <string name="pack_unknown_tool">Unknown tool</string>
+    <string name="pack_part_of_downloadable">Part of the downloadable \"%1$s\" pack (v%2$s).</string>
+    <string name="pack_checksum_verified">Checksum verified on install.</string>
+    <string name="pack_no_checksum_published">No checksum published for this build — install only if you trust the source.</string>
+    <string name="pack_no_checksum_confirm">No checksum is published for this pack build. Install only if you trust the source. Continue?</string>
+    <string name="pack_action_update">Update pack</string>
+    <string name="pack_action_download">Download pack</string>
+    <string name="pack_remove_confirm">Remove this pack and its %1$d tools?</string>
+    <string name="pack_pick_apk">Pick %1$s.apk</string>
+    <string name="pack_not_an_apk">Not an APK file</string>
+    <string name="pack_installed">%1$s installed</string>
+    <string name="tools_external_plugins_header">External plugins  (%1$d)</string>
+    <string name="tools_cert_label">Certificate (SHA-256):</string>
+    <string name="tools_status_label">Status:</string>
+    <string name="tools_status_trusted">Trusted</string>
+    <string name="tools_status_not_trusted">Not trusted</string>
+    <string name="tools_app_info">App info</string>
+    <string name="tools_disable">Disable</string>
+    <string name="tools_trust">Trust</string>
+    <string name="plugin_trust_allow">Allow</string>
+
+    <!-- ===== dev info card ===== -->
+    <string name="dev_info_title">Build your own plugins</string>
+    <string name="dev_info_body">Running out of tools? Anyone can make more.\n\nPlugins are regular apps. Install one and it turns up here — the first time, you will be asked to match its certificate fingerprint with the one the developer published, and you will hear about it again if that ever changes without warning.\n\nA plugin can put an item in your sidebar, add a setting, add a file-menu action, add a button to the text editor, or add an entry to the APK dialog. Whatever it wires up, it runs as its own app with its own permissions — so a calculator plugin cannot read your files unless you hand it storage access yourself.\n\nFancy making one? Copy samples/plugin-sample, say what you plug into in your manifest, and follow the contract strings in PluginContracts. No forms, no review queue — publish the APK wherever you like and share the fingerprint.</string>
+
+    <!-- ===== overlay editor ===== -->
+    <string name="overlay_toast_duration_long">Long</string>
+    <string name="overlay_adv_font_default">Dialog font: Default</string>
+    <string name="hint_corner_dp">Corner dp</string>
+    <string name="hint_pad_dp">Pad dp</string>
+    <string name="hint_border_dp">Border dp</string>
+    <string name="hint_speed_ms">Speed ms</string>
+
+    <!-- ===== misc ===== -->
+    <string name="dialog_theme">Theme</string>
+    <string name="checksum_unavailable">Checksum unavailable: %1$s</string>
+    <string name="hint_width">Width</string>
+    <string name="hint_height">Height</string>
+    <string name="antisplit">AntiSplit</string>
+    <string name="update_go_github_release">Go to GitHub Release</string>
+    <string name="editor_btn_label_hint">Button Label (optional)</string>
+    <string name="editor_data_1">Data 1</string>
+    <string name="editor_data_2">Data 2</string>
+    <string name="editor_long_data_1">Long Data 1</string>
+    <string name="editor_long_data_2">Long Data 2</string>
+    <string name="editor_insert_text">Text to insert</string>
+    <string name="editor_find_regex">Find Regex</string>
+    <string name="editor_replace_regex">Replace Regex</string>
+
+    <!-- ===== storage manager categories ===== -->
+    <string name="storage_cat_images">Images</string>
+    <string name="storage_cat_videos">Videos</string>
+    <string name="storage_cat_audio">Audio</string>
+    <string name="storage_cat_documents">Documents</string>
+    <string name="storage_cat_archives">Archives</string>
+    <string name="storage_cat_apks">APKs</string>
+    <string name="storage_cat_other">Other</string>
+
+    <!-- ===== Java-hardcoded UI: extractor / main / ftp ===== -->
+    <string name="root_action_clear_data">Clear data</string>
+    <string name="root_action_force_stop">Force stop</string>
+    <string name="root_action_enable_app">Enable app</string>
+    <string name="root_action_disable_app">Disable app</string>
+    <string name="root_action_uninstall">Uninstall</string>
+    <string name="folder_file_count">Folders: %1$d  Files: %2$d</string>
+    <string name="ftp_dir_copy_unsupported">Directory copy not fully supported yet</string>
+    <string name="ftp_moving_to">Moving %1$s to %2$s</string>
+    <string name="ftp_copying_to">Copying %1$s to %2$s</string>
+    <string name="ftp_download_soon">FTP File Download coming soon</string>
+    <string name="allow_notifications_ftp">Please allow notifications to show FTP server running</string>
+
+    <!-- ===== command helper / properties / rename ===== -->
+    <string name="name_empty_err">Name cannot be empty</string>
+    <string name="cmd_template_empty_err">Command template cannot be empty</string>
+    <string name="last_modified_updated">Last modified updated</string>
+    <string name="update_last_modified_failed">Failed to update last modified</string>
+    <string name="no_files_selected">No files selected</string>
+    <string name="navigate_failed_fmt">Failed to navigate to %1$s</string>
+
+    <!-- ===== arsc editors ===== -->
+    <string name="arsc_search_results">%1$d results - %2$s [%3$s]</string>
+    <string name="arsc_search_results_in">%1$d results - %2$s [%3$s] in %4$s</string>
+    <string name="no_history">No history</string>
+    <string name="field_value">Value</string>
+    <string name="applying">Applying…</string>
+    <string name="loading_arsc">Loading resources.arsc…</string>
+    <string name="reverted">Reverted</string>
+    <string name="backup_prefix">Backup: %1$s</string>
+    <string name="updated_invalid_fmt">Updated %1$d, invalid %2$d</string>
+    <string name="hex_id">Hex ID</string>
+    <string name="text_title">Text</string>
+    <string name="entries_count">%1$d entries</string>
+    <string name="text_apply_summary">Updated %1$d, new %2$d, skipped complex %3$d, invalid %4$d</string>
+    <string name="copied_fmt">Copied %1$s</string>
+
+    <!-- ===== apk features ===== -->
+    <string name="cannot_share_apk_plugin">Cannot share this APK with the plugin</string>
+    <string name="path_colon">Path %1$s</string>
+    <string name="image_attached_fmt">Image attached (%1$s)</string>
+    <string name="image_failed_fmt">Image failed: %1$s</string>
+    <string name="no_activities_in_apk">No activities found in this APK</string>
+    <string name="enter_title_or_message">Enter a title or message</string>
+    <string name="add_at_least_widget">Add at least one widget</string>
+    <string name="position_bottom">Bottom</string>
+    <string name="gradient_cleared">Gradient cleared (long-press clears)</string>
+    <string name="need_two_colors">Need at least 2 colors</string>
+    <string name="font_picker_unavailable">Font picker unavailable</string>
+    <string name="pick_ttf_otf">Please pick a .ttf or .otf file</string>
+    <string name="font_copy_failed">Font copy failed</string>
+    <string name="font_loaded_fmt">Font loaded: %1$s</string>
+    <string name="font_failed_fmt">Font failed: %1$s</string>
+    <string name="using_dialog_font">Using dialog font</string>
+    <string name="count_apks_fmt">%1$d APKs</string>
+    <string name="zipalign_colon">Zipalign: </string>
+    <string name="sig_v1_label">V1 (JAR): </string>
+    <string name="sig_v2_label">V2 (APK Signature Scheme v2): </string>
+    <string name="cert_sha256_colon">Cert SHA-256: </string>
+    <string name="need_two_dex">Need at least 2 dex files to merge</string>
+    <string name="split_install_unsupported">Installing split APKs is not supported on this version of Android :(</string>
+    <string name="split_try_merge">You could try merging the APK then installing it</string>
+
+    <!-- ===== search / settings ===== -->
+    <string name="files_scanned_fmt">%1$d files…</string>
+    <string name="setup">Setup</string>
+    <string name="startup_last">last</string>
+    <string name="checking_root">Checking root…</string>
+    <string name="invalid_su_command">Invalid su command, keeping previous</string>
+    <string name="rebooting">Rebooting...</string>
+    <string name="reboot_failed_fmt">Reboot failed: %1$s</string>
+    <string name="cannot_read_images">Cannot read images</string>
+
+    <!-- ===== viewer / player ===== -->
+    <string name="label_file">File: </string>
+    <string name="label_path">Path: </string>
+    <string name="label_size">Size: </string>
+    <string name="label_modified">Modified: </string>
+    <string name="label_resolution">Resolution: </string>
+    <string name="exif_header">\n--- EXIF Data ---\n</string>
+    <string name="gps_coordinates">GPS Coordinates: </string>
+    <string name="no_exif_data">(No EXIF data available)\n</string>
+    <string name="unknown">Unknown</string>
+
+    <!-- ===== plugin trust / pack download ===== -->
+    <string name="plugin_new_cert">\n\nThis plugin updated with a NEW certificate. Allow only if you trust the update source.</string>
+    <string name="plugin_separate_app">\n\nThis plugin runs as a separate app with its own permissions.</string>
+    <string name="plugin_cert_block">\n\nCertificate (SHA-256):\n</string>
+    <string name="tools_status_block">\n\nStatus: </string>
+    <string name="download_url_missing">Download URL is missing</string>
+    <string name="downloading_fmt">Downloading %1$s…</string>
+    <string name="refreshing_catalog">Refreshing pack catalog…</string>
+    <string name="catalog_updated">Catalog updated</string>
+    <string name="catalog_refresh_failed">Could not refresh, keeping cached catalog</string>
+
+    <!-- ===== compare / cert / error ===== -->
+    <string name="error_comparing_text_fmt">Error comparing text: %1$s</string>
+    <string name="error_extracting_zip_fmt">Error extracting inner zip: %1$s</string>
+    <string name="error_extracting_arsc_fmt">Error extracting inner arsc: %1$s</string>
+    <string name="cert_subject">Subject: </string>
+    <string name="cert_issuer">Issuer: </string>
+    <string name="cert_serial">Serial: </string>
+    <string name="cert_valid_from">Valid from: </string>
+    <string name="cert_valid_to">Valid to: </string>
+    <string name="cert_sig_algo">Signature algo: </string>
+    <string name="storage_perm_granted_fmt">Storage permission granted: %1$s</string>
+
+    <!-- ===== follow-up: keys added while finishing localization ===== -->
+    <string name="enter_a_message">Enter a message</string>
+    <string name="this_button">this button</string>
+    <string name="plugin_cert_changed_title">Plugin certificate changed</string>
+    <string name="plugin_allow_title">Allow external plugin?</string>
+    <string name="plugin_allow_integrate"> Allow it to integrate with MP-Manager?</string>
+    <string name="cert_unavailable">(unavailable)</string>
+    <string name="download_failed_plain">Download failed</string>
+    <string name="rename_failed_plain">Failed to rename</string>
+    <string name="path_not_accessible">%1$snot accessible</string>
+
+    <!-- ===== last sweep: sibling labels of already-localized strings ===== -->
+    <string name="copy">Copy</string>
+    <string name="copy_nth_fmt">Copy #%1$d</string>
+    <string name="open">Open</string>
+    <string name="overlay_toast_duration_short">Short</string>
+    <string name="position_default">Default</string>
+
 </resources>

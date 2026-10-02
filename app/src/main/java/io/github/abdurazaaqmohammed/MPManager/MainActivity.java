@@ -1232,8 +1232,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 File[] folders = homeDir1.listFiles(File::isDirectory);
                 int foldersCount = folders == null ? 0 : folders.length;
                 MainActivity.this.<TextView>findViewById(R.id.folderCount).setText(
-                        new StringBuilder("Folders: ").append(foldersCount).append(" Files: ")
-                                .append(dir1Files.length - foldersCount));
+                        getString(R.string.folder_file_count, foldersCount, dir1Files.length - foldersCount));
             }
             if(TextUtils.isEmpty(locate)) loadFolderInPane(resolveStartupFolder(true, homeDir1), true);
             loadFolderInPane(resolveStartupFolder(false, homeDir2), false);
@@ -1684,7 +1683,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (ShizukuShell.isGranted()) loadFolderInPane(folder, pane1, false);
         }));
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Shizuku")
+                .setTitle(getString(R.string.shizuku_mode))
                 .setMessage(message)
                 .setPositiveButton(positiveLabel, (d, w) -> onPositive.run())
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1792,8 +1791,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 currentFolderPath.setText(path);
                 uiHelper.scrollTextView(currentFolderPath);
                 this.<TextView>findViewById(R.id.folderCount).setText(
-                        new StringBuilder("Folders: ").append(finalFoldersCount).append(" Files: ")
-                                .append(files.size() - finalFoldersCount));
+                        getString(R.string.folder_file_count, finalFoldersCount, files.size() - finalFoldersCount));
             });
         }).start();
     }

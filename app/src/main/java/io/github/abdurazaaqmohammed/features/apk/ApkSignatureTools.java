@@ -131,7 +131,7 @@ public class ApkSignatureTools {
                     for (int i = 0; i < certs.size(); i++) {
                         if (i > 0) sb.append("\n\n");
                         sb.append(context.getString(R.string.cert, i + 1)).append('\n');
-                        sb.append(CertUtil.describe(certs.get(i)));
+                        sb.append(CertUtil.describe(context, certs.get(i)));
                     }
                     text = sb;
                 }
@@ -164,7 +164,7 @@ public class ApkSignatureTools {
                     }
                     pm.dismiss();
                     context.handler.post(() -> {
-                        Extensions.showMessage(context, context.rss.getString(R.string.signed, apks.size() + " APKs"));
+                        Extensions.showMessage(context, context.rss.getString(R.string.signed, context.rss.getString(R.string.count_apks_fmt, apks.size())));
                         context.loadFolderInPane(apks.get(0).getParentFile(), pane1, false);
                     });
                 } catch (Exception e) {
@@ -228,7 +228,7 @@ public class ApkSignatureTools {
     private String buildSignatureHealthReport(File apk) {
         StringBuilder sb = new StringBuilder();
         String issue = ApkZipAlignUtil.installIssue(apk);
-        sb.append("Zipalign: ").append(issue == null ? "OK" : issue).append('\n');
+        sb.append(context.rss.getString(R.string.zipalign_colon)).append(issue == null ? "OK" : issue).append('\n');
         ApkVerifier.Result result = null;
         String verifyError = null;
         try {
@@ -253,8 +253,8 @@ public class ApkSignatureTools {
                 v2 = "error: " + e.getMessage();
             }
         }
-        sb.append("V1 (JAR): ").append(v1).append('\n');
-        sb.append("V2 (APK Signature Scheme v2): ").append(v2).append('\n');
+        sb.append(context.rss.getString(R.string.sig_v1_label)).append(v1).append('\n');
+        sb.append(context.rss.getString(R.string.sig_v2_label)).append(v2).append('\n');
         String sha256 = "none";
         try {
             List<X509Certificate> certs = CertUtil.getCertificatesUnverified(apk);
@@ -263,7 +263,7 @@ public class ApkSignatureTools {
         } catch (Exception e) {
             sha256 = "error: " + (e.getMessage() != null ? e.getMessage() : e.toString());
         }
-        sb.append("Cert SHA-256: ").append(sha256);
+        sb.append(context.rss.getString(R.string.cert_sha256_colon)).append(sha256);
         return sb.toString();
     }
 

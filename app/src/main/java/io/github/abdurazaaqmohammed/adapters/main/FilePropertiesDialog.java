@@ -202,7 +202,7 @@ public class FilePropertiesDialog {
                             context.handler.post(() -> {
                                 checksumRows.removeAllViews();
                                 TextView err = new TextView(context);
-                                err.setText("Checksum unavailable: " + e.getMessage());
+                                err.setText(context.getString(R.string.checksum_unavailable, e.getMessage()));
                                 checksumRows.addView(err);
                             });
                         }
@@ -294,7 +294,7 @@ public class FilePropertiesDialog {
                         AccessManager.touchMtime(context, file.getAbsolutePath(), newTime);
                         context.handler.post(() -> {
                             modifiedView.setText(UiPrefs.formatDate(context, newTime));
-                            Extensions.showMessage(context, "Last modified updated");
+                            Extensions.showMessage(context, context.getString(R.string.last_modified_updated));
                         });
                     } catch (Exception e) { new ErrorUtil(context).showError(e); }
                 }).start();
@@ -302,7 +302,7 @@ public class FilePropertiesDialog {
                 if (file.setLastModified(newTime)) {
                     modifiedView.setText(UiPrefs.formatDate(context, newTime));
                 } else {
-                    Extensions.showMessage(context, "Failed to update last modified");
+                    Extensions.showMessage(context, context.getString(R.string.update_last_modified_failed));
                 }
             }
         }, hour, minute, true).show(), year, month, day).show();

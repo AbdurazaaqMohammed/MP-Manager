@@ -547,7 +547,7 @@ public class ArscEditorActivity extends BaseActivity {
         input.setSingleLine(false);
         new MaterialAlertDialogBuilder(this)
                 .setTitle(String.format(Locale.US, "String %04X", ps.index & 0xFFFF))
-                .setView(UiFields.wrap(this, input, "Value", 16))
+                .setView(UiFields.wrap(this, input, getString(R.string.field_value), 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String text = input.getText() == null ? "" : input.getText().toString();
@@ -619,7 +619,7 @@ public class ArscEditorActivity extends BaseActivity {
         input.setSingleLine(true);
         new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.arsc_search_id))
-                .setView(UiFields.wrap(this, input, "Hex ID", 16))
+                .setView(UiFields.wrap(this, input, getString(R.string.hex_id), 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(getString(R.string.go), (d, w) -> {
                     String hex = input.getText() == null ? "" : input.getText().toString();

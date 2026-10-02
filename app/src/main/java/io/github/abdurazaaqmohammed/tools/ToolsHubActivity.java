@@ -103,13 +103,13 @@ public class ToolsHubActivity extends BaseActivity {
     }
 
     private void refreshCatalog() {
-        Toast.makeText(this, "Refreshing pack catalog…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.refreshing_catalog), Toast.LENGTH_SHORT).show();
         PackCatalog.refreshAsync(this, fresh -> runOnUiThread(() -> {
             if (fresh != null && !fresh.isEmpty()) {
                 catalog = fresh;
-                Toast.makeText(this, "Catalog updated", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.catalog_updated), Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "Could not refresh, keeping cached catalog", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.catalog_refresh_failed), Toast.LENGTH_SHORT).show();
             }
             rebuildPacks();
         }));
@@ -173,14 +173,15 @@ public class ToolsHubActivity extends BaseActivity {
             String digest = PluginHost.certDigest(this, ext.packageName);
             StringBuilder msg = new StringBuilder();
             msg.append(ext.packageName);
-            msg.append("\n\nCertificate (SHA-256):\n").append(shortDigest(digest));
-            msg.append("\n\nStatus: ").append(trusted ? "Trusted" : "Not trusted");
+            msg.append(getString(R.string.plugin_cert_block)).append(shortDigest(digest));
+            msg.append(getString(R.string.tools_status_block))
+                    .append(getString(trusted ? R.string.tools_status_trusted : R.string.tools_status_not_trusted));
             androidx.appcompat.app.AlertDialog.Builder builder =
                     new androidx.appcompat.app.AlertDialog.Builder(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
-                            .setNeutralButton("App info", (d, w) -> {
+                            .setNeutralButton(getString(R.string.tools_app_info), (d, w) -> {
                                 try {
                                     android.content.Intent info = new android.content.Intent(
                                             android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -190,14 +191,14 @@ public class ToolsHubActivity extends BaseActivity {
                                 }
                             });
             if (trusted) {
-                builder.setPositiveButton("Disable", (d, w) -> {
+                builder.setPositiveButton(getString(R.string.tools_disable), (d, w) -> {
                     PluginHost.setTrusted(this, ext.packageName,
                             PluginHost.pinnedDigest(this, ext.packageName),
                             String.valueOf(ext.label), false);
                     rebuildPacks();
                 });
             } else {
-                builder.setPositiveButton("Trust", (d, w) -> {
+                builder.setPositiveButton(getString(R.string.tools_trust), (d, w) -> {
                     String fresh = PluginHost.certDigest(this, ext.packageName);
                     if (fresh != null) {
                         PluginHost.setTrusted(this, ext.packageName, fresh,
@@ -252,8 +253,9 @@ public class ToolsHubActivity extends BaseActivity {
         desc.setText(pack.description);
         MaterialButton action = card.findViewById(R.id.pack_action);
         action.setText(installed
-                ? (pack.version > PackManager.installedVersion(this, pack.id) ? "Update" : "Open")
-                : "Get");
+                ? (pack.version > PackManager.installedVersion(this, pack.id)
+                    ? getString(R.string.update) : getString(R.string.open))
+                : getString(R.string.pack_action_get));
 
         LinearLayout toolsBox = card.findViewById(R.id.pack_tools);
         toolsBox.removeAllViews();
@@ -269,9 +271,9 @@ public class ToolsHubActivity extends BaseActivity {
             remove.setOnClickListener(v -> {
                 new androidx.appcompat.app.AlertDialog.Builder(this)
                         .setTitle(pack.title)
-                        .setMessage("Remove this pack and its " + pack.tools.size() + " tools?")
+                        .setMessage(getString(R.string.pack_remove_confirm, pack.tools.size()))
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton("Remove", (d, w) -> {
+                        .setPositiveButton(getString(R.string.remove), (d, w) -> {
                             PackManager.uninstallPack(this, pack.id);
                             rebuildPacks();
                         })
@@ -379,19 +381,19 @@ public class ToolsHubActivity extends BaseActivity {
         props.selection_type = FilePickerDialog.FILE_SELECT;
         props.root = android.os.Environment.getExternalStorageDirectory();
         FilePickerDialog picker = new FilePickerDialog(this, props);
-        picker.setTitle("Pick " + pack.id + ".apk");
+        picker.setTitle(getString(R.string.pack_pick_apk, pack.id));
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) return;
             File picked = new File(files[0]);
             if (!picked.getName().toLowerCase().endsWith(".apk")) {
-                Toast.makeText(this, "Not an APK file", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.pack_not_an_apk), Toast.LENGTH_SHORT).show();
                 return;
             }
             new Thread(() -> {
                 String error = PackManager.installFromFile(this, pack, picked);
                 runOnUiThread(() -> {
                     if (error == null) {
-                        Toast.makeText(this, pack.title + " installed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, getString(R.string.pack_installed, pack.title), Toast.LENGTH_SHORT).show();
                         rebuildPacks();
                     } else {
                         Toast.makeText(this, error, Toast.LENGTH_LONG).show();
@@ -498,7 +500,7 @@ public class ToolsHubActivity extends BaseActivity {
                     int count = 0;
                     for (int i = position + 1; i < rows.size()
                             && rows.get(i) instanceof PluginHost.ExternalPlugin; i++) count++;
-                    ((HeaderHolder) holder).label.setText("External plugins  (" + count + ")");
+                    ((HeaderHolder) holder).label.setText(getString(R.string.tools_external_plugins_header, count));
                 } else {
                     String cat = (String) row;
                     int count = 0;
@@ -520,7 +522,8 @@ public class ToolsHubActivity extends BaseActivity {
                     trusted = PluginHost.isTrusted(h.card.getContext(), ext.packageName);
                 } catch (Exception ignored) {
                 }
-                h.subtitle.setText(ext.packageName + "  •  " + (trusted ? "Trusted" : "Not trusted"));
+                h.subtitle.setText(ext.packageName + "  •  " + h.card.getContext().getString(trusted
+                        ? R.string.tools_status_trusted : R.string.tools_status_not_trusted));
                 h.card.setOnClickListener(v -> showExternalDialog(ext));
             } else if (holder instanceof ToolViewHolder h) {
                 ToolRegistry.ToolItem item = (ToolRegistry.ToolItem) row;

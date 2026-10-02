@@ -10,14 +10,14 @@
         android:id="@+id/tools_toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:title="Plugins" />
+        android:title="@string/tools_hub_title" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="12dp"
         android:layout_marginBottom="4dp"
-        android:hint="Search tools"
+        android:hint="@string/tools_hub_search_hint"
         app:endIconMode="clear_text">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -35,7 +35,7 @@
         android:paddingTop="8dp"
         android:paddingEnd="18dp"
         android:paddingBottom="4dp"
-        android:text="Tool packs"
+        android:text="@string/tools_hub_packs_header"
         android:textAppearance="?attr/textAppearanceTitleSmall"
         android:textColor="?attr/colorPrimary" />
 

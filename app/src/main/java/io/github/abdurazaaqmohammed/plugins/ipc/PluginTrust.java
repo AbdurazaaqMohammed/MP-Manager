@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.plugins.ipc;
 
 import android.app.Activity;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.ExternalPlugin;
 
 /**
@@ -42,22 +43,22 @@ public final class PluginTrust {
             String digest = PluginHost.certDigest(activity, plugin.packageName);
             boolean rotation = digest != null
                     && PluginHost.pinnedDigest(activity, plugin.packageName) != null;
-            String title = rotation ? "Plugin certificate changed" : "Allow external plugin?";
+            String title = rotation ? activity.getString(R.string.plugin_cert_changed_title)
+                    : activity.getString(R.string.plugin_allow_title);
             StringBuilder msg = new StringBuilder();
             msg.append(plugin.label).append('\n').append(plugin.packageName);
             if (rotation) {
-                msg.append("\n\nThis plugin updated with a NEW certificate.")
-                        .append(" Allow only if you trust the update source.");
+                msg.append(activity.getString(R.string.plugin_new_cert));
             } else {
-                msg.append("\n\nThis plugin runs as a separate app with its own"
-                        + " permissions. Allow it to integrate with MP-Manager?");
+                msg.append(activity.getString(R.string.plugin_separate_app))
+                        .append(activity.getString(R.string.plugin_allow_integrate));
             }
-            msg.append("\n\nCertificate (SHA-256):\n").append(fingerprint(digest));
+            msg.append(activity.getString(R.string.plugin_cert_block)).append(fingerprint(activity, digest));
             new androidx.appcompat.app.AlertDialog.Builder(activity)
                     .setTitle(title)
                     .setMessage(msg.toString())
                     .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton("Allow", (d, w) -> {
+                    .setPositiveButton(activity.getString(R.string.plugin_trust_allow), (d, w) -> {
                         try {
                             String fresh = PluginHost.certDigest(activity, plugin.packageName);
                             if (fresh == null) return;
@@ -72,8 +73,8 @@ public final class PluginTrust {
         }
     }
 
-    private static String fingerprint(String hex) {
-        if (hex == null || hex.isEmpty()) return "(unavailable)";
+    private static String fingerprint(Activity activity, String hex) {
+        if (hex == null || hex.isEmpty()) return activity.getString(R.string.cert_unavailable);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < hex.length(); i += 2) {
             if (sb.length() > 0) sb.append(i % 32 == 0 ? '\n' : ':');

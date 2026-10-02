@@ -874,7 +874,7 @@ public class APKExtractorActivity extends BaseActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.clear_app_data)
                                 .setMessage(getString(R.string.clear_all_data_for, ai.name))
-                                .setPositiveButton(R.string.clear_app_data, (d, w) -> executeRootAction("Clear data", () -> rootManager.clearAppData(packageName), packageName))
+                                .setPositiveButton(R.string.clear_app_data, (d, w) -> executeRootAction(getString(R.string.root_action_clear_data), () -> rootManager.clearAppData(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -882,18 +882,18 @@ public class APKExtractorActivity extends BaseActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.force_stop)
                                 .setMessage(getString(R.string.force_stop_x, ai.name))
-                                .setPositiveButton(R.string.force_stop, (d, w) -> executeRootAction("Force stop", () -> rootManager.forceStopApp(packageName), packageName))
+                                .setPositiveButton(R.string.force_stop, (d, w) -> executeRootAction(getString(R.string.root_action_force_stop), () -> rootManager.forceStopApp(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
                     case 202: // Enable app (root)
-                        executeRootAction("Enable app", () -> rootManager.enableApp(packageName), packageName);
+                        executeRootAction(getString(R.string.root_action_enable_app), () -> rootManager.enableApp(packageName), packageName);
                         break;
                     case 203: // Disable app (root)
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.disable_app)
                                 .setMessage(getString(R.string.disable_x, ai.name))
-                                .setPositiveButton(R.string.disable, (d, w) -> executeRootAction("Disable app", () -> rootManager.disableApp(packageName), packageName))
+                                .setPositiveButton(R.string.disable, (d, w) -> executeRootAction(getString(R.string.root_action_disable_app), () -> rootManager.disableApp(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
@@ -901,7 +901,7 @@ public class APKExtractorActivity extends BaseActivity {
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.root_uninstall)
                                 .setMessage(rss.getString(R.string.uninstall_root, ai.name))
-                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction("Uninstall", () -> rootManager.uninstallSilent(packageName), packageName))
+                                .setPositiveButton(rss.getString(R.string.uninstall), (d, w) -> executeRootAction(getString(R.string.root_action_uninstall), () -> rootManager.uninstallSilent(packageName), packageName))
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;

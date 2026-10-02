@@ -272,8 +272,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
         if (searchInfo == null) return;
         int n = searchAdapter == null ? 0 : searchAdapter.getItemCount();
         if (!TextUtils.isEmpty(lastSearchQuery)) {
-            searchInfo.setText(n + " results - " + lastSearchQuery + " [" + lastSearchType + "]"
-                    + (TextUtils.isEmpty(lastSearchQuery) ? "" : " in " + lastSearchPath));
+            searchInfo.setText(TextUtils.isEmpty(lastSearchPath)
+                    ? getString(R.string.arsc_search_results, n, lastSearchQuery, lastSearchType)
+                    : getString(R.string.arsc_search_results_in, n, lastSearchQuery, lastSearchType, lastSearchPath));
         }
     }
 
@@ -329,7 +330,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         historyBtn.setOnClickListener(v -> {
             List<SearchHistoryHelper.Item> hist = SearchHistoryHelper.load(this, SearchHistoryHelper.KEY_ARSC_PLUS);
             if (hist.isEmpty()) {
-                Extensions.showMessage(this, "No history");
+                Extensions.showMessage(this, getString(R.string.no_history));
                 return;
             }
             SearchHistoryDropdown.show(this, etFind, hist, new SearchHistoryDropdown.Listener() {
@@ -620,7 +621,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         String name = re.getName();
         new MaterialAlertDialogBuilder(this)
                 .setTitle(name)
-                .setView(UiFields.wrap(this, input, "Value", 16))
+                .setView(UiFields.wrap(this, input, getString(R.string.field_value), 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String text = input.getText() == null ? "" : input.getText().toString();
@@ -632,7 +633,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
     private void applyStringsStaged() {
         if (data == null || !stringsAdapter.hasStaged()) return;
         final Map<ResourceEntry, String> staged = stringsAdapter.stagedCopy();
-        Extensions.showMessage(this, "Applying…");
+        Extensions.showMessage(this, getString(R.string.applying));
         new Thread(() -> {
             int updated = 0;
             int invalid = 0;
@@ -661,13 +662,13 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     historyAdapter.refresh();
                 }
                 refreshStrings();
-                Extensions.showMessage(this, "Updated " + done + ", invalid " + bad);
+                Extensions.showMessage(this, getString(R.string.updated_invalid_fmt, done, bad));
             });
         }).start();
     }
 
     private void loadAsync(File arsc, File apk, String entryPath) {
-        Extensions.showMessage(this, "Loading resources.arsc…");
+        Extensions.showMessage(this, getString(R.string.loading_arsc));
         new Thread(() -> {
             try {
                 ArscData loaded = ArscData.load(arsc, apk, entryPath);
@@ -708,7 +709,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
             if (onDone != null) onDone.run();
             return;
         }
-        Extensions.showMessage(this, "Saving…");
+        Extensions.showMessage(this, getString(R.string.saving));
         new Thread(() -> {
             try {
                 data.save();
@@ -719,7 +720,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                     rebuildTree();
                     refreshStrings();
                     historyAdapter.refresh();
-                    Extensions.showMessage(this, "Saved");
+                    Extensions.showMessage(this, getString(R.string.saved));
                     if (onDone != null) onDone.run();
                 });
             } catch (Exception e) {
@@ -793,7 +794,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
         new Thread(() -> {
             try {
                 File bak = data.backup();
-                runOnUiThread(() -> Extensions.showMessage(this, "Backup: " + bak.getName()));
+                runOnUiThread(() -> Extensions.showMessage(this, getString(R.string.backup_prefix, bak.getName())));
             } catch (Exception e) {
                 runOnUiThread(() -> new ErrorUtil(this).showError(e));
             }
@@ -1593,7 +1594,7 @@ public class ArscEditorPlusActivity extends BaseActivity {
                         rebuildTree();
                         refreshStrings();
                         refresh();
-                        Extensions.showMessage(ArscEditorPlusActivity.this, "Reverted");
+                        Extensions.showMessage(ArscEditorPlusActivity.this, getString(R.string.reverted));
                     } catch (Exception e) {
                         new ErrorUtil(ArscEditorPlusActivity.this).showError(e);
                     }

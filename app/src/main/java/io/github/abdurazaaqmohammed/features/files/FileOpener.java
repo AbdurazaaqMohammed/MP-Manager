@@ -873,8 +873,8 @@ public class FileOpener {
                                         }
                                     }).start();
                                 } else {
-                                    Extensions.showMessage(context, "Installing split APKs is not supported on this version of Android :(");
-                                    context.handler.postDelayed(() -> Extensions.showMessage(context, "You could try merging the APK then installing it"), 1500);
+                                    Extensions.showMessage(context, context.getString(R.string.split_install_unsupported));
+                                    context.handler.postDelayed(() -> Extensions.showMessage(context, context.getString(R.string.split_try_merge)), 1500);
                                 }
                                 break;
                             case 1:

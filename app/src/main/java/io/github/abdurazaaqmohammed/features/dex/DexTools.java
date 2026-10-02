@@ -682,7 +682,7 @@ public class DexTools {
                     }
                     if (inputs.size() < 2) {
                         pm.dismiss();
-                        context.handler.post(() -> Extensions.showMessage(context, "Need at least 2 dex files to merge"));
+                        context.handler.post(() -> Extensions.showMessage(context, context.getString(R.string.need_two_dex)));
                         return;
                     }
                     int api = detectDexApi(inputs.get(0));

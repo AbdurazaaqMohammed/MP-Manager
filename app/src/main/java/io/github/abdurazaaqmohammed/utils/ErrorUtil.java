@@ -49,7 +49,7 @@ public class ErrorUtil {
         } catch (Exception ex) {
             currentVer = "1.0";
         }
-        stackTrace.append(currentVer).append('\n').append("Storage permission granted: ").append(!doesNotHaveStoragePerm(context));
+        stackTrace.append(currentVer).append('\n').append(context.getString(R.string.storage_perm_granted_fmt, !doesNotHaveStoragePerm(context)));
         MaterialAlertDialogBuilder b = dialogUtil.getDialogBuilder()
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(android.R.string.copy, (dialog, which) -> copyText(stackTrace));

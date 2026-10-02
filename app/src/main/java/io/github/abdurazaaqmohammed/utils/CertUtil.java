@@ -184,15 +184,22 @@ public class CertUtil {
         return getFingerprint(cert, "SHA-256");
     }
 
-    public static CharSequence describe(X509Certificate cert) {
+    public static CharSequence describe(android.content.Context context, X509Certificate cert) {
         if (cert == null) return "";
+        android.content.res.Resources r = context.getResources();
         StringBuilder sb = new StringBuilder();
-        sb.append("Subject: ").append(cert.getSubjectX500Principal().getName()).append('\n');
-        sb.append("Issuer: ").append(cert.getIssuerX500Principal().getName()).append('\n');
-        sb.append("Serial: ").append(cert.getSerialNumber().toString(16)).append('\n');
-        sb.append("Valid from: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(cert.getNotBefore())).append('\n');
-        sb.append("Valid to: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(cert.getNotAfter())).append('\n');
-        sb.append("Signature algo: ").append(cert.getSigAlgName()).append('\n');
+        sb.append(r.getString(io.github.abdurazaaqmohammed.MPManager.R.string.cert_subject))
+                .append(cert.getSubjectX500Principal().getName()).append('\n');
+        sb.append(r.getString(io.github.abdurazaaqmohammed.MPManager.R.string.cert_issuer))
+                .append(cert.getIssuerX500Principal().getName()).append('\n');
+        sb.append(r.getString(io.github.abdurazaaqmohammed.MPManager.R.string.cert_serial))
+                .append(cert.getSerialNumber().toString(16)).append('\n');
+        sb.append(r.getString(io.github.abdurazaaqmohammed.MPManager.R.string.cert_valid_from))
+                .append(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(cert.getNotBefore())).append('\n');
+        sb.append(r.getString(io.github.abdurazaaqmohammed.MPManager.R.string.cert_valid_to))
+                .append(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(cert.getNotAfter())).append('\n');
+        sb.append(r.getString(io.github.abdurazaaqmohammed.MPManager.R.string.cert_sig_algo))
+                .append(cert.getSigAlgName()).append('\n');
         sb.append("SHA-1: ").append(getSha1(cert)).append('\n');
         sb.append("SHA-256: ").append(getSha256(cert));
         return sb;

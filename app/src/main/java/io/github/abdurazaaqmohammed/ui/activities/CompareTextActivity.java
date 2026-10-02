@@ -20,6 +20,8 @@ import java.util.zip.ZipFile;
 
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
+
 public class CompareTextActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,7 +85,7 @@ public class CompareTextActivity extends BaseActivity {
             webView.loadDataWithBaseURL(null, html.toString(), "text/html", "UTF-8", null);
 
         } catch (Exception e) {
-            Extensions.showMessage(this, "Error comparing text: " + e.getMessage());
+            Extensions.showMessage(this, getString(R.string.error_comparing_text_fmt, e.getMessage()));
             new ErrorUtil(this).showError(e);
         }
     }

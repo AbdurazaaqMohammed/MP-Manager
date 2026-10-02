@@ -74,7 +74,7 @@ public class RenameUtil {
             } else if (i != 0) items.add(values[i]); // position 0 is ".."
         }
         if (items.isEmpty()) {
-            Extensions.showMessage(context, "No files selected");
+            Extensions.showMessage(context, context.getString(R.string.no_files_selected));
             return;
         }
 
@@ -199,7 +199,7 @@ public class RenameUtil {
     private static void executeRenameFiles(MainActivity context, List<RenamePlan> plans, boolean pane1) {
         File parent = ((File) plans.get(0).item).getParentFile();
         if (parent == null) {
-            Extensions.showMessage(context, "Failed to rename");
+            Extensions.showMessage(context, context.getString(R.string.rename_failed_plain));
             return;
         }
         ProgressManager pm = new ProgressManager(context, true).show();

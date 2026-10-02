@@ -32,7 +32,7 @@ public final class ThemeDialogs {
         }
         final int[] selected = {checked};
         BaseDialog.builder(context)
-                .setTitle("Theme")
+                .setTitle(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.dialog_theme))
                 .setSingleChoiceItems(names, checked, (d, which) -> selected[0] = which)
                 .setPositiveButton(android.R.string.ok, (d, which) -> {
                     ThemeRegistry.setCurrentId(context, themes.get(selected[0]).id());

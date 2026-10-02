@@ -134,7 +134,7 @@ public class CompareZipDialog {
 
             new CompareZipDialog(context, tmp1, tmp2).show();
         } catch (Exception e) {
-            Extensions.showMessage(context, "Error extracting inner zip: " + e.getMessage());
+            Extensions.showMessage(context, context.getString(R.string.error_extracting_zip_fmt, e.getMessage()));
         }
     }
 
@@ -148,7 +148,7 @@ public class CompareZipDialog {
 
             new CompareArscDialog(context, tmp1.getAbsolutePath(), tmp2.getAbsolutePath()).show();
         } catch (Exception e) {
-            Extensions.showMessage(context, "Error extracting inner arsc: " + e.getMessage());
+            Extensions.showMessage(context, context.getString(R.string.error_extracting_arsc_fmt, e.getMessage()));
         }
     }
 

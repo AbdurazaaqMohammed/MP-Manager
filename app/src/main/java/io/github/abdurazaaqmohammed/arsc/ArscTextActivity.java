@@ -105,7 +105,7 @@ public class ArscTextActivity extends BaseActivity {
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
         toolbar = new MaterialToolbar(this);
-        toolbar.setTitle(title == null ? "Text" : title);
+        toolbar.setTitle(title == null ? getString(R.string.text_title) : title);
         toolbar.setSubtitle(data.arscFile == null ? "" : data.arscFile.getName());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
@@ -239,7 +239,7 @@ public class ArscTextActivity extends BaseActivity {
                         }
                     }
                 }
-                Extensions.showMessage(this, entryCount + " entries");
+                Extensions.showMessage(this, getString(R.string.entries_count, entryCount));
             });
         }).start();
     }
@@ -256,7 +256,7 @@ public class ArscTextActivity extends BaseActivity {
         }
         final TypeBlock tb = block;
         final String content = text;
-        Extensions.showMessage(this, "Applying…");
+        Extensions.showMessage(this, getString(R.string.applying));
         new Thread(() -> {
             try {
                 ArscData.TextApplyResult r = data.applyTypeBlockText(tb, content);
@@ -266,10 +266,7 @@ public class ArscTextActivity extends BaseActivity {
                         bufferDirty = false;
                     }
                     StringBuilder msg = new StringBuilder();
-                    msg.append("Updated ").append(r.updated)
-                            .append(", new ").append(r.created)
-                            .append(", skipped complex ").append(r.skippedComplex)
-                            .append(", invalid ").append(r.invalid);
+                    msg.append(getString(R.string.text_apply_summary, r.updated, r.created, r.skippedComplex, r.invalid));
                     if (!r.badNames.isEmpty()) {
                         msg.append(" (");
                         for (int i = 0; i < r.badNames.size(); i++) {
@@ -366,7 +363,7 @@ public class ArscTextActivity extends BaseActivity {
                 try {
                     String hex = re.getHexId();
                     CopyUtil.copyToClipboard(ArscTextActivity.this, hex);
-                    Extensions.showMessage(ArscTextActivity.this, "Copied " + hex);
+                    Extensions.showMessage(ArscTextActivity.this, getString(R.string.copied_fmt, hex));
                 } catch (Exception ignored) {
                 }
             }
@@ -505,7 +502,7 @@ public class ArscTextActivity extends BaseActivity {
         idRow.setOnClickListener(v -> {
             try {
                 CopyUtil.copyToClipboard(this, hexId);
-                Extensions.showMessage(this, "Copied " + hexId);
+                Extensions.showMessage(this, getString(R.string.copied_fmt, hexId));
             } catch (Exception ignored) {
             }
             dismissIdPopup();

@@ -137,7 +137,7 @@ public class CommandHelper {
             btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
             h.copyBtn = new MaterialButton(context);
-            h.copyBtn.setText(multipleFiles ? ("Copy #" + (i + 1)) : "Copy");
+            h.copyBtn.setText(multipleFiles ? context.getString(R.string.copy_nth_fmt, i + 1) : context.getString(R.string.copy));
             h.copyBtn.setWidth(0);
             h.copyBtn.setPadding(5, 0, 5, 0);
             h.copyBtn.setIconResource(R.drawable.ic_copy);

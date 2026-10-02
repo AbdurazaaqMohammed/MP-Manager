@@ -222,12 +222,12 @@ public class CommandHelperSettingsDialog extends DialogFragment {
             String name = nameInput.getText().toString().trim();
             String cmd = cmdInput.getText().toString().trim();
             if (TextUtils.isEmpty(name)) {
-                Extensions.showMessage(getActivity(), "Name cannot be empty");
+                Extensions.showMessage(getActivity(), getString(R.string.name_empty_err));
 
                 return;
             }
             if (TextUtils.isEmpty(cmd)) {
-                Extensions.showMessage(getActivity(), "Command template cannot be empty");
+                Extensions.showMessage(getActivity(), getString(R.string.cmd_template_empty_err));
                 return;
             }
             if (index < 0) profileManager.addProfile(new Profile(name, cmd));

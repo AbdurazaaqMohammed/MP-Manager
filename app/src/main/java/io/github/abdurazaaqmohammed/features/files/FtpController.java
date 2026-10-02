@@ -103,7 +103,7 @@ public class FtpController {
         pl.setEnabled(serverNotStarted);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
-            Extensions.showMessage(activity, "Please allow notifications to show FTP server running");
+            Extensions.showMessage(activity, activity.rss.getString(R.string.allow_notifications_ftp));
             activity.permissionLauncher().launch(Manifest.permission.POST_NOTIFICATIONS);
         }
 
@@ -272,7 +272,7 @@ public class FtpController {
                             currentFolderPath.setText(activity.rss.getString(R.string.ftp, path));
                             activity.uiHelper.scrollTextView(currentFolderPath);
 
-                            activity.<TextView>findViewById(R.id.folderCount).setText(new StringBuilder("Folders: ").append(foldersCount).append(" Files: ").append(response.size() - foldersCount));
+                            activity.<TextView>findViewById(R.id.folderCount).setText(activity.rss.getString(R.string.folder_file_count, foldersCount, response.size() - foldersCount));
                         });
                     }
 
@@ -313,7 +313,7 @@ public class FtpController {
         } else if (folder.isDirectory()) {
             fetchFtpDirAndLoad(folder.getFtpFile().getName(), pane1);
         } else {
-            Extensions.showMessage(activity, "FTP File Download coming soon");
+            Extensions.showMessage(activity, activity.rss.getString(R.string.ftp_download_soon));
         }
     }
 }

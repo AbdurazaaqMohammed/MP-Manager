@@ -120,7 +120,7 @@ public class BatchImageTools {
             if (dims[1] > 0) minH = Math.min(minH, dims[1]);
         }
         if (minW == Integer.MAX_VALUE) {
-            Extensions.showMessage(context, "Cannot read images");
+            Extensions.showMessage(context, context.getString(R.string.cannot_read_images));
             return;
         }
         LinearLayout root = new LinearLayout(context);
@@ -128,13 +128,13 @@ public class BatchImageTools {
         int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
         root.setPadding(pad, pad / 2, pad, 0);
         EditText wInput = new EditText(context);
-        wInput.setHint("Width");
+        wInput.setHint(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.hint_width));
         wInput.setText(String.valueOf(minW));
         wInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         wInput.setSingleLine(true);
         root.addView(wInput);
         EditText hInput = new EditText(context);
-        hInput.setHint("Height");
+        hInput.setHint(context.getString(io.github.abdurazaaqmohammed.MPManager.R.string.hint_height));
         hInput.setText(String.valueOf(minH));
         hInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         hInput.setSingleLine(true);

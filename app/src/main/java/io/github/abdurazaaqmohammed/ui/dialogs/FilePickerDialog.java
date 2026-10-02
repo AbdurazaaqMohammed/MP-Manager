@@ -137,7 +137,7 @@ public class FilePickerDialog {
                     loadDirectory(inputPath);
                     ad.dismiss();
                 } else {
-                    Extensions.showMessage(ad, "Failed to navigate to " + inputPath);
+                    Extensions.showMessage(ad, context.getString(R.string.navigate_failed_fmt, inputPath));
                 }
             });
             ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {

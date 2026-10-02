@@ -341,7 +341,7 @@ public class SettingsController {
                 MaterialButton setup = new MaterialButton(activity);
                 setup.setText(isAction
                         ? (e.title == null || e.title.isEmpty() ? e.id : e.title)
-                        : "Setup");
+                        : activity.getString(R.string.setup));
                 LinearLayout.LayoutParams setupParams = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 setupParams.topMargin = (int) (4 * density);
@@ -694,7 +694,7 @@ public class SettingsController {
             String picked = modeLabels.get(position);
             if (picked.equals(labelRoot)) {
                 workingModeTv.setText(labelRoot, false);
-                Extensions.showMessage(activity, "Checking root…");
+                Extensions.showMessage(activity, activity.getString(R.string.checking_root));
                 new Thread(() -> {
                     boolean ok = rootManager.isRootAvailable();
                     activity.handler.post(() -> {
@@ -774,7 +774,7 @@ public class SettingsController {
             TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
             String cmd = suCommandEt.getText() != null ? suCommandEt.getText().toString().trim() : "";
             if (!cmd.isEmpty() && !cmd.matches("^[A-Za-z0-9_./-]+$")) {
-                Extensions.showMessage(activity, "Invalid su command, keeping previous");
+                Extensions.showMessage(activity, activity.getString(R.string.invalid_su_command));
                 return;
             }
             PreferenceManager.getDefaultSharedPreferences(activity).edit()
@@ -827,9 +827,9 @@ public class SettingsController {
                                         case 2: rootManager.reboot("bootloader"); break;
                                         case 3: rootManager.reboot("-p"); break;
                                     }
-                                    Extensions.showMessage(activity, "Rebooting...");
+                                    Extensions.showMessage(activity, activity.getString(R.string.rebooting));
                                 } catch (Exception e) {
-                                    Extensions.showMessage(activity, "Reboot failed: " + e.getMessage());
+                                    Extensions.showMessage(activity, activity.getString(R.string.reboot_failed_fmt, e.getMessage()));
                                 }
                             })
                             .setNegativeButton(android.R.string.cancel, null)

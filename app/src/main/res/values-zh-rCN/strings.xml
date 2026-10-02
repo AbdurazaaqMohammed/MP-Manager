@@ -1257,14 +1257,14 @@ Layout Inspector
     <string name="bottom">底部</string>
     <string name="center">居中</string>
     <string name="top">顶部</string>
-    <string name="toast">Toast</string>
+    <string name="toast">提示</string>
     <string name="dialog">对话框</string>
     <string name="advanced">高级</string>
     <string name="dialog_font_applied_to_all_widgets">对话框字体已应用到所有小组件</string>
     <string name="enter_a_name">输入名称</string>
     <string name="save_profile">保存配置文件</string>
     <string name="profile_saved">配置文件已保存</string>
-    <string name="toast_dialog">Toast / Dialog</string>
+    <string name="toast_dialog">提示 / 对话框</string>
     <string name="enter_a_url_or_set_the_button_to_dismiss">输入 URL 或将按钮设置为关闭</string>
     <string name="remove_toasts_info">这将反编译 APK，从 smali 代码中移除所有 Toast.makeText/show 调用，然后重新编译。继续？</string>
     <string name="signature_removed">签名已移除</string>
@@ -1380,4 +1380,248 @@ Layout Inspector
     <string name="check_update_now">立即检查更新</string>
     <string name="check_for_updates">检查更新</string>
     <string name="failed_to_check_for_update">检查更新失败</string>
+
+    <!-- 侧边栏 / 书签 -->
+    <string name="show_bookmarks_sidebar">在侧边栏显示书签</string>
+    <string name="include_bookmark_groups_sidebar">侧边栏包含书签分组</string>
+    <string name="sidebar_collapse">折叠分组</string>
+    <string name="sidebar_expand">展开分组</string>
+    <string name="organize_sidebar">整理侧边栏</string>
+    <string name="done_organizing_sidebar">整理完成</string>
+    <string name="drag_to_reorder">拖动以排序</string>
+    <string name="restore_sidebar_item">恢复侧边栏项目</string>
+    <string name="two_column_file_menu">双列文件菜单</string>
+
+    <!-- 分组标题 -->
+    <string name="plugins_section">插件</string>
+    <string name="tools_section">工具</string>
+
+    <!-- 插件快捷方式 -->
+    <string name="plugin_open">打开</string>
+    <string name="plugin_expand">展开</string>
+    <string name="plugin_create_shortcut">创建快捷方式</string>
+    <string name="plugin_shortcut_done">快捷方式请求已发送</string>
+    <string name="plugin_shortcut_unsupported">启动器不允许创建快捷方式</string>
+    <string name="plugin_shortcut_old_android">快捷方式需要 Android 8 或更高版本</string>
+
+    <!-- 图片编辑 -->
+    <string name="aspect_ratio">宽高比</string>
+    <string name="aspect_fit">适应</string>
+    <string name="aspect_fill">填充</string>
+    <string name="aspect_mode">宽高比：%1$s</string>
+    <string name="unlock">解锁</string>
+    <!-- ===== smali / text editor menu (menu/editor_menu.xml) ===== -->
+    <string name="ed_menu_navigation">导航</string>
+    <string name="ed_menu_undo">撤销</string>
+    <string name="ed_menu_redo">重做</string>
+    <string name="ed_menu_edit">编辑</string>
+    <string name="ed_menu_copy_line">复制此行</string>
+    <string name="ed_menu_cut_line">剪切此行</string>
+    <string name="ed_menu_delete_line">删除此行</string>
+    <string name="ed_menu_empty_line">清空此行</string>
+    <string name="ed_menu_replace_line">替换此行</string>
+    <string name="ed_menu_duplicate_line">创建此行副本</string>
+    <string name="ed_menu_uppercase">转为大写</string>
+    <string name="ed_menu_lowercase">转为小写</string>
+    <string name="ed_menu_increase_indent">增加缩进</string>
+    <string name="ed_menu_decrease_indent">减少缩进</string>
+    <string name="ed_menu_toggle_comment">切换注释</string>
+    <string name="ed_menu_more">更多</string>
+    <string name="ed_menu_smali2java">Smali 转 Java</string>
+    <string name="ed_menu_instruction_query">指令查询</string>
+    <string name="ed_menu_jump_to_line">跳转到行</string>
+    <string name="ed_menu_wrap_word">自动换行</string>
+    <string name="ed_menu_read_only">只读模式</string>
+    <string name="ed_menu_preference">偏好设置</string>
+    <string name="smali_show_strings">显示字符串</string>
+
+    <!-- ===== plugins / tools hub ===== -->
+    <string name="tools_hub_title">插件</string>
+    <string name="tools_hub_search_hint">搜索工具</string>
+    <string name="tools_hub_packs_header">工具包</string>
+    <string name="pack_action_get">获取</string>
+    <string name="pack_remove">移除工具包</string>
+    <string name="pack_unknown_tool">未知工具</string>
+    <string name="pack_part_of_downloadable">属于可下载工具包“%1$s”（v%2$s）的一部分。</string>
+    <string name="pack_checksum_verified">安装时已校验校验和。</string>
+    <string name="pack_no_checksum_published">此版本未发布校验和 —— 仅在你信任该来源时才安装。</string>
+    <string name="pack_no_checksum_confirm">此工具包版本未发布校验和。仅在你信任该来源时才安装。要继续吗？</string>
+    <string name="pack_action_update">更新工具包</string>
+    <string name="pack_action_download">下载工具包</string>
+    <string name="pack_remove_confirm">要移除此工具包及其中的 %1$d 个工具吗？</string>
+    <string name="pack_pick_apk">选择 %1$s.apk</string>
+    <string name="pack_not_an_apk">不是 APK 文件</string>
+    <string name="pack_installed">%1$s 已安装</string>
+    <string name="tools_external_plugins_header">外部插件（%1$d）</string>
+    <string name="tools_cert_label">证书（SHA-256）：</string>
+    <string name="tools_status_label">状态：</string>
+    <string name="tools_status_trusted">已信任</string>
+    <string name="tools_status_not_trusted">未信任</string>
+    <string name="tools_app_info">应用信息</string>
+    <string name="tools_disable">停用</string>
+    <string name="tools_trust">信任</string>
+    <string name="plugin_trust_allow">允许</string>
+
+    <!-- ===== dev info card ===== -->
+    <string name="dev_info_title">开发你自己的插件</string>
+    <string name="dev_info_body">工具不够用？任何人都能做更多。\n\n插件就是普通应用。安装一个，它就会出现在这里 —— 首次安装时，你会需要把它的证书指纹与开发者公布的那个进行比对；如果指纹在没有通知的情况下发生变化，系统会再次提醒你。\n\n插件可以在侧边栏添加项目、添加一个设置项、添加一个文件菜单操作、给文本编辑器添加按钮，或者在 APK 对话框中添加一个条目。无论接入什么，它都以独立应用、独立权限运行 —— 所以一个计算器插件无法读取你的文件，除非你自己把存储权限授予它。\n\n想做 一个？复制 samples/plugin-sample，在清单文件里声明你要接入的部分，并遵循 PluginContracts 中的契约字符串。无需表单、无需审核队列 —— APK 随便你发布在哪里，把指纹分享出来即可。</string>
+
+    <!-- ===== overlay editor ===== -->
+    <string name="overlay_toast_duration_long">长</string>
+    <string name="overlay_adv_font_default">对话框字体：默认</string>
+    <string name="hint_corner_dp">圆角 dp</string>
+    <string name="hint_pad_dp">内边距 dp</string>
+    <string name="hint_border_dp">边框 dp</string>
+    <string name="hint_speed_ms">速度 毫秒</string>
+
+    <!-- ===== misc ===== -->
+    <string name="dialog_theme">主题</string>
+    <string name="checksum_unavailable">无法计算校验值：%1$s</string>
+    <string name="hint_width">宽度</string>
+    <string name="hint_height">高度</string>
+    <string name="antisplit">合并分包</string>
+    <string name="update_go_github_release">前往 GitHub Release</string>
+    <string name="editor_btn_label_hint">按钮文字（可选）</string>
+    <string name="editor_data_1">数据 1</string>
+    <string name="editor_data_2">数据 2</string>
+    <string name="editor_long_data_1">长按数据 1</string>
+    <string name="editor_long_data_2">长按数据 2</string>
+    <string name="editor_insert_text">要插入的文本</string>
+    <string name="editor_find_regex">查找正则</string>
+    <string name="editor_replace_regex">替换正则</string>
+
+    <!-- ===== storage manager categories ===== -->
+    <string name="storage_cat_images">图片</string>
+    <string name="storage_cat_videos">视频</string>
+    <string name="storage_cat_audio">音频</string>
+    <string name="storage_cat_documents">文档</string>
+    <string name="storage_cat_archives">压缩包</string>
+    <string name="storage_cat_apks">安装包</string>
+    <string name="storage_cat_other">其他</string>
+
+    <!-- ===== Java-hardcoded UI: extractor / main / ftp ===== -->
+    <string name="root_action_clear_data">清除数据</string>
+    <string name="root_action_force_stop">强制停止</string>
+    <string name="root_action_enable_app">启用应用</string>
+    <string name="root_action_disable_app">停用应用</string>
+    <string name="root_action_uninstall">卸载</string>
+    <string name="folder_file_count">文件夹：%1$d  文件：%2$d</string>
+    <string name="ftp_dir_copy_unsupported">暂不支持目录复制</string>
+    <string name="ftp_moving_to">正在移动 %1$s 到 %2$s</string>
+    <string name="ftp_copying_to">正在复制 %1$s 到 %2$s</string>
+    <string name="ftp_download_soon">FTP 文件下载即将推出</string>
+    <string name="allow_notifications_ftp">请允许通知权限，以显示 FTP 服务器运行状态</string>
+
+    <!-- ===== command helper / properties / rename ===== -->
+    <string name="name_empty_err">名称不能为空</string>
+    <string name="cmd_template_empty_err">命令模板不能为空</string>
+    <string name="last_modified_updated">修改时间已更新</string>
+    <string name="update_last_modified_failed">修改时间更新失败</string>
+    <string name="no_files_selected">未选择文件</string>
+    <string name="navigate_failed_fmt">无法进入 %1$s</string>
+
+    <!-- ===== arsc editors ===== -->
+    <string name="arsc_search_results">%1$d 个结果 - %2$s [%3$s]</string>
+    <string name="arsc_search_results_in">%1$d 个结果 - %2$s [%3$s]，位于 %4$s</string>
+    <string name="no_history">无历史记录</string>
+    <string name="field_value">值</string>
+    <string name="applying">正在应用…</string>
+    <string name="loading_arsc">正在加载 resources.arsc…</string>
+    <string name="reverted">已还原</string>
+    <string name="backup_prefix">备份：%1$s</string>
+    <string name="updated_invalid_fmt">已更新 %1$d，无效 %2$d</string>
+    <string name="hex_id">十六进制 ID</string>
+    <string name="text_title">文本</string>
+    <string name="entries_count">%1$d 个条目</string>
+    <string name="text_apply_summary">已更新 %1$d，新增 %2$d，跳过复杂项 %3$d，无效 %4$d</string>
+    <string name="copied_fmt">已复制 %1$s</string>
+
+    <!-- ===== apk features ===== -->
+    <string name="cannot_share_apk_plugin">无法将此 APK 共享给插件</string>
+    <string name="path_colon">路径 %1$s</string>
+    <string name="image_attached_fmt">已附加图片（%1$s）</string>
+    <string name="image_failed_fmt">图片失败：%1$s</string>
+    <string name="no_activities_in_apk">此 APK 中未找到 Activity</string>
+    <string name="enter_title_or_message">请输入标题或消息</string>
+    <string name="add_at_least_widget">至少添加一个小部件</string>
+    <string name="position_bottom">底部</string>
+    <string name="gradient_cleared">渐变已清除（长按清除）</string>
+    <string name="need_two_colors">至少需要 2 种颜色</string>
+    <string name="font_picker_unavailable">字体选择器不可用</string>
+    <string name="pick_ttf_otf">请选择 .ttf 或 .otf 文件</string>
+    <string name="font_copy_failed">字体复制失败</string>
+    <string name="font_loaded_fmt">字体已加载：%1$s</string>
+    <string name="font_failed_fmt">字体失败：%1$s</string>
+    <string name="using_dialog_font">已使用对话框字体</string>
+    <string name="count_apks_fmt">%1$d 个 APK</string>
+    <string name="zipalign_colon">Zipalign：</string>
+    <string name="sig_v1_label">V1（JAR）：</string>
+    <string name="sig_v2_label">V2（APK 签名方案 v2）：</string>
+    <string name="cert_sha256_colon">证书 SHA-256：</string>
+    <string name="need_two_dex">合并至少需要 2 个 dex 文件</string>
+    <string name="split_install_unsupported">当前 Android 版本不支持安装分包 APK :(</string>
+    <string name="split_try_merge">可以尝试先合并 APK 再安装</string>
+
+    <!-- ===== search / settings ===== -->
+    <string name="files_scanned_fmt">%1$d 个文件…</string>
+    <string name="setup">设置</string>
+    <string name="startup_last">上次位置</string>
+    <string name="checking_root">正在检查 Root…</string>
+    <string name="invalid_su_command">su 命令无效，保留原值</string>
+    <string name="rebooting">正在重启…</string>
+    <string name="reboot_failed_fmt">重启失败：%1$s</string>
+    <string name="cannot_read_images">无法读取图片</string>
+
+    <!-- ===== viewer / player ===== -->
+    <string name="label_file">文件：</string>
+    <string name="label_path">路径：</string>
+    <string name="label_size">大小：</string>
+    <string name="label_modified">修改时间：</string>
+    <string name="label_resolution">分辨率：</string>
+    <string name="exif_header">\n--- EXIF 数据 ---\n</string>
+    <string name="gps_coordinates">GPS 坐标：</string>
+    <string name="no_exif_data">（没有可用的 EXIF 数据）\n</string>
+    <string name="unknown">未知</string>
+
+    <!-- ===== plugin trust / pack download ===== -->
+    <string name="plugin_new_cert">\n\n此插件已使用新证书更新。\n仅在你信任该更新来源时才允许。</string>
+    <string name="plugin_separate_app">\n\n此插件以独立应用运行，拥有自己的权限。</string>
+    <string name="plugin_cert_block">\n\n证书（SHA-256）：\n</string>
+    <string name="tools_status_block">\n\n状态：</string>
+    <string name="download_url_missing">缺少下载地址</string>
+    <string name="downloading_fmt">正在下载 %1$s…</string>
+    <string name="refreshing_catalog">正在刷新工具包目录…</string>
+    <string name="catalog_updated">目录已更新</string>
+    <string name="catalog_refresh_failed">刷新失败，保留缓存目录</string>
+
+    <!-- ===== compare / cert / error ===== -->
+    <string name="error_comparing_text_fmt">文本对比出错：%1$s</string>
+    <string name="error_extracting_zip_fmt">解压内层 zip 出错：%1$s</string>
+    <string name="error_extracting_arsc_fmt">解压内层 arsc 出错：%1$s</string>
+    <string name="cert_subject">主体：</string>
+    <string name="cert_issuer">签发者：</string>
+    <string name="cert_serial">序列号：</string>
+    <string name="cert_valid_from">有效期起：</string>
+    <string name="cert_valid_to">有效期止：</string>
+    <string name="cert_sig_algo">签名算法：</string>
+    <string name="storage_perm_granted_fmt">存储权限已授予：%1$s</string>
+
+    <!-- ===== follow-up: keys added while finishing localization ===== -->
+    <string name="enter_a_message">请输入消息</string>
+    <string name="this_button">此按钮</string>
+    <string name="plugin_cert_changed_title">插件证书已变更</string>
+    <string name="plugin_allow_title">允许外部插件？</string>
+    <string name="plugin_allow_integrate"> 允许它与 MP-Manager 集成吗？</string>
+    <string name="cert_unavailable">（不可用）</string>
+    <string name="download_failed_plain">下载失败</string>
+    <string name="rename_failed_plain">重命名失败</string>
+    <string name="path_not_accessible">%1$s不可访问</string>
+
+    <!-- ===== last sweep: sibling labels of already-localized strings ===== -->
+    <string name="copy">复制</string>
+    <string name="copy_nth_fmt">复制 #%1$d</string>
+    <string name="open">打开</string>
+    <string name="overlay_toast_duration_short">短</string>
+    <string name="position_default">默认</string>
+
 </resources>

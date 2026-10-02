@@ -226,10 +226,10 @@ public class ApkOverlayTools {
                 final int kb = bytes.length / 1024;
                 context.handler.post(() -> {
                     cb.onImage(thumb, b64);
-                    Extensions.showMessage(context, "Image attached (" + kb + " KB)");
+                    Extensions.showMessage(context, context.getString(R.string.image_attached_fmt, kb + " KB"));
                 });
             } catch (Exception e) {
-                context.handler.post(() -> Extensions.showMessage(context, "Image failed: " + e.getMessage()));
+                context.handler.post(() -> Extensions.showMessage(context, context.getString(R.string.image_failed_fmt, e.getMessage())));
             }
         }).start();
     }
@@ -262,7 +262,7 @@ public class ApkOverlayTools {
     public void showAddToastDialog(File file, String filePath) {
         List<ActivityInfo> activities = ToastInjectorUtil.getActivities(context, filePath);
         if (activities.isEmpty()) {
-            Extensions.showMessage(context, "No activities found in this APK");
+            Extensions.showMessage(context, context.getString(R.string.no_activities_in_apk));
             return;
         }
         PackageInfo packageInfo = context.getPackageManager().getPackageArchiveInfo(filePath, 0);
@@ -444,7 +444,7 @@ public class ApkOverlayTools {
         toast.html = f.toastHtml.isChecked();
         toast.base64 = f.toastB64.isChecked();
         if (toast.message.isEmpty()) {
-            Extensions.showMessage(context, "Enter a message");
+            Extensions.showMessage(context, context.getString(R.string.enter_a_message));
             return null;
         }
         return toast;
@@ -472,7 +472,7 @@ public class ApkOverlayTools {
         dlg.dlgFont = f.dlgFont;
         dlg.dlgFontPath = f.dlgFontPath;
         if (dlg.message.isEmpty() && dlg.title.isEmpty()) {
-            Extensions.showMessage(context, "Enter a title or message");
+            Extensions.showMessage(context, context.getString(R.string.enter_title_or_message));
             return null;
         }
         if (dlg.positive.isEmpty() && dlg.negative.isEmpty() && dlg.neutral.isEmpty()) {
@@ -484,7 +484,7 @@ public class ApkOverlayTools {
     private OverlayInjectorUtil.DialogOptions collectAdvanced(OverlayForm f,
                                                               List<OverlayInjectorUtil.AdvWidget> widgets) {
         if (widgets == null || widgets.isEmpty()) {
-            Extensions.showMessage(context, "Add at least one widget");
+            Extensions.showMessage(context, context.getString(R.string.add_at_least_widget));
             return null;
         }
         OverlayInjectorUtil.DialogOptions dlg = new OverlayInjectorUtil.DialogOptions();
@@ -495,7 +495,7 @@ public class ApkOverlayTools {
             if (copy != null) dlg.widgets.add(copy);
         }
         if (dlg.widgets.isEmpty()) {
-            Extensions.showMessage(context, "Add at least one widget");
+            Extensions.showMessage(context, context.getString(R.string.add_at_least_widget));
             return null;
         }
         collectStyle(f, dlg);
@@ -565,8 +565,8 @@ public class ApkOverlayTools {
 
     private void applyToast(OverlayForm f, OverlayInjectorUtil.ToastOptions o) {
         setText(f.messageInput, o.message);
-        f.durationTv.setText(o.longDuration ? "Long" : "Short", false);
-        f.gravityTv.setText(o.gravity == 80 ? "Bottom" : o.gravity == 17 ? "Center" : o.gravity == 48 ? "Top" : "Default", false);
+        f.durationTv.setText(o.longDuration ? context.getString(R.string.overlay_toast_duration_long) : context.getString(R.string.overlay_toast_duration_short), false);
+        f.gravityTv.setText(o.gravity == 80 ? context.getString(R.string.position_bottom) : o.gravity == 17 ? context.getString(R.string.center) : o.gravity == 48 ? context.getString(R.string.top) : context.getString(R.string.position_default), false);
         setText(f.xInput, String.valueOf(o.xOffset));
         setText(f.yInput, String.valueOf(o.yOffset));
         f.toastHtml.setChecked(o.html);
@@ -628,7 +628,7 @@ public class ApkOverlayTools {
         box.setVisibility(show ? View.VISIBLE : View.GONE);
         if (addBtn != null) addBtn.setVisibility(show ? View.GONE : View.VISIBLE);
         setText(textInput, text);
-        if (actionTv != null) actionTv.setText(url != null && !url.isEmpty() ? "Open URL" : "Dismiss", false);
+        if (actionTv != null) actionTv.setText(url != null && !url.isEmpty() ? context.getString(R.string.open_url) : context.getString(R.string.dismiss), false);
         setText(urlInput, url);
     }
 
@@ -811,7 +811,7 @@ public class ApkOverlayTools {
             f.bgC2set = false;
             refreshStyleLabels(f);
             updatePreview.run();
-            Extensions.showMessage(context, "Gradient cleared (long-press clears)");
+            Extensions.showMessage(context, context.getString(R.string.gradient_cleared));
             return true;
         });
         f.borderColorBtn.setOnClickListener(v -> showColorWheel(f.borderC, (argb, hex) -> {
@@ -850,7 +850,7 @@ public class ApkOverlayTools {
                         f.renderAnimChips.run();
                         updatePreview.run();
                     } else {
-                        Extensions.showMessage(context, "Need at least 2 colors");
+                        Extensions.showMessage(context, context.getString(R.string.need_two_colors));
                     }
                     return true;
                 });
@@ -1159,7 +1159,7 @@ public class ApkOverlayTools {
             });
             dlg.show();
         } catch (Exception e) {
-            Extensions.showMessage(context, "Font picker unavailable");
+            Extensions.showMessage(context, context.getString(R.string.font_picker_unavailable));
         }
     }
 
@@ -1169,7 +1169,7 @@ public class ApkOverlayTools {
                 if (src == null || !src.isFile()) throw new IOException("Not a file");
                 String lower = src.getName().toLowerCase(Locale.ROOT);
                 if (!lower.endsWith(".ttf") && !lower.endsWith(".otf")) {
-                    context.handler.post(() -> Extensions.showMessage(context, "Please pick a .ttf or .otf file"));
+                    context.handler.post(() -> Extensions.showMessage(context, context.getString(R.string.pick_ttf_otf)));
                     return;
                 }
                 File dir = context.getExternalFilesDir("Fonts");
@@ -1184,16 +1184,16 @@ public class ApkOverlayTools {
                     while ((n = is.read(buf)) != -1) os.write(buf, 0, n);
                 }
                 if (!dst.exists() || dst.length() == 0) {
-                    context.handler.post(() -> Extensions.showMessage(context, "Font copy failed"));
+                    context.handler.post(() -> Extensions.showMessage(context, context.getString(R.string.font_copy_failed)));
                     return;
                 }
                 String path = dst.getAbsolutePath();
                 context.handler.post(() -> {
                     if (cb != null) cb.onFont(path);
-                    Extensions.showMessage(context, "Font loaded: " + dst.getName());
+                    Extensions.showMessage(context, context.getString(R.string.font_loaded_fmt, dst.getName()));
                 });
             } catch (Exception e) {
-                context.handler.post(() -> Extensions.showMessage(context, "Font failed: " + e.getMessage()));
+                context.handler.post(() -> Extensions.showMessage(context, context.getString(R.string.font_failed_fmt, e.getMessage())));
             }
         }).start();
     }
@@ -1489,7 +1489,7 @@ public class ApkOverlayTools {
                 w.fontPath = "";
                 fontBtn.setText(widgetFontLabel(w));
                 renderAdv[0].run();
-                Extensions.showMessage(context, "Using dialog font");
+                Extensions.showMessage(context, context.getString(R.string.using_dialog_font));
             });
             styleRow.addView(inheritBtn, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
@@ -1523,7 +1523,7 @@ public class ApkOverlayTools {
                     w.btnBg2 = 0;
                     gradBtn.setText(context.getString(R.string.gradient_label));
                     renderAdv[0].run();
-                    Extensions.showMessage(context, "Gradient cleared (long-press clears)");
+                    Extensions.showMessage(context, context.getString(R.string.gradient_cleared));
                     return true;
                 });
                 btnBgRow.addView(gradBtn, new LinearLayout.LayoutParams(0,
@@ -1534,7 +1534,7 @@ public class ApkOverlayTools {
                 EditText cornerInput = new EditText(context);
                 cornerInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 cornerInput.setText(w.btnCornerRadiusDp > 0 ? String.valueOf(w.btnCornerRadiusDp) : "");
-                cornerInput.setHint("Corner dp");
+                cornerInput.setHint(context.getString(R.string.hint_corner_dp));
                 btnShapeRow.addView(UiFields.wrap(context, cornerInput, "Corner dp", 0),
                         new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 cornerInput.addTextChangedListener(new TextWatcher() {
@@ -1555,7 +1555,7 @@ public class ApkOverlayTools {
                 EditText padInput = new EditText(context);
                 padInput.setInputType(InputType.TYPE_CLASS_NUMBER);
                 padInput.setText(w.btnPaddingDp > 0 ? String.valueOf(w.btnPaddingDp) : "");
-                padInput.setHint("Pad dp");
+                padInput.setHint(context.getString(R.string.hint_pad_dp));
                 btnShapeRow.addView(UiFields.wrap(context, padInput, "Padding dp", 0),
                         new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 padInput.addTextChangedListener(new TextWatcher() {
@@ -1579,7 +1579,7 @@ public class ApkOverlayTools {
                 EditText borderInput = new EditText(context);
                 borderInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 borderInput.setText(w.btnBorderWidthDp > 0 ? String.valueOf(w.btnBorderWidthDp) : "");
-                borderInput.setHint("Border dp");
+                borderInput.setHint(context.getString(R.string.hint_border_dp));
                 btnBorderRow.addView(UiFields.wrap(context, borderInput, "Border dp", 0),
                         new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 borderInput.addTextChangedListener(new TextWatcher() {
@@ -1659,7 +1659,7 @@ public class ApkOverlayTools {
                                 renderBtnAnim[0].run();
                                 renderAdv[0].run();
                             } else {
-                                Extensions.showMessage(context, "Need at least 2 colors");
+                                Extensions.showMessage(context, context.getString(R.string.need_two_colors));
                             }
                             return true;
                         });
@@ -1680,7 +1680,7 @@ public class ApkOverlayTools {
                     EditText speedInput = new EditText(context);
                     speedInput.setInputType(InputType.TYPE_CLASS_NUMBER);
                     if (w.btnAnimSpeedMs > 0) speedInput.setText(String.valueOf(w.btnAnimSpeedMs));
-                    speedInput.setHint("Speed ms");
+                    speedInput.setHint(context.getString(R.string.hint_speed_ms));
                     speedInput.addTextChangedListener(new TextWatcher() {
                         public void beforeTextChanged(CharSequence s, int a, int b, int c) {
                         }
@@ -1778,7 +1778,7 @@ public class ApkOverlayTools {
                     vw = btn;
                 } else {
                     TextView tv = new TextView(context);
-                    tv.setText(displayText(w.text == null || w.text.isEmpty() ? "Text" : w.text, richText));
+                    tv.setText(displayText(w.text == null || w.text.isEmpty() ? getString(R.string.text_title) : w.text, richText));
                     tv.setTextSize(w.textSizeSp > 0 ? w.textSizeSp : 16f);
                     if (w.textColor != 0) tv.setTextColor(w.textColor);
                     applyWidgetTypeface(tv, w, form);
@@ -1915,7 +1915,7 @@ public class ApkOverlayTools {
             w.kind = "button";
             w.text = "Button";
             w.textSizeSp = 14f;
-            w.btnAction = "Dismiss";
+            w.btnAction = context.rss.getString(R.string.dismiss);
             w.leftDp = 16;
             w.topDp = 16 * advWidgets.size();
             advWidgets.add(w);

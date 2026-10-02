@@ -11,7 +11,7 @@
         app:showAsAction="always"
         android:icon="@drawable/ic_swap"
         android:id="@+id/strings_list"
-        android:title="Show Strings"/>    
+        android:title="@string/smali_show_strings"/>    
     <item
         app:showAsAction="always"
         android:icon="@drawable/ic_close_mt"

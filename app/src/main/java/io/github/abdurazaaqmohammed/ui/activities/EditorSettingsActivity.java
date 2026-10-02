@@ -111,7 +111,7 @@ public class EditorSettingsActivity extends BaseActivity {
                         public void onDelete(int position) {
                             new MaterialAlertDialogBuilder(getContext())
                                     .setTitle(R.string.delete_button)
-                                    .setMessage(getString(R.string.confirm_delete_f, "this button"))
+                                    .setMessage(getString(R.string.confirm_delete_f, getString(R.string.this_button)))
                                     .setPositiveButton(R.string.delete, (dialog, which) -> {
                                         finalArray.remove(position);
                                         prefs.edit().putString("pref_bottom_bar_buttons", finalArray.toString()).apply();
@@ -148,7 +148,7 @@ public class EditorSettingsActivity extends BaseActivity {
             scrollView.addView(layout);
 
             EditText labelInput = new EditText(getContext());
-            labelInput.setHint("Button Label (optional)");
+            labelInput.setHint(getString(R.string.editor_btn_label_hint));
             layout.addView(labelInput);
 
             TextView clickHeader = new TextView(getContext());
@@ -164,12 +164,12 @@ public class EditorSettingsActivity extends BaseActivity {
             layout.addView(actionSpinner);
 
             EditText dataInput1 = new EditText(getContext());
-            dataInput1.setHint("Data 1");
+            dataInput1.setHint(getString(R.string.editor_data_1));
             dataInput1.setVisibility(View.GONE);
             layout.addView(dataInput1);
 
             EditText dataInput2 = new EditText(getContext());
-            dataInput2.setHint("Data 2");
+            dataInput2.setHint(getString(R.string.editor_data_2));
             dataInput2.setVisibility(View.GONE);
             layout.addView(dataInput2);
 
@@ -185,12 +185,12 @@ public class EditorSettingsActivity extends BaseActivity {
             layout.addView(longActionSpinner);
 
             EditText longDataInput1 = new EditText(getContext());
-            longDataInput1.setHint("Long Data 1");
+            longDataInput1.setHint(getString(R.string.editor_long_data_1));
             longDataInput1.setVisibility(View.GONE);
             layout.addView(longDataInput1);
 
             EditText longDataInput2 = new EditText(getContext());
-            longDataInput2.setHint("Long Data 2");
+            longDataInput2.setHint(getString(R.string.editor_long_data_2));
             longDataInput2.setVisibility(View.GONE);
             layout.addView(longDataInput2);
 
@@ -262,13 +262,13 @@ public class EditorSettingsActivity extends BaseActivity {
                     String action = actions[pos];
                     if (action.equals("Insert text")) {
                         data1.setVisibility(View.VISIBLE);
-                        data1.setHint("Text to insert");
+                        data1.setHint(getString(R.string.editor_insert_text));
                         data2.setVisibility(View.GONE);
                     } else if (action.equals("Regex find and replace")) {
                         data1.setVisibility(View.VISIBLE);
-                        data1.setHint("Find Regex");
+                        data1.setHint(getString(R.string.editor_find_regex));
                         data2.setVisibility(View.VISIBLE);
-                        data2.setHint("Replace Regex");
+                        data2.setHint(getString(R.string.editor_replace_regex));
                     } else {
                         data1.setVisibility(View.GONE);
                         data2.setVisibility(View.GONE);

@@ -108,7 +108,7 @@ public class UpdateUtil {
                                                                 | DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
                                         context.downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request);
                                     })
-                                    .setNegativeButton("Go to GitHub Release", (dialog, which) -> context
+                                    .setNegativeButton(rss.getString(R.string.update_go_github_release), (dialog, which) -> context
                                             .startActivity(new Intent(Intent.ACTION_VIEW).setData(Uri.parse(
                                                     "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/latest"))))
                                     .setNeutralButton(rss.getString(android.R.string.cancel), null).create();

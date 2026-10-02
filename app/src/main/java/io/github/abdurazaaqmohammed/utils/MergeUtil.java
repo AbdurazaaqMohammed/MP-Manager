@@ -225,7 +225,7 @@ public class MergeUtil {
         });
 
         new MaterialAlertDialogBuilder(context)
-                .setTitle("AntiSplit")
+                .setTitle(context.getString(R.string.antisplit))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(context.getString(R.string.antisplit_merge), (d, w) -> {

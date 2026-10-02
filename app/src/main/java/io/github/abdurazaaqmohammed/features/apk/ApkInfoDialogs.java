@@ -726,7 +726,7 @@ public class ApkInfoDialogs {
                                                 });
                                     } catch (Exception e2) {
                                         try {
-                                            Extensions.showMessage(context, "Cannot share this APK with the plugin");
+                                            Extensions.showMessage(context, context.getString(R.string.cannot_share_apk_plugin));
                                         } catch (Exception ignored) {
                                         }
                                     }
@@ -944,7 +944,7 @@ public class ApkInfoDialogs {
                 ad.dismiss();
                 File dir = new File(tapPath);
                 if (!dir.exists()) {
-                    Extensions.showMessage(context, "Path " + tapPath + "not accessible");
+                    Extensions.showMessage(context, context.getString(R.string.path_not_accessible, tapPath));
                     return;
                 }
                 File target = dir.isFile() ? dir.getParentFile() : dir;
