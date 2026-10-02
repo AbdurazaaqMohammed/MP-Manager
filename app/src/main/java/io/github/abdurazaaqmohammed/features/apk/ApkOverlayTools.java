@@ -1778,7 +1778,7 @@ public class ApkOverlayTools {
                     vw = btn;
                 } else {
                     TextView tv = new TextView(context);
-                    tv.setText(displayText(w.text == null || w.text.isEmpty() ? getString(R.string.text_title) : w.text, richText));
+                    tv.setText(displayText(w.text == null || w.text.isEmpty() ? context.getString(R.string.text_title) : w.text, richText));
                     tv.setTextSize(w.textSizeSp > 0 ? w.textSizeSp : 16f);
                     if (w.textColor != 0) tv.setTextColor(w.textColor);
                     applyWidgetTypeface(tv, w, form);
