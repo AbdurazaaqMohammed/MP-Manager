@@ -14,11 +14,12 @@ public final class ToolCategories {
     public static final String TEXT = "Text & Security";
     public static final String MEDIA = "Media & Sound";
     public static final String RAND = "Random";
+    public static final String GENERAL = "General";
 
     private ToolCategories() {
     }
 
     public static String[] inOrder() {
-        return new String[]{NETWORK, STORAGE, DEVICE, MATH, TIME, TEXT, MEDIA, RAND};
+        return new String[]{NETWORK, STORAGE, DEVICE, MATH, TIME, TEXT, MEDIA, RAND, GENERAL};
     }
 }
