@@ -10,6 +10,7 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.OpenableColumns;
 import android.text.InputType;
 import android.view.Gravity;
@@ -47,6 +48,7 @@ import io.github.abdurazaaqmohammed.utils.JpegMetaStrip;
 import io.github.abdurazaaqmohammed.utils.JpegtranJni;
 import io.github.abdurazaaqmohammed.utils.NativeToolManager;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 
 public class ImageEditActivity extends BaseActivity {
 
@@ -55,6 +57,7 @@ public class ImageEditActivity extends BaseActivity {
     private String originalPath;
     private File workingFile;
     private boolean isJpeg;
+    private String sharedName;
     private ImageView preview;
     private CropOverlayView overlay;
     private TextView infoView;
@@ -87,7 +90,6 @@ public class ImageEditActivity extends BaseActivity {
             return;
         }
         initEditor();
-        initEditor();
     }
 
     private void resolveSharedImage(Uri uri) {
@@ -116,6 +118,7 @@ public class ImageEditActivity extends BaseActivity {
                 } catch (Exception ignored) {
                 }
                 if (!name.contains(".")) name += ".jpg";
+                sharedName = name;
                 File dest = new File(getCacheDir(), "shared_" + System.currentTimeMillis() + "_" + name.replaceAll("[^a-zA-Z0-9._-]", "_"));
                 try (InputStream in = getContentResolver().openInputStream(uri);
                      OutputStream os = new FileOutputStream(dest)) {
@@ -700,6 +703,11 @@ public class ImageEditActivity extends BaseActivity {
                     }
                     resetOrientationTag();
                 }
+                if (fromShared) {
+                    pm.dismiss();
+                    runOnUiThread(this::promptSharedSaveLocation);
+                    return;
+                }
                 File original = new File(originalPath);
                 try {
                     copyFile(original, new File(originalPath + ".bak"));
@@ -709,7 +717,52 @@ public class ImageEditActivity extends BaseActivity {
                 pm.dismiss();
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
-                    if (fromShared) showError(getString(R.string.logger_saved_to, originalPath));
+                    finish();
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                runOnUiThread(() -> showError(e.getMessage() != null ? e.getMessage() : e.toString()));
+            }
+        }).start();
+    }
+
+    private void promptSharedSaveLocation() {
+        File pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        if (pictures != null && pictures.isDirectory()) props.offset = pictures;
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle(getString(R.string.save_to_folder));
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) {
+                setResult(RESULT_CANCELED);
+                finish();
+                return;
+            }
+            saveSharedToFolder(new File(files[0]));
+        });
+        picker.show();
+    }
+
+    private void saveSharedToFolder(File dir) {
+        ProgressManager pm = new ProgressManager(this, true).show();
+        new Thread(() -> {
+            try {
+                String name = sharedName != null ? sharedName : new File(originalPath).getName();
+                File dest = new File(dir, name);
+                int copy = 1;
+                while (dest.exists()) {
+                    int dot = name.lastIndexOf('.');
+                    String base = dot > 0 ? name.substring(0, dot) : name;
+                    String ext = dot > 0 ? name.substring(dot) : "";
+                    dest = new File(dir, base + " (" + (++copy) + ")" + ext);
+                }
+                copyFile(workingFile, dest);
+                final String savedPath = dest.getAbsolutePath();
+                pm.dismiss();
+                runOnUiThread(() -> {
+                    showError(getString(R.string.logger_saved_to, savedPath));
                     finish();
                 });
             } catch (Exception e) {
