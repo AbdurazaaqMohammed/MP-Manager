@@ -18,7 +18,7 @@ public class TimePack implements ToolPack {
 
     @Override
     public int version() {
-        return 2;
+        return 3;
     }
 
     @Override
