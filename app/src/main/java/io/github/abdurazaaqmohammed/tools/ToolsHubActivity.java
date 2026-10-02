@@ -339,9 +339,17 @@ public class ToolsHubActivity extends BaseActivity {
         open.setOnClickListener(v -> openPackTool(pack, tool));
         row.addView(open);
         MaterialButton shortcut = new MaterialButton(this, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                com.google.android.material.R.attr.materialIconButtonStyle);
         shortcut.setIconResource(R.drawable.add_24px);
         shortcut.setIconPadding(0);
+        shortcut.setIconSize((int) (20 * density));
+        shortcut.setInsetTop(0);
+        shortcut.setInsetBottom(0);
+        shortcut.setMinWidth(0);
+        shortcut.setMinimumWidth(0);
+        shortcut.setMinHeight(0);
+        shortcut.setMinimumHeight(0);
+        shortcut.setPadding((int) (8 * density), 0, (int) (8 * density), 0);
         shortcut.setContentDescription(getString(R.string.plugin_create_shortcut));
         LinearLayout.LayoutParams shortcutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
