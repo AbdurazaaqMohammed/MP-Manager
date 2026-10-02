@@ -89,6 +89,9 @@ jobs:
           BUILD_PACKS: ${{ inputs.build_packs }}
         run: |
           set -o pipefail
+          # gradlew is tracked as 100644 upstream, so a fresh checkout has no
+          # execute bit.
+          chmod +x gradlew
           TASKS=":app:assembleRelease :app:assembleDebug"
           if [ "$BUILD_PACKS" = "true" ]; then
             for p in math text time random device media network; do
