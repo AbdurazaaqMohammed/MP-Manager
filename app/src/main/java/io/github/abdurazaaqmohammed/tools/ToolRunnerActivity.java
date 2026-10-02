@@ -5,10 +5,13 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.TextView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
 
 import java.util.ArrayList;
@@ -17,7 +20,12 @@ import java.util.List;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
+import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
+import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
+import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
+import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.rosemoe.sora.util.Chars;
 
 /**
  * Thin host for toolkit screens.
@@ -49,19 +57,23 @@ public class ToolRunnerActivity extends BaseActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
         box.setPadding(pad, pad, pad, pad);
-        scroll.addView(box, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        scroll.addView(box, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
+        CharSequence loadError;
         try {
             ToolPlugin custom = PluginRegistry.findCustom(toolId);
             if (custom != null) {
                 View content = custom.createView(this, box);
                 if (content != null) {
-                    box.addView(content);
+                    box.addView(content, new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT, 1f));
                     trackPlugin(custom);
                     boolean fill = false;
                     try {
@@ -73,16 +85,49 @@ public class ToolRunnerActivity extends BaseActivity {
                     }
                     return;
                 }
+                loadError = "The tool opened but did not return a view.";
+            } else {
+                loadError = "The installed pack does not provide the \"" + toolId + "\" tool.";
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            new ErrorUtil(this).showError(e);
+            final String mainErr = e.toString();
+            StringBuilder stackTrace = new StringBuilder(mainErr).append('\n');
+            for (StackTraceElement line : e.getStackTrace()) stackTrace.append(line).append('\n');
+            loadError = stackTrace;
+            //loadError = e.getClass().getSimpleName() + ": " + (e.getMessage() != null ? e.getMessage() : "no details");
         }
         final String id = toolId;
-        PackPrompts.showForTool(this, box, id, () -> {
-            try {
-                recreate();
-            } catch (Exception ignored) {
-            }
-        });
+        List<PackDescriptor> catalog = PackCatalog.load(this);
+        PackDescriptor pack = PackCatalog.packForTool(catalog, id);
+        if (pack == null || !PackManager.isInstalled(this, pack.id)) {
+            PackPrompts.showForTool(this, box, id, () -> {
+                try {
+                    recreate();
+                } catch (Exception ignored) {
+                }
+            });
+            return;
+        }
+        // The pack is installed but this tool failed to build its UI:
+        // surface the real reason instead of the "not installed" prompt.
+        box.removeAllViews();
+        LinearLayout err = new LinearLayout(this);
+        err.setOrientation(LinearLayout.VERTICAL);
+        err.setPadding(pad, pad, pad, pad);
+        TextView head = new TextView(this);
+        head.setText("Tool failed to load");
+        head.setTextSize(18);
+        err.addView(head);
+        TextView msg = new TextView(this);
+        msg.setText(loadError);
+        msg.setTextSize(14);
+        err.addView(msg);
+        MaterialButton retry = new MaterialButton(this);
+        retry.setText("Retry");
+        retry.setOnClickListener(v -> recreate());
+        err.addView(retry);
+        box.addView(err);
     }
 
     protected void onNewIntent(Intent intent) {
@@ -131,6 +176,20 @@ public class ToolRunnerActivity extends BaseActivity {
     private void fitViewport(android.widget.ScrollView scroll, LinearLayout box,
                              View content, int pad) {
         try {
+            scroll.setFillViewport(true);
+            try {
+                ViewGroup.LayoutParams initialContent = content.getLayoutParams();
+                if (initialContent == null) {
+                    initialContent = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT);
+                    content.setLayoutParams(initialContent);
+                } else {
+                    initialContent.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                    content.setLayoutParams(initialContent);
+                }
+            } catch (Exception ignored) {
+            }
             final int[] tries = new int[]{0};
             Runnable fit = new Runnable() {
                 @Override
@@ -138,12 +197,38 @@ public class ToolRunnerActivity extends BaseActivity {
                     try {
                         int viewport = scroll.getHeight();
                         if (viewport > 0) {
-                            ViewGroup.LayoutParams blp = box.getLayoutParams();
-                            blp.height = viewport;
-                            box.setLayoutParams(blp);
-                            ViewGroup.LayoutParams clp = content.getLayoutParams();
-                            clp.height = Math.max(0, viewport - pad * 2);
-                            content.setLayoutParams(clp);
+                            try {
+                                ViewGroup.LayoutParams blp = box.getLayoutParams();
+                                if (blp == null) {
+                                    blp = new FrameLayout.LayoutParams(
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                            ViewGroup.LayoutParams.MATCH_PARENT);
+                                    box.setLayoutParams(blp);
+                                } else if (blp.height != viewport) {
+                                    blp.height = viewport;
+                                    box.setLayoutParams(blp);
+                                }
+                            } catch (Exception ignored) {
+                            }
+                            try {
+                                ViewGroup.LayoutParams clp = content.getLayoutParams();
+                                if (clp == null) {
+                                    clp = new LinearLayout.LayoutParams(
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                            ViewGroup.LayoutParams.MATCH_PARENT);
+                                    content.setLayoutParams(clp);
+                                } else if (clp.height != ViewGroup.LayoutParams.MATCH_PARENT
+                                        && clp.height != Math.max(0, viewport - pad * 2)) {
+                                    clp.height = Math.max(0, viewport - pad * 2);
+                                    content.setLayoutParams(clp);
+                                }
+                            } catch (Exception ignored) {
+                            }
+                            try {
+                                content.requestLayout();
+                                box.requestLayout();
+                            } catch (Exception ignored) {
+                            }
                             return;
                         }
                     } catch (Exception ignored) {

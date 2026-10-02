@@ -41,6 +41,9 @@ public final class PackManager {
     /** packId -> loaded tool ids, for unregister on remove/update. */
     private static final Map<String, List<String>> LOADED = new HashMap<>();
 
+    /** packId -> version reported by the loaded pack APK itself. */
+    private static final Map<String, Integer> PACK_VERSIONS = new HashMap<>();
+
     /** packId -> loaded extensions, for unregister on remove/update. */
     private static final Map<String, List<AppExtension>> LOADED_EXT = new HashMap<>();
 
@@ -124,10 +127,16 @@ public final class PackManager {
             if (!(instance instanceof ToolPack)) return loaded;
             ToolPack pack = (ToolPack) instance;
             if (packId != null && !packId.isEmpty() && !packId.equals(pack.packId())) return loaded;
+            if (packId != null && !packId.isEmpty()) {
+                PACK_VERSIONS.put(packId, pack.version());
+            }
             for (ToolPlugin tool : pack.tools()) {
-                if (tool == null || tool.id() == null) continue;
-                PluginRegistry.register(tool);
-                loaded.add(tool.id());
+                try {
+                    if (tool == null || tool.id() == null) continue;
+                    PluginRegistry.register(tool);
+                    loaded.add(tool.id());
+                } catch (Exception ignored) {
+                }
             }
             List<AppExtension> extensions = new ArrayList<>();
             try {
@@ -189,6 +198,11 @@ public final class PackManager {
      * @param requireChecksum when true, packs without a catalog checksum are
      *                        rejected. Download path always requires it;
      *                        sideload relaxes it on debuggable builds only.
+     *
+     * <p>The previous APK is backed up first; if the new build fails to
+     * load, reports a different version than the catalog, or is missing
+     * tools the catalog lists, the previous APK is restored so a bad
+     * update can never leave a pack half-installed.
      */
     public static synchronized String installDownloadedPack(Context context, PackDescriptor pack, File downloaded, boolean requireChecksum) {
         if (pack == null || downloaded == null || !downloaded.exists()) {
@@ -204,8 +218,16 @@ public final class PackManager {
                 return "Checksum mismatch, pack rejected";
             }
         }
+        File dest = packFile(context, pack.id);
+        File backup = new File(dest.getParentFile(), pack.id + ".apk.bak");
+        boolean hadPrevious = dest.exists();
+        int previousVersion = installedVersion(context, pack.id);
+        String previousEntry = installedEntry(context, pack.id);
         try {
-            File dest = packFile(context, pack.id);
+            if (hadPrevious) {
+                backup.delete();
+                copy(dest, backup);
+            }
             copy(downloaded, dest);
             prefs(context).edit()
                     .putInt(KEY_PREFIX + pack.id + "_version", pack.version)
@@ -215,18 +237,62 @@ public final class PackManager {
             loadPack(context, dest, pack.entryClass, pack.id);
             String refusal = PackSignatures.takeRefusal();
             if (refusal != null) {
-                try {
-                    dest.delete();
-                } catch (Exception ignored) {
-                }
-                return refusal;
+                throw new IllegalStateException(refusal);
             }
+            Integer loadedVersion = PACK_VERSIONS.get(pack.id);
+            if (loadedVersion == null) {
+                throw new IllegalStateException("The pack APK failed to load"
+                        + " (entry class " + pack.entryClass + " not found).");
+            }
+            if (loadedVersion != pack.version) {
+                throw new IllegalStateException("The pack APK is version "
+                        + loadedVersion + " but the catalog expects " + pack.version
+                        + ". The hosted APK is outdated — upload the latest build to the pack URL.");
+            }
+            List<String> missing = new ArrayList<>();
+            for (PackDescriptor.ToolMeta tool : pack.tools) {
+                if (PluginRegistry.findCustom(tool.id) == null) missing.add(tool.id);
+            }
+            if (!missing.isEmpty()) {
+                throw new IllegalStateException("The pack build is missing tools: "
+                        + missing + ". The hosted APK does not match the catalog.");
+            }
+            backup.delete();
             try {
                 downloaded.delete();
             } catch (Exception ignored) {
             }
             return null;
         } catch (Exception e) {
+            try {
+                dest.delete();
+            } catch (Exception ignored) {
+            }
+            if (hadPrevious && backup.exists()) {
+                try {
+                    copy(backup, dest);
+                    prefs(context).edit()
+                            .putInt(KEY_PREFIX + pack.id + "_version", previousVersion)
+                            .putString(KEY_PREFIX + pack.id + "_entry", previousEntry)
+                            .apply();
+                    unloadPack(pack.id);
+                    loadPack(context, dest, previousEntry, pack.id);
+                } catch (Exception ignored) {
+                }
+            } else {
+                try {
+                    prefs(context).edit()
+                            .remove(KEY_PREFIX + pack.id + "_version")
+                            .remove(KEY_PREFIX + pack.id + "_entry")
+                            .apply();
+                } catch (Exception ignored) {
+                }
+                unloadPack(pack.id);
+            }
+            try {
+                backup.delete();
+            } catch (Exception ignored) {
+            }
             return e.getMessage() != null ? e.getMessage() : e.toString();
         }
     }
@@ -257,6 +323,7 @@ public final class PackManager {
     }
 
     public static synchronized void unloadPack(String packId) {
+        PACK_VERSIONS.remove(packId);
         List<String> ids = LOADED.remove(packId);
         if (ids != null) {
             for (String id : ids) {
