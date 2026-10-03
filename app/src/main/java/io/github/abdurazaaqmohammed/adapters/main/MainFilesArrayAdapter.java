@@ -455,6 +455,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
+                // GPG encrypt/decrypt: single real file, not a directory, not
+                // inside an archive. Decrypt only on .gpg/.asc names.
+                if (!multi && !isInZip && file != null && !file.isDirectory()) {
+                    String lower = fileName == null ? "" : fileName.toLowerCase(Locale.ENGLISH);
+                    if (lower.endsWith(".gpg") || lower.endsWith(".asc") || lower.endsWith(".pgp")) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DECRYPT, FileMenuOrder.labelFor(context, FileMenuOrder.DECRYPT, direction)));
+                    } else {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.ENCRYPT, FileMenuOrder.labelFor(context, FileMenuOrder.ENCRYPT, direction)));
+                    }
+                }
+
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
@@ -676,6 +687,12 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 if (isInZip || multi) return;
                                 fileOps.extractArchive(file);
                                 return;
+                            case FileMenuOrder.ENCRYPT:
+                                gpgEncrypt(file);
+                                return;
+                            case FileMenuOrder.DECRYPT:
+                                gpgDecrypt(file);
+                                return;
                             default:
                                 switch (actionId) {
                                     case FileMenuOrder.COPY:
@@ -869,5 +886,80 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         isMultiSelectMode = true;
         for (int i = (isInZip ? 0 : 1); i < values.length; i++) selectedPositions.add(i);
         notifyDataSetChanged();
+    }
+
+    /**
+     * Asks for a password, then encrypts {@code src} to {@code src.getName() +
+     * ".gpg"} in the same directory, in the OpenPGP format gpg can read.
+     */
+    private void gpgEncrypt(File src) {
+        promptGpgPassword(src.getName(), password -> {
+            File target = new File(src.getParentFile(), src.getName() + ".gpg");
+            new Thread(() -> {
+                try {
+                    try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
+                         java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(target))) {
+                        io.github.abdurazaaqmohammed.utils.GpgCrypto.encrypt(in, out, password.toCharArray());
+                    }
+                    context.runOnUiThread(() -> {
+                        context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                        Extensions.showMessage(context, target.getName());
+                    });
+                } catch (Exception e) {
+                    context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                }
+            }).start();
+        });
+    }
+
+    /**
+     * Asks for the password, then decrypts a .gpg/.asc/.pgp file back to its
+     * original name (suffix stripped) in the same directory.
+     */
+    private void gpgDecrypt(File src) {
+        promptGpgPassword(src.getName(), password -> {
+            String base = src.getName();
+            int dot = base.lastIndexOf('.');
+            String outName = dot > 0 ? base.substring(0, dot) : base + ".out";
+            if (outName.isEmpty()) outName = base + ".out";
+            File target = new File(src.getParentFile(), outName);
+            new Thread(() -> {
+                try {
+                    try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
+                         java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(target))) {
+                        io.github.abdurazaaqmohammed.utils.GpgCrypto.decrypt(in, out, password.toCharArray());
+                    }
+                    context.runOnUiThread(() -> {
+                        context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                        Extensions.showMessage(context, target.getName());
+                    });
+                } catch (Exception e) {
+                    // A wrong password typically surfaces here; keep the message short.
+                    if (target.exists() && target.length() == 0) target.delete();
+                    final Exception fe = e;
+                    context.runOnUiThread(() -> {
+                        Throwable c = fe.getCause() != null ? fe.getCause() : fe;
+                        Extensions.showMessage(context,
+                                context.getString(R.string.wrong_password_or_corrupt) + ": " + (c.getMessage() == null ? c.getClass().getSimpleName() : c.getMessage()));
+                    });
+                }
+            }).start();
+        });
+    }
+
+    /** Shows a password box and hands the entered text to {@code onPassword}. */
+    private void promptGpgPassword(String title, java.util.function.Consumer<String> onPassword) {
+        final EditText input = new EditText(context);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setHint(R.string.enter_password_gpg);
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(title)
+                .setView(input)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String pw = input.getText() == null ? "" : input.getText().toString();
+                    if (!pw.isEmpty()) onPassword.accept(pw);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 }

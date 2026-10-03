@@ -1031,6 +1031,10 @@ Layout Inspector
     <string name="wifi_hide_passwords">隐藏密码</string>
     <string name="export">导出</string>
     <string name="share">分享</string>
+    <string name="encrypt_gpg">加密 (GPG)</string>
+    <string name="decrypt_gpg">解密 (GPG)</string>
+    <string name="enter_password_gpg">输入密码</string>
+    <string name="wrong_password_or_corrupt">密码错误或文件损坏</string>
     <string name="wifi_copy_all">全部复制</string>
     <string name="wifi_open_network">开放网络</string>
     <string name="wifi_name_plus_password">名称 + 密码</string>

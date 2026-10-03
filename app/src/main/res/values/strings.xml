@@ -1056,6 +1056,10 @@ Layout Inspector
     <string name="wifi_hide_passwords">Hide passwords</string>
     <string name="export">Export</string>
     <string name="share">Share</string>
+    <string name="encrypt_gpg">Encrypt (GPG)</string>
+    <string name="decrypt_gpg">Decrypt (GPG)</string>
+    <string name="enter_password_gpg">Enter password</string>
+    <string name="wrong_password_or_corrupt">Wrong password or corrupt/corrupted file</string>
     <string name="wifi_copy_all">Copy all</string>
     <string name="wifi_open_network">Open network</string>
     <string name="wifi_name_plus_password">Name + password</string>
