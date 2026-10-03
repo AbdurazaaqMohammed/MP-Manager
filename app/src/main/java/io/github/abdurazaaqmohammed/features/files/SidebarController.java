@@ -342,6 +342,9 @@ public class SidebarController {
             case "ftp_client":
                 activity.showFtpClientDialog();
                 break;
+            case "remote":
+                activity.showRemoteConnectionsDialog();
+                break;
             case "wifi":
                 activity.startActivity(new Intent(activity, WifiManagerActivity.class));
                 break;

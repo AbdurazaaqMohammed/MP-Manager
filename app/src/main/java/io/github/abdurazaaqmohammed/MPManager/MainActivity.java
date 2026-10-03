@@ -89,6 +89,7 @@ import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
 import io.github.abdurazaaqmohammed.features.files.BookmarksController;
 import io.github.abdurazaaqmohammed.features.files.FileSearchController;
 import io.github.abdurazaaqmohammed.features.files.FtpController;
+import io.github.abdurazaaqmohammed.features.files.RemotePaneController;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
 import io.github.abdurazaaqmohammed.features.files.SettingsController;
 import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
@@ -265,6 +266,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final MultiSelectController multiSelect = new MultiSelectController(this);
     private final SettingsController settingsUI = new SettingsController(this);
     private final FtpController ftp = new FtpController(this);
+    private final RemotePaneController remotePane = new RemotePaneController(this);
     private final ApkResultHandler apkResults = new ApkResultHandler(this);
     private final UpdateController updates = new UpdateController(this);
 
@@ -1921,6 +1923,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void showFtpServerDialog() {
         ftp.showFtpServerDialog();
+    }
+
+    /** Entry point for the "Remote storage" sidebar tool. */
+    public void showRemoteConnectionsDialog() {
+        remotePane.showConnectionsDialog();
     }
 
     public void showFtpClientDialog() {

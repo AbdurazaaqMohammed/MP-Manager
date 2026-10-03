@@ -13,8 +13,10 @@ public interface RemoteFileSystemFactory {
     RemoteCredentials.Kind kind();
 
     /**
+     * @param appContext application context, for backends that need a cache or
+     *                   scratch directory
      * @return a disconnected instance; the caller still calls
      *         {@link RemoteFileSystem#connect}
      */
-    RemoteFileSystem create();
+    RemoteFileSystem create(android.content.Context appContext);
 }
