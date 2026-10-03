@@ -366,6 +366,8 @@
     <string name="remote_kind_webdav">WebDAV（HTTPS，端口 443）</string>
     <string name="remote_kind_s3">S3 / MinIO</string>
     <string name="remote_kind_sftp">SFTP over SSH（端口 22）</string>
+    <string name="sidebar_root">文件系统根目录 (/)</string>
+    <string name="root_unavailable">无法访问文件系统根目录</string>
     <string name="remote_connections">远程存储</string>
     <string name="remote_no_profiles">尚未保存远程连接。</string>
     <string name="remote_add_profile">添加连接</string>

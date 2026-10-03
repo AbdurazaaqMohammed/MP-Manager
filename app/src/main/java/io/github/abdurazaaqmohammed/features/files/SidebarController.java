@@ -345,6 +345,9 @@ public class SidebarController {
             case "remote":
                 activity.showRemoteConnectionsDialog();
                 break;
+            case "root":
+                activity.openFilesystemRoot();
+                break;
             case "wifi":
                 activity.startActivity(new Intent(activity, WifiManagerActivity.class));
                 break;

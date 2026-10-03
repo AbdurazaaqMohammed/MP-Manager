@@ -203,8 +203,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                     entries.add(new SidebarEntry(EntryType.STORAGE, section, info.path,
                             info.name, 0, null, info));
                 }
-                // Remote storage sits with the volumes rather than among the
-                // tools: it is somewhere you browse, not a one-off action.
+                // The filesystem root and remote storage are places you browse,
+                // so they belong with the volumes rather than among the tools.
+                addRootEntry(section);
                 addRemoteEntry(section);
             } else if ("bookmarks".equals(section)) {
                 addBookmarks("bookmarks", section, defaultBookmarks);
@@ -223,6 +224,21 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         if ("bookmarks".equals(section)) return context.getString(R.string.bookmarks);
         if (section.startsWith(BOOKMARK_GROUP_PREFIX)) return section.substring(BOOKMARK_GROUP_PREFIX.length());
         return context.getString(R.string.tools_section);
+    }
+
+    /**
+     * Filesystem root.
+     *
+     * <p>The root directory is mode 0755, so any unprivileged process may list
+     * its entries and traverse into subdirectories that grant "other" the x bit.
+     * That is ordinary Linux DAC, not root: no special permission is involved,
+     * and directories that deny access simply fail to open.
+     */
+    private void addRootEntry(String section) {
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, "root",
+                context.getString(R.string.sidebar_root),
+                R.drawable.baseline_insert_drive_file_24, null, null);
+        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
     }
 
     private void addRemoteEntry(String section) {

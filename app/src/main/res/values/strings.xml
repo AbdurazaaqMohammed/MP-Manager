@@ -370,6 +370,8 @@
     <string name="remote_kind_webdav">WebDAV (HTTPS, port 443)</string>
     <string name="remote_kind_s3">S3 / MinIO</string>
     <string name="remote_kind_sftp">SFTP over SSH (port 22)</string>
+    <string name="sidebar_root">Filesystem root (/)</string>
+    <string name="root_unavailable">Filesystem root is not available</string>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
     <string name="remote_add_profile">Add connection</string>

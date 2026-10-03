@@ -1938,6 +1938,23 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ftp.showFtpServerDialog();
     }
 
+    /**
+     * Opens the filesystem root in the active pane.
+     *
+     * <p>No root is involved. "/" is mode 0755, so listing it and descending into
+     * directories that allow it works for any app; the ones that do not simply
+     * refuse to open, which is why an empty or denied directory is expected here
+     * rather than a bug.
+     */
+    public void openFilesystemRoot() {
+        File root = new File("/");
+        if (!root.exists()) {
+            Extensions.showMessage(this, R.string.root_unavailable);
+            return;
+        }
+        loadFolderInPane(root, lastPaneSelected == 1);
+    }
+
     /** Entry point for the "Remote storage" sidebar tool. */
     public void showRemoteConnectionsDialog() {
         remotePane().showConnectionsDialog();
