@@ -14,7 +14,9 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Map;
 
 import androidx.recyclerview.widget.RecyclerView;
@@ -305,6 +307,10 @@ public class RemotePaneController {
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD, null);
         EditText path = addField(box, R.string.remote_path_hint,
                 InputType.TYPE_CLASS_TEXT, "/");
+        // S3 signatures are region-scoped, so the region has to be part of the
+        // profile or every bucket outside us-east-1 answers 301/403.
+        EditText region = addField(box, R.string.remote_region,
+                InputType.TYPE_CLASS_TEXT, "us-east-1");
 
         MaterialSwitch insecure = new MaterialSwitch(activity);
         insecure.setText(R.string.remote_insecure);
@@ -333,6 +339,15 @@ public class RemotePaneController {
                         return;
                     }
 
+                    Map<String, String> extra = new LinkedHashMap<>(RemoteEndpoint.extrasFor(parsed));
+                    if (RemoteCredentials.Kind.S3 == kind) {
+                        String regionText = region.getText().toString().trim();
+                        extra.put("region", regionText.isEmpty() ? "us-east-1" : regionText);
+                        // Path-style is what MinIO, Ceph and most compatible
+                        // servers expect, and AWS still accepts it.
+                        extra.put("pathStyle", "true");
+                    }
+
                     RemoteCredentials c = new RemoteCredentials(
                             kind.name().toLowerCase(Locale.US) + "-" + System.currentTimeMillis(),
                             kind,
@@ -342,7 +357,7 @@ public class RemotePaneController {
                             pass.getText().toString(),
                             parsed.path(),
                             insecure.isChecked(),
-                            RemoteEndpoint.extrasFor(parsed));
+                            extra);
                     profiles.put(c);
                     connectAndLoad(c, activity.lastPaneSelected == 1);
                 })
