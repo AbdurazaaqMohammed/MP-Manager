@@ -7,11 +7,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      build_packs:
-        description: 'Also build the tool pack APKs'
-        type: boolean
-        default: false
 
 concurrency:
   group: build-${{ github.ref }}
@@ -85,19 +80,13 @@ jobs:
           echo "available=true" >> "$GITHUB_OUTPUT"
 
       - name: Build
-        env:
-          BUILD_PACKS: ${{ inputs.build_packs }}
         run: |
           set -o pipefail
           # gradlew is tracked as 100644 upstream, so a fresh checkout has no
           # execute bit.
           chmod +x gradlew
+          # Tool packs have been removed from the project.
           TASKS=":app:assembleRelease :app:assembleDebug"
-          if [ "$BUILD_PACKS" = "true" ]; then
-            for p in math text time random device media network; do
-              TASKS="$TASKS :packs:pack-$p:assembleRelease"
-            done
-          fi
           echo "Gradle tasks: $TASKS"
           # shellcheck disable=SC2086
           ./gradlew --stacktrace $TASKS
@@ -108,7 +97,6 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASS: ${{ secrets.KEY_PASSWORD }}
           HAS_KEYSTORE: ${{ steps.keystore.outputs.available }}
-          BUILD_PACKS: ${{ inputs.build_packs }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -151,13 +139,6 @@ jobs:
             rm -f "$ALIGNED"
           else
             echo "release APK left unsigned (no KEYSTORE_BASE64 secret)." > verify.txt
-          fi
-
-          if [ "$BUILD_PACKS" = "true" ]; then
-            for p in math text time random device media network; do
-              f="packs/pack-$p/build/outputs/apk/release/pack-$p-release-unsigned.apk"
-              { [ -f "$f" ] && cp "$f" "$STAGE/pack-$p.apk"; } || true
-            done
           fi
 
           echo "### Build output" >> "$GITHUB_STEP_SUMMARY"
