@@ -348,9 +348,6 @@ public class SidebarController {
             case "root":
                 activity.openFilesystemRoot();
                 break;
-            case "wifi":
-                activity.startActivity(new Intent(activity, WifiManagerActivity.class));
-                break;
             case "settings":
                 activity.showSettingsDialog();
                 break;
