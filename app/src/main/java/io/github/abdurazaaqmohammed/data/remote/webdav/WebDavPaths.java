@@ -51,6 +51,16 @@ final class WebDavPaths {
      * @throws IllegalArgumentException when the href escapes the base, which
      *         would let a hostile server redirect reads and writes outside it
      */
+    /** Drops a single trailing slash; "/" collapses to "". */
+    static String stripTrailingSlash(String path) {
+        if (path == null) return "";
+        String p = path;
+        while (p.length() > 1 && p.endsWith("/")) {
+            p = p.substring(0, p.length() - 1);
+        }
+        return "/".equals(p) ? "" : p;
+    }
+
     static String hrefToPath(String href, String basePath) {
         String raw = href;
         if (raw == null || raw.isEmpty()) throw new IllegalArgumentException("empty href");
@@ -67,17 +77,22 @@ final class WebDavPaths {
         if (basePath == null || basePath.isEmpty() || "/".equals(basePath)) {
             return rejectEscape(normalize(decoded));
         }
-        String base = basePath.endsWith("/") ? basePath : basePath + "/";
-        String prefix = base.replaceAll("^(https?://[^/]+)?", "");
-        if (decoded.startsWith(prefix)) {
-            return rejectEscape(normalize("/" + decoded.substring(prefix.length())));
+        // Compare against the base WITHOUT a trailing slash. Servers describe the
+        // base collection itself as "/dav", not "/dav/", so a prefix of "/dav/"
+        // never matched and the fallback below doubled the base into "/dav/dav".
+        String base = stripTrailingSlash(basePath);
+        if (base.isEmpty() || "/".equals(base)) {
+            return rejectEscape(normalize(decoded));
         }
-        // Some servers echo the full absolute URL, others a path relative to the
-        // base. Fall back to treating it as already-relative to the base.
-        if (!decoded.startsWith("/")) {
-            return rejectEscape(normalize(join(base, decoded)));
+        if (decoded.equals(base)) return "/";
+        if (decoded.startsWith(base + "/")) {
+            return rejectEscape(normalize("/" + decoded.substring(base.length() + 1)));
         }
-        return rejectEscape(normalize(join(base, decoded)));
+        // Not under our base. Conformant servers always return absolute hrefs
+        // including the base prefix, so reaching here means a non-conformant
+        // server; treat the href as the absolute path it already looks like
+        // rather than prefixing the base again and requesting /dav/dav.
+        return rejectEscape(normalize(decoded));
     }
 
     private static String rejectEscape(String path) {

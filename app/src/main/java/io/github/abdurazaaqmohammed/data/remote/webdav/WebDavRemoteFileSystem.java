@@ -117,9 +117,13 @@ public class WebDavRemoteFileSystem implements RemoteFileSystem {
         }
 
         this.client = b.build();
-        // PROPFIND the root: fails fast on a wrong path or bad credentials,
-        // instead of letting the first user tap fail.
-        stat("/");
+        // PROPFIND the base collection: fails fast on bad credentials or a wrong
+        // base path. stat() returns null on 404 rather than throwing, so the null
+        // has to be checked here or a bad base path reports a successful connect
+        // and only fails later, at the first list.
+        if (stat("/") == null) {
+            throw new RemoteException("WebDAV base is not a readable collection: " + baseUrl);
+        }
         connected.set(true);
     }
 
@@ -153,7 +157,12 @@ public class WebDavRemoteFileSystem implements RemoteFileSystem {
             requireSuccess(response, "list " + target);
             try (InputStream body = response.body() == null ? null : response.body().byteStream()) {
                 if (body == null) return new ArrayList<>();
-                return WebDavMultiStatus.parse(body, basePath, target);
+                List<RemoteEntry> entries = WebDavMultiStatus.parse(body, basePath, target);
+                // A Depth:1 multistatus includes the collection itself. It is the
+                // pane's current directory, not a child of it, and its name
+                // resolves to "" -- keeping it would render a blank row.
+                entries.removeIf(e -> target.equals(e.path()));
+                return entries;
             }
         } catch (IOException e) {
             throw new RemoteException("WebDAV list failed: " + e.getMessage(), e);
@@ -205,7 +214,7 @@ public class WebDavRemoteFileSystem implements RemoteFileSystem {
 
     @Override
     public void write(String path, InputStream in, boolean append) throws RemoteException {
-        if (append) throw new UnsupportedOperationException("WebDAV append is not supported");
+        if (append) throw new RemoteException("WebDAV append is not supported");
         String target = WebDavPaths.normalize(path);
         // Unknown length up front, so this streams rather than buffering.
         RequestBody body = new RequestBody() {
@@ -259,7 +268,7 @@ public class WebDavRemoteFileSystem implements RemoteFileSystem {
         Request request = new Request.Builder().url(urlFor(path)).method("MKCOL", null).build();
         try (Response response = execute(request, "mkdir " + path)) {
             if (response.code() == 405) {
-                throw new UnsupportedOperationException("Server refuses MKCOL");
+                throw new RemoteException("Server refuses MKCOL");
             }
             if (response.code() == 409) {
                 throw new RemoteException("Parent collection does not exist");
@@ -284,7 +293,7 @@ public class WebDavRemoteFileSystem implements RemoteFileSystem {
                 .build();
         try (Response response = execute(request, "rename " + src)) {
             if (response.code() == 405) {
-                throw new UnsupportedOperationException("Server refuses MOVE");
+                throw new RemoteException("Server refuses MOVE");
             }
             if (response.code() == 412) {
                 throw new RemoteException("Destination already exists");
@@ -320,12 +329,26 @@ public class WebDavRemoteFileSystem implements RemoteFileSystem {
 
     private HttpUrl urlFor(String path) throws RemoteException {
         if (baseUrl == null) throw new RemoteException("WebDAV is not connected");
-        String encoded = WebDavPaths.encodePath(WebDavPaths.normalize(path));
-        HttpUrl resolved = baseUrl.resolve(encoded);
+        String normalized = WebDavPaths.normalize(path);
+        // HttpUrl.resolve() treats a leading "/" as server-root-absolute, so
+        // resolving "/" or "/dir" against a base of "/dav/Koofr" produced
+        // "https://host/" and dropped the DAV prefix entirely -- a 404 on any
+        // server that does not publish the collection at the site root. Resolve
+        // against the base as a *directory* instead, trailing slash included.
+        HttpUrl baseDir = baseUrl.newBuilder()
+                .encodedPath(withTrailingSlash(baseUrl.encodedPath()))
+                .build();
+        String relative = normalized.startsWith("/") ? normalized.substring(1) : normalized;
+        if (relative.isEmpty()) return baseDir;
+        HttpUrl resolved = baseDir.resolve(WebDavPaths.encodePath(relative));
         if (resolved == null) {
             throw new RemoteException("Cannot build URL for " + path);
         }
         return resolved;
+    }
+
+    private static String withTrailingSlash(String encodedPath) {
+        return encodedPath.endsWith("/") ? encodedPath : encodedPath + "/";
     }
 
     /** MOVE needs an absolute Destination URL, including the base path prefix. */
