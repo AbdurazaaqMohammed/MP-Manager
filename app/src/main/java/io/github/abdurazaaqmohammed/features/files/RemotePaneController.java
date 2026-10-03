@@ -293,11 +293,6 @@ public class RemotePaneController {
 
             MaterialButton edit = new MaterialButton(activity);
             edit.setText(R.string.remote_edit);
-            if (isFtpKind(c.kind())) {
-                // Editing would have to change the protocol, because FTP is not
-                // offered here; the old client owns those settings.
-                edit.setEnabled(false);
-            }
             edit.setOnClickListener(v -> {
                 dialog.dismiss();
                 showFormDialog(c);
@@ -314,6 +309,35 @@ public class RemotePaneController {
         Extensions.showMessage(activity,
                 activity.rss.getString(R.string.remote_profile_removed, c.host()));
         showConnectionsDialog();
+    }
+
+    /**
+     * Protocols this form can create a profile for.
+     *
+     * <p>FTP is creatable even though it is not served here: the settings live
+     * in one place, and opening the profile hands off to the built-in client.
+     * Omitting it would mean FTP could only be configured from the old dialog,
+     * which is the duplication this screen was meant to remove.
+     */
+    private static List<RemoteCredentials.Kind> creatableKinds() {
+        List<RemoteCredentials.Kind> kinds = new ArrayList<>();
+        for (RemoteCredentials.Kind k : RemoteCredentials.Kind.values()) {
+            if (RemoteRegistry.isSupported(k) || isFtpKind(k)) kinds.add(k);
+        }
+        return kinds;
+    }
+
+    /** Readable protocol names; the raw enum names mean nothing to a user. */
+    private String kindLabel(RemoteCredentials.Kind kind) {
+        switch (kind) {
+            case FTP: return activity.getString(R.string.remote_kind_ftp);
+            case FTPS_EXPLICIT: return activity.getString(R.string.remote_kind_ftps_explicit);
+            case FTPS_IMPLICIT: return activity.getString(R.string.remote_kind_ftps_implicit);
+            case WEBDAV: return activity.getString(R.string.remote_kind_webdav);
+            case S3: return activity.getString(R.string.remote_kind_s3);
+            case SFTP: return activity.getString(R.string.remote_kind_sftp);
+            default: return kind.name();
+        }
     }
 
     /** Fields of the connection form, rebuilt whenever the protocol changes. */
@@ -334,15 +358,13 @@ public class RemotePaneController {
      * @param existing the profile to edit, or null to create a new one
      */
     private void showFormDialog(RemoteCredentials existing) {
-        List<RemoteCredentials.Kind> kinds = new ArrayList<>();
-        for (RemoteCredentials.Kind k : RemoteCredentials.Kind.values()) {
-            if (RemoteRegistry.isSupported(k)) kinds.add(k);
-        }
-        List<String> kindLabels = new ArrayList<>(kinds.size());
-        for (RemoteCredentials.Kind k : kinds) kindLabels.add(k.name());
+        List<RemoteCredentials.Kind> kinds = creatableKinds();
 
         LinearLayout box = new LinearLayout(activity);
         box.setOrientation(LinearLayout.VERTICAL);
+
+        List<String> kindLabels = new ArrayList<>(kinds.size());
+        for (RemoteCredentials.Kind k : kinds) kindLabels.add(kindLabel(k));
 
         Spinner kindSpinner = new Spinner(activity);
         kindSpinner.setAdapter(new ArrayAdapter<>(activity,
@@ -406,6 +428,13 @@ public class RemotePaneController {
             if (pos < 0 || pos >= kinds.size()) return;
             RemoteCredentials probe = assemble(kinds.get(pos), f, existing);
             if (probe == null) return;
+            if (isFtpKind(probe.kind())) {
+                // There is no backend to probe: FTP is served by the built-in
+                // client, which reports its own errors when it connects.
+                Extensions.showMessage(activity,
+                        activity.rss.getString(R.string.remote_ftp_handoff));
+                return;
+            }
             testConnection(probe);
         });
     }

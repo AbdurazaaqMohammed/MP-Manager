@@ -360,6 +360,12 @@
     <string name="remote_secret_key">Secret Access Key</string>
     <string name="remote_bucket">桶名（或 /桶名/前缀）</string>
     <string name="remote_ftp_handoff">FTP 将在内置 FTP 客户端中打开</string>
+    <string name="remote_kind_ftp">FTP（明文，端口 21）</string>
+    <string name="remote_kind_ftps_explicit">FTPS（显式 TLS，端口 21）</string>
+    <string name="remote_kind_ftps_implicit">FTPS（隐式 TLS，端口 990）</string>
+    <string name="remote_kind_webdav">WebDAV（HTTPS，端口 443）</string>
+    <string name="remote_kind_s3">S3 / MinIO</string>
+    <string name="remote_kind_sftp">SFTP over SSH（端口 22）</string>
     <string name="remote_connections">远程存储</string>
     <string name="remote_no_profiles">尚未保存远程连接。</string>
     <string name="remote_add_profile">添加连接</string>

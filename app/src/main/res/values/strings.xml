@@ -364,6 +364,12 @@
     <string name="remote_secret_key">Secret access key</string>
     <string name="remote_bucket">Bucket (or /bucket/prefix)</string>
     <string name="remote_ftp_handoff">FTP opens in the built-in FTP client</string>
+    <string name="remote_kind_ftp">FTP (plain, port 21)</string>
+    <string name="remote_kind_ftps_explicit">FTPS (explicit TLS, port 21)</string>
+    <string name="remote_kind_ftps_implicit">FTPS (implicit TLS, port 990)</string>
+    <string name="remote_kind_webdav">WebDAV (HTTPS, port 443)</string>
+    <string name="remote_kind_s3">S3 / MinIO</string>
+    <string name="remote_kind_sftp">SFTP over SSH (port 22)</string>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
     <string name="remote_add_profile">Add connection</string>
