@@ -235,7 +235,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private void addTools() {
-        String[] defaults = {"extract", "ftp_server", "ftp_client", "remote", "color_picker", "layout", "wifi", "tools", "settings"};
+        String[] defaults = {"extract", "ftp_server", "remote", "color_picker", "layout", "wifi", "tools", "settings"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -243,7 +243,6 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             switch (id) {
                 case "extract": addTool(id, R.string.sidebar_extract, R.drawable.apk_document_24px); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
-                case "ftp_client": addTool(id, R.string.ftp_client, R.drawable.cloud_download_24px); break;
                 case "remote": addTool(id, R.string.remote_connections, R.drawable.cloud_download_24px); break;
                 case "color_picker": addTool(id, R.string.color_picker, R.drawable.colorize_24px); break;
                 case "layout": addTool(id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;

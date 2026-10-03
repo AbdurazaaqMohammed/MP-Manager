@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.data.remote;
 import java.util.EnumMap;
 import java.util.Map;
 
-import io.github.abdurazaaqmohammed.data.remote.ftp.EzfFtpRemoteFileSystem;
 import io.github.abdurazaaqmohammed.data.remote.s3.S3RemoteFileSystem;
 import io.github.abdurazaaqmohammed.data.remote.sftp.SftpRemoteFileSystem;
 import io.github.abdurazaaqmohammed.data.remote.webdav.WebDavRemoteFileSystem;
@@ -18,6 +17,10 @@ import io.github.abdurazaaqmohammed.domain.remote.RemoteFileSystemFactory;
  * rather than being guessed at, so the connection dialog can hide options that
  * cannot work instead of offering one that throws on connect.
  *
+ * <p>FTP is absent on purpose. The application's own FTP client is far more
+ * capable than anything this abstraction offers, so FTP profiles are handed to
+ * it instead of being served here.
+ *
  * <p>SMB has no entry yet. It stays in the enum so stored profiles survive, and
  * the connection dialog greys it out rather than offering one that throws.
  */
@@ -27,12 +30,6 @@ public final class RemoteRegistry {
             new EnumMap<>(RemoteCredentials.Kind.class);
 
     static {
-        register(RemoteCredentials.Kind.FTP, factory(RemoteCredentials.Kind.FTP,
-                ctx -> new EzfFtpRemoteFileSystem(ctx)));
-        register(RemoteCredentials.Kind.FTPS_EXPLICIT, factory(RemoteCredentials.Kind.FTPS_EXPLICIT,
-                ctx -> new EzfFtpRemoteFileSystem(ctx)));
-        register(RemoteCredentials.Kind.FTPS_IMPLICIT, factory(RemoteCredentials.Kind.FTPS_IMPLICIT,
-                ctx -> new EzfFtpRemoteFileSystem(ctx)));
         register(RemoteCredentials.Kind.WEBDAV, factory(RemoteCredentials.Kind.WEBDAV,
                 ctx -> new WebDavRemoteFileSystem()));
         register(RemoteCredentials.Kind.S3, factory(RemoteCredentials.Kind.S3,

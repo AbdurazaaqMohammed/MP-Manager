@@ -359,6 +359,7 @@
     <string name="remote_access_key">Access Key ID</string>
     <string name="remote_secret_key">Secret Access Key</string>
     <string name="remote_bucket">桶名（或 /桶名/前缀）</string>
+    <string name="remote_ftp_handoff">FTP 将在内置 FTP 客户端中打开</string>
     <string name="remote_connections">远程存储</string>
     <string name="remote_no_profiles">尚未保存远程连接。</string>
     <string name="remote_add_profile">添加连接</string>

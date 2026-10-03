@@ -71,6 +71,15 @@ public class RemotePaneController {
      * @return true when the pane is now showing the remote listing
      */
     public boolean connectAndLoad(RemoteCredentials credentials, boolean pane1) {
+        // FTP goes to the application's own client: it already handles
+        // transfers, file operations and server mode, all of which this
+        // abstraction deliberately leaves out.
+        if (isFtpKind(credentials.kind())) {
+            Extensions.showMessage(activity,
+                    activity.rss.getString(R.string.remote_ftp_handoff));
+            activity.showFtpClientDialog();
+            return true;
+        }
         if (!RemoteRegistry.isSupported(credentials.kind())) {
             Extensions.showMessage(activity, activity.rss.getString(
                     R.string.remote_kind_unsupported, credentials.kind().name()));
@@ -284,6 +293,11 @@ public class RemotePaneController {
 
             MaterialButton edit = new MaterialButton(activity);
             edit.setText(R.string.remote_edit);
+            if (isFtpKind(c.kind())) {
+                // Editing would have to change the protocol, because FTP is not
+                // offered here; the old client owns those settings.
+                edit.setEnabled(false);
+            }
             edit.setOnClickListener(v -> {
                 dialog.dismiss();
                 showFormDialog(c);
@@ -501,6 +515,12 @@ public class RemotePaneController {
             final String message = result;
             activity.runOnUiThread(() -> Extensions.showMessage(activity, message));
         }).start();
+    }
+
+    static boolean isFtpKind(RemoteCredentials.Kind kind) {
+        return kind == RemoteCredentials.Kind.FTP
+                || kind == RemoteCredentials.Kind.FTPS_EXPLICIT
+                || kind == RemoteCredentials.Kind.FTPS_IMPLICIT;
     }
 
     private static String text(EditText field) {

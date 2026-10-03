@@ -363,6 +363,7 @@
     <string name="remote_access_key">Access key ID</string>
     <string name="remote_secret_key">Secret access key</string>
     <string name="remote_bucket">Bucket (or /bucket/prefix)</string>
+    <string name="remote_ftp_handoff">FTP opens in the built-in FTP client</string>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
     <string name="remote_add_profile">Add connection</string>
