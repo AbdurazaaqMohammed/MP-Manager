@@ -185,16 +185,25 @@ final class WebDavMultiStatus {
         try {
             DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
             f.setNamespaceAware(true);
-            // A WebDAV server is often third-party; do not let its XML reach
-            // the filesystem or the network.
-            f.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            // A WebDAV server is often third-party; do not let its XML reach the
+            // filesystem or the network.
+            //
+            // Every hardening knob is optional: Android's parser rejects
+            // FEATURE_SECURE_PROCESSING outright (it throws with the feature URI
+            // as the message) and does not support XInclude either. Asking for
+            // them unguarded broke every real connection while passing on the
+            // JVM, which supports both. The guarantees come from the features
+            // that stick plus the EntityResolver below, which is unconditional.
+            setFeatureQuietly(f, XMLConstants.FEATURE_SECURE_PROCESSING, true);
             setFeatureQuietly(f, "http://apache.org/xml/features/disallow-doctype-decl", true);
             setFeatureQuietly(f, "http://xml.org/sax/features/external-general-entities", false);
             setFeatureQuietly(f, "http://xml.org/sax/features/external-parameter-entities", false);
             setFeatureQuietly(f, "http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-            f.setXIncludeAware(false);
-            f.setExpandEntityReferences(false);
+            setQuietly(() -> f.setXIncludeAware(false));
+            setQuietly(() -> f.setExpandEntityReferences(false));
             DocumentBuilder b = f.newDocumentBuilder();
+            // Blocks external entity resolution on its own, even where none of
+            // the features above were accepted.
             b.setEntityResolver((publicId, systemId) -> new org.xml.sax.InputSource(new ByteArrayInputStream(new byte[0])));
             return b.parse(in);
         } catch (ParserConfigurationException | SAXException | IOException e) {
@@ -205,8 +214,16 @@ final class WebDavMultiStatus {
     private static void setFeatureQuietly(DocumentBuilderFactory f, String feature, boolean value) {
         try {
             f.setFeature(feature, value);
-        } catch (ParserConfigurationException ignored) {
+        } catch (ParserConfigurationException | RuntimeException ignored) {
             // Not every parser knows every feature; the others still apply.
+        }
+    }
+
+    private static void setQuietly(Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException ignored) {
+            // UnsupportedOperationException on parsers without XInclude.
         }
     }
 }
