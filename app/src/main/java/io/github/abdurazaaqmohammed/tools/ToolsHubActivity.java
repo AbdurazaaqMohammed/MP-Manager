@@ -511,7 +511,7 @@ public class ToolsHubActivity extends BaseActivity {
                     for (int i = position + 1; i < rows.size() && rows.get(i) instanceof ToolRegistry.ToolItem; i++) count++;
                     ((HeaderHolder) holder).label.setText(
                             io.github.abdurazaaqmohammed.plugins.api.PluginRegistry
-                                    .categoryLabel(this, cat) + "  (" + count + ")");
+                                    .categoryLabel(ToolsHubActivity.this, cat) + "  (" + count + ")");
                 }
             } else if (holder instanceof ToolViewHolder h
                     && row instanceof PluginHost.ExternalPlugin ext) {
