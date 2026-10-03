@@ -1996,9 +1996,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             box.addView(row);
         }
 
+        // 27 rows do not fit on a phone, and a bare LinearLayout in a dialog is
+        // clipped rather than scrolled, so the ones below the fold would be
+        // unreachable.
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(box);
+
         dialogUtil.getDialogBuilder()
                 .setTitle(R.string.sidebar_root)
-                .setView(box)
+                .setView(scroll)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }

@@ -257,9 +257,14 @@ public class RemotePaneController {
         add.setOnClickListener(v -> showFormDialog(null));
         box.addView(add);
 
+        // Profiles are added below, and several rows overflow a phone screen; a
+        // bare LinearLayout in a dialog is clipped rather than scrolled.
+        android.widget.ScrollView scroll = new android.widget.ScrollView(activity);
+        scroll.addView(box);
+
         androidx.appcompat.app.AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
                 .setTitle(R.string.remote_connections)
-                .setView(box)
+                .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
 
