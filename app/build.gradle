@@ -105,10 +105,15 @@ dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
 
-    // Remote filesystems. okhttp backs the WebDAV client.
-    // smbj (SMB) and jsch (SFTP) are deliberately NOT added yet: they land with
-    // their implementations, so the APK never carries an unused library.
+    // Remote filesystems. okhttp backs the WebDAV client, the AWS SigV4 signer
+    // is hand-written, jsch speaks SFTP and smbj speaks SMB/CIFS.
+    // smbj's BouncyCastle and slf4j requirements are already met above, so it
+    // only adds about a megabyte.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.github.mwiede:jsch:0.2.23")
+    // SMB (smbj) is intentionally absent: it pulls its own transitive tree and
+    // there is no way to exercise it from a phone, so it lands with the
+    // implementation that has actually been tested.
 
     testImplementation 'junit:junit:4.13.2'
 }

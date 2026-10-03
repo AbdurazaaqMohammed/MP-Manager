@@ -5,6 +5,7 @@ import java.util.Map;
 
 import io.github.abdurazaaqmohammed.data.remote.ftp.EzfFtpRemoteFileSystem;
 import io.github.abdurazaaqmohammed.data.remote.s3.S3RemoteFileSystem;
+import io.github.abdurazaaqmohammed.data.remote.sftp.SftpRemoteFileSystem;
 import io.github.abdurazaaqmohammed.data.remote.webdav.WebDavRemoteFileSystem;
 import io.github.abdurazaaqmohammed.domain.remote.RemoteCredentials;
 import io.github.abdurazaaqmohammed.domain.remote.RemoteFileSystem;
@@ -17,8 +18,8 @@ import io.github.abdurazaaqmohammed.domain.remote.RemoteFileSystemFactory;
  * rather than being guessed at, so the connection dialog can hide options that
  * cannot work instead of offering one that throws on connect.
  *
- * <p>Kinds without an entry (SFTP, SMB) are not implemented yet. They stay in
- * the enum so stored profiles survive, and the UI greys them out.
+ * <p>SMB has no entry yet. It stays in the enum so stored profiles survive, and
+ * the connection dialog greys it out rather than offering one that throws.
  */
 public final class RemoteRegistry {
 
@@ -36,6 +37,8 @@ public final class RemoteRegistry {
                 ctx -> new WebDavRemoteFileSystem()));
         register(RemoteCredentials.Kind.S3, factory(RemoteCredentials.Kind.S3,
                 ctx -> new S3RemoteFileSystem()));
+        register(RemoteCredentials.Kind.SFTP, factory(RemoteCredentials.Kind.SFTP,
+                ctx -> new SftpRemoteFileSystem()));
     }
 
     private RemoteRegistry() {

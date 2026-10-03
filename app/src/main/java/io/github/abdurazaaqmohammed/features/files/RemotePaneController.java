@@ -311,6 +311,10 @@ public class RemotePaneController {
         // profile or every bucket outside us-east-1 answers 301/403.
         EditText region = addField(box, R.string.remote_region,
                 InputType.TYPE_CLASS_TEXT, "us-east-1");
+        // Key-based SFTP is the common case; the path is typed or pasted since
+        // a picker would need a storage-aware file browser.
+        EditText privateKey = addField(box, R.string.remote_private_key,
+                InputType.TYPE_CLASS_TEXT, null);
 
         MaterialSwitch insecure = new MaterialSwitch(activity);
         insecure.setText(R.string.remote_insecure);
@@ -340,6 +344,10 @@ public class RemotePaneController {
                     }
 
                     Map<String, String> extra = new LinkedHashMap<>(RemoteEndpoint.extrasFor(parsed));
+                    if (RemoteCredentials.Kind.SFTP == kind) {
+                        String keyText = privateKey.getText().toString().trim();
+                        if (!keyText.isEmpty()) extra.put("privateKey", keyText);
+                    }
                     if (RemoteCredentials.Kind.S3 == kind) {
                         String regionText = region.getText().toString().trim();
                         extra.put("region", regionText.isEmpty() ? "us-east-1" : regionText);

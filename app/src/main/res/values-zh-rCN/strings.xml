@@ -348,6 +348,7 @@
     <string name="crash_log_title">上次崩溃记录</string>
     <string name="remote_loaded">已加载 %1$d 项</string>
     <string name="remote_region">区域（S3，如 us-east-1）</string>
+    <string name="remote_private_key">私钥路径（SFTP，可选）</string>
     <string name="remote_connections">远程存储</string>
     <string name="remote_no_profiles">尚未保存远程连接。</string>
     <string name="remote_add_profile">添加连接</string>
