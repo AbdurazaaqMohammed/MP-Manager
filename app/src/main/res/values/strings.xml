@@ -373,8 +373,7 @@
     <string name="sidebar_root">Filesystem root (/)</string>
     <string name="root_unavailable">Filesystem root is not available</string>
     <string name="root_denied">Cannot list the filesystem root: this device policy blocks it. Grant Shizuku to browse it.</string>
-    <string name="root_index_note">The device policy blocks reading the root directory itself, so these are the usual top-level directories instead.</string>
-    <string name="root_index_denied_header">Not reachable without elevated access:</string>
+    <string name="root_index_note">The device policy blocks reading the root directory itself. These are the usual top-level directories; tap one to try it.</string>
     <string-array name="filesystem_root_paths">
         "/system",
         "/vendor",

@@ -1982,19 +1982,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         note.setText(R.string.root_index_note);
         box.addView(note);
 
-        List<String> readable = new ArrayList<>();
-        List<String> denied = new ArrayList<>();
+        // Every path stays tappable. canRead() is answered by the SELinux domain
+        // the app runs in, which is not necessarily the one that will be asked
+        // on the way in, so gating on it risks greying out everything and
+        // making the whole index useless. Trying costs one navigation attempt
+        // and reports the real reason if it is denied.
         for (String path : known) {
-            File dir = new File(path);
-            (dir.canRead() ? readable : denied).add(path);
-        }
-        // Readable first, then the rest greyed, so the useful ones are not buried.
-        for (String path : readable) addRootIndexRow(box, path, true);
-        if (!denied.isEmpty()) {
-            TextView divider = new TextView(this);
-            divider.setText(R.string.root_index_denied_header);
-            box.addView(divider);
-            for (String path : denied) addRootIndexRow(box, path, false);
+            com.google.android.material.button.MaterialButton row =
+                    new com.google.android.material.button.MaterialButton(this);
+            row.setText(path);
+            row.setOnClickListener(v ->
+                    loadFolderInPane(new File(path), lastPaneSelected == 1));
+            box.addView(row);
         }
 
         dialogUtil.getDialogBuilder()
@@ -2002,17 +2001,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 .setView(box)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
-    }
-
-    private void addRootIndexRow(LinearLayout box, String path, boolean enabled) {
-        com.google.android.material.button.MaterialButton row =
-                new com.google.android.material.button.MaterialButton(this);
-        row.setText(path);
-        row.setEnabled(enabled);
-        if (enabled) {
-            row.setOnClickListener(v -> loadFolderInPane(new File(path), lastPaneSelected == 1));
-        }
-        box.addView(row);
     }
 
     /** Entry point for the "Remote storage" sidebar tool. */
