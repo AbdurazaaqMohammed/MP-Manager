@@ -266,7 +266,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final MultiSelectController multiSelect = new MultiSelectController(this);
     private final SettingsController settingsUI = new SettingsController(this);
     private final FtpController ftp = new FtpController(this);
-    private final RemotePaneController remotePane = new RemotePaneController(this);
+    /**
+     * Created on first use, not in a field initialiser: constructing it touches
+     * the Context, and field initialisers run before Activity.attach().
+     */
+    private RemotePaneController remotePane;
+
+    private RemotePaneController remotePane() {
+        if (remotePane == null) remotePane = new RemotePaneController(this);
+        return remotePane;
+    }
     private final ApkResultHandler apkResults = new ApkResultHandler(this);
     private final UpdateController updates = new UpdateController(this);
 
@@ -743,6 +752,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     protected void onCreate(Bundle savedInstanceState) {
         upgradeThemePrefsIfNeeded();
         super.onCreate(savedInstanceState);
+        io.github.abdurazaaqmohammed.utils.CrashLog.install(this);
         // BaseActivity applied the ThemeRegistry plugin; sync legacy fields for
         // status-bar tinting, icon colors and intent extras during transition.
         theme = ThemeRegistry.currentStyleRes(this);
@@ -1260,6 +1270,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }).start();
         });
         if ((checkForUpdates = settings.getBoolean("checkForUpdates", true))) UpdateUtil.checkForUpdates(false, this);
+        // A crash in the previous process cannot be reported by that process,
+        // so surface its trace now, once the activity is actually up.
+        io.github.abdurazaaqmohammed.utils.CrashLog.showPending(this);
     }
 
     private File resolveStartupFolder(boolean pane1, File home) {
@@ -1927,7 +1940,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     /** Entry point for the "Remote storage" sidebar tool. */
     public void showRemoteConnectionsDialog() {
-        remotePane.showConnectionsDialog();
+        remotePane().showConnectionsDialog();
     }
 
     public void showFtpClientDialog() {

@@ -349,6 +349,7 @@
     <string name="done">Done</string>
     <string name="unhidden">Unhidden %1$s</string>
     <string name="ftp_server">FTP Server</string>
+    <string name="crash_log_title">Previous crash</string>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
     <string name="remote_add_profile">Add connection</string>

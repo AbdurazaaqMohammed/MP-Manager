@@ -33,7 +33,12 @@ public final class RemoteProfiles {
     private final Context appContext;
 
     public RemoteProfiles(Context context) {
-        this.appContext = context.getApplicationContext();
+        // getApplicationContext() returns null before Activity.attach() has run,
+        // which is exactly when MainActivity's field initialisers call this.
+        // Falling back to the passed context keeps the profile store usable
+        // instead of NPE-ing on the first dialog.
+        Context app = context.getApplicationContext();
+        this.appContext = app != null ? app : context;
     }
 
     // ------------------------------------------------------------- profiles
