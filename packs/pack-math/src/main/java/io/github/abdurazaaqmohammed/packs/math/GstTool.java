@@ -25,33 +25,33 @@ import java.text.DecimalFormat;
 public class GstTool extends BaseToolPlugin {
 
     public GstTool() {
-        super("gst", "Tax Calculator", "Add or remove GST, VAT", ToolCategories.MATH);
+        super("gst", R.string.gst_title, R.string.gst_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Tax Calculator");
-        EditText amountInput = ToolViewFactory.makeInput(box, "Amount",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.gst_tax_calculator));
+        EditText amountInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.currency_amount),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText rateInput = ToolViewFactory.makeInput(box, "Tax percent",
+        EditText rateInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.gst_tax_percent),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         rateInput.setText("18");
         RadioGroup modeGroup = new RadioGroup(context);
         modeGroup.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton addBtn2 = new RadioButton(context);
         addBtn2.setId(View.generateViewId());
-        addBtn2.setText("Add tax");
+        addBtn2.setText(addBtn2.getContext().getString(R.string.gst_add_tax));
         RadioButton remBtn = new RadioButton(context);
         remBtn.setId(View.generateViewId());
-        remBtn.setText("Remove tax");
+        remBtn.setText(remBtn.getContext().getString(R.string.gst_remove_tax));
         modeGroup.addView(addBtn2);
         modeGroup.addView(remBtn);
         modeGroup.check(addBtn2.getId());
         box.addView(modeGroup);
         TextView output = ToolViewFactory.makeOutput(box);
         final int addId = addBtn2.getId();
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compound_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double amount = Double.parseDouble(amountInput.getText().toString());
@@ -59,13 +59,15 @@ public class GstTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.00");
                 if (modeGroup.getCheckedRadioButtonId() == addId) {
                     double[] r = Money.gstAdd(amount, rate);
-                    output.setText("Tax " + df.format(r[0]) + "  Total " + df.format(r[1]));
+                    output.setText(output.getContext().getString(R.string.gst_tax) + df.format(r[0])
+                            + output.getContext().getString(R.string.gst_total) + df.format(r[1]));
                 } else {
                     double[] r = Money.gstRemove(amount, rate);
-                    output.setText("Net " + df.format(r[0]) + "  Tax " + df.format(r[1]));
+                    output.setText(output.getContext().getString(R.string.gst_net) + df.format(r[0])
+                            + output.getContext().getString(R.string.gst_tax_amount) + df.format(r[1]));
                 }
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText(output.getContext().getString(R.string.compound_check_inputs));
             }
         });
         return box;

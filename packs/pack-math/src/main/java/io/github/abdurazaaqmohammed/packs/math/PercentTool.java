@@ -25,24 +25,24 @@ import java.text.DecimalFormat;
 public class PercentTool extends BaseToolPlugin {
 
     public PercentTool() {
-        super("percent", "Percentage Calculator", "Percents, change, shares", ToolCategories.MATH);
+        super("percent", R.string.percent_title, R.string.percent_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Percentage Calculator");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.percent_percentage_calculator));
         RadioGroup modeGroup = new RadioGroup(context);
         modeGroup.setOrientation(RadioGroup.VERTICAL);
         RadioButton m1 = new RadioButton(context);
         m1.setId(View.generateViewId());
-        m1.setText("X percent of Y");
+        m1.setText(m1.getContext().getString(R.string.percent_x_percent_of_y));
         RadioButton m2 = new RadioButton(context);
         m2.setId(View.generateViewId());
-        m2.setText("X is what percent of Y");
+        m2.setText(m2.getContext().getString(R.string.percent_x_is_what_percent_of_y));
         RadioButton m3 = new RadioButton(context);
         m3.setId(View.generateViewId());
-        m3.setText("Percent change from X to Y");
+        m3.setText(m3.getContext().getString(R.string.percent_percent_change_from_x_to_y));
         modeGroup.addView(m1);
         modeGroup.addView(m2);
         modeGroup.addView(m3);
@@ -65,19 +65,19 @@ public class PercentTool extends BaseToolPlugin {
                     output.setText(df.format(Money.percentOf(x, y)));
                 } else if (mode == id2) {
                     if (y == 0) {
-                        output.setText("Y must not be zero");
+                        output.setText(output.getContext().getString(R.string.percent_y_must_not_be_zero));
                         return;
                     }
                     output.setText(df.format(Money.whatPercent(x, y)) + "%");
                 } else {
                     if (x == 0) {
-                        output.setText("X must not be zero");
+                        output.setText(output.getContext().getString(R.string.percent_x_must_not_be_zero));
                         return;
                     }
                     output.setText(df.format(Money.percentChange(x, y)) + "%");
                 }
             } catch (Exception e) {
-                output.setText("Enter X and Y");
+                output.setText(output.getContext().getString(R.string.percent_enter_x_and_y));
             }
         };
         final Runnable computeRef = compute;

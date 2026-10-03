@@ -21,21 +21,21 @@ public class TallyTool extends BaseToolPlugin {
     private int count;
 
     public TallyTool() {
-        super("tally", "Tally Counter", "Count taps easily", ToolCategories.TIME);
+        super("tally", R.string.tally_title, R.string.tally_sub,  ToolCategories.TIME);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         count = 0;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Tally Counter");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.tally_tally_counter));
         TextView output = ToolViewFactory.makeOutput(box);
         output.setTextSize(56);
         output.setText("0");
         LinearLayout row = ToolViewFactory.makeRow(box);
         MaterialButton add = ToolViewFactory.makeRowButton(row, "+1", 1f);
         MaterialButton sub = ToolViewFactory.makeRowButton(row, "-1", 1f);
-        MaterialButton reset = ToolViewFactory.makeRowButton(row, "Reset", 1f);
+        MaterialButton reset = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.tally_reset), 1f);
         add.setOnClickListener(v -> {
             count++;
             output.setText(String.valueOf(count));

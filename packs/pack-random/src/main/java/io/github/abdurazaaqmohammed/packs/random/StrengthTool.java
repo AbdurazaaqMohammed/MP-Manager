@@ -23,33 +23,33 @@ import java.text.DecimalFormat;
 public class StrengthTool extends BaseToolPlugin {
 
     public StrengthTool() {
-        super("strength", "Password Strength", "Entropy and crack estimates", ToolCategories.RAND);
+        super("strength", R.string.strength_title, R.string.strength_sub,  ToolCategories.RAND);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Password Strength");
-        EditText input = ToolViewFactory.makeInput(box, "Password to test",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.strength_password_strength));
+        EditText input = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.strength_password_to_test),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Type a password");
+        output.setText(output.getContext().getString(R.string.strength_type_a_password));
         input.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String p = s.toString();
                 if (p.isEmpty()) {
-                    output.setText("Type a password");
+                    output.setText(output.getContext().getString(R.string.strength_type_a_password));
                     return;
                 }
                 double entropy = Passwords.entropyBits(p);
-                String label = Passwords.strengthLabel(entropy);
+                String label = Passwords.strengthLabel(context, entropy);
                 double guesses = Math.pow(2, entropy - 1);
-                String time = Passwords.guessesToTime(guesses);
+                String time = Passwords.guessesToTime(context, guesses);
                 StringBuilder tips = new StringBuilder();
                 if (p.length() < 12) {
-                    tips.append("Use 12 or more characters. ");
+                    tips.append(output.getContext().getString(R.string.strength_use_12));
                 }
                 boolean hasSymbol = false;
                 boolean hasDigit = false;
@@ -63,15 +63,18 @@ public class StrengthTool extends BaseToolPlugin {
                     else hasSymbol = true;
                 }
                 if (!hasSymbol) {
-                    tips.append("Add symbols. ");
+                    tips.append(output.getContext().getString(R.string.strength_add_symbols));
                 }
                 if (!hasDigit) {
-                    tips.append("Add digits. ");
+                    tips.append(output.getContext().getString(R.string.strength_add_digits));
                 }
                 if (!hasUpper || !hasLower) {
-                    tips.append("Mix upper and lower case.");
+                    tips.append(output.getContext().getString(R.string.strength_mix_case));
                 }
-                output.setText(label + "  (" + new DecimalFormat("0").format(entropy) + " bits)\nCrack estimate " + time + "\n" + tips.toString().trim());
+                output.setText(output.getContext().getString(R.string.strength_bits, label,
+                                new DecimalFormat("0").format(entropy))
+                        + output.getContext().getString(R.string.strength_crack_estimate, time)
+                        + tips.toString().trim());
             }
             public void afterTextChanged(Editable s) {
             }

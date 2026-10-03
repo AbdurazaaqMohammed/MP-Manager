@@ -23,32 +23,32 @@ import java.text.DecimalFormat;
 public class BmiTool extends BaseToolPlugin {
 
     public BmiTool() {
-        super("bmi", "BMI Calculator", "Calculate body mass index", ToolCategories.TIME);
+        super("bmi", R.string.bmi_title, R.string.bmi_sub,  ToolCategories.TIME);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "BMI Calculator");
-        EditText heightInput = ToolViewFactory.makeInput(box, "Height in cm",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.bmi_bmi_calculator));
+        EditText heightInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.bmi_height_in_cm),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText weightInput = ToolViewFactory.makeInput(box, "Weight in kg",
+        EditText weightInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.bmi_weight_in_kg),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Enter height and weight");
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        output.setText(output.getContext().getString(R.string.bmi_enter_height_and_weight));
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.agecalc_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double h = Double.parseDouble(heightInput.getText().toString());
                 double w = Double.parseDouble(weightInput.getText().toString());
                 if (h <= 0 || w <= 0) {
-                    output.setText("Height and weight must be above zero");
+                    output.setText(output.getContext().getString(R.string.bmi_height_and_weight_must_be_abov));
                     return;
                 }
                 double bmi = Health.bmi(w, h);
-                output.setText("BMI " + new DecimalFormat("0.0").format(bmi) + "  " + Health.bmiCategory(bmi));
+                output.setText(output.getContext().getString(R.string.bmi_bmi) + new DecimalFormat("0.0").format(bmi) + "  " + Health.bmiCategory(context, bmi));
             } catch (Exception e) {
-                output.setText("Invalid input");
+                output.setText(output.getContext().getString(R.string.bmi_invalid_input));
             }
         });
         return box;

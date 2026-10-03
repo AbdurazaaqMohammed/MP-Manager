@@ -23,32 +23,32 @@ import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 public class MagnifierTool extends BaseToolPlugin {
 
     public MagnifierTool() {
-        super("magnifier", "Magnifier", "Zoom into small text", ToolCategories.DEVICE);
+        super("magnifier", R.string.magnifier_title, R.string.magnifier_sub,  ToolCategories.DEVICE);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Magnifier");
-        ToolViewFactory.addLabel(box, "Type or paste text, then zoom it with the slider.");
-        EditText input = ToolViewFactory.makeInput(box, "Text to magnify",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.magnifier_magnifier));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.magnifier_type_or_paste_text_then_zoom_i));
+        EditText input = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.magnifier_text_to_magnify),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        input.setText("Hold the phone close and read comfortably.");
+        input.setText(input.getContext().getString(R.string.magnifier_hold_the_phone_close_and_read_));
         TextView zoom = new TextView(context);
-        zoom.setText("Hold the phone close and read comfortably.");
+        zoom.setText(zoom.getContext().getString(R.string.magnifier_hold_the_phone_close_and_read_));
         zoom.setTextSize(32);
         zoom.setPadding(ToolViewFactory.dp(context, 12), ToolViewFactory.dp(context, 12),
                 ToolViewFactory.dp(context, 12), ToolViewFactory.dp(context, 12));
         zoom.setBackgroundColor(Color.parseColor("#FFFFFF"));
         zoom.setTextColor(Color.parseColor("#000000"));
         box.addView(zoom, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        ToolViewFactory.addLabel(box, "Text size");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.magnifier_text_size));
         SeekBar sizeBar = new SeekBar(context);
         sizeBar.setMax(108);
         sizeBar.setProgress(20);
         box.addView(sizeBar);
         CheckBox invertBox = new CheckBox(context);
-        invertBox.setText("High contrast (black on yellow)");
+        invertBox.setText(invertBox.getContext().getString(R.string.magnifier_high_contrast_black_on_yellow));
         box.addView(invertBox);
         input.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {

@@ -29,8 +29,10 @@ import java.text.DecimalFormat;
  */
 public class ConnectivityTool extends BaseToolPlugin {
 
+    private Context ctx;
+
     public ConnectivityTool() {
-        super("connectivity", "Connectivity Hub", "Network, Bluetooth, NFC info", ToolCategories.NETWORK);
+        super("connectivity", R.string.connectivity_title, R.string.connectivity_sub,  ToolCategories.NETWORK);
     }
 
     private static String ipToString(int ip) {
@@ -63,10 +65,10 @@ public class ConnectivityTool extends BaseToolPlugin {
             if (cm != null) {
                 try {
                     NetworkInfo active = cm.getActiveNetworkInfo();
-                    if (active != null) b.append("Active: ").append(active.getTypeName()).append(" connected=").append(active.isConnected()).append("\n");
-                    else b.append("Active: none\n");
+                    if (active != null) b.append(context.getString(R.string.connectivity_active, active.getTypeName(), active.isConnected()));
+                    else b.append(context.getString(R.string.connectivity_active_none));
                 } catch (Exception e) {
-                    b.append("Active: unknown\n");
+                    b.append(context.getString(R.string.connectivity_active_unknown));
                 }
             }
             try {
@@ -79,28 +81,30 @@ public class ConnectivityTool extends BaseToolPlugin {
                         b.append("IP ").append(ipToString(info.getIpAddress()));
                     }
                 } else {
-                    b.append("Wi-Fi off or unavailable");
+                    b.append(context.getString(R.string.connectivity_wifi_off));
                 }
             } catch (Exception e) {
-                b.append("Wi-Fi: unavailable");
+                b.append(context.getString(R.string.connectivity_wifi_unavailable));
             }
         } catch (Exception e) {
-            return "Unavailable";
+            return context.getString(R.string.connectivity_unavailable);
         }
         return b.toString();
     }
 
-    private static String readDataUsageSummary() {
+    private String readDataUsageSummary() {
         try {
             long mRx = TrafficStats.getMobileRxBytes();
             long mTx = TrafficStats.getMobileTxBytes();
             long tRx = TrafficStats.getTotalRxBytes();
             long tTx = TrafficStats.getTotalTxBytes();
-            return "Mobile ↓ " + (mRx < 0 ? "-" : formatBytes(mRx)) + "  ↑ " + (mTx < 0 ? "-" : formatBytes(mTx)) + "\n"
-                    + "Total ↓ " + (tRx < 0 ? "-" : formatBytes(tRx)) + "  ↑ " + (tTx < 0 ? "-" : formatBytes(tTx)) + "\n"
-                    + "Counters reset on reboot";
+            return ctx.getString(R.string.connectivity_mobile_usage,
+                    mRx < 0 ? "-" : formatBytes(mRx), mTx < 0 ? "-" : formatBytes(mTx))
+                    + ctx.getString(R.string.connectivity_total_usage,
+                    tRx < 0 ? "-" : formatBytes(tRx), tTx < 0 ? "-" : formatBytes(tTx))
+                    + ctx.getString(R.string.connectivity_counters_reset);
         } catch (Exception e) {
-            return "Unavailable";
+            return ctx.getString(R.string.connectivity_unavailable);
         }
     }
 
@@ -113,18 +117,19 @@ public class ConnectivityTool extends BaseToolPlugin {
             i.putExtra("tool_title", title);
             context.startActivity(i);
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Cannot open " + title);
+            ToolViewFactory.toast(context, context.getString(R.string.connectivity_cannot_open) + title);
         }
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
+        ctx = context;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Connectivity Hub");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.connectivity_connectivity_hub));
         LinearLayout net = ToolViewFactory.container(context);
         box.addView(net);
         TextView netTitle = new TextView(context);
-        netTitle.setText("Network");
+        netTitle.setText(netTitle.getContext().getString(R.string.connectivity_network));
         netTitle.setTextSize(16);
         netTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         net.addView(netTitle);
@@ -135,7 +140,7 @@ public class ConnectivityTool extends BaseToolPlugin {
         LinearLayout data = ToolViewFactory.container(context);
         box.addView(data);
         TextView dataTitle = new TextView(context);
-        dataTitle.setText("Data usage");
+        dataTitle.setText(dataTitle.getContext().getString(R.string.connectivity_data_usage));
         dataTitle.setTextSize(16);
         dataTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         data.addView(dataTitle);
@@ -149,17 +154,22 @@ public class ConnectivityTool extends BaseToolPlugin {
         };
         refresh.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton r = ToolViewFactory.makeRowButton(row, "Refresh", 1f);
-        MaterialButton c = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton r = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.bluetooth_refresh), 1f);
+        MaterialButton c = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.connectivity_copy), 1f);
         r.setOnClickListener(v -> refresh.run());
-        c.setOnClickListener(v -> ToolViewFactory.copyText(context, "connectivity",
+        c.setOnClickListener(v -> ToolViewFactory.copyText(context, context.getString(R.string.connectivity_connectivity),
                 netText.getText() + "\n\n" + dataText.getText()));
-        ToolViewFactory.addLabel(box, "Short-range radios");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.connectivity_short_range_radios));
         LinearLayout row2 = ToolViewFactory.makeRow(box);
-        MaterialButton btBtn = ToolViewFactory.makeRowButton(row2, "Bluetooth pairs", 1f);
-        MaterialButton nfcBtn = ToolViewFactory.makeRowButton(row2, "NFC reader", 1f);
-        btBtn.setOnClickListener(v -> openTool(context, "bluetooth", "Bluetooth Pairs"));
-        nfcBtn.setOnClickListener(v -> openTool(context, "nfc", "NFC Reader"));
+        MaterialButton btBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.connectivity_bluetooth_pairs), 1f);
+        MaterialButton nfcBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.connectivity_nfc_reader), 1f);
+        btBtn.setOnClickListener(v -> openTool(context, "bluetooth", context.getString(R.string.bluetooth_title)));
+        nfcBtn.setOnClickListener(v -> openTool(context, "nfc", context.getString(R.string.nfc_title)));
         return box;
+    }
+
+    @Override
+    public void onDestroy() {
+        ctx = null;
     }
 }

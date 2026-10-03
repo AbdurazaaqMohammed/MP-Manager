@@ -81,7 +81,7 @@ public class RecorderTool extends BaseToolPlugin {
     private Runnable playTick;
 
     public RecorderTool() {
-        super("recorder", "Voice Recorder", "Record and play audio", ToolCategories.MEDIA);
+        super("recorder", R.string.recorder_title, R.string.recorder_sub,  ToolCategories.MEDIA);
     }
 
     private File recordingsDir(Context context) {
@@ -164,9 +164,9 @@ public class RecorderTool extends BaseToolPlugin {
             s.setType(mime);
             s.putExtra(Intent.EXTRA_STREAM, uri);
             s.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            context.startActivity(Intent.createChooser(s, "Share"));
+            context.startActivity(Intent.createChooser(s, context.getString(R.string.recorder_share)));
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Share failed");
+            ToolViewFactory.toast(context, context.getString(R.string.recorder_share_failed));
         }
     }
 
@@ -176,18 +176,18 @@ public class RecorderTool extends BaseToolPlugin {
             Intent v = new Intent(Intent.ACTION_VIEW);
             v.setDataAndType(uri, mime);
             v.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            context.startActivity(Intent.createChooser(v, "Open with"));
+            context.startActivity(Intent.createChooser(v, context.getString(R.string.recorder_open_with)));
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "No app found");
+            ToolViewFactory.toast(context, context.getString(R.string.recorder_no_app_found));
         }
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Voice Recorder");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.recorder_voice_recorder));
         final TextView status = ToolViewFactory.makeOutput(box);
-        status.setText("Ready");
+        status.setText(status.getContext().getString(R.string.recorder_ready));
         recTimerText = new TextView(context);
         recTimerText.setText("00:00");
         recTimerText.setTextSize(40);
@@ -197,20 +197,20 @@ public class RecorderTool extends BaseToolPlugin {
         recWaveView = new RecWaveView(context);
         recWaveView.setMinimumHeight(ToolViewFactory.dp(context, 90));
         box.addView(recWaveView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 90)));
-        ToolViewFactory.addLabel(box, "Quality");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.recorder_quality));
         final Spinner fmtSpinner = new Spinner(context);
-        final String[] fmtNames = new String[]{"High quality (AAC)", "Small size (AMR)"};
+        final String[] fmtNames = new String[]{context.getString(R.string.recorder_high_quality_aac), context.getString(R.string.recorder_small_size_amr)};
         ArrayAdapter<String> fmtAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, fmtNames);
         fmtAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         fmtSpinner.setAdapter(fmtAdapter);
         box.addView(fmtSpinner);
         LinearLayout recRow = ToolViewFactory.makeRow(box);
-        final MaterialButton recBtn = ToolViewFactory.makeRowButton(recRow, "Record", 1f);
-        final MaterialButton pauseBtn = ToolViewFactory.makeRowButton(recRow, "Pause", 1f);
+        final MaterialButton recBtn = ToolViewFactory.makeRowButton(recRow, recRow.getContext().getString(R.string.recorder_record), 1f);
+        final MaterialButton pauseBtn = ToolViewFactory.makeRowButton(recRow, recRow.getContext().getString(R.string.recorder_pause), 1f);
         pauseBtn.setEnabled(false);
-        ToolViewFactory.addLabel(box, "Now playing");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.recorder_now_playing));
         final TextView nowPlaying = ToolViewFactory.makeOutput(box);
-        nowPlaying.setText("Nothing loaded");
+        nowPlaying.setText(nowPlaying.getContext().getString(R.string.recorder_nothing_loaded));
         playWaveView = new RecWaveView(context);
         playWaveView.setMinimumHeight(ToolViewFactory.dp(context, 90));
         box.addView(playWaveView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 90)));
@@ -241,8 +241,8 @@ public class RecorderTool extends BaseToolPlugin {
             }
         });
         LinearLayout playRow = ToolViewFactory.makeRow(box);
-        final MaterialButton playBtn = ToolViewFactory.makeRowButton(playRow, "Play", 1f);
-        final MaterialButton stopPlayBtn = ToolViewFactory.makeRowButton(playRow, "Stop", 1f);
+        final MaterialButton playBtn = ToolViewFactory.makeRowButton(playRow, playRow.getContext().getString(R.string.recorder_play), 1f);
+        final MaterialButton stopPlayBtn = ToolViewFactory.makeRowButton(playRow, playRow.getContext().getString(R.string.metronome_stop), 1f);
         final MaterialButton speedBtn = ToolViewFactory.makeRowButton(playRow, "1x", 1f);
         final float[] speeds = new float[]{1f, 1.25f, 1.5f, 2f};
         final int[] speedIdx = new int[]{0};
@@ -310,7 +310,7 @@ public class RecorderTool extends BaseToolPlugin {
                         ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.RECORD_AUDIO}, 9002);
                     } catch (Exception ignored) {
                     }
-                    ToolViewFactory.toast(context, "Microphone permission needed, then tap Record");
+                    ToolViewFactory.toast(context, context.getString(R.string.recorder_microphone_permission_needed_t));
                     return;
                 }
                 try {
@@ -343,10 +343,10 @@ public class RecorderTool extends BaseToolPlugin {
                     recStartElapsed = SystemClock.elapsedRealtime();
                     recAmps = new ArrayList<>();
                     if (recWaveView != null) recWaveView.reset();
-                    recBtn.setText("Stop");
+                    recBtn.setText(recBtn.getContext().getString(R.string.metronome_stop));
                     pauseBtn.setEnabled(true);
-                    pauseBtn.setText("Pause");
-                    status.setText("Recording " + recOutFile.getName());
+                    pauseBtn.setText(pauseBtn.getContext().getString(R.string.recorder_pause));
+                    status.setText(status.getContext().getString(R.string.recorder_recording) + recOutFile.getName());
                     if (recTick == null) {
                         recTick = new Runnable() {
                             public void run() {
@@ -367,9 +367,9 @@ public class RecorderTool extends BaseToolPlugin {
                     }
                     handler.post(recTick);
                 } catch (Exception e) {
-                    status.setText("Record failed");
+                    status.setText(status.getContext().getString(R.string.recorder_record_failed));
                     recordingNow = false;
-                    recBtn.setText("Record");
+                    recBtn.setText(recBtn.getContext().getString(R.string.recorder_record));
                     pauseBtn.setEnabled(false);
                 }
             }
@@ -397,13 +397,13 @@ public class RecorderTool extends BaseToolPlugin {
                 voiceRecorder = null;
                 recordingNow = false;
                 recordingPaused = false;
-                recBtn.setText("Record");
+                recBtn.setText(recBtn.getContext().getString(R.string.recorder_record));
                 pauseBtn.setEnabled(false);
-                pauseBtn.setText("Pause");
+                pauseBtn.setText(pauseBtn.getContext().getString(R.string.recorder_pause));
                 if (recTimerText != null) recTimerText.setText("00:00");
                 if (recOutFile != null && recOutFile.exists()) {
                     saveAmps(recOutFile, recAmps);
-                    status.setText("Saved " + recOutFile.getName());
+                    status.setText(status.getContext().getString(R.string.recorder_saved, recOutFile.getName()));
                     recCurrentFile = recOutFile;
                     nowPlaying.setText(recOutFile.getName());
                     playAmps = new ArrayList<>(recAmps);
@@ -417,7 +417,7 @@ public class RecorderTool extends BaseToolPlugin {
                     playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
                     recOutFile = null;
                 } else {
-                    status.setText("Saved");
+                    status.setText(status.getContext().getString(R.string.recorder_saved_2));
                 }
                 refreshList.run();
                 return;
@@ -427,7 +427,7 @@ public class RecorderTool extends BaseToolPlugin {
         pauseBtn.setOnClickListener(v -> {
             if (!recordingNow || voiceRecorder == null) return;
             if (Build.VERSION.SDK_INT < 24) {
-                ToolViewFactory.toast(context, "Pause needs Android 7+");
+                ToolViewFactory.toast(context, context.getString(R.string.recorder_pause_needs_android_7));
                 return;
             }
             try {
@@ -435,24 +435,24 @@ public class RecorderTool extends BaseToolPlugin {
                     voiceRecorder.pause();
                     recordingPaused = true;
                     recPauseStarted = SystemClock.elapsedRealtime();
-                    pauseBtn.setText("Resume");
-                    status.setText("Paused");
+                    pauseBtn.setText(pauseBtn.getContext().getString(R.string.recorder_resume));
+                    status.setText(status.getContext().getString(R.string.recorder_paused));
                 } else {
                     voiceRecorder.resume();
                     recordingPaused = false;
                     recPausedTotal += SystemClock.elapsedRealtime() - recPauseStarted;
-                    pauseBtn.setText("Pause");
-                    status.setText("Recording");
+                    pauseBtn.setText(pauseBtn.getContext().getString(R.string.recorder_pause));
+                    status.setText(status.getContext().getString(R.string.recorder_recording_2));
                 }
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Pause failed");
+                ToolViewFactory.toast(context, context.getString(R.string.recorder_pause_failed));
             }
         });
         playBtn.setOnClickListener(v -> {
             try {
                 if (voicePlayer != null && voicePlayer.isPlaying()) {
                     voicePlayer.pause();
-                    playBtn.setText("Play");
+                    playBtn.setText(playBtn.getContext().getString(R.string.recorder_play));
                     return;
                 }
                 if (voicePlayer != null && playDurationMs > 0) {
@@ -461,17 +461,17 @@ public class RecorderTool extends BaseToolPlugin {
                     } catch (Exception ignored) {
                     }
                     voicePlayer.start();
-                    playBtn.setText("Pause");
+                    playBtn.setText(playBtn.getContext().getString(R.string.recorder_pause));
                     return;
                 }
                 File f = recCurrentFile != null ? recCurrentFile : (files.isEmpty() ? null : files.get(0));
                 if (f == null || !f.exists()) {
-                    ToolViewFactory.toast(context, "No recordings yet");
+                    ToolViewFactory.toast(context, context.getString(R.string.recorder_no_recordings_yet));
                     return;
                 }
                 playRecordingFile(context, f, status, nowPlaying, playBtn);
             } catch (Exception e) {
-                status.setText("Play failed");
+                status.setText(status.getContext().getString(R.string.recorder_play_failed));
             }
         });
         stopPlayBtn.setOnClickListener(v -> {
@@ -486,7 +486,7 @@ public class RecorderTool extends BaseToolPlugin {
             playSeek.setProgress(0);
             playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
             if (playWaveView != null) playWaveView.setProgress(0);
-            playBtn.setText("Play");
+            playBtn.setText(playBtn.getContext().getString(R.string.recorder_play));
         });
         listView.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= files.size()) return;
@@ -495,7 +495,7 @@ public class RecorderTool extends BaseToolPlugin {
         listView.setOnItemLongClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= files.size()) return true;
             final File f = files.get(position);
-            String[] opts = new String[]{"Rename", "Share", "Open", "Delete"};
+            String[] opts = new String[]{context.getString(R.string.recorder_rename), context.getString(R.string.recorder_share), context.getString(R.string.recorder_open), context.getString(R.string.recorder_delete)};
             new MaterialAlertDialogBuilder(context).setTitle(f.getName()).setItems(opts, (d, which) -> {
                 if (which == 0) {
                     final EditText nameInput = new EditText(context);
@@ -538,7 +538,7 @@ public class RecorderTool extends BaseToolPlugin {
             }).show();
             return true;
         });
-        ToolViewFactory.addLabel(box, "Tap a recording to play it, long-press for rename, share, open or delete.");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.recorder_tap_a_recording_to_play_it_lon));
         return box;
     }
 
@@ -573,12 +573,12 @@ public class RecorderTool extends BaseToolPlugin {
                 playSeek.setProgress(0);
             }
             if (playTimeText != null) playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
-            status.setText("Playing " + f.getName());
+            status.setText(status.getContext().getString(R.string.recorder_playing) + f.getName());
             if (nowPlaying != null) nowPlaying.setText(f.getName() + "  " + fmtDur(playDurationMs) + "  " + formatBytes(f.length()));
-            if (playBtn != null) playBtn.setText("Pause");
+            if (playBtn != null) playBtn.setText(playBtn.getContext().getString(R.string.recorder_pause));
             voicePlayer.setOnCompletionListener(mp -> {
-                status.setText("Ready");
-                if (playBtn != null) playBtn.setText("Play");
+                status.setText(status.getContext().getString(R.string.recorder_ready));
+                if (playBtn != null) playBtn.setText(playBtn.getContext().getString(R.string.recorder_play));
                 if (playSeek != null) playSeek.setProgress(0);
                 if (playTimeText != null) playTimeText.setText("00:00 / " + fmtDur(playDurationMs));
                 if (playWaveView != null) playWaveView.setProgress(0);
@@ -601,7 +601,7 @@ public class RecorderTool extends BaseToolPlugin {
             }
             handler.post(playTick);
         } catch (Exception e) {
-            status.setText("Play failed");
+            status.setText(status.getContext().getString(R.string.recorder_play_failed));
         }
     }
 

@@ -23,13 +23,13 @@ import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 public class CalculatorTool extends BaseToolPlugin {
 
     public CalculatorTool() {
-        super("calc", "Calculator", "Calculate science expressions", ToolCategories.MATH);
+        super("calc", R.string.calc_title, R.string.calc_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Calculator");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.calc_calculator));
         EditText display = ToolViewFactory.makeInput(box, "0", InputType.TYPE_CLASS_TEXT);
         display.setTextSize(24);
         display.setTypeface(Typeface.MONOSPACE);
@@ -81,7 +81,7 @@ public class CalculatorTool extends BaseToolPlugin {
                                 result.setText("= " + out);
                                 lastAns[0] = out;
                             } catch (Exception e) {
-                                result.setText("Error");
+                                result.setText(result.getContext().getString(R.string.calc_error));
                             }
                             break;
                         }
@@ -104,9 +104,9 @@ public class CalculatorTool extends BaseToolPlugin {
                 });
             }
         }
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy result");
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.calc_copy_result));
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "calc", result.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.calc_calc), result.getText().toString()));
         return box;
     }
 }

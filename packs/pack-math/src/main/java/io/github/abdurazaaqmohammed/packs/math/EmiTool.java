@@ -23,20 +23,20 @@ import java.text.DecimalFormat;
 public class EmiTool extends BaseToolPlugin {
 
     public EmiTool() {
-        super("emi", "EMI Calculator", "Loans, interest, totals", ToolCategories.MATH);
+        super("emi", R.string.emi_title, R.string.emi_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "EMI Calculator");
-        EditText pInput = ToolViewFactory.makeInput(box, "Loan amount",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.emi_emi_calculator));
+        EditText pInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.emi_loan_amount),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText rInput = ToolViewFactory.makeInput(box, "Annual interest percent",
+        EditText rInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.emi_annual_interest_percent),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText nInput = ToolViewFactory.makeInput(box, "Months", InputType.TYPE_CLASS_NUMBER);
+        EditText nInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.emi_months), InputType.TYPE_CLASS_NUMBER);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compound_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double p = Double.parseDouble(pInput.getText().toString());
@@ -44,9 +44,11 @@ public class EmiTool extends BaseToolPlugin {
                 int n = Integer.parseInt(nInput.getText().toString().trim());
                 double[] r = Money.emi(p, annual, n);
                 DecimalFormat df = new DecimalFormat("0.00");
-                output.setText("EMI " + df.format(r[0]) + "  Total " + df.format(r[1]) + "  Interest " + df.format(r[2]));
+                output.setText(output.getContext().getString(R.string.emi_emi) + df.format(r[0])
+                        + output.getContext().getString(R.string.emi_total) + df.format(r[1])
+                        + output.getContext().getString(R.string.emi_interest) + df.format(r[2]));
             } catch (Exception e) {
-                output.setText("Invalid input");
+                output.setText(output.getContext().getString(R.string.converter_invalid_input));
             }
         });
         return box;

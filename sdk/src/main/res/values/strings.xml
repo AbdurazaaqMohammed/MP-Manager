@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Source of truth for the sdk domain labels. These values double as the
+         fallback used by the null-Context overloads in the domain classes, so
+         they must stay byte-identical to the literals they replaced. -->
+
+    <!-- DateTime.ageDetails / ageFrom / diff -->
+    <string name="datetime_age_parts">%1$d years, %2$d months, %3$d days</string>
+    <string name="datetime_age_short">"%1$d years, %2$d months, %3$d days  (%4$d days total)"</string>
+    <string name="datetime_age_total">"Total %1$d days  (%2$d weeks)"</string>
+    <string name="datetime_age_born_on">Born on a %1$s</string>
+    <string name="datetime_age_next_bday">Next birthday in %1$d days</string>
+    <string name="datetime_diff">"%1$d days  (%2$d weeks, %3$dy %4$dm %5$dd)"</string>
+
+    <!-- Health.bmiCategory / bodyFatCategory / sleep-cycle rows -->
+    <string name="health_bmi_underweight">Underweight</string>
+    <string name="health_bmi_normal">Normal</string>
+    <string name="health_bmi_overweight">Overweight</string>
+    <string name="health_bmi_obese">Obese</string>
+    <string name="health_bf_essential">Essential</string>
+    <string name="health_bf_athletic">Athletic</string>
+    <string name="health_bf_fit">Fit</string>
+    <string name="health_bf_high">High</string>
+    <string name="health_cycles_at">%1$d cycles: %2$s</string>
+
+    <!-- Passwords.strengthLabel / guessesToTime -->
+    <string name="passwords_strength_very_weak">Very weak</string>
+    <string name="passwords_strength_weak">Weak</string>
+    <string name="passwords_strength_fair">Fair</string>
+    <string name="passwords_strength_strong">Strong</string>
+    <string name="passwords_strength_excellent">Excellent</string>
+    <string name="passwords_time_under_a_second">under a second</string>
+    <string name="passwords_time_seconds">%1$s seconds</string>
+    <string name="passwords_time_minutes">%1$s minutes</string>
+    <string name="passwords_time_hours">%1$s hours</string>
+    <string name="passwords_time_days">%1$s days</string>
+    <string name="passwords_time_years">%1$s years</string>
+    <string name="passwords_time_centuries">centuries</string>
+
+    <!-- ToolViewFactory.copyText toasts -->
+    <string name="tvf_copied">Copied</string>
+    <string name="tvf_copy_failed">Copy failed</string>
+</resources>

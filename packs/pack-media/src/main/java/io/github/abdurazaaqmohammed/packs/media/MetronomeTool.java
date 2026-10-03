@@ -34,7 +34,7 @@ public class MetronomeTool extends BaseToolPlugin {
     private View metronomeFlash;
 
     public MetronomeTool() {
-        super("metronome", "Metronome", "Keep tempo with beats", ToolCategories.MEDIA);
+        super("metronome", R.string.metronome_title, R.string.metronome_sub,  ToolCategories.MEDIA);
     }
 
     private ToneGenerator getTone() {
@@ -54,8 +54,8 @@ public class MetronomeTool extends BaseToolPlugin {
         metronomeBpm = 120;
         metronomeTick = null;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Metronome");
-        TextView bpmLabel = ToolViewFactory.addLabel(box, "Tempo: 120 BPM");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.metronome_metronome));
+        TextView bpmLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.metronome_tempo_120_bpm));
         SeekBar bpmBar = new SeekBar(context);
         bpmBar.setMax(210);
         bpmBar.setProgress(90);
@@ -65,29 +65,29 @@ public class MetronomeTool extends BaseToolPlugin {
         box.addView(metronomeFlash, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
         TextView beatText = ToolViewFactory.makeOutput(box);
         beatText.setGravity(Gravity.CENTER);
-        beatText.setText("Stopped");
+        beatText.setText(beatText.getContext().getString(R.string.metronome_stopped));
         bpmBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
                 metronomeBpm = 30 + progress;
-                bpmLabel.setText("Tempo: " + metronomeBpm + " BPM");
+                bpmLabel.setText(bpmLabel.getContext().getString(R.string.metronome_tempo, metronomeBpm));
             }
             public void onStartTrackingTouch(SeekBar s) {
             }
             public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        MaterialButton toggleBtn = ToolViewFactory.makeButton(box, "Start");
+        MaterialButton toggleBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.metronome_start));
         toggleBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (metronomeRunning) {
                     metronomeRunning = false;
-                    toggleBtn.setText("Start");
-                    beatText.setText("Stopped");
+                    toggleBtn.setText(toggleBtn.getContext().getString(R.string.metronome_start));
+                    beatText.setText(beatText.getContext().getString(R.string.metronome_stopped));
                     return;
                 }
                 metronomeRunning = true;
                 metronomeBeat = 0;
-                toggleBtn.setText("Stop");
+                toggleBtn.setText(toggleBtn.getContext().getString(R.string.metronome_stop));
                 if (metronomeTick == null) {
                     metronomeTick = new Runnable() {
                         public void run() {
@@ -96,7 +96,7 @@ public class MetronomeTool extends BaseToolPlugin {
                             }
                             metronomeBeat++;
                             int beat = ((metronomeBeat - 1) % 4) + 1;
-                            beatText.setText("Beat " + beat + " of 4");
+                            beatText.setText(beatText.getContext().getString(R.string.metronome_beat_of, beat));
                             try {
                                 ToneGenerator tg = getTone();
                                 if (tg != null) {

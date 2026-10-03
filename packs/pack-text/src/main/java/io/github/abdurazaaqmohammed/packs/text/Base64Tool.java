@@ -23,26 +23,26 @@ import java.nio.charset.StandardCharsets;
 public class Base64Tool extends BaseToolPlugin {
 
     public Base64Tool() {
-        super("base64", "Base64 Tool", "Encode and decode Base64", ToolCategories.TEXT);
+        super("base64", R.string.base64_title, R.string.base64_sub,  ToolCategories.TEXT);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Base64 Tool");
-        EditText input = ToolViewFactory.makeInput(box, "Input",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.base64_base64_tool));
+        EditText input = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.base64_input),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Result appears here");
+        output.setText(output.getContext().getString(R.string.base64_result_appears_here));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, "Encode", 1f);
-        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, "Decode", 1f);
+        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.base64_encode), 1f);
+        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.base64_decode), 1f);
         encBtn.setOnClickListener(v -> {
             try {
                 String s = input.getText().toString();
                 output.setText(Base64.encodeToString(s.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP));
             } catch (Exception e) {
-                output.setText("Error");
+                output.setText(output.getContext().getString(R.string.base64_error));
             }
         });
         decBtn.setOnClickListener(v -> {
@@ -50,12 +50,12 @@ public class Base64Tool extends BaseToolPlugin {
                 String s = input.getText().toString().trim();
                 output.setText(new String(Base64.decode(s, Base64.DEFAULT), StandardCharsets.UTF_8));
             } catch (Exception e) {
-                output.setText("Invalid Base64");
+                output.setText(output.getContext().getString(R.string.base64_invalid_base64));
             }
         });
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy result");
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.base64_copy_result));
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "base64", output.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.base64_base64), output.getText().toString()));
         return box;
     }
 }

@@ -35,7 +35,7 @@ public class CompassTool extends BaseToolPlugin {
     private TextView compassText;
 
     public CompassTool() {
-        super("compass", "Compass", "Find magnetic heading", ToolCategories.DEVICE);
+        super("compass", R.string.compass_title, R.string.compass_sub,  ToolCategories.DEVICE);
     }
 
     private static String cardinalFor(float az) {
@@ -47,7 +47,7 @@ public class CompassTool extends BaseToolPlugin {
     private void startSensors() {
         if (sensorManager == null) {
             if (compassText != null) {
-                compassText.setText("No sensors on this device");
+                compassText.setText(compassText.getContext().getString(R.string.compass_no_sensors_on_this_device));
             }
             return;
         }
@@ -55,7 +55,7 @@ public class CompassTool extends BaseToolPlugin {
         Sensor magnet = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         if (accel == null || magnet == null) {
             if (compassText != null) {
-                compassText.setText("Compass sensor not available");
+                compassText.setText(compassText.getContext().getString(R.string.compass_compass_sensor_not_available));
             }
             return;
         }
@@ -100,7 +100,7 @@ public class CompassTool extends BaseToolPlugin {
             sensorManager.registerListener(listener, magnet, SensorManager.SENSOR_DELAY_UI);
         } catch (Exception e) {
             if (compassText != null) {
-                compassText.setText("Sensor error");
+                compassText.setText(compassText.getContext().getString(R.string.compass_sensor_error));
             }
         }
     }
@@ -109,7 +109,7 @@ public class CompassTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Compass");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.compass_compass));
         compassView = new CompassView(context);
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
                 ToolViewFactory.dp(context, 260), ToolViewFactory.dp(context, 260));
@@ -118,9 +118,9 @@ public class CompassTool extends BaseToolPlugin {
         cp.setMargins(0, m8, 0, m8);
         box.addView(compassView, cp);
         compassText = ToolViewFactory.makeOutput(box);
-        compassText.setText("Waiting for sensors");
+        compassText.setText(compassText.getContext().getString(R.string.compass_waiting_for_sensors));
         compassText.setGravity(Gravity.CENTER);
-        MaterialButton calBtn = ToolViewFactory.makeButton(box, "Restart sensors");
+        MaterialButton calBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compass_restart_sensors));
         calBtn.setOnClickListener(v -> startSensors());
         startSensors();
         return box;

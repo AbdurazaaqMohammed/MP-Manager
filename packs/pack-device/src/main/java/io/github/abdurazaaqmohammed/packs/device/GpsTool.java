@@ -42,7 +42,7 @@ public class GpsTool extends BaseToolPlugin {
     private TextView gpsText;
 
     public GpsTool() {
-        super("gps", "GPS Speedometer", "Track live GPS speed", ToolCategories.DEVICE);
+        super("gps", R.string.gps_title, R.string.gps_sub,  ToolCategories.DEVICE);
     }
 
     private void startGpsUpdates(Context context) {
@@ -50,7 +50,7 @@ public class GpsTool extends BaseToolPlugin {
             locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         }
         if (locationManager == null) {
-            ToolViewFactory.toast(context, "Location unavailable");
+            ToolViewFactory.toast(context, context.getString(R.string.gps_location_unavailable));
             return;
         }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -58,12 +58,12 @@ public class GpsTool extends BaseToolPlugin {
                 ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 9003);
             } catch (Exception ignored) {
             }
-            ToolViewFactory.toast(context, "Location permission needed, then tap Start");
+            ToolViewFactory.toast(context, context.getString(R.string.gps_location_permission_needed_the));
             return;
         }
         try {
             if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                ToolViewFactory.toast(context, "Enable GPS first");
+                ToolViewFactory.toast(context, context.getString(R.string.gps_enable_gps_first));
             }
         } catch (Exception ignored) {
         }
@@ -83,7 +83,7 @@ public class GpsTool extends BaseToolPlugin {
                         gpsCount++;
                         DecimalFormat df = new DecimalFormat("0.0");
                         if (gpsText != null) {
-                            gpsText.setText(df.format(kmh) + " km/h\nMax " + df.format(gpsMax) + "  Avg " + df.format(gpsCount == 0 ? 0 : gpsSum / gpsCount));
+                            gpsText.setText(context.getString(R.string.gps_readout, df.format(kmh), df.format(gpsMax), df.format(gpsCount == 0 ? 0 : gpsSum / gpsCount)));
                         }
                     } catch (Exception ignored) {
                     }
@@ -100,7 +100,7 @@ public class GpsTool extends BaseToolPlugin {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, gpsListener);
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000, 5, gpsListener);
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "GPS failed");
+            ToolViewFactory.toast(context, context.getString(R.string.gps_gps_failed));
         }
     }
 
@@ -121,15 +121,15 @@ public class GpsTool extends BaseToolPlugin {
         gpsSum = 0;
         gpsCount = 0;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "GPS Speedometer");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.gps_gps_speedometer));
         gpsText = ToolViewFactory.makeOutput(box);
         gpsText.setTextSize(36);
         gpsText.setGravity(Gravity.CENTER);
-        gpsText.setText("0.0 km/h");
+        gpsText.setText(gpsText.getContext().getString(R.string.gps_0_0_km_h));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, "Start", 1f);
-        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, "Stop", 1f);
-        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, "Reset", 1f);
+        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.gps_start), 1f);
+        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.gps_stop), 1f);
+        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.gps_reset), 1f);
         startBtn.setOnClickListener(v -> {
             gpsRunning = true;
             startGpsUpdates(context);
@@ -139,7 +139,7 @@ public class GpsTool extends BaseToolPlugin {
             gpsMax = 0;
             gpsSum = 0;
             gpsCount = 0;
-            gpsText.setText("0.0 km/h");
+            gpsText.setText(gpsText.getContext().getString(R.string.gps_0_0_km_h));
         });
         return box;
     }

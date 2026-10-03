@@ -21,38 +21,38 @@ import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 public class BinaryTool extends BaseToolPlugin {
 
     public BinaryTool() {
-        super("binarytext", "Binary Translator", "Convert text to binary", ToolCategories.TEXT);
+        super("binarytext", R.string.binarytext_title, R.string.binarytext_sub,  ToolCategories.TEXT);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Binary Translator");
-        EditText input = ToolViewFactory.makeInput(box, "Text or binary",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.binarytext_binary_translator));
+        EditText input = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.binarytext_text_or_binary),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(3);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Result");
+        output.setText(output.getContext().getString(R.string.binarytext_result));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, "To binary", 1f);
-        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, "To text", 1f);
+        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.binarytext_to_binary), 1f);
+        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.binarytext_to_text), 1f);
         encBtn.setOnClickListener(v -> {
             try {
                 output.setText(TextCodecs.binaryEncode(input.getText().toString()));
             } catch (Exception e) {
-                output.setText("Error");
+                output.setText(output.getContext().getString(R.string.base64_error));
             }
         });
         decBtn.setOnClickListener(v -> {
             try {
                 output.setText(TextCodecs.binaryDecode(input.getText().toString()));
             } catch (Exception e) {
-                output.setText("Use 8-bit groups separated by spaces");
+                output.setText(output.getContext().getString(R.string.binarytext_use_8_bit_groups_separated_by_));
             }
         });
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy result");
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.base64_copy_result));
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "binary", output.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.binarytext_binary), output.getText().toString()));
         return box;
     }
 }

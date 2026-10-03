@@ -3,15 +3,20 @@
      own applicationId/UID/permissions, one exported activity per area. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- The TITLE <meta-data> values below are intentionally literal English,
+         not @string references: the host reads them through PackageManager in
+         the HOST's configuration, so a resource reference would resolve against
+         the host's resource table (and fail) instead of this plugin's. The
+         android:label values above do resolve against this app and are localized. -->
     <application
         android:allowBackup="true"
-        android:label="MP Sample Plugin"
+        android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.Light">
 
         <activity
             android:name=".SidebarActivity"
             android:exported="true"
-            android:label="Sample Sidebar">
+            android:label="@string/label_sidebar">
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SIDEBAR_OPEN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -27,7 +32,7 @@
         <activity
             android:name=".SettingActivity"
             android:exported="true"
-            android:label="Sample Setting">
+            android:label="@string/label_setting">
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.action.SETTING_CONFIG" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -49,7 +54,7 @@
         <activity
             android:name=".FileActionActivity"
             android:exported="true"
-            android:label="Sample Hash">
+            android:label="@string/label_hash">
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.action.FILE_MENU" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -71,7 +76,7 @@
         <activity
             android:name=".EditorActivity"
             android:exported="true"
-            android:label="Sample Uppercase">
+            android:label="@string/label_uppercase">
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.action.EDITOR_ACTION" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -87,7 +92,7 @@
         <activity
             android:name=".ApkActivity"
             android:exported="true"
-            android:label="Sample APK Scan">
+            android:label="@string/label_apk">
             <intent-filter>
                 <action android:name="io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION" />
                 <category android:name="android.intent.category.DEFAULT" />

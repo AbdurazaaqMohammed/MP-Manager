@@ -23,15 +23,15 @@ public class SettingActivity extends Activity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad, pad, pad);
         TextView title = new TextView(this);
-        title.setText("Sample setting (" + key + ")");
+        title.setText(getString(R.string.setting_title, key));
         title.setTextSize(18);
         box.addView(title);
         Switch toggle = new Switch(this);
-        toggle.setText("Demo feature");
+        toggle.setText(getString(R.string.setting_demo_feature));
         toggle.setChecked(current);
         box.addView(toggle);
         Button save = new Button(this);
-        save.setText("Save");
+        save.setText(getString(R.string.save));
         save.setOnClickListener(v -> {
             Intent result = new Intent();
             result.putExtra(PluginContracts.EXTRA_VALUE, toggle.isChecked());

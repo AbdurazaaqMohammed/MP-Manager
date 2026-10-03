@@ -24,7 +24,7 @@ import java.util.Locale;
 public class PaceTool extends BaseToolPlugin {
 
     public PaceTool() {
-        super("pace", "Pace Calculator", "Running pace and speed", ToolCategories.MATH);
+        super("pace", R.string.pace_title, R.string.pace_sub,  ToolCategories.MATH);
     }
 
     private static long parseLongSafe(String s) {
@@ -42,22 +42,22 @@ public class PaceTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Pace Calculator");
-        EditText distInput = ToolViewFactory.makeInput(box, "Distance in km",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.pace_pace_calculator));
+        EditText distInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.fuel_distance_in_km),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         distInput.setText("5");
         LinearLayout row = ToolViewFactory.makeRow(box);
-        EditText hInput = ToolViewFactory.makeRowInput(row, "hh", InputType.TYPE_CLASS_NUMBER, 1f, "0");
-        EditText mInput = ToolViewFactory.makeRowInput(row, "mm", InputType.TYPE_CLASS_NUMBER, 1f, "25");
-        EditText sInput = ToolViewFactory.makeRowInput(row, "ss", InputType.TYPE_CLASS_NUMBER, 1f, "0");
+        EditText hInput = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.pace_hh), InputType.TYPE_CLASS_NUMBER, 1f, "0");
+        EditText mInput = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.pace_mm), InputType.TYPE_CLASS_NUMBER, 1f, "25");
+        EditText sInput = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.pace_ss), InputType.TYPE_CLASS_NUMBER, 1f, "0");
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compound_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double dist = Double.parseDouble(distInput.getText().toString());
                 long secs = parseLongSafe(hInput.getText().toString()) * 3600 + parseLongSafe(mInput.getText().toString()) * 60 + parseLongSafe(sInput.getText().toString());
                 if (dist <= 0 || secs <= 0) {
-                    output.setText("Enter distance and time");
+                    output.setText(output.getContext().getString(R.string.pace_enter_distance_and_time));
                     return;
                 }
                 double secPerKm = secs / dist;
@@ -65,12 +65,12 @@ public class PaceTool extends BaseToolPlugin {
                 long pm = totalPaceSecs / 60;
                 long ps = totalPaceSecs % 60;
                 double kmh = dist / (secs / 3600.0);
-                String b = "Pace " + pm + ":" + String.format(Locale.US, "%02d", ps) + " per km\n"
-                        + "Speed " + new DecimalFormat("0.0").format(kmh) + " km/h\n"
-                        + "10K in " + DateTime.formatDuration(Math.round(secPerKm * 10)) + "  Marathon in " + DateTime.formatDuration(Math.round(secPerKm * 42.195));
+                String b = output.getContext().getString(R.string.pace_pace) + pm + ":" + String.format(Locale.US, "%02d", ps) + output.getContext().getString(R.string.pace_per_km)
+                        + output.getContext().getString(R.string.pace_speed) + new DecimalFormat("0.0").format(kmh) + " km/h\n"
+                        + output.getContext().getString(R.string.pace_10k_in) + DateTime.formatDuration(Math.round(secPerKm * 10)) + output.getContext().getString(R.string.pace_marathon_in) + DateTime.formatDuration(Math.round(secPerKm * 42.195));
                 output.setText(b);
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText(output.getContext().getString(R.string.compound_check_inputs));
             }
         });
         return box;

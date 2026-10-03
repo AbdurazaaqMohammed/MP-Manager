@@ -26,14 +26,14 @@ import java.util.Random;
 public class ColorConvTool extends BaseToolPlugin {
 
     public ColorConvTool() {
-        super("colorconv", "Color Converter", "HEX, RGB, HSL", ToolCategories.TEXT);
+        super("colorconv", R.string.colorconv_title, R.string.colorconv_sub,  ToolCategories.TEXT);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Color Converter");
-        EditText hexInput = ToolViewFactory.makeInput(box, "HEX, e.g. #1B73E8", InputType.TYPE_CLASS_TEXT);
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.colorconv_color_converter));
+        EditText hexInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.colorconv_hex_e_g_1b73e8), InputType.TYPE_CLASS_TEXT);
         hexInput.setText("#1B73E8");
         View swatch = new View(context);
         box.addView(swatch, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
@@ -51,12 +51,15 @@ public class ColorConvTool extends BaseToolPlugin {
                 float[] hsv = new float[3];
                 Color.RGBToHSV(r, g, b, hsv);
                 swatch.setBackgroundColor(color);
-                String sb = "RGB " + r + ", " + g + ", " + b + "\n"
-                        + "HSL " + Math.round(hsv[0]) + ", " + Math.round(hsv[1] * 100) + "%, " + Math.round(hsv[2] * 100) + "%\n"
-                        + "HEX #" + String.format(Locale.US, "%02X%02X%02X", r, g, b);
-                output.setText(sb);
+                output.setText(output.getContext().getString(R.string.colorconv_rgb_line, r, g, b)
+                        + "\n"
+                        + output.getContext().getString(R.string.colorconv_hsl_line,
+                                Math.round(hsv[0]), Math.round(hsv[1] * 100), Math.round(hsv[2] * 100))
+                        + "\n"
+                        + output.getContext().getString(R.string.colorconv_hex_line,
+                                String.format(Locale.US, "%02X%02X%02X", r, g, b)));
             } catch (Exception e) {
-                output.setText("Enter a valid HEX color");
+                output.setText(output.getContext().getString(R.string.colorconv_enter_a_valid_hex_color));
             }
         };
         hexInput.addTextChangedListener(new TextWatcher() {
@@ -70,14 +73,14 @@ public class ColorConvTool extends BaseToolPlugin {
         });
         compute.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton randomBtn = ToolViewFactory.makeRowButton(row, "Random", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton randomBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.colorconv_random), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.colorconv_copy), 1f);
         randomBtn.setOnClickListener(v -> {
             Random r = new Random();
             hexInput.setText(String.format(Locale.US, "#%02X%02X%02X", r.nextInt(256), r.nextInt(256), r.nextInt(256)));
         });
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "color", output.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.colorconv_color), output.getText().toString()));
         return box;
     }
 }

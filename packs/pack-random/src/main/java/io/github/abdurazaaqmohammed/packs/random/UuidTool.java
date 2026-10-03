@@ -21,14 +21,14 @@ import java.util.UUID;
 public class UuidTool extends BaseToolPlugin {
 
     public UuidTool() {
-        super("uuid", "UUID Generator", "Generate random UUIDs", ToolCategories.RAND);
+        super("uuid", R.string.uuid_title, R.string.uuid_sub,  ToolCategories.RAND);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "UUID Generator");
-        TextView countLabel = ToolViewFactory.addLabel(box, "Count: 5");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.uuid_uuid_generator));
+        TextView countLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.uuid_count_5));
         SeekBar countBar = new SeekBar(context);
         countBar.setMax(19);
         countBar.setProgress(4);
@@ -36,7 +36,7 @@ public class UuidTool extends BaseToolPlugin {
         TextView output = ToolViewFactory.makeOutput(box);
         final Runnable generate = () -> {
             int n = 1 + countBar.getProgress();
-            countLabel.setText("Count: " + n);
+            countLabel.setText(countLabel.getContext().getString(R.string.uuid_count) + n);
             StringBuilder b = new StringBuilder();
             for (int i = 0; i < n; i++) {
                 b.append(UUID.randomUUID().toString());
@@ -57,11 +57,11 @@ public class UuidTool extends BaseToolPlugin {
         });
         generate.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, "New", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.uuid_new), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.password_copy), 1f);
         regenBtn.setOnClickListener(v -> generate.run());
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "uuid", output.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.uuid_uuid), output.getText().toString()));
         return box;
     }
 }

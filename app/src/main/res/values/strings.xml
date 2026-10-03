@@ -1627,4 +1627,14 @@ Layout Inspector
     <string name="overlay_toast_duration_short">Short</string>
     <string name="position_default">Default</string>
 
+    <!-- ===== plugin categories: keys are the ToolCategories constants, values are display text ===== -->
+    <string name="cat_network">Wi-Fi &amp; Network</string>
+    <string name="cat_storage">Storage &amp; Apps</string>
+    <string name="cat_device">Device &amp; Hardware</string>
+    <string name="cat_math">Math &amp; Finance</string>
+    <string name="cat_time">Time &amp; Productivity</string>
+    <string name="cat_text">Text &amp; Security</string>
+    <string name="cat_media">Media &amp; Sound</string>
+    <string name="cat_random">Random</string>
+
 </resources>

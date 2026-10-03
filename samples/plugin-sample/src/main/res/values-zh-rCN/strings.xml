@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MP 示例插件</string>
+
+    <string name="label_sidebar">示例侧边栏</string>
+    <string name="label_setting">示例设置</string>
+    <string name="label_hash">示例哈希</string>
+    <string name="label_uppercase">示例转大写</string>
+    <string name="label_apk">示例 APK 扫描</string>
+
+    <!-- SidebarActivity -->
+    <string name="sidebar_title">示例外部插件</string>
+    <string name="sidebar_sub">由宿主侧边栏以独立应用启动（plugin=%1$s）。</string>
+    <string name="close">关闭</string>
+
+    <!-- SettingActivity -->
+    <string name="setting_title">示例设置（%1$s）</string>
+    <string name="setting_demo_feature">演示功能</string>
+    <string name="save">保存</string>
+
+    <!-- FileActionActivity -->
+    <string name="file_action_title">示例文件操作</string>
+    <string name="file_action_hash_first">计算首个文件哈希</string>
+    <string name="file_action_hash_failed">哈希计算失败</string>
+
+    <!-- ApkActivity -->
+    <string name="apk_title">示例 APK 扫描</string>
+    <string name="apk_info">APK：%1$s\nURI：%2$s</string>
+    <string name="done">完成</string>
+
+    <!-- EditorActivity -->
+    <string name="editor_apply">应用到编辑器</string>
+</resources>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="password_copy">复制</string>
+    <string name="password_error">错误</string>
+    <string name="password_generate">生成</string>
+    <string name="password_length">"长度： "</string>
+    <string name="password_length_16">长度：16</string>
+    <string name="password_password">password</string>
+    <string name="password_password_generator">密码生成</string>
+    <string name="password_pick_at_least_one_set">请至少勾选一组字符</string>
+    <string name="password_press_generate">点击生成</string>
+    <string name="password_sub">生成安全的密码</string>
+    <string name="password_symbols">符号</string>
+    <string name="password_title">密码生成</string>
+    <string name="random_coin">抛硬币</string>
+    <string name="random_dice">掷骰子</string>
+    <string name="random_heads">正面</string>
+    <string name="random_max">最大值</string>
+    <string name="random_min">最小值</string>
+    <string name="random_number">随机数</string>
+    <string name="random_randomizer">随机工具</string>
+    <string name="random_sub">骰子、硬币、随机数</string>
+    <string name="random_tails">反面</string>
+    <string name="random_title">随机工具</string>
+    <string name="strength_add_digits">"添加数字。 "</string>
+    <string name="strength_add_symbols">"添加符号。 "</string>
+    <string name="strength_bits">%1$s（%2$s 比特）</string>
+    <string name="strength_crack_estimate">"\n破解时间估计：%1$s\n"</string>
+    <string name="strength_mix_case">混合使用大小写字母。</string>
+    <string name="strength_password_strength">密码强度</string>
+    <string name="strength_password_to_test">待测试的密码</string>
+    <string name="strength_sub">熵值与破解时间估计</string>
+    <string name="strength_title">密码强度</string>
+    <string name="strength_type_a_password">请输入密码</string>
+    <string name="strength_use_12">"请使用至少 12 个字符。 "</string>
+    <string name="uuid_count">"数量： "</string>
+    <string name="uuid_count_5">数量：5</string>
+    <string name="uuid_new">重新生成</string>
+    <string name="uuid_sub">生成随机 UUID</string>
+    <string name="uuid_title">UUID 生成</string>
+    <string name="uuid_uuid">uuid</string>
+    <string name="uuid_uuid_generator">UUID 生成</string>
+</resources>

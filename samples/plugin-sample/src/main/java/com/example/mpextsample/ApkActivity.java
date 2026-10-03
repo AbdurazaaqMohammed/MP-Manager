@@ -22,14 +22,14 @@ public class ApkActivity extends Activity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad, pad, pad);
         TextView title = new TextView(this);
-        title.setText("Sample APK scan");
+        title.setText(getString(R.string.apk_title));
         title.setTextSize(18);
         box.addView(title);
         TextView info = new TextView(this);
-        info.setText("APK: " + name + "\nURI: " + apk);
+        info.setText(getString(R.string.apk_info, name, apk));
         box.addView(info);
         Button done = new Button(this);
-        done.setText("Done");
+        done.setText(getString(R.string.done));
         done.setOnClickListener(v -> {
             setResult(RESULT_OK);
             finish();

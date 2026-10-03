@@ -22,7 +22,7 @@ import java.text.DecimalFormat;
 public class OhmTool extends BaseToolPlugin {
 
     public OhmTool() {
-        super("ohm", "Ohm Law Calc", "Solve V, I, R, P", ToolCategories.MATH);
+        super("ohm", R.string.ohm_title, R.string.ohm_sub,  ToolCategories.MATH);
     }
 
     private static Double parseDoubleOrNull(String s) {
@@ -44,18 +44,18 @@ public class OhmTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Ohm Law Solver");
-        ToolViewFactory.addLabel(box, "Fill any two values, leave the rest empty.");
-        EditText vInput = ToolViewFactory.makeInput(box, "Voltage V",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.ohm_ohm_law_solver));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.ohm_fill_any_two_values_leave_the_));
+        EditText vInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.ohm_voltage_v),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText iInput = ToolViewFactory.makeInput(box, "Current A",
+        EditText iInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.ohm_current_a),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText rInput = ToolViewFactory.makeInput(box, "Resistance Ohm",
+        EditText rInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.ohm_resistance_ohm),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText pInput = ToolViewFactory.makeInput(box, "Power W",
+        EditText pInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.ohm_power_w),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Solve");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.ohm_solve));
         goBtn.setOnClickListener(v -> {
             try {
                 Double V = parseDoubleOrNull(vInput.getText().toString());
@@ -91,7 +91,7 @@ public class OhmTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.####");
                 output.setText("V=" + fmtNull(V, df) + "  I=" + fmtNull(I, df) + "  R=" + fmtNull(R, df) + "  P=" + fmtNull(P, df));
             } catch (Exception e) {
-                output.setText("Enter at least two values");
+                output.setText(output.getContext().getString(R.string.ohm_enter_at_least_two_values));
             }
         });
         return box;

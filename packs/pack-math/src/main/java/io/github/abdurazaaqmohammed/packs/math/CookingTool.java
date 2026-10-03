@@ -25,14 +25,14 @@ import java.text.DecimalFormat;
 public class CookingTool extends BaseToolPlugin {
 
     public CookingTool() {
-        super("cooking", "Cooking Converter", "Cups and grams", ToolCategories.MATH);
+        super("cooking", R.string.cooking_title, R.string.cooking_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Cooking Converter");
-        String[] ingredients = new String[]{"Water", "Milk", "Flour", "Sugar", "Butter", "Rice", "Oats", "Oil"};
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.cooking_cooking_converter));
+        String[] ingredients = new String[]{context.getString(R.string.cooking_water), context.getString(R.string.cooking_milk), context.getString(R.string.cooking_flour), context.getString(R.string.cooking_sugar), context.getString(R.string.cooking_butter), context.getString(R.string.cooking_rice), context.getString(R.string.cooking_oats), context.getString(R.string.cooking_oil)};
         double[] gramsPerCup = new double[]{236.0, 240.0, 120.0, 200.0, 227.0, 185.0, 90.0, 218.0};
         Spinner ingSpinner = new Spinner(context);
         ArrayAdapter<String> ingAdapter =
@@ -40,10 +40,10 @@ public class CookingTool extends BaseToolPlugin {
         ingAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         ingSpinner.setAdapter(ingAdapter);
         box.addView(ingSpinner);
-        EditText cupsInput = ToolViewFactory.makeInput(box, "Cups",
+        EditText cupsInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.cooking_cups),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         cupsInput.setText("1");
-        EditText gramsInput = ToolViewFactory.makeInput(box, "Grams",
+        EditText gramsInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.cooking_grams),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         TextView output = ToolViewFactory.makeOutput(box);
         final boolean[] syncing = new boolean[]{false};
@@ -56,7 +56,7 @@ public class CookingTool extends BaseToolPlugin {
                     output.setText(new DecimalFormat("0.#").format(grams) + " g  (" + new DecimalFormat("0.#").format(grams / 28.3495) + " oz)");
                 }
             } catch (Exception e) {
-                output.setText("Enter cups or grams");
+                output.setText(output.getContext().getString(R.string.cooking_enter_cups_or_grams));
             }
         };
         ingSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

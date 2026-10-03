@@ -127,9 +127,9 @@ public final class ToolViewFactory {
             android.content.ClipboardManager cm =
                     (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
             cm.setPrimaryClip(android.content.ClipData.newPlainText(label, value));
-            toast(context, "Copied");
+            toast(context, context.getString(io.github.abdurazaaqmohammed.sdk.R.string.tvf_copied));
         } catch (Exception e) {
-            toast(context, "Copy failed");
+            toast(context, context.getString(io.github.abdurazaaqmohammed.sdk.R.string.tvf_copy_failed));
         }
     }
 

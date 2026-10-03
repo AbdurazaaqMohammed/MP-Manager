@@ -23,16 +23,16 @@ import java.util.Random;
 public class RandomTool extends BaseToolPlugin {
 
     public RandomTool() {
-        super("random", "Randomizer", "Dice, coins, numbers", ToolCategories.RAND);
+        super("random", R.string.random_title, R.string.random_sub,  ToolCategories.RAND);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Randomizer");
-        EditText minInput = ToolViewFactory.makeInput(box, "Min",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.random_randomizer));
+        EditText minInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.random_min),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText maxInput = ToolViewFactory.makeInput(box, "Max",
+        EditText maxInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.random_max),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
         minInput.setText("1");
         maxInput.setText("100");
@@ -42,9 +42,9 @@ public class RandomTool extends BaseToolPlugin {
         output.setText("-");
         Random random = new Random();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton numBtn = ToolViewFactory.makeRowButton(row, "Number", 1f);
-        MaterialButton diceBtn = ToolViewFactory.makeRowButton(row, "Dice", 1f);
-        MaterialButton coinBtn = ToolViewFactory.makeRowButton(row, "Coin", 1f);
+        MaterialButton numBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.random_number), 1f);
+        MaterialButton diceBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.random_dice), 1f);
+        MaterialButton coinBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.random_coin), 1f);
         numBtn.setOnClickListener(v -> {
             try {
                 int min = Integer.parseInt(minInput.getText().toString().trim());
@@ -66,7 +66,9 @@ public class RandomTool extends BaseToolPlugin {
             output.setText(faces[d - 1] + "  " + d);
             ToolViewFactory.vibrateTick(context);
         });
-        coinBtn.setOnClickListener(v -> output.setText(random.nextBoolean() ? "Heads" : "Tails"));
+        coinBtn.setOnClickListener(v -> output.setText(random.nextBoolean()
+                ? output.getContext().getString(R.string.random_heads)
+                : output.getContext().getString(R.string.random_tails)));
         return box;
     }
 }

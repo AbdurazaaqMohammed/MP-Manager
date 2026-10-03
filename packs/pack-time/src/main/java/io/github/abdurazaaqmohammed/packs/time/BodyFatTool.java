@@ -25,37 +25,37 @@ import java.text.DecimalFormat;
 public class BodyFatTool extends BaseToolPlugin {
 
     public BodyFatTool() {
-        super("bodyfat", "Body Fat Estimator", "Estimate with US Navy method", ToolCategories.TIME);
+        super("bodyfat", R.string.bodyfat_title, R.string.bodyfat_sub,  ToolCategories.TIME);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Body Fat Estimator");
-        ToolViewFactory.addLabel(box, "US Navy method, measurements in cm.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.bodyfat_body_fat_estimator));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.bodyfat_us_navy_method_measurements_in));
         RadioGroup genderGroup = new RadioGroup(context);
         genderGroup.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton maleBtn = new RadioButton(context);
         maleBtn.setId(View.generateViewId());
-        maleBtn.setText("Male");
+        maleBtn.setText(maleBtn.getContext().getString(R.string.bmr_male));
         RadioButton femaleBtn = new RadioButton(context);
         femaleBtn.setId(View.generateViewId());
-        femaleBtn.setText("Female");
+        femaleBtn.setText(femaleBtn.getContext().getString(R.string.bmr_female));
         genderGroup.addView(maleBtn);
         genderGroup.addView(femaleBtn);
         genderGroup.check(maleBtn.getId());
         box.addView(genderGroup);
-        EditText waistInput = ToolViewFactory.makeInput(box, "Waist cm",
+        EditText waistInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.bodyfat_waist_cm),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText neckInput = ToolViewFactory.makeInput(box, "Neck cm",
+        EditText neckInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.bodyfat_neck_cm),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText heightInput = ToolViewFactory.makeInput(box, "Height cm",
+        EditText heightInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.bodyfat_height_cm),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText hipInput = ToolViewFactory.makeInput(box, "Hip cm (female only)",
+        EditText hipInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.bodyfat_hip_cm_female_only),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         TextView output = ToolViewFactory.makeOutput(box);
         final int maleId = maleBtn.getId();
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.agecalc_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double waist = Double.parseDouble(waistInput.getText().toString());
@@ -64,26 +64,26 @@ public class BodyFatTool extends BaseToolPlugin {
                 boolean male = genderGroup.getCheckedRadioButtonId() == maleId;
                 double bf;
                 if (height <= 0 || neck <= 0) {
-                    output.setText("Height and neck must be above zero");
+                    output.setText(output.getContext().getString(R.string.bodyfat_height_and_neck_must_be_above_));
                     return;
                 }
                 if (male) {
                     if (waist <= neck) {
-                        output.setText("Waist must exceed neck");
+                        output.setText(output.getContext().getString(R.string.bodyfat_waist_must_exceed_neck));
                         return;
                     }
                     bf = Health.bodyFatMale(waist, neck, height);
                 } else {
                     double hip = Double.parseDouble(hipInput.getText().toString());
                     if (waist + hip <= neck) {
-                        output.setText("Waist plus hip must exceed neck");
+                        output.setText(output.getContext().getString(R.string.bodyfat_waist_plus_hip_must_exceed_nec));
                         return;
                     }
                     bf = Health.bodyFatFemale(waist, hip, neck, height);
                 }
-                output.setText(new DecimalFormat("0.0").format(bf) + "%  " + Health.bodyFatCategory(male, bf));
+                output.setText(new DecimalFormat("0.0").format(bf) + "%  " + Health.bodyFatCategory(context, male, bf));
             } catch (Exception e) {
-                output.setText("Check measurements");
+                output.setText(output.getContext().getString(R.string.bodyfat_check_measurements));
             }
         });
         return box;

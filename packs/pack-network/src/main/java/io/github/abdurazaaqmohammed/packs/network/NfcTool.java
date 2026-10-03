@@ -39,7 +39,7 @@ public class NfcTool extends BaseToolPlugin {
     private Activity host;
 
     public NfcTool() {
-        super("nfc", "NFC Reader", "Scan NFC tags", ToolCategories.NETWORK);
+        super("nfc", R.string.nfc_title, R.string.nfc_sub,  ToolCategories.NETWORK);
     }
 
     private static String decodeNdefText(NdefRecord rec) {
@@ -82,21 +82,21 @@ public class NfcTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "NFC Reader");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.nfc_nfc_reader));
         nfcText = ToolViewFactory.makeOutput(box);
         try {
             NfcAdapter adapter = NfcAdapter.getDefaultAdapter(context);
             if (adapter == null) {
-                nfcText.setText("No NFC hardware on this device");
+                nfcText.setText(nfcText.getContext().getString(R.string.nfc_no_nfc_hardware_on_this_device));
                 return box;
             }
             if (!adapter.isEnabled()) {
-                nfcText.setText("Turn on NFC, then hold a tag to the phone");
+                nfcText.setText(nfcText.getContext().getString(R.string.nfc_turn_on_nfc_then_hold_a_tag_to));
             } else {
-                nfcText.setText("Hold a tag to the phone");
+                nfcText.setText(nfcText.getContext().getString(R.string.nfc_hold_a_tag_to_the_phone));
             }
         } catch (Exception e) {
-            nfcText.setText("NFC unavailable");
+            nfcText.setText(nfcText.getContext().getString(R.string.nfc_nfc_unavailable));
             return box;
         }
         try {
@@ -104,8 +104,8 @@ public class NfcTool extends BaseToolPlugin {
             enableDispatch(host);
         } catch (Exception ignored) {
         }
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy tag info");
-        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, "nfc", nfcText.getText().toString()));
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.nfc_copy_tag_info));
+        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, context.getString(R.string.nfc_nfc), nfcText.getText().toString()));
         return box;
     }
 
@@ -132,7 +132,7 @@ public class NfcTool extends BaseToolPlugin {
             }
             b.append("ID ").append(hex).append("\n");
             String[] techs = tag.getTechList();
-            b.append("Tech: ");
+            b.append(nfcText.getContext().getString(R.string.nfc_tech));
             for (int i = 0; i < techs.length; i++) {
                 if (i > 0) {
                     b.append(", ");
@@ -165,7 +165,7 @@ public class NfcTool extends BaseToolPlugin {
             nfcText.setText(b.toString());
         } catch (Exception e) {
             if (nfcText != null) {
-                nfcText.setText("Read failed");
+                nfcText.setText(nfcText.getContext().getString(R.string.nfc_read_failed));
             }
         }
     }

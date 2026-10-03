@@ -38,7 +38,7 @@ public class QrGenTool extends BaseToolPlugin {
     private File qrGenFile;
 
     public QrGenTool() {
-        super("qrgen", "QR Generator", "Text, URL, Wi-Fi to QR", ToolCategories.NETWORK);
+        super("qrgen", R.string.qrgen_title, R.string.qrgen_sub,  ToolCategories.NETWORK);
     }
 
     private void shareFile(Context context, File f) {
@@ -48,17 +48,17 @@ public class QrGenTool extends BaseToolPlugin {
             s.setType("image/png");
             s.putExtra(Intent.EXTRA_STREAM, uri);
             s.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            context.startActivity(Intent.createChooser(s, "Share"));
+            context.startActivity(Intent.createChooser(s, context.getString(R.string.qrgen_share)));
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Share failed");
+            ToolViewFactory.toast(context, context.getString(R.string.qrgen_share_failed));
         }
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "QR Generator");
-        EditText input = ToolViewFactory.makeInput(box, "Text, URL or WIFI config",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.qrgen_qr_generator));
+        EditText input = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.qrgen_text_url_or_wifi_config),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         qrGenView = new ImageView(context);
         qrGenView.setAdjustViewBounds(true);
@@ -70,13 +70,13 @@ public class QrGenTool extends BaseToolPlugin {
         box.addView(qrGenView, vp);
         qrGenView.setVisibility(View.GONE);
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton genBtn = ToolViewFactory.makeRowButton(row, "Generate", 1f);
-        MaterialButton saveBtn = ToolViewFactory.makeRowButton(row, "Save", 1f);
-        MaterialButton shareBtn = ToolViewFactory.makeRowButton(row, "Share", 1f);
+        MaterialButton genBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.qrgen_generate), 1f);
+        MaterialButton saveBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.qrgen_save), 1f);
+        MaterialButton shareBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.qrgen_share), 1f);
         genBtn.setOnClickListener(v -> {
             String text = input.getText().toString().trim();
             if (text.isEmpty()) {
-                ToolViewFactory.toast(context, "Enter text first");
+                ToolViewFactory.toast(context, context.getString(R.string.qrgen_enter_text_first));
                 return;
             }
             try {
@@ -84,12 +84,12 @@ public class QrGenTool extends BaseToolPlugin {
                 qrGenView.setImageBitmap(qrGenBitmap);
                 qrGenView.setVisibility(View.VISIBLE);
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "QR failed: " + e.getMessage());
+                ToolViewFactory.toast(context, context.getString(R.string.qrgen_qr_failed) + e.getMessage());
             }
         });
         saveBtn.setOnClickListener(v -> {
             if (qrGenBitmap == null) {
-                ToolViewFactory.toast(context, "Generate first");
+                ToolViewFactory.toast(context, context.getString(R.string.qrgen_generate_first));
                 return;
             }
             new Thread(() -> {
@@ -105,9 +105,9 @@ public class QrGenTool extends BaseToolPlugin {
                         qrGenFile = out;
                     } catch (Exception ignored) {
                     }
-                    ToolViewFactory.toast(context, "QR image saved");
+                    ToolViewFactory.toast(context, context.getString(R.string.qrgen_qr_image_saved));
                 } catch (final Exception e) {
-                    ToolViewFactory.toast(context, "Save failed: " + e.getMessage());
+                    ToolViewFactory.toast(context, context.getString(R.string.qrgen_save_failed) + e.getMessage());
                 }
             }).start();
         });
@@ -128,15 +128,15 @@ public class QrGenTool extends BaseToolPlugin {
             }
             String text = input.getText().toString().trim();
             if (text.isEmpty()) {
-                ToolViewFactory.toast(context, "Enter text first");
+                ToolViewFactory.toast(context, context.getString(R.string.qrgen_enter_text_first));
                 return;
             }
             Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
-            context.startActivity(Intent.createChooser(share, "Share"));
+            context.startActivity(Intent.createChooser(share, context.getString(R.string.qrgen_share)));
         });
         LinearLayout qrRow2 = ToolViewFactory.makeRow(box);
-        MaterialButton qrOpenBtn = ToolViewFactory.makeRowButton(qrRow2, "Open image", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(qrRow2, "Copy text", 1f);
+        MaterialButton qrOpenBtn = ToolViewFactory.makeRowButton(qrRow2, qrRow2.getContext().getString(R.string.qrgen_open_image), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(qrRow2, qrRow2.getContext().getString(R.string.qrgen_copy_text), 1f);
         qrOpenBtn.setOnClickListener(v -> {
             if (qrGenFile != null && qrGenFile.exists()) {
                 try {
@@ -144,17 +144,17 @@ public class QrGenTool extends BaseToolPlugin {
                     Intent i = new Intent(Intent.ACTION_VIEW);
                     i.setDataAndType(uri, "image/png");
                     i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    context.startActivity(Intent.createChooser(i, "Open image"));
+                    context.startActivity(Intent.createChooser(i, context.getString(R.string.qrgen_open_image)));
                 } catch (Exception e) {
-                    ToolViewFactory.toast(context, "Open failed");
+                    ToolViewFactory.toast(context, context.getString(R.string.qrgen_open_failed));
                 }
             } else {
-                ToolViewFactory.toast(context, "Generate or save first");
+                ToolViewFactory.toast(context, context.getString(R.string.qrgen_generate_or_save_first));
             }
         });
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "qr", input.getText().toString()));
-        ToolViewFactory.addLabel(box, "Wi-Fi shortcut: WIFI:T:WPA;S:MyNet;P:pass123;;");
+                ToolViewFactory.copyText(context, context.getString(R.string.qrgen_qr), input.getText().toString()));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.qrgen_wi_fi_shortcut_wifi_t_wpa_s_my));
         return box;
     }
 

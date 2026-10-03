@@ -22,14 +22,14 @@ import java.util.Random;
 public class LoremTool extends BaseToolPlugin {
 
     public LoremTool() {
-        super("lorem", "Lorem Generator", "Generate placeholder text", ToolCategories.TEXT);
+        super("lorem", R.string.lorem_title, R.string.lorem_sub,  ToolCategories.TEXT);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Lorem Generator");
-        TextView countLabel = ToolViewFactory.addLabel(box, "Paragraphs: 3");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.lorem_lorem_generator));
+        TextView countLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.lorem_paragraphs_3));
         SeekBar countBar = new SeekBar(context);
         countBar.setMax(9);
         countBar.setProgress(2);
@@ -38,7 +38,7 @@ public class LoremTool extends BaseToolPlugin {
         Random loremRandom = new Random();
         final Runnable generate = () -> {
             int paras = 1 + countBar.getProgress();
-            countLabel.setText("Paragraphs: " + paras);
+            countLabel.setText(countLabel.getContext().getString(R.string.lorem_paragraphs) + paras);
             output.setText(Lorem.generate(paras, loremRandom));
         };
         countBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -52,11 +52,11 @@ public class LoremTool extends BaseToolPlugin {
         });
         generate.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, "New", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.lorem_new), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.colorconv_copy), 1f);
         regenBtn.setOnClickListener(v -> generate.run());
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "lorem", output.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.lorem_lorem), output.getText().toString()));
         return box;
     }
 }

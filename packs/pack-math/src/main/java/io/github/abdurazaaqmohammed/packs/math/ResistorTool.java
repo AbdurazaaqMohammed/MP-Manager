@@ -25,7 +25,7 @@ import java.util.List;
 public class ResistorTool extends BaseToolPlugin {
 
     public ResistorTool() {
-        super("resistor", "Resistor Decoder", "Decode color bands", ToolCategories.MATH);
+        super("resistor", R.string.resistor_title, R.string.resistor_sub,  ToolCategories.MATH);
     }
 
     private static String formatOhms(double v) {
@@ -41,16 +41,16 @@ public class ResistorTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Resistor Decoder");
-        String[] colors = new String[]{"Black", "Brown", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Gray", "White", "Gold", "Silver"};
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.resistor_resistor_decoder));
+        String[] colors = new String[]{context.getString(R.string.resistor_black), context.getString(R.string.resistor_brown), context.getString(R.string.resistor_red), context.getString(R.string.resistor_orange), context.getString(R.string.resistor_yellow), context.getString(R.string.resistor_green), context.getString(R.string.resistor_blue), context.getString(R.string.resistor_violet), context.getString(R.string.resistor_gray), context.getString(R.string.resistor_white), context.getString(R.string.resistor_gold), context.getString(R.string.resistor_silver)};
         RadioGroup modeGroup = new RadioGroup(context);
         modeGroup.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton fourBtn = new RadioButton(context);
         fourBtn.setId(View.generateViewId());
-        fourBtn.setText("4-band");
+        fourBtn.setText(fourBtn.getContext().getString(R.string.resistor_4_band));
         RadioButton fiveBtn = new RadioButton(context);
         fiveBtn.setId(View.generateViewId());
-        fiveBtn.setText("5-band");
+        fiveBtn.setText(fiveBtn.getContext().getString(R.string.resistor_5_band));
         modeGroup.addView(fourBtn);
         modeGroup.addView(fiveBtn);
         modeGroup.check(fourBtn.getId());
@@ -76,7 +76,7 @@ public class ResistorTool extends BaseToolPlugin {
                     int d1 = digitVal[digits.get(0)];
                     int d2 = digitVal[digits.get(1)];
                     if (d1 < 0 || d2 < 0) {
-                        output.setText("Gold/Silver invalid as digits");
+                        output.setText(output.getContext().getString(R.string.resistor_gold_silver_invalid_as_digits));
                         return;
                     }
                     int mult = digitVal[digits.get(2)];
@@ -87,16 +87,16 @@ public class ResistorTool extends BaseToolPlugin {
                     int d2 = digitVal[digits.get(1)];
                     int d3 = digitVal[digits.get(2)];
                     if (d1 < 0 || d2 < 0 || d3 < 0) {
-                        output.setText("Gold/Silver invalid as digits");
+                        output.setText(output.getContext().getString(R.string.resistor_gold_silver_invalid_as_digits));
                         return;
                     }
                     int mult = digitVal[digits.get(3)];
                     tol = tolMap[digits.get(4)];
                     value = (d1 * 100 + d2 * 10 + d3) * Math.pow(10, mult);
                 }
-                output.setText(formatOhms(value) + "  Tol " + tol + "%");
+                output.setText(formatOhms(value) + output.getContext().getString(R.string.resistor_tol_value, tol));
             } catch (Exception e) {
-                output.setText("Pick band colors");
+                output.setText(output.getContext().getString(R.string.resistor_pick_band_colors));
             }
         };
         final AdapterView.OnItemSelectedListener bandListener = new AdapterView.OnItemSelectedListener() {
@@ -109,7 +109,7 @@ public class ResistorTool extends BaseToolPlugin {
         final Runnable rebuild = () -> {
             bandsBox.removeAllViews();
             int count = bandCount[0] == 4 ? 4 : 5;
-            String[] labels = bandCount[0] == 4 ? new String[]{"Digit 1", "Digit 2", "Multiplier", "Tolerance"} : new String[]{"Digit 1", "Digit 2", "Digit 3", "Multiplier", "Tolerance"};
+            String[] labels = bandCount[0] == 4 ? new String[]{context.getString(R.string.resistor_digit_1), context.getString(R.string.resistor_digit_2), context.getString(R.string.resistor_multiplier), context.getString(R.string.resistor_tolerance)} : new String[]{context.getString(R.string.resistor_digit_1), context.getString(R.string.resistor_digit_2), context.getString(R.string.resistor_digit_3), context.getString(R.string.resistor_multiplier), context.getString(R.string.resistor_tolerance)};
             int[] defaults = bandCount[0] == 4 ? new int[]{2, 7, 3, 10} : new int[]{2, 7, 3, 3, 10};
             for (int i = 0; i < count; i++) {
                 ToolViewFactory.addLabel(bandsBox, labels[i]);

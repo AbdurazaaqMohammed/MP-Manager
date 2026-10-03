@@ -59,7 +59,14 @@ public final class PackPrompts {
         TextView title = new TextView(activity);
         title.setTextSize(18);
         PackDescriptor.ToolMeta meta = pack.tool(toolId);
-        title.setText(meta != null ? meta.title : pack.title);
+        // Prefer the installed pack's own localized metadata; the catalog JSON
+        // is English-only because it is fetched before/without the pack APK.
+        io.github.abdurazaaqmohammed.plugins.api.ToolPlugin live = (meta != null)
+                ? io.github.abdurazaaqmohammed.plugins.api.PluginRegistry.findById(activity, meta.id)
+                : null;
+        String label = (live != null && live.title(activity) != null)
+                ? live.title(activity) : (meta != null ? meta.title : pack.title);
+        title.setText(label);
         root.addView(title);
 
         TextView desc = new TextView(activity);

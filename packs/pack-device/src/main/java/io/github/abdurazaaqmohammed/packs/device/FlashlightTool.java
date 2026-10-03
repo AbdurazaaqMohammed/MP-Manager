@@ -46,16 +46,16 @@ public class FlashlightTool extends BaseToolPlugin {
     private Runnable sosTick;
 
     public FlashlightTool() {
-        super("flashlight", "Flashlight", "Use torch and screen light", ToolCategories.DEVICE);
+        super("flashlight", R.string.flashlight_title, R.string.flashlight_sub,  ToolCategories.DEVICE);
     }
 
     private void setTorch(Context context, boolean on) {
         if (Build.VERSION.SDK_INT < 23) {
-            ToolViewFactory.toast(context, "Torch needs Android 6+");
+            ToolViewFactory.toast(context, context.getString(R.string.flashlight_torch_needs_android_6));
             return;
         }
         if (cameraManager == null || torchCameraId == null) {
-            ToolViewFactory.toast(context, "Flash not available");
+            ToolViewFactory.toast(context, context.getString(R.string.flashlight_flash_not_available));
             return;
         }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -63,7 +63,7 @@ public class FlashlightTool extends BaseToolPlugin {
                 ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.CAMERA}, 9001);
             } catch (Exception ignored) {
             }
-            ToolViewFactory.toast(context, "Camera permission needed, then tap again");
+            ToolViewFactory.toast(context, context.getString(R.string.flashlight_camera_permission_needed_then_));
             return;
         }
         setTorchSilent(context, on);
@@ -76,7 +76,7 @@ public class FlashlightTool extends BaseToolPlugin {
                 torchOn = on;
             }
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Torch failed");
+            ToolViewFactory.toast(context, context.getString(R.string.flashlight_torch_failed));
         }
     }
 
@@ -84,7 +84,7 @@ public class FlashlightTool extends BaseToolPlugin {
         FrameLayout root = new FrameLayout(context);
         root.setBackgroundColor(Color.WHITE);
         MaterialButton exit = new MaterialButton(context);
-        exit.setText("Turn off screen light");
+        exit.setText(exit.getContext().getString(R.string.flashlight_turn_off_screen_light));
         exit.setBackgroundColor(Color.parseColor("#CC000000"));
         exit.setTextColor(Color.WHITE);
         FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
@@ -99,7 +99,7 @@ public class FlashlightTool extends BaseToolPlugin {
             }
             screenLightOn = false;
             screenLightDialog = null;
-            if (screenBtn != null) screenBtn.setText("Screen light: OFF");
+            if (screenBtn != null) screenBtn.setText(screenBtn.getContext().getString(R.string.flashlight_screen_light_off));
         };
         root.setOnClickListener(v -> close.run());
         exit.setOnClickListener(v -> close.run());
@@ -109,7 +109,7 @@ public class FlashlightTool extends BaseToolPlugin {
         d.setOnDismissListener(di -> {
             screenLightOn = false;
             screenLightDialog = null;
-            if (screenBtn != null) screenBtn.setText("Screen light: OFF");
+            if (screenBtn != null) screenBtn.setText(screenBtn.getContext().getString(R.string.flashlight_screen_light_off));
         });
         d.show();
         if (d.getWindow() != null) {
@@ -129,8 +129,8 @@ public class FlashlightTool extends BaseToolPlugin {
         sosStep = 0;
         sosTick = null;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Flashlight");
-        ToolViewFactory.addLabel(box, "Torch uses the camera flash. Screen light fills the whole display white at max brightness.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.flashlight_flashlight));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.flashlight_torch_uses_the_camera_flash_sc));
         if (Build.VERSION.SDK_INT >= 21) {
             try {
                 cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
@@ -150,12 +150,12 @@ public class FlashlightTool extends BaseToolPlugin {
             } catch (Throwable ignored) {
             }
         }
-        MaterialButton torchBtn = ToolViewFactory.makeButton(box, "Torch: OFF");
+        MaterialButton torchBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.flashlight_torch_off));
         torchBtn.setOnClickListener(v -> {
             setTorch(context, !torchOn);
-            torchBtn.setText(torchOn ? "Torch: ON" : "Torch: OFF");
+            torchBtn.setText(torchOn ? torchBtn.getContext().getString(R.string.flashlight_torch_on) : torchBtn.getContext().getString(R.string.flashlight_torch_off));
         });
-        MaterialButton screenBtn = ToolViewFactory.makeButton(box, "Screen light: OFF");
+        MaterialButton screenBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.flashlight_screen_light_off));
         View screenLightView = new View(context);
         screenLightView.setBackgroundColor(Color.WHITE);
         screenLightView.setVisibility(View.GONE);
@@ -169,18 +169,18 @@ public class FlashlightTool extends BaseToolPlugin {
                 }
                 screenLightOn = false;
                 screenLightDialog = null;
-                screenBtn.setText("Screen light: OFF");
+                screenBtn.setText(screenBtn.getContext().getString(R.string.flashlight_screen_light_off));
                 return;
             }
             screenLightOn = true;
-            screenBtn.setText("Screen light: ON (tap to turn off)");
+            screenBtn.setText(screenBtn.getContext().getString(R.string.flashlight_screen_light_on_tap_to_turn_of));
             showScreenLightOverlay(context, screenBtn);
         });
-        MaterialButton sosBtn = ToolViewFactory.makeButton(box, "SOS blink: OFF");
+        MaterialButton sosBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.flashlight_sos_blink_off));
         sosBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 sosRunning = !sosRunning;
-                sosBtn.setText(sosRunning ? "SOS blink: ON" : "SOS blink: OFF");
+                sosBtn.setText(sosRunning ? sosBtn.getContext().getString(R.string.flashlight_sos_blink_on) : sosBtn.getContext().getString(R.string.flashlight_sos_blink_off));
                 if (sosRunning) {
                     sosStep = 0;
                     if (sosTick == null) {
@@ -191,7 +191,7 @@ public class FlashlightTool extends BaseToolPlugin {
                                 }
                                 boolean on = (sosStep % 2 == 0);
                                 setTorchSilent(context, on);
-                                torchBtn.setText(torchOn ? "Torch: ON" : "Torch: OFF");
+                                torchBtn.setText(torchOn ? torchBtn.getContext().getString(R.string.flashlight_torch_on) : torchBtn.getContext().getString(R.string.flashlight_torch_off));
                                 sosStep++;
                                 handler.postDelayed(this, sosStep % 4 == 0 ? 600 : 250);
                             }
@@ -200,7 +200,7 @@ public class FlashlightTool extends BaseToolPlugin {
                     handler.post(sosTick);
                 } else {
                     setTorchSilent(context, false);
-                    torchBtn.setText("Torch: OFF");
+                    torchBtn.setText(torchBtn.getContext().getString(R.string.flashlight_torch_off));
                 }
             }
         });

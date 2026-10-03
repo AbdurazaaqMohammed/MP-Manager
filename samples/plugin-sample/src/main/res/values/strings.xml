@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MP Sample Plugin</string>
+
+    <!-- Manifest android:label values. android:label is resolved by the
+         launcher against THIS app's resources, so it can be localized.
+         The <meta-data> TITLE entries deliberately stay literal English: the
+         host reads them through PackageManager in the HOST's configuration, so
+         a @string reference would either not resolve or resolve to the wrong
+         locale. See AndroidManifest.xml. -->
+    <string name="label_sidebar">Sample Sidebar</string>
+    <string name="label_setting">Sample Setting</string>
+    <string name="label_hash">Sample Hash</string>
+    <string name="label_uppercase">Sample Uppercase</string>
+    <string name="label_apk">Sample APK Scan</string>
+
+    <!-- SidebarActivity -->
+    <string name="sidebar_title">Sample external plugin</string>
+    <string name="sidebar_sub">Launched from the host sidebar as a separate app (plugin=%1$s).</string>
+    <string name="close">Close</string>
+
+    <!-- SettingActivity -->
+    <string name="setting_title">Sample setting (%1$s)</string>
+    <string name="setting_demo_feature">Demo feature</string>
+    <string name="save">Save</string>
+
+    <!-- FileActionActivity -->
+    <string name="file_action_title">Sample file action</string>
+    <string name="file_action_hash_first">Hash first file</string>
+    <string name="file_action_hash_failed">Hash failed</string>
+
+    <!-- ApkActivity -->
+    <string name="apk_title">Sample APK scan</string>
+    <string name="apk_info">APK: %1$s\nURI: %2$s</string>
+    <string name="done">Done</string>
+
+    <!-- EditorActivity -->
+    <string name="editor_apply">Apply to editor</string>
+</resources>

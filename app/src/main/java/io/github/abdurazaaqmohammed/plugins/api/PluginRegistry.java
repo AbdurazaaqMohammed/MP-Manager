@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.plugins.api;
 
 import android.content.Context;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.tools.ToolRegistry;
 
 import java.util.ArrayList;
@@ -62,5 +63,38 @@ public final class PluginRegistry {
 
     public static String[] categoriesInOrder() {
         return ToolRegistry.categoriesInOrder();
+    }
+
+    /**
+     * Display name for a {@code ToolCategories} constant.
+     *
+     * <p>The constants stay English on purpose: they are used as map keys and
+     * compared by {@code ToolsHubActivity.buildRows}, so localizing them in
+     * place would break grouping. Only the rendered label is localized.
+     * An unknown category is returned unchanged.
+     */
+    public static String categoryLabel(Context context, String category) {
+        if (context == null || category == null) return category;
+        int res;
+        switch (category) {
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.NETWORK:
+                res = R.string.cat_network; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.STORAGE:
+                res = R.string.cat_storage; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.DEVICE:
+                res = R.string.cat_device; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.MATH:
+                res = R.string.cat_math; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.TIME:
+                res = R.string.cat_time; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.TEXT:
+                res = R.string.cat_text; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.MEDIA:
+                res = R.string.cat_media; break;
+            case io.github.abdurazaaqmohammed.sdk.plugins.api.ToolCategories.RAND:
+                res = R.string.cat_random; break;
+            default: return category;
+        }
+        return context.getString(res);
     }
 }

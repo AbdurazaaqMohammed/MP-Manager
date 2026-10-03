@@ -25,24 +25,24 @@ import java.text.DecimalFormat;
 public class ProtractorTool extends BaseToolPlugin {
 
     public ProtractorTool() {
-        super("protractor", "Protractor", "Measure angles with touch", ToolCategories.DEVICE);
+        super("protractor", R.string.protractor_title, R.string.protractor_sub,  ToolCategories.DEVICE);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Protractor");
-        ToolViewFactory.addLabel(box, "Touch the dial to measure an angle from 0 to 180 degrees.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.protractor_protractor));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.protractor_touch_the_dial_to_measure_an_a));
         ProtractorView protractorView = new ProtractorView(context);
         box.addView(protractorView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 260)));
         TextView protractorText = ToolViewFactory.makeOutput(box);
-        protractorText.setText("Angle: 0 deg");
-        protractorView.setListener(deg -> protractorText.setText("Angle: " + new DecimalFormat("0.0").format(deg) + " deg"));
-        MaterialButton resetBtn = ToolViewFactory.makeButton(box, "Reset");
+        protractorText.setText(protractorText.getContext().getString(R.string.protractor_angle_0_deg));
+        protractorView.setListener(deg -> protractorText.setText(protractorText.getContext().getString(R.string.protractor_angle) + new DecimalFormat("0.0").format(deg) + " deg"));
+        MaterialButton resetBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.gps_reset));
         resetBtn.setOnClickListener(v -> {
             protractorView.setAngle(0f);
-            protractorText.setText("Angle: 0 deg");
+            protractorText.setText(protractorText.getContext().getString(R.string.protractor_angle_0_deg));
         });
         return box;
     }

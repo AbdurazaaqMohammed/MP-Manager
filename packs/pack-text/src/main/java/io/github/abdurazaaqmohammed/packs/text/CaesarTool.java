@@ -22,17 +22,17 @@ import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 public class CaesarTool extends BaseToolPlugin {
 
     public CaesarTool() {
-        super("caesar", "Caesar Cipher", "Shift ciphers, brute force", ToolCategories.TEXT);
+        super("caesar", R.string.caesar_title, R.string.caesar_sub,  ToolCategories.TEXT);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Caesar Cipher");
-        EditText input = ToolViewFactory.makeInput(box, "Text",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.caesar_caesar_cipher));
+        EditText input = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.caesar_text),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(2);
-        TextView shiftLabel = ToolViewFactory.addLabel(box, "Shift: 3");
+        TextView shiftLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.caesar_shift_3));
         SeekBar shiftBar = new SeekBar(context);
         shiftBar.setMax(25);
         shiftBar.setProgress(3);
@@ -41,7 +41,7 @@ public class CaesarTool extends BaseToolPlugin {
         shiftBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
                 shift[0] = progress;
-                shiftLabel.setText("Shift: " + progress);
+                shiftLabel.setText(shiftLabel.getContext().getString(R.string.caesar_shift) + progress);
             }
             public void onStartTrackingTouch(SeekBar s) {
             }
@@ -49,17 +49,18 @@ public class CaesarTool extends BaseToolPlugin {
             }
         });
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Result");
+        output.setText(output.getContext().getString(R.string.binarytext_result));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, "Encrypt", 1f);
-        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, "Decrypt", 1f);
-        MaterialButton bruteBtn = ToolViewFactory.makeRowButton(row, "All shifts", 1f);
+        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.caesar_encrypt), 1f);
+        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.caesar_decrypt), 1f);
+        MaterialButton bruteBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.caesar_all_shifts), 1f);
         encBtn.setOnClickListener(v -> output.setText(TextCodecs.caesarShift(input.getText().toString(), shift[0])));
         decBtn.setOnClickListener(v -> output.setText(TextCodecs.caesarShift(input.getText().toString(), 26 - (shift[0] % 26))));
         bruteBtn.setOnClickListener(v -> {
             StringBuilder b = new StringBuilder();
             for (int i = 1; i < 26; i++) {
-                b.append(i).append(": ").append(TextCodecs.caesarShift(input.getText().toString(), i)).append("\n");
+                b.append(box.getContext().getString(R.string.caesar_shift_try, i,
+                        TextCodecs.caesarShift(input.getText().toString(), i))).append("\n");
             }
             output.setText(b.toString().trim());
         });

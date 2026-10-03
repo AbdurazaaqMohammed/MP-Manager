@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="datetime_age_parts">%1$d 岁 %2$d 个月 %3$d 天</string>
+    <string name="datetime_age_short">"%1$d 岁 %2$d 个月 %3$d 天（共 %4$d 天）"</string>
+    <string name="datetime_age_total">"合计 %1$d 天（%2$d 周）"</string>
+    <string name="datetime_age_born_on">出生于 %1$s</string>
+    <string name="datetime_age_next_bday">距离下一个生日还有 %1$d 天</string>
+    <string name="datetime_diff">"%1$d 天（%2$d 周，%3$d 年 %4$d 个月 %5$d 天）"</string>
+
+    <string name="health_bmi_underweight">偏瘦</string>
+    <string name="health_bmi_normal">正常</string>
+    <string name="health_bmi_overweight">偏胖</string>
+    <string name="health_bmi_obese">肥胖</string>
+    <string name="health_bf_essential">必需脂肪</string>
+    <string name="health_bf_athletic">运动员</string>
+    <string name="health_bf_fit">健美</string>
+    <string name="health_bf_high">偏高</string>
+    <string name="health_cycles_at">%1$d 个周期：%2$s</string>
+
+    <string name="passwords_strength_very_weak">极弱</string>
+    <string name="passwords_strength_weak">弱</string>
+    <string name="passwords_strength_fair">一般</string>
+    <string name="passwords_strength_strong">强</string>
+    <string name="passwords_strength_excellent">极强</string>
+    <string name="passwords_time_under_a_second">不到一秒</string>
+    <string name="passwords_time_seconds">%1$s 秒</string>
+    <string name="passwords_time_minutes">%1$s 分钟</string>
+    <string name="passwords_time_hours">%1$s 小时</string>
+    <string name="passwords_time_days">%1$s 天</string>
+    <string name="passwords_time_years">%1$s 年</string>
+    <string name="passwords_time_centuries">数百年</string>
+
+    <string name="tvf_copied">已复制</string>
+    <string name="tvf_copy_failed">复制失败</string>
+</resources>

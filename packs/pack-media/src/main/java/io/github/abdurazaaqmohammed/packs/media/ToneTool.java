@@ -44,7 +44,7 @@ public class ToneTool extends BaseToolPlugin {
     private Context hostContext;
 
     public ToneTool() {
-        super("tone", "Tone Generator", "Play custom frequencies", ToolCategories.MEDIA);
+        super("tone", R.string.tone_title, R.string.tone_sub,  ToolCategories.MEDIA);
     }
 
     private void stopTone() {
@@ -102,7 +102,7 @@ public class ToneTool extends BaseToolPlugin {
             });
             toneThread.start();
         } catch (Exception e) {
-            ToolViewFactory.toast(hostContext, "Tone failed");
+            ToolViewFactory.toast(hostContext, hostContext.getString(R.string.tone_tone_failed));
         }
     }
 
@@ -155,9 +155,9 @@ public class ToneTool extends BaseToolPlugin {
             s.setType(mime);
             s.putExtra(Intent.EXTRA_STREAM, uri);
             s.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            context.startActivity(Intent.createChooser(s, "Share"));
+            context.startActivity(Intent.createChooser(s, context.getString(R.string.recorder_share)));
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Share failed");
+            ToolViewFactory.toast(context, context.getString(R.string.recorder_share_failed));
         }
     }
 
@@ -165,8 +165,8 @@ public class ToneTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         hostContext = context.getApplicationContext();
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Tone Generator");
-        TextView freqLabel = ToolViewFactory.addLabel(box, "Frequency: 440 Hz");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.tone_tone_generator));
+        TextView freqLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.tone_frequency_440_hz));
         SeekBar freqBar = new SeekBar(context);
         freqBar.setMax(3950);
         freqBar.setProgress(390);
@@ -175,7 +175,7 @@ public class ToneTool extends BaseToolPlugin {
         freqBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
                 freq[0] = 50 + progress;
-                freqLabel.setText("Frequency: " + freq[0] + " Hz");
+                freqLabel.setText(freqLabel.getContext().getString(R.string.tone_frequency, freq[0]));
                 if (tonePlaying) {
                     stopTone();
                     startTone(freq[0]);
@@ -187,22 +187,22 @@ public class ToneTool extends BaseToolPlugin {
             }
         });
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton playBtn = ToolViewFactory.makeRowButton(row, "Play", 1f);
-        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, "Stop", 1f);
+        MaterialButton playBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.recorder_play), 1f);
+        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.metronome_stop), 1f);
         playBtn.setOnClickListener(v -> {
             stopTone();
             startTone(freq[0]);
         });
         stopBtn.setOnClickListener(v -> stopTone());
-        ToolViewFactory.addLabel(box, "Waveform");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.tone_waveform));
         Spinner waveSpinner = new Spinner(context);
-        String[] waves = new String[]{"Sine", "Square", "Sawtooth"};
+        String[] waves = new String[]{context.getString(R.string.tone_sine), context.getString(R.string.tone_square), context.getString(R.string.tone_sawtooth)};
         ArrayAdapter<String> waveAdapter =
                 new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, waves);
         waveAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         waveSpinner.setAdapter(waveAdapter);
         box.addView(waveSpinner);
-        TextView durLabel = ToolViewFactory.addLabel(box, "Save length: 3 s");
+        TextView durLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.tone_save_length_3_s));
         SeekBar durBar = new SeekBar(context);
         durBar.setMax(27);
         durBar.setProgress(2);
@@ -211,7 +211,7 @@ public class ToneTool extends BaseToolPlugin {
         durBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
                 toneSecs[0] = 1 + progress;
-                durLabel.setText("Save length: " + toneSecs[0] + " s");
+                durLabel.setText(durLabel.getContext().getString(R.string.tone_save_length, toneSecs[0]));
             }
             public void onStartTrackingTouch(SeekBar s) {
             }
@@ -219,9 +219,9 @@ public class ToneTool extends BaseToolPlugin {
             }
         });
         LinearLayout toneRow2 = ToolViewFactory.makeRow(box);
-        MaterialButton saveToneBtn = ToolViewFactory.makeRowButton(toneRow2, "Save WAV", 1f);
-        MaterialButton shareToneBtn = ToolViewFactory.makeRowButton(toneRow2, "Share", 1f);
-        MaterialButton openToneBtn = ToolViewFactory.makeRowButton(toneRow2, "Open file", 1f);
+        MaterialButton saveToneBtn = ToolViewFactory.makeRowButton(toneRow2, toneRow2.getContext().getString(R.string.tone_save_wav), 1f);
+        MaterialButton shareToneBtn = ToolViewFactory.makeRowButton(toneRow2, toneRow2.getContext().getString(R.string.recorder_share), 1f);
+        MaterialButton openToneBtn = ToolViewFactory.makeRowButton(toneRow2, toneRow2.getContext().getString(R.string.tone_open_file), 1f);
         final File[] lastTone = new File[1];
         saveToneBtn.setOnClickListener(v -> {
             try {
@@ -230,14 +230,14 @@ public class ToneTool extends BaseToolPlugin {
                 File out = new File(dir, "tone_" + freq[0] + "hz_" + System.currentTimeMillis() + ".wav");
                 writeToneWav(out, freq[0], waveSpinner.getSelectedItemPosition(), toneSecs[0]);
                 lastTone[0] = out;
-                ToolViewFactory.toast(context, "Saved " + out.getName());
+                ToolViewFactory.toast(context, context.getString(R.string.recorder_saved, out.getName()));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Save failed");
+                ToolViewFactory.toast(context, context.getString(R.string.tone_save_failed));
             }
         });
         shareToneBtn.setOnClickListener(v -> {
             if (lastTone[0] != null && lastTone[0].exists()) shareFile(context, lastTone[0], "audio/*");
-            else ToolViewFactory.toast(context, "Save first");
+            else ToolViewFactory.toast(context, context.getString(R.string.tone_save_first));
         });
         openToneBtn.setOnClickListener(v -> {
             if (lastTone[0] != null && lastTone[0].exists()) {
@@ -246,12 +246,12 @@ public class ToneTool extends BaseToolPlugin {
                     Intent i = new Intent(Intent.ACTION_VIEW);
                     i.setDataAndType(uri, "audio/*");
                     i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    context.startActivity(Intent.createChooser(i, "Open tone"));
+                    context.startActivity(Intent.createChooser(i, context.getString(R.string.tone_open_tone)));
                 } catch (Exception e) {
-                    ToolViewFactory.toast(context, "Open failed");
+                    ToolViewFactory.toast(context, context.getString(R.string.tone_open_failed));
                 }
             } else {
-                ToolViewFactory.toast(context, "Save first");
+                ToolViewFactory.toast(context, context.getString(R.string.tone_save_first));
             }
         });
         return box;

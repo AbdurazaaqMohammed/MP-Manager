@@ -28,7 +28,7 @@ public class FileActionActivity extends Activity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad, pad, pad);
         TextView title = new TextView(this);
-        title.setText("Sample file action");
+        title.setText(getString(R.string.file_action_title));
         title.setTextSize(18);
         box.addView(title);
         TextView info = new TextView(this);
@@ -40,13 +40,13 @@ public class FileActionActivity extends Activity {
         info.setText(sb.toString());
         box.addView(info);
         Button run = new Button(this);
-        run.setText("Hash first file");
+        run.setText(getString(R.string.file_action_hash_first));
         run.setOnClickListener(v -> {
             String msg;
             try {
                 msg = "SHA-256: " + sha256(data);
             } catch (Exception e) {
-                msg = "Hash failed";
+                msg = getString(R.string.file_action_hash_failed);
             }
             Intent result = new Intent();
             result.putExtra(PluginContracts.EXTRA_MESSAGE, msg);

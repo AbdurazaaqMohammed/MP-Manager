@@ -33,20 +33,20 @@ public class LevelTool extends BaseToolPlugin {
     private TextView levelText;
 
     public LevelTool() {
-        super("level", "Bubble Level", "Check surface level", ToolCategories.DEVICE);
+        super("level", R.string.level_title, R.string.level_sub,  ToolCategories.DEVICE);
     }
 
     private void startSensors() {
         if (sensorManager == null) {
             if (levelText != null) {
-                levelText.setText("No sensors on this device");
+                levelText.setText(levelText.getContext().getString(R.string.compass_no_sensors_on_this_device));
             }
             return;
         }
         Sensor accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         if (accel == null) {
             if (levelText != null) {
-                levelText.setText("Accelerometer not available");
+                levelText.setText(levelText.getContext().getString(R.string.level_accelerometer_not_available));
             }
             return;
         }
@@ -68,7 +68,7 @@ public class LevelTool extends BaseToolPlugin {
                 }
                 if (levelText != null) {
                     boolean flat = Math.abs(pitch) < 1.5 && Math.abs(roll) < 1.5;
-                    levelText.setText("Pitch " + new DecimalFormat("0.0").format(pitch) + "  Roll " + new DecimalFormat("0.0").format(roll) + (flat ? "  LEVEL" : ""));
+                    levelText.setText(levelText.getContext().getString(R.string.level_readout, new DecimalFormat("0.0").format(pitch), new DecimalFormat("0.0").format(roll), flat ? levelText.getContext().getString(R.string.level_flat) : ""));
                 }
             }
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -78,7 +78,7 @@ public class LevelTool extends BaseToolPlugin {
             sensorManager.registerListener(listener, accel, SensorManager.SENSOR_DELAY_UI);
         } catch (Exception e) {
             if (levelText != null) {
-                levelText.setText("Sensor error");
+                levelText.setText(levelText.getContext().getString(R.string.compass_sensor_error));
             }
         }
     }
@@ -87,12 +87,12 @@ public class LevelTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Bubble Level");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.level_bubble_level));
         levelView = new LevelView(context);
         box.addView(levelView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 220)));
         levelText = ToolViewFactory.makeOutput(box);
-        levelText.setText("Waiting for sensors");
+        levelText.setText(levelText.getContext().getString(R.string.compass_waiting_for_sensors));
         levelText.setGravity(Gravity.CENTER);
         startSensors();
         return box;

@@ -32,7 +32,7 @@ public class RulerTool extends BaseToolPlugin {
     private TextView rulerInfo;
 
     public RulerTool() {
-        super("ruler", "Ruler", "Measure in cm and inches", ToolCategories.DEVICE);
+        super("ruler", R.string.ruler_title, R.string.ruler_sub,  ToolCategories.DEVICE);
     }
 
     private void updateRulerInfo(Context context) {
@@ -47,9 +47,9 @@ public class RulerTool extends BaseToolPlugin {
         float xdpi = dm.xdpi <= 0 ? 320f : dm.xdpi;
         float inches = widthPx / xdpi * rulerCal;
         if (rulerMode == 0) {
-            rulerInfo.setText("Screen width: " + new DecimalFormat("0.0").format(inches * 2.54) + " cm");
+            rulerInfo.setText(rulerInfo.getContext().getString(R.string.ruler_screen_width) + new DecimalFormat("0.0").format(inches * 2.54) + " " + rulerInfo.getContext().getString(R.string.ruler_cm));
         } else {
-            rulerInfo.setText("Screen width: " + new DecimalFormat("0.00").format(inches) + " inch");
+            rulerInfo.setText(rulerInfo.getContext().getString(R.string.ruler_screen_width) + new DecimalFormat("0.00").format(inches) + " " + rulerInfo.getContext().getString(R.string.ruler_inch));
         }
         rulerView.post(() -> updateRulerInfoText(context));
     }
@@ -64,9 +64,9 @@ public class RulerTool extends BaseToolPlugin {
             float xdpi = dm.xdpi <= 0 ? 320f : dm.xdpi;
             float inches = widthPx / xdpi * rulerCal;
             if (rulerMode == 0) {
-                rulerInfo.setText("Screen width: " + new DecimalFormat("0.0").format(inches * 2.54) + " cm");
+                rulerInfo.setText(rulerInfo.getContext().getString(R.string.ruler_screen_width) + new DecimalFormat("0.0").format(inches * 2.54) + " " + rulerInfo.getContext().getString(R.string.ruler_cm));
             } else {
-                rulerInfo.setText("Screen width: " + new DecimalFormat("0.00").format(inches) + " inch");
+                rulerInfo.setText(rulerInfo.getContext().getString(R.string.ruler_screen_width) + new DecimalFormat("0.00").format(inches) + " " + rulerInfo.getContext().getString(R.string.ruler_inch));
             }
         } catch (Exception ignored) {
         }
@@ -84,16 +84,16 @@ public class RulerTool extends BaseToolPlugin {
         rulerMode = 0;
         rulerCal = 1.0f;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Ruler");
-        ToolViewFactory.addLabel(box, "Place object along the top edge. Toggle units and calibrate with the slider.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.ruler_ruler));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.ruler_place_object_along_the_top_edg));
         RadioGroup group = new RadioGroup(context);
         group.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton cmBtn = new RadioButton(context);
         cmBtn.setId(View.generateViewId());
-        cmBtn.setText("cm");
+        cmBtn.setText(cmBtn.getContext().getString(R.string.ruler_cm));
         RadioButton inchBtn = new RadioButton(context);
         inchBtn.setId(View.generateViewId());
-        inchBtn.setText("inch");
+        inchBtn.setText(inchBtn.getContext().getString(R.string.ruler_inch));
         group.addView(cmBtn);
         group.addView(inchBtn);
         group.check(rulerMode == 1 ? inchBtn.getId() : cmBtn.getId());
@@ -105,7 +105,7 @@ public class RulerTool extends BaseToolPlugin {
         rp.setMargins(0, m8, 0, m8);
         box.addView(rulerView, rp);
         rulerInfo = ToolViewFactory.makeOutput(box);
-        ToolViewFactory.addLabel(box, "Calibration");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.ruler_calibration));
         SeekBar calBar = new SeekBar(context);
         calBar.setMax(40);
         calBar.setProgress(20);

@@ -30,14 +30,14 @@ public class RingtoneTool extends BaseToolPlugin {
     private Ringtone current;
 
     public RingtoneTool() {
-        super("ringtone", "Ringtone Preview", "Browse and preview sounds", ToolCategories.DEVICE);
+        super("ringtone", R.string.ringtone_title, R.string.ringtone_sub,  ToolCategories.DEVICE);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Ringtone Preview");
-        String[] types = new String[]{"Ringtones", "Alarms", "Notifications"};
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.ringtone_ringtone_preview));
+        String[] types = new String[]{context.getString(R.string.ringtone_ringtones), context.getString(R.string.ringtone_alarms), context.getString(R.string.ringtone_notifications)};
         int[] typeVals = new int[]{RingtoneManager.TYPE_RINGTONE, RingtoneManager.TYPE_ALARM, RingtoneManager.TYPE_NOTIFICATION};
         Spinner typeSpinner = new Spinner(context);
         ArrayAdapter<String> typeAdapter =
@@ -88,10 +88,10 @@ public class RingtoneTool extends BaseToolPlugin {
                 current = RingtoneManager.getRingtone(context, uris.get(position));
                 current.play();
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Play failed");
+                ToolViewFactory.toast(context, context.getString(R.string.ringtone_play_failed));
             }
         });
-        MaterialButton stopBtn = ToolViewFactory.makeButton(box, "Stop preview");
+        MaterialButton stopBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.ringtone_stop_preview));
         stopBtn.setOnClickListener(v -> {
             try {
                 if (current != null) {

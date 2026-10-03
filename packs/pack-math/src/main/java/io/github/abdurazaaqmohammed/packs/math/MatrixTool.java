@@ -25,7 +25,7 @@ import java.text.DecimalFormat;
 public class MatrixTool extends BaseToolPlugin {
 
     public MatrixTool() {
-        super("matrix", "Matrix 2x2", "Add, multiply, invert", ToolCategories.MATH);
+        super("matrix", R.string.matrix_title, R.string.matrix_sub,  ToolCategories.MATH);
     }
 
     private static EditText numCell(Context context, LinearLayout row, String def) {
@@ -42,15 +42,15 @@ public class MatrixTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Matrix 2x2");
-        ToolViewFactory.addLabel(box, "Matrix A");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.matrix_matrix_2x2));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.matrix_matrix_a));
         LinearLayout aRow1 = ToolViewFactory.makeRow(box);
         EditText a11 = numCell(context, aRow1, "1");
         EditText a12 = numCell(context, aRow1, "2");
         LinearLayout aRow2 = ToolViewFactory.makeRow(box);
         EditText a21 = numCell(context, aRow2, "3");
         EditText a22 = numCell(context, aRow2, "4");
-        ToolViewFactory.addLabel(box, "Matrix B");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.matrix_matrix_b));
         LinearLayout bRow1 = ToolViewFactory.makeRow(box);
         EditText b11 = numCell(context, bRow1, "5");
         EditText b12 = numCell(context, bRow1, "6");
@@ -59,12 +59,12 @@ public class MatrixTool extends BaseToolPlugin {
         EditText b22 = numCell(context, bRow2, "8");
         Spinner opSpinner = new Spinner(context);
         ArrayAdapter<String> opAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item,
-                new String[]{"A + B", "A - B", "A x B", "det(A)", "inverse(A)", "transpose(A)"});
+                new String[]{"A + B", "A - B", "A x B", context.getString(R.string.matrix_det_a), context.getString(R.string.matrix_inverse_a), context.getString(R.string.matrix_transpose_a)});
         opAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         opSpinner.setAdapter(opAdapter);
         box.addView(opSpinner);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Compute");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.matrix_compute));
         goBtn.setOnClickListener(v -> {
             try {
                 double x11 = Double.parseDouble(a11.getText().toString());
@@ -88,11 +88,11 @@ public class MatrixTool extends BaseToolPlugin {
                 } else if (op == 2) {
                     result = mat2(df, x11 * y11 + x12 * y21, x11 * y12 + x12 * y22, x21 * y11 + x22 * y21, x21 * y12 + x22 * y22);
                 } else if (op == 3) {
-                    result = "det = " + df.format(x11 * x22 - x12 * x21);
+                    result = output.getContext().getString(R.string.matrix_det_value) + df.format(x11 * x22 - x12 * x21);
                 } else if (op == 4) {
                     double det = x11 * x22 - x12 * x21;
                     if (det == 0) {
-                        result = "Singular, no inverse";
+                        result = output.getContext().getString(R.string.matrix_singular);
                     } else {
                         result = mat2(df, x22 / det, -x12 / det, -x21 / det, x11 / det);
                     }
@@ -101,7 +101,7 @@ public class MatrixTool extends BaseToolPlugin {
                 }
                 output.setText(result);
             } catch (Exception e) {
-                output.setText("Fill all cells");
+                output.setText(output.getContext().getString(R.string.matrix_fill_all_cells));
             }
         });
         return box;

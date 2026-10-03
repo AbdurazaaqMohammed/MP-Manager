@@ -24,32 +24,32 @@ import java.util.List;
 public class SleepTool extends BaseToolPlugin {
 
     public SleepTool() {
-        super("sleep", "Sleep Cycles", "Bedtimes in 90-minute cycles", ToolCategories.TIME);
+        super("sleep", R.string.sleep_title, R.string.sleep_sub,  ToolCategories.TIME);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Sleep Cycles");
-        ToolViewFactory.addLabel(box, "Each cycle is 90 minutes. Wake at the end of a cycle.");
-        EditText wakeInput = ToolViewFactory.makeInput(box, "Wake time HH:mm", InputType.TYPE_CLASS_DATETIME);
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.sleep_sleep_cycles));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.sleep_each_cycle_is_90_minutes_wake_));
+        EditText wakeInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.sleep_wake_time_hh_mm), InputType.TYPE_CLASS_DATETIME);
         wakeInput.setText("07:00");
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton bedBtn = ToolViewFactory.makeButton(box, "Best bedtimes");
+        MaterialButton bedBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.sleep_best_bedtimes));
         bedBtn.setOnClickListener(v -> {
             try {
                 String[] parts = wakeInput.getText().toString().trim().split(":");
                 int hour = Integer.parseInt(parts[0].trim());
                 int minute = Integer.parseInt(parts[1].trim());
-                List<String> rows = Health.bedtimesForWake(hour, minute);
+                List<String> rows = Health.bedtimesForWake(context, hour, minute);
                 output.setText(TextUtils.join("\n", rows));
             } catch (Exception e) {
-                output.setText("Use HH:mm");
+                output.setText(output.getContext().getString(R.string.sleep_use_hh_mm));
             }
         });
-        MaterialButton nowBtn = ToolViewFactory.makeButton(box, "Sleeping now, when to wake");
+        MaterialButton nowBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.sleep_sleeping_now_when_to_wake));
         nowBtn.setOnClickListener(v -> {
-            List<String> rows = Health.wakeTimesFromNow();
+            List<String> rows = Health.wakeTimesFromNow(context);
             output.setText(TextUtils.join("\n", rows));
         });
         return box;

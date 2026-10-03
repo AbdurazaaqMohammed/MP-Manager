@@ -27,14 +27,14 @@ import java.text.DecimalFormat;
 public class CurrencyTool extends BaseToolPlugin {
 
     public CurrencyTool() {
-        super("currency", "Currency Converter", "Convert with offline rates", ToolCategories.MATH);
+        super("currency", R.string.currency_title, R.string.currency_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Currency Converter");
-        ToolViewFactory.addLabel(box, "Indicative offline rates, base USD.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.currency_currency_converter));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.currency_indicative_offline_rates_base_));
         String[] codes = new String[]{"USD", "EUR", "GBP", "JPY", "INR", "CNY", "AED", "SAR", "PKR", "BDT", "CAD", "AUD"};
         double[] perUsd = new double[]{1.0, 0.92, 0.79, 149.5, 83.2, 7.24, 3.67, 3.75, 278.0, 117.0, 1.36, 1.52};
         Spinner fromCur = new Spinner(context);
@@ -47,7 +47,7 @@ public class CurrencyTool extends BaseToolPlugin {
         toCur.setSelection(1);
         box.addView(fromCur);
         box.addView(toCur);
-        EditText amount = ToolViewFactory.makeInput(box, "Amount",
+        EditText amount = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.currency_amount),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         amount.setText("100");
         TextView output = ToolViewFactory.makeOutput(box);
@@ -61,7 +61,7 @@ public class CurrencyTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.##");
                 output.setText(df.format(v) + " " + codes[fi] + " = " + df.format(result) + " " + codes[ti]);
             } catch (Exception e) {
-                output.setText("Enter amount");
+                output.setText(output.getContext().getString(R.string.currency_enter_amount));
             }
         };
         AdapterView.OnItemSelectedListener listener = new AdapterView.OnItemSelectedListener() {
@@ -82,7 +82,7 @@ public class CurrencyTool extends BaseToolPlugin {
             public void afterTextChanged(Editable s) {
             }
         });
-        MaterialButton swapBtn = ToolViewFactory.makeButton(box, "Swap");
+        MaterialButton swapBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.currency_swap));
         swapBtn.setOnClickListener(v -> {
             int f = fromCur.getSelectedItemPosition();
             int t = toCur.getSelectedItemPosition();

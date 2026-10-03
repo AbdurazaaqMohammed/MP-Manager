@@ -20,15 +20,14 @@ public class SidebarActivity extends Activity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad, pad, pad);
         TextView title = new TextView(this);
-        title.setText("Sample external plugin");
+        title.setText(getString(R.string.sidebar_title));
         title.setTextSize(20);
         box.addView(title);
         TextView sub = new TextView(this);
-        sub.setText("Launched from the host sidebar as a separate app"
-                + " (plugin=" + pluginId + ").");
+        sub.setText(getString(R.string.sidebar_sub, pluginId));
         box.addView(sub);
         Button close = new Button(this);
-        close.setText("Close");
+        close.setText(getString(R.string.close));
         close.setOnClickListener(v -> finish());
         box.addView(close);
         setContentView(box);

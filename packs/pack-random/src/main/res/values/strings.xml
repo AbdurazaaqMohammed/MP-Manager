@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="password_copy">Copy</string>
+    <string name="password_error">Error</string>
+    <string name="password_generate">Generate</string>
+    <string name="password_length">"Length: "</string>
+    <string name="password_length_16">Length: 16</string>
+    <string name="password_password">password</string>
+    <string name="password_password_generator">Password Generator</string>
+    <string name="password_pick_at_least_one_set">Pick at least one set</string>
+    <string name="password_press_generate">Press Generate</string>
+    <string name="password_sub">Generate secure passwords</string>
+    <string name="password_symbols">Symbols</string>
+    <string name="password_title">Password Generator</string>
+    <string name="random_coin">Coin</string>
+    <string name="random_dice">Dice</string>
+    <string name="random_heads">Heads</string>
+    <string name="random_max">Max</string>
+    <string name="random_min">Min</string>
+    <string name="random_number">Number</string>
+    <string name="random_randomizer">Randomizer</string>
+    <string name="random_sub">Dice, coins, numbers</string>
+    <string name="random_tails">Tails</string>
+    <string name="random_title">Randomizer</string>
+    <string name="strength_add_digits">"Add digits. "</string>
+    <string name="strength_add_symbols">"Add symbols. "</string>
+    <string name="strength_bits">"%1$s  (%2$s bits)"</string>
+    <string name="strength_crack_estimate">"\nCrack estimate %1$s\n"</string>
+    <string name="strength_mix_case">Mix upper and lower case.</string>
+    <string name="strength_password_strength">Password Strength</string>
+    <string name="strength_password_to_test">Password to test</string>
+    <string name="strength_sub">Entropy and crack estimates</string>
+    <string name="strength_title">Password Strength</string>
+    <string name="strength_type_a_password">Type a password</string>
+    <string name="strength_use_12">"Use 12 or more characters. "</string>
+    <string name="uuid_count">"Count: "</string>
+    <string name="uuid_count_5">Count: 5</string>
+    <string name="uuid_new">New</string>
+    <string name="uuid_sub">Generate random UUIDs</string>
+    <string name="uuid_title">UUID Generator</string>
+    <string name="uuid_uuid">uuid</string>
+    <string name="uuid_uuid_generator">UUID Generator</string>
+</resources>

@@ -22,14 +22,14 @@ import java.text.DecimalFormat;
 public class QuadraticTool extends BaseToolPlugin {
 
     public QuadraticTool() {
-        super("quadratic", "Quadratic Solver", "Roots and vertex", ToolCategories.MATH);
+        super("quadratic", R.string.quadratic_title, R.string.quadratic_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Quadratic Solver");
-        ToolViewFactory.addLabel(box, "Solves a x squared plus b x plus c equals 0.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.quadratic_quadratic_solver));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.quadratic_solves_a_x_squared_plus_b_x_pl));
         EditText aInput = ToolViewFactory.makeInput(box, "a",
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         aInput.setText("1");
@@ -40,7 +40,7 @@ public class QuadraticTool extends BaseToolPlugin {
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         cInput.setText("2");
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Solve");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.ohm_solve));
         goBtn.setOnClickListener(v -> {
             try {
                 double a = Double.parseDouble(aInput.getText().toString());
@@ -49,9 +49,9 @@ public class QuadraticTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.####");
                 if (a == 0) {
                     if (b == 0) {
-                        output.setText("Not an equation");
+                        output.setText(output.getContext().getString(R.string.quadratic_not_an_equation));
                     } else {
-                        output.setText("Linear root x = " + df.format(-c / b));
+                        output.setText(output.getContext().getString(R.string.quadratic_linear_root_x) + df.format(-c / b));
                     }
                     return;
                 }
@@ -59,7 +59,7 @@ public class QuadraticTool extends BaseToolPlugin {
                 double vx = -b / (2 * a);
                 double vy = a * vx * vx + b * vx + c;
                 StringBuilder sb = new StringBuilder();
-                sb.append("Discriminant ").append(df.format(disc)).append("\n");
+                sb.append(output.getContext().getString(R.string.quadratic_discriminant)).append(df.format(disc)).append("\n");
                 if (disc > 0) {
                     sb.append("x1 = ").append(df.format((-b + Math.sqrt(disc)) / (2 * a))).append("\n");
                     sb.append("x2 = ").append(df.format((-b - Math.sqrt(disc)) / (2 * a))).append("\n");
@@ -71,10 +71,10 @@ public class QuadraticTool extends BaseToolPlugin {
                     sb.append("x1 = ").append(df.format(re)).append(" + ").append(df.format(im)).append("i\n");
                     sb.append("x2 = ").append(df.format(re)).append(" - ").append(df.format(im)).append("i\n");
                 }
-                sb.append("Vertex (").append(df.format(vx)).append(", ").append(df.format(vy)).append(")");
+                sb.append(output.getContext().getString(R.string.quadratic_vertex)).append(df.format(vx)).append(", ").append(df.format(vy)).append(")");
                 output.setText(sb.toString());
             } catch (Exception e) {
-                output.setText("Enter a, b and c");
+                output.setText(output.getContext().getString(R.string.quadratic_enter_a_b_and_c));
             }
         });
         return box;

@@ -312,12 +312,16 @@ public class ToolsHubActivity extends BaseActivity {
         LinearLayout.LayoutParams textsParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         texts.setLayoutParams(textsParams);
+        io.github.abdurazaaqmohammed.plugins.api.ToolPlugin live =
+                io.github.abdurazaaqmohammed.plugins.api.PluginRegistry.findById(this, tool.id);
+        String toolTitle = (live != null && live.title(this) != null) ? live.title(this) : tool.title;
+        String toolSub = (live != null && live.subtitle(this) != null) ? live.subtitle(this) : tool.subtitle;
         TextView title = new TextView(this);
-        title.setText(tool.title);
+        title.setText(toolTitle);
         title.setTextSize(14);
         texts.addView(title);
         TextView sub = new TextView(this);
-        sub.setText(tool.subtitle);
+        sub.setText(toolSub);
         sub.setTextSize(12);
         sub.setAlpha(0.6f);
         texts.addView(sub);
@@ -505,7 +509,9 @@ public class ToolsHubActivity extends BaseActivity {
                     String cat = (String) row;
                     int count = 0;
                     for (int i = position + 1; i < rows.size() && rows.get(i) instanceof ToolRegistry.ToolItem; i++) count++;
-                    ((HeaderHolder) holder).label.setText(cat + "  (" + count + ")");
+                    ((HeaderHolder) holder).label.setText(
+                            io.github.abdurazaaqmohammed.plugins.api.PluginRegistry
+                                    .categoryLabel(this, cat) + "  (" + count + ")");
                 }
             } else if (holder instanceof ToolViewHolder h
                     && row instanceof PluginHost.ExternalPlugin ext) {

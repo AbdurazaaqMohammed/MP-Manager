@@ -26,7 +26,7 @@ import java.text.DecimalFormat;
 public class FractionTool extends BaseToolPlugin {
 
     public FractionTool() {
-        super("fraction", "Fraction Calc", "Simplify fractions", ToolCategories.MATH);
+        super("fraction", R.string.fraction_title, R.string.fraction_sub,  ToolCategories.MATH);
     }
 
     private static EditText cell(Context context, LinearLayout row, String def) {
@@ -39,7 +39,7 @@ public class FractionTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Fraction Calculator");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.fraction_fraction_calculator));
         LinearLayout row1 = ToolViewFactory.makeRow(box);
         EditText aInput = cell(context, row1, "1");
         TextView slash1 = new TextView(context);
@@ -50,7 +50,7 @@ public class FractionTool extends BaseToolPlugin {
         EditText bInput = cell(context, row1, "2");
         Spinner opSpinner = new Spinner(context);
         ArrayAdapter<String> opAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item,
-                new String[]{"+", "-", "x", "div"});
+                new String[]{"+", "-", "x", context.getString(R.string.fraction_div)});
         opAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         opSpinner.setAdapter(opAdapter);
         box.addView(opSpinner);
@@ -63,7 +63,7 @@ public class FractionTool extends BaseToolPlugin {
         row2.addView(slash2, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.4f));
         EditText dInput = cell(context, row2, "3");
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compound_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 long a = Long.parseLong(aInput.getText().toString().trim());
@@ -71,7 +71,7 @@ public class FractionTool extends BaseToolPlugin {
                 long c = Long.parseLong(cInput.getText().toString().trim());
                 long d = Long.parseLong(dInput.getText().toString().trim());
                 if (b == 0 || d == 0) {
-                    output.setText("Denominator cannot be 0");
+                    output.setText(output.getContext().getString(R.string.fraction_denominator_cannot_be_0));
                     return;
                 }
                 long num;
@@ -88,7 +88,7 @@ public class FractionTool extends BaseToolPlugin {
                     den = b * d;
                 } else {
                     if (c == 0) {
-                        output.setText("Cannot divide by zero");
+                        output.setText(output.getContext().getString(R.string.fraction_cannot_divide_by_zero));
                         return;
                     }
                     num = a * d;
@@ -104,7 +104,7 @@ public class FractionTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.####");
                 output.setText(num + " / " + den + "  =  " + df.format((double) num / den));
             } catch (Exception e) {
-                output.setText("Enter four integers");
+                output.setText(output.getContext().getString(R.string.fraction_enter_four_integers));
             }
         });
         return box;

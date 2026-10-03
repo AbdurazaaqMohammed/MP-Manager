@@ -45,9 +45,9 @@ public class DeviceHubTool extends BaseToolPlugin {
     private SensorEventListener activeListener;
     private float[][] sensorLatest;
     private TextView sensorLiveText;
-
+    private Context ctx;
     public DeviceHubTool() {
-        super("devicehub", "Device Hub", "Battery, CPU, sensors, storage", ToolCategories.DEVICE);
+        super("devicehub", R.string.devicehub_title, R.string.devicehub_sub,  ToolCategories.DEVICE);
     }
 
     private static LinearLayout addSectionCard(Context context, LinearLayout box, String title) {
@@ -103,32 +103,33 @@ public class DeviceHubTool extends BaseToolPlugin {
     private static String readBatterySummary(Context context) {
         try {
             Intent battery = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-            if (battery == null) return "Unavailable";
+            if (battery == null) return context.getString(R.string.devicehub_unavailable);
             int level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
             int scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
             int pct = scale <= 0 ? level : Math.round(level * 100f / scale);
             int status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-            String statusStr = status == BatteryManager.BATTERY_STATUS_CHARGING ? "Charging" : status == BatteryManager.BATTERY_STATUS_FULL ? "Full" : status == BatteryManager.BATTERY_STATUS_DISCHARGING ? "Discharging" : status == BatteryManager.BATTERY_STATUS_NOT_CHARGING ? "Not charging" : "Unknown";
+            String statusStr = status == BatteryManager.BATTERY_STATUS_CHARGING ? context.getString(R.string.devicehub_batt_charging) : status == BatteryManager.BATTERY_STATUS_FULL ? context.getString(R.string.devicehub_batt_full) : status == BatteryManager.BATTERY_STATUS_DISCHARGING ? context.getString(R.string.devicehub_batt_discharging) : status == BatteryManager.BATTERY_STATUS_NOT_CHARGING ? context.getString(R.string.devicehub_batt_not_charging) : context.getString(R.string.devicehub_batt_unknown);
             int plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
-            String plugStr = plugged == BatteryManager.BATTERY_PLUGGED_AC ? "AC" : plugged == BatteryManager.BATTERY_PLUGGED_USB ? "USB" : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "Wireless" : "Unplugged";
+            String plugStr = plugged == BatteryManager.BATTERY_PLUGGED_AC ? context.getString(R.string.devicehub_plug_ac) : plugged == BatteryManager.BATTERY_PLUGGED_USB ? context.getString(R.string.devicehub_plug_usb) : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? context.getString(R.string.devicehub_plug_wireless) : context.getString(R.string.devicehub_plug_none);
             int temp = battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
             int volt = battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
             String tech = battery.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY);
-            return "Level " + pct + "%  •  " + statusStr + "\nPower " + plugStr + "  •  " + new DecimalFormat("0.0").format(temp / 10.0) + " °C  •  " + volt + " mV  •  " + (tech == null ? "-" : tech);
+            return context.getString(R.string.devicehub_batt_summary, pct, statusStr, plugStr,
+                    new DecimalFormat("0.0").format(temp / 10.0), volt, (tech == null ? "-" : tech));
         } catch (Exception e) {
-            return "Unavailable";
+            return context.getString(R.string.devicehub_unavailable);
         }
     }
 
-    private static String readCpuSummary() {
+    private static String readCpuSummary(Context context) {
         try {
             StringBuilder b = new StringBuilder();
-            b.append("Cores: ").append(Runtime.getRuntime().availableProcessors()).append("\n");
+            b.append(context.getString(R.string.devicehub_cores)).append(Runtime.getRuntime().availableProcessors()).append("\n");
             if (Build.VERSION.SDK_INT >= 21) {
                 try {
                     String[] abis = Build.SUPPORTED_ABIS;
                     if (abis != null) {
-                        b.append("ABI: ");
+                        b.append(context.getString(R.string.devicehub_abi));
                         for (int i = 0; i < abis.length; i++) {
                             if (i > 0) b.append(", ");
                             b.append(abis[i]);
@@ -137,18 +138,18 @@ public class DeviceHubTool extends BaseToolPlugin {
                     }
                 } catch (Exception ignored) {}
             }
-            b.append("Hardware: ").append(Build.HARDWARE).append("  Board: ").append(Build.BOARD).append("\n");
+            b.append(context.getString(R.string.devicehub_hw)).append(Build.HARDWARE).append(context.getString(R.string.devicehub_board)).append(Build.BOARD).append("\n");
             try {
                 File f = new File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
                 if (f.exists()) {
                     Scanner s = new Scanner(f);
-                    if (s.hasNext()) b.append("CPU0: ").append(Long.parseLong(s.next().trim()) / 1000).append(" MHz\n");
+                    if (s.hasNext()) b.append(context.getString(R.string.devicehub_cpu_freq, Long.parseLong(s.next().trim()) / 1000));
                     s.close();
                 }
             } catch (Exception ignored) {}
             return b.toString();
         } catch (Exception e) {
-            return "Unavailable";
+            return context.getString(R.string.devicehub_unavailable);
         }
     }
 
@@ -157,14 +158,15 @@ public class DeviceHubTool extends BaseToolPlugin {
             StringBuilder b = new StringBuilder();
             StatFs internal = new StatFs(Environment.getDataDirectory().getAbsolutePath());
             long bs = internal.getBlockSizeLong();
-            b.append("Internal ").append(formatBytes((internal.getBlockCountLong() - internal.getAvailableBlocksLong()) * bs)).append(" used / ").append(formatBytes(internal.getBlockCountLong() * bs)).append("\n");
+            b.append(context.getString(R.string.devicehub_storage_internal, formatBytes((internal.getBlockCountLong() - internal.getAvailableBlocksLong()) * bs), formatBytes(internal.getBlockCountLong() * bs)));
             android.app.ActivityManager am = (android.app.ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
             android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
             am.getMemoryInfo(mi);
-            b.append("RAM ").append(formatBytes(mi.totalMem - mi.availMem)).append(" used / ").append(formatBytes(mi.totalMem)).append(mi.lowMemory ? "  •  LOW" : "  •  OK");
+            b.append(context.getString(R.string.devicehub_storage_ram, formatBytes(mi.totalMem - mi.availMem), formatBytes(mi.totalMem),
+                    context.getString(mi.lowMemory ? R.string.devicehub_low : R.string.devicehub_ok)));
             return b.toString();
         } catch (Exception e) {
-            return "Unavailable";
+            return context.getString(R.string.devicehub_unavailable);
         }
     }
 
@@ -172,7 +174,7 @@ public class DeviceHubTool extends BaseToolPlugin {
         if (sensorManager == null || sensorLiveText == null) {
             return;
         }
-        final String[] names = new String[]{"Accel", "Gyro", "Magnet", "Light", "Proximity"};
+        final String[] names = new String[]{ctx.getString(R.string.devicehub_sensor_accel), ctx.getString(R.string.devicehub_sensor_gyro), ctx.getString(R.string.devicehub_sensor_magnet), ctx.getString(R.string.devicehub_sensor_light), ctx.getString(R.string.devicehub_sensor_proximity)};
         final float[][] latest = sensorLatest == null ? (sensorLatest = new float[5][]) : sensorLatest;
         try {
             if (activeListener != null) {
@@ -234,7 +236,7 @@ public class DeviceHubTool extends BaseToolPlugin {
             }
         }
         if (found == 0) {
-            sensorLiveText.setText("No common sensors found");
+            sensorLiveText.setText(sensorLiveText.getContext().getString(R.string.devicehub_no_common_sensors_found));
         }
     }
 
@@ -260,23 +262,23 @@ public class DeviceHubTool extends BaseToolPlugin {
         try {
             sensorManager.registerListener(activeListener, pressure, SensorManager.SENSOR_DELAY_UI);
         } catch (Exception e) {
-            output.setText("Sensor error");
+            output.setText(output.getContext().getString(R.string.compass_sensor_error));
         }
     }
 
     private void buildAltimeter(Context context, LinearLayout box) {
-        ToolViewFactory.addTitle(box, "Altimeter");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.devicehub_altimeter));
         final TextView output = ToolViewFactory.makeOutput(box);
         output.setTextSize(28);
         output.setGravity(Gravity.CENTER);
-        output.setText("Starting...");
+        output.setText(output.getContext().getString(R.string.devicehub_starting));
         if (sensorManager == null) {
-            output.setText("No sensors on this device");
+            output.setText(output.getContext().getString(R.string.compass_no_sensors_on_this_device));
             return;
         }
         Sensor pressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
         if (pressure == null) {
-            output.setText("No barometer on this device");
+            output.setText(output.getContext().getString(R.string.devicehub_no_barometer_on_this_device));
             return;
         }
         startAltimeterListener(output, pressure);
@@ -284,27 +286,28 @@ public class DeviceHubTool extends BaseToolPlugin {
 
     @Override
     public View createView(Context context, ViewGroup container) {
+        ctx = context;
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Device Hub");
-        LinearLayout overview = addSectionCard(context, box, "Overview");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.devicehub_device_hub));
+        LinearLayout overview = addSectionCard(context, box, context.getString(R.string.devicehub_sec_overview));
         final TextView overText = addCardOutput(context, overview);
-        LinearLayout power = addSectionCard(context, box, "Battery & Power");
+        LinearLayout power = addSectionCard(context, box, context.getString(R.string.devicehub_sec_battery));
         final TextView powerText = addCardOutput(context, power);
         final ProgressBar levelBar = new ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
         levelBar.setMax(100);
         power.addView(levelBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout compute = addSectionCard(context, box, "Processor & Memory");
+        LinearLayout compute = addSectionCard(context, box, context.getString(R.string.devicehub_sec_cpu));
         final TextView computeText = addCardOutput(context, compute);
-        LinearLayout stor = addSectionCard(context, box, "Storage & RAM");
+        LinearLayout stor = addSectionCard(context, box, context.getString(R.string.devicehub_sec_storage));
         final TextView storText = addCardOutput(context, stor);
-        LinearLayout disp = addSectionCard(context, box, "Display");
+        LinearLayout disp = addSectionCard(context, box, context.getString(R.string.devicehub_sec_display));
         final TextView dispText = addCardOutput(context, disp);
-        LinearLayout sens = addSectionCard(context, box, "Live sensors & altimeter");
+        LinearLayout sens = addSectionCard(context, box, context.getString(R.string.devicehub_sec_sensors));
         sensorLiveText = addCardOutput(context, sens);
-        sensorLiveText.setText("Starting sensors...");
+        sensorLiveText.setText(sensorLiveText.getContext().getString(R.string.devicehub_starting_sensors));
         final TextView altText = addCardOutput(context, sens);
-        altText.setText("Barometer: starting...");
+        altText.setText(altText.getContext().getString(R.string.devicehub_barometer_starting));
         final Runnable refreshAll = () -> {
             try {
                 DisplayMetrics dm = context.getResources().getDisplayMetrics();
@@ -320,22 +323,25 @@ public class DeviceHubTool extends BaseToolPlugin {
                     int s = bat.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
                     levelBar.setProgress(s <= 0 ? l : Math.round(l * 100f / s));
                 } catch (Exception ignored) {}
-                computeText.setText(readCpuSummary());
+                computeText.setText(readCpuSummary(context));
                 storText.setText(readStorageSummary(context));
-                dispText.setText(dm.widthPixels + " × " + dm.heightPixels + "  •  " + dm.densityDpi + " dpi\nxdpi " + new DecimalFormat("0.0").format(dm.xdpi) + "  ydpi " + new DecimalFormat("0.0").format(dm.ydpi) + "  •  density " + dm.density);
+                dispText.setText(context.getString(R.string.devicehub_display_info,
+                        String.valueOf(dm.widthPixels), String.valueOf(dm.heightPixels), String.valueOf(dm.densityDpi),
+                        new DecimalFormat("0.0").format(dm.xdpi), new DecimalFormat("0.0").format(dm.ydpi),
+                        String.valueOf(dm.density)));
                 if (sensorManager != null) {
                     List<Sensor> all = sensorManager.getSensorList(Sensor.TYPE_ALL);
                     StringBuilder sl = new StringBuilder();
-                    sl.append(all.size()).append(" sensors: ");
+                    sl.append(context.getString(R.string.devicehub_sensor_count, all.size()));
                     for (int i = 0; i < Math.min(6, all.size()); i++) {
                         if (i > 0) sl.append(", ");
                         sl.append(all.get(i).getName());
                     }
                     if (all.size() > 6) sl.append(" …");
-                    sensorLiveText.setText("Starting live feed…\n" + sl);
+                    sensorLiveText.setText(sensorLiveText.getContext().getString(R.string.devicehub_starting_live_feed) + sl);
                 }
             } catch (Exception e) {
-                overText.setText("Unavailable");
+                overText.setText(overText.getContext().getString(R.string.devicehub_unavailable));
             }
         };
         refreshAll.run();
@@ -347,28 +353,28 @@ public class DeviceHubTool extends BaseToolPlugin {
             if (sensorManager != null) {
                 Sensor pressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
                 if (pressure != null) {
-                    altText.setText("Barometer present — tap below for altitude readout.");
+                    altText.setText(altText.getContext().getString(R.string.devicehub_barometer_present_tap_below_fo));
                     MaterialButton altBtn = new MaterialButton(context);
-                    altBtn.setText("Open altimeter");
+                    altBtn.setText(altBtn.getContext().getString(R.string.devicehub_open_altimeter));
                     sens.addView(altBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                     altBtn.setOnClickListener(v -> {
                         box.removeAllViews();
                         buildAltimeter(context, box);
                     });
                 } else {
-                    altText.setText("No barometer on this device");
+                    altText.setText(altText.getContext().getString(R.string.devicehub_no_barometer_on_this_device));
                 }
             }
         } catch (Exception ignored) {}
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton refreshBtn = ToolViewFactory.makeRowButton(row, "Refresh all", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy report", 1f);
+        MaterialButton refreshBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.devicehub_refresh_all), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.devicehub_copy_report), 1f);
         refreshBtn.setOnClickListener(v -> {
             refreshAll.run();
             try { startSensorsListener(); } catch (Exception ignored) {}
-            ToolViewFactory.toast(context, "Refreshed");
+            ToolViewFactory.toast(context, context.getString(R.string.devicehub_refreshed));
         });
-        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, "device-hub",
+        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, context.getString(R.string.devicehub_device_hub_2),
                 overText.getText() + "\n\n" + powerText.getText() + "\n\n" + computeText.getText() + "\n\n" + storText.getText() + "\n\n" + dispText.getText()));
         return box;
     }
@@ -385,5 +391,6 @@ public class DeviceHubTool extends BaseToolPlugin {
         sensorManager = null;
         sensorLatest = null;
         sensorLiveText = null;
+        ctx = null;
     }
 }

@@ -25,23 +25,23 @@ import java.text.DecimalFormat;
 public class CompoundTool extends BaseToolPlugin {
 
     public CompoundTool() {
-        super("compound", "Interest Calculator", "Compound growth, SIP", ToolCategories.MATH);
+        super("compound", R.string.compound_title, R.string.compound_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Interest Calculator");
-        EditText pInput = ToolViewFactory.makeInput(box, "Initial amount",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.compound_interest_calculator));
+        EditText pInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.compound_initial_amount),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         pInput.setText("10000");
-        EditText rInput = ToolViewFactory.makeInput(box, "Annual percent",
+        EditText rInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.compound_annual_percent),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         rInput.setText("8");
-        EditText yInput = ToolViewFactory.makeInput(box, "Years",
+        EditText yInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.compound_years),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         yInput.setText("5");
-        String[] freqs = new String[]{"Yearly", "Half-yearly", "Quarterly", "Monthly"};
+        String[] freqs = new String[]{context.getString(R.string.compound_yearly), context.getString(R.string.compound_half_yearly), context.getString(R.string.compound_quarterly), context.getString(R.string.compound_monthly)};
         int[] perYear = new int[]{1, 2, 4, 12};
         Spinner freqSpinner = new Spinner(context);
         ArrayAdapter<String> freqAdapter =
@@ -50,11 +50,11 @@ public class CompoundTool extends BaseToolPlugin {
         freqSpinner.setAdapter(freqAdapter);
         freqSpinner.setSelection(3);
         box.addView(freqSpinner);
-        EditText sipInput = ToolViewFactory.makeInput(box, "Monthly deposit, 0 for none",
+        EditText sipInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.compound_monthly_deposit_0_for_none),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         sipInput.setText("0");
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compound_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double p = Double.parseDouble(pInput.getText().toString());
@@ -65,9 +65,11 @@ public class CompoundTool extends BaseToolPlugin {
                 double monthly = Double.parseDouble(sipInput.getText().toString());
                 double sipFv = monthly > 0 ? Money.sipFutureValue(monthly, annual, years) : 0;
                 DecimalFormat df = new DecimalFormat("0.00");
-                output.setText("Lump sum grows to " + df.format(lump) + "\nDeposits grow to " + df.format(sipFv) + "\nTotal " + df.format(lump + sipFv));
+                output.setText(output.getContext().getString(R.string.compound_lump_sum_grows_to) + df.format(lump)
+                        + output.getContext().getString(R.string.compound_deposits_grow_to) + df.format(sipFv)
+                        + output.getContext().getString(R.string.compound_total) + df.format(lump + sipFv));
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText(output.getContext().getString(R.string.compound_check_inputs));
             }
         });
         return box;

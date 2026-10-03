@@ -25,7 +25,7 @@ public class EditorActivity extends Activity {
         field.setText(selected.toUpperCase());
         box.addView(field);
         Button apply = new Button(this);
-        apply.setText("Apply to editor");
+        apply.setText(getString(R.string.editor_apply));
         apply.setOnClickListener(v -> {
             Intent result = new Intent();
             result.putExtra(PluginContracts.EXTRA_REPLACE_SELECTION,

@@ -27,13 +27,13 @@ import java.text.DecimalFormat;
 public class GpaTool extends BaseToolPlugin {
 
     public GpaTool() {
-        super("gpa", "GPA Calculator", "Grades and credits", ToolCategories.MATH);
+        super("gpa", R.string.gpa_title, R.string.gpa_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "GPA Calculator");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.gpa_gpa_calculator));
         String[] grades = new String[]{"A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"};
         double[] points = new double[]{4.0, 4.0, 3.7, 3.3, 3.0, 2.7, 2.3, 2.0, 1.7, 1.0, 0.0};
         LinearLayout rowsBox = new LinearLayout(context);
@@ -57,12 +57,13 @@ public class GpaTool extends BaseToolPlugin {
                     totalCredits += credits;
                 }
                 if (totalCredits <= 0) {
-                    output.setText("Add courses with credits");
+                    output.setText(output.getContext().getString(R.string.gpa_add_courses_with_credits));
                     return;
                 }
-                output.setText("GPA " + new DecimalFormat("0.00").format(totalPoints / totalCredits) + "  Credits " + new DecimalFormat("0.#").format(totalCredits));
+                output.setText(output.getContext().getString(R.string.gpa_gpa) + new DecimalFormat("0.00").format(totalPoints / totalCredits)
+                        + output.getContext().getString(R.string.gpa_credits_total) + new DecimalFormat("0.#").format(totalCredits));
             } catch (Exception e) {
-                output.setText("Check credits");
+                output.setText(output.getContext().getString(R.string.gpa_check_credits));
             }
         };
         final AdapterView.OnItemSelectedListener gradeListener = new AdapterView.OnItemSelectedListener() {
@@ -82,7 +83,7 @@ public class GpaTool extends BaseToolPlugin {
             g.setSelection(1);
             g.setOnItemSelectedListener(gradeListener);
             row.addView(g, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            EditText c = ToolViewFactory.makeRowInput(row, "Credits",
+            EditText c = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.gpa_credits),
                     InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL, 1f, "3");
             c.addTextChangedListener(new TextWatcher() {
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -106,7 +107,7 @@ public class GpaTool extends BaseToolPlugin {
         addCourseRow.run();
         addCourseRow.run();
         addCourseRow.run();
-        MaterialButton addBtn = ToolViewFactory.makeButton(box, "Add course");
+        MaterialButton addBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.gpa_add_course));
         addBtn.setOnClickListener(v -> addCourseRow.run());
         return box;
     }

@@ -21,36 +21,36 @@ import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 public class DateDiffTool extends BaseToolPlugin {
 
     public DateDiffTool() {
-        super("datediff", "Date Difference", "Days and age between dates", ToolCategories.TIME);
+        super("datediff", R.string.datediff_title, R.string.datediff_sub,  ToolCategories.TIME);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Date Calculator");
-        ToolViewFactory.addLabel(box, "Use yyyy-MM-dd, for example 2024-01-31.");
-        EditText d1 = ToolViewFactory.makeInput(box, "Start date", InputType.TYPE_CLASS_DATETIME);
-        EditText d2 = ToolViewFactory.makeInput(box, "End date", InputType.TYPE_CLASS_DATETIME);
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.datediff_date_calculator));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.datediff_use_yyyy_mm_dd_for_example_202));
+        EditText d1 = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.datediff_start_date), InputType.TYPE_CLASS_DATETIME);
+        EditText d2 = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.datediff_end_date), InputType.TYPE_CLASS_DATETIME);
         String today = DateTime.todayIso();
         d1.setText(today);
         d2.setText(today);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton calcBtn = ToolViewFactory.makeButton(box, "Calculate difference");
+        MaterialButton calcBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.datediff_calculate_difference));
         calcBtn.setOnClickListener(v -> {
             try {
-                output.setText(DateTime.diff(d1.getText().toString(), d2.getText().toString()));
+                output.setText(DateTime.diff(context, d1.getText().toString(), d2.getText().toString()));
             } catch (Exception e) {
-                output.setText("Use yyyy-MM-dd");
+                output.setText(output.getContext().getString(R.string.agecalc_use_yyyy_mm_dd_2));
             }
         });
-        MaterialButton ageBtn = ToolViewFactory.makeButton(box, "Age from start date to today");
+        MaterialButton ageBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.datediff_age_from_start_date_to_today));
         ageBtn.setOnClickListener(v -> {
             try {
-                output.setText(DateTime.ageFrom(d1.getText().toString()));
+                output.setText(DateTime.ageFrom(context, d1.getText().toString()));
             } catch (IllegalArgumentException e) {
-                output.setText("Birth date is in the future");
+                output.setText(output.getContext().getString(R.string.agecalc_birth_date_is_in_the_future));
             } catch (Exception e) {
-                output.setText("Use yyyy-MM-dd");
+                output.setText(output.getContext().getString(R.string.agecalc_use_yyyy_mm_dd_2));
             }
         });
         return box;

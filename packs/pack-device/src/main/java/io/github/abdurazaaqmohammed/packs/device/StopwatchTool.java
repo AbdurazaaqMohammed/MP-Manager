@@ -37,7 +37,7 @@ public class StopwatchTool extends BaseToolPlugin {
     private Runnable tick;
 
     public StopwatchTool() {
-        super("stopwatch", "Stopwatch", "Stopwatch with laps", ToolCategories.DEVICE);
+        super("stopwatch", R.string.stopwatch_title, R.string.stopwatch_sub,  ToolCategories.DEVICE);
     }
 
     private long elapsed() {
@@ -61,15 +61,15 @@ public class StopwatchTool extends BaseToolPlugin {
         laps.clear();
         lapCount = 0;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Stopwatch");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.stopwatch_stopwatch));
         TextView stopwatchText = ToolViewFactory.makeOutput(box);
         stopwatchText.setTextSize(32);
         stopwatchText.setGravity(Gravity.CENTER);
         stopwatchText.setText("00:00.00");
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, "Start", 1f);
-        MaterialButton lapBtn = ToolViewFactory.makeRowButton(row, "Lap", 1f);
-        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, "Reset", 1f);
+        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.gps_start), 1f);
+        MaterialButton lapBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.stopwatch_lap), 1f);
+        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, row.getContext().getString(R.string.gps_reset), 1f);
         ArrayAdapter<String> lapAdapter =
                 new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, laps);
         ListView lapList = new ListView(context);
@@ -88,18 +88,18 @@ public class StopwatchTool extends BaseToolPlugin {
             if (running) {
                 accum = elapsed();
                 running = false;
-                ((android.widget.Button) v).setText("Start");
+                ((android.widget.Button) v).setText(startBtn.getContext().getString(R.string.gps_start));
             } else {
                 base = SystemClock.elapsedRealtime();
                 running = true;
-                ((android.widget.Button) v).setText("Pause");
+                ((android.widget.Button) v).setText(startBtn.getContext().getString(R.string.timer_pause));
                 handler.post(tick);
             }
         });
         lapBtn.setOnClickListener(v -> {
             if (running) {
                 lapCount++;
-                laps.add(0, "Lap " + lapCount + "  " + format(elapsed()));
+                laps.add(0, context.getString(R.string.stopwatch_lap_line, lapCount, format(elapsed())));
                 lapAdapter.notifyDataSetChanged();
                 ToolViewFactory.vibrateTick(context);
             }
@@ -111,7 +111,7 @@ public class StopwatchTool extends BaseToolPlugin {
             laps.clear();
             lapAdapter.notifyDataSetChanged();
             lapCount = 0;
-            startBtn.setText("Start");
+            startBtn.setText(startBtn.getContext().getString(R.string.gps_start));
         });
         return box;
     }

@@ -32,15 +32,15 @@ public class EventCountTool extends BaseToolPlugin {
     private boolean active;
 
     public EventCountTool() {
-        super("eventcount", "Event Countdown", "Countdown to events live", ToolCategories.TIME);
+        super("eventcount", R.string.eventcount_title, R.string.eventcount_sub,  ToolCategories.TIME);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Event Countdown");
-        EditText titleInput = ToolViewFactory.makeInput(box, "Event name", InputType.TYPE_CLASS_TEXT);
-        EditText dateInput = ToolViewFactory.makeInput(box, "Date yyyy-MM-dd HH:mm", InputType.TYPE_CLASS_DATETIME);
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.eventcount_event_countdown));
+        EditText titleInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.eventcount_event_name), InputType.TYPE_CLASS_TEXT);
+        EditText dateInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.eventcount_date_yyyy_mm_dd_hh_mm), InputType.TYPE_CLASS_DATETIME);
         try {
             String savedTitle = context.getSharedPreferences("tools", Context.MODE_PRIVATE).getString("event_title", "");
             String savedDate = context.getSharedPreferences("tools", Context.MODE_PRIVATE).getString("event_date", "");
@@ -59,7 +59,7 @@ public class EventCountTool extends BaseToolPlugin {
                 try {
                     String raw = dateInput.getText().toString().trim();
                     if (raw.isEmpty()) {
-                        output.setText("Enter event date");
+                        output.setText(output.getContext().getString(R.string.eventcount_enter_event_date));
                         return;
                     }
                     SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
@@ -68,16 +68,16 @@ public class EventCountTool extends BaseToolPlugin {
                     long diff = target.getTime() - System.currentTimeMillis();
                     String name = titleInput.getText().toString().trim();
                     if (name.isEmpty()) {
-                        name = "Event";
+                        name = output.getContext().getString(R.string.eventcount_default_name);
                     }
                     long[] parts = DateTime.countdownParts(diff);
                     if (parts == null) {
-                        output.setText(name + "\nHappening now or passed");
+                        output.setText(name + "\n" + output.getContext().getString(R.string.eventcount_happening_now));
                         return;
                     }
                     output.setText(name + "\n" + parts[0] + "d " + String.format(Locale.US, "%02d:%02d:%02d", parts[1], parts[2], parts[3]));
                 } catch (Exception e) {
-                    output.setText("Use yyyy-MM-dd HH:mm");
+                    output.setText(output.getContext().getString(R.string.eventcount_use_yyyy_mm_dd_hh_mm));
                 }
                 if (active) {
                     handler.postDelayed(this, 1000);
@@ -86,15 +86,15 @@ public class EventCountTool extends BaseToolPlugin {
         };
         active = true;
         handler.post(ticker);
-        MaterialButton saveBtn = ToolViewFactory.makeButton(box, "Save event");
+        MaterialButton saveBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.eventcount_save_event));
         saveBtn.setOnClickListener(v -> {
             try {
                 context.getSharedPreferences("tools", Context.MODE_PRIVATE).edit()
                         .putString("event_title", titleInput.getText().toString().trim())
                         .putString("event_date", dateInput.getText().toString().trim()).apply();
-                ToolViewFactory.toast(context, "Saved");
+                ToolViewFactory.toast(context, context.getString(R.string.eventcount_saved));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Save failed");
+                ToolViewFactory.toast(context, context.getString(R.string.eventcount_save_failed));
             }
         });
         return box;

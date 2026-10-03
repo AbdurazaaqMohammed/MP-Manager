@@ -33,7 +33,7 @@ public class TimerTool extends BaseToolPlugin {
     private CountDownTimer countDownTimer;
 
     public TimerTool() {
-        super("timer", "Countdown Timer", "Set alarms and run countdowns", ToolCategories.DEVICE);
+        super("timer", R.string.timer_title, R.string.timer_sub,  ToolCategories.DEVICE);
     }
 
     private static long parseLongSafe(String s) {
@@ -78,19 +78,19 @@ public class TimerTool extends BaseToolPlugin {
         timerRunning = false;
         timerRemaining = 0;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Countdown Timer");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.timer_countdown_timer));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        EditText hInput = ToolViewFactory.makeRowInput(row, "hh", InputType.TYPE_CLASS_NUMBER, 1f, null);
-        EditText mInput = ToolViewFactory.makeRowInput(row, "mm", InputType.TYPE_CLASS_NUMBER, 1f, null);
-        EditText sInput = ToolViewFactory.makeRowInput(row, "ss", InputType.TYPE_CLASS_NUMBER, 1f, null);
+        EditText hInput = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.timer_hh), InputType.TYPE_CLASS_NUMBER, 1f, null);
+        EditText mInput = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.timer_mm), InputType.TYPE_CLASS_NUMBER, 1f, null);
+        EditText sInput = ToolViewFactory.makeRowInput(row, row.getContext().getString(R.string.timer_ss), InputType.TYPE_CLASS_NUMBER, 1f, null);
         TextView timerText = ToolViewFactory.makeOutput(box);
         timerText.setTextSize(32);
         timerText.setGravity(Gravity.CENTER);
         timerText.setText("00:00");
         LinearLayout row2 = ToolViewFactory.makeRow(box);
-        MaterialButton startBtn = ToolViewFactory.makeRowButton(row2, "Start", 1f);
-        MaterialButton pauseBtn = ToolViewFactory.makeRowButton(row2, "Pause", 1f);
-        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row2, "Reset", 1f);
+        MaterialButton startBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.gps_start), 1f);
+        MaterialButton pauseBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.timer_pause), 1f);
+        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.gps_reset), 1f);
         startBtn.setOnClickListener(v -> {
             if (timerRunning) {
                 return;
@@ -103,7 +103,7 @@ public class TimerTool extends BaseToolPlugin {
                 total = (h * 3600 + m * 60 + s) * 1000;
             }
             if (total <= 0) {
-                ToolViewFactory.toast(context, "Enter a duration");
+                ToolViewFactory.toast(context, context.getString(R.string.timer_enter_a_duration));
                 return;
             }
             timerRunning = true;
@@ -121,8 +121,8 @@ public class TimerTool extends BaseToolPlugin {
                 public void onFinish() {
                     timerRunning = false;
                     timerRemaining = 0;
-                    timerText.setText("Done");
-                    ToolViewFactory.toast(context, "Time is up");
+                    timerText.setText(timerText.getContext().getString(R.string.timer_done));
+                    ToolViewFactory.toast(context, context.getString(R.string.timer_time_is_up));
                     ToolViewFactory.vibrateTick(context);
                     beep();
                 }

@@ -1624,4 +1624,14 @@ Layout Inspector
     <string name="overlay_toast_duration_short">短</string>
     <string name="position_default">默认</string>
 
+    <!-- ===== plugin categories: keys are the ToolCategories constants, values are display text ===== -->
+    <string name="cat_network">Wi-Fi 与网络</string>
+    <string name="cat_storage">存储与应用</string>
+    <string name="cat_device">设备与硬件</string>
+    <string name="cat_math">数学与金融</string>
+    <string name="cat_time">时间与效率</string>
+    <string name="cat_text">文本与安全</string>
+    <string name="cat_media">媒体与声音</string>
+    <string name="cat_random">随机</string>
+
 </resources>

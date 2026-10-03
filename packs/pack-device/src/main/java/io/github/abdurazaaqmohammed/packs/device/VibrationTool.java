@@ -24,7 +24,7 @@ public class VibrationTool extends BaseToolPlugin {
     private Vibrator vibrator;
 
     public VibrationTool() {
-        super("vibration", "Vibration Studio", "Create custom vibrations", ToolCategories.DEVICE);
+        super("vibration", R.string.vibration_title, R.string.vibration_sub,  ToolCategories.DEVICE);
     }
 
     private void vibratePattern(long[] pattern) {
@@ -45,18 +45,18 @@ public class VibrationTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Vibration Studio");
-        EditText customInput = ToolViewFactory.makeInput(box, "Custom pattern ms, e.g. 0,200,100,400",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.vibration_vibration_studio));
+        EditText customInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.vibration_custom_pattern_ms_e_g_0_200_10),
                 InputType.TYPE_CLASS_TEXT);
         customInput.setText("0,200,100,400");
         LinearLayout row1 = ToolViewFactory.makeRow(box);
-        MaterialButton shortBtn = ToolViewFactory.makeRowButton(row1, "Short", 1f);
-        MaterialButton longBtn = ToolViewFactory.makeRowButton(row1, "Long", 1f);
+        MaterialButton shortBtn = ToolViewFactory.makeRowButton(row1, row1.getContext().getString(R.string.vibration_short), 1f);
+        MaterialButton longBtn = ToolViewFactory.makeRowButton(row1, row1.getContext().getString(R.string.vibration_long), 1f);
         MaterialButton sosBtn = ToolViewFactory.makeRowButton(row1, "SOS", 1f);
         LinearLayout row2 = ToolViewFactory.makeRow(box);
-        MaterialButton heartbeatBtn = ToolViewFactory.makeRowButton(row2, "Heartbeat", 1f);
-        MaterialButton customBtn = ToolViewFactory.makeRowButton(row2, "Custom", 1f);
-        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row2, "Stop", 1f);
+        MaterialButton heartbeatBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.vibration_heartbeat), 1f);
+        MaterialButton customBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.vibration_custom), 1f);
+        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row2, row2.getContext().getString(R.string.gps_stop), 1f);
         shortBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 150}));
         longBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 600}));
         sosBtn.setOnClickListener(v -> vibratePattern(new long[]{0, 150, 150, 150, 150, 150, 300, 400, 200, 400, 200, 400, 300, 150, 150, 150, 150, 150}));
@@ -70,7 +70,7 @@ public class VibrationTool extends BaseToolPlugin {
                 }
                 vibratePattern(pattern);
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Use numbers separated by commas");
+                ToolViewFactory.toast(context, context.getString(R.string.vibration_use_numbers_separated_by_comma));
             }
         });
         stopBtn.setOnClickListener(v -> {

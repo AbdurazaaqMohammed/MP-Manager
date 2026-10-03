@@ -39,7 +39,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.Locale;
 
 /**
  * Extraction of ToolRunnerActivity.buildWallpaper().
@@ -50,7 +49,7 @@ import java.util.Locale;
 public class WallpaperTool extends BaseToolPlugin {
 
     public WallpaperTool() {
-        super("wallpaper", "Wallpaper Maker", "Design gradient wallpapers", ToolCategories.DEVICE);
+        super("wallpaper", R.string.wallpaper_title, R.string.wallpaper_sub,  ToolCategories.DEVICE);
     }
 
     private static void renderWallpaperPreview(Context context, ImageView preview, int first, int second, boolean gradient, String direction) {
@@ -62,7 +61,7 @@ public class WallpaperTool extends BaseToolPlugin {
             Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             if (!gradient) {
                 bmp.eraseColor(first);
-            } else if ("Left → Right".equals(direction)) {
+            } else if (context.getString(R.string.wallpaper_left_right).equals(direction)) {
                 int[] row = new int[w];
                 for (int x = 0; x < w; x++) {
                     float t = x / (float) w;
@@ -73,7 +72,7 @@ public class WallpaperTool extends BaseToolPlugin {
                             Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t));
                 }
                 for (int y = 0; y < h; y++) bmp.setPixels(row, 0, w, 0, y, w, 1);
-            } else if ("Diagonal".equals(direction)) {
+            } else if (context.getString(R.string.wallpaper_diagonal).equals(direction)) {
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
                         float t = (x / (float) w + y / (float) h) / 2f;
@@ -84,7 +83,7 @@ public class WallpaperTool extends BaseToolPlugin {
                                 Math.round(Color.blue(first) * (1 - t) + Color.blue(second) * t)));
                     }
                 }
-            } else if ("Radial".equals(direction)) {
+            } else if (context.getString(R.string.wallpaper_radial).equals(direction)) {
                 float cx = w / 2f;
                 float cy = h / 2f;
                 float max = (float) Math.sqrt(cx * cx + cy * cy);
@@ -122,23 +121,23 @@ public class WallpaperTool extends BaseToolPlugin {
                 }
             }
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Render failed");
+            ToolViewFactory.toast(context, context.getString(R.string.wallpaper_render_failed));
         }
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Wallpaper Maker");
-        ToolViewFactory.addLabel(box, "Pick any colors from the wheel, blend gradients, preview fullscreen, then set or save.");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.wallpaper_wallpaper_maker));
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.wallpaper_pick_any_colors_from_the_wheel));
         final int[] first = new int[]{Color.parseColor("#1B73E8")};
         final int[] second = new int[]{Color.parseColor("#681DA8")};
         final int[] which = new int[]{0};
-        final String[] direction = new String[]{"Top → Bottom"};
+        final String[] direction = new String[]{context.getString(R.string.wallpaper_top_bottom)};
 
         LinearLayout whichRow = ToolViewFactory.makeRow(box);
-        MaterialButton firstTab = ToolViewFactory.makeRowButton(whichRow, "Color 1 ●", 1f);
-        MaterialButton secondTab = ToolViewFactory.makeRowButton(whichRow, "Color 2", 1f);
+        MaterialButton firstTab = ToolViewFactory.makeRowButton(whichRow, whichRow.getContext().getString(R.string.wallpaper_color_1), 1f);
+        MaterialButton secondTab = ToolViewFactory.makeRowButton(whichRow, whichRow.getContext().getString(R.string.wallpaper_color_2), 1f);
         final View currentSwatch = new View(context);
         currentSwatch.setBackgroundColor(first[0]);
         box.addView(currentSwatch, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 56)));
@@ -147,7 +146,7 @@ public class WallpaperTool extends BaseToolPlugin {
 
         final ColorWheelView wheel = new ColorWheelView(context);
         box.addView(wheel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 300)));
-        ToolViewFactory.addLabel(box, "Alpha (transparency)");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.wallpaper_alpha_transparency));
         SeekBar alphaBar = new SeekBar(context);
         alphaBar.setMax(255);
         alphaBar.setProgress(255);
@@ -176,21 +175,21 @@ public class WallpaperTool extends BaseToolPlugin {
         });
         firstTab.setOnClickListener(v -> {
             which[0] = 0;
-            firstTab.setText("Color 1 ●");
-            secondTab.setText("Color 2");
+            firstTab.setText(firstTab.getContext().getString(R.string.wallpaper_color_1));
+            secondTab.setText(secondTab.getContext().getString(R.string.wallpaper_color_2));
             wheel.setColor(first[0]);
             currentSwatch.setBackgroundColor(first[0]);
         });
         secondTab.setOnClickListener(v -> {
             which[0] = 1;
-            firstTab.setText("Color 1");
-            secondTab.setText("Color 2 ●");
+            firstTab.setText(firstTab.getContext().getString(R.string.wallpaper_color_1_2));
+            secondTab.setText(secondTab.getContext().getString(R.string.wallpaper_color_2_2));
             wheel.setColor(second[0]);
             currentSwatch.setBackgroundColor(second[0]);
         });
         wheel.setColor(first[0]);
 
-        ToolViewFactory.addLabel(box, "Presets (tap = set current color)");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.wallpaper_presets_tap_set_current_color));
         int[] presets = new int[]{Color.parseColor("#1B73E8"), Color.parseColor("#0D652D"), Color.parseColor("#A50E0E"), Color.parseColor("#681DA8"), Color.parseColor("#FF6D00"), Color.parseColor("#00BCD4"), Color.parseColor("#000000"), Color.parseColor("#FFFFFF"), Color.parseColor("#FF4081"), Color.parseColor("#9E9E9E")};
         LinearLayout presetRow1 = ToolViewFactory.makeRow(box);
         LinearLayout presetRow2 = ToolViewFactory.makeRow(box);
@@ -213,13 +212,13 @@ public class WallpaperTool extends BaseToolPlugin {
         }
 
         CheckBox gradientBox = new CheckBox(context);
-        gradientBox.setText("Gradient blend (off = solid Color 1)");
+        gradientBox.setText(gradientBox.getContext().getString(R.string.wallpaper_gradient_blend_off_solid_color));
         gradientBox.setChecked(true);
         box.addView(gradientBox);
         gradientHolder[0] = true;
-        ToolViewFactory.addLabel(box, "Gradient direction");
+        ToolViewFactory.addLabel(box, box.getContext().getString(R.string.wallpaper_gradient_direction));
         Spinner dirSpinner = new Spinner(context);
-        String[] dirs = new String[]{"Top → Bottom", "Left → Right", "Diagonal", "Radial"};
+        String[] dirs = new String[]{context.getString(R.string.wallpaper_top_bottom), context.getString(R.string.wallpaper_left_right), context.getString(R.string.wallpaper_diagonal), context.getString(R.string.wallpaper_radial)};
         ArrayAdapter<String> dirAdapter =
                 new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, dirs);
         dirAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -244,12 +243,12 @@ public class WallpaperTool extends BaseToolPlugin {
         renderWallpaperPreview(context, preview, first[0], second[0], true, direction[0]);
 
         LinearLayout btnRow = ToolViewFactory.makeRow(box);
-        MaterialButton previewBtn = ToolViewFactory.makeRowButton(btnRow, "Fullscreen preview", 1f);
-        MaterialButton swapBtn = ToolViewFactory.makeRowButton(btnRow, "Swap", 1f);
+        MaterialButton previewBtn = ToolViewFactory.makeRowButton(btnRow, btnRow.getContext().getString(R.string.wallpaper_fullscreen_preview), 1f);
+        MaterialButton swapBtn = ToolViewFactory.makeRowButton(btnRow, btnRow.getContext().getString(R.string.wallpaper_swap), 1f);
         previewBtn.setOnClickListener(v -> {
             Object tag = preview.getTag();
             if (!(tag instanceof Bitmap)) {
-                ToolViewFactory.toast(context, "Nothing to preview");
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_nothing_to_preview));
                 return;
             }
             ImageView full = new ImageView(context);
@@ -259,7 +258,7 @@ public class WallpaperTool extends BaseToolPlugin {
             root.setBackgroundColor(Color.BLACK);
             root.addView(full, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             MaterialButton exit = new MaterialButton(context);
-            exit.setText("EXIT preview");
+            exit.setText(exit.getContext().getString(R.string.wallpaper_exit_preview));
             FrameLayout.LayoutParams ep = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             int m = ToolViewFactory.dp(context, 24);
             ep.setMargins(m, m, m, ToolViewFactory.dp(context, 48));
@@ -280,8 +279,8 @@ public class WallpaperTool extends BaseToolPlugin {
             renderWallpaperPreview(context, preview, first[0], second[0], gradientHolder[0], direction[0]);
         });
         LinearLayout btnRow2 = ToolViewFactory.makeRow(box);
-        MaterialButton applyBtn = ToolViewFactory.makeRowButton(btnRow2, "Set as wallpaper", 1f);
-        MaterialButton saveBtn = ToolViewFactory.makeRowButton(btnRow2, "Save to gallery", 1f);
+        MaterialButton applyBtn = ToolViewFactory.makeRowButton(btnRow2, btnRow2.getContext().getString(R.string.wallpaper_set_as_wallpaper), 1f);
+        MaterialButton saveBtn = ToolViewFactory.makeRowButton(btnRow2, btnRow2.getContext().getString(R.string.wallpaper_save_to_gallery), 1f);
         applyBtn.setOnClickListener(v -> {
             try {
                 Object tag = preview.getTag();
@@ -300,9 +299,9 @@ public class WallpaperTool extends BaseToolPlugin {
                 } finally {
                     try { if (scaled != tag) scaled.recycle(); } catch (Exception ignored) {}
                 }
-                ToolViewFactory.toast(context, "Wallpaper set");
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_wallpaper_set));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Failed: " + e.getMessage());
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_failed) + e.getMessage());
             }
         });
         saveBtn.setOnClickListener(v -> {
@@ -317,22 +316,22 @@ public class WallpaperTool extends BaseToolPlugin {
                 cv.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
                 Uri uri = context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
                 if (uri == null) {
-                    ToolViewFactory.toast(context, "Save failed");
+                    ToolViewFactory.toast(context, context.getString(R.string.wallpaper_save_failed));
                     return;
                 }
                 OutputStream os = context.getContentResolver().openOutputStream(uri);
                 ((Bitmap) tag).compress(Bitmap.CompressFormat.PNG, 100, os);
                 os.close();
-                ToolViewFactory.toast(context, "Saved to gallery");
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_saved_to_gallery));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Save failed");
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_save_failed));
             }
         });
-        MaterialButton copyHex = ToolViewFactory.makeButton(box, "Copy colors as HEX");
-        copyHex.setOnClickListener(v -> ToolViewFactory.copyText(context, "wallpaper", String.format(Locale.US, "Color1 #%08X  Color2 #%08X", first[0], second[0])));
+        MaterialButton copyHex = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.wallpaper_copy_colors_as_hex));
+        copyHex.setOnClickListener(v -> ToolViewFactory.copyText(context, context.getString(R.string.wallpaper_wallpaper), context.getString(R.string.wallpaper_hex_pair, first[0], second[0])));
         LinearLayout btnRow3 = ToolViewFactory.makeRow(box);
-        MaterialButton shareWpBtn = ToolViewFactory.makeRowButton(btnRow3, "Share image", 1f);
-        MaterialButton openWpBtn = ToolViewFactory.makeRowButton(btnRow3, "Open file", 1f);
+        MaterialButton shareWpBtn = ToolViewFactory.makeRowButton(btnRow3, btnRow3.getContext().getString(R.string.wallpaper_share_image), 1f);
+        MaterialButton openWpBtn = ToolViewFactory.makeRowButton(btnRow3, btnRow3.getContext().getString(R.string.wallpaper_open_file), 1f);
         shareWpBtn.setOnClickListener(v -> {
             try {
                 Object tag = preview.getTag();
@@ -348,9 +347,9 @@ public class WallpaperTool extends BaseToolPlugin {
                 s.setType("image/png");
                 s.putExtra(Intent.EXTRA_STREAM, uri);
                 s.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                context.startActivity(Intent.createChooser(s, "Share"));
+                context.startActivity(Intent.createChooser(s, context.getString(R.string.wallpaper_share)));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Share failed");
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_share_failed));
             }
         });
         openWpBtn.setOnClickListener(v -> {
@@ -358,7 +357,7 @@ public class WallpaperTool extends BaseToolPlugin {
                 File dir = new File(new File(Environment.getExternalStorageDirectory(), Environment.DIRECTORY_PICTURES), "Wallpapers");
                 File[] all = dir.listFiles();
                 if (all == null || all.length == 0) {
-                    ToolViewFactory.toast(context, "Save or share first");
+                    ToolViewFactory.toast(context, context.getString(R.string.wallpaper_save_or_share_first));
                     return;
                 }
                 File latest = all[0];
@@ -367,9 +366,9 @@ public class WallpaperTool extends BaseToolPlugin {
                 Intent i = new Intent(Intent.ACTION_VIEW);
                 i.setDataAndType(uri, "image/png");
                 i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                context.startActivity(Intent.createChooser(i, "Open wallpaper"));
+                context.startActivity(Intent.createChooser(i, context.getString(R.string.wallpaper_open_wallpaper)));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Open failed");
+                ToolViewFactory.toast(context, context.getString(R.string.wallpaper_open_failed));
             }
         });
         return box;

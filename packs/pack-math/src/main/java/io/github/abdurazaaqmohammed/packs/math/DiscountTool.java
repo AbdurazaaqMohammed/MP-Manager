@@ -23,21 +23,21 @@ import java.text.DecimalFormat;
 public class DiscountTool extends BaseToolPlugin {
 
     public DiscountTool() {
-        super("discount", "Discount Calculator", "Prices, discounts, tax", ToolCategories.MATH);
+        super("discount", R.string.discount_title, R.string.discount_sub,  ToolCategories.MATH);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Discount Calculator");
-        EditText priceInput = ToolViewFactory.makeInput(box, "Original price",
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.discount_discount_calculator));
+        EditText priceInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.discount_original_price),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText discInput = ToolViewFactory.makeInput(box, "Discount percent",
+        EditText discInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.discount_discount_percent),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText taxInput = ToolViewFactory.makeInput(box, "Tax percent (optional)",
+        EditText taxInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.discount_tax_percent_optional),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.compound_calculate));
         goBtn.setOnClickListener(v -> {
             try {
                 double price = Double.parseDouble(priceInput.getText().toString());
@@ -45,9 +45,10 @@ public class DiscountTool extends BaseToolPlugin {
                 double tax = taxInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(taxInput.getText().toString());
                 double[] r = Money.discount(price, disc, tax);
                 DecimalFormat df = new DecimalFormat("0.00");
-                output.setText("You save " + df.format(r[0]) + ", pay " + df.format(r[1]));
+                output.setText(output.getContext().getString(R.string.discount_you_save) + df.format(r[0])
+                        + output.getContext().getString(R.string.discount_pay) + df.format(r[1]));
             } catch (Exception e) {
-                output.setText("Invalid input");
+                output.setText(output.getContext().getString(R.string.converter_invalid_input));
             }
         });
         return box;

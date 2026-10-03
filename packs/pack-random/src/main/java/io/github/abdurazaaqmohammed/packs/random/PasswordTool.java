@@ -23,14 +23,14 @@ import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 public class PasswordTool extends BaseToolPlugin {
 
     public PasswordTool() {
-        super("password", "Password Generator", "Generate secure passwords", ToolCategories.RAND);
+        super("password", R.string.password_title, R.string.password_sub,  ToolCategories.RAND);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Password Generator");
-        TextView lengthLabel = ToolViewFactory.addLabel(box, "Length: 16");
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.password_password_generator));
+        TextView lengthLabel = ToolViewFactory.addLabel(box, box.getContext().getString(R.string.password_length_16));
         SeekBar lengthBar = new SeekBar(context);
         lengthBar.setMax(60);
         lengthBar.setProgress(12);
@@ -48,36 +48,36 @@ public class PasswordTool extends BaseToolPlugin {
         digitBox.setChecked(true);
         box.addView(digitBox);
         CheckBox symbolBox = new CheckBox(context);
-        symbolBox.setText("Symbols");
+        symbolBox.setText(symbolBox.getContext().getString(R.string.password_symbols));
         symbolBox.setChecked(true);
         box.addView(symbolBox);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Press Generate");
+        output.setText(output.getContext().getString(R.string.password_press_generate));
         lengthBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
                 int len = 4 + progress;
-                lengthLabel.setText("Length: " + len);
+                lengthLabel.setText(lengthLabel.getContext().getString(R.string.password_length) + len);
             }
             public void onStartTrackingTouch(SeekBar s) {
             }
             public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        MaterialButton genBtn = ToolViewFactory.makeButton(box, "Generate");
+        MaterialButton genBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.password_generate));
         genBtn.setOnClickListener(v -> {
             int len = 4 + lengthBar.getProgress();
             try {
                 output.setText(Passwords.generate(len, upperBox.isChecked(), lowerBox.isChecked(),
                         digitBox.isChecked(), symbolBox.isChecked()));
             } catch (IllegalArgumentException e) {
-                ToolViewFactory.toast(context, "Pick at least one set");
+                ToolViewFactory.toast(context, context.getString(R.string.password_pick_at_least_one_set));
             } catch (Exception e) {
-                output.setText("Error");
+                output.setText(output.getContext().getString(R.string.password_error));
             }
         });
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy");
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, box.getContext().getString(R.string.password_copy));
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "password", output.getText().toString()));
+                ToolViewFactory.copyText(context, context.getString(R.string.password_password), output.getText().toString()));
         return box;
     }
 }

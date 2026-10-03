@@ -24,25 +24,25 @@ import java.util.regex.Pattern;
 public class RegexTool extends BaseToolPlugin {
 
     public RegexTool() {
-        super("regex", "Regex Tester", "Test patterns live", ToolCategories.TEXT);
+        super("regex", R.string.regex_title, R.string.regex_sub,  ToolCategories.TEXT);
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Regex Tester");
-        EditText patternInput = ToolViewFactory.makeInput(box, "Pattern, e.g. [a-z]+@[a-z]+", InputType.TYPE_CLASS_TEXT);
+        ToolViewFactory.addTitle(box, box.getContext().getString(R.string.regex_regex_tester));
+        EditText patternInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.regex_pattern_e_g_a_z_a_z), InputType.TYPE_CLASS_TEXT);
         patternInput.setText("[a-z]+@[a-z]+");
         CheckBox caseBox = new CheckBox(context);
-        caseBox.setText("Ignore case");
+        caseBox.setText(caseBox.getContext().getString(R.string.regex_ignore_case));
         box.addView(caseBox);
         CheckBox multiBox = new CheckBox(context);
-        multiBox.setText("Multiline");
+        multiBox.setText(multiBox.getContext().getString(R.string.regex_multiline));
         box.addView(multiBox);
-        EditText testInput = ToolViewFactory.makeInput(box, "Test text",
+        EditText testInput = ToolViewFactory.makeInput(box, box.getContext().getString(R.string.regex_test_text),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         testInput.setMinLines(3);
-        testInput.setText("mail me at joe@example or ann@test");
+        testInput.setText(testInput.getContext().getString(R.string.regex_mail_me_at_joe_example_or_ann_));
         TextView output = ToolViewFactory.makeOutput(box);
         final Runnable compute = () -> {
             try {
@@ -66,12 +66,14 @@ public class RegexTool extends BaseToolPlugin {
                     total++;
                 }
                 if (total == 0) {
-                    output.setText("No matches");
+                    output.setText(output.getContext().getString(R.string.regex_no_matches));
                 } else {
-                    output.setText(total + (total == 1 ? " match" : " matches") + "\n" + b.toString().trim());
+                    output.setText(output.getContext().getString(
+                            total == 1 ? R.string.regex_match_one : R.string.regex_matches_many, total)
+                            + "\n" + b.toString().trim());
                 }
             } catch (Exception e) {
-                output.setText("Invalid pattern");
+                output.setText(output.getContext().getString(R.string.regex_invalid_pattern));
             }
         };
         TextWatcher watcher = new TextWatcher() {
