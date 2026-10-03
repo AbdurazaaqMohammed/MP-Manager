@@ -45,8 +45,11 @@ android {
     }
     packaging {
         resources.excludes.add("META-INF/DEPENDENCIES")
-        resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
-        resources.excludes.add("META-INF/versions/9/OSGI-INF/LICENSES/**")
+        // bcprov and jsch both ship multi-release OSGi manifests, at different
+        // Java versions, and only one may be packaged. Android reads none of
+        // them, so exclude the whole family rather than one version at a time.
+        resources.excludes.add("META-INF/versions/*/OSGI-INF/MANIFEST.MF")
+        resources.excludes.add("META-INF/versions/*/OSGI-INF/LICENSES/**")
     }
 }
 
