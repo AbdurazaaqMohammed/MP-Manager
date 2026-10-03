@@ -8,7 +8,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.text.SimpleDateFormat;
@@ -18,6 +17,7 @@ import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
 import io.github.abdurazaaqmohammed.domain.remote.RemoteEntry;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 
@@ -93,10 +93,10 @@ public class RemoteFilesArrayAdapter extends RecyclerView.Adapter<RemoteFilesArr
         boolean isParent = isParentRow(position);
 
         holder.fileNameView.setText(entry.name());
-        Drawable ic = ResourcesCompat.getDrawable(context.rss,
-                entry.directory() ? R.drawable.ic_folder_mt : R.drawable.baseline_insert_drive_file_24,
-                context.getTheme());
-        holder.fileIconView.setImageDrawable(ic);
+        // Same badges the local browser uses. The raw vectors are white glyphs
+        // with no background, which show up as a blank shape on a light theme.
+        holder.fileIconView.setImageDrawable(FileIconLoader.badgeForRemoteEntry(
+                context, entry.extension(), entry.directory()));
 
         if (isParent) {
             holder.fileDateView.setText("");

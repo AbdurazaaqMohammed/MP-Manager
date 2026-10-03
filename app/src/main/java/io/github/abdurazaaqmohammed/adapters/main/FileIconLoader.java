@@ -166,6 +166,42 @@ public class FileIconLoader {
         });
     }
 
+    /**
+     * The shared folder badge: a dark squircle with a white folder glyph.
+     *
+     * <p>Exposed so other listings look identical to the main one. Setting the
+     * raw {@code ic_folder_mt} vector instead renders a white shape with no
+     * outline, which is unreadable on a light background.
+     */
+    public static Drawable folderBadge(MainActivity context) {
+        ensureCachedIcons(context.getResources(), context.theme);
+        return cachedFolderIcon;
+    }
+
+    /**
+     * Picks the badge for a remote entry from its file extension, falling back
+     * to the generic file badge. Remote listings cannot use the File-based
+     * helpers because there is no local File behind the entry.
+     */
+    public static Drawable badgeForRemoteEntry(MainActivity context, String extension, boolean directory) {
+        if (directory) return folderBadge(context);
+        ensureCachedIcons(context.getResources(), context.theme);
+        String ext = extension == null ? "" : extension.toLowerCase(java.util.Locale.US);
+        switch (ext) {
+            case "apk": return cachedApkIcon;
+            case "png": case "jpg": case "jpeg": case "gif": case "webp":
+            case "bmp": case "heic": return cachedImageIcon;
+            case "mp4": case "mkv": case "avi": case "mov": case "webm": return cachedVideoIcon;
+            case "mp3": case "flac": case "aac": case "ogg": case "wav": return cachedMusicIcon;
+            case "zip": case "apks": case "jar": case "tar": case "gz": case "rar": return cachedArchiveIcon;
+            case "arsc": return cachedArscIcon;
+            case "dex": case "smali": return cachedDexIcon;
+            case "pdf": return cachedPdfIcon;
+            case "txt": case "md": case "log": case "json": case "xml": return cachedTextIcon;
+            default: return cachedFileIcon;
+        }
+    }
+
     private static void ensureCachedIcons(Resources res, int theme) {
         float density = res.getDisplayMetrics().density;
         int bucket = (int) (density * 4);
