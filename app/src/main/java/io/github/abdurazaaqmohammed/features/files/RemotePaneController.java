@@ -10,7 +10,7 @@ import android.widget.TextView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
-import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -337,11 +337,20 @@ public class RemotePaneController {
                 .show();
     }
 
+    /**
+     * Adds a labelled field to {@code box} and returns the editable part.
+     *
+     * <p>Adds the {@link TextInputLayout} itself, never {@code field.getParent()}:
+     * TextInputLayout.addView() hands an added EditText to setEditText(), which
+     * re-parents it into an internal container. That container is already a child
+     * of the layout, so adding it to {@code box} fails with "child already has a
+     * parent".
+     */
     private EditText addField(LinearLayout box, int labelRes, int inputType, String initial) {
-        TextInputEditText field = UiFields.field(
-                UiFields.box(activity, activity.rss.getString(labelRes)), inputType);
+        TextInputLayout layout = UiFields.box(activity, activity.rss.getString(labelRes));
+        EditText field = UiFields.field(layout, inputType);
         if (initial != null && !initial.isEmpty()) field.setText(initial);
-        box.addView((View) field.getParent());
+        box.addView(layout);
         return field;
     }
 
