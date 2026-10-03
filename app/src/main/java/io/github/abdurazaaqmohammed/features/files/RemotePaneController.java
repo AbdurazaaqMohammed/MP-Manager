@@ -2,7 +2,6 @@ package io.github.abdurazaaqmohammed.features.files;
 
 import android.text.InputType;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -119,9 +118,12 @@ public class RemotePaneController {
         fs = null;
         if (old == null) return;
         new Thread(() -> {
+            // disconnect() and close() declare no checked exception; a backend
+            // that fails here is already unusable, so only guard the runtime
+            // failures a teardown can plausibly throw.
             try {
                 old.disconnect();
-            } catch (RemoteException ignored) {
+            } catch (RuntimeException ignored) {
                 // Best effort.
             }
             try {
