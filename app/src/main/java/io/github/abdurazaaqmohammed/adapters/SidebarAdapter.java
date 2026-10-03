@@ -203,6 +203,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                     entries.add(new SidebarEntry(EntryType.STORAGE, section, info.path,
                             info.name, 0, null, info));
                 }
+                // Remote storage sits with the volumes rather than among the
+                // tools: it is somewhere you browse, not a one-off action.
+                addRemoteEntry(section);
             } else if ("bookmarks".equals(section)) {
                 addBookmarks("bookmarks", section, defaultBookmarks);
             } else if (section.startsWith(BOOKMARK_GROUP_PREFIX)) {
@@ -222,6 +225,13 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         return context.getString(R.string.tools_section);
     }
 
+    private void addRemoteEntry(String section) {
+        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, "remote",
+                context.getString(R.string.remote_connections),
+                R.drawable.cloud_download_24px, null, null);
+        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
+    }
+
     private void addBookmarks(String group, String section, List<File> files) {
         for (File file : files) {
             String label = labels.get(file.getPath());
@@ -235,7 +245,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private void addTools() {
-        String[] defaults = {"extract", "ftp_server", "remote", "color_picker", "layout", "wifi", "tools", "settings"};
+        String[] defaults = {"extract", "ftp_server", "color_picker", "layout", "wifi", "tools", "settings"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -243,7 +253,6 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             switch (id) {
                 case "extract": addTool(id, R.string.sidebar_extract, R.drawable.apk_document_24px); break;
                 case "ftp_server": addTool(id, R.string.ftp_server, R.drawable.cloud_upload_24px); break;
-                case "remote": addTool(id, R.string.remote_connections, R.drawable.cloud_download_24px); break;
                 case "color_picker": addTool(id, R.string.color_picker, R.drawable.colorize_24px); break;
                 case "layout": addTool(id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
                 case "wifi": addTool(id, R.string.sidebar_wifi, R.drawable.wifi_24px); break;
