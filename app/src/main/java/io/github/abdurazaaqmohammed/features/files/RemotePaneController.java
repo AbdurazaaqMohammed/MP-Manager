@@ -197,6 +197,9 @@ public class RemotePaneController {
         TextView counts = activity.findViewById(R.id.folderCount);
         counts.setText(activity.rss.getString(R.string.folder_file_count,
                 folders, entries.size() - folders));
+
+        Extensions.showMessage(activity,
+                activity.rss.getString(R.string.remote_loaded, rows.size()));
     }
 
     /** Parent of a normalised absolute path; "/" is its own parent. */
@@ -234,40 +237,47 @@ public class RemotePaneController {
 
     /** Entry point for the sidebar item: pick a saved profile, or create one. */
     public void showConnectionsDialog() {
-        List<RemoteCredentials> saved = profiles.load();
         LinearLayout box = new LinearLayout(activity);
         box.setOrientation(LinearLayout.VERTICAL);
-
-        if (saved.isEmpty()) {
-            TextView empty = new TextView(activity);
-            empty.setText(R.string.remote_no_profiles);
-            box.addView(empty);
-        } else {
-            for (RemoteCredentials c : saved) {
-                MaterialButton row = new MaterialButton(activity);
-                row.setText(activity.rss.getString(R.string.remote_profile_row,
-                        c.kind().name(), c.host()));
-                row.setOnLongClickListener(v -> {
-                    profiles.remove(c.id());
-                    Extensions.showMessage(activity,
-                            activity.rss.getString(R.string.remote_profile_removed, c.host()));
-                    return true;
-                });
-                row.setOnClickListener(v -> connectAndLoad(c, activity.lastPaneSelected == 1));
-                box.addView(row);
-            }
-        }
 
         MaterialButton add = new MaterialButton(activity);
         add.setText(R.string.remote_add_profile);
         add.setOnClickListener(v -> showCreateDialog());
         box.addView(add);
 
-        activity.dialogUtil.getDialogBuilder()
+        androidx.appcompat.app.AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
                 .setTitle(R.string.remote_connections)
                 .setView(box)
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+
+        // Rows are added after show() so each one can dismiss the dialog: the
+        // listing renders into a pane behind this window, so leaving it up hides
+        // the result of a successful connection.
+        List<RemoteCredentials> saved = profiles.load();
+        if (saved.isEmpty()) {
+            TextView empty = new TextView(activity);
+            empty.setText(R.string.remote_no_profiles);
+            box.addView(empty, 0);
+            return;
+        }
+        for (RemoteCredentials c : saved) {
+            MaterialButton row = new MaterialButton(activity);
+            row.setText(activity.rss.getString(R.string.remote_profile_row,
+                    c.kind().name(), c.host()));
+            row.setOnLongClickListener(v -> {
+                profiles.remove(c.id());
+                Extensions.showMessage(activity,
+                        activity.rss.getString(R.string.remote_profile_removed, c.host()));
+                v.post(() -> showConnectionsDialog());
+                return true;
+            });
+            row.setOnClickListener(v -> {
+                dialog.dismiss();
+                connectAndLoad(c, activity.lastPaneSelected == 1);
+            });
+            box.addView(row, box.getChildCount() - 1);
+        }
     }
 
     /** Minimal new-connection form: kind, host, port, user, password, path. */

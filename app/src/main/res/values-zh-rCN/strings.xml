@@ -346,6 +346,7 @@
     <string name="unhidden">已取消隐藏 %1$s</string>
     <string name="ftp_server">FTP 服务器</string>
     <string name="crash_log_title">上次崩溃记录</string>
+    <string name="remote_loaded">已加载 %1$d 项</string>
     <string name="remote_connections">远程存储</string>
     <string name="remote_no_profiles">尚未保存远程连接。</string>
     <string name="remote_add_profile">添加连接</string>
