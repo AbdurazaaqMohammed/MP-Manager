@@ -375,33 +375,33 @@
     <string name="root_denied">Cannot list the filesystem root: this device policy blocks it. Grant Shizuku to browse it.</string>
     <string name="root_index_note">The device policy blocks reading the root directory itself. These are the usual top-level directories; tap one to try it.</string>
     <string-array name="filesystem_root_paths">
-        "/system",
-        "/vendor",
-        "/product",
-        "/system_ext",
-        "/odm",
-        "/apex",
-        "/data",
-        "/proc",
-        "/sys",
-        "/sdcard",
-        "/storage",
-        "/cache",
-        "/metadata",
-        "/persist",
-        "/mnt",
-        "/acct",
-        "/dev",
-        "/etc",
-        "/tmp",
-        "/bin",
-        "/d",
-        "/lost+found",
-        "/pltlib",
-        "/post_data",
-        "/root",
-        "/sepolicy",
-        "/version"
+        <item>/system</item>
+        <item>/vendor</item>
+        <item>/product</item>
+        <item>/system_ext</item>
+        <item>/odm</item>
+        <item>/apex</item>
+        <item>/data</item>
+        <item>/proc</item>
+        <item>/sys</item>
+        <item>/sdcard</item>
+        <item>/storage</item>
+        <item>/cache</item>
+        <item>/metadata</item>
+        <item>/persist</item>
+        <item>/mnt</item>
+        <item>/acct</item>
+        <item>/dev</item>
+        <item>/etc</item>
+        <item>/tmp</item>
+        <item>/bin</item>
+        <item>/d</item>
+        <item>/lost+found</item>
+        <item>/pltlib</item>
+        <item>/post_data</item>
+        <item>/root</item>
+        <item>/sepolicy</item>
+        <item>/version</item>
     </string-array>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
