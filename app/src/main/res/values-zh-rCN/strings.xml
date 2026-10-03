@@ -1033,6 +1033,12 @@ Layout Inspector
     <string name="share">分享</string>
     <string name="encrypt_gpg">加密 (GPG)</string>
     <string name="decrypt_gpg">解密 (GPG)</string>
+    <string name="gpg_encrypt_password">用密码加密</string>
+    <string name="gpg_encrypt_pubkey">用公钥加密</string>
+    <string name="gpg_key_path_hint">公钥或私钥文件 (.asc / .gpg / .kbx)</string>
+    <string name="gpg_passphrase_hint">私钥口令（没有则留空）</string>
+    <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
+    <string name="gpg_target_exists">目标已存在，未覆盖</string>
     <string name="enter_password_gpg">输入密码</string>
     <string name="wrong_password_or_corrupt">密码错误或文件损坏</string>
     <string name="wifi_copy_all">全部复制</string>

@@ -889,61 +889,160 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     /**
-     * Asks for a password, then encrypts {@code src} to {@code src.getName() +
-     * ".gpg"} in the same directory, in the OpenPGP format gpg can read.
+     * Asks how to encrypt, then runs the chosen scheme. The result lands in
+     * {@code src.getName() + ".gpg"} next to the source, in OpenPGP format.
      */
     private void gpgEncrypt(File src) {
-        promptGpgPassword(src.getName(), password -> {
-            File target = new File(src.getParentFile(), src.getName() + ".gpg");
-            new Thread(() -> {
-                try {
-                    try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
-                         java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(target))) {
-                        io.github.abdurazaaqmohammed.utils.GpgCrypto.encrypt(in, out, password.toCharArray());
+        String[] modes = {
+                context.getString(R.string.gpg_encrypt_password),
+                context.getString(R.string.gpg_encrypt_pubkey)};
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(src.getName())
+                .setItems(modes, (d, which) -> {
+                    if (which == 0) {
+                        promptGpgPassword(src.getName(),
+                                password -> runGpgEncrypt(src, password.toCharArray()));
+                    } else {
+                        promptGpgKeyFile(src.getName(),
+                                keyPath -> runGpgEncryptWithKey(src, keyPath));
                     }
-                    context.runOnUiThread(() -> {
-                        context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
-                        Extensions.showMessage(context, target.getName());
-                    });
-                } catch (Exception e) {
-                    context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+                })
+                .show();
+    }
+
+    private void runGpgEncrypt(File src, char[] password) {
+        File target = new File(src.getParentFile(), src.getName() + ".gpg");
+        new Thread(() -> {
+            File tmp = new File(src.getParentFile(), "." + src.getName() + ".gpg.tmp");
+            try {
+                try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
+                     java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(tmp))) {
+                    io.github.abdurazaaqmohammed.utils.GpgCrypto.encrypt(in, out, password);
                 }
-            }).start();
-        });
+                finishGpgWrite(tmp, target);
+            } catch (Exception e) {
+                tmp.delete();
+                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
+    private void runGpgEncryptWithKey(File src, String keyPath) {
+        File target = new File(src.getParentFile(), src.getName() + ".gpg");
+        new Thread(() -> {
+            File tmp = new File(src.getParentFile(), "." + src.getName() + ".gpg.tmp");
+            try {
+                org.bouncycastle.openpgp.PGPPublicKey key;
+                try (java.io.InputStream keyIn = new java.io.BufferedInputStream(new java.io.FileInputStream(keyPath))) {
+                    key = io.github.abdurazaaqmohammed.utils.GpgCrypto.loadEncryptionKey(keyIn);
+                }
+                try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
+                     java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(tmp))) {
+                    io.github.abdurazaaqmohammed.utils.GpgCrypto.encryptForKey(in, out, key);
+                }
+                finishGpgWrite(tmp, target);
+            } catch (Exception e) {
+                tmp.delete();
+                context.runOnUiThread(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
     }
 
     /**
-     * Asks for the password, then decrypts a .gpg/.asc/.pgp file back to its
-     * original name (suffix stripped) in the same directory.
+     * Asks for whatever the file actually needs: a password for symmetric
+     * files, or a secret key plus its passphrase for public-key ones.
      */
     private void gpgDecrypt(File src) {
-        promptGpgPassword(src.getName(), password -> {
-            String base = src.getName();
-            int dot = base.lastIndexOf('.');
-            String outName = dot > 0 ? base.substring(0, dot) : base + ".out";
-            if (outName.isEmpty()) outName = base + ".out";
-            File target = new File(src.getParentFile(), outName);
-            new Thread(() -> {
-                try {
-                    try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
-                         java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(target))) {
-                        io.github.abdurazaaqmohammed.utils.GpgCrypto.decrypt(in, out, password.toCharArray());
-                    }
-                    context.runOnUiThread(() -> {
-                        context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
-                        Extensions.showMessage(context, target.getName());
-                    });
-                } catch (Exception e) {
-                    // A wrong password typically surfaces here; keep the message short.
-                    if (target.exists() && target.length() == 0) target.delete();
-                    final Exception fe = e;
-                    context.runOnUiThread(() -> {
-                        Throwable c = fe.getCause() != null ? fe.getCause() : fe;
-                        Extensions.showMessage(context,
-                                context.getString(R.string.wrong_password_or_corrupt) + ": " + (c.getMessage() == null ? c.getClass().getSimpleName() : c.getMessage()));
-                    });
+        boolean publicKey;
+        try (java.io.InputStream probe = new java.io.BufferedInputStream(new java.io.FileInputStream(src))) {
+            publicKey = io.github.abdurazaaqmohammed.utils.GpgCrypto.isPublicKeyEncrypted(probe);
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+            return;
+        }
+        if (publicKey) {
+            promptGpgKeyAndPassphrase(src.getName(),
+                    (keyPath, passphrase) -> runGpgDecryptWithKey(src, keyPath, passphrase.toCharArray()));
+        } else {
+            promptGpgPassword(src.getName(),
+                    password -> runGpgDecrypt(src, password.toCharArray()));
+        }
+    }
+
+    private void runGpgDecrypt(File src, char[] password) {
+        File target = decryptedTarget(src);
+        new Thread(() -> {
+            File tmp = new File(src.getParentFile(), "." + src.getName() + ".dec.tmp");
+            try {
+                try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
+                     java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(tmp))) {
+                    io.github.abdurazaaqmohammed.utils.GpgCrypto.decrypt(in, out, password);
                 }
-            }).start();
+                finishGpgWrite(tmp, target);
+            } catch (Exception e) {
+                tmp.delete();
+                context.runOnUiThread(() -> Extensions.showMessage(context,
+                        context.getString(R.string.wrong_password_or_corrupt)));
+            }
+        }).start();
+    }
+
+    private void runGpgDecryptWithKey(File src, String keyPath, char[] passphrase) {
+        File target = decryptedTarget(src);
+        new Thread(() -> {
+            File tmp = new File(src.getParentFile(), "." + src.getName() + ".dec.tmp");
+            try {
+                try (java.io.InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(src));
+                     java.io.InputStream keyIn = new java.io.BufferedInputStream(new java.io.FileInputStream(keyPath));
+                     java.io.OutputStream out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(tmp))) {
+                    io.github.abdurazaaqmohammed.utils.GpgCrypto.decryptWithKey(in, out, keyIn, passphrase);
+                }
+                finishGpgWrite(tmp, target);
+            } catch (Exception e) {
+                tmp.delete();
+                context.runOnUiThread(() -> Extensions.showMessage(context,
+                        context.getString(R.string.gpg_wrong_key)));
+            }
+        }).start();
+    }
+
+    /**
+     * Decrypted name: strip the .gpg/.asc/.pgp suffix; fall back to ".out" so
+     * an odd name never maps onto the source itself.
+     */
+    private File decryptedTarget(File src) {
+        String base = src.getName();
+        String lower = base.toLowerCase(Locale.ENGLISH);
+        for (String suffix : new String[]{".gpg", ".asc", ".pgp"}) {
+            if (lower.endsWith(suffix) && base.length() > suffix.length()) {
+                return new File(src.getParentFile(), base.substring(0, base.length() - suffix.length()));
+            }
+        }
+        return new File(src.getParentFile(), base + ".out");
+    }
+
+    /**
+     * Moves a finished crypto result into place. The write went to a temporary
+     * file first, so a wrong password or a bad key never truncates an existing
+     * plaintext file; and if the target already exists the result is dropped
+     * instead of silently overwriting it.
+     */
+    private void finishGpgWrite(File tmp, File target) {
+        if (target.exists()) {
+            tmp.delete();
+            context.runOnUiThread(() -> Extensions.showMessage(context,
+                    context.getString(R.string.gpg_target_exists) + ": " + target.getName()));
+            return;
+        }
+        boolean ok = tmp.renameTo(target);
+        context.runOnUiThread(() -> {
+            if (ok) {
+                context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                Extensions.showMessage(context, target.getName());
+            } else {
+                tmp.delete();
+                Extensions.showMessage(context, R.string.wrong_password_or_corrupt);
+            }
         });
     }
 
@@ -958,6 +1057,47 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String pw = input.getText() == null ? "" : input.getText().toString();
                     if (!pw.isEmpty()) onPassword.accept(pw);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Asks for the recipient's public key file path. */
+    private void promptGpgKeyFile(String title, java.util.function.Consumer<String> onKeyPath) {
+        final EditText input = new EditText(context);
+        input.setHint(R.string.gpg_key_path_hint);
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(title)
+                .setView(input)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String path = input.getText() == null ? "" : input.getText().toString().trim();
+                    if (!path.isEmpty()) onKeyPath.accept(path);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Asks for the secret key file path and its passphrase (may be empty). */
+    private void promptGpgKeyAndPassphrase(String title,
+                                           java.util.function.BiConsumer<String, String> onBoth) {
+        LinearLayout box = new LinearLayout(context);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        box.setPadding(pad, 0, pad, 0);
+        final EditText keyPath = new EditText(context);
+        keyPath.setHint(R.string.gpg_key_path_hint);
+        final EditText pass = new EditText(context);
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setHint(R.string.gpg_passphrase_hint);
+        box.addView(keyPath);
+        box.addView(pass);
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(title)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String path = keyPath.getText() == null ? "" : keyPath.getText().toString().trim();
+                    String pw = pass.getText() == null ? "" : pass.getText().toString();
+                    if (!path.isEmpty()) onBoth.accept(path, pw);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();

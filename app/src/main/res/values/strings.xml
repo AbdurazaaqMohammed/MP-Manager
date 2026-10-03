@@ -1058,6 +1058,12 @@ Layout Inspector
     <string name="share">Share</string>
     <string name="encrypt_gpg">Encrypt (GPG)</string>
     <string name="decrypt_gpg">Decrypt (GPG)</string>
+    <string name="gpg_encrypt_password">Encrypt with password</string>
+    <string name="gpg_encrypt_pubkey">Encrypt with public key</string>
+    <string name="gpg_key_path_hint">Public or secret key file (.asc / .gpg / .kbx)</string>
+    <string name="gpg_passphrase_hint">Key passphrase (leave empty if none)</string>
+    <string name="gpg_wrong_key">No matching secret key, or wrong passphrase</string>
+    <string name="gpg_target_exists">Target exists, not overwritten</string>
     <string name="enter_password_gpg">Enter password</string>
     <string name="wrong_password_or_corrupt">Wrong password or corrupt/corrupted file</string>
     <string name="wifi_copy_all">Copy all</string>
