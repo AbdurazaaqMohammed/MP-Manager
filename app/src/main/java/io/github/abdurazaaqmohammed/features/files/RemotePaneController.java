@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.features.files;
 
 import android.text.InputType;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -244,7 +245,7 @@ public class RemotePaneController {
 
         MaterialButton add = new MaterialButton(activity);
         add.setText(R.string.remote_add_profile);
-        add.setOnClickListener(v -> showCreateDialog());
+        add.setOnClickListener(v -> showFormDialog(null));
         box.addView(add);
 
         androidx.appcompat.app.AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
@@ -264,26 +265,61 @@ public class RemotePaneController {
             return;
         }
         for (RemoteCredentials c : saved) {
-            MaterialButton row = new MaterialButton(activity);
-            row.setText(activity.rss.getString(R.string.remote_profile_row,
+            LinearLayout row = new LinearLayout(activity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+
+            MaterialButton open = new MaterialButton(activity);
+            open.setText(activity.rss.getString(R.string.remote_profile_row,
                     c.kind().name(), c.host()));
-            row.setOnLongClickListener(v -> {
-                profiles.remove(c.id());
-                Extensions.showMessage(activity,
-                        activity.rss.getString(R.string.remote_profile_removed, c.host()));
-                v.post(() -> showConnectionsDialog());
-                return true;
-            });
-            row.setOnClickListener(v -> {
+            open.setOnClickListener(v -> {
                 dialog.dismiss();
                 connectAndLoad(c, activity.lastPaneSelected == 1);
             });
+            open.setOnLongClickListener(v -> {
+                dialog.dismiss();
+                confirmDelete(c);
+                return true;
+            });
+            row.addView(open);
+
+            MaterialButton edit = new MaterialButton(activity);
+            edit.setText(R.string.remote_edit);
+            edit.setOnClickListener(v -> {
+                dialog.dismiss();
+                showFormDialog(c);
+            });
+            row.addView(edit);
+
             box.addView(row, box.getChildCount() - 1);
         }
     }
 
-    /** Minimal new-connection form: kind, host, port, user, password, path. */
-    private void showCreateDialog() {
+    /** Long-press a profile row in the list to delete it. */
+    private void confirmDelete(RemoteCredentials c) {
+        profiles.remove(c.id());
+        Extensions.showMessage(activity,
+                activity.rss.getString(R.string.remote_profile_removed, c.host()));
+        showConnectionsDialog();
+    }
+
+    /** Fields of the connection form, rebuilt whenever the protocol changes. */
+    private static final class Form {
+        EditText host;
+        EditText port;
+        EditText user;
+        EditText pass;
+        EditText path;
+        EditText region;
+        EditText privateKey;
+        MaterialSwitch insecure;
+    }
+
+    /**
+     * Add or edit a profile.
+     *
+     * @param existing the profile to edit, or null to create a new one
+     */
+    private void showFormDialog(RemoteCredentials existing) {
         List<RemoteCredentials.Kind> kinds = new ArrayList<>();
         for (RemoteCredentials.Kind k : RemoteCredentials.Kind.values()) {
             if (RemoteRegistry.isSupported(k)) kinds.add(k);
@@ -297,80 +333,196 @@ public class RemotePaneController {
         Spinner kindSpinner = new Spinner(activity);
         kindSpinner.setAdapter(new ArrayAdapter<>(activity,
                 android.R.layout.simple_spinner_dropdown_item, kindLabels));
+        int initial = existing == null ? 0 : Math.max(0, kinds.indexOf(existing.kind()));
+        kindSpinner.setSelection(initial);
         box.addView(kindSpinner);
 
-        EditText host = addField(box, R.string.remote_host,
-                InputType.TYPE_CLASS_TEXT, "dav.example.com");
-        EditText port = addField(box, R.string.remote_port, InputType.TYPE_CLASS_NUMBER, null);
-        EditText user = addField(box, R.string.remote_user, InputType.TYPE_CLASS_TEXT, null);
-        EditText pass = addField(box, R.string.remote_password,
-                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD, null);
-        EditText path = addField(box, R.string.remote_path_hint,
-                InputType.TYPE_CLASS_TEXT, "/");
-        // S3 signatures are region-scoped, so the region has to be part of the
-        // profile or every bucket outside us-east-1 answers 301/403.
-        EditText region = addField(box, R.string.remote_region,
-                InputType.TYPE_CLASS_TEXT, "us-east-1");
-        // Key-based SFTP is the common case; the path is typed or pasted since
-        // a picker would need a storage-aware file browser.
-        EditText privateKey = addField(box, R.string.remote_private_key,
-                InputType.TYPE_CLASS_TEXT, null);
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        box.addView(form);
 
-        MaterialSwitch insecure = new MaterialSwitch(activity);
-        insecure.setText(R.string.remote_insecure);
-        box.addView(insecure);
+        MaterialButton test = new MaterialButton(activity);
+        test.setText(R.string.remote_test_connection);
+        box.addView(test);
 
-        activity.dialogUtil.getDialogBuilder()
-                .setTitle(R.string.remote_add_profile)
-                .setView(box)
-                .setPositiveButton(R.string.connect, (d, w) -> {
-                    int idx = kindSpinner.getSelectedItemPosition();
-                    if (idx < 0 || idx >= kinds.size()) return;
-                    RemoteCredentials.Kind kind = kinds.get(idx);
+        Form f = new Form();
+        buildFields(form, f, kinds.get(initial), existing);
 
-                    // The host field is where people paste the whole DAV URL,
-                    // so split scheme/host/port/path out of it instead of
-                    // assuming each box holds exactly one thing. Defaulting to
-                    // cleartext here silently broke every https-only server.
-                    RemoteEndpoint.Parsed parsed = RemoteEndpoint.parse(
-                            host.getText().toString(),
-                            port.getText().toString(),
-                            path.getText().toString());
+        // Rebuilding on every selection would wipe what the user just typed the
+        // first time the spinner fires, so the initial pass is skipped.
+        final boolean[] first = {true};
+        kindSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                if (first[0]) {
+                    first[0] = false;
+                    return;
+                }
+                if (pos < 0 || pos >= kinds.size()) return;
+                form.removeAllViews();
+                buildFields(form, f, kinds.get(pos), null);
+            }
 
-                    if (parsed.host().isEmpty()) {
-                        Extensions.showMessage(activity,
-                                activity.rss.getString(R.string.remote_host_required));
-                        return;
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        androidx.appcompat.app.AlertDialog.Builder builder =
+                activity.dialogUtil.getDialogBuilder()
+                        .setTitle(existing == null
+                                ? R.string.remote_add_profile : R.string.remote_edit)
+                        .setView(box)
+                        .setPositiveButton(R.string.connect, (d, w) -> {
+                            int pos = kindSpinner.getSelectedItemPosition();
+                            if (pos < 0 || pos >= kinds.size()) return;
+                            RemoteCredentials built = assemble(kinds.get(pos), f, existing);
+                            if (built == null) return;
+                            profiles.put(built);
+                            connectAndLoad(built, activity.lastPaneSelected == 1);
+                        })
+                        .setNegativeButton(android.R.string.cancel, null);
+        if (existing != null) {
+            builder.setNeutralButton(R.string.remote_delete, (d, w) -> confirmDelete(existing));
+        }
+        builder.show();
+
+        test.setOnClickListener(v -> {
+            int pos = kindSpinner.getSelectedItemPosition();
+            if (pos < 0 || pos >= kinds.size()) return;
+            RemoteCredentials probe = assemble(kinds.get(pos), f, existing);
+            if (probe == null) return;
+            testConnection(probe);
+        });
+    }
+
+    /**
+     * Adds only the fields that protocol uses, so the form does not show an S3
+     * region box to someone configuring WebDAV.
+     */
+    private void buildFields(LinearLayout form, Form f,
+                             RemoteCredentials.Kind kind, RemoteCredentials existing) {
+        boolean s3 = kind == RemoteCredentials.Kind.S3;
+        boolean sftp = kind == RemoteCredentials.Kind.SFTP;
+
+        f.host = addField(form, s3 ? R.string.remote_endpoint : R.string.remote_host,
+                InputType.TYPE_CLASS_TEXT,
+                existing == null ? defaultHost(kind) : existing.host());
+        f.port = addField(form, R.string.remote_port, InputType.TYPE_CLASS_NUMBER, null);
+        if (existing != null && existing.port() > 0) {
+            f.port.setText(String.valueOf(existing.port()));
+        } else {
+            f.port.setHint(defaultPort(kind));
+        }
+        f.user = addField(form, s3 ? R.string.remote_access_key : R.string.remote_user,
+                InputType.TYPE_CLASS_TEXT, existing == null ? null : existing.username());
+        f.pass = addField(form, s3 ? R.string.remote_secret_key : R.string.remote_password,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD,
+                existing == null ? null : existing.password());
+        f.path = addField(form, s3 ? R.string.remote_bucket : R.string.remote_path_hint,
+                InputType.TYPE_CLASS_TEXT,
+                existing == null ? (s3 ? null : "/") : existing.path());
+
+        if (s3) {
+            f.region = addField(form, R.string.remote_region, InputType.TYPE_CLASS_TEXT,
+                    existing == null ? "us-east-1" : existing.extra("region", "us-east-1"));
+        }
+        if (sftp) {
+            f.privateKey = addField(form, R.string.remote_private_key, InputType.TYPE_CLASS_TEXT,
+                    existing == null ? null : existing.extra("privateKey", ""));
+        }
+
+        f.insecure = new MaterialSwitch(activity);
+        f.insecure.setText(R.string.remote_insecure);
+        if (existing != null) f.insecure.setChecked(existing.insecure());
+        form.addView(f.insecure);
+    }
+
+    /** Turns the form into credentials, or reports the first missing value. */
+    private RemoteCredentials assemble(RemoteCredentials.Kind kind, Form f,
+                                       RemoteCredentials existing) {
+        RemoteEndpoint.Parsed parsed = RemoteEndpoint.parse(
+                text(f.host), text(f.port), text(f.path));
+        if (parsed.host().isEmpty()) {
+            Extensions.showMessage(activity,
+                    activity.rss.getString(R.string.remote_host_required));
+            return null;
+        }
+        Map<String, String> extra = new LinkedHashMap<>(RemoteEndpoint.extrasFor(parsed));
+        if (kind == RemoteCredentials.Kind.SFTP && f.privateKey != null) {
+            String key = text(f.privateKey);
+            if (!key.isEmpty()) extra.put("privateKey", key);
+        }
+        if (kind == RemoteCredentials.Kind.S3) {
+            String region = f.region == null ? "" : text(f.region);
+            extra.put("region", region.isEmpty() ? "us-east-1" : region);
+            // Path-style is what MinIO, Ceph and most compatible servers expect,
+            // and AWS still accepts it.
+            extra.put("pathStyle", "true");
+        }
+        String id = existing != null ? existing.id()
+                : kind.name().toLowerCase(Locale.US) + "-" + System.currentTimeMillis();
+        return new RemoteCredentials(id, kind, parsed.host(), parsed.port(),
+                text(f.user), text(f.pass), parsed.path(),
+                f.insecure != null && f.insecure.isChecked(), extra);
+    }
+
+    /**
+     * Opens a second connection just to prove the settings work.
+     *
+     * <p>The probe is always closed, so an established listing is never left
+     * holding a second session to the same server.
+     */
+    private void testConnection(RemoteCredentials probe) {
+        Extensions.showMessage(activity,
+                activity.rss.getString(R.string.remote_testing, probe.host()));
+        new Thread(() -> {
+            RemoteFileSystem test = null;
+            String result;
+            try {
+                test = profiles.create(probe);
+                test.connect(probe);
+                int count = test.list(test.root()).size();
+                result = activity.rss.getString(R.string.remote_test_ok, count);
+            } catch (Exception e) {
+                String message = e.getMessage();
+                result = activity.rss.getString(R.string.remote_test_failed,
+                        message == null ? e.getClass().getSimpleName() : message);
+            } finally {
+                if (test != null) {
+                    try {
+                        test.disconnect();
+                        test.close();
+                    } catch (Exception ignored) {
+                        // best effort
                     }
+                }
+            }
+            final String message = result;
+            activity.runOnUiThread(() -> Extensions.showMessage(activity, message));
+        }).start();
+    }
 
-                    Map<String, String> extra = new LinkedHashMap<>(RemoteEndpoint.extrasFor(parsed));
-                    if (RemoteCredentials.Kind.SFTP == kind) {
-                        String keyText = privateKey.getText().toString().trim();
-                        if (!keyText.isEmpty()) extra.put("privateKey", keyText);
-                    }
-                    if (RemoteCredentials.Kind.S3 == kind) {
-                        String regionText = region.getText().toString().trim();
-                        extra.put("region", regionText.isEmpty() ? "us-east-1" : regionText);
-                        // Path-style is what MinIO, Ceph and most compatible
-                        // servers expect, and AWS still accepts it.
-                        extra.put("pathStyle", "true");
-                    }
+    private static String text(EditText field) {
+        return field == null || field.getText() == null ? "" : field.getText().toString().trim();
+    }
 
-                    RemoteCredentials c = new RemoteCredentials(
-                            kind.name().toLowerCase(Locale.US) + "-" + System.currentTimeMillis(),
-                            kind,
-                            parsed.host(),
-                            parsed.port(),
-                            user.getText().toString(),
-                            pass.getText().toString(),
-                            parsed.path(),
-                            insecure.isChecked(),
-                            extra);
-                    profiles.put(c);
-                    connectAndLoad(c, activity.lastPaneSelected == 1);
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+    private static String defaultHost(RemoteCredentials.Kind kind) {
+        switch (kind) {
+            case S3: return "s3.amazonaws.com";
+            case WEBDAV: return "dav.example.com";
+            default: return null;
+        }
+    }
+
+    /** Shown as the port placeholder, so it reads as "leave blank for this". */
+    private static String defaultPort(RemoteCredentials.Kind kind) {
+        switch (kind) {
+            case SFTP: return "22";
+            case S3: return "443";
+            case WEBDAV: return "443";
+            default: return "21";
+        }
     }
 
     /**

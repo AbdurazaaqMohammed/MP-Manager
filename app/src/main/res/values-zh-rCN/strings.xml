@@ -349,6 +349,16 @@
     <string name="remote_loaded">已加载 %1$d 项</string>
     <string name="remote_region">区域（S3，如 us-east-1）</string>
     <string name="remote_private_key">私钥路径（SFTP，可选）</string>
+    <string name="remote_edit">编辑</string>
+    <string name="remote_delete">删除</string>
+    <string name="remote_test_connection">测试连接</string>
+    <string name="remote_testing">正在测试 %1$s…</string>
+    <string name="remote_test_ok">连接成功，共 %1$d 项</string>
+    <string name="remote_test_failed">连接失败：%1$s</string>
+    <string name="remote_endpoint">Endpoint 主机</string>
+    <string name="remote_access_key">Access Key ID</string>
+    <string name="remote_secret_key">Secret Access Key</string>
+    <string name="remote_bucket">桶名（或 /桶名/前缀）</string>
     <string name="remote_connections">远程存储</string>
     <string name="remote_no_profiles">尚未保存远程连接。</string>
     <string name="remote_add_profile">添加连接</string>

@@ -353,6 +353,16 @@
     <string name="remote_loaded">Remote listing loaded: %1$d entries</string>
     <string name="remote_region">Region (S3, e.g. us-east-1)</string>
     <string name="remote_private_key">Private key path (SFTP, optional)</string>
+    <string name="remote_edit">Edit</string>
+    <string name="remote_delete">Delete</string>
+    <string name="remote_test_connection">Test connection</string>
+    <string name="remote_testing">Testing %1$s…</string>
+    <string name="remote_test_ok">Connected. %1$d entries</string>
+    <string name="remote_test_failed">Failed: %1$s</string>
+    <string name="remote_endpoint">Endpoint host</string>
+    <string name="remote_access_key">Access key ID</string>
+    <string name="remote_secret_key">Secret access key</string>
+    <string name="remote_bucket">Bucket (or /bucket/prefix)</string>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
     <string name="remote_add_profile">Add connection</string>
