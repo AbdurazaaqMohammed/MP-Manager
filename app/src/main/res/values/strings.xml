@@ -372,6 +372,7 @@
     <string name="remote_kind_sftp">SFTP over SSH (port 22)</string>
     <string name="sidebar_root">Filesystem root (/)</string>
     <string name="root_unavailable">Filesystem root is not available</string>
+    <string name="root_denied">Cannot list the filesystem root: this device policy blocks it. Grant Shizuku to browse it.</string>
     <string name="remote_connections">Remote storage</string>
     <string name="remote_no_profiles">No remote connections saved yet.</string>
     <string name="remote_add_profile">Add connection</string>

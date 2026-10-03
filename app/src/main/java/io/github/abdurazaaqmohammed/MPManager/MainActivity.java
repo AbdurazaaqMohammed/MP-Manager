@@ -1952,6 +1952,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             Extensions.showMessage(this, R.string.root_unavailable);
             return;
         }
+        // listFiles() returns null both for "no such directory" and for "denied",
+        // and on a stock device the SELinux policy for untrusted_app can refuse
+        // the read on the root directory itself. Find out which it is, so the
+        // message tells the user whether to grant Shizuku or to stop.
+        if (root.listFiles() == null) {
+            Extensions.showMessage(this, R.string.root_denied);
+            return;
+        }
         loadFolderInPane(root, lastPaneSelected == 1);
     }
 
