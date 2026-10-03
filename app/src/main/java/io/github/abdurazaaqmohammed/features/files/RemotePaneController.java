@@ -13,7 +13,6 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.RemoteFilesArrayAdapter;
+import io.github.abdurazaaqmohammed.data.remote.RemoteEndpoint;
 import io.github.abdurazaaqmohammed.data.remote.RemoteProfiles;
 import io.github.abdurazaaqmohammed.data.remote.RemoteRegistry;
 import io.github.abdurazaaqmohammed.domain.remote.RemoteCredentials;
@@ -308,28 +308,31 @@ public class RemotePaneController {
                     if (idx < 0 || idx >= kinds.size()) return;
                     RemoteCredentials.Kind kind = kinds.get(idx);
 
-                    String hostText = host.getText().toString().trim();
-                    if (hostText.isEmpty()) {
+                    // The host field is where people paste the whole DAV URL,
+                    // so split scheme/host/port/path out of it instead of
+                    // assuming each box holds exactly one thing. Defaulting to
+                    // cleartext here silently broke every https-only server.
+                    RemoteEndpoint.Parsed parsed = RemoteEndpoint.parse(
+                            host.getText().toString(),
+                            port.getText().toString(),
+                            path.getText().toString());
+
+                    if (parsed.host().isEmpty()) {
                         Extensions.showMessage(activity,
                                 activity.rss.getString(R.string.remote_host_required));
                         return;
                     }
 
-                    String pathText = path.getText().toString().trim();
-                    Map<String, String> extra = new LinkedHashMap<>();
-                    // WebDAV over cleartext http needs this; harmless for FTP.
-                    extra.put("plainHttp", "true");
-
                     RemoteCredentials c = new RemoteCredentials(
                             kind.name().toLowerCase(Locale.US) + "-" + System.currentTimeMillis(),
                             kind,
-                            hostText,
-                            parsePort(port.getText().toString()),
+                            parsed.host(),
+                            parsed.port(),
                             user.getText().toString(),
                             pass.getText().toString(),
-                            pathText.isEmpty() ? "/" : pathText,
+                            parsed.path(),
                             insecure.isChecked(),
-                            extra);
+                            RemoteEndpoint.extrasFor(parsed));
                     profiles.put(c);
                     connectAndLoad(c, activity.lastPaneSelected == 1);
                 })
@@ -354,12 +357,4 @@ public class RemotePaneController {
         return field;
     }
 
-    private static int parsePort(String s) {
-        try {
-            int v = Integer.parseInt(s.trim());
-            return v > 0 && v <= 65535 ? v : 0;
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
 }
