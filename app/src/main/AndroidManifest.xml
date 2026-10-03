@@ -93,16 +93,14 @@
                android:name="io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity"
             android:exported="false">
         </activity>
+        <!-- Reachable from the sidebar (SidebarController) and by explicit
+             intent. Deliberately has no MAIN/LAUNCHER filter: a second launcher
+             entry duplicated the main icon on the home screen. -->
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.ToolsHubActivity"
             android:exported="true"
-            android:label="Tools Kit">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:label="Tools Kit" />
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.ToolRunnerActivity"
