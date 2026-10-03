@@ -1402,6 +1402,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
+        // "/" is mode 0755 and normally listable, but some device policies deny
+        // the read to an ordinary app. Fall back to an index of the standard
+        // top-level directories instead of failing: they are world-readable
+        // even when the parent listing is not, so the tree is still browsable.
+        if ("/".equals(folder.getAbsolutePath()) && folder.listFiles() == null) {
+            showFilesystemRootIndex();
+            return;
+        }
         if (folder instanceof FTPFileWrapper) {
             loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
             return;
@@ -1952,15 +1960,59 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             Extensions.showMessage(this, R.string.root_unavailable);
             return;
         }
-        // listFiles() returns null both for "no such directory" and for "denied",
-        // and on a stock device the SELinux policy for untrusted_app can refuse
-        // the read on the root directory itself. Find out which it is, so the
-        // message tells the user whether to grant Shizuku or to stop.
-        if (root.listFiles() == null) {
-            Extensions.showMessage(this, R.string.root_denied);
-            return;
-        }
+        // loadFolderInPane falls back to the root index when "/" cannot be
+        // listed, so both routes behave the same.
         loadFolderInPane(root, lastPaneSelected == 1);
+    }
+
+    /**
+     * Lists the standard top-level directories when "/" itself cannot be read.
+     *
+     * <p>This is an index, not a directory listing: the names are a known set,
+     * and each is probed so the user only sees what is actually reachable. The
+     * contents of the reachable ones are read normally, so this is a fallback,
+     * not a substitute for real permissions.
+     */
+    private void showFilesystemRootIndex() {
+        String[] known = getResources().getStringArray(R.array.filesystem_root_paths);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+
+        TextView note = new TextView(this);
+        note.setText(R.string.root_index_note);
+        box.addView(note);
+
+        List<String> readable = new ArrayList<>();
+        List<String> denied = new ArrayList<>();
+        for (String path : known) {
+            File dir = new File(path);
+            (dir.canRead() ? readable : denied).add(path);
+        }
+        // Readable first, then the rest greyed, so the useful ones are not buried.
+        for (String path : readable) addRootIndexRow(box, path, true);
+        if (!denied.isEmpty()) {
+            TextView divider = new TextView(this);
+            divider.setText(R.string.root_index_denied_header);
+            box.addView(divider);
+            for (String path : denied) addRootIndexRow(box, path, false);
+        }
+
+        dialogUtil.getDialogBuilder()
+                .setTitle(R.string.sidebar_root)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void addRootIndexRow(LinearLayout box, String path, boolean enabled) {
+        com.google.android.material.button.MaterialButton row =
+                new com.google.android.material.button.MaterialButton(this);
+        row.setText(path);
+        row.setEnabled(enabled);
+        if (enabled) {
+            row.setOnClickListener(v -> loadFolderInPane(new File(path), lastPaneSelected == 1));
+        }
+        box.addView(row);
     }
 
     /** Entry point for the "Remote storage" sidebar tool. */
