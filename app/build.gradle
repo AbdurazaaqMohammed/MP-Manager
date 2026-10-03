@@ -102,12 +102,13 @@ dependencies {
     implementation("org.apache.ftpserver:ftplet-api:1.2.1")
     implementation("org.apache.ftpserver:ftpserver-core:1.2.1")
     implementation("commons-io:commons-io:2.22.0")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.85.2")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
     // OpenPGP (password-based encryption). The app has no gpg binary, so
     // encryption is done in-process; output is standard OpenPGP that gpg
-    // itself can read. bcpg/bcutil pair at 1.84; the public asn1.cryptlib
-    // classes bcpg needs come from bcutil, so the existing bcprov 1.85.2
-    // stays untouched. Verified interoperable with gpg both directions.
+    // itself can read. bcprov/bcpg/bcutil must be the same version or they
+    // ship overlapping org.bouncycastle.asn1 classes and the build fails the
+    // duplicate-class check; pinned to 1.84, the trio is verified to round-trip
+    // with gpg in both directions.
     implementation("org.bouncycastle:bcpg-jdk18on:1.84")
     implementation("org.bouncycastle:bcutil-jdk18on:1.84")
     implementation("com.google.zxing:core:3.5.3")
