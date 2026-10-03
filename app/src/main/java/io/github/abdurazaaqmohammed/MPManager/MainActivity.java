@@ -1402,14 +1402,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void loadFolderInPane(File folder, boolean pane1, boolean addToHistory) {
-        // "/" is mode 0755 and normally listable, but some device policies deny
-        // the read to an ordinary app. Fall back to an index of the standard
-        // top-level directories instead of failing: they are world-readable
-        // even when the parent listing is not, so the tree is still browsable.
-        if ("/".equals(folder.getAbsolutePath()) && folder.listFiles() == null) {
-            showFilesystemRootIndex();
-            return;
-        }
         if (folder instanceof FTPFileWrapper) {
             loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
             return;
@@ -1427,6 +1419,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
+        // Listing "/" is refused on some devices while its children are not, so
+        // fall back to the standard top-level directories and let the pane show
+        // them like any other folder.
+        if (files == null && "/".equals(folderPath)) files = filesystemRootEntries();
         if (files == null || (files.length == 0 && shizukuDir)) {
             File[] viaShizuku = ShizukuFile.tryList(this, folder);
             if (viaShizuku != null) files = viaShizuku;
@@ -1966,47 +1962,23 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     /**
-     * Lists the standard top-level directories when "/" itself cannot be read.
+     * The standard top-level directories, as File objects.
      *
-     * <p>This is an index, not a directory listing: the names are a known set,
-     * and each is probed so the user only sees what is actually reachable. The
-     * contents of the reachable ones are read normally, so this is a fallback,
-     * not a substitute for real permissions.
+     * <p>"/" can be denied while its children remain world-readable, so listing
+     * the root directly is not the only way to browse it. The pane shows these
+     * like any other folder; paths that are actually refused simply fail to open
+     * and report the reason, rather than disappearing silently.
      */
-    private void showFilesystemRootIndex() {
+    private File[] filesystemRootEntries() {
         String[] known = getResources().getStringArray(R.array.filesystem_root_paths);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-
-        TextView note = new TextView(this);
-        note.setText(R.string.root_index_note);
-        box.addView(note);
-
-        // Every path stays tappable. canRead() is answered by the SELinux domain
-        // the app runs in, which is not necessarily the one that will be asked
-        // on the way in, so gating on it risks greying out everything and
-        // making the whole index useless. Trying costs one navigation attempt
-        // and reports the real reason if it is denied.
+        List<File> out = new ArrayList<>();
         for (String path : known) {
-            com.google.android.material.button.MaterialButton row =
-                    new com.google.android.material.button.MaterialButton(this);
-            row.setText(path);
-            row.setOnClickListener(v ->
-                    loadFolderInPane(new File(path), lastPaneSelected == 1));
-            box.addView(row);
+            File dir = new File(path);
+            // Only include directories that exist: a handful are absent on some
+            // builds, and a dead entry would just confuse the list.
+            if (dir.exists()) out.add(dir);
         }
-
-        // 27 rows do not fit on a phone, and a bare LinearLayout in a dialog is
-        // clipped rather than scrolled, so the ones below the fold would be
-        // unreachable.
-        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
-        scroll.addView(box);
-
-        dialogUtil.getDialogBuilder()
-                .setTitle(R.string.sidebar_root)
-                .setView(scroll)
-                .setPositiveButton(android.R.string.ok, null)
-                .show();
+        return out.toArray(new File[0]);
     }
 
     /** Entry point for the "Remote storage" sidebar tool. */
