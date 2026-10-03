@@ -103,6 +103,13 @@ dependencies {
     implementation("org.apache.ftpserver:ftpserver-core:1.2.1")
     implementation("commons-io:commons-io:2.22.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.85.2")
+    // OpenPGP (password-based encryption). The app has no gpg binary, so
+    // encryption is done in-process; output is standard OpenPGP that gpg
+    // itself can read. bcpg/bcutil pair at 1.84; the public asn1.cryptlib
+    // classes bcpg needs come from bcutil, so the existing bcprov 1.85.2
+    // stays untouched. Verified interoperable with gpg both directions.
+    implementation("org.bouncycastle:bcpg-jdk18on:1.84")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.84")
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("dev.rikka.shizuku:api:13.1.5")
