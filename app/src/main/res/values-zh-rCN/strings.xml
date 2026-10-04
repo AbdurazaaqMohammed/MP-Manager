@@ -1038,6 +1038,7 @@ Layout Inspector
     <string name="gpg_key_path_hint">公钥或私钥文件 (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">私钥口令（没有则留空）</string>
     <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
+    <string name="list_changed_try_again">列表已变化，请重试</string>
     <string name="gpg_target_exists">目标已存在，未覆盖</string>
     <string name="enter_password_gpg">输入密码</string>
     <string name="wrong_password_or_corrupt">密码错误或文件损坏</string>

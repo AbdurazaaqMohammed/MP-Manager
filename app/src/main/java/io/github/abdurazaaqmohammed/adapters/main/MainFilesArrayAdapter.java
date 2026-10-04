@@ -253,7 +253,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
 
                     @Override
-                    public void clearSelection() {
+                    /**
+     * Current index of {@code item} in the shown list (which carries the up-dir
+     * entry at 0), or -1 when it is no longer listed.
+     */
+    private int indexOf(Object item) {
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == item) return i;
+        }
+        return -1;
+    }
+
+    public void clearSelection() {
                         MainFilesArrayAdapter.this.clearSelection();
                     }
                 });
@@ -588,6 +599,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     if (menuSheet != null) menuSheet.dismiss();
                     if (menuDialog != null) menuDialog.dismiss();
                     try {
+                        // The menu is shown asynchronously, so by the time an item
+                        // is tapped the listing may have been replaced. Re-resolve
+                        // the row we acted on and drop selections that no longer
+                        // point at a live entry: using the bind-time index would
+                        // either read past the end or, worse, hit a neighbouring
+                        // file and delete it.
+                        final int livePosition = indexOf(boundItem);
+                        selectedPositions.removeIf(p -> p < 0 || p >= values.length);
+                        if (livePosition < 0) {
+                            Extensions.showMessage(context, R.string.list_changed_try_again);
+                            return;
+                        }
                         String actionId = itemIds[position1];
                         FileMenuAction pluginAction = ExtensionRegistry.findFileMenu(actionId);
                         if (pluginAction != null) {
@@ -716,16 +739,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         fileOps.moveAsync(item);
                                         break;
                                     case FileMenuOrder.RENAME:
-                                        entryDialogs.showRenameDialog(finalPosition, file, entry, fileName, multi);
+                                        entryDialogs.showRenameDialog(livePosition, file, entry, fileName, multi);
                                         break;
                                     case FileMenuOrder.DELETE:
-                                        entryDialogs.showDeleteDialog(finalPosition, file, entry, multi);
+                                        entryDialogs.showDeleteDialog(livePosition, file, entry, multi);
                                         break;
                                     case FileMenuOrder.COMPRESS:
                                         entryDialogs.showCompressDialog(file, fileName, multi);
                                         break;
                                     case FileMenuOrder.PROPERTIES:
-                                        propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, entryDialogs.getFilesToDisplay(multi, finalPosition).toString());
+                                        propertiesDialog.show(multi, values, selectedPositions, isInZip, file, entry, fileName, entryDialogs.getFilesToDisplay(multi, livePosition).toString());
                                         break;
                                     case FileMenuOrder.SHARE:
                                         if (isInZip) {

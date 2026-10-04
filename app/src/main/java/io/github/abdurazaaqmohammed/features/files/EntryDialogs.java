@@ -88,13 +88,28 @@ public class EntryDialogs {
 
     public CharSequence getFilesToDisplay(boolean multi, int position) {
         Object[] values = state.values();
+        // Positions come from a menu that may have been opened before the last
+        // listing change, so they are validated here rather than trusted: an out
+        // of range index must not read past the array, and must never silently
+        // name a different file in the confirmation.
+        StringBuilder sb = new StringBuilder();
         if (multi) {
-            StringBuilder sb = new StringBuilder();
-            for (int i : state.selectedPositions())
-                sb.append(',').append(state.isInZip() ? ((ZipEntryInfo) values[i]).getName() : ((File) values[i]).getName());
-            return sb.deleteCharAt(0);
+            for (int i : state.selectedPositions()) {
+                if (i < 0 || i >= values.length) continue;
+                Object v = values[i];
+                sb.append(',').append(v == null ? "" : displayName(v));
+            }
+        } else {
+            if (position < 0 || position >= values.length) return "";
+            sb.append(displayName(values[position]));
         }
-        return state.isInZip() ? ((ZipEntryInfo) values[position]).getName() : ((File) values[position]).getName();
+        return sb.length() == 0 ? "" : sb.substring(1);
+    }
+
+    private String displayName(Object value) {
+        if (value instanceof ZipEntryInfo) return ((ZipEntryInfo) value).getName();
+        if (value instanceof File) return ((File) value).getName();
+        return String.valueOf(value);
     }
 
     public void showRenameDialog(int position, File file, ZipEntryInfo entry, String fileName, boolean multi) {
