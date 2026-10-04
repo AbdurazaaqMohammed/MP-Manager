@@ -689,7 +689,7 @@ public class FileOperationsHelper {
                 .setTitle(R.string.archive_password_needed)
                 .setView(input)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.ok, (d, w) -> {
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
                     final String pw = input.getText() == null ? "" : input.getText().toString();
                     if (pw.isEmpty()) return;
                     pm.show();

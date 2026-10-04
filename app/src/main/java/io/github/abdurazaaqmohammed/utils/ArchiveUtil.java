@@ -84,12 +84,6 @@ public class ArchiveUtil {
         else throw new IOException("Passwords are only supported for 7z and rar");
     }
 
-    /** Creates a 7z, optionally encrypted with {@code password}. */
-    public static void createEncrypted7z(File output, List<File> sources, char[] password)
-            throws IOException {
-        create7z(output, sources, password);
-    }
-
     public static void create(File output, List<File> sources) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".7z")) create7z(output, sources);
@@ -147,7 +141,7 @@ public class ArchiveUtil {
             throws IOException {
         try (Archive rar = password == null
                 ? new Archive(archive)
-                : new Archive(archive, new String[]{new String(password)})) {
+                : new Archive(archive, new String(password))) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
                 String name = sanitizeEntryName(fh.getFileName());
@@ -211,13 +205,10 @@ public class ArchiveUtil {
     }
 
     private static void create7z(File output, List<File> sources) throws IOException {
-        create7z(output, sources, null);
-    }
-
-    /** @param password null for no encryption. */
-    static void create7z(File output, List<File> sources, char[] password) throws IOException {
-        try (SevenZOutputFile sevenZOutput = password == null
-                ? new SevenZOutputFile(output) : new SevenZOutputFile(output, password)) {
+        // No password: the SevenZOutputFile in commons-compress 1.21 has no
+        // password constructor, so this build cannot write an encrypted 7z. It
+        // can still read one.
+        try (SevenZOutputFile sevenZOutput = new SevenZOutputFile(output)) {
             sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
             for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName());
         }
