@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Rename/delete/compress entry dialogs extracted from MainFilesArrayAdapter.
@@ -205,18 +206,29 @@ public class EntryDialogs {
         ProgressManager pm = new ProgressManager(context, true);
         MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
+        // Temporary diagnostic. The build that forces a long-press to become the
+        // selection always reports multi=false with just the pressed index in
+        // sel, so this line distinguishes that build from an older one and shows
+        // exactly which rows this confirmation would delete.
+        String atPosName = (position >= 0 && position < values.length)
+                ? displayName(values[position]) : "n/a";
+        String diag = "\n[diag] " + context.getString(R.string.build_fingerprint)
+                + " multi=" + multi
+                + " sel=" + new TreeSet<>(state.selectedPositions())
+                + " atPos=" + position + "(" + atPosName + ")"
+                + " willDelete=" + filesToDisplay;
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean[] sign = new boolean[1];
         File zipFile = isInZip ? entry.getZipFile() : null;
         if (isInZip && zipFile.getName().endsWith(".apk")) {
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
-            ll.<TextView>findViewById(R.id.modifiedText).setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+            ll.<TextView>findViewById(R.id.modifiedText).setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay) + diag);
             CheckBox autosign = ll.findViewById(R.id.autosign);
             autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
             ll.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
-        } else deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+        } else deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay) + diag);
         deleteDialog.setTitle(context.rss.getString(R.string.warning)).setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
             Runnable doDelete = () -> {
