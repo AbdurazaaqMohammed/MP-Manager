@@ -1153,7 +1153,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             try {
                 List<File> parts = FileSplitMerge.split(src, src.getParentFile(), chunkSize,
                         (done, total) -> {
-                            pm.setProgress((int) (total == 0 ? 0 : done * 100 / total));
+                            pm.setProgress((int) done, (int) Math.max(total, 1));
                             return true;
                         });
                 count = parts.size();
@@ -1189,7 +1189,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             String error = null;
             try {
                 FileSplitMerge.merge(parts, out, (done, total) -> {
-                    pm.setProgress((int) (total == 0 ? 0 : done * 100 / total));
+                    pm.setProgress((int) done, (int) Math.max(total, 1));
                     return true;
                 });
             } catch (Exception e) {
