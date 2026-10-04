@@ -107,6 +107,8 @@ import io.github.abdurazaaqmohammed.utils.FileListExporter;
 import io.github.abdurazaaqmohammed.utils.FileNameSwap;
 import io.github.abdurazaaqmohammed.utils.FileSplitMerge;
 import io.github.abdurazaaqmohammed.utils.SymlinkTool;
+import io.github.abdurazaaqmohammed.utils.ShortcutActionStore;
+import io.github.abdurazaaqmohammed.utils.ShortcutTool;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
@@ -1115,13 +1117,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      */
     private void showFileTools(int position, File file) {
         String[] tools = {
-                context.getString(R.string.encrypt_gpg),
-                context.getString(R.string.decrypt_gpg),
+                context.getString(R.string.file_encrypt),
+                context.getString(R.string.file_decrypt),
                 context.getString(R.string.file_split),
                 context.getString(R.string.file_merge),
                 context.getString(R.string.file_swap_names),
                 context.getString(R.string.file_export_list),
-                context.getString(R.string.file_symlink)};
+                context.getString(R.string.file_symlink),
+                context.getString(R.string.shortcut_icon),
+                context.getString(R.string.shortcut_action)};
         new MaterialAlertDialogBuilder(context)
                 .setTitle(file.getName())
                 .setItems(tools, (d, which) -> {
@@ -1132,7 +1136,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         case 3: mergeParts(file); break;
                         case 4: promptSwapNames(file); break;
                         case 5: exportListing(file); break;
-                        default: createSymlink(file); break;
+                        case 6: createSymlink(file); break;
+                        case 7: pinHomeShortcut(file); break;
+                        default: promptShortcutAction(file); break;
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1330,6 +1336,48 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         break;
                 }
             });
+        }).start();
+    }
+
+    /** Asks the launcher to pin a home screen shortcut to this file. */
+    private void pinHomeShortcut(File target) {
+        if (!ShortcutTool.isSupported(context)) {
+            Extensions.showMessage(context, R.string.shortcut_unsupported);
+            return;
+        }
+        new Thread(() -> {
+            boolean ok = ShortcutTool.pinToHome(context, target);
+            context.runOnUiThread(() -> Extensions.showMessage(context, ok
+                    ? context.getString(R.string.shortcut_pin_ok, target.getName())
+                    : context.getString(R.string.shortcut_pin_denied, target.getName())));
+        }).start();
+    }
+
+    /** The five actions a shortcut can carry instead of just an icon. */
+    private void promptShortcutAction(File target) {
+        String[] actions = {
+                context.getString(R.string.shortcut_act_locate),
+                context.getString(R.string.shortcut_act_locate_click),
+                context.getString(R.string.shortcut_act_editor),
+                context.getString(R.string.shortcut_act_script),
+                context.getString(R.string.shortcut_act_html)};
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(target.getName())
+                .setItems(actions, (d, which) -> createActionShortcut(target, which))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void createActionShortcut(File target, int action) {
+        if (!ShortcutTool.isSupported(context)) {
+            Extensions.showMessage(context, R.string.shortcut_unsupported);
+            return;
+        }
+        new Thread(() -> {
+            boolean ok = ShortcutActionStore.create(context, target, action);
+            context.runOnUiThread(() -> Extensions.showMessage(context, ok
+                    ? context.getString(R.string.shortcut_action_ok, target.getName())
+                    : R.string.shortcut_unsupported));
         }).start();
     }
 
