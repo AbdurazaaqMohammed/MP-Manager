@@ -1060,7 +1060,6 @@ Layout Inspector
     <string name="password_manager_delete_first">已删除第 1 个密码</string>
     <string name="password_manager_delete_last">已删除最后一个密码</string>
     <string name="password_manager_delete_any">已删除 1 个密码</string>
-    <string name="password_manager_storage_warning">以未加密形式保存在本应用私有目录</string>
     <string name="activity_log_search_hint">搜索类名或包名</string>
     <string name="activity_log_copy">全部复制</string>
     <string name="activity_log_clear">清空</string>

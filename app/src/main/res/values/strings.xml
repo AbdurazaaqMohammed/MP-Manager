@@ -1085,7 +1085,6 @@ Matched on %2$d of %3$d, %4$s</string>
     <string name="password_manager_delete_first">The first password is deleted</string>
     <string name="password_manager_delete_last">The last password is deleted</string>
     <string name="password_manager_delete_any">An entry is deleted</string>
-    <string name="password_manager_storage_warning">Stored unencrypted in this app's private storage</string>
     <string name="activity_log_search_hint">Search class or package</string>
     <string name="activity_log_copy">Copy all</string>
     <string name="activity_log_clear">Clear</string>
