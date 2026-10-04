@@ -1120,6 +1120,12 @@ Layout Inspector
     <string name="file_export_recursive">包含子目录</string>
     <string name="file_export_done">已写入 %1$d 条到 %2$s</string>
     <string name="file_export_failed">无法列出该目录</string>
+    <string name="tool_need_encrypted_name">仅适用于 .gpg / .asc / .pgp 文件</string>
+    <string name="tool_need_file_not_folder">仅适用于单个文件，不适用于文件夹</string>
+    <string name="tool_need_parts">该文件不是分割产生的分片</string>
+    <string name="tool_need_sibling">该目录下没有其他文件可交换</string>
+    <string name="tool_need_shell">需要 root 或 Shizuku 权限</string>
+    <string name="tool_need_launcher">当前桌面不支持固定快捷方式</string>
     <string name="file_split">文件分割</string>
     <string name="file_merge">文件合并</string>
     <string name="file_split_title">分割 %1$s</string>

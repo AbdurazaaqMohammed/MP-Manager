@@ -1115,34 +1115,143 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * own: the menu is already long, and these act on the file that was pressed
      * rather than on the folder the user is browsing.
      */
+    /** One entry in the tools list, with why it cannot be used when it cannot. */
+    private static final class ToolEntry {
+        final String label;
+        final boolean enabled;
+        final String reason;
+        final Runnable action;
+
+        ToolEntry(String label, boolean enabled, String reason, Runnable action) {
+            this.label = label;
+            this.enabled = enabled;
+            this.reason = reason;
+            this.action = action;
+        }
+    }
+
+    /**
+     * The tools that apply to this file.
+     *
+     * <p>Anything that cannot work right now is listed but greyed, and tapping it
+     * says which condition is missing. Hiding it instead would leave the user
+     * wondering whether the app lost the feature; a disabled row with a reason
+     * tells them what to fix.
+     */
+    private List<ToolEntry> buildToolEntries(File file) {
+        List<ToolEntry> out = new ArrayList<>();
+        boolean isDir = file.isDirectory();
+        String lower = file.getName().toLowerCase(Locale.ENGLISH);
+
+        out.add(new ToolEntry(context.getString(R.string.file_encrypt), true, null,
+                () -> gpgEncrypt(file)));
+
+        boolean looksEncrypted = lower.endsWith(".gpg") || lower.endsWith(".asc")
+                || lower.endsWith(".pgp");
+        out.add(new ToolEntry(context.getString(R.string.file_decrypt), looksEncrypted,
+                context.getString(R.string.tool_need_encrypted_name),
+                () -> gpgDecrypt(file)));
+
+        out.add(new ToolEntry(context.getString(R.string.file_split), !isDir,
+                context.getString(R.string.tool_need_file_not_folder),
+                () -> promptSplit(file)));
+
+        boolean isPart = !FileSplitMerge.findParts(file).isEmpty();
+        out.add(new ToolEntry(context.getString(R.string.file_merge), isPart,
+                context.getString(R.string.tool_need_parts),
+                () -> mergeParts(file)));
+
+        boolean hasSibling = false;
+        File[] siblings = file.getParentFile() == null ? null : file.getParentFile().listFiles();
+        if (siblings != null) {
+            for (File f : siblings) {
+                if (!f.equals(file)) {
+                    hasSibling = true;
+                    break;
+                }
+            }
+        }
+        out.add(new ToolEntry(context.getString(R.string.file_swap_names), hasSibling,
+                context.getString(R.string.tool_need_sibling),
+                () -> promptSwapNames(file)));
+
+        out.add(new ToolEntry(context.getString(R.string.file_export_list), true, null,
+                () -> exportListing(file)));
+
+        boolean shell = SymlinkTool.canCreateSymlink(context);
+        out.add(new ToolEntry(context.getString(R.string.file_symlink), shell,
+                context.getString(R.string.tool_need_shell),
+                () -> createSymlink(file)));
+
+        boolean pins = ShortcutTool.isSupported(context);
+        out.add(new ToolEntry(context.getString(R.string.shortcut_icon), pins,
+                context.getString(R.string.tool_need_launcher),
+                () -> pinHomeShortcut(file)));
+        out.add(new ToolEntry(context.getString(R.string.shortcut_action), pins,
+                context.getString(R.string.tool_need_launcher),
+                () -> promptShortcutAction(file)));
+        return out;
+    }
+
     private void showFileTools(int position, File file) {
-        String[] tools = {
-                context.getString(R.string.file_encrypt),
-                context.getString(R.string.file_decrypt),
-                context.getString(R.string.file_split),
-                context.getString(R.string.file_merge),
-                context.getString(R.string.file_swap_names),
-                context.getString(R.string.file_export_list),
-                context.getString(R.string.file_symlink),
-                context.getString(R.string.shortcut_icon),
-                context.getString(R.string.shortcut_action)};
-        new MaterialAlertDialogBuilder(context)
+        final List<ToolEntry> entries = buildToolEntries(file);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+        android.widget.LinearLayout column = new android.widget.LinearLayout(context);
+        column.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (8 * context.getResources().getDisplayMetrics().density);
+        int side = (int) (20 * context.getResources().getDisplayMetrics().density);
+        column.setPadding(side, pad, side, pad);
+        scroll.addView(column);
+
+        // Dimmed rather than tinted: a disabled row should read as unavailable
+        // next to the usable ones without looking like a different kind of action.
+        int normal = resolveThemeColor(androidx.appcompat.R.attr.colorOnSurface, 0xFF000000);
+        int dimmed = resolveThemeColor(androidx.appcompat.R.attr.colorOnSurface, 0xFF000000);
+        dimmed = (dimmed & 0x00FFFFFF) | (0x55 << 24);
+
+        for (ToolEntry entry : entries) {
+            TextView row = new TextView(context);
+            row.setText(entry.label);
+            row.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            row.setTextColor(entry.enabled ? normal : dimmed);
+            row.setPadding(0, pad * 2, 0, pad * 2);
+            row.setClickable(true);
+            row.setOnClickListener(v -> {
+                if (entry.enabled) {
+                    dismissToolDialog();
+                    entry.action.run();
+                } else {
+                    Extensions.showMessage(context, entry.reason);
+                }
+            });
+            column.addView(row);
+        }
+
+        android.app.Dialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(file.getName())
-                .setItems(tools, (d, which) -> {
-                    switch (which) {
-                        case 0: gpgEncrypt(file); break;
-                        case 1: gpgDecrypt(file); break;
-                        case 2: promptSplit(file); break;
-                        case 3: mergeParts(file); break;
-                        case 4: promptSwapNames(file); break;
-                        case 5: exportListing(file); break;
-                        case 6: createSymlink(file); break;
-                        case 7: pinHomeShortcut(file); break;
-                        default: promptShortcutAction(file); break;
-                    }
-                })
+                .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        dialogUtil.styleAlertDialog(dialog);
+        toolDialog = dialog;
+        context.runOnUiThread(dialog::show);
+    }
+
+    private android.app.Dialog toolDialog;
+
+    private void dismissToolDialog() {
+        if (toolDialog != null) {
+            toolDialog.dismiss();
+            toolDialog = null;
+        }
+    }
+
+    private int resolveThemeColor(int attr, int fallback) {
+        android.util.TypedValue tv = new android.util.TypedValue();
+        if (getTheme() != null && context.getTheme().resolveAttribute(attr, tv, true)) {
+            return tv.data;
+        }
+        return fallback;
     }
 
     /** Asks for a chunk size, then splits the file beside itself. */

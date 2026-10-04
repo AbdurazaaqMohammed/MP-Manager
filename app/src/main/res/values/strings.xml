@@ -1145,6 +1145,12 @@ Tap "Open settings", pick "Activity log" and turn it on. It only listens for the
     <string name="file_export_recursive">Include subfolders</string>
     <string name="file_export_done">%1$d entries written to %2$s</string>
     <string name="file_export_failed">Cannot list this folder</string>
+    <string name="tool_need_encrypted_name">Only for .gpg / .asc / .pgp files</string>
+    <string name="tool_need_file_not_folder">Only for a single file, not a folder</string>
+    <string name="tool_need_parts">This file is not part of a split set</string>
+    <string name="tool_need_sibling">No other file in this folder to trade names with</string>
+    <string name="tool_need_shell">Needs root or Shizuku</string>
+    <string name="tool_need_launcher">This launcher does not support pinned shortcuts</string>
     <string name="file_split">Split file</string>
     <string name="file_merge">Merge parts</string>
     <string name="file_split_title">Split %1$s</string>
