@@ -125,13 +125,19 @@ public final class RecycleBin {
             File meta = new File(d, META);
             if (meta.exists()) {
                 try {
-                    String[] lines = java.nio.file.Files.readAllLines(meta.toPath(),
-                            StandardCharsets.UTF_8);
-                    if (lines.length > 0 && !lines[0].trim().isEmpty()) path = lines[0].trim();
-                    if (lines.length > 1) {
-                        try {
-                            stamp = Long.parseLong(lines[1].trim());
-                        } catch (NumberFormatException ignored) {
+                    // Read the two lines by hand: java.nio.file.Files is not
+                    // available down to our minSdk.
+                    try (java.io.BufferedReader r = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(new java.io.FileInputStream(meta),
+                                    StandardCharsets.UTF_8))) {
+                        String first = r.readLine();
+                        String second = r.readLine();
+                        if (first != null && !first.trim().isEmpty()) path = first.trim();
+                        if (second != null) {
+                            try {
+                                stamp = Long.parseLong(second.trim());
+                            } catch (NumberFormatException ignored) {
+                            }
                         }
                     }
                 } catch (Exception ignored) {

@@ -153,8 +153,9 @@ public class RecycleBinActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             RecycleBin.Entry e = entries.get(position);
             holder.name.setText(e.originalName + (e.wasDirectory() ? "/" : ""));
-            String when = DateUtils.getRelativeTimeSpanString(e.deletedAt,
+            CharSequence rel = DateUtils.getRelativeTimeSpanString(e.deletedAt,
                     System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
+            String when = rel.toString();
             holder.path.setText(getString(R.string.recycle_bin_item_meta,
                     e.originalPath, when, formatSize(e.size())));
             holder.restore.setOnClickListener(v -> restore(e));
