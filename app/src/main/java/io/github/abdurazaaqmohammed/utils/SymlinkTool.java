@@ -77,7 +77,7 @@ public final class SymlinkTool {
     }
 
     /** Single-quote a path for the shell, escaping any embedded quote. */
-    static String quote(String path) {
+    public static String quote(String path) {
         return "'" + path.replace("'", "'\\''") + "'";
     }
 }
