@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Rename/delete/compress entry dialogs extracted from MainFilesArrayAdapter.
@@ -201,45 +200,46 @@ public class EntryDialogs {
     }
 
     public void showDeleteDialog(int position, File file, ZipEntryInfo entry, boolean multi) {
-        showDeleteDialog(position, file, entry, multi, true);
-    }
-
-    /**
-     * @param useRecycleBin move into the recoverable bin instead of erasing;
-     *                      false is a permanent delete.
-     */
-    public void showDeleteDialog(int position, File file, ZipEntryInfo entry, boolean multi,
-                                 boolean useRecycleBin) {
         Object[] values = state.values();
         boolean isInZip = state.isInZip();
         ProgressManager pm = new ProgressManager(context, true);
         MaterialAlertDialogBuilder deleteDialog = dialogUtil.getDialogBuilder();
         CharSequence filesToDisplay = getFilesToDisplay(multi, position);
-        // Temporary diagnostic. The build that forces a long-press to become the
-        // selection always reports multi=false with just the pressed index in
-        // sel, so this line distinguishes that build from an older one and shows
-        // exactly which rows this confirmation would delete.
-        String atPosName = (position >= 0 && position < values.length)
-                ? displayName(values[position]) : "n/a";
-        String diag = "\n[diag] " + context.getString(R.string.build_fingerprint)
-                + " multi=" + multi
-                + " sel=" + new TreeSet<>(state.selectedPositions())
-                + " atPos=" + position + "(" + atPosName + ")"
-                + " willDelete=" + filesToDisplay;
+        // One delete action, with the choice of whether it is recoverable: ticked
+        // (the default) the items go to the bin and can be restored, unticked they
+        // are erased outright.
+        final boolean[] useRecycleBin = {true};
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean[] sign = new boolean[1];
         File zipFile = isInZip ? entry.getZipFile() : null;
         if (isInZip && zipFile.getName().endsWith(".apk")) {
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
-            ll.<TextView>findViewById(R.id.modifiedText).setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay) + diag);
+            ll.<TextView>findViewById(R.id.modifiedText).setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
             CheckBox autosign = ll.findViewById(R.id.autosign);
             autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
             ll.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
-        } else deleteDialog.setMessage(context.rss.getString(
-                useRecycleBin ? R.string.confirm_recycle_f : R.string.confirm_delete_f,
-                filesToDisplay) + diag);
+        } else {
+            View box = LayoutInflater.from(context).inflate(R.layout.dialog_delete_recycle, null);
+            TextView msg = box.findViewById(R.id.delete_message);
+            CheckBox toBin = box.findViewById(R.id.delete_to_bin);
+            toBin.setChecked(true);
+            // Zip entries cannot be recycled -- there is no original path to
+            // record -- so the choice is not offered for them.
+            toBin.setVisibility(isInZip ? View.GONE : View.VISIBLE);
+            toBin.setOnCheckedChangeListener((b2, checked) -> {
+                useRecycleBin[0] = checked;
+                msg.setText(context.rss.getString(
+                        checked ? R.string.confirm_recycle_f : R.string.confirm_delete_permanently,
+                        filesToDisplay));
+            });
+            msg.setText(context.rss.getString(
+                    isInZip ? R.string.confirm_delete_f
+                            : (useRecycleBin[0] ? R.string.confirm_recycle_f : R.string.confirm_delete_permanently),
+                    filesToDisplay));
+            deleteDialog.setView(box);
+        }
         deleteDialog.setTitle(context.rss.getString(R.string.warning)).setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
             Runnable doDelete = () -> {
@@ -257,7 +257,7 @@ public class EntryDialogs {
                                     if (finalSelectedFile1 != null)
                                         pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
 
-                                    if (useRecycleBin) {
+                                    if (useRecycleBin[0]) {
                                         // Moving keeps it recoverable; a fallback to a
                                         // real delete is only for when the move cannot
                                         // happen at all.
@@ -298,7 +298,7 @@ public class EntryDialogs {
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
                             boolean stored = false;
-                            if (useRecycleBin) {
+                            if (useRecycleBin[0] && !isInZip) {
                                 try {
                                     io.github.abdurazaaqmohammed.utils.RecycleBin.store(context, file);
                                     stored = true;

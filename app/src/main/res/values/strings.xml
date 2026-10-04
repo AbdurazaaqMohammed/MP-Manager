@@ -1063,7 +1063,9 @@ Layout Inspector
     <string name="gpg_key_path_hint">Public or secret key file (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">Key passphrase (leave empty if none)</string>
     <string name="gpg_wrong_key">No matching secret key, or wrong passphrase</string>
-    <string name="build_fingerprint">build 7817be4 </string>
+    <string name="delete_to_recycle_bin">Move to recycle bin</string>
+    <string name="delete_to_recycle_bin_hint">Untick to delete permanently instead</string>
+    <string name="confirm_delete_permanently">Permanently delete %1$s? This cannot be undone.</string>
     <string name="delete_permanently">Delete permanently</string>
     <string name="confirm_recycle_f">Move %1$s to the recycle bin?</string>
     <string name="recycle_bin">Recycle bin</string>
