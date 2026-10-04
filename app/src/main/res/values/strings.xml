@@ -1063,6 +1063,15 @@ Layout Inspector
     <string name="gpg_key_path_hint">Public or secret key file (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">Key passphrase (leave empty if none)</string>
     <string name="gpg_wrong_key">No matching secret key, or wrong passphrase</string>
+    <string name="gpg_tool">GPG encrypt / decrypt</string>
+    <string name="gpg_tool_title">GPG encrypt / decrypt</string>
+    <string name="gpg_tool_description">Pick a file, then encrypt it with a password or a recipient key, or decrypt one. Output is standard OpenPGP that gpg can read, written into the app files folder.</string>
+    <string name="gpg_encrypt_button">Encrypt a file</string>
+    <string name="gpg_decrypt_button">Decrypt a file</string>
+    <string name="gpg_working">Working...</string>
+    <string name="gpg_done_at">Done: %1$s</string>
+    <string name="gpg_failed">Failed: %1$s</string>
+    <string name="gpg_pick_failed">Could not read that file</string>
     <string name="password_manager">Password manager</string>
     <string name="password_manager_title">Password manager</string>
     <string name="password_manager_description">Add your usual passwords here. When extracting an encrypted archive they are tried in order, and you are only asked if none of them work. While compressing you can pick one instead of typing it.</string>
