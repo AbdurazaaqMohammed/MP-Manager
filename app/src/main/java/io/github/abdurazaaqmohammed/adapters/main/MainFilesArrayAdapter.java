@@ -38,7 +38,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 import androidx.exifinterface.media.ExifInterface;
-import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -414,6 +413,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 } else
                     context.setCurrentFolder(file.getParentFile(), getOldValues());
 
+                // Diagnostic: one line per long-press, so a row that acts on its
+                // neighbour reveals whether the bind index, the live index or the
+                // data at those indices is the one that moved.
+                showRowDiagnostic(finalPosition, bindHolder.getBindingAdapterPosition(), fileName);
+
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
                 List<FileMenuOrder.MenuItem> visibleMenu = new ArrayList<>();
@@ -775,14 +779,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 int currentPos = bindHolder.getBindingAdapterPosition();
                 if (currentPos < 0 || currentPos >= values.length) return;
                 if (values[currentPos] != boundItem) return;
-                // Diagnostic: when enabled in settings, the row shows what the
-                // adapter believes it holds, so a tap acting on the wrong row
-                // reveals whether the display, the data or the dispatch shifted.
-                if (PreferenceManager.getDefaultSharedPreferences(context)
-                        .getBoolean("debug_row_diagnostics", false)) {
-                    Extensions.showMessage(context,
-                            "bind pos=" + finalPosition + " item=" + fileName);
-                }
                 convertView.setOnTouchListener(new SwipeTouchListener(
                         context,
                         originalClickListener,
@@ -861,6 +857,21 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             selectedFiles.add(values[position]);
         }
         return selectedFiles;
+    }
+
+    /** Reports the indices this row resolved to; temporary aid for an off-by-one. */
+    private void showRowDiagnostic(int bindPosition, int livePosition, String name) {
+        String at = "n/a", live = "n/a";
+        if (bindPosition >= 0 && bindPosition < values.length) {
+            Object v = values[bindPosition];
+            at = v instanceof File ? ((File) v).getName() : String.valueOf(v);
+        }
+        if (livePosition >= 0 && livePosition < values.length) {
+            Object v = values[livePosition];
+            live = v instanceof File ? ((File) v).getName() : String.valueOf(v);
+        }
+        Extensions.showMessage(context, "bind=" + bindPosition + "(" + at + ") live="
+                + livePosition + "(" + live + ") shown=" + name);
     }
 
     /**
