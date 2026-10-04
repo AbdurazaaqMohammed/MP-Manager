@@ -244,8 +244,11 @@ public class ArchiveUtil {
                 new net.lingala.zip4j.model.ZipParameters();
         params.setCompressionMethod(net.lingala.zip4j.model.enums.CompressionMethod.DEFLATE);
         if (password != null && password.length > 0) {
-            params.setEncryption(net.lingala.zip4j.model.enums.EncryptionMethod.AES);
-            params.setPassword(new String(password));
+            // zip4j 2.11: the password lives on ZipFile, and encryption is
+            // enabled by flag plus method rather than by one setter.
+            zip.setPassword(password);
+            params.setEncryptFiles(true);
+            params.setEncryptionMethod(net.lingala.zip4j.model.enums.EncryptionMethod.AES);
         }
         List<java.io.File> toAdd = new ArrayList<>(sources);
         zip.addFiles(toAdd, params);
