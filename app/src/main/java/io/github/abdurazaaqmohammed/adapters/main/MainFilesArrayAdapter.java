@@ -1205,9 +1205,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
         // Dimmed rather than tinted: a disabled row should read as unavailable
         // next to the usable ones without looking like a different kind of action.
-        int normal = resolveThemeColor(androidx.appcompat.R.attr.colorOnSurface, 0xFF000000);
-        int dimmed = resolveThemeColor(androidx.appcompat.R.attr.colorOnSurface, 0xFF000000);
-        dimmed = (dimmed & 0x00FFFFFF) | (0x55 << 24);
+        int normal = com.google.android.material.color.MaterialColors.getColor(
+                context, com.google.android.material.R.attr.colorOnSurface, 0xFF000000);
+        // Same hue at lower alpha, so a disabled row reads as the same action
+        // that happens to be unavailable.
+        int dimmed = (normal & 0x00FFFFFF) | (0x55 << 24);
 
         for (ToolEntry entry : entries) {
             TextView row = new TextView(context);
@@ -1227,7 +1229,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             column.addView(row);
         }
 
-        android.app.Dialog dialog = new MaterialAlertDialogBuilder(context)
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(file.getName())
                 .setView(scroll)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1237,7 +1239,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         context.runOnUiThread(dialog::show);
     }
 
-    private android.app.Dialog toolDialog;
+    private androidx.appcompat.app.AlertDialog toolDialog;
 
     private void dismissToolDialog() {
         if (toolDialog != null) {
@@ -1246,13 +1248,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
     }
 
-    private int resolveThemeColor(int attr, int fallback) {
-        android.util.TypedValue tv = new android.util.TypedValue();
-        if (getTheme() != null && context.getTheme().resolveAttribute(attr, tv, true)) {
-            return tv.data;
-        }
-        return fallback;
-    }
 
     /** Asks for a chunk size, then splits the file beside itself. */
     private void promptSplit(File src) {
