@@ -440,6 +440,9 @@ public class EntryDialogs {
     }
 
     private void runCompress(File outputZip, String format, File file, String fileName, boolean multi, View compressView, ProgressManager pm) {
+        // Read the password here rather than passing it in: this is a separate
+        // method from the dialog that owns the field.
+        final TextInputEditText passwordField = compressView.findViewById(R.id.compress_password);
         Object[] values = state.values();
         pm.show();
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
@@ -537,8 +540,8 @@ public class EntryDialogs {
                     }
                 } else {
                     try {
-                        String pw = passwordInput == null || passwordInput.getText() == null
-                                ? "" : passwordInput.getText().toString();
+                        String pw = passwordField == null || passwordField.getText() == null
+                                ? "" : passwordField.getText().toString();
                         if (!pw.isEmpty() && !finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
                             Extensions.showMessage(context, R.string.archive_encrypt_zip_only);
                             return;
