@@ -85,7 +85,25 @@ public class ArchiveUtil {
     }
 
     public static void create(File output, List<File> sources) throws IOException {
+        create(output, sources, null);
+    }
+
+    /**
+     * Creates an archive, encrypting it when a password is given.
+     *
+     * <p>Only zip can be encrypted here: it goes through zip4j, which supports AES
+     * encryption. The 7z writer in commons-compress has no password support, so a
+     * password with a 7z target is refused rather than quietly ignored.
+     */
+    public static void create(File output, List<File> sources, char[] password) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".zip")) {
+            createZip(output, sources, password);
+            return;
+        }
+        if (password != null && password.length > 0) {
+            throw new IOException("Encrypted archives can only be created as .zip");
+        }
         if (lower.endsWith(".7z")) create7z(output, sources);
         else if (lower.endsWith(".tar")) createTar(new FileOutputStream(output), sources);
         else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
@@ -212,6 +230,25 @@ public class ArchiveUtil {
             sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
             for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName());
         }
+    }
+
+    /**
+     * Writes a zip through zip4j, with AES encryption when a password is given.
+     *
+     * <p>zip4j also handles the entry paths, so directory contents keep their
+     * structure rather than landing flat.
+     */
+    static void createZip(File output, List<File> sources, char[] password) throws IOException {
+        net.lingala.zip4j.ZipFile zip = new net.lingala.zip4j.ZipFile(output);
+        net.lingala.zip4j.model.ZipParameters params =
+                new net.lingala.zip4j.model.ZipParameters();
+        params.setCompressionMethod(net.lingala.zip4j.model.enums.CompressionMethod.DEFLATE);
+        if (password != null && password.length > 0) {
+            params.setEncryption(net.lingala.zip4j.model.enums.EncryptionMethod.AES);
+            params.setPassword(new String(password));
+        }
+        List<java.io.File> toAdd = new ArrayList<>(sources);
+        zip.addFiles(toAdd, params);
     }
 
     private static void addToSevenZ(SevenZOutputFile sevenZOutput, File file, String entryName) throws IOException {

@@ -392,6 +392,25 @@ public class EntryDialogs {
         for (CompressionLevel cl : CompressionLevel.values()) compressionLevels.add(cl.name());
         compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, compressionLevels));
         compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
+        // Password, with the stored ones a tap away: typing the same password for
+        // every archive is exactly what the password manager is for.
+        final TextInputEditText passwordInput = compressView.findViewById(R.id.compress_password);
+        View pickButton = compressView.findViewById(R.id.compress_pick_password);
+        pickButton.setOnClickListener(v -> {
+            java.util.List<String> saved =
+                    io.github.abdurazaaqmohammed.utils.ArchivePasswordStore.list(context);
+            if (saved.isEmpty()) {
+                Extensions.showMessage(context, R.string.compress_no_saved_passwords);
+                return;
+            }
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.compress_pick_password)
+                    .setItems(saved.toArray(new String[0]), (d2, which) ->
+                            passwordInput.setText(saved.get(which)))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        });
+
         compressDialog.setView(compressView);
         compressDialog.setNegativeButton(context.rss.getString(android.R.string.cancel), null);
         ProgressManager pm = new ProgressManager(context, true);
@@ -518,7 +537,14 @@ public class EntryDialogs {
                     }
                 } else {
                     try {
-                        ArchiveUtil.create(finalOutput, finalSources);
+                        String pw = passwordInput == null || passwordInput.getText() == null
+                                ? "" : passwordInput.getText().toString();
+                        if (!pw.isEmpty() && !finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
+                            Extensions.showMessage(context, R.string.archive_encrypt_zip_only);
+                            return;
+                        }
+                        ArchiveUtil.create(finalOutput, finalSources,
+                                pw.isEmpty() ? null : pw.toCharArray());
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
                         context.handler.post(context::reloadCurrentFolder);

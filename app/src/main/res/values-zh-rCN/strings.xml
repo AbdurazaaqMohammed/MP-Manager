@@ -1089,6 +1089,10 @@ Layout Inspector
     <string name="shortcut_script_needs_shell">执行脚本需要 root 或 Shizuku 权限</string>
     <string name="shortcut_script_ran">脚本执行完毕</string>
     <string name="shortcut_script_out">脚本输出：%1$s</string>
+    <string name="compress_password_hint">密码（仅 zip 支持，留空则不加密）</string>
+    <string name="compress_pick_password">从已保存密码中选择</string>
+    <string name="compress_no_saved_passwords">还没有保存任何密码</string>
+    <string name="archive_encrypt_zip_only">加密压缩包必须是 .zip 格式</string>
     <string name="enter_archive_password">压缩包密码</string>
     <string name="archive_password_needed">该压缩包已加密</string>
     <string name="shortcut_icon">桌面图标快捷方式</string>
