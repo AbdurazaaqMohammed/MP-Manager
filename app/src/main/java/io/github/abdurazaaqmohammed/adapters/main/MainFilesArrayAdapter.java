@@ -106,6 +106,7 @@ import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileListExporter;
 import io.github.abdurazaaqmohammed.utils.FileNameSwap;
 import io.github.abdurazaaqmohammed.utils.FileSplitMerge;
+import io.github.abdurazaaqmohammed.utils.SymlinkTool;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
@@ -1119,7 +1120,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 context.getString(R.string.file_split),
                 context.getString(R.string.file_merge),
                 context.getString(R.string.file_swap_names),
-                context.getString(R.string.file_export_list)};
+                context.getString(R.string.file_export_list),
+                context.getString(R.string.file_symlink)};
         new MaterialAlertDialogBuilder(context)
                 .setTitle(file.getName())
                 .setItems(tools, (d, which) -> {
@@ -1129,7 +1131,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         case 2: promptSplit(file); break;
                         case 3: mergeParts(file); break;
                         case 4: promptSwapNames(file); break;
-                        default: exportListing(file); break;
+                        case 5: exportListing(file); break;
+                        default: createSymlink(file); break;
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1294,6 +1297,40 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    /**
+     * Creates a symbolic link beside the file.
+     *
+     * <p>Without a shell backend a real link is impossible, so the fallback is an
+     * in-app entry: the user gets something that takes them to the same place and
+     * the message says plainly that it is not a filesystem link.
+     */
+    private void createSymlink(File target) {
+        File link = new File(target.getParentFile(), target.getName() + "_link");
+        new Thread(() -> {
+            SymlinkTool.Outcome outcome = SymlinkTool.create(context, target, link);
+            context.runOnUiThread(() -> {
+                switch (outcome) {
+                    case CREATED:
+                        context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                        Extensions.showMessage(context,
+                                context.getString(R.string.file_symlink_done, link.getName()));
+                        break;
+                    case EXISTS:
+                        Extensions.showMessage(context,
+                                context.getString(R.string.file_symlink_exists, link.getName()));
+                        break;
+                    case NO_PERMISSION:
+                        context.addBookmark(target);
+                        Extensions.showMessage(context, R.string.file_symlink_fallback);
+                        break;
+                    default:
+                        Extensions.showMessage(context, R.string.file_symlink_failed);
+                        break;
+                }
+            });
+        }).start();
     }
 
     /** Shows a password box and hands the entered text to {@code onPassword}. */

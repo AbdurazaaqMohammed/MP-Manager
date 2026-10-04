@@ -1108,6 +1108,11 @@ Tap "Open settings", pick "Activity log" and turn it on. It only listens for the
     <string name="delete_to_recycle_bin">Move to recycle bin</string>
     <string name="delete_to_recycle_bin_hint">Untick to delete permanently instead</string>
     <string name="confirm_delete_permanently">Permanently delete %1$s? This cannot be undone.</string>
+    <string name="file_symlink">Create shortcut link</string>
+    <string name="file_symlink_done">Linked as %1$s</string>
+    <string name="file_symlink_exists">%1$s already exists</string>
+    <string name="file_symlink_failed">Could not create the link</string>
+    <string name="file_symlink_fallback">No root or Shizuku access, so an in-app shortcut was saved to the sidebar instead</string>
     <string name="file_swap_names">Swap file names</string>
     <string name="file_export_list">Export file list</string>
     <string name="file_swap_title">Swap names with</string>
