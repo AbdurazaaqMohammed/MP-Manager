@@ -206,7 +206,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     public List<File> selectedImages() {
                         List<File> out = new ArrayList<>();
                         for (int p : selectedPositions) {
-                            Object o = values[p];
+                            Object o = MainFilesArrayAdapter.this.values[p];
                             if (o instanceof File f) {
                                 if (f.isFile() && FileUtils.isImageFile(f.getName())) out.add(f);
                             }
@@ -233,7 +233,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 new EntryDialogs.State() {
                     @Override
                     public Object[] values() {
-                        return values;
+                        // Must be the field, not the constructor parameter of the
+                        // same name: the field carries the up-dir entry at index 0
+                        // and the parameter does not, so reading the parameter
+                        // shifted every dialog one row down the listing.
+                        return MainFilesArrayAdapter.this.values;
                     }
 
                     @Override
@@ -613,6 +617,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         // point at a live entry: using the bind-time index would
                         // either read past the end or, worse, hit a neighbouring
                         // file and delete it.
+                        // If the pane was re-listed while this menu was open, the
+                        // menu is holding a detached adapter whose indices no longer
+                        // mean what they did: the same index named gpg.txt.gpg when
+                        // the row was pressed and a different file by the time the
+                        // item was tapped. Refuse rather than act on a listing the
+                        // user is no longer looking at.
+                        RecyclerView paneView = (RecyclerView) context.findViewById(
+                                pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                        if (paneView.getAdapter() != MainFilesArrayAdapter.this) {
+                            Extensions.showMessage(context, R.string.list_changed_try_again);
+                            return;
+                        }
                         final int livePosition = indexOf(boundItem);
                         selectedPositions.removeIf(p -> p < 0 || p >= values.length);
                         if (livePosition < 0) {
