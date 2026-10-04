@@ -103,6 +103,8 @@ import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileListExporter;
+import io.github.abdurazaaqmohammed.utils.FileNameSwap;
 import io.github.abdurazaaqmohammed.utils.FileSplitMerge;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
@@ -1115,7 +1117,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 context.getString(R.string.encrypt_gpg),
                 context.getString(R.string.decrypt_gpg),
                 context.getString(R.string.file_split),
-                context.getString(R.string.file_merge)};
+                context.getString(R.string.file_merge),
+                context.getString(R.string.file_swap_names),
+                context.getString(R.string.file_export_list)};
         new MaterialAlertDialogBuilder(context)
                 .setTitle(file.getName())
                 .setItems(tools, (d, which) -> {
@@ -1123,7 +1127,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         case 0: gpgEncrypt(file); break;
                         case 1: gpgDecrypt(file); break;
                         case 2: promptSplit(file); break;
-                        default: mergeParts(file); break;
+                        case 3: mergeParts(file); break;
+                        case 4: promptSwapNames(file); break;
+                        default: exportListing(file); break;
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1206,6 +1212,88 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 }
             });
         }).start();
+    }
+
+    /** Asks which sibling to trade names with, then swaps them. */
+    private void promptSwapNames(File src) {
+        File[] siblings = src.getParentFile() == null ? null : src.getParentFile().listFiles();
+        if (siblings == null) {
+            Extensions.showMessage(context, R.string.file_swap_no_target);
+            return;
+        }
+        List<File> others = new ArrayList<>();
+        for (File f : siblings) {
+            if (!f.equals(src)) others.add(f);
+        }
+        if (others.isEmpty()) {
+            Extensions.showMessage(context, R.string.file_swap_no_target);
+            return;
+        }
+        String[] names = new String[others.size()];
+        for (int i = 0; i < others.size(); i++) names[i] = others.get(i).getName();
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(context.getString(R.string.file_swap_title, src.getName()))
+                .setItems(names, (d, which) -> {
+                    File other = others.get(which);
+                    new Thread(() -> {
+                        String error = null;
+                        try {
+                            FileNameSwap.swap(src, other);
+                        } catch (Exception e) {
+                            error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                        }
+                        final String err = error;
+                        context.runOnUiThread(() -> {
+                            if (err != null) {
+                                new ErrorUtil(context).showError(new IOException(err));
+                            } else {
+                                context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                                Extensions.showMessage(context, src.getName() + " ⇄ " + other.getName());
+                            }
+                        });
+                    }).start();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Writes a listing of this file's folder to a text file beside it. */
+    private void exportListing(File file) {
+        final File root = file.isDirectory() ? file : file.getParentFile();
+        if (root == null) {
+            Extensions.showMessage(context, R.string.file_export_failed);
+            return;
+        }
+        String[] modes = {
+                context.getString(R.string.file_export_top),
+                context.getString(R.string.file_export_recursive)};
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(context.getString(R.string.file_export_title, root.getName()))
+                .setItems(modes, (d, which) -> {
+                    File out = FileListExporter.defaultOutput(root);
+                    new Thread(() -> {
+                        String error = null;
+                        int n = 0;
+                        try {
+                            n = FileListExporter.export(root, out, which == 1).entries();
+                        } catch (Exception e) {
+                            error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                        }
+                        final int count = n;
+                        final String err = error;
+                        context.runOnUiThread(() -> {
+                            if (err != null) {
+                                new ErrorUtil(context).showError(new IOException(err));
+                            } else {
+                                context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                                Extensions.showMessage(context,
+                                        context.getString(R.string.file_export_done, count, out.getName()));
+                            }
+                        });
+                    }).start();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /** Shows a password box and hands the entered text to {@code onPassword}. */

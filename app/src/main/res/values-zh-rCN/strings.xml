@@ -1083,6 +1083,15 @@ Layout Inspector
     <string name="delete_to_recycle_bin">移入回收站</string>
     <string name="delete_to_recycle_bin_hint">不勾选则直接彻底删除，无法还原</string>
     <string name="confirm_delete_permanently">彻底删除 %1$s？此操作无法撤销。</string>
+    <string name="file_swap_names">交换文件名</string>
+    <string name="file_export_list">导出文件列表</string>
+    <string name="file_swap_title">与哪个文件交换</string>
+    <string name="file_swap_no_target">该目录下没有其他文件</string>
+    <string name="file_export_title">列出 %1$s</string>
+    <string name="file_export_top">仅当前目录</string>
+    <string name="file_export_recursive">包含子目录</string>
+    <string name="file_export_done">已写入 %1$d 条到 %2$s</string>
+    <string name="file_export_failed">无法列出该目录</string>
     <string name="file_split">文件分割</string>
     <string name="file_merge">文件合并</string>
     <string name="file_split_title">分割 %1$s</string>

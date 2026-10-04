@@ -1108,6 +1108,15 @@ Tap "Open settings", pick "Activity log" and turn it on. It only listens for the
     <string name="delete_to_recycle_bin">Move to recycle bin</string>
     <string name="delete_to_recycle_bin_hint">Untick to delete permanently instead</string>
     <string name="confirm_delete_permanently">Permanently delete %1$s? This cannot be undone.</string>
+    <string name="file_swap_names">Swap file names</string>
+    <string name="file_export_list">Export file list</string>
+    <string name="file_swap_title">Swap names with</string>
+    <string name="file_swap_no_target">No other file in this folder</string>
+    <string name="file_export_title">List %1$s</string>
+    <string name="file_export_top">This folder only</string>
+    <string name="file_export_recursive">Include subfolders</string>
+    <string name="file_export_done">%1$d entries written to %2$s</string>
+    <string name="file_export_failed">Cannot list this folder</string>
     <string name="file_split">Split file</string>
     <string name="file_merge">Merge parts</string>
     <string name="file_split_title">Split %1$s</string>
