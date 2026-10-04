@@ -1064,6 +1064,11 @@ Layout Inspector
     <string name="gpg_passphrase_hint">Key passphrase (leave empty if none)</string>
     <string name="gpg_wrong_key">No matching secret key, or wrong passphrase</string>
     <string name="build_fingerprint">build 7817be4 </string>
+    <string name="smali_reference">Smali instruction reference</string>
+    <string name="smali_reference_title">Smali Instructions</string>
+    <string name="smali_reference_search_hint">Search opcode, form or meaning</string>
+    <string name="smali_reference_count">%1$d instructions</string>
+    <string name="smali_reference_count_filtered">%1$d of %2$d instructions</string>
     <string name="list_changed_try_again">List changed, please try again</string>
     <string name="gpg_target_exists">Target exists, not overwritten</string>
     <string name="enter_password_gpg">Enter password</string>

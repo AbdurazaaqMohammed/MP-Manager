@@ -1038,6 +1038,11 @@ Layout Inspector
     <string name="gpg_key_path_hint">公钥或私钥文件 (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">私钥口令（没有则留空）</string>
     <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
+    <string name="smali_reference">Smali 指令查询</string>
+    <string name="smali_reference_title">Smali 指令查询</string>
+    <string name="smali_reference_search_hint">搜索指令助记符、操作数格式或含义</string>
+    <string name="smali_reference_count">共 %1$d 条指令</string>
+    <string name="smali_reference_count_filtered">匹配 %1$d / %2$d 条指令</string>
     <string name="list_changed_try_again">列表已变化，请重试</string>
     <string name="gpg_target_exists">目标已存在，未覆盖</string>
     <string name="enter_password_gpg">输入密码</string>
