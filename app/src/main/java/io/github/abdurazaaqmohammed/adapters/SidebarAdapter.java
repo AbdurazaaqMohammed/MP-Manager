@@ -261,7 +261,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private void addTools() {
-        String[] defaults = {"extract", "ftp_server", "color_picker", "layout", "smali_reference", "activity_log", "recycle_bin", "tools", "settings"};
+        String[] defaults = {"extract", "ftp_server", "color_picker", "layout", "smali_reference", "activity_log", "password_manager", "recycle_bin", "tools", "settings"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -273,6 +273,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 case "layout": addTool(id, R.string.sidebar_layout_inspector, R.drawable.ic_inspect); break;
                 case "smali_reference": addTool(id, R.string.smali_reference, R.drawable.terminal_24px); break;
                 case "activity_log": addTool(id, R.string.activity_log, R.drawable.tag_24px); break;
+                case "password_manager": addTool(id, R.string.password_manager, R.drawable.lock_24px); break;
                 case "recycle_bin": addTool(id, R.string.recycle_bin, R.drawable.baseline_delete_24); break;
                 case "tools": addTool(id, R.string.sidebar_tools, R.drawable.tools_24px); break;
                 case "settings": addTool(id, R.string.settings, R.drawable.baseline_settings_24); break;
