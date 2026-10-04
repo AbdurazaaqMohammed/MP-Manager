@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import java.util.List;
+
 import io.github.abdurazaaqmohammed.utils.ActivityLogStore;
 
 /**
@@ -35,7 +37,7 @@ public class ActivityLoggerService extends AccessibilityService {
 
     private void dumpWindows() {
         try {
-            AccessibilityWindowInfo[] windows = getWindows();
+            List<AccessibilityWindowInfo> windows = getWindows();
             if (windows == null) return;
             for (AccessibilityWindowInfo w : windows) {
                 if (w == null || w.getRoot() == null) continue;

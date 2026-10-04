@@ -81,7 +81,7 @@ public class ActivityLogActivity extends BaseActivity {
         ignoreSelf.setChecked(ActivityLogStore.ignoreSelf());
         ignoreSelf.setOnCheckedChangeListener((b, checked) -> ActivityLogStore.setIgnoreSelf(checked));
 
-        findViewById(R.id.log_search).addTextChangedListener(new TextWatcher() {
+        ((android.widget.EditText) findViewById(R.id.log_search)).addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -107,9 +107,13 @@ public class ActivityLogActivity extends BaseActivity {
     private void refresh() {
         boolean running = isServiceEnabled();
         status.setText(running ? R.string.activity_log_running : R.string.activity_log_not_running);
-        status.setTextColor(getColor(running
-                ? com.google.android.material.R.color.primary
-                : com.google.android.material.R.color.error));
+        // Theme attributes rather than library colour ids, so this follows the
+        // app's light/dark palette.
+        int attr = running ? androidx.appcompat.R.attr.colorPrimary : androidx.appcompat.R.attr.colorError;
+        android.util.TypedValue tv = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(attr, tv, true)) {
+            status.setTextColor(tv.data);
+        }
         status.setOnClickListener(v -> {
             if (!running) openAccessibilitySettings();
         });
