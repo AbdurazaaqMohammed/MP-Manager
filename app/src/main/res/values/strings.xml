@@ -1064,6 +1064,22 @@ Layout Inspector
     <string name="gpg_passphrase_hint">Key passphrase (leave empty if none)</string>
     <string name="gpg_wrong_key">No matching secret key, or wrong passphrase</string>
     <string name="build_fingerprint">build 7817be4 </string>
+    <string name="delete_permanently">Delete permanently</string>
+    <string name="confirm_recycle_f">Move %1$s to the recycle bin?</string>
+    <string name="recycle_bin">Recycle bin</string>
+    <string name="recycle_bin_title">Recycle bin</string>
+    <string name="recycle_bin_empty">The recycle bin is empty</string>
+    <string name="recycle_bin_summary_empty">Nothing to restore</string>
+    <string name="recycle_bin_summary">%1$d items, %2$s</string>
+    <string name="recycle_bin_item_meta">%1$s
+Deleted %2$s · %3$s</string>
+    <string name="recycle_bin_restore">Restore</string>
+    <string name="recycle_bin_purge">Delete permanently</string>
+    <string name="recycle_bin_restored">Restored</string>
+    <string name="recycle_bin_restore_failed">Could not restore</string>
+    <string name="recycle_bin_confirm_purge">Permanently delete %1$s? This cannot be undone.</string>
+    <string name="recycle_bin_empty_action">Empty bin</string>
+    <string name="recycle_bin_confirm_empty">Permanently delete %1$d items (%2$s)? This cannot be undone.</string>
     <string name="smali_reference">Smali instruction reference</string>
     <string name="smali_reference_title">Smali Instructions</string>
     <string name="smali_reference_search_hint">Search opcode, form or meaning</string>

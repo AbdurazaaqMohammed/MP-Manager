@@ -1038,6 +1038,22 @@ Layout Inspector
     <string name="gpg_key_path_hint">公钥或私钥文件 (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">私钥口令（没有则留空）</string>
     <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
+    <string name="delete_permanently">永久删除</string>
+    <string name="confirm_recycle_f">将 %1$s 移入回收站？</string>
+    <string name="recycle_bin">回收站</string>
+    <string name="recycle_bin_title">回收站</string>
+    <string name="recycle_bin_empty">回收站是空的</string>
+    <string name="recycle_bin_summary_empty">没有可还原的内容</string>
+    <string name="recycle_bin_summary">%1$d 项，%2$s</string>
+    <string name="recycle_bin_item_meta">%1$s
+删除于 %2$s · %3$s</string>
+    <string name="recycle_bin_restore">还原</string>
+    <string name="recycle_bin_purge">彻底删除</string>
+    <string name="recycle_bin_restored">已还原</string>
+    <string name="recycle_bin_restore_failed">还原失败</string>
+    <string name="recycle_bin_confirm_purge">彻底删除 %1$s？此操作无法撤销。</string>
+    <string name="recycle_bin_empty_action">清空回收站</string>
+    <string name="recycle_bin_confirm_empty">彻底删除 %1$d 项（%2$s）？此操作无法撤销。</string>
     <string name="smali_reference">Smali 指令查询</string>
     <string name="smali_reference_title">Smali 指令查询</string>
     <string name="smali_reference_search_hint">搜索指令助记符、操作数格式或含义</string>

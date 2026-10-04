@@ -36,6 +36,7 @@ public final class FileMenuOrder {
     public static final String CMP_TEXT = "cmp_text";
     public static final String CMP_HASH = "cmp_hash";
     public static final String CMP_APK = "cmp_apk";
+    public static final String DELETE_PERMANENT = "delete_permanent";
     public static final String ENCRYPT = "encrypt";
     public static final String DECRYPT = "decrypt";
     public static final String BATCH_CROP = "batch_crop";
@@ -150,6 +151,7 @@ public final class FileMenuOrder {
             case CMP_TEXT -> context.getString(R.string.compare_text);
             case CMP_HASH -> context.getString(R.string.compare_hashes);
             case CMP_APK -> context.getString(R.string.compare_apks);
+            case DELETE_PERMANENT -> context.getString(R.string.delete_permanently);
             case ENCRYPT -> context.getString(R.string.encrypt_gpg);
             case DECRYPT -> context.getString(R.string.decrypt_gpg);
             case BATCH_CROP -> context.getString(R.string.crop_images);
@@ -190,6 +192,7 @@ public final class FileMenuOrder {
             case EXTRACT -> R.drawable.baseline_compress_24;
             case CMP_ZIP, CMP_ARSC -> R.drawable.baseline_swap_horiz_24;
             case CMP_TEXT, CMP_HASH, CMP_APK -> R.drawable.baseline_swap_horiz_24;
+            case DELETE_PERMANENT -> R.drawable.baseline_delete_24;
             case ENCRYPT -> R.drawable.lock_24px;
             case DECRYPT -> R.drawable.lock_open_24px;
             case BATCH_CROP -> R.drawable.edit_24px;

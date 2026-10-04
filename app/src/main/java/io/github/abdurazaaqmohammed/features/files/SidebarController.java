@@ -33,6 +33,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
+import io.github.abdurazaaqmohammed.tools.RecycleBinActivity;
 import io.github.abdurazaaqmohammed.tools.SmaliReferenceActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
@@ -351,6 +352,9 @@ public class SidebarController {
                 break;
             case "settings":
                 activity.showSettingsDialog();
+                break;
+            case "recycle_bin":
+                activity.startActivity(new Intent(activity, RecycleBinActivity.class));
                 break;
             case "smali_reference":
                 activity.startActivity(new Intent(activity, SmaliReferenceActivity.class));

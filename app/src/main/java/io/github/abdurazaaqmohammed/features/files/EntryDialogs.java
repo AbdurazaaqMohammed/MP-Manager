@@ -201,6 +201,15 @@ public class EntryDialogs {
     }
 
     public void showDeleteDialog(int position, File file, ZipEntryInfo entry, boolean multi) {
+        showDeleteDialog(position, file, entry, multi, true);
+    }
+
+    /**
+     * @param useRecycleBin move into the recoverable bin instead of erasing;
+     *                      false is a permanent delete.
+     */
+    public void showDeleteDialog(int position, File file, ZipEntryInfo entry, boolean multi,
+                                 boolean useRecycleBin) {
         Object[] values = state.values();
         boolean isInZip = state.isInZip();
         ProgressManager pm = new ProgressManager(context, true);
@@ -228,7 +237,9 @@ public class EntryDialogs {
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
             ll.findViewById(R.id.sign_settings).setOnClickListener(context.uiHelper.showSignSettingsDialog());
             deleteDialog.setView(ll);
-        } else deleteDialog.setMessage(context.rss.getString(R.string.confirm_delete_f, filesToDisplay) + diag);
+        } else deleteDialog.setMessage(context.rss.getString(
+                useRecycleBin ? R.string.confirm_recycle_f : R.string.confirm_delete_f,
+                filesToDisplay) + diag);
         deleteDialog.setTitle(context.rss.getString(R.string.warning)).setPositiveButton(context.rss.getString(R.string.yes), (dialog3, which) -> {
             SignWrapper[] wrapper = new SignWrapper[1];
             Runnable doDelete = () -> {
@@ -246,6 +257,16 @@ public class EntryDialogs {
                                     if (finalSelectedFile1 != null)
                                         pm.setText(context.rss.getString(R.string.deleting, finalSelectedFile1.getName()));
 
+                                    if (useRecycleBin) {
+                                        // Moving keeps it recoverable; a fallback to a
+                                        // real delete is only for when the move cannot
+                                        // happen at all.
+                                        try {
+                                            io.github.abdurazaaqmohammed.utils.RecycleBin
+                                                    .store(context, selectedFile);
+                                            continue;
+                                        } catch (Exception ignored) {}
+                                    }
                                     if (useElevatedForDelete) {
                                         try {
                                             AccessManager.delete(context, selectedFile.getAbsolutePath(), true);
@@ -276,16 +297,26 @@ public class EntryDialogs {
                             pm.setProgress(0, total);
                             pm.setText(context.rss.getString(R.string.deleting, file.getName()));
 
-                            if (useElevatedForDelete) {
+                            boolean stored = false;
+                            if (useRecycleBin) {
                                 try {
-                                    AccessManager.delete(context, file.getAbsolutePath(), true);
-                                } catch (Exception e) {
+                                    io.github.abdurazaaqmohammed.utils.RecycleBin.store(context, file);
+                                    stored = true;
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            if (!stored) {
+                                if (useElevatedForDelete) {
+                                    try {
+                                        AccessManager.delete(context, file.getAbsolutePath(), true);
+                                    } catch (Exception e) {
+                                        if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                        else file.delete();
+                                    }
+                                } else {
                                     if (file.isDirectory()) Util.deleteDir(file, pm, total);
                                     else file.delete();
                                 }
-                            } else {
-                                if (file.isDirectory()) Util.deleteDir(file, pm, total);
-                                else file.delete();
                             }
                             context.handler.post(() -> {
                                 state.clearSelection();

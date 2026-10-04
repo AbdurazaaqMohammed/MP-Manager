@@ -450,6 +450,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.OPEN_WITH, FileMenuOrder.labelFor(context, FileMenuOrder.OPEN_WITH, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.BOOKMARK, FileMenuOrder.labelFor(context, FileMenuOrder.BOOKMARK, direction)));
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMD, FileMenuOrder.labelFor(context, FileMenuOrder.CMD, direction)));
+                if (!multi && !isInZip && file != null) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DELETE_PERMANENT, FileMenuOrder.labelFor(context, FileMenuOrder.DELETE_PERMANENT, direction)));
+                }
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CHECK, FileMenuOrder.labelFor(context, FileMenuOrder.CHECK, direction)));
 
                 if (multi && !isInZip) {
@@ -766,7 +769,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                         entryDialogs.showRenameDialog(livePosition, file, entry, fileName, multi);
                                         break;
                                     case FileMenuOrder.DELETE:
-                                        entryDialogs.showDeleteDialog(livePosition, file, entry, multi);
+                                        entryDialogs.showDeleteDialog(livePosition, file, entry, multi, true);
+                                        break;
+                                    case FileMenuOrder.DELETE_PERMANENT:
+                                        entryDialogs.showDeleteDialog(livePosition, file, entry, multi, false);
                                         break;
                                     case FileMenuOrder.COMPRESS:
                                         entryDialogs.showCompressDialog(file, fileName, multi);
