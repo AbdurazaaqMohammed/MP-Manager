@@ -339,6 +339,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final View convertView = holder.itemView;
+        // Drop any listener left over from a previous bind *before* anything
+        // else. The real listener is attached from a posted runnable, and if this
+        // row were rebound first, the stale one survived and the row answered
+        // taps and long-presses for its old index -- which showed up as the
+        // highlight and the delete target sitting one row off.
+        convertView.setOnTouchListener(null);
+        convertView.setTranslationX(0f);
         position = holder.getBindingAdapterPosition();
         if (position < 0 || position >= values.length) return;
         Object item = values[position];
@@ -762,7 +769,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         originalLongClickListener,
                         finalPosition,
                         MainFilesArrayAdapter.this,
-                        pane1 ? 1 : 2));
+                        pane1 ? 1 : 2,
+                        bindHolder::getBindingAdapterPosition));
             });
         }).start();
 

@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import androidx.annotation.NonNull;
 import androidx.core.view.GestureDetectorCompat;
+import androidx.recyclerview.widget.RecyclerView;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
@@ -21,6 +22,12 @@ public class SwipeTouchListener implements View.OnTouchListener {
     private final View.OnLongClickListener originalLongClickListener;
     private final Object arrayAdapter;
     private final int position;
+    /**
+     * Resolves the row this view currently shows, so a listener that outlived a
+     * rebind cannot act on a stale index. May be null, in which case the
+     * position captured at bind time is used.
+     */
+    private final java.util.function.IntSupplier livePosition;
 
     private final float swipeSlopPx;
     private final float swipeConfirmPx;
@@ -39,9 +46,19 @@ public class SwipeTouchListener implements View.OnTouchListener {
                               View.OnLongClickListener longClickListener,
                               int position,
                               Object arrayAdapter, int pane) {
+        this(context, clickListener, longClickListener, position, arrayAdapter, pane, null);
+    }
+
+    public SwipeTouchListener(MainActivity context,
+                              View.OnClickListener clickListener,
+                              View.OnLongClickListener longClickListener,
+                              int position,
+                              Object arrayAdapter, int pane,
+                              java.util.function.IntSupplier livePosition) {
         this.originalClickListener = clickListener;
         this.originalLongClickListener = longClickListener;
         this.position = position;
+        this.livePosition = livePosition;
         this.context = context;
         this.arrayAdapter = arrayAdapter;
         this.pane = pane;
@@ -58,7 +75,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
                         context.setCurrentPane(pane);
                         if (!isSwiping) {
                             if (arrayAdapter instanceof MainFilesArrayAdapter && ((MainFilesArrayAdapter) arrayAdapter).isMultiSelectMode()) {
-                                ((MainFilesArrayAdapter) arrayAdapter).handleMultiSelect(position);
+                                ((MainFilesArrayAdapter) arrayAdapter).handleMultiSelect(currentPosition());
                             } else {
                                 originalClickListener.onClick(null);
                             }
@@ -146,7 +163,7 @@ public class SwipeTouchListener implements View.OnTouchListener {
                                 .start();
 
                         if (arrayAdapter instanceof MainFilesArrayAdapter ma)
-                            ma.handleSwipe(position);
+                            ma.handleSwipe(currentPosition());
                     } else {
                         v.animate().translationX(0).setDuration(180).setInterpolator(new DecelerateInterpolator(1.5f)).start();
                     }
@@ -159,6 +176,18 @@ public class SwipeTouchListener implements View.OnTouchListener {
             }
         }
         return false;
+    }
+
+    /**
+     * The row this view shows right now. Falls back to the bind-time index when
+     * no live source was supplied or the view has been recycled off-screen.
+     */
+    private int currentPosition() {
+        if (livePosition != null) {
+            int live = livePosition.getAsInt();
+            if (live != RecyclerView.NO_POSITION) return live;
+        }
+        return position;
     }
 
     private float rubberBand(float dx, float threshold) {
