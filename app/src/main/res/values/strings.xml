@@ -1108,6 +1108,11 @@ Tap "Open settings", pick "Activity log" and turn it on. It only listens for the
     <string name="delete_to_recycle_bin">Move to recycle bin</string>
     <string name="delete_to_recycle_bin_hint">Untick to delete permanently instead</string>
     <string name="confirm_delete_permanently">Permanently delete %1$s? This cannot be undone.</string>
+    <string name="file_split">Split file</string>
+    <string name="file_merge">Merge parts</string>
+    <string name="file_split_title">Split %1$s</string>
+    <string name="file_split_done">Created %1$d parts</string>
+    <string name="file_merge_none">No matching parts found next to this file</string>
     <string name="file_tools">Tools</string>
     <string name="delete_permanently">Delete permanently</string>
     <string name="confirm_recycle_f">Move %1$s to the recycle bin?</string>

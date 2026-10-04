@@ -1083,6 +1083,11 @@ Layout Inspector
     <string name="delete_to_recycle_bin">移入回收站</string>
     <string name="delete_to_recycle_bin_hint">不勾选则直接彻底删除，无法还原</string>
     <string name="confirm_delete_permanently">彻底删除 %1$s？此操作无法撤销。</string>
+    <string name="file_split">文件分割</string>
+    <string name="file_merge">文件合并</string>
+    <string name="file_split_title">分割 %1$s</string>
+    <string name="file_split_done">已生成 %1$d 个分片</string>
+    <string name="file_merge_none">该文件旁边没有找到同组分片</string>
     <string name="file_tools">工具</string>
     <string name="delete_permanently">永久删除</string>
     <string name="confirm_recycle_f">将 %1$s 移入回收站？</string>

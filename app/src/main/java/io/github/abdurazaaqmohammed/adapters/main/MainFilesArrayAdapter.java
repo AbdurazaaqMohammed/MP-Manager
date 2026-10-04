@@ -103,6 +103,7 @@ import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileSplitMerge;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
@@ -1112,18 +1113,99 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private void showFileTools(int position, File file) {
         String[] tools = {
                 context.getString(R.string.encrypt_gpg),
-                context.getString(R.string.decrypt_gpg)};
+                context.getString(R.string.decrypt_gpg),
+                context.getString(R.string.file_split),
+                context.getString(R.string.file_merge)};
         new MaterialAlertDialogBuilder(context)
                 .setTitle(file.getName())
                 .setItems(tools, (d, which) -> {
-                    if (which == 0) {
-                        gpgEncrypt(file);
-                    } else {
-                        gpgDecrypt(file);
+                    switch (which) {
+                        case 0: gpgEncrypt(file); break;
+                        case 1: gpgDecrypt(file); break;
+                        case 2: promptSplit(file); break;
+                        default: mergeParts(file); break;
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    /** Asks for a chunk size, then splits the file beside itself. */
+    private void promptSplit(File src) {
+        long[] presets = FileSplitMerge.chunkSizePresets();
+        String[] labels = new String[presets.length];
+        for (int i = 0; i < presets.length; i++) {
+            labels[i] = FileSplitMerge.describeSize(presets[i]);
+        }
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(context.getString(R.string.file_split_title, src.getName()))
+                .setItems(labels, (d, which) -> runSplit(src, presets[which]))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void runSplit(File src, long chunkSize) {
+        final ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            String error = null;
+            int count = 0;
+            try {
+                List<File> parts = FileSplitMerge.split(src, src.getParentFile(), chunkSize,
+                        (done, total) -> {
+                            pm.setProgress((int) (total == 0 ? 0 : done * 100 / total));
+                            return true;
+                        });
+                count = parts.size();
+            } catch (Exception e) {
+                error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            }
+            final int n = count;
+            final String err = error;
+            pm.dismiss();
+            context.runOnUiThread(() -> {
+                if (err != null) {
+                    new ErrorUtil(context).showError(new IOException(err));
+                } else {
+                    context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                    Extensions.showMessage(context, context.getString(R.string.file_split_done, n));
+                }
+            });
+        }).start();
+    }
+
+    /** Concatenates every sibling part belonging to the pressed part. */
+    private void mergeParts(File anyPart) {
+        List<File> parts = FileSplitMerge.findParts(anyPart);
+        if (parts.isEmpty()) {
+            Extensions.showMessage(context, R.string.file_merge_none);
+            return;
+        }
+        File out = new File(anyPart.getParentFile(),
+                FileSplitMerge.mergedName(anyPart.getName()));
+        final ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        new Thread(() -> {
+            String error = null;
+            try {
+                FileSplitMerge.merge(parts, out, (done, total) -> {
+                    pm.setProgress((int) (total == 0 ? 0 : done * 100 / total));
+                    return true;
+                });
+            } catch (Exception e) {
+                error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            }
+            final String err = error;
+            pm.dismiss();
+            context.runOnUiThread(() -> {
+                if (err != null) {
+                    new ErrorUtil(context).showError(new IOException(err));
+                } else {
+                    context.loadFolderInPane(pane1 ? context.pane1Folder : context.pane2Folder, pane1);
+                    Extensions.showMessage(context, out.getName());
+                }
+            });
+        }).start();
     }
 
     /** Shows a password box and hands the entered text to {@code onPassword}. */
