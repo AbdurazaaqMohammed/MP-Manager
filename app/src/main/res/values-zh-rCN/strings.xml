@@ -1083,6 +1083,7 @@ Layout Inspector
     <string name="delete_to_recycle_bin">移入回收站</string>
     <string name="delete_to_recycle_bin_hint">不勾选则直接彻底删除，无法还原</string>
     <string name="confirm_delete_permanently">彻底删除 %1$s？此操作无法撤销。</string>
+    <string name="file_tools">工具</string>
     <string name="delete_permanently">永久删除</string>
     <string name="confirm_recycle_f">将 %1$s 移入回收站？</string>
     <string name="recycle_bin">回收站</string>

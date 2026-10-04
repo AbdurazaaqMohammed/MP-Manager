@@ -479,16 +479,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
-                // GPG encrypt/decrypt: single real file, not a directory, not
-                // inside an archive. Decrypt only on .gpg/.asc names.
-                if (!multi && !isInZip && file != null && !file.isDirectory()) {
-                    String lower = fileName == null ? "" : fileName.toLowerCase(Locale.ENGLISH);
-                    if (lower.endsWith(".gpg") || lower.endsWith(".asc") || lower.endsWith(".pgp")) {
-                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DECRYPT, FileMenuOrder.labelFor(context, FileMenuOrder.DECRYPT, direction)));
-                    } else {
-                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.ENCRYPT, FileMenuOrder.labelFor(context, FileMenuOrder.ENCRYPT, direction)));
-                    }
+                // Tool entry: opens the per-file tool list (GPG encrypt/decrypt
+                // and friends). Real files only; a zip entry has no file to work
+                // on.
+                if (!multi && !isInZip && file != null) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.TOOLS, FileMenuOrder.labelFor(context, FileMenuOrder.TOOLS, direction)));
                 }
+
 
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
@@ -735,11 +732,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 if (isInZip || multi) return;
                                 fileOps.extractArchive(file);
                                 return;
-                            case FileMenuOrder.ENCRYPT:
-                                gpgEncrypt(file);
-                                return;
-                            case FileMenuOrder.DECRYPT:
-                                gpgDecrypt(file);
+                            case FileMenuOrder.TOOLS:
+                                showFileTools(livePosition, file);
                                 return;
                             default:
                                 switch (actionId) {
@@ -1106,6 +1100,30 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 Extensions.showMessage(context, R.string.wrong_password_or_corrupt);
             }
         });
+    }
+
+    /**
+     * The per-file tool list reached from the long-press menu.
+     *
+     * <p>Tools live behind one entry rather than each getting a line of their
+     * own: the menu is already long, and these act on the file that was pressed
+     * rather than on the folder the user is browsing.
+     */
+    private void showFileTools(int position, File file) {
+        String[] tools = {
+                context.getString(R.string.encrypt_gpg),
+                context.getString(R.string.decrypt_gpg)};
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(file.getName())
+                .setItems(tools, (d, which) -> {
+                    if (which == 0) {
+                        gpgEncrypt(file);
+                    } else {
+                        gpgDecrypt(file);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /** Shows a password box and hands the entered text to {@code onPassword}. */
