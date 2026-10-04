@@ -206,6 +206,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.LegacyUtils;
@@ -1248,6 +1249,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             if(TextUtils.isEmpty(locate)) loadFolderInPane(resolveStartupFolder(true, homeDir1), true);
             loadFolderInPane(resolveStartupFolder(false, homeDir2), false);
+            // After the startup folders, not before: a shortcut that points
+            // somewhere would be undone by the pane loading its home folder.
+            handleShortcutIntent();
             new Thread(() -> AccessManager.warmUp(MainActivity.this)).start();
             new Thread(() -> {
                 try {
@@ -1829,6 +1833,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // The launcher reuses this activity, so a second shortcut tap arrives
+        // here rather than as a fresh intent.
+        try {
+            setIntent(intent);
+        } catch (Exception ignored) {
+        }
+        handler.post(this::handleShortcutIntent);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         try {
@@ -1848,12 +1864,150 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
         } catch (Exception ignored) {
         }
+        // Warm start: a shortcut tapped while the app was already running arrives
+        // here. On a cold start this is a no-op, since the extras were consumed
+        // during onCreate.
+        try {
+            handleShortcutIntent();
+        } catch (Exception ignored) {
+        }
         try {
             refreshSidebar(getSidebarSectionOrder());
         } catch (Exception ignored) {
         }
     }
 
+    /**
+     * Runs the action a home screen shortcut was created with.
+     *
+     * <p>The extras are consumed once and removed, so returning to the app later
+     * does not replay the action.
+     */
+    private void handleShortcutIntent() {
+        Intent in = getIntent();
+        if (in == null) return;
+        String path = in.getStringExtra(io.github.abdurazaaqmohammed.utils.ShortcutTool.EXTRA_PATH);
+        int action = in.getIntExtra(io.github.abdurazaaqmohammed.utils.ShortcutTool.EXTRA_ACTION, -1);
+        if (path == null || path.isEmpty()) return;
+        try {
+            in.removeExtra(io.github.abdurazaaqmohammed.utils.ShortcutTool.EXTRA_PATH);
+            in.removeExtra(io.github.abdurazaaqmohammed.utils.ShortcutTool.EXTRA_FOCUS);
+            in.removeExtra(io.github.abdurazaaqmohammed.utils.ShortcutTool.EXTRA_ACTION);
+        } catch (Exception ignored) {
+        }
+        File target = new File(path);
+        if (!target.exists()) {
+            Extensions.showMessage(this, rss.getString(R.string.shortcut_target_gone, path));
+            return;
+        }
+        File folder = target.isFile() ? target.getParentFile() : target;
+        if (folder != null && folder.exists()) loadFolderInPane(folder, true);
+
+        switch (action) {
+            case io.github.abdurazaaqmohammed.utils.ShortcutActionStore.ACT_LOCATE:
+                Extensions.showMessage(this, rss.getString(R.string.shortcut_located, target.getName()));
+                break;
+            case io.github.abdurazaaqmohammed.utils.ShortcutActionStore.ACT_LOCATE_CLICK:
+                // Reveal it and open it, rather than reaching into another app.
+                openShortcutTarget(target);
+                break;
+            case io.github.abdurazaaqmohammed.utils.ShortcutActionStore.ACT_EDITOR:
+                openInTextEditor(target);
+                break;
+            case io.github.abdurazaaqmohammed.utils.ShortcutActionStore.ACT_SCRIPT:
+                runShortcutScript(target);
+                break;
+            case io.github.abdurazaaqmohammed.utils.ShortcutActionStore.ACT_HTML:
+                previewShortcutHtml(target);
+                break;
+            default:
+                if (target.isDirectory()) {
+                    Extensions.showMessage(this, rss.getString(R.string.shortcut_located, target.getName()));
+                } else {
+                    openShortcutTarget(target);
+                }
+                break;
+        }
+    }
+
+    /** Opens a file the way tapping it in the list would. */
+    private void openShortcutTarget(File target) {
+        if (target.isDirectory()) {
+            loadFolderInPane(target, true);
+            return;
+        }
+        // A MIME intent rather than FileOpener: that needs the pane's adapters
+        // to do its richer per-type handling, and building them here just to open
+        // one file would be a lot of wiring for no gain here.
+        try {
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(this,
+                    "io.github.abdurazaaqmohammed.MPManager.provider", target);
+            String mime = MimeUtil.getMimeTypeForAction(this, target);
+            Intent i = new Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, mime != null ? mime : "application/octet-stream")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (i.resolveActivity(getPackageManager()) != null) startActivity(i);
+            else openInTextEditor(target);
+        } catch (Exception e) {
+            openInTextEditor(target);
+        }
+    }
+
+    private void openInTextEditor(File target) {
+        try {
+            startActivity(new Intent(this,
+                    io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity.class)
+                    .putExtra("path", target.getAbsolutePath()));
+        } catch (Exception e) {
+            Extensions.showMessage(this, rss.getString(R.string.shortcut_action_failed));
+        }
+    }
+
+    /**
+     * Runs a script through the shell backend, if one is enabled.
+     *
+     * <p>Without root or Shizuku there is nowhere to run it, and saying so beats
+     * opening an editor and letting the user wonder why nothing happened.
+     */
+    private void runShortcutScript(File script) {
+        if (io.github.abdurazaaqmohammed.utils.AccessManager.active(this)
+                != io.github.abdurazaaqmohammed.utils.AccessManager.Backend.NONE) {
+            Extensions.showMessage(this, rss.getString(R.string.shortcut_script_needs_shell));
+            return;
+        }
+        String cmd = "sh " + io.github.abdurazaaqmohammed.utils.SymlinkTool.quote(script.getAbsolutePath());
+        new Thread(() -> {
+            String out = "";
+            try {
+                io.github.abdurazaaqmohammed.utils.RootManager.ShellResult r =
+                        io.github.abdurazaaqmohammed.utils.AccessManager.execute(this, cmd, 60);
+                out = r == null ? "" : (r.output() + r.error());
+            } catch (Exception ignored) {
+            }
+            final String o = out;
+            handler.post(() -> Extensions.showMessage(this,
+                    o.isEmpty() ? rss.getString(R.string.shortcut_script_ran)
+                            : rss.getString(R.string.shortcut_script_out, o)));
+        }).start();
+    }
+
+    /** Hands an HTML file to whatever can show it; falls back to the editor. */
+    private void previewShortcutHtml(File target) {
+        try {
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(this,
+                    "io.github.abdurazaaqmohammed.MPManager.provider", target);
+            Intent i = new Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "text/html")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (i.resolveActivity(getPackageManager()) != null) {
+                startActivity(i);
+            } else {
+                openInTextEditor(target);
+            }
+        } catch (Exception e) {
+            openInTextEditor(target);
+        }
+    }
 
 
     public static boolean areFilesDifferent(File[] files1, File[] files2) throws IOException {

@@ -1108,6 +1108,12 @@ Tap "Open settings", pick "Activity log" and turn it on. It only listens for the
     <string name="delete_to_recycle_bin">Move to recycle bin</string>
     <string name="delete_to_recycle_bin_hint">Untick to delete permanently instead</string>
     <string name="confirm_delete_permanently">Permanently delete %1$s? This cannot be undone.</string>
+    <string name="shortcut_target_gone">Gone since the shortcut was made: %1$s</string>
+    <string name="shortcut_located">Located %1$s</string>
+    <string name="shortcut_action_failed">Cannot open that here</string>
+    <string name="shortcut_script_needs_shell">Running a script needs root or Shizuku</string>
+    <string name="shortcut_script_ran">Script finished</string>
+    <string name="shortcut_script_out">Script output: %1$s</string>
     <string name="shortcut_icon">Home screen shortcut</string>
     <string name="shortcut_action">Shortcut with action</string>
     <string name="shortcut_unsupported">This launcher does not support pinned shortcuts</string>

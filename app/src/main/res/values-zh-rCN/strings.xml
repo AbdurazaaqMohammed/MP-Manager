@@ -1083,6 +1083,12 @@ Layout Inspector
     <string name="delete_to_recycle_bin">移入回收站</string>
     <string name="delete_to_recycle_bin_hint">不勾选则直接彻底删除，无法还原</string>
     <string name="confirm_delete_permanently">彻底删除 %1$s？此操作无法撤销。</string>
+    <string name="shortcut_target_gone">目标已不存在：%1$s</string>
+    <string name="shortcut_located">已定位 %1$s</string>
+    <string name="shortcut_action_failed">无法在此打开</string>
+    <string name="shortcut_script_needs_shell">执行脚本需要 root 或 Shizuku 权限</string>
+    <string name="shortcut_script_ran">脚本执行完毕</string>
+    <string name="shortcut_script_out">脚本输出：%1$s</string>
     <string name="shortcut_icon">桌面图标快捷方式</string>
     <string name="shortcut_action">带操作的快捷方式</string>
     <string name="shortcut_unsupported">当前桌面不支持固定快捷方式</string>
