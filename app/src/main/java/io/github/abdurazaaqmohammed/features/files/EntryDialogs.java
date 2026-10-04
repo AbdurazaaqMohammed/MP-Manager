@@ -92,18 +92,22 @@ public class EntryDialogs {
         // listing change, so they are validated here rather than trusted: an out
         // of range index must not read past the array, and must never silently
         // name a different file in the confirmation.
-        StringBuilder sb = new StringBuilder();
-        if (multi) {
-            for (int i : state.selectedPositions()) {
-                if (i < 0 || i >= values.length) continue;
-                Object v = values[i];
-                sb.append(',').append(v == null ? "" : displayName(v));
-            }
-        } else {
+        if (!multi) {
             if (position < 0 || position >= values.length) return "";
-            sb.append(displayName(values[position]));
+            return displayName(values[position]);
         }
-        return sb.length() == 0 ? "" : sb.substring(1);
+        // Join with commas as we go rather than prefixing each name and stripping
+        // the leading separator afterwards: a single selected file then comes
+        // back with its first character intact.
+        StringBuilder sb = new StringBuilder();
+        for (int i : state.selectedPositions()) {
+            if (i < 0 || i >= values.length) continue;
+            String name = displayName(values[i]);
+            if (name.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(name);
+        }
+        return sb.toString();
     }
 
     private String displayName(Object value) {
