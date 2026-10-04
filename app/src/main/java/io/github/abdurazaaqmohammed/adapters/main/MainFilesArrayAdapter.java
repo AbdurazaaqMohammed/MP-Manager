@@ -1375,9 +1375,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
         new Thread(() -> {
             boolean ok = ShortcutActionStore.create(context, target, action);
-            context.runOnUiThread(() -> Extensions.showMessage(context, ok
-                    ? context.getString(R.string.shortcut_action_ok, target.getName())
-                    : R.string.shortcut_unsupported));
+            context.runOnUiThread(() -> Extensions.showMessage(context,
+                    ok ? context.getString(R.string.shortcut_action_ok, target.getName())
+                            : context.getString(R.string.shortcut_unsupported)));
         }).start();
     }
 

@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.util.Collections;
 import android.util.Size;
 
 import java.io.File;
@@ -34,6 +35,8 @@ public final class ShortcutTool {
     public static final String EXTRA_PATH = "io.github.abdurazaaqmohammed.extra.SHORTCUT_PATH";
     /** Optional: highlight this file once the folder is open. */
     public static final String EXTRA_FOCUS = "io.github.abdurazaaqmohammed.extra.SHORTCUT_FOCUS";
+    /** Which of the five actions this shortcut carries; see ShortcutActionStore. */
+    public static final String EXTRA_ACTION = "io.github.abdurazaaqmohammed.extra.SHORTCUT_ACTION";
 
     private ShortcutTool() {
     }
@@ -75,7 +78,8 @@ public final class ShortcutTool {
     /** Removes a previously pinned shortcut. Returns true if one was removed. */
     public static boolean unpin(Context context, File target) {
         try {
-            return ShortcutManagerCompat.removeDynamicShortcut(context, shortcutId(target));
+            return ShortcutManagerCompat.removeDynamicShortcut(context,
+                    Collections.singletonList(shortcutId(target)));
         } catch (Exception e) {
             return false;
         }
