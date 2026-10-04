@@ -416,7 +416,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 // Diagnostic: one line per long-press, so a row that acts on its
                 // neighbour reveals whether the bind index, the live index or the
                 // data at those indices is the one that moved.
-                showRowDiagnostic(finalPosition, bindHolder.getBindingAdapterPosition(), fileName);
+                CharSequence onScreen = convertView instanceof android.widget.TextView
+                        ? ((android.widget.TextView) convertView).getText()
+                        : bindHolder.fileNameView.getText();
+                showRowDiagnostic(finalPosition, bindHolder.getBindingAdapterPosition(),
+                        String.valueOf(onScreen), fileName);
 
                 // The menu acts on the selection, so a stale leftover selection
                 // would make a long-press on this row name -- and delete -- some
@@ -871,7 +875,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     }
 
     /** Reports the indices this row resolved to; temporary aid for an off-by-one. */
-    private void showRowDiagnostic(int bindPosition, int livePosition, String name) {
+    private void showRowDiagnostic(int bindPosition, int livePosition, String onScreen, String captured) {
         String at = "n/a", live = "n/a";
         if (bindPosition >= 0 && bindPosition < values.length) {
             Object v = values[bindPosition];
@@ -882,7 +886,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             live = v instanceof File ? ((File) v).getName() : String.valueOf(v);
         }
         Extensions.showMessage(context, "bind=" + bindPosition + "(" + at + ") live="
-                + livePosition + "(" + live + ") shown=" + name);
+                + livePosition + "(" + live + ") screen=[" + onScreen + "] captured=[" + captured + "]");
     }
 
     /**
