@@ -479,17 +479,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
-                // GPG encrypt/decrypt: single real file, not a directory, not
-                // inside an archive. Decrypt only on .gpg/.asc names.
-                if (!multi && !isInZip && file != null && !file.isDirectory()) {
-                    String lower = fileName == null ? "" : fileName.toLowerCase(Locale.ENGLISH);
-                    if (lower.endsWith(".gpg") || lower.endsWith(".asc") || lower.endsWith(".pgp")) {
-                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.DECRYPT, FileMenuOrder.labelFor(context, FileMenuOrder.DECRYPT, direction)));
-                    } else {
-                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.ENCRYPT, FileMenuOrder.labelFor(context, FileMenuOrder.ENCRYPT, direction)));
-                    }
-                }
-
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
