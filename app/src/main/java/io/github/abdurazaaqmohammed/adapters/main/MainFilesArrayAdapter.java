@@ -418,7 +418,18 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 // data at those indices is the one that moved.
                 showRowDiagnostic(finalPosition, bindHolder.getBindingAdapterPosition(), fileName);
 
-                boolean multi = !selectedPositions.isEmpty();
+                // The menu acts on the selection, so a stale leftover selection
+                // would make a long-press on this row name -- and delete -- some
+                // other file. Drop selections the last listing invalidated, and
+                // when the pressed row is not part of the selection, make that row
+                // the selection.
+                selectedPositions.removeIf(p -> p < 0 || p >= values.length);
+                if (!selectedPositions.contains(finalPosition)) {
+                    selectedPositions.clear();
+                    selectedPositions.add(finalPosition);
+                    notifyDataSetChanged();
+                }
+                boolean multi = selectedPositions.size() > 1;
                 String direction = pane1 ? "->" : "<-";
                 List<FileMenuOrder.MenuItem> visibleMenu = new ArrayList<>();
                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.COPY, FileMenuOrder.labelFor(context, FileMenuOrder.COPY, direction)));
