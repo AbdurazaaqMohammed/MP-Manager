@@ -8,7 +8,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 
 import java.io.File;
-import java.util.Collections;
 
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
@@ -67,26 +66,6 @@ public final class ShortcutTool {
                     .setIntent(launcherIntent(context, target))
                     .build();
             return ShortcutManagerCompat.requestPinShortcut(context, info, null);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /** Removes a previously pinned shortcut. Returns true if one was removed. */
-    public static boolean unpin(Context context, File target) {
-        try {
-            return ShortcutManagerCompat.removeDynamicShortcut(context,
-                    Collections.singletonList(shortcutId(target)));
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public static boolean isPinned(Context context, File target) {
-        try {
-            return ShortcutManagerCompat.isRequestPinShortcutSupported(context)
-                    && ShortcutManagerCompat.getShortcuts(context, android.content.pm.ShortcutManager.FLAG_MATCH_PINNED)
-                    .stream().anyMatch(s -> s.getId().equals(shortcutId(target)));
         } catch (Exception e) {
             return false;
         }
