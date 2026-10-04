@@ -1038,6 +1038,26 @@ Layout Inspector
     <string name="gpg_key_path_hint">公钥或私钥文件 (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">私钥口令（没有则留空）</string>
     <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
+    <string name="activity_log_search_hint">搜索类名或包名</string>
+    <string name="activity_log_copy">全部复制</string>
+    <string name="activity_log_clear">清空</string>
+    <string name="activity_log_confirm_clear">丢弃已记录的 %1$d 条？</string>
+    <string name="activity_log">Activity 记录</string>
+    <string name="activity_log_title">Activity 记录</string>
+    <string name="activity_log_service_description">记录前台是哪个界面（Activity 或 Dialog），用于分析 APK。只上报类名和包名。</string>
+    <string name="activity_log_enable_title">需要开启无障碍服务</string>
+    <string name="activity_log_enable_message">记录功能需要无障碍服务才能获知前台界面。
+
+点「打开设置」，选择「Activity 记录」并开启。它只监听界面切换，并声明为调试辅助工具，而非无障碍工具。</string>
+    <string name="activity_log_open_settings">打开设置</string>
+    <string name="activity_log_not_running">服务未开启</string>
+    <string name="activity_log_running">记录中</string>
+    <string name="activity_log_ignore_self">忽略本应用</string>
+    <string name="activity_log_empty">暂无记录</string>
+    <string name="activity_log_summary">共 %1$d 条</string>
+    <string name="activity_log_copied">已复制 %1$d 行</string>
+    <string name="activity_log_item_meta">%1$s
+%2$s</string>
     <string name="delete_to_recycle_bin">移入回收站</string>
     <string name="delete_to_recycle_bin_hint">不勾选则直接彻底删除，无法还原</string>
     <string name="confirm_delete_permanently">彻底删除 %1$s？此操作无法撤销。</string>

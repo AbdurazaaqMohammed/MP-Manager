@@ -1063,6 +1063,26 @@ Layout Inspector
     <string name="gpg_key_path_hint">Public or secret key file (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">Key passphrase (leave empty if none)</string>
     <string name="gpg_wrong_key">No matching secret key, or wrong passphrase</string>
+    <string name="activity_log_search_hint">Search class or package</string>
+    <string name="activity_log_copy">Copy all</string>
+    <string name="activity_log_clear">Clear</string>
+    <string name="activity_log_confirm_clear">Discard %1$d recorded entries?</string>
+    <string name="activity_log">Activity log</string>
+    <string name="activity_log_title">Activity log</string>
+    <string name="activity_log_service_description">Records which screen (activity or dialog) is in the foreground, to help inspect APKs. It reports class and package names only.</string>
+    <string name="activity_log_enable_title">Enable the accessibility service</string>
+    <string name="activity_log_enable_message">The recorder needs an accessibility service to see which screen is in front.
+
+Tap "Open settings", pick "Activity log" and turn it on. It only listens for the screen changing and is declared as a debugging aid, not an accessibility tool.</string>
+    <string name="activity_log_open_settings">Open settings</string>
+    <string name="activity_log_not_running">Service is off</string>
+    <string name="activity_log_running">Recording</string>
+    <string name="activity_log_ignore_self">Ignore this app</string>
+    <string name="activity_log_empty">Nothing recorded yet</string>
+    <string name="activity_log_summary">%1$d entries</string>
+    <string name="activity_log_copied">Copied %1$d lines</string>
+    <string name="activity_log_item_meta">%1$s
+%2$s</string>
     <string name="delete_to_recycle_bin">Move to recycle bin</string>
     <string name="delete_to_recycle_bin_hint">Untick to delete permanently instead</string>
     <string name="confirm_delete_permanently">Permanently delete %1$s? This cannot be undone.</string>

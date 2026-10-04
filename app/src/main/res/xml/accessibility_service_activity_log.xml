@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Deliberately minimal: window state changes only. It does not request touch
+  exploration, gesture dispatch or window content retrieval, so it observes which
+  screen is in front and nothing about what is on it.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:description="@string/activity_log_service_description"
+    android:notificationTimeout="100" />
