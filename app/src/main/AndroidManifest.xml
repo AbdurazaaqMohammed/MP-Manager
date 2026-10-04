@@ -103,11 +103,6 @@
             android:label="@string/activity_log_title" />
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:name="io.github.abdurazaaqmohammed.tools.GpgToolActivity"
-            android:exported="false"
-            android:label="@string/gpg_tool_title" />
-        <activity
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.tools.PasswordManagerActivity"
             android:exported="false"
             android:label="@string/password_manager_title" />

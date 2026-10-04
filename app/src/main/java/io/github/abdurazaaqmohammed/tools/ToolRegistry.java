@@ -33,7 +33,6 @@ public class ToolRegistry {
         }
         tools.add(new ToolItem("wifimanager", "Wi-Fi Manager", "DNS profiles, passwords, usage", resId(context, "wifi_24px", pkg), CAT_NETWORK));
         tools.add(new ToolItem("storagemanager", "Storage Manager", "Largest files, clear cache", resId(context, "archive_24px", pkg), CAT_STORAGE));
-        tools.add(new ToolItem("gpg", "GPG encrypt / decrypt", "Password or public key, gpg compatible", resId(context, "lock_24px", pkg), CAT_STORAGE));
         return tools;
     }
     public static String[] categoriesInOrder() {

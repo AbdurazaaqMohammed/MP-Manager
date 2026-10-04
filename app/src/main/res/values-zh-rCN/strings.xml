@@ -1038,15 +1038,6 @@ Layout Inspector
     <string name="gpg_key_path_hint">公钥或私钥文件 (.asc / .gpg / .kbx)</string>
     <string name="gpg_passphrase_hint">私钥口令（没有则留空）</string>
     <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
-    <string name="gpg_tool">GPG 加密解密</string>
-    <string name="gpg_tool_title">GPG 加密解密</string>
-    <string name="gpg_tool_description">先选一个文件，再用密码或对方公钥加密，或解密。输出为标准 OpenPGP（gpg 可读），保存在本应用 files 目录。</string>
-    <string name="gpg_encrypt_button">加密文件</string>
-    <string name="gpg_decrypt_button">解密文件</string>
-    <string name="gpg_working">处理中...</string>
-    <string name="gpg_done_at">完成：%1$s</string>
-    <string name="gpg_failed">失败：%1$s</string>
-    <string name="gpg_pick_failed">无法读取该文件</string>
     <string name="password_manager">常用密码管理</string>
     <string name="password_manager_title">常用密码管理</string>
     <string name="password_manager_description">把常用密码加到这里。解压加密压缩文件时会按顺序自动尝试，全部失败才手动输入；压缩文件时也可快速选择这些密码输入。</string>

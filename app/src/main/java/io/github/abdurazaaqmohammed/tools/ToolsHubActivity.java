@@ -448,8 +448,6 @@ public class ToolsHubActivity extends BaseActivity {
     private void openTool(ToolRegistry.ToolItem item) {
         if ("wifimanager".equals(item.id())) {
             startActivity(new Intent(this, WifiManagerActivity.class));
-        } else if ("gpg".equals(item.id())) {
-            startActivity(new Intent(this, GpgToolActivity.class));
         } else if ("storagemanager".equals(item.id())) {
             startActivity(new Intent(this, StorageManagerActivity.class));
         } else {
