@@ -253,18 +253,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
 
                     @Override
-                    /**
-     * Current index of {@code item} in the shown list (which carries the up-dir
-     * entry at 0), or -1 when it is no longer listed.
-     */
-    private int indexOf(Object item) {
-        for (int i = 0; i < values.length; i++) {
-            if (values[i] == item) return i;
-        }
-        return -1;
-    }
-
-    public void clearSelection() {
+                    public void clearSelection() {
                         MainFilesArrayAdapter.this.clearSelection();
                     }
                 });
@@ -859,9 +848,22 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public List<Object> getSelectedFiles() {
         List<Object> selectedFiles = new ArrayList<>();
         for (Integer position : selectedPositions) {
+            // Skip indices the last listing change invalidated.
+            if (position == null || position < 0 || position >= values.length) continue;
             selectedFiles.add(values[position]);
         }
         return selectedFiles;
+    }
+
+    /**
+     * Current index of {@code item} in the shown list (which carries the up-dir
+     * entry at 0), or -1 when it is no longer listed.
+     */
+    private int indexOf(Object item) {
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == item) return i;
+        }
+        return -1;
     }
 
     public void clearSelection() {
