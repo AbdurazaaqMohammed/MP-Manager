@@ -69,6 +69,27 @@ public class ArchiveUtil {
         else throw new IOException("Unsupported archive format: " + archive.getName());
     }
 
+    /**
+     * Extracts an archive that needs a password.
+     *
+     * <p>Passing a wrong password throws from the archive library, which is what
+     * makes trying several possible: the caller can catch and try the next.
+     */
+    public static void extract(File archive, File destDir, boolean preserveTime, char[] password)
+            throws IOException {
+        String lower = archive.getName().toLowerCase(Locale.ROOT);
+        if (!destDir.exists()) destDir.mkdirs();
+        if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime, password);
+        else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime, password);
+        else throw new IOException("Passwords are only supported for 7z and rar");
+    }
+
+    /** Creates a 7z, optionally encrypted with {@code password}. */
+    public static void createEncrypted7z(File output, List<File> sources, char[] password)
+            throws IOException {
+        create7z(output, sources, password);
+    }
+
     public static void create(File output, List<File> sources) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".7z")) create7z(output, sources);
@@ -86,7 +107,17 @@ public class ArchiveUtil {
     }
 
     private static void extract7z(File archive, File destDir, boolean preserveTime) throws IOException {
-        try (SevenZFile sevenZFile = new SevenZFile(archive)) {
+        extract7z(archive, destDir, preserveTime, null);
+    }
+
+    /**
+     * @param password null for an unencrypted archive; a wrong password makes the
+     *                  library throw rather than produce garbage.
+     */
+    static void extract7z(File archive, File destDir, boolean preserveTime, char[] password)
+            throws IOException {
+        try (SevenZFile sevenZFile = password == null
+                ? new SevenZFile(archive) : new SevenZFile(archive, password)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 String name = sanitizeEntryName(entry.getName());
@@ -108,7 +139,15 @@ public class ArchiveUtil {
     }
 
     private static void extractRar(File archive, File destDir, boolean preserveTime) throws IOException {
-        try (Archive rar = new Archive(archive)) {
+        extractRar(archive, destDir, preserveTime, null);
+    }
+
+    /** @param password null for an unencrypted archive. */
+    static void extractRar(File archive, File destDir, boolean preserveTime, char[] password)
+            throws IOException {
+        try (Archive rar = password == null
+                ? new Archive(archive)
+                : new Archive(archive, new String[]{new String(password)})) {
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
                 String name = sanitizeEntryName(fh.getFileName());
@@ -172,7 +211,13 @@ public class ArchiveUtil {
     }
 
     private static void create7z(File output, List<File> sources) throws IOException {
-        try (SevenZOutputFile sevenZOutput = new SevenZOutputFile(output)) {
+        create7z(output, sources, null);
+    }
+
+    /** @param password null for no encryption. */
+    static void create7z(File output, List<File> sources, char[] password) throws IOException {
+        try (SevenZOutputFile sevenZOutput = password == null
+                ? new SevenZOutputFile(output) : new SevenZOutputFile(output, password)) {
             sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
             for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName());
         }

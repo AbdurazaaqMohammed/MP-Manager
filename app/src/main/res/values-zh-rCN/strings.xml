@@ -1089,6 +1089,8 @@ Layout Inspector
     <string name="shortcut_script_needs_shell">执行脚本需要 root 或 Shizuku 权限</string>
     <string name="shortcut_script_ran">脚本执行完毕</string>
     <string name="shortcut_script_out">脚本输出：%1$s</string>
+    <string name="enter_archive_password">压缩包密码</string>
+    <string name="archive_password_needed">该压缩包已加密</string>
     <string name="shortcut_icon">桌面图标快捷方式</string>
     <string name="shortcut_action">带操作的快捷方式</string>
     <string name="shortcut_unsupported">当前桌面不支持固定快捷方式</string>
