@@ -59,13 +59,22 @@ public final class PasswordedArchive {
                         passwords.get(i).toCharArray());
                 if (attemptDir.isDirectory() && attemptDir.list() != null
                         && attemptDir.list().length > 0) {
-                    // Only replace the real destination once something came out.
-                    deleteDir(destDir);
+                    // Move it into place only now that something came out. If the
+                    // rename cannot happen, copy instead of extracting a second
+                    // time -- re-extracting into the destination could leave it
+                    // half written and destroy the attempt that already succeeded.
+                    if (!deleteDir(destDir)) {
+                        deleteDir(attemptDir);
+                        lastError = new IOException("Cannot clear " + destDir);
+                        continue;
+                    }
                     if (!attemptDir.renameTo(destDir)) {
-                        ArchiveUtil.extract(archive, destDir, preserveTime,
-                                passwords.get(i).toCharArray());
+                        copyTree(attemptDir, destDir);
                         deleteDir(attemptDir);
                     }
+                    // Sweep any folders left by the passwords tried before this
+                    // one, then record which password actually worked.
+                    cleanupLeftovers(destDir);
                     ArchivePasswordStore.recordMatch(context, archive.getName(), i, passwords.size());
                     return new Result(true, i, null);
                 }
@@ -85,6 +94,7 @@ public final class PasswordedArchive {
                 lastError = e;
             }
         }
+        cleanupLeftovers(destDir);
         return new Result(false, -1, lastError);
     }
 
@@ -94,14 +104,58 @@ public final class PasswordedArchive {
         return n.endsWith(".7z") || n.endsWith(".rar");
     }
 
-    private static void deleteDir(File f) {
+    /**
+     * Removes any leftover .tryN folders beside the destination.
+     *
+     * <p>An attempt folder is created per password, so an unexpected exception
+     * partway through would otherwise leave them next to the real output.
+     */
+    private static void cleanupLeftovers(File destDir) {
+        File parent = destDir.getParentFile();
+        if (parent == null) return;
+        File[] kids = parent.listFiles();
+        if (kids == null) return;
+        String prefix = destDir.getName() + ".try";
+        for (File k : kids) {
+            if (k.getName().startsWith(prefix)) deleteDir(k);
+        }
+    }
+
+    /** Copies a tree, used when a rename cannot cross the boundary. */
+    private static void copyTree(File from, File to) {
+        File[] kids = from.listFiles();
+        if (kids == null) return;
+        if (!to.exists() && !to.mkdirs()) return;
+        for (File k : kids) {
+            File dest = new File(to, k.getName());
+            if (k.isDirectory()) {
+                copyTree(k, dest);
+            } else {
+                try (java.io.InputStream in = new java.io.BufferedInputStream(
+                        new java.io.FileInputStream(k));
+                     java.io.OutputStream os = new java.io.BufferedOutputStream(
+                             new java.io.FileOutputStream(dest))) {
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    while ((n = in.read(buf)) >= 0) os.write(buf, 0, n);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    /** @return true when the path is gone afterwards. */
+    private static boolean deleteDir(File f) {
         try {
-            if (f == null || !f.exists()) return;
+            if (f == null || !f.exists()) return true;
+            boolean ok = true;
             File[] kids = f.listFiles();
-            if (kids != null) for (File k : kids) deleteDir(k);
-            //noinspection ResultOfMethodCallIgnored
-            f.delete();
-        } catch (Exception ignored) {
+            if (kids != null) {
+                for (File k : kids) ok &= deleteDir(k);
+            }
+            return f.delete() || !f.exists();
+        } catch (Exception e) {
+            return false;
         }
     }
 }

@@ -30,6 +30,8 @@ public final class FileSplitMerge {
 
     /** Chunk names carry a fixed width so lexical order is numeric order. */
     private static final String SUFFIX = ".part%03d";
+    /** .part%03d stops being unique past this, and sorting breaks down. */
+    public static final int MAX_PARTS = 9999;
     private static final Pattern PART = Pattern.compile("^(.*)\\.part(\\d+)$");
 
     private FileSplitMerge() {
@@ -95,7 +97,17 @@ public final class FileSplitMerge {
                 done += written;
                 if (written < chunkSize) break;
                 index++;
-                if (index > 9999) break; // .part%03d would start colliding
+                if (index > MAX_PARTS) {
+                    // Silently stopping here would look like the split finished.
+                    for (File earlier : parts) {
+                        //noinspection ResultOfMethodCallIgnored
+                        earlier.delete();
+                    }
+                    //noinspection ResultOfMethodCallIgnored
+                    part.delete();
+                    throw new IOException("More than " + MAX_PARTS
+                            + " parts needed; choose a larger chunk size");
+                }
             }
         }
         return parts;
