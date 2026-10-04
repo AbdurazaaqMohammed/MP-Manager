@@ -775,6 +775,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 int currentPos = bindHolder.getBindingAdapterPosition();
                 if (currentPos < 0 || currentPos >= values.length) return;
                 if (values[currentPos] != boundItem) return;
+                // Diagnostic: when enabled in settings, the row shows what the
+                // adapter believes it holds, so a tap acting on the wrong row
+                // reveals whether the display, the data or the dispatch shifted.
+                if (PreferenceManager.getDefaultSharedPreferences(context)
+                        .getBoolean("debug_row_diagnostics", false)) {
+                    Extensions.showMessage(context,
+                            "bind pos=" + finalPosition + " item=" + fileName);
+                }
                 convertView.setOnTouchListener(new SwipeTouchListener(
                         context,
                         originalClickListener,

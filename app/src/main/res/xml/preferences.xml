@@ -31,6 +31,14 @@
             app:defaultValue="true" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Diagnostics">
+        <SwitchPreferenceCompat
+            app:key="debug_row_diagnostics"
+            app:title="Row diagnostics (temporary)"
+            app:summary="Show which row a tap binds to, to diagnose selection offsets"
+            app:defaultValue="false"/>
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="Function">
         <Preference
             app:key="floating_menu"
