@@ -155,7 +155,7 @@ public class GpgToolActivity extends BaseActivity {
                         }
                         try (InputStream in = new BufferedInputStream(new FileInputStream(src));
                              OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                            GpgCrypto.encryptForKey(in, os, key);
+                            GpgCrypto.encryptForKey(in, out, key);
                         }
                     }
                 } else {
