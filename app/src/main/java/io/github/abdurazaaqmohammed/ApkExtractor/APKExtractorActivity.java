@@ -55,6 +55,7 @@ import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.reandroid.apk.APKLogger;
@@ -149,11 +150,22 @@ public class APKExtractorActivity extends BaseActivity {
         return getAppFolder();
     }
 
+    /** Shared by the toolbar up-arrow and the system back gesture. */
+    private void handleBack() {
+        onBackPressed();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        handleBack();
+        return true;
+    }
+
     @Override
     public void onBackPressed() {
         AppRecyclerViewAdapter adapter = getCurrentAdapter();
-        if(!adapter.selectedItems.isEmpty()) adapter.clearSelection();
-        else super.onBackPressed();
+        if(adapter.selectedItems.isEmpty()) super.onBackPressed();
+        else adapter.clearSelection();
     }
 
     public static void deleteDir(File dir) {
@@ -188,15 +200,17 @@ public class APKExtractorActivity extends BaseActivity {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         handler = new Handler(Looper.getMainLooper());
         setContentView(R.layout.activity_extractor);
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setHomeAsUpIndicator(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        }
+        toolbar.setNavigationOnClickListener(v -> handleBack());
 
         SharedPreferences settings = getSharedPreferences("set", Context.MODE_PRIVATE);
 
-        ActionBar ab = getSupportActionBar();
-        if (ab != null) {
-            ab.setTitle(R.string.extract_apks);
-        }
 
         signApk = settings.getBoolean("signApk", true);
         ask = false;

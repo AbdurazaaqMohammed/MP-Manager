@@ -27,6 +27,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -157,12 +158,17 @@ public class HexEditorActivity extends BaseActivity {
         }
 
         MaterialToolbar toolbar = findViewById(R.id.hexToolbar);
+        toolbar.setTitle(R.string.hex_editor);
         toolbar.setSubtitle(rootOriginalPath != null
                 ? new File(rootOriginalPath).getName() + " (root)"
                 : file.getName());
-        toolbar.setNavigationIcon(R.drawable.chevron_left_24px);
-        toolbar.setNavigationOnClickListener(v -> confirmDiscardAndFinish());
         setSupportActionBar(toolbar);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setHomeAsUpIndicator(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        }
+        toolbar.setNavigationOnClickListener(v -> handleBack());
 
         tapDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override

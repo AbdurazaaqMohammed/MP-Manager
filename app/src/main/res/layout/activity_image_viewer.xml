@@ -1,66 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <androidx.appcompat.widget.Toolbar
+    <!-- Header: fixed ?attr/actionBarSize row so btnBack / title / btnInfo share one
+         vertical centre. A wrap_content Toolbar with a weighted FrameLayout let the
+         title and subtitle overlap and left the chevron off-centre. -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:titleTextColor="?attr/colorOnSurface"
-        app:subtitleTextColor="@android:color/darker_gray"
-        android:minHeight="?attr/actionBarSize">
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorSurface"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="?attr/selectableItemBackground"
-            android:src="@drawable/chevron_left_24px"
+            android:layout_gravity="center_vertical"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/abc_ic_ab_back_material"
             android:contentDescription="@string/back" />
 
-        <FrameLayout
-            android:layout_width="fill_parent"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="8dp"
-            android:clickable="true"
-            android:focusable="true">
+            android:paddingStart="8dp"
+            android:paddingEnd="4dp">
 
             <TextView
                 android:id="@+id/titleText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:ellipsize="middle"
+                android:gravity="center_vertical"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:singleLine="true"
                 android:contentDescription="@string/filename" />
 
             <TextView
-                android:layout_gravity="center"
                 android:id="@+id/subtitleText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/darker_gray"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp"
                 android:singleLine="true"
                 android:contentDescription="@string/resolution" />
+        </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btnInfo"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="end|center"
-                android:background="?attr/selectableItemBackground"
-                android:contentDescription="@string/properties"
-                android:src="@drawable/baseline_info_24" />
-        </FrameLayout>
-
-
-
-    </androidx.appcompat.widget.Toolbar>
+        <ImageButton
+            android:id="@+id/btnInfo"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_vertical"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/properties"
+            android:src="@drawable/baseline_info_24" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/pager"
