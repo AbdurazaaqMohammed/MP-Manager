@@ -54,6 +54,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class ToolsHubActivity extends BaseActivity {
     private RecyclerView grid;
@@ -127,16 +128,17 @@ public class ToolsHubActivity extends BaseActivity {
         }));
     }
 
-    /** Single scrolling list: packs, built-in tools, then external plugins. */
+    /** Single scrolling list: external plugins, packs, then built-in tools. */
     private List<Object> displayRows() {
         List<Object> rows = new ArrayList<>();
-        rows.addAll(catalog);
-        rows.addAll(buildRows(filterTools(currentQuery)));
         List<PluginHost.ExternalPlugin> external = externalPlugins();
         if (!external.isEmpty()) {
             rows.add(new ExtSection());
             rows.addAll(external);
         }
+        rows.add(new PacksSection());
+        rows.addAll(catalog);
+        rows.addAll(buildRows(filterTools(currentQuery)));
         rows.add(new DevSection());
         return rows;
     }
@@ -188,7 +190,7 @@ public class ToolsHubActivity extends BaseActivity {
             msg.append("\n\nCertificate (SHA-256):\n").append(shortDigest(digest));
             msg.append("\n\nStatus: ").append(trusted ? "Trusted" : "Not trusted");
             AlertDialog.Builder builder =
-                    new AlertDialog.Builder(this)
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
@@ -279,7 +281,7 @@ public class ToolsHubActivity extends BaseActivity {
         if (installed) {
             remove.setVisibility(View.VISIBLE);
             remove.setOnClickListener(v -> {
-                new AlertDialog.Builder(this)
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                         .setTitle(pack.title)
                         .setMessage("Remove this pack and its " + pack.tools.size() + " tools?")
                         .setNegativeButton(android.R.string.cancel, null)
@@ -350,7 +352,12 @@ public class ToolsHubActivity extends BaseActivity {
         shortcut.setMinHeight(0);
         shortcut.setMinimumHeight(0);
         shortcut.setPadding((int) (8 * density), 0, (int) (8 * density), 0);
-        shortcut.setContentDescription(getString(R.string.plugin_create_shortcut));
+        String cs = getString(R.string.plugin_create_shortcut);
+        shortcut.setContentDescription(cs);
+        shortcut.setOnLongClickListener(v -> {
+            Extensions.showMessage(this, cs);
+            return false;
+        });
         LinearLayout.LayoutParams shortcutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         shortcutParams.setMarginStart((int) (4 * density));
@@ -483,7 +490,7 @@ public class ToolsHubActivity extends BaseActivity {
         public int getItemViewType(int position) {
             Object row = rows.get(position);
             if (row instanceof PackDescriptor) return 2;
-            if (row instanceof ExtSection) return 3;
+            if (row instanceof ExtSection || row instanceof PacksSection) return 3;
             if (row instanceof PluginHost.ExternalPlugin) return 4;
             if (row instanceof DevSection) return 5;
             return row instanceof String ? 0 : 1;
@@ -519,6 +526,8 @@ public class ToolsHubActivity extends BaseActivity {
                     for (int i = position + 1; i < rows.size()
                             && rows.get(i) instanceof PluginHost.ExternalPlugin; i++) count++;
                     ((HeaderHolder) holder).label.setText("External plugins  (" + count + ")");
+                } else if (row instanceof PacksSection) {
+                    ((HeaderHolder) holder).label.setText("Tool packs");
                 } else {
                     String cat = (String) row;
                     int count = 0;
@@ -562,6 +571,9 @@ public class ToolsHubActivity extends BaseActivity {
     }
     /** Marker row starting the external-plugins section. */
     private static class ExtSection {
+    }
+    /** Marker row starting the tool-packs section. */
+    private static class PacksSection {
     }
     /** Marker row for the developer info card. */
     private static class DevSection {
