@@ -19,7 +19,7 @@ public class MathPack implements ToolPack {
 
     @Override
     public int version() {
-        return 6;
+        return 1;
     }
 
     @Override

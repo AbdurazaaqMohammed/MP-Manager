@@ -18,7 +18,7 @@ public class TextPack implements ToolPack {
 
     @Override
     public int version() {
-        return 4;
+        return 1;
     }
 
     @Override

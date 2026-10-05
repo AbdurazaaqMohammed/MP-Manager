@@ -18,22 +18,21 @@ public class DevicePack implements ToolPack {
 
     @Override
     public int version() {
-        return 3;
+        return 1;
     }
 
     @Override
     public List<ToolPlugin> tools() {
         return Arrays.<ToolPlugin>asList(
-                new StopwatchTool(),
-                new TimerTool(),
+                new DeviceHubTool(),
+                new ClockTool(),
+                new MeasureTool(),
                 new FlashlightTool(),
                 new MagnifierTool(),
                 new VolumeTool(),
                 new VibrationTool(),
-                new CompassTool(),
                 new LevelTool(),
-                new RulerTool(),
-                new ProtractorTool(),
+                new CompassTool(),
                 new GpsTool(),
                 new RingtoneTool(),
                 new WallpaperTool(),
