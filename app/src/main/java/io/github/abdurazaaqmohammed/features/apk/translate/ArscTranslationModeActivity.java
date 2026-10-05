@@ -346,10 +346,16 @@ public class ArscTranslationModeActivity extends BaseActivity {
         boolean languages = next == Page.LANGUAGES;
         languagesPage.setVisibility(languages ? View.VISIBLE : View.GONE);
         entriesPage.setVisibility(languages ? View.GONE : View.VISIBLE);
-        toolbar.setNavigationIcon(languages ? null
-                : androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        // Not a conditional expression: mixing a null branch with an int branch makes javac
+        // unify them into Integer and then unbox the null, which throws on the languages page.
+        if (languages) {
+            toolbar.setNavigationIcon(null);
+            toolbar.setNavigationOnClickListener(null);
+        } else {
+            toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+            toolbar.setNavigationOnClickListener(v -> leaveEntries());
+        }
         toolbar.setTitle(languages ? R.string.translation_mode : R.string.xlate_edit_strings);
-        toolbar.setNavigationOnClickListener(languages ? null : v -> leaveEntries());
         // Only the entries page has anything to run or configure.
         for (int i = 0; i < toolbar.getMenu().size(); i++) {
             toolbar.getMenu().getItem(i).setVisible(!languages);
