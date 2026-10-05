@@ -352,403 +352,411 @@ public class ApkInfoDialogs {
         final FrameLayout functionContainer = new FrameLayout(context);
         functionContainer.addView(display, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        AlertDialog ad = dialogUtil.getDialogBuilder()
-                .setView(functionContainer)
-                .setNeutralButton(R.string.func, (dialog, which) -> {
-                    java.util.List<String> moreTitles = new java.util.ArrayList<>(java.util.Arrays.asList(new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)}));
-                    // Third-party APK actions appended after the 14 built-ins.
-                    final java.util.List<io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction> pluginMore =
-                            io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry.apkActions();
-                    for (io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction ext : pluginMore) {
-                        if (ext == null) continue;
-                        moreTitles.add(ext.title() == null || ext.title().isEmpty() ? ext.id() : ext.title());
-                    }
-                    // External (out-of-process) APK actions, fire-and-forget.
-                    final java.util.List<io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry> externalApk =
-                            io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.apkEntries(context);
-                    for (io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry e : externalApk) {
-                        if (e == null) continue;
-                        moreTitles.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
-                    }
-                    String[] items = moreTitles.toArray(new String[0]);
-                    final int[] functionOrder = buildFunctionOrder(items.length);
-                    DialogInterface.OnClickListener apkAction = (dialog12, which1) -> {
-                        dialog12.dismiss();
-                        if (which1 < 0) {
-                            runApkFunction(which1, file, fileName, filePath);
-                            return;
-                        }
-                        if (which1 == 0) SignatureKeyDialog.show(context, file, false);
-                        else if (which1 == 1) {
-                            View ll = LayoutInflater.from(context).inflate(R.layout.dialog_opt, null);
-                            final boolean[] sign = new boolean[1];
-                            final boolean[] delFiles = new boolean[1];
-                            final boolean[] deepOpt = new boolean[1];
-                            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-                            CheckBox autosign = ll.findViewById(R.id.autosign);
-                            autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
-                            autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
-                            ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-                            CheckBox deepOptimize = ll.findViewById(R.id.deep_optimize);
-                            deepOptimize.setChecked(deepOpt[0] = settings.getBoolean("deep_optimize", false));
-                            deepOptimize.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_optimize", deepOpt[0] = isChecked).apply());
-                            MaterialCheckBox phaseB = ll.findViewById(R.id.deep_optimize_phase_b);
-                            phaseB.setChecked(settings.getBoolean("deep_opt_phase_b", false));
-                            phaseB.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_phase_b", isChecked).apply());
-                            MaterialCheckBox preserveDebug = ll.findViewById(R.id.deep_optimize_preserve_debug);
-                            preserveDebug.setChecked(settings.getBoolean("deep_opt_preserve_debug", true));
-                            preserveDebug.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_preserve_debug", isChecked).apply());
-                            MaterialCheckBox removeClasses = ll.findViewById(R.id.deep_optimize_remove_classes);
-                            removeClasses.setChecked(settings.getBoolean("deep_opt_remove_classes", true));
-                            removeClasses.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_classes", isChecked).apply());
-                            MaterialCheckBox removeMethods = ll.findViewById(R.id.deep_optimize_remove_methods);
-                            removeMethods.setChecked(settings.getBoolean("deep_opt_remove_methods", true));
-                            removeMethods.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_methods", isChecked).apply());
-                            MaterialCheckBox removeFields = ll.findViewById(R.id.deep_optimize_remove_fields);
-                            removeFields.setChecked(settings.getBoolean("deep_opt_remove_fields", true));
-                            removeFields.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_fields", isChecked).apply());
-                            TextInputEditText passesInput = ll.findViewById(R.id.deep_optimize_passes);
-                            passesInput.setText(String.valueOf(settings.getInt("deep_opt_max_passes", 25)));
-                            passesInput.addTextChangedListener(new TextWatcher() {
-                                @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
-                                @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
-                                @Override public void afterTextChanged(Editable s) {
-                                    try {
-                                        int value = Integer.parseInt(s.toString());
-                                        if (value >= 0) settings.edit().putInt("deep_opt_max_passes", value).apply();
-                                    } catch (NumberFormatException ignored) {
-                                    }
-                                }
-                            });
-                            CheckBox deleteFiles = ll.findViewById(R.id.files_to_delete);
-                            deleteFiles.setChecked(delFiles[0] = settings.getBoolean("delFiles", true));
-                            deleteFiles.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("delFiles", delFiles[0] = isChecked).apply());
-                            ll.findViewById(R.id.choose_files_delete).setOnClickListener(v8 -> {
-                                Set<String> filesToDelete = settings.getStringSet("filesToDelete", null);
-                                String[] filesFiDelete = (filesToDelete == null) ? new String[]{"assets/audience_network.dex", "androidsupportmultidexversion.txt", "DebugProbesKt.bin", "stamp-cert-sha256", "user-messaging-platform.properties", "transport-runtime.properties", "transport-backend-cct.properties", "transport-api.properties", "protolite-well-known-types.properties", "play-services-tasks.properties", "play-services-stats.properties", "play-services-measurement-sdk-api.properties", "play-services-measurement-sdk.properties", "play-services-measurement-impl.properties", "play-services-measurement-base.properties", "play-services-measurement-api.properties", "play-services-measurement.properties", "play-services-cloud-messaging.properties", "play-services-basement.properties", "play-services-base.properties", "play-services-appset.properties", "play-services-ads-lite.properties", "play-services-ads-identifier.properties", "play-services-ads-base.properties", "play-services-ads.properties", "firebase-abt.properties", "firebase-analytics-ktx.properties", "firebase-analytics.properties", "firebase-annotations.properties", "firebase-common-ktx.properties", "firebase-common.properties", "firebase-components.properties", "firebase-config-ktx.properties", "firebase-config.properties", "firebase-crashlytics-ktx.properties", "firebase-crashlytics.properties", "firebase-datatransport.properties", "firebase-encoders-json.properties", "firebase-encoders-proto.properties", "firebase-encoders.properties", "firebase-iid-interop.properties", "firebase-installations-interop.properties", "firebase-installations.properties", "firebase-measurement-connector.properties", "firebase-messaging-ktx.properties", "firebase-messaging.properties", "firebase-perf-ktx.properties", "firebase-perf.properties"}
-                                        : filesToDelete.toArray(new String[0]);
-                                List<String> filesFiDel = new ArrayList<>(Arrays.asList(filesFiDelete));
-                                ListView listView = new ListView(context);
-                                ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.item_bottom_bar_config, filesFiDel) {
-                                    @NonNull
-                                    @Override
-                                    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                                        if (convertView == null)
-                                            convertView = LayoutInflater.from(context).inflate(R.layout.item_bottom_bar_config, parent, false);
-                                        TextView textLabel = convertView.findViewById(R.id.text_label);
-                                        ImageButton btnEdit = convertView.findViewById(R.id.btn_edit);
-                                        ImageButton btnDelete = convertView.findViewById(R.id.btn_delete);
-                                        textLabel.setText(filesFiDel.get(position));
-                                        btnEdit.setVisibility(View.GONE);
-                                        btnDelete.setOnClickListener(v -> {
-                                            filesFiDel.remove(position);
-                                            notifyDataSetChanged();
-                                        });
-                                        return convertView;
-                                    }
-                                };
-                                listView.setAdapter(adapter);
-                                dialogUtil.getDialogBuilder()
-                                        .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                                        .setNeutralButton(context.rss.getString(R.string.add), (dialog9, which6) -> {
-                                            EditText et = new EditText(context);
-                                            dialogUtil.getDialogBuilder().setView(UiFields.wrap(context, et, null, 16)).setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                                                    .setPositiveButton(context.rss.getString(io.github.rosemoe.sora.R.string.sora_editor_next), (dialog8, which5) -> {
-                                                        filesFiDel.add(et.getText().toString());
-                                                        adapter.notifyDataSetChanged();
-                                                    }).show();
-                                        })
-                                        .setPositiveButton(context.rss.getString(io.github.rosemoe.sora.R.string.sora_editor_next), (dialog8, which5) -> settings.edit().putStringSet("filesToDelete", new HashSet<>(filesFiDel)).apply())
-                                        .setView(listView)
-                                        .show();
-                            });
-                                     dialogUtil.getDialogBuilder().setView(ll)
-                                            .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                                            .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
-                                                SignWrapper[] wrapper = new SignWrapper[1];
-                                                Runnable doOpt = () -> {
-                                                    ProgressManager pm = new ProgressManager(context, true).show();
-                                                    APKLogger logger = pm.getLogger();
-                                                    new Thread(() -> {
-                                                        try {
-                                                            File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, logger);
-                                                            if (deepOpt[0]) {
-                                                                logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
-                                                                opt = ApkDeepOptimizer.optimize(context, opt, settings.getStringSet("filesToDelete", null), settings, logger);
-                                                            }
-                                                            if (sign[0]) wrapper[0].signApk(opt);
-                                                            pm.dismiss();
-                                                            context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                                        } catch (Exception e) {
-                                                            pm.dismiss();
-                                                            new ErrorUtil(context).showError(e);
-                                                        }
-                                                    }).start();
-                                                };
-                                                Runnable startOpt = () -> {
-                                                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                                                        wrapper[0] = sw;
-                                                        doOpt.run();
-                                                    }); else doOpt.run();
-                                                };
-                                                if (deepOpt[0]) {
-                                                    new MaterialAlertDialogBuilder(context)
-                                                            .setTitle(context.rss.getString(R.string.deep_optimize))
-                                                            .setMessage(context.rss.getString(R.string.deep_optimize_warning))
-                                                            .setPositiveButton(context.rss.getString(R.string.opt), (dialog8, which5) -> startOpt.run())
-                                                            .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                                                            .show();
-                                                } else startOpt.run();
-                                            }).show();
-                    } else if (which1 == 2) showDecompileOptionsDialog(file, fileName);
-                    else if (which1 == 3) {
-                        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-                        boolean forceDeleteOutputPath = settings.getBoolean("flagForce", false);
-                        boolean cleanMeta = settings.getBoolean("cleanMeta", true);
-                        boolean fixTypes = settings.getBoolean("fixTypes", true);
-                        RefactorOptions options = new RefactorOptions();
-                        options.inputFile = file;
-                        String extension = FilenameUtils.getExtension(fileName);
-                        options.outputFile = new File(file.getParentFile(), fileName.replace('.' + extension, "_refactored." + extension));
-                        LinearLayout layout = new LinearLayout(context);
-                        layout.setOrientation(LinearLayout.VERTICAL);
-                        final String[] publicXmlPath = {null};
-                        MaterialButton publicXmlInputView = new MaterialButton(context);
-                        String publiXmlText = context.rss.getString(R.string.public_xml);
-                        publicXmlInputView.setText(publiXmlText);
-                        publicXmlInputView.setOnClickListener(v5 -> {
-                            FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
-                            properties.selection_mode = FilePickerDialog.SINGLE_MODE;
-                            properties.selection_type = FilePickerDialog.FILE_SELECT;
-                            properties.root = new File(Environment.getExternalStorageDirectory().getPath());
-                            properties.offset = new File(Environment.getExternalStorageDirectory().getPath());
-                            properties.preferenceKey = "public_xml";
-                            properties.extensions = new String[]{"xml"};
-                            FilePickerDialog fpd = new FilePickerDialog(context, properties);
-                            fpd.setTitle(publiXmlText);
-                            fpd.setDialogSelectionListener(files -> publicXmlPath[0] = files[0]);
-                            fpd.show();
-                        });
-                        MaterialSwitch cleanMetaSwitch = new MaterialSwitch(context);
-                        cleanMetaSwitch.setText(context.rss.getString(R.string.clean_meta));
-                        cleanMetaSwitch.setChecked(cleanMeta);
-                        cleanMetaSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("cleanMeta", isChecked2).apply());
-                        MaterialSwitch fixTypesSwitch = new MaterialSwitch(context);
-                        fixTypesSwitch.setText(R.string.fix_types);
-                        fixTypesSwitch.setChecked(fixTypes);
-                        fixTypesSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("fixTypes", isChecked2).apply());
-                        MaterialSwitch forceSwitch = new MaterialSwitch(context);
-                        forceSwitch.setText(context.rss.getString(R.string.force_delete_output_path));
-                        forceSwitch.setChecked(forceDeleteOutputPath);
-                        forceSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("flagForce", isChecked2).apply());
-                        layout.addView(publicXmlInputView);
-                        layout.addView(cleanMetaSwitch);
-                        layout.addView(fixTypesSwitch);
-                        layout.addView(forceSwitch);
-                        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .setPositiveButton(R.string.refactor, (dialog2, which3) -> {
-                                    options.cleanMeta = settings.getBoolean("cleanMeta", true);
-                                    options.fixTypeNames = settings.getBoolean("fixTypes", true);
-                                    options.force = settings.getBoolean("flagForce", false);
-                                    ProgressManager pm = new ProgressManager(context, true).show();
-                                    APKLogger logger = pm.getLogger();
-                                    new Thread(() -> {
-                                        try {
-                                            String pXmlFilePath = publicXmlPath[0];
-                                            if (!TextUtils.isEmpty(pXmlFilePath)) options.publicXml = new File(pXmlFilePath);
-                                            options.newCommandExecutor(logger).runCommand();
-                                            logger.close();
-                                            pm.dismiss();
-                                            Extensions.showMessage(context, context.getString(R.string.refactored, fileName));
-                                        } catch (Exception e) {
-                                            pm.dismiss();
-                                            context.handler.post(() -> new ErrorUtil(context).showError(e));
-                                            logger.close();
-                                        }
-                                    }).start();
-                                }).create());
-                    }
-                    else if (which1 == 4) {
-                        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-                        boolean skipManifest = settings.getBoolean("skipManifest", false);
-                        boolean confuseZip = settings.getBoolean("confuseZip", false);
-                        int dexLevel = settings.getInt("dexLevel", 0);
-                        boolean flagForce = settings.getBoolean("flagForce", false);
-                        ProtectorOptions options = new ProtectorOptions();
-                        options.inputFile = file;
-                        LinearLayout layout = new LinearLayout(context);
-                        layout.setOrientation(LinearLayout.VERTICAL);
-                        LayoutInflater layoutInflater = LayoutInflater.from(context);
-                        View skipManifestView = layoutInflater.inflate(R.layout.item_switch, layout, false);
-                        TextView skipManifestTitle = skipManifestView.findViewById(R.id.title);
-                        CheckBox skipManifestSwtch = skipManifestView.findViewById(R.id.switch_view);
-                        skipManifestTitle.setText(context.rss.getString(R.string.skip_manifest_protection));
-                        skipManifestSwtch.setChecked(skipManifest);
-                        skipManifestSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("skipManifest", isChecked).apply());
-                        skipManifestView.setOnClickListener(v2 -> skipManifestSwtch.toggle());
-                        View confuseZipView = layoutInflater.inflate(R.layout.item_switch, layout, false);
-                        TextView confuseZipTitle = confuseZipView.findViewById(R.id.title);
-                        CheckBox confuseZipSwtch = confuseZipView.findViewById(R.id.switch_view);
-                        confuseZipTitle.setText(context.rss.getString(R.string.confuse_zip_structure));
-                        confuseZipSwtch.setChecked(confuseZip);
-                        confuseZipSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("confuseZip", isChecked).apply());
-                        confuseZipView.setOnClickListener(v2 -> confuseZipSwtch.toggle());
-                        View dexLevelView = layoutInflater.inflate(R.layout.item_edit_number, layout, false);
-                        TextView dexLevelTitle = dexLevelView.findViewById(R.id.title);
-                        EditText dexLevelInput = dexLevelView.findViewById(R.id.edit_text);
-                        dexLevelTitle.setText(context.rss.getString(R.string.dex_protection_level));
-                        dexLevelInput.setText(String.valueOf(dexLevel));
-                        dexLevelInput.addTextChangedListener(new TextWatcher() {
-                            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                            @Override public void afterTextChanged(Editable s) {
-                                try {
-                                    settings.edit().putInt("dexLevel", Integer.parseInt(s.toString())).apply();
-                                } catch (Exception ignored) {}
+        final AlertDialog[] dialogRef = new AlertDialog[1];
+        Runnable openFunctions = () -> {
+            java.util.List<String> moreTitles = new java.util.ArrayList<>(java.util.Arrays.asList(new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)}));
+            // Third-party APK actions appended after the 14 built-ins.
+            final java.util.List<io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction> pluginMore =
+                    io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry.apkActions();
+            for (io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction ext : pluginMore) {
+                if (ext == null) continue;
+                moreTitles.add(ext.title() == null || ext.title().isEmpty() ? ext.id() : ext.title());
+            }
+            // External (out-of-process) APK actions, fire-and-forget.
+            final java.util.List<io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry> externalApk =
+                    io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.apkEntries(context);
+            for (io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry e : externalApk) {
+                if (e == null) continue;
+                moreTitles.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
+            }
+            String[] items = moreTitles.toArray(new String[0]);
+            final int[] functionOrder = buildFunctionOrder(items.length);
+            DialogInterface.OnClickListener apkAction = (dialog12, which1) -> {
+                dialog12.dismiss();
+                if (which1 < 0) {
+                    runApkFunction(which1, file, fileName, filePath);
+                    return;
+                }
+                if (which1 == 0) SignatureKeyDialog.show(context, file, false);
+                else if (which1 == 1) {
+                    View ll = LayoutInflater.from(context).inflate(R.layout.dialog_opt, null);
+                    final boolean[] sign = new boolean[1];
+                    final boolean[] delFiles = new boolean[1];
+                    final boolean[] deepOpt = new boolean[1];
+                    SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                    CheckBox autosign = ll.findViewById(R.id.autosign);
+                    autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                    autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                    ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                    CheckBox deepOptimize = ll.findViewById(R.id.deep_optimize);
+                    deepOptimize.setChecked(deepOpt[0] = settings.getBoolean("deep_optimize", false));
+                    deepOptimize.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_optimize", deepOpt[0] = isChecked).apply());
+                    MaterialCheckBox phaseB = ll.findViewById(R.id.deep_optimize_phase_b);
+                    phaseB.setChecked(settings.getBoolean("deep_opt_phase_b", false));
+                    phaseB.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_phase_b", isChecked).apply());
+                    MaterialCheckBox preserveDebug = ll.findViewById(R.id.deep_optimize_preserve_debug);
+                    preserveDebug.setChecked(settings.getBoolean("deep_opt_preserve_debug", true));
+                    preserveDebug.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_preserve_debug", isChecked).apply());
+                    MaterialCheckBox removeClasses = ll.findViewById(R.id.deep_optimize_remove_classes);
+                    removeClasses.setChecked(settings.getBoolean("deep_opt_remove_classes", true));
+                    removeClasses.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_classes", isChecked).apply());
+                    MaterialCheckBox removeMethods = ll.findViewById(R.id.deep_optimize_remove_methods);
+                    removeMethods.setChecked(settings.getBoolean("deep_opt_remove_methods", true));
+                    removeMethods.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_methods", isChecked).apply());
+                    MaterialCheckBox removeFields = ll.findViewById(R.id.deep_optimize_remove_fields);
+                    removeFields.setChecked(settings.getBoolean("deep_opt_remove_fields", true));
+                    removeFields.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("deep_opt_remove_fields", isChecked).apply());
+                    TextInputEditText passesInput = ll.findViewById(R.id.deep_optimize_passes);
+                    passesInput.setText(String.valueOf(settings.getInt("deep_opt_max_passes", 25)));
+                    passesInput.addTextChangedListener(new TextWatcher() {
+                        @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                        @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                        @Override public void afterTextChanged(Editable s) {
+                            try {
+                                int value = Integer.parseInt(s.toString());
+                                if (value >= 0) settings.edit().putInt("deep_opt_max_passes", value).apply();
+                            } catch (NumberFormatException ignored) {
                             }
-                        });
-                        View forceView = layoutInflater.inflate(R.layout.item_switch, layout, false);
-                        TextView forceTitle = forceView.findViewById(R.id.title);
-                        CheckBox forceSwitch = forceView.findViewById(R.id.switch_view);
-                        forceTitle.setText(context.rss.getString(R.string.force_delete_output_path));
-                        forceSwitch.setChecked(flagForce);
-                        forceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("flagForce", isChecked).apply());
-                        forceView.setOnClickListener(v2 -> forceSwitch.toggle());
-                        layout.addView(skipManifestView);
-                        layout.addView(confuseZipView);
-                        layout.addView(dexLevelView);
-                        layout.addView(forceView);
-                        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .setPositiveButton(R.string.protect, (dialog2, which3) -> {
-                                    options.skipManifest = settings.getBoolean("skipManifest", false);
-                                    options.confuse_zip = settings.getBoolean("confuseZip", false);
-                                    options.dexLevel = settings.getInt("dexLevel", 0);
-                                    options.force = settings.getBoolean("flagForce", false);
-                                    options.outputFile = options.generateOutputFromInput(file);
-                                    ProgressManager pm = new ProgressManager(context, true).show();
-                                    APKLogger logger = pm.getLogger();
-                                    new Thread(() -> {
-                                        try {
-                                            options.newCommandExecutor(logger).runCommand();
-                                            logger.close();
-                                            pm.dismiss();
-                                            context.handler.post(() -> { dialog2.dismiss(); Extensions.showMessage(context, context.rss.getString(R.string.protectd)); });
-                                        } catch (Exception e) {
-                                            pm.dismiss();
-                                            context.handler.post(dialog2::dismiss);
-                                            new ErrorUtil(context).showError(e);
-                                            logger.close();
-                                        }
-                                    }).start();
-                                }).create());
-                    }
-                    else if (which1 == 5) {
-                        View ll = LayoutInflater.from(context).inflate(R.layout.dialog_clone, null);
-                        TextView pkgNameView = ll.findViewById(R.id.package_name_input);
-                        String pkgNameFromApk = overlay.getPackageNameFromApk(filePath);
-                        pkgNameView.setText(ApkCloner.changeEndCharacter(pkgNameFromApk));
-                        final boolean[] sign = new boolean[1];
-                        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-                        CheckBox autosign = ll.findViewById(R.id.autosign);
-                        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
-                        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
-                        ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-                        dialogUtil.getDialogBuilder().setView(ll)
+                        }
+                    });
+                    CheckBox deleteFiles = ll.findViewById(R.id.files_to_delete);
+                    deleteFiles.setChecked(delFiles[0] = settings.getBoolean("delFiles", true));
+                    deleteFiles.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("delFiles", delFiles[0] = isChecked).apply());
+                    ll.findViewById(R.id.choose_files_delete).setOnClickListener(v8 -> {
+                        Set<String> filesToDelete = settings.getStringSet("filesToDelete", null);
+                        String[] filesFiDelete = (filesToDelete == null) ? new String[]{"assets/audience_network.dex", "androidsupportmultidexversion.txt", "DebugProbesKt.bin", "stamp-cert-sha256", "user-messaging-platform.properties", "transport-runtime.properties", "transport-backend-cct.properties", "transport-api.properties", "protolite-well-known-types.properties", "play-services-tasks.properties", "play-services-stats.properties", "play-services-measurement-sdk-api.properties", "play-services-measurement-sdk.properties", "play-services-measurement-impl.properties", "play-services-measurement-base.properties", "play-services-measurement-api.properties", "play-services-measurement.properties", "play-services-cloud-messaging.properties", "play-services-basement.properties", "play-services-base.properties", "play-services-appset.properties", "play-services-ads-lite.properties", "play-services-ads-identifier.properties", "play-services-ads-base.properties", "play-services-ads.properties", "firebase-abt.properties", "firebase-analytics-ktx.properties", "firebase-analytics.properties", "firebase-annotations.properties", "firebase-common-ktx.properties", "firebase-common.properties", "firebase-components.properties", "firebase-config-ktx.properties", "firebase-config.properties", "firebase-crashlytics-ktx.properties", "firebase-crashlytics.properties", "firebase-datatransport.properties", "firebase-encoders-json.properties", "firebase-encoders-proto.properties", "firebase-encoders.properties", "firebase-iid-interop.properties", "firebase-installations-interop.properties", "firebase-installations.properties", "firebase-measurement-connector.properties", "firebase-messaging-ktx.properties", "firebase-messaging.properties", "firebase-perf-ktx.properties", "firebase-perf.properties"}
+                                : filesToDelete.toArray(new String[0]);
+                        List<String> filesFiDel = new ArrayList<>(Arrays.asList(filesFiDelete));
+                        ListView listView = new ListView(context);
+                        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.item_bottom_bar_config, filesFiDel) {
+                            @NonNull
+                            @Override
+                            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                                if (convertView == null)
+                                    convertView = LayoutInflater.from(context).inflate(R.layout.item_bottom_bar_config, parent, false);
+                                TextView textLabel = convertView.findViewById(R.id.text_label);
+                                ImageButton btnEdit = convertView.findViewById(R.id.btn_edit);
+                                ImageButton btnDelete = convertView.findViewById(R.id.btn_delete);
+                                textLabel.setText(filesFiDel.get(position));
+                                btnEdit.setVisibility(View.GONE);
+                                btnDelete.setOnClickListener(v -> {
+                                    filesFiDel.remove(position);
+                                    notifyDataSetChanged();
+                                });
+                                return convertView;
+                            }
+                        };
+                        listView.setAdapter(adapter);
+                        dialogUtil.getDialogBuilder()
                                 .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                                .setPositiveButton(context.rss.getString(R.string.clone), (dialog6, which2) -> {
-                                    SignWrapper[] wrapper = new SignWrapper[1];
-                                    Runnable doClone = () -> {
-                                        ProgressManager pm = new ProgressManager(context, false).show();
-                                        APKLogger logger = pm.getLogger();
-                                        new Thread(() -> {
-                                            ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
-                                            @Override public void onMessage(String msg) { logger.logMessage(msg); }
-                                            @Override public void onProgress(int progress, int total) { pm.setProgress(progress, total); }
-                                        });
-                                            String pkgNameInput = pkgNameView.getText().toString();
-                                            apkCloner.setPath(filePath, pkgNameFromApk, pkgNameInput);
-                                            try {
-                                                apkCloner.processApk();
-                                                File cloned = new File(filePath.replace(".apk", "_clone.apk"));
-                                                if (sign[0]) {
-                                                    wrapper[0].signApk(cloned);
+                                .setNeutralButton(context.rss.getString(R.string.add), (dialog9, which6) -> {
+                                    EditText et = new EditText(context);
+                                    dialogUtil.getDialogBuilder().setView(UiFields.wrap(context, et, null, 16)).setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                                            .setPositiveButton(context.rss.getString(io.github.rosemoe.sora.R.string.sora_editor_next), (dialog8, which5) -> {
+                                                filesFiDel.add(et.getText().toString());
+                                                adapter.notifyDataSetChanged();
+                                            }).show();
+                                })
+                                .setPositiveButton(context.rss.getString(io.github.rosemoe.sora.R.string.sora_editor_next), (dialog8, which5) -> settings.edit().putStringSet("filesToDelete", new HashSet<>(filesFiDel)).apply())
+                                .setView(listView)
+                                .show();
+                    });
+                             dialogUtil.getDialogBuilder().setView(ll)
+                                    .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                                    .setPositiveButton(context.rss.getString(R.string.opt), (dialog7, which4) -> {
+                                        SignWrapper[] wrapper = new SignWrapper[1];
+                                        Runnable doOpt = () -> {
+                                            ProgressManager pm = new ProgressManager(context, true).show();
+                                            APKLogger logger = pm.getLogger();
+                                            new Thread(() -> {
+                                                try {
+                                                    File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, logger);
+                                                    if (deepOpt[0]) {
+                                                        logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
+                                                        opt = ApkDeepOptimizer.optimize(context, opt, settings.getStringSet("filesToDelete", null), settings, logger);
+                                                    }
+                                                    if (sign[0]) wrapper[0].signApk(opt);
+                                                    pm.dismiss();
+                                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                                } catch (Exception e) {
+                                                    pm.dismiss();
+                                                    new ErrorUtil(context).showError(e);
                                                 }
-                                                pm.dismiss();
-                                                context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                            } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
-                                        }).start();
-                                    };
-                                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                                        wrapper[0] = sw;
-                                        doClone.run();
-                                    }); else doClone.run();
-                                }).show();
-                    } else if (which1 == 6) signatures.showCertificateDialog(file);
-                    else if (which1 == 7) signatures.killSignatureVerification(file, fileName);
-                    else if (which1 == 8) overlay.showAddToastDialog(file, filePath);
-                    else if (which1 == 9) overlay.showRemoveAllToastsDialog(file);
-                    else if (which1 == 10) signatures.removeSignature(file);
-                    else if (which1 == 11) signatures.showSignatureHealthDialog(file);
-                    else if (which1 == 12) manifestEditor.showManifestTogglesDialog(file);
-                    else if (which1 == 13) manifestEditor.showPermissionsDialog(file);
-                    else {
-                        // Third-party APK action: indices 0-13 are built-ins above.
-                        int pluginIndex = which1 - 14;
-                        if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
-                            io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction ext = pluginMore.get(pluginIndex);
-                            if (ext != null) {
+                                            }).start();
+                                        };
+                                        Runnable startOpt = () -> {
+                                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                                wrapper[0] = sw;
+                                                doOpt.run();
+                                            }); else doOpt.run();
+                                        };
+                                        if (deepOpt[0]) {
+                                            new MaterialAlertDialogBuilder(context)
+                                                    .setTitle(context.rss.getString(R.string.deep_optimize))
+                                                    .setMessage(context.rss.getString(R.string.deep_optimize_warning))
+                                                    .setPositiveButton(context.rss.getString(R.string.opt), (dialog8, which5) -> startOpt.run())
+                                                    .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                                                    .show();
+                                        } else startOpt.run();
+                                    }).show();
+            } else if (which1 == 2) showDecompileOptionsDialog(file, fileName);
+            else if (which1 == 3) {
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                boolean forceDeleteOutputPath = settings.getBoolean("flagForce", false);
+                boolean cleanMeta = settings.getBoolean("cleanMeta", true);
+                boolean fixTypes = settings.getBoolean("fixTypes", true);
+                RefactorOptions options = new RefactorOptions();
+                options.inputFile = file;
+                String extension = FilenameUtils.getExtension(fileName);
+                options.outputFile = new File(file.getParentFile(), fileName.replace('.' + extension, "_refactored." + extension));
+                LinearLayout layout = new LinearLayout(context);
+                layout.setOrientation(LinearLayout.VERTICAL);
+                final String[] publicXmlPath = {null};
+                MaterialButton publicXmlInputView = new MaterialButton(context);
+                String publiXmlText = context.rss.getString(R.string.public_xml);
+                publicXmlInputView.setText(publiXmlText);
+                publicXmlInputView.setOnClickListener(v5 -> {
+                    FilePickerDialog.Properties properties = new FilePickerDialog.Properties();
+                    properties.selection_mode = FilePickerDialog.SINGLE_MODE;
+                    properties.selection_type = FilePickerDialog.FILE_SELECT;
+                    properties.root = new File(Environment.getExternalStorageDirectory().getPath());
+                    properties.offset = new File(Environment.getExternalStorageDirectory().getPath());
+                    properties.preferenceKey = "public_xml";
+                    properties.extensions = new String[]{"xml"};
+                    FilePickerDialog fpd = new FilePickerDialog(context, properties);
+                    fpd.setTitle(publiXmlText);
+                    fpd.setDialogSelectionListener(files -> publicXmlPath[0] = files[0]);
+                    fpd.show();
+                });
+                MaterialSwitch cleanMetaSwitch = new MaterialSwitch(context);
+                cleanMetaSwitch.setText(context.rss.getString(R.string.clean_meta));
+                cleanMetaSwitch.setChecked(cleanMeta);
+                cleanMetaSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("cleanMeta", isChecked2).apply());
+                MaterialSwitch fixTypesSwitch = new MaterialSwitch(context);
+                fixTypesSwitch.setText(R.string.fix_types);
+                fixTypesSwitch.setChecked(fixTypes);
+                fixTypesSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("fixTypes", isChecked2).apply());
+                MaterialSwitch forceSwitch = new MaterialSwitch(context);
+                forceSwitch.setText(context.rss.getString(R.string.force_delete_output_path));
+                forceSwitch.setChecked(forceDeleteOutputPath);
+                forceSwitch.setOnCheckedChangeListener((buttonView, isChecked2) -> settings.edit().putBoolean("flagForce", isChecked2).apply());
+                layout.addView(publicXmlInputView);
+                layout.addView(cleanMetaSwitch);
+                layout.addView(fixTypesSwitch);
+                layout.addView(forceSwitch);
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.refactor, (dialog2, which3) -> {
+                            options.cleanMeta = settings.getBoolean("cleanMeta", true);
+                            options.fixTypeNames = settings.getBoolean("fixTypes", true);
+                            options.force = settings.getBoolean("flagForce", false);
+                            ProgressManager pm = new ProgressManager(context, true).show();
+                            APKLogger logger = pm.getLogger();
+                            new Thread(() -> {
                                 try {
-                                    ext.run(new io.github.abdurazaaqmohammed.plugins.ext.ApkJob(context, file, fileName, filePath));
+                                    String pXmlFilePath = publicXmlPath[0];
+                                    if (!TextUtils.isEmpty(pXmlFilePath)) options.publicXml = new File(pXmlFilePath);
+                                    options.newCommandExecutor(logger).runCommand();
+                                    logger.close();
+                                    pm.dismiss();
+                                    Extensions.showMessage(context, context.getString(R.string.refactored, fileName));
+                                } catch (Exception e) {
+                                    pm.dismiss();
+                                    context.handler.post(() -> new ErrorUtil(context).showError(e));
+                                    logger.close();
+                                }
+                            }).start();
+                        }).create());
+            }
+            else if (which1 == 4) {
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                boolean skipManifest = settings.getBoolean("skipManifest", false);
+                boolean confuseZip = settings.getBoolean("confuseZip", false);
+                int dexLevel = settings.getInt("dexLevel", 0);
+                boolean flagForce = settings.getBoolean("flagForce", false);
+                ProtectorOptions options = new ProtectorOptions();
+                options.inputFile = file;
+                LinearLayout layout = new LinearLayout(context);
+                layout.setOrientation(LinearLayout.VERTICAL);
+                LayoutInflater layoutInflater = LayoutInflater.from(context);
+                View skipManifestView = layoutInflater.inflate(R.layout.item_switch, layout, false);
+                TextView skipManifestTitle = skipManifestView.findViewById(R.id.title);
+                CheckBox skipManifestSwtch = skipManifestView.findViewById(R.id.switch_view);
+                skipManifestTitle.setText(context.rss.getString(R.string.skip_manifest_protection));
+                skipManifestSwtch.setChecked(skipManifest);
+                skipManifestSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("skipManifest", isChecked).apply());
+                skipManifestView.setOnClickListener(v2 -> skipManifestSwtch.toggle());
+                View confuseZipView = layoutInflater.inflate(R.layout.item_switch, layout, false);
+                TextView confuseZipTitle = confuseZipView.findViewById(R.id.title);
+                CheckBox confuseZipSwtch = confuseZipView.findViewById(R.id.switch_view);
+                confuseZipTitle.setText(context.rss.getString(R.string.confuse_zip_structure));
+                confuseZipSwtch.setChecked(confuseZip);
+                confuseZipSwtch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("confuseZip", isChecked).apply());
+                confuseZipView.setOnClickListener(v2 -> confuseZipSwtch.toggle());
+                View dexLevelView = layoutInflater.inflate(R.layout.item_edit_number, layout, false);
+                TextView dexLevelTitle = dexLevelView.findViewById(R.id.title);
+                EditText dexLevelInput = dexLevelView.findViewById(R.id.edit_text);
+                dexLevelTitle.setText(context.rss.getString(R.string.dex_protection_level));
+                dexLevelInput.setText(String.valueOf(dexLevel));
+                dexLevelInput.addTextChangedListener(new TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override public void afterTextChanged(Editable s) {
+                        try {
+                            settings.edit().putInt("dexLevel", Integer.parseInt(s.toString())).apply();
+                        } catch (Exception ignored) {}
+                    }
+                });
+                View forceView = layoutInflater.inflate(R.layout.item_switch, layout, false);
+                TextView forceTitle = forceView.findViewById(R.id.title);
+                CheckBox forceSwitch = forceView.findViewById(R.id.switch_view);
+                forceTitle.setText(context.rss.getString(R.string.force_delete_output_path));
+                forceSwitch.setChecked(flagForce);
+                forceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("flagForce", isChecked).apply());
+                forceView.setOnClickListener(v2 -> forceSwitch.toggle());
+                layout.addView(skipManifestView);
+                layout.addView(confuseZipView);
+                layout.addView(dexLevelView);
+                layout.addView(forceView);
+                dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder().setView(layout)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.protect, (dialog2, which3) -> {
+                            options.skipManifest = settings.getBoolean("skipManifest", false);
+                            options.confuse_zip = settings.getBoolean("confuseZip", false);
+                            options.dexLevel = settings.getInt("dexLevel", 0);
+                            options.force = settings.getBoolean("flagForce", false);
+                            options.outputFile = options.generateOutputFromInput(file);
+                            ProgressManager pm = new ProgressManager(context, true).show();
+                            APKLogger logger = pm.getLogger();
+                            new Thread(() -> {
+                                try {
+                                    options.newCommandExecutor(logger).runCommand();
+                                    logger.close();
+                                    pm.dismiss();
+                                    context.handler.post(() -> { dialog2.dismiss(); Extensions.showMessage(context, context.rss.getString(R.string.protectd)); });
+                                } catch (Exception e) {
+                                    pm.dismiss();
+                                    context.handler.post(dialog2::dismiss);
+                                    new ErrorUtil(context).showError(e);
+                                    logger.close();
+                                }
+                            }).start();
+                        }).create());
+            }
+            else if (which1 == 5) {
+                View ll = LayoutInflater.from(context).inflate(R.layout.dialog_clone, null);
+                TextView pkgNameView = ll.findViewById(R.id.package_name_input);
+                String pkgNameFromApk = overlay.getPackageNameFromApk(filePath);
+                pkgNameView.setText(ApkCloner.changeEndCharacter(pkgNameFromApk));
+                final boolean[] sign = new boolean[1];
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                CheckBox autosign = ll.findViewById(R.id.autosign);
+                autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+                autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                ll.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                dialogUtil.getDialogBuilder().setView(ll)
+                        .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                        .setPositiveButton(context.rss.getString(R.string.clone), (dialog6, which2) -> {
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            Runnable doClone = () -> {
+                                ProgressManager pm = new ProgressManager(context, false).show();
+                                APKLogger logger = pm.getLogger();
+                                new Thread(() -> {
+                                    ApkCloner apkCloner = new ApkCloner(context, new ApkCloner.ApkClonerCallBack() {
+                                    @Override public void onMessage(String msg) { logger.logMessage(msg); }
+                                    @Override public void onProgress(int progress, int total) { pm.setProgress(progress, total); }
+                                });
+                                    String pkgNameInput = pkgNameView.getText().toString();
+                                    apkCloner.setPath(filePath, pkgNameFromApk, pkgNameInput);
+                                    try {
+                                        apkCloner.processApk();
+                                        File cloned = new File(filePath.replace(".apk", "_clone.apk"));
+                                        if (sign[0]) {
+                                            wrapper[0].signApk(cloned);
+                                        }
+                                        pm.dismiss();
+                                        context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                    } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
+                                }).start();
+                            };
+                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                wrapper[0] = sw;
+                                doClone.run();
+                            }); else doClone.run();
+                        }).show();
+            } else if (which1 == 6) signatures.showCertificateDialog(file);
+            else if (which1 == 7) signatures.killSignatureVerification(file, fileName);
+            else if (which1 == 8) overlay.showAddToastDialog(file, filePath);
+            else if (which1 == 9) overlay.showRemoveAllToastsDialog(file);
+            else if (which1 == 10) signatures.removeSignature(file);
+            else if (which1 == 11) signatures.showSignatureHealthDialog(file);
+            else if (which1 == 12) manifestEditor.showManifestTogglesDialog(file);
+            else if (which1 == 13) manifestEditor.showPermissionsDialog(file);
+            else {
+                // Third-party APK action: indices 0-13 are built-ins above.
+                int pluginIndex = which1 - 14;
+                if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
+                    io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction ext = pluginMore.get(pluginIndex);
+                    if (ext != null) {
+                        try {
+                            ext.run(new io.github.abdurazaaqmohammed.plugins.ext.ApkJob(context, file, fileName, filePath));
+                        } catch (Exception ignored) {
+                        }
+                    }
+                } else {
+                    int extIndex = which1 - 14 - pluginMore.size();
+                    if (extIndex >= 0 && extIndex < externalApk.size()) {
+                        io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry found =
+                                externalApk.get(extIndex);
+                        if (found != null) {
+                            try {
+                                android.net.Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                                        context, context.getPackageName() + ".provider", file);
+                                android.content.Intent extIntent = io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.explicitIntent(
+                                        found.plugin, io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.ACTION_APK);
+                                extIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                                extIntent.putExtra(io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.EXTRA_PLUGIN_ID,
+                                        found.plugin.pluginId);
+                                extIntent.putExtra(io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.EXTRA_APK_NAME,
+                                        fileName);
+                                extIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                try {
+                                    context.grantUriPermission(found.plugin.packageName, apkUri,
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                } catch (Exception ignored) {
+                                }
+                                io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust.ensureTrusted(
+                                        context, found.plugin, () -> {
+                                            try {
+                                                context.startActivity(extIntent);
+                                            } catch (Exception ignored) {
+                                            }
+                                        });
+                            } catch (Exception e2) {
+                                try {
+                                    Extensions.showMessage(context, context.getString(R.string.cannot_share_apk_plugin));
                                 } catch (Exception ignored) {
                                 }
                             }
-                        } else {
-                            int extIndex = which1 - 14 - pluginMore.size();
-                            if (extIndex >= 0 && extIndex < externalApk.size()) {
-                                io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions.Entry found =
-                                        externalApk.get(extIndex);
-                                if (found != null) {
-                                    try {
-                                        android.net.Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
-                                                context, context.getPackageName() + ".provider", file);
-                                        android.content.Intent extIntent = io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.explicitIntent(
-                                                found.plugin, io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.ACTION_APK);
-                                        extIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                                        extIntent.putExtra(io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.EXTRA_PLUGIN_ID,
-                                                found.plugin.pluginId);
-                                        extIntent.putExtra(io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts.EXTRA_APK_NAME,
-                                                fileName);
-                                        extIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                        try {
-                                            context.grantUriPermission(found.plugin.packageName, apkUri,
-                                                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                        } catch (Exception ignored) {
-                                        }
-                                        io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust.ensureTrusted(
-                                                context, found.plugin, () -> {
-                                                    try {
-                                                        context.startActivity(extIntent);
-                                                    } catch (Exception ignored) {
-                                                    }
-                                                });
-                                    } catch (Exception e2) {
-                                        try {
-                                            Extensions.showMessage(context, context.getString(R.string.cannot_share_apk_plugin));
-                                        } catch (Exception ignored) {
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
-                    };
-                    showFunctionGrid(functionContainer, display, dialog, items, functionOrder, apkAction);
-                })
+                }
+            }
+            };
+            showFunctionGrid(functionContainer, display, dialogRef[0], items, functionOrder, apkAction);
+        };
+        AlertDialog ad = dialogUtil.getDialogBuilder()
+                .setView(functionContainer)
+                .setNeutralButton(R.string.func, (dialog, which) -> openFunctions.run())
                 .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
                 .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file))
                 .create();
+        dialogRef[0] = ad;
+        // AlertDialog closes itself on every button click. 功能 has to swap the body in
+        // place, so re-bind the neutral button after show(): that replaces the handler
+        // which posts the dismiss message and leaves the dialog open.
+        ad.setOnShowListener(d -> ad.getButton(AlertDialog.BUTTON_NEUTRAL)
+                .setOnClickListener(v -> openFunctions.run()));
         dialogUtil.styleAlertDialog(ad);
         LinearLayout rootInfoSection = display.findViewById(R.id.rootInfoSection);
         LinearLayout rootInfoHeader = display.findViewById(R.id.rootInfoHeader);
