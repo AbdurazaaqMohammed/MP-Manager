@@ -62,7 +62,7 @@ public class WallpaperTool extends BaseToolPlugin {
             Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             if (!gradient) {
                 bmp.eraseColor(first);
-            } else if ("Left → Right".equals(direction)) {
+            } else if ("Horizontal".equals(direction)) {
                 int[] row = new int[w];
                 for (int x = 0; x < w; x++) {
                     float t = x / (float) w;
@@ -134,7 +134,7 @@ public class WallpaperTool extends BaseToolPlugin {
         final int[] first = new int[]{Color.parseColor("#1B73E8")};
         final int[] second = new int[]{Color.parseColor("#681DA8")};
         final int[] which = new int[]{0};
-        final String[] direction = new String[]{"Top → Bottom"};
+        final String[] direction = new String[]{"Vertical"};
 
         LinearLayout whichRow = ToolViewFactory.makeRow(box);
         MaterialButton firstTab = ToolViewFactory.makeRowButton(whichRow, "Color 1 ●", 1f);
@@ -190,48 +190,42 @@ public class WallpaperTool extends BaseToolPlugin {
         });
         wheel.setColor(first[0]);
 
-        ToolViewFactory.addLabel(box, "Presets (tap = set current color)");
-        int[] presets = new int[]{Color.parseColor("#1B73E8"), Color.parseColor("#0D652D"), Color.parseColor("#A50E0E"), Color.parseColor("#681DA8"), Color.parseColor("#FF6D00"), Color.parseColor("#00BCD4"), Color.parseColor("#000000"), Color.parseColor("#FFFFFF"), Color.parseColor("#FF4081"), Color.parseColor("#9E9E9E")};
-        LinearLayout presetRow1 = ToolViewFactory.makeRow(box);
-        LinearLayout presetRow2 = ToolViewFactory.makeRow(box);
-        for (int i = 0; i < presets.length; i++) {
-            final int color = presets[i];
-            MaterialButton sw = new MaterialButton(context);
-            sw.setText("");
-            sw.setBackgroundColor(color);
-            sw.setMinHeight(ToolViewFactory.dp(context, 48));
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, ToolViewFactory.dp(context, 48), 1f);
-            int mm = ToolViewFactory.dp(context, 3);
-            p.setMargins(mm, mm, mm, mm);
-            (i < 5 ? presetRow1 : presetRow2).addView(sw, p);
-            sw.setOnClickListener(v -> {
-                if (which[0] == 0) first[0] = color; else second[0] = color;
-                wheel.setColor(color);
-                currentSwatch.setBackgroundColor(color);
-                renderWallpaperPreview(context, previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
-            });
-        }
-
         CheckBox gradientBox = new CheckBox(context);
         gradientBox.setText("Gradient blend (off = solid Color 1)");
         gradientBox.setChecked(true);
         box.addView(gradientBox);
         gradientHolder[0] = true;
         ToolViewFactory.addLabel(box, "Gradient direction");
-        Spinner dirSpinner = new Spinner(context);
-        String[] dirs = new String[]{"Top → Bottom", "Left → Right", "Diagonal", "Radial"};
-        ArrayAdapter<String> dirAdapter =
-                new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, dirs);
-        dirAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        dirSpinner.setAdapter(dirAdapter);
-        box.addView(dirSpinner);
-        dirSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                direction[0] = dirs[position];
-                renderWallpaperPreview(context, previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
+        String[] dirs = new String[]{"Vertical", "Horizontal", "Diagonal", "Radial"};
+        com.google.android.material.button.MaterialButtonToggleGroup dirToggle =
+                new com.google.android.material.button.MaterialButtonToggleGroup(context);
+        dirToggle.setSingleSelection(true);
+        dirToggle.setSelectionRequired(true);
+        for (String d : dirs) {
+            MaterialButton b = new MaterialButton(context);
+            b.setId(View.generateViewId());
+            b.setText(d);
+            b.setTextSize(12);
+            dirToggle.addView(b, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        int tm = ToolViewFactory.dp(context, 8);
+        LinearLayout.LayoutParams dgp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dgp.setMargins(0, 0, 0, tm);
+        box.addView(dirToggle, dgp);
+        dirToggle.addOnButtonCheckedListener((g, checkedId, checked) -> {
+            if (!checked) return;
+            for (int i = 0; i < dirs.length; i++) {
+                if (dirToggle.getChildAt(i).getId() == checkedId) {
+                    direction[0] = dirs[i];
+                    renderWallpaperPreview(context, previewHolder[0], first[0], second[0], gradientHolder[0], direction[0]);
+                    return;
+                }
             }
-            public void onNothingSelected(AdapterView<?> parent) {}
         });
+        dirToggle.check(dirToggle.getChildAt(0).getId());
+        direction[0] = dirs[0];
 
         ImageView preview = new ImageView(context);
         preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -375,3 +369,6 @@ public class WallpaperTool extends BaseToolPlugin {
         return box;
     }
 }
+
+
+
