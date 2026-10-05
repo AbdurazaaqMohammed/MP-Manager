@@ -234,9 +234,10 @@ public class ShizukuFile extends File {
 
     @Override
     public int compareTo(File other) {
-        if (other instanceof ShizukuFile) return super.compareTo(other);
-        // Keep directories-first ordering consistent with the app's File comparator.
-        if (isDirectory() != other.isDirectory()) return isDirectory() ? -1 : 1;
-        return getName().compareToIgnoreCase(other.getName());
+        // Deliberately never probes the other file: TimSort and Arrays.binarySearch call this, and
+        // isDirectory() on a plain File blocks on FUSE for paths the app cannot reach. Plain
+        // path order also keeps the ordering consistent for binarySearch, and FileSorting re-sorts
+        // with real metadata immediately afterwards.
+        return super.compareTo(other);
     }
 }

@@ -1426,6 +1426,16 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             File[] viaShizuku = ShizukuFile.tryList(this, folder);
             if (viaShizuku != null) files = viaShizuku;
         }
+        // Once listFiles() succeeds it returns plain File entries, and every one of them has to be
+        // stat'ed later: FileSorting's comparator calls isDirectory/length/lastModified, and the
+        // manifest probe below compares against plain File keys. Under Android/data those stats
+        // block on FUSE instead of failing, so sorting 372 entries ANRs the main thread. Re-list
+        // through the shell when that did not happen: those entries carry the metadata, so the
+        // stats disappear instead of merely moving off the main thread.
+        if (shizukuDir && files != null && !(files.length > 0 && files[0] instanceof ShizukuFile)) {
+            File[] viaShizuku = ShizukuFile.tryList(this, folder);
+            if (viaShizuku != null && viaShizuku.length > 0) files = viaShizuku;
+        }
         if (files == null) {
             if (shizukuDir) showShizukuGuideOnce(folder, pane1);
             boolean elevated = AccessManager.fileOpsOn(this);
