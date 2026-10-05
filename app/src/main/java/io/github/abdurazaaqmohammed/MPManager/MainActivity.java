@@ -1411,16 +1411,18 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
-        boolean shizukuDir = ShizukuFile.isAndroidDataPath(folder);
+        boolean shizukuDir = ShizukuFile.isShellPath(folder);
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
         boolean rootListingPath = "/".equals(folderPath) || RootManager.isRootOnlyPath(folderPath);
-        if (rootListingPath && AccessManager.active(this) == AccessManager.Backend.ROOT && AccessManager.fileOpsOn(this)) {
+        AccessManager.Backend backend = AccessManager.active(this);
+        if (rootListingPath && (backend == AccessManager.Backend.ROOT || backend == AccessManager.Backend.SHIZUKU)
+                && AccessManager.fileOpsOn(this)) {
             files = AccessManager.listWithStat(this, folder.getAbsolutePath());
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
-        if (files == null || (files.length == 0 && shizukuDir)) {
+        if (files == null || (files.length == 0 && shizukuDir && !folder.canRead())) {
             File[] viaShizuku = ShizukuFile.tryList(this, folder);
             if (viaShizuku != null) files = viaShizuku;
         }

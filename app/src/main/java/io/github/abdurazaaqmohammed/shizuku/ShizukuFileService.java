@@ -15,7 +15,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 public class ShizukuFileService extends IFileService.Stub {
 
@@ -32,9 +31,6 @@ public class ShizukuFileService extends IFileService.Stub {
             "pm grant ",
             "pm trim-caches"
     };
-
-    private static final Pattern ALLOWED =
-            Pattern.compile("^/storage/emulated/\\d+/Android/(data|obb|media)(/.*)?$");
 
     private String error = "";
 
@@ -90,16 +86,22 @@ public class ShizukuFileService extends IFileService.Stub {
         return n;
     }
 
+    /**
+     * Any absolute path is accepted; the kernel and SELinux decide what shell can actually reach.
+     * Mirrors {@code ShizukuManager.isAllowed}.
+     */
     private boolean allowed(String path) {
-        String n = canon(path);
-        return n != null && ALLOWED.matcher(n).matches();
+        return canon(path) != null;
     }
 
     private boolean topLevel(String path) {
         String n = canon(path);
         return n != null && (n.equals("/storage/emulated/0/Android/data")
                 || n.equals("/storage/emulated/0/Android/obb")
-                || n.equals("/storage/emulated/0/Android/media"));
+                || n.equals("/storage/emulated/0/Android/media")
+                || n.equals("/storage")
+                || n.equals("/storage/emulated")
+                || n.equals("/storage/self/primary"));
     }
 
     private File checked(String path) {

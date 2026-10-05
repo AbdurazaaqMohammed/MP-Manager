@@ -14,7 +14,6 @@ import java.io.OutputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.shizuku.IFileService;
 import io.github.abdurazaaqmohammed.shizuku.ShizukuConnection;
@@ -24,9 +23,6 @@ import rikka.shizuku.Shizuku;
 public final class ShizukuManager {
 
     public static final int PERMISSION_CODE = 5101;
-
-    private static final Pattern ALLOWED =
-            Pattern.compile("^(?:/storage/emulated/\\d+|/sdcard)/Android/(data|obb|media)(/.*)?$");
 
     private ShizukuManager() {
     }
@@ -128,14 +124,13 @@ public final class ShizukuManager {
         return sb.length() == 0 ? "/" : sb.toString();
     }
 
+    /**
+     * Any absolute path is accepted: Shizuku runs as shell uid, so what is reachable is decided by
+     * the kernel (read-only erofs mounts) and SELinux rather than by a whitelist here. What the
+     * shell cannot touch simply fails with the underlying OS error.
+     */
     public static boolean isAllowed(String path) {
-        String n = normalize(path);
-        if (n == null) return false;
-        if (n.equals("/sdcard") || n.startsWith("/sdcard/")) {
-            n = "/storage/emulated/0" + n.substring("/sdcard".length());
-            if (n.isEmpty()) n = "/";
-        }
-        return ALLOWED.matcher(n).matches();
+        return normalize(path) != null;
     }
 
     public static boolean isTopLevel(String path) {
@@ -146,7 +141,10 @@ public final class ShizukuManager {
         }
         return n.equals("/storage/emulated/0/Android/data")
                 || n.equals("/storage/emulated/0/Android/obb")
-                || n.equals("/storage/emulated/0/Android/media");
+                || n.equals("/storage/emulated/0/Android/media")
+                || n.equals("/storage")
+                || n.equals("/storage/emulated")
+                || n.equals("/storage/self/primary");
     }
 
     private static void requireAllowed(String path) throws IOException {

@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.core.ui.UIKit;
 import io.github.abdurazaaqmohammed.core.ui.util.ThemeAttrs;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
@@ -44,6 +45,7 @@ import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
+import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.views.FastScrollerRecyclerView;
@@ -175,6 +177,17 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         } catch (Exception ignored) { }
     }
 
+    /**
+     * True only when {@code file} is known gone and checking it was free. ShizukuFile and RootFile
+     * override exists() with a shell/root round-trip, so probing them here would fork a process per
+     * restored tab on the main thread; readTabText catches those off-thread instead.
+     */
+    private static boolean isPlainFileMissing(File file) {
+        if (file == null) return false;
+        if (file instanceof ShizukuFile || file instanceof RootFile) return false;
+        return !file.exists();
+    }
+
     private void restoreSession() {
         File file = sessionFile();
         if (!file.exists()) return;
@@ -216,6 +229,10 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 } else if (t.file == null && t.fileUri == null) {
                     continue; // nothing restorable for this tab
                 }
+                // Drop tabs whose backing file vanished, but never drop persisted content or
+                // root-staged tabs: those hold unsaved edits or get re-staged on load.
+                if (!t.loaded && (t.rootOriginalPath == null || t.rootOriginalPath.isEmpty())
+                        && isPlainFileMissing(t.file)) continue;
                 tabs.add(t);
             }
             if (!tabs.isEmpty()) {
@@ -595,6 +612,14 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     }
 
     private String readTabText(EditorTab tab) {
+        // A session-restored tab can point at a file deleted since the session was saved. Guard
+        // here rather than letting FileUtils surface NoSuchFileException into ErrorUtil, which
+        // would try to log the failure into the very directory that is already gone.
+        if (tab.file != null && !tab.file.exists()) {
+            tab.loadFailed = true;
+            runOnUiThread(() -> Extensions.showMessage(this, R.string.hex_file_not_found));
+            return "";
+        }
         // Binary axml must be decoded, not read as UTF-8 text
         if (tab.axml) {
             try (InputStream is = tab.file != null ? FileUtils.getInputStream(tab.file)

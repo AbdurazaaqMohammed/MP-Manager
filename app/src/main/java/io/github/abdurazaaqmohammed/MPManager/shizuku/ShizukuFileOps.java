@@ -8,9 +8,9 @@ import java.io.IOException;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 
 /**
- * Cross-boundary helpers for Shizuku paths: copying/moving between Android/data and normal
- * folders, and materializing Shizuku-only files into the app cache for open/share flows.
- * Kept out of ShizukuFile so the File subclass stays minimal.
+ * Cross-boundary helpers for emulated-volume paths the app cannot reach directly: copying/moving
+ * between them and normal folders, and materializing Shizuku-only files into the app cache for
+ * open/share flows. Kept out of ShizukuFile so the File subclass stays minimal.
  */
 public final class ShizukuFileOps {
 
@@ -36,14 +36,24 @@ public final class ShizukuFileOps {
         }
     }
 
-    /** True when either side of the operation lives in Android/data. */
+/**
+     * True when either side of the operation genuinely needs shell access. Files the app can read
+     * on its own keep the fast native path, so ordinary files are never pushed through
+     * {@code cp -r}/{@code mv} or needlessly wrapped as {@link ShizukuFile}.
+     */
     public static boolean involvesShizukuPath(File src, File dest) {
-        return ShizukuFile.isAndroidDataPath(src) || ShizukuFile.isAndroidDataPath(dest);
+        return needsShell(src) || needsShell(dest);
+    }
+
+    private static boolean needsShell(File f) {
+        if (f == null) return false;
+        if (f instanceof ShizukuFile) return true;
+        return ShizukuFile.isShellPath(f) && !f.canRead();
     }
 
     /**
      * Copy src into destFolder via shell (cp -r). Returns the created file, or null on failure.
-     * Works in both directions (into and out of Android/data).
+     * Works in both directions (into and out of the shell-only subtrees).
      */
     public static File shellCopy(File src, File destFolder, String name) {
         if (!ShizukuShell.isGranted()) return null;

@@ -48,6 +48,7 @@ public class RootManager {
             "/", "/system", "/system_ext", "/vendor", "/product", "/odm", "/oem",
             "/boot", "/recovery", "/sbin", "/proc", "/sys", "/dev",
             "/cache", "/tmp", "/mnt", "/storage",
+            "/mnt/installer", "/mnt/androidwritable",
             "/data", "/data/data", "/data/user", "/data/user_de",
             "/data/system", "/data/app", "/data/dalvik-cache",
             "/sdcard"
@@ -245,11 +246,7 @@ public class RootManager {
     public static boolean isPathBlocked(String path) {
         if (path == null) return true;
         String normalized = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
-        if (BLOCKED_DELETE_PATHS.contains(normalized)) return true;
-        for (String blocked : BLOCKED_DELETE_PATHS) {
-            if (normalized.equals(blocked)) return true;
-        }
-        return false;
+        return BLOCKED_DELETE_PATHS.contains(normalized);
     }
 
     public static boolean isPathInKeyDirectory(String path) {
