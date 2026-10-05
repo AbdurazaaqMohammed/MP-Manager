@@ -1,471 +1,206 @@
 {
-  "catalogVersion": 1,
-  "packs": [
-    {
-      "id": "media",
-      "title": "Media Pack",
-      "description": "Tone generator, metronome, recorder and text to speech.",
-      "category": "Media & Sound",
-      "version": 2,
-      "versionName": "1.1",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-media.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.media.MediaPack",
-      "tools": [
-        {
-          "id": "tone",
-          "title": "Tone Generator",
-          "subtitle": "Play custom frequencies"
-        },
-        {
-          "id": "metronome",
-          "title": "Metronome",
-          "subtitle": "Keep tempo with beats"
-        },
-        {
-          "id": "recorder",
-          "title": "Voice Recorder",
-          "subtitle": "Record and play audio"
-        },
-        {
-          "id": "tts",
-          "title": "Speak Text",
-          "subtitle": "Speak typed text aloud"
-        }
-      ]
-    },
-    {
-      "id": "device",
-      "title": "Device Pack",
-      "description": "Timers, flashlight, sensors, GPS, hub, ringtones and wallpapers.",
-      "category": "Device & Hardware",
-      "version": 3,
-      "versionName": "1.2",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-device.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.device.DevicePack",
-      "tools": [
-        {
-          "id": "stopwatch",
-          "title": "Stopwatch",
-          "subtitle": "Stopwatch with laps"
-        },
-        {
-          "id": "timer",
-          "title": "Countdown Timer",
-          "subtitle": "Set alarms and run countdowns"
-        },
-        {
-          "id": "flashlight",
-          "title": "Flashlight",
-          "subtitle": "Use torch and screen light"
-        },
-        {
-          "id": "magnifier",
-          "title": "Magnifier",
-          "subtitle": "Zoom into small text"
-        },
-        {
-          "id": "volume",
-          "title": "Volume Panel",
-          "subtitle": "Control all volume streams"
-        },
-        {
-          "id": "vibration",
-          "title": "Vibration Studio",
-          "subtitle": "Create custom vibrations"
-        },
-        {
-          "id": "compass",
-          "title": "Compass",
-          "subtitle": "Find magnetic heading"
-        },
-        {
-          "id": "level",
-          "title": "Bubble Level",
-          "subtitle": "Check surface level"
-        },
-        {
-          "id": "ruler",
-          "title": "Ruler",
-          "subtitle": "Measure in cm and inches"
-        },
-        {
-          "id": "protractor",
-          "title": "Protractor",
-          "subtitle": "Measure angles with touch"
-        },
-        {
-          "id": "gps",
-          "title": "GPS Speedometer",
-          "subtitle": "Track live GPS speed"
-        },
-        {
-          "id": "ringtone",
-          "title": "Ringtone Preview",
-          "subtitle": "Browse and preview sounds"
-        },
-        {
-          "id": "wallpaper",
-          "title": "Wallpaper Maker",
-          "subtitle": "Design gradient wallpapers"
-        },
-        {
-          "id": "devicehub",
-          "title": "Device Info",
-          "subtitle": "Battery, CPU, sensors, storage"
-        }
-      ]
-    },
-    {
-      "id": "network",
-      "title": "Network Pack",
-      "description": "Connectivity hub, NFC, Bluetooth, QR generator and scanner.",
-      "category": "Wi-Fi & Network",
-      "version": 1,
-      "versionName": "1.0",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-network.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.network.NetworkPack",
-      "tools": [
-        {
-          "id": "connectivity",
-          "title": "Connectivity Hub",
-          "subtitle": "Network, Bluetooth, NFC info"
-        },
-        {
-          "id": "nfc",
-          "title": "NFC Reader",
-          "subtitle": "Scan NFC tags"
-        },
-        {
-          "id": "bluetooth",
-          "title": "Bluetooth Pairs",
-          "subtitle": "View bonded devices"
-        },
-        {
-          "id": "qrgen",
-          "title": "QR Generator",
-          "subtitle": "Text, URL, Wi-Fi to QR"
-        },
-        {
-          "id": "qrscan",
-          "title": "QR Scanner",
-          "subtitle": "Scan barcodes with camera"
-        }
-      ]
-    },
-    {
-      "id": "math",
-      "title": "Math Pack",
-      "description": "Calculators, converters, price/tax, finance and algebra.",
-      "category": "Math & Finance",
-      "version": 3,
-      "versionName": "1.2",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-math.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.math.MathPack",
-      "tools": [
-        {
-          "id": "calc",
-          "title": "Calculator",
-          "subtitle": "Calculate science expressions"
-        },
-        {
-          "id": "converter",
-          "title": "Unit Converter",
-          "subtitle": "Length, weight, temp, data"
-        },
-        {
-          "id": "baseconv",
-          "title": "Base Converter",
-          "subtitle": "Binary, octal, decimal, hex"
-        },
-        {
-          "id": "discount",
-          "title": "Discount Calculator",
-          "subtitle": "Prices, discounts, tax"
-        },
-        {
-          "id": "tip",
-          "title": "Tip Calculator",
-          "subtitle": "Split bills and tip"
-        },
-        {
-          "id": "percent",
-          "title": "Percentage Calculator",
-          "subtitle": "Percents, change, shares"
-        },
-        {
-          "id": "gst",
-          "title": "Tax Calculator",
-          "subtitle": "Add or remove GST, VAT"
-        },
-        {
-          "id": "unitprice",
-          "title": "Price Compare",
-          "subtitle": "Compare best values"
-        },
-        {
-          "id": "emi",
-          "title": "EMI Calculator",
-          "subtitle": "Loans, interest, totals"
-        },
-        {
-          "id": "compound",
-          "title": "Interest Calculator",
-          "subtitle": "Compound growth, SIP"
-        },
-        {
-          "id": "savings",
-          "title": "Savings Goal",
-          "subtitle": "Plan deposits and goals"
-        },
-        {
-          "id": "prime",
-          "title": "Prime Tools",
-          "subtitle": "Primes and factors"
-        },
-        {
-          "id": "quadratic",
-          "title": "Quadratic Solver",
-          "subtitle": "Roots and vertex"
-        },
-        {
-          "id": "matrix",
-          "title": "Matrix 2x2",
-          "subtitle": "Add, multiply, invert"
-        },
-        {
-          "id": "triangle",
-          "title": "Triangle Solver",
-          "subtitle": "Sides and angles"
-        },
-        {
-          "id": "geometry",
-          "title": "Geometry Calc",
-          "subtitle": "Areas and volumes"
-        },
-        {
-          "id": "fraction",
-          "title": "Fraction Calc",
-          "subtitle": "Simplify fractions"
-        },
-        {
-          "id": "gpa",
-          "title": "GPA Calculator",
-          "subtitle": "Grades and credits"
-        },
-        {
-          "id": "currency",
-          "title": "Currency Converter",
-          "subtitle": "Convert with offline rates"
-        },
-        {
-          "id": "cooking",
-          "title": "Cooking Converter",
-          "subtitle": "Cups and grams"
-        },
-        {
-          "id": "fuel",
-          "title": "Fuel Calculator",
-          "subtitle": "Mileage and fuel cost"
-        },
-        {
-          "id": "pace",
-          "title": "Pace Calculator",
-          "subtitle": "Running pace and speed"
-        },
-        {
-          "id": "ohm",
-          "title": "Ohm Law Calc",
-          "subtitle": "Solve V, I, R, P"
-        },
-        {
-          "id": "resistor",
-          "title": "Resistor Decoder",
-          "subtitle": "Decode color bands"
-        }
-      ]
-    },
-    {
-      "id": "text",
-      "title": "Text & Code Pack",
-      "description": "Counter, hashes, codecs, case, Morse, JSON, lorem, regex and color.",
-      "category": "Text & Security",
-      "version": 3,
-      "versionName": "1.2",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-text.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.text.TextPack",
-      "tools": [
-        {
-          "id": "textcounter",
-          "title": "Text Counter",
-          "subtitle": "Chars, words, lines"
-        },
-        {
-          "id": "hash",
-          "title": "Hash Generator",
-          "subtitle": "MD5, SHA-1, SHA-256"
-        },
-        {
-          "id": "base64",
-          "title": "Base64 Tool",
-          "subtitle": "Encode and decode Base64"
-        },
-        {
-          "id": "urlcodec",
-          "title": "URL Encoder",
-          "subtitle": "Encode and decode URLs"
-        },
-        {
-          "id": "binarytext",
-          "title": "Binary Translator",
-          "subtitle": "Convert text to binary"
-        },
-        {
-          "id": "caesar",
-          "title": "Caesar Cipher",
-          "subtitle": "Shift ciphers, brute force"
-        },
-        {
-          "id": "caseconv",
-          "title": "Case Converter",
-          "subtitle": "Upper, lower, title, reverse"
-        },
-        {
-          "id": "morse",
-          "title": "Morse Code",
-          "subtitle": "Encode, decode, play Morse"
-        },
-        {
-          "id": "json",
-          "title": "JSON Formatter",
-          "subtitle": "Format, minify, validate"
-        },
-        {
-          "id": "lorem",
-          "title": "Lorem Generator",
-          "subtitle": "Generate placeholder text"
-        },
-        {
-          "id": "regex",
-          "title": "Regex Tester",
-          "subtitle": "Test patterns live"
-        },
-        {
-          "id": "colorconv",
-          "title": "Color Converter",
-          "subtitle": "HEX, RGB, HSL"
-        }
-      ]
-    },
-    {
-      "id": "time",
-      "title": "Time & Notes Pack",
-      "description": "Notes, tally, dates, health and sleep.",
-      "category": "Time & Productivity",
-      "version": 2,
-      "versionName": "1.1",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-time.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.time.TimePack",
-      "tools": [
-        {
-          "id": "notes",
-          "title": "Quick Notes",
-          "subtitle": "Write and save notes"
-        },
-        {
-          "id": "tally",
-          "title": "Tally Counter",
-          "subtitle": "Count taps easily"
-        },
-        {
-          "id": "datediff",
-          "title": "Date Difference",
-          "subtitle": "Days and age between dates"
-        },
-        {
-          "id": "agecalc",
-          "title": "Age Calculator",
-          "subtitle": "Exact age and birthdays"
-        },
-        {
-          "id": "dateadd",
-          "title": "Date Adder",
-          "subtitle": "Add or subtract days"
-        },
-        {
-          "id": "timecalc",
-          "title": "Duration Calculator",
-          "subtitle": "Add or subtract durations"
-        },
-        {
-          "id": "eventcount",
-          "title": "Event Countdown",
-          "subtitle": "Countdown to events live"
-        },
-        {
-          "id": "bmi",
-          "title": "BMI Calculator",
-          "subtitle": "Calculate body mass index"
-        },
-        {
-          "id": "bmr",
-          "title": "Calorie Calculator",
-          "subtitle": "BMR, TDEE, calories"
-        },
-        {
-          "id": "bodyfat",
-          "title": "Body Fat Estimator",
-          "subtitle": "Estimate with US Navy method"
-        },
-        {
-          "id": "water",
-          "title": "Water Tracker",
-          "subtitle": "Log daily water intake"
-        },
-        {
-          "id": "sleep",
-          "title": "Sleep Cycles",
-          "subtitle": "Bedtimes in 90-minute cycles"
-        }
-      ]
-    },
-    {
-      "id": "random",
-      "title": "Random Pack",
-      "description": "Randomizer, passwords, UUIDs.",
-      "category": "Random",
-      "version": 2,
-      "versionName": "1.1",
-      "apkUrl": "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-random.apk",
-      "sha256": "",
-      "entryClass": "io.github.abdurazaaqmohammed.packs.random.RandomPack",
-      "tools": [
-        {
-          "id": "random",
-          "title": "Randomizer",
-          "subtitle": "Dice, coins, numbers"
-        },
-        {
-          "id": "password",
-          "title": "Password Generator",
-          "subtitle": "Generate secure passwords"
-        },
-        {
-          "id": "strength",
-          "title": "Password Strength",
-          "subtitle": "Entropy and crack estimates"
-        },
-        {
-          "id": "uuid",
-          "title": "UUID Generator",
-          "subtitle": "Generate random UUIDs"
-        }
-      ]
-    }
-  ]
+    "catalogVersion":  1,
+    "packs":  [
+                  {
+                      "id":  "media",
+                      "title":  "Media Pack",
+                      "description":  "Tone generator, metronome, recorder and text to speech.",
+                      "category":  "Media \u0026 Sound",
+                      "version":  3,
+                      "versionName":  "1.2",
+                      "apkUrl":  "https://files.catbox.moe/1mcrcm.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.media.MediaPack",
+                      "tools":  [
+                                    {
+                                        "id":  "tone",
+                                        "title":  "Tone Generator",
+                                        "subtitle":  "Play custom frequencies"
+                                    },
+                                    {
+                                        "id":  "metronome",
+                                        "title":  "Metronome",
+                                        "subtitle":  "Keep tempo with beats"
+                                    },
+                                    {
+                                        "id":  "recorder",
+                                        "title":  "Recorder",
+                                        "subtitle":  "Record audio and video"
+                                    },
+                                    {
+                                        "id":  "tts",
+                                        "title":  "Speak Text",
+                                        "subtitle":  "Speak typed text aloud"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "device",
+                      "title":  "Device Pack",
+                      "description":  "Timers, flashlight, sensors, GPS, hub, ringtones and wallpapers.",
+                      "category":  "Device \u0026 Hardware",
+                      "version":  7,
+                      "versionName":  "1.6",
+                      "apkUrl":  "https://litter.catbox.moe/atcd4sbzr7r7u7o6.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.device.DevicePack",
+                      "tools":  [
+                                    {
+                                        "id":  "devicehub",
+                                        "title":  "Device Info",
+                                        "subtitle":  "Battery, CPU, sensors, storage"
+                                    },
+                                    {
+                                        "id":  "clock",
+                                        "title":  "Clock",
+                                        "subtitle":  "Stopwatch and countdown timer"
+                                    },
+                                    {
+                                        "id":  "flashlight",
+                                        "title":  "Flashlight",
+                                        "subtitle":  "Torch, screen light and strobe"
+                                    },
+                                    {
+                                        "id":  "magnifier",
+                                        "title":  "Magnifier",
+                                        "subtitle":  "Zoom into small text"
+                                    },
+                                    {
+                                        "id":  "volume",
+                                        "title":  "Volume Panel",
+                                        "subtitle":  "Control all volume streams"
+                                    },
+                                    {
+                                        "id":  "vibration",
+                                        "title":  "Vibration Studio",
+                                        "subtitle":  "Create custom vibrations"
+                                    },
+                                    {
+                                        "id":  "measure",
+                                        "title":  "Measuring",
+                                        "subtitle":  "Ruler and protractor"
+                                    },
+                                    {
+                                        "id":  "level",
+                                        "title":  "Bubble Level",
+                                        "subtitle":  "Check surface level"
+                                    },
+                                    {
+                                        "id":  "compass",
+                                        "title":  "Compass",
+                                        "subtitle":  "Find magnetic heading"
+                                    },
+                                    {
+                                        "id":  "gps",
+                                        "title":  "GPS Speedometer",
+                                        "subtitle":  "Track live GPS speed"
+                                    },
+                                    {
+                                        "id":  "ringtone",
+                                        "title":  "Ringtone Preview",
+                                        "subtitle":  "Browse and preview sounds"
+                                    },
+                                    {
+                                        "id":  "wallpaper",
+                                        "title":  "Wallpaper Maker",
+                                        "subtitle":  "Design gradient wallpapers"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "network",
+                      "title":  "Network Pack",
+                      "description":  "Connectivity hub, Bluetooth, NFC and QR tools in one suite.",
+                      "category":  "Wi-Fi \u0026 Network",
+                      "version":  2,
+                      "versionName":  "1.1",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-network.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.network.NetworkPack",
+                      "tools":  [
+                                    {
+                                        "id":  "network",
+                                        "title":  "Network Tools",
+                                        "subtitle":  "Connectivity hub, Bluetooth, NFC and QR tools"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "math",
+                      "title":  "Math Pack",
+                      "description":  "Calculator suite with finance, converters, algebra, general tools.",
+                      "category":  "Math \u0026 Finance",
+                      "version":  6,
+                      "versionName":  "1.5",
+                      "apkUrl":  "https://litter.catbox.moe/hvxqo1.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.math.MathPack",
+                      "tools":  [
+                                    {
+                                        "id":  "calc",
+                                        "title":  "Calculator",
+                                        "subtitle":  "Calculator, finance, converters, algebra"
+                                    },
+                                    {
+                                        "id":  "tally",
+                                        "title":  "Tally Counter",
+                                        "subtitle":  "Count taps easily"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "text",
+                      "title":  "Text \u0026 Code Pack",
+                      "description":  "All-in-one text tools suite: counter, codecs, case, Morse, JSON, regex, hashes.",
+                      "category":  "Text \u0026 Security",
+                      "version":  4,
+                      "versionName":  "1.3",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-text.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.text.TextPack",
+                      "tools":  [
+                                    {
+                                        "id":  "text",
+                                        "title":  "Text Tools",
+                                        "subtitle":  "Counter, hashes, codecs, case, Morse, JSON, colors"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "notes",
+                      "title":  "Notes",
+                      "description":  "Markdown notes, checklists, tags, stats and backups.",
+                      "category":  "General",
+                      "version":  1,
+                      "versionName":  "1.0",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-notes.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.notes.NotesPack",
+                      "tools":  [
+                                    {
+                                        "id":  "notes",
+                                        "title":  "Notes",
+                                        "subtitle":  "Markdown notes, checklists, tags and backups"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "random",
+                      "title":  "Random Pack",
+                      "description":  "All-in-one random tools: dice, coins, numbers, passwords, UUIDs, tokens.",
+                      "category":  "Random",
+                      "version":  4,
+                      "versionName":  "1.3",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-random.apk",
+                      "sha256":  "",
+                      "entryClass":  "io.github.abdurazaaqmohammed.packs.random.RandomPack",
+                      "tools":  [
+                                    {
+                                        "id":  "random",
+                                        "title":  "Random Tools",
+                                        "subtitle":  "Randomizer, passwords, UUIDs, tokens"
+                                    }
+                                ]
+                  }
+              ]
 }
