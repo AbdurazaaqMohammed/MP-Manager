@@ -91,6 +91,8 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
+import io.github.abdurazaaqmohammed.features.apk.translate.ApkXmlTranslationActivity;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
@@ -492,6 +494,14 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.TOOLS, FileMenuOrder.labelFor(context, FileMenuOrder.TOOLS, direction)));
                 }
 
+                // XML translation mode: decode the APK's XML for reading and stage
+                // translations for its compiled string resources. One APK at a time,
+                // and only for a real file since both halves need the APK on disk.
+                if (!multi && !isInZip && file != null && !file.isDirectory()
+                        && fileName.toLowerCase(Locale.ENGLISH).endsWith(".apk")) {
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.XML_TRANSLATE, FileMenuOrder.labelFor(context, FileMenuOrder.XML_TRANSLATE, direction)));
+                }
+
 
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
@@ -740,6 +750,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 return;
                             case FileMenuOrder.TOOLS:
                                 showFileTools(livePosition, file);
+                                return;
+                            case FileMenuOrder.XML_TRANSLATE:
+                                if (isInZip || multi) return;
+                                // The screen edits the APK's own arsc, so it must be launched
+                                // for result: a modified table comes back as entry
+                                // resources.arsc and this class' handler injects it, takes
+                                // the backup and offers signing.
+                                context.startActivityForResult(new Intent(context,
+                                        ApkXmlTranslationActivity.class)
+                                        .putExtra("apkPath", file.getAbsolutePath()),
+                                        ApkResultHandler.REQUEST_MODIFIED_ENTRY);
                                 return;
                             default:
                                 switch (actionId) {

@@ -35,6 +35,12 @@ import java.util.Arrays;
  */
 public class ApkResultHandler {
 
+    /**
+     * Request code for "an editor wrote a file back that belongs inside the open archive".
+     * Shared so every editor that edits an archived file uses the same contract.
+     */
+    public static final int REQUEST_MODIFIED_ENTRY = 757;
+
     private final MainActivity activity;
 
     public ApkResultHandler(MainActivity activity) {

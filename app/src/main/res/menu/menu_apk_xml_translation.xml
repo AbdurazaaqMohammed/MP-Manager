@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/xlate_menu_translate"
+        android:icon="@drawable/ic_translate_mt"
+        android:title="@string/xlate_run"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/xlate_menu_languages"
+        android:icon="@drawable/baseline_text_snippet_24"
+        android:title="@string/xlate_languages"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/xlate_menu_glossary"
+        android:title="@string/xlate_glossary"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_settings"
+        android:title="@string/xlate_settings"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_revert"
+        android:title="@string/xlate_revert"
+        app:showAsAction="never" />
+
+</menu>
