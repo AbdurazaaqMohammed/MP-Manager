@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.features.apk.translate.DexTranslationActivity;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
 /**
@@ -177,12 +178,110 @@ public class DexTools {
                         showDexStringReplaceDialog(dexFile, zipFile);
                     } else if (which == 6) {
                         mergeDexOption(dexFile, zipFile);
+                    } else if (which == 4) {
+                        // Translation mode. An APK is usually split over many dex files and only
+                        // some of them hold copy, so ask which ones to look at instead of taking
+                        // the one that was tapped or loading all of them silently.
+                        showMultiDexPicker(dexFile, zipFile);
                     } else if (which == 0 && zipFile != null) {
                         openDexPlusInZip(zipFile, dexFile.getName());
                     } else {
-                        openDexPlusFiles(singleDexList(dexFile), which == 4 ? 3 : null);
+                        openDexPlusFiles(singleDexList(dexFile), null);
                     }
                 }).create());
+    }
+
+    /**
+     * Lists the APK's dex files with checkboxes, then opens the translation screen on the chosen
+     * ones. Mirrors MT Manager: everything preselected, Select all / Cancel / Confirm.
+     *
+     * <p>For a loose .dex there is nothing to choose and the picker is skipped entirely.
+     */
+    private void showMultiDexPicker(File dexFile, File zipFile) {
+        if (zipFile == null) {
+            openDexTranslation(null, singleDexList(dexFile));
+            return;
+        }
+        ArrayList<String> names = new ArrayList<>();
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+            java.util.Enumeration<? extends java.util.zip.ZipEntry> e = zf.entries();
+            while (e.hasMoreElements()) {
+                String n = e.nextElement().getName();
+                if (n.matches("classes(\\d*)\\.dex")) names.add(n);
+            }
+        } catch (Exception ex) {
+            new ErrorUtil(context).showError(ex);
+            return;
+        }
+        if (names.isEmpty()) {
+            openDexTranslation(zipFile, singleDexList(dexFile));
+            return;
+        }
+        // classes.dex first, then numeric order: the enumeration order is whatever the zip has.
+        names.sort((a, b) -> Integer.compare(dexOrder(a), dexOrder(b)));
+
+        boolean[] checked = new boolean[names.size()];
+        java.util.Arrays.fill(checked, true);
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.dex_multi_select)
+                .setMultiChoiceItems(names, checked, (d, which, isChecked) -> checked[which] = isChecked)
+                .setNeutralButton(R.string.menu_select_all, (d, w) -> {
+                    java.util.Arrays.fill(checked, true);
+                    d.dismiss();
+                    openDexTranslation(zipFile, dexPathList(zipFile, names));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.apply, (d, w) -> {
+                    ArrayList<String> picked = new ArrayList<>();
+                    for (int i = 0; i < checked.length; i++) if (checked[i]) picked.add(names.get(i));
+                    if (picked.isEmpty()) {
+                        Extensions.showMessage(context, R.string.dex_multi_none);
+                        return;
+                    }
+                    openDexTranslation(zipFile, dexPathList(zipFile, picked));
+                })
+                .show();
+    }
+
+    /** classes.dex sorts first, then classes2, classes3 and so on. */
+    private static int dexOrder(String name) {
+        if (name.equals("classes.dex")) return 0;
+        try {
+            return Integer.parseInt(name.replaceAll("\\D+", ""));
+        } catch (NumberFormatException e) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    /** Copies the named entries out of the APK so the translation screen can read them as files. */
+    private ArrayList<String> dexPathList(File zipFile, ArrayList<String> names) {
+        File dir = new File(context.getFilesDir(), "dextrans_" + UUID.randomUUID());
+        //noinspection ResultOfMethodCallIgnored
+        dir.mkdirs();
+        ArrayList<String> out = new ArrayList<>();
+        try (ZipFile zf = new ZipFile(zipFile)) {
+            for (String name : names) {
+                FileHeader fh = zf.getFileHeader(name);
+                if (fh == null) continue;
+                zf.extractFile(fh, dir.getAbsolutePath());
+                File f = new File(dir, name);
+                if (f.isFile()) out.add(f.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+        }
+        return out;
+    }
+
+    private void openDexTranslation(File zipFile, ArrayList<String> dexPaths) {
+        if (dexPaths == null || dexPaths.isEmpty()) return;
+        Intent intent = new Intent(context, DexTranslationActivity.class)
+                .putExtra("theme", context.theme)
+                .putStringArrayListExtra("dex_paths", dexPaths);
+        // The screen needs the APK to hand back through setResult(757); without it the edited dex
+        // files would stay in the app's cache with no way back into the archive.
+        if (zipFile != null) intent.putExtra("apkPath", zipFile.getAbsolutePath());
+        context.startActivityForResult(intent, 757);
     }
 
     private static ArrayList<String> singleDexList(File dexFile) {

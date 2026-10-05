@@ -986,6 +986,11 @@ Layout Inspector
     <string name="img_standard_crop">标准裁剪</string>
     <string name="dex_replace_strings">替换字符串</string>
     <string name="dex_merge">合并 dex 文件</string>
+    <string name="dex_multi_select">MultiDex</string>
+    <string name="xlate_dex_entries">%1$d 个 dex 文件</string>
+    <string name="xlate_dex_hidden">已隐藏 %1$d 条非文本字符串</string>
+    <string name="xlate_dex_settings_note">引擎、接口和词库设置与 resources.arsc 翻译界面共用。</string>
+    <string name="dex_multi_none">请至少选择一个 dex 文件</string>
     <string name="arsc_plus">ARSC 编辑器 Plus</string>
     <string name="arsc_editor">ARSC 编辑器</string>
     <string name="me_updated"> 已更新</string>

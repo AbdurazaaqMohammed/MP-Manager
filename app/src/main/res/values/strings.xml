@@ -1010,6 +1010,11 @@ Layout Inspector
     <string name="discard">Discard</string>
     <string name="img_standard_crop">Standard crop</string>
     <string name="dex_replace_strings">Replace strings</string>
+    <string name="dex_multi_select">MultiDex</string>
+    <string name="xlate_dex_entries">%1$d dex file(s)</string>
+    <string name="xlate_dex_hidden">%1$d non-prose literals hidden</string>
+    <string name="xlate_dex_settings_note">Engine, endpoint and glossary settings are shared with the resources.arsc translation screen.</string>
+    <string name="dex_multi_none">Select at least one dex file</string>
     <string name="dex_merge">Merge dex files</string>
     <string name="arsc_plus">ARSC Editor Plus</string>
     <string name="arsc_editor">ARSC Editor</string>

@@ -893,6 +893,11 @@
     <string name="img_standard_crop">Стандартная обрезка</string>
     <string name="dex_replace_strings">Заменить строки</string>
     <string name="dex_merge">Объединить dex-файлы</string>
+    <string name="dex_multi_select">MultiDex</string>
+    <string name="xlate_dex_entries">Файлов dex: %1$d</string>
+    <string name="xlate_dex_hidden">Скрыто нетекстовых строк: %1$d</string>
+    <string name="xlate_dex_settings_note">Настройки движка, адреса и словаря общие с экраном перевода resources.arsc.</string>
+    <string name="dex_multi_none">Выберите хотя бы один dex-файл</string>
     <string name="arsc_plus">ARSC Editor Plus</string>
     <string name="arsc_editor">Редактор ARSC</string>
     <string name="me_updated"> обновлено</string>
