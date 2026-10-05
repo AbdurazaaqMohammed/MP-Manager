@@ -19,7 +19,14 @@ import android.widget.Toast;
 import com.google.android.material.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
+
+import java.util.Calendar;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import io.github.abdurazaaqmohammed.ui.UiFields;
 
@@ -91,6 +98,77 @@ public final class ToolViewFactory {
         return input;
     }
 
+    public static EditText makeDateField(LinearLayout box, String hint) {
+        EditText input = makeInput(box, hint, InputType.TYPE_NULL);
+        input.setFocusable(false);
+        input.setCursorVisible(false);
+        input.setClickable(true);
+        input.setOnClickListener(v -> {
+            try {
+                MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker().setTitleText(hint).build();
+                picker.addOnPositiveButtonClickListener(selection -> {
+                    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                    cal.setTimeInMillis(selection == null ? 0 : selection);
+                    input.setText(String.format(Locale.US, "%04d-%02d-%02d",
+                            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)));
+                });
+                androidx.fragment.app.FragmentActivity fa = (androidx.fragment.app.FragmentActivity) box.getContext();
+                picker.show(fa.getSupportFragmentManager(), "date");
+            } catch (Exception ignored) {
+            }
+        });
+        return input;
+    }
+
+    public static EditText makeDateTimeField(LinearLayout box, String hint) {
+        EditText input = makeInput(box, hint, InputType.TYPE_NULL);
+        input.setFocusable(false);
+        input.setCursorVisible(false);
+        input.setClickable(true);
+        input.setOnClickListener(v -> {
+            try {
+                MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker().setTitleText(hint).build();
+                picker.addOnPositiveButtonClickListener(selection -> {
+                    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                    cal.setTimeInMillis(selection == null ? 0 : selection);
+                    String date = String.format(Locale.US, "%04d-%02d-%02d",
+                            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH));
+                    try {
+                        MaterialTimePicker time = new MaterialTimePicker.Builder()
+                                .setTimeFormat(TimeFormat.CLOCK_24H).setTitleText("Time").build();
+                        time.addOnPositiveButtonClickListener(t2 -> input.setText(date + String.format(Locale.US, " %02d:%02d", time.getHour(), time.getMinute())));
+                        androidx.fragment.app.FragmentActivity fa2 = (androidx.fragment.app.FragmentActivity) box.getContext();
+                        time.show(fa2.getSupportFragmentManager(), "time");
+                    } catch (Exception ignored) {
+                        input.setText(date + " 09:00");
+                    }
+                });
+                androidx.fragment.app.FragmentActivity fa = (androidx.fragment.app.FragmentActivity) box.getContext();
+                picker.show(fa.getSupportFragmentManager(), "date");
+            } catch (Exception ignored) {
+            }
+        });
+        return input;
+    }
+
+    public static EditText makeTimeField(LinearLayout box, String hint) {
+        EditText input = makeInput(box, hint, InputType.TYPE_NULL);
+        input.setFocusable(false);
+        input.setCursorVisible(false);
+        input.setClickable(true);
+        input.setOnClickListener(v -> {
+            try {
+                MaterialTimePicker time = new MaterialTimePicker.Builder()
+                        .setTimeFormat(TimeFormat.CLOCK_24H).setTitleText(hint).build();
+                time.addOnPositiveButtonClickListener(t2 -> input.setText(String.format(Locale.US, "%02d:%02d", time.getHour(), time.getMinute())));
+                androidx.fragment.app.FragmentActivity fa = (androidx.fragment.app.FragmentActivity) box.getContext();
+                time.show(fa.getSupportFragmentManager(), "time");
+            } catch (Exception ignored) {
+            }
+        });
+        return input;
+    }
+
     public static TextView addLabel(LinearLayout box, String text) {
         Context context = box.getContext();
         TextView t = new TextView(context);
@@ -125,7 +203,7 @@ public final class ToolViewFactory {
         }
     }
 
-    public static void copyText(Context context, String label, String value) {
+    public static void copyText(Context context, String label, CharSequence value) {
         try {
             ClipboardManager cm =
                     (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
