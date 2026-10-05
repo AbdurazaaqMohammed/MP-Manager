@@ -613,7 +613,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
 
     /** Where one row's translation came from, in words rather than the badge's four letters. */
     private String originLabel(TranslateRow row) {
-        return switch (row.origin) {
+        return switch (row.getOrigin()) {
             case MANUAL -> getString(R.string.engine_manual);
             case GLOSSARY_PHRASE -> getString(R.string.xlate_origin_glossary_exact);
             case GLOSSARY_PARTIAL -> getString(R.string.xlate_origin_glossary_partial);
