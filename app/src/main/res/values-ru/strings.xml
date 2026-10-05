@@ -1459,4 +1459,7 @@
     <string name="inject_file_provider">Внедрение файлового провайдера</string>
     <string name="dex_string_decrypt">Расшифровка строк DEX</string>
     <string name="function_in_development">Функция ещё в разработке</string>
+    <string name="dex_resplit_hint">Макс. классов на dex</string>
+    <string name="dex_resplit_done">Переразделено классов: %1$d</string>
+    <string name="dex_resplit_nothing">Переразделение не требуется</string>
 </resources>

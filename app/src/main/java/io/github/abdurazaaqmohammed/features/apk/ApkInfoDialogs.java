@@ -81,6 +81,7 @@ import com.reandroid.apkeditor.decompile.Decompiler;
 import com.reandroid.apkeditor.protect.ProtectorOptions;
 import com.reandroid.apkeditor.refactor.RefactorOptions;
 import com.reandroid.archive.ArchiveFile;
+import com.reandroid.dex.model.DexDirectory;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -93,6 +94,8 @@ import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -103,6 +106,8 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkSignatureTools;
+import io.github.abdurazaaqmohammed.features.apk.translate.ArscTranslationModeActivity;
+import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
@@ -113,6 +118,7 @@ import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -1098,6 +1104,15 @@ public class ApkInfoDialogs {
                         settings.getBoolean("skipManifest", false));
                 break;
             }
+            case ACT_XML_TRANSLATE:
+                startArscTranslation(file);
+                break;
+            case ACT_XML_BATCH:
+                startArscBatchReplace(file);
+                break;
+            case ACT_DEX_RESPLIT:
+                showResplitDialog(file);
+                break;
             default:
                 Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
                 break;
@@ -1167,6 +1182,152 @@ public class ApkInfoDialogs {
                 new ErrorUtil(context).showError(e);
             }
         }).start();
+    }
+
+    // ---------------------------------------------------------------- MT grid: actions
+
+    /** The compiled resource table sits at the APK root or under res/, depending on the toolchain. */
+    private static ZipEntry findArscEntry(ZipFile zipFile) {
+        java.util.Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            if (!entry.isDirectory() && entry.getName().endsWith("resources.arsc")) return entry;
+        }
+        return null;
+    }
+
+    private static String arscEntryName(File apk) throws IOException {
+        try (ZipFile zipFile = new ZipFile(apk)) {
+            ZipEntry entry = findArscEntry(zipFile);
+            return entry == null ? null : entry.getName();
+        }
+    }
+
+    private File extractArsc(ZipFile zipFile, ZipEntry entry) throws IOException {
+        File dir = new File(context.getCacheDir(), "arsc");
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create " + dir);
+        File out = new File(dir, "resources.arsc");
+        try (InputStream in = zipFile.getInputStream(entry);
+             FileOutputStream outStream = new FileOutputStream(out)) {
+            byte[] buffer = new byte[65536];
+            int length;
+            while ((length = in.read(buffer)) != -1) outStream.write(buffer, 0, length);
+        }
+        if (out.length() == 0) throw new IOException("Empty " + entry.getName());
+        return out;
+    }
+
+    /**
+     * MT's "XML translation mode". The activity re-extracts the table itself when given
+     * {@code apkPath}, so only the entry name has to be resolved here.
+     */
+    private void startArscTranslation(File file) {
+        try {
+            String entryName = arscEntryName(file);
+            if (entryName == null) {
+                Extensions.showMessage(context, context.rss.getString(R.string.xlate_no_resource_table));
+                return;
+            }
+            Intent intent = new Intent(context, ArscTranslationModeActivity.class)
+                    .putExtra("apkPath", file.getAbsolutePath())
+                    .putExtra("zipEntryPath", entryName);
+            context.startActivityForResult(intent, 757);
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+        }
+    }
+
+    /**
+     * MT's "XML batch replace": the full arsc editor, where every replace-all walks the whole
+     * string table. Unlike translation mode it reads the file straight off disk, so the table
+     * is extracted first; the 757 result lets MainActivity inject it back into the APK.
+     */
+    private void startArscBatchReplace(File file) {
+        try (ZipFile zipFile = new ZipFile(file)) {
+            ZipEntry entry = findArscEntry(zipFile);
+            if (entry == null) {
+                Extensions.showMessage(context, context.rss.getString(R.string.xlate_no_resource_table));
+                return;
+            }
+            File arsc = extractArsc(zipFile, entry);
+            Intent intent = new Intent(context, ArscEditorPlusActivity.class)
+                    .putExtra("path", arsc.getAbsolutePath())
+                    .putExtra("apkPath", file.getAbsolutePath())
+                    .putExtra("zipEntryPath", entry.getName())
+                    .putExtra("arscMode", ArscEditorPlusActivity.MODE_PLUS);
+            context.startActivityForResult(intent, 757);
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+        }
+    }
+
+    /** MT's "re-split DEX": ask for the per-dex class cap, then rebalance the dex files. */
+    private void showResplitDialog(File file) {
+        View view = LayoutInflater.from(context).inflate(R.layout.item_edit_number, null);
+        TextView title = view.findViewById(R.id.title);
+        EditText input = view.findViewById(R.id.edit_text);
+        title.setText(context.rss.getString(R.string.dex_resplit_hint));
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        input.setText(String.valueOf(settings.getInt("redex_max_classes", 60000)));
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.dex_resplit))
+                .setView(view)
+                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                .setPositiveButton(context.rss.getString(android.R.string.ok), (dialog, which) -> {
+                    int max;
+                    try {
+                        max = Integer.parseInt(input.getText().toString().trim());
+                    } catch (NumberFormatException e) {
+                        max = 0;
+                    }
+                    if (max <= 0) {
+                        Extensions.showMessage(context, context.rss.getString(
+                                R.string.invalid_value_forx,
+                                context.rss.getString(R.string.dex_resplit_hint)));
+                        return;
+                    }
+                    settings.edit().putInt("redex_max_classes", max).apply();
+                    runResplit(file, max);
+                }).create());
+    }
+
+    private void runResplit(File file, int maxClassesPerDex) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean sign = settings.getBoolean("autosign", true);
+        SignWrapper[] wrapper = new SignWrapper[1];
+        Runnable doResplit = () -> {
+            File out = FileUtils.getUnusedFile(new File(file.getAbsoluteFile().getParentFile(),
+                    FilenameUtils.getBaseName(file.getName()) + "_redex.apk"));
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    ApkModule module = ApkModule.loadApkFile(file);
+                    DexDirectory directory = DexDirectory.fromZip(module.getZipEntryMap());
+                    int moved = directory.distributeClasses(maxClassesPerDex);
+                    directory.save();
+                    module.writeApk(out, (path, method, length) -> {});
+                    if (sign) wrapper[0].signApk(out);
+                    logger.close();
+                    pm.dismiss();
+                    context.handler.post(() -> {
+                        Extensions.showMessage(context, moved > 0
+                                ? context.rss.getString(R.string.dex_resplit_done, moved)
+                                : context.rss.getString(R.string.dex_resplit_nothing));
+                        context.loadFolderInPane(file.getParentFile(), pane1, false);
+                    });
+                } catch (Exception e) {
+                    pm.dismiss();
+                    context.handler.post(logger::close);
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        };
+        if (sign) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doResplit.run();
+        });
+        else doResplit.run();
     }
 
 }

@@ -99,6 +99,8 @@ public final class ApkStringsTranslator {
     private static boolean copyZipEntry(File zip, String entry, File dest) throws IOException {
         try (ZipFile zf = new ZipFile(zip)) {
             FileHeader header = zf.getFileHeader(entry);
+            // AAPT keeps the table at the root, some toolchains put it under res/ - accept both.
+            if (header == null) header = findBySuffix(zf, entry);
             if (header == null) return false;
             if (header.getUncompressedSize() > MAX_ARSC_BYTES) {
                 throw new IOException("resources.arsc is too large: " + header.getUncompressedSize());
@@ -116,6 +118,18 @@ public final class ApkStringsTranslator {
             }
             return dest.length() > 0;
         }
+    }
+
+    /** Last-resort lookup by path suffix, for APKs whose table is not where we expected it. */
+    private static FileHeader findBySuffix(ZipFile zf, String suffix) {
+        List<FileHeader> headers = zf.getFileHeaders();
+        if (headers == null) return null;
+        for (FileHeader header : headers) {
+            if (header != null && !header.isDirectory() && header.getFileName().endsWith(suffix)) {
+                return header;
+            }
+        }
+        return null;
     }
 
     /**

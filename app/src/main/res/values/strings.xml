@@ -1932,4 +1932,7 @@ Deleted %2$s · %3$s</string>
     <string name="inject_file_provider">Inject file provider</string>
     <string name="dex_string_decrypt">DEX string decryption</string>
     <string name="function_in_development">This feature is still in development</string>
+    <string name="dex_resplit_hint">Max classes per dex</string>
+    <string name="dex_resplit_done">Re-split %1$d classes</string>
+    <string name="dex_resplit_nothing">No re-split needed</string>
 </resources>
