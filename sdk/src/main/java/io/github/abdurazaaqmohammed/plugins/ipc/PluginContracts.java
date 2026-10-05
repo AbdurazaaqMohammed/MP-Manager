@@ -45,8 +45,10 @@ public final class PluginContracts {
             "io.github.abdurazaaqmohammed.MPManager.action.EDITOR_ACTION";
 
     /**
-     * Act on an APK. Host sends EXTRA_APK_URI (read grant) + EXTRA_APK_NAME.
-     * Fire-and-forget; RESULT_OK acknowledges.
+     * Act on an APK. Host sends a staged copy URI (read+write grant) +
+     * EXTRA_APK_NAME. The plugin processes it and rewrites the same URI
+     * with the result, then returns RESULT_OK with EXTRA_MESSAGE and
+     * optionally EXTRA_OUTPUT_NAME (suggested file name for the result).
      */
     public static final String ACTION_APK =
             "io.github.abdurazaaqmohammed.MPManager.action.APK_ACTION";
@@ -72,6 +74,21 @@ public final class PluginContracts {
     /** Setting pref key for setting entries. Empty = plugin id. */
     public static final String META_SETTING_KEY =
             "io.github.abdurazaaqmohammed.MPManager.SETTING_KEY";
+
+    /**
+     * Comma-separated APK-action options for the host material options dialog.
+     * Each entry is either a label (used as both id and label) or
+     * "Label|value". The selected value is sent to the plugin activity
+     * via the "method" extra.
+     */
+    public static final String META_APK_CHOICES =
+            "io.github.abdurazaaqmohammed.MPManager.APK_CHOICES";
+
+    /**
+     * Whether the host should show an "Auto sign" checkbox. "1" = yes.
+     */
+    public static final String META_APK_AUTO_SIGN =
+            "io.github.abdurazaaqmohammed.MPManager.APK_AUTO_SIGN";
 
     /**
      * Setting entry type: "boolean" (host persists EXTRA_VALUE) or "action"
@@ -128,6 +145,10 @@ public final class PluginContracts {
     /** Output file URI produced by the plugin (FILE_MENU out). */
     public static final String EXTRA_OUTPUT_URI =
             "io.github.abdurazaaqmohammed.MPManager.extra.OUTPUT_URI";
+
+    /** Suggested file name for the plugin's result (APK out). */
+    public static final String EXTRA_OUTPUT_NAME =
+            "io.github.abdurazaaqmohammed.MPManager.extra.OUTPUT_NAME";
 
     /** Max full-text bytes the host sends to editor plugins. */
     public static final int MAX_FULL_TEXT_BYTES = 150 * 1024;
