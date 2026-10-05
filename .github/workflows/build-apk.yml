@@ -62,9 +62,8 @@ jobs:
             "platforms;android-36" \
             "build-tools;36.0.0"
 
-      # app/build.gradle declares no signingConfig, so `assembleRelease` only
-      # yields app-release-unsigned.apk. Sign it here (zipalign first, then
-      # apksigner) so release artifacts are actually installable.
+      # Restore the release keystore from a secret. It is never committed; the repo only
+      # pins the certificate fingerprint it is expected to produce.
       - name: Restore signing keystore
         id: keystore
         env:
@@ -79,6 +78,23 @@ jobs:
           printf '%s' "$KEYSTORE_B64" | base64 --decode > keystore/release.jks
           echo "available=true" >> "$GITHUB_OUTPUT"
 
+      # Hand the restored keystore to Gradle so assembleRelease signs during packaging.
+      # Doing it this way rather than post-hoc with apksigner keeps signing part of the
+      # normal build, which is what makes the Verify signing identity step meaningful for
+      # release. The fingerprints in keystore/signing-fingerprint.txt still decide whether
+      # the key on hand is the one we expect.
+      - name: Wire release signing into Gradle
+        if: steps.keystore.outputs.available == 'true'
+        env:
+          MPM_STORE_FILE: keystore/release.jks
+          MPM_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MPM_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MPM_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Recorded so the Verify step can explain a failure when Gradle silently fell back
+          # to an unsigned release variant.
+          echo "MPM_STORE_FILE=$MPM_STORE_FILE" >> "$GITHUB_ENV"
+
       - name: Build
         run: |
           set -o pipefail
@@ -90,6 +106,91 @@ jobs:
           echo "Gradle tasks: $TASKS"
           # shellcheck disable=SC2086
           ./gradlew --stacktrace $TASKS
+
+      # The point of this step is that a rotated key cannot slip through unnoticed. Every
+      # build used to be signed with whatever ~/.android/debug.keystore the runner happened to
+      # have, so the identity changed on every single run; the debug variant is now signed with
+      # the committed assets/debug.keystore and this check holds both variants to the
+      # fingerprints recorded in keystore/signing-fingerprint.txt.
+      - name: Verify signing identity
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          BUILD_TOOLS="$(ls -d "$SDK_ROOT"/build-tools/*/ 2>/dev/null | grep -E '/3[0-9]+\.[0-9]+\.[0-9]+/$' | sort -V | tail -1)"
+          BUILD_TOOLS="${BUILD_TOOLS%/}"
+          if [ -z "$BUILD_TOOLS" ] || [ ! -x "$BUILD_TOOLS/apksigner" ]; then
+            echo "::error::no usable apksigner under $SDK_ROOT/build-tools"
+            exit 1
+          fi
+          EXPECTED=keystore/signing-fingerprint.txt
+
+          # apksigner labels the signer differently depending on which scheme vouched for it
+          # ("Signer #1 certificate ..." on older builds, "V2 Signer: ..." on current ones), so
+          # match on the digest field rather than on the prefix.
+          #
+          # Digests are normalised to the colon-separated uppercase form keytool prints, so the
+          # two sides are compared in one shape and the file stays readable.
+          canon() {
+            tr -cd '0-9a-fA-F' | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//'
+          }
+          fingerprint_of() {
+            [ -f "$1" ] || return 0
+            "$BUILD_TOOLS/apksigner" verify --print-certs "$1" 2>/dev/null \
+              | sed -n 's/^.*certificate SHA-256 digest: //p' | head -1 | canon
+          }
+          expected_of() {
+            sed -n "s/^$1 //p" "$EXPECTED" | head -1
+          }
+
+          status=0
+          check() {
+            variant="$1"; apk="$2"
+            [ -f "$apk" ] || { echo "::error::$variant APK missing at $apk"; status=1; return; }
+            actual="$(fingerprint_of "$apk" || true)"
+            want="$(expected_of "$variant")"
+            if [ -z "$actual" ]; then
+              if [ "$want" = "UNSET" ]; then
+                echo "$variant: unsigned, and $EXPECTED says UNSET - ok"
+              else
+                echo "::error::$variant APK is unsigned but $EXPECTED pins $want"
+                status=1
+              fi
+              return
+            fi
+            if [ "$want" = "UNSET" ] || [ -z "$want" ]; then
+              echo "::error::$variant APK is signed with $actual but $EXPECTED has no fingerprint"
+              echo "::error::record it there if this rotation is intentional"
+              status=1
+            elif [ "$actual" != "$want" ]; then
+              echo "::error::$variant signing identity changed"
+              echo "::error::  expected $want"
+              echo "::error::  actual   $actual"
+              status=1
+            else
+              echo "$variant: $actual (matches)"
+            fi
+          }
+
+          check debug app/build/outputs/apk/debug/app-debug.apk
+          # Exactly one of these exists: the signed variant when Gradle had a keystore, the
+          # unsigned one otherwise. Probing both would report a missing APK as an error.
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            check release app/build/outputs/apk/release/app-release.apk
+          elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            check release app/build/outputs/apk/release/app-release-unsigned.apk
+          else
+            echo "::error::no release APK at either expected path"
+            status=1
+          fi
+
+          {
+            echo "### Signing identity"
+            echo '```'
+            echo "debug   $(fingerprint_of app/build/outputs/apk/debug/app-debug.apk || echo unsigned)"
+            echo "expected $(expected_of debug)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
       - name: Collect, align and sign
         env:
@@ -114,14 +215,29 @@ jobs:
 
           cp app/build/outputs/apk/debug/app-debug.apk "$STAGE/MP-Manager-debug.apk"
 
+          # Gradle signs the release variant whenever MPM_STORE_FILE is set, so the normal
+          # output is app-release.apk. Without a keystore it falls back to
+          # app-release-unsigned.apk and there is nothing to sign it with, which the
+          # Verify signing identity step has already reported.
+          GRADLE_SIGNED=app/build/outputs/apk/release/app-release.apk
           UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
-          if [ ! -f "$UNSIGNED" ]; then
-            echo "::error::release APK was not produced"; exit 1
-          fi
-          cp "$UNSIGNED" "$STAGE/MP-Manager-$TAG-unsigned.apk"
 
           : > verify.txt
-          if [ "$HAS_KEYSTORE" = "true" ]; then
+          if [ -f "$GRADLE_SIGNED" ]; then
+            cp "$GRADLE_SIGNED" "$STAGE/MP-Manager-$TAG.apk"
+            "$BUILD_TOOLS/zipalign" -f -p 4 "$STAGE/MP-Manager-$TAG.apk" "$STAGE/MP-Manager-$TAG-aligned.apk"
+            mv "$STAGE/MP-Manager-$TAG-aligned.apk" "$STAGE/MP-Manager-$TAG.apk"
+            "$BUILD_TOOLS/apksigner" verify --verbose "$STAGE/MP-Manager-$TAG.apk" | tee verify.txt
+          elif [ -f "$UNSIGNED" ]; then
+            cp "$UNSIGNED" "$STAGE/MP-Manager-$TAG-unsigned.apk"
+          else
+            echo "::error::release APK was not produced"; exit 1
+          fi
+
+          # Gradle signed it above whenever a keystore was available. Re-signing here would
+          # overwrite a correct signature with a second one, so this path only covers the
+          # fallback where the secret exists but Gradle was not given it.
+          if [ ! -f "$GRADLE_SIGNED" ] && [ "$HAS_KEYSTORE" = "true" ] && [ -f "$UNSIGNED" ]; then
             ALIGNED="$STAGE/MP-Manager-$TAG-aligned.apk"
             SIGNED="$STAGE/MP-Manager-$TAG.apk"
             "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
@@ -137,7 +253,7 @@ jobs:
               "$ALIGNED"
             "$BUILD_TOOLS/apksigner" verify --verbose "$SIGNED" | tee verify.txt
             rm -f "$ALIGNED"
-          else
+          elif [ ! -f "$GRADLE_SIGNED" ]; then
             echo "release APK left unsigned (no KEYSTORE_BASE64 secret)." > verify.txt
           fi
 

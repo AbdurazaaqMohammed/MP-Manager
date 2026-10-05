@@ -2,6 +2,33 @@ plugins {
     id 'com.android.application'
 }
 
+// Signing identity has to survive every rebuild, otherwise the app cannot be installed over
+// its own previous version and CI artefacts are not comparable.
+//
+// The debug key is therefore the one committed at app/src/main/assets/debug.keystore rather
+// than the ~/.android/debug.keystore AGP would otherwise generate fresh on each machine. It is
+// the same key the app signs with at runtime (FileUtils.getDebugKeystore), so an APK this app
+// signs itself installs straight over a CI build without an uninstall in between.
+//
+// Release keys never live in the repository. Point MPM_* at one, or drop a keystore.properties
+// next to this file (see .gitignore), and assembleRelease signs with it; with neither present
+// the release APK stays unsigned and the workflow's apksigner step handles it from a secret.
+def releaseSigning = {
+    def props = new Properties()
+    def propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) {
+        propsFile.withInputStream { props.load(it) }
+    }
+    def store = System.getenv("MPM_STORE_FILE") ?: props.getProperty("storeFile")
+    if (!store) return null
+    [
+            storeFile     : rootProject.file(store),
+            storePassword : System.getenv("MPM_STORE_PASSWORD") ?: props.getProperty("storePassword"),
+            keyAlias      : System.getenv("MPM_KEY_ALIAS") ?: props.getProperty("keyAlias"),
+            keyPassword   : System.getenv("MPM_KEY_PASSWORD") ?: props.getProperty("keyPassword"),
+    ]
+}()
+
 android {
     compileSdk 36
     lint {
@@ -18,8 +45,31 @@ android {
         versionName "1.0.9"
     }
 
+    signingConfigs {
+        bundled {
+            storeFile file("src/main/assets/debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+        if (releaseSigning != null) {
+            release {
+                storeFile releaseSigning.storeFile
+                storePassword releaseSigning.storePassword
+                keyAlias releaseSigning.keyAlias
+                keyPassword releaseSigning.keyPassword
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.bundled
+        }
         release {
+            if (releaseSigning != null) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

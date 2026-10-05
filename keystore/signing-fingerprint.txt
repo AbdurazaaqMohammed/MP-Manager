@@ -1,0 +1,17 @@
+# Signing identity of every build produced from this repository.
+#
+# CI recomputes these from the built APKs and fails the build on any mismatch, so a rotated
+# or regenerated key cannot reach an artefact unnoticed. Regenerating a key means updating
+# this file in the same commit, which is the point: the change has to be visible in review.
+#
+# Format: <variant> <UPPERCASE_COLON_SEPARATED_SHA256_OF_SIGNER_CERT>
+#
+# The debug entry describes app/src/main/assets/debug.keystore, which is committed on purpose.
+# It is the key the app signs with at runtime, so an APK this app signs installs straight over
+# a CI build without an uninstall.
+#
+# release stays UNSET until a release key is provisioned as the KEYSTORE_BASE64 secret. CI then
+# fails, naming the fingerprint it saw, so the value can be pasted here deliberately.
+
+debug FB:2C:19:D9:51:ED:18:74:4D:EC:CE:97:39:8C:C2:DE:89:7F:96:44:9A:E7:D7:3B:D4:AA:08:8E:07:00:93:ED
+release UNSET

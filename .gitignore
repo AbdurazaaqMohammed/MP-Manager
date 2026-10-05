@@ -23,7 +23,9 @@ render.experimental.xml
 
 # Keystore files
 *.jks
-#*.keystore
+# *.keystore stays tracked on purpose: app/src/main/assets/debug.keystore is the build's
+# signing identity, so removing it would rotate the key on the next build.
+/keystore.properties
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
