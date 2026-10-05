@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  One string literal from a dex file, as a two-cell table row: the original on the left, an
+  empty cell on the right to type the replacement into.
+
+  Same geometry as item_translate_row.xml, minus the checkbox: dex strings carry no per-row
+  selection, everything staged here is applied together. Dropping that column is what lets the
+  two text cells start at the screen edge and read as a plain two-column table.
+
+  The original stays visible even once a replacement is staged, where the previous single-cell
+  row swapped it for the new text. Editing a value used to hide the value being translated, so
+  there was no way to check a replacement against what it replaced.
+
+  Cell widths, padding and divider insets must match view_dex_columns.xml.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
@@ -7,24 +22,53 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/selectableItemBackground"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:baselineAligned="false"
+        android:minHeight="44dp"
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/string_text"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:paddingStart="10dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="8dp"
+            android:textSize="14sp" />
 
-            android:textSize="14sp"
-            android:maxLines="5"
-            android:ellipsize="end" />
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="?android:attr/listDivider" />
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/string_box"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="1"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/string_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:maxLines="4"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+        </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
+    <!-- Horizontal rule between rows, so the cells read as a grid rather than a wall of text. -->
     <View
         android:layout_width="match_parent"
-        android:layout_height="0.5dp"
-         />
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider" />
 
 </LinearLayout>

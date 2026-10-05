@@ -5,11 +5,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical">
 
+        <!-- Headings for the two table columns. Placed inside the same header view rather than
+             outside the list, because this tab builds its header as a ConcatAdapter item and has
+             no pinned slot to put one in. -->
+        <include
+            layout="@layout/view_dex_columns"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
         <TextView
             android:id="@+id/btn_strings_reload"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
@@ -21,8 +28,7 @@
         <TextView
             android:id="@+id/btn_strings_filter"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
@@ -34,8 +40,7 @@
         <TextView
             android:id="@+id/btn_strings_replace"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
@@ -47,8 +52,7 @@
         <TextView
             android:id="@+id/btn_strings_apply"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:textColor="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackground"
