@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -348,9 +349,12 @@ public class ApkInfoDialogs {
         protectedDisplay.setText(R.string.loading);
 
 
+        final FrameLayout functionContainer = new FrameLayout(context);
+        functionContainer.addView(display, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         AlertDialog ad = dialogUtil.getDialogBuilder()
-                .setView(display)
-                .setNeutralButton(R.string.more, (dialog, which) -> {
+                .setView(functionContainer)
+                .setNeutralButton(R.string.func, (dialog, which) -> {
                     java.util.List<String> moreTitles = new java.util.ArrayList<>(java.util.Arrays.asList(new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)}));
                     // Third-party APK actions appended after the 14 built-ins.
                     final java.util.List<io.github.abdurazaaqmohammed.plugins.ext.ApkMoreAction> pluginMore =
@@ -367,8 +371,13 @@ public class ApkInfoDialogs {
                         moreTitles.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
                     }
                     String[] items = moreTitles.toArray(new String[0]);
-                    dialogUtil.getDialogBuilder().setSingleChoiceItems(items, -1, (dialog12, which1) -> {
+                    final int[] functionOrder = buildFunctionOrder(items.length);
+                    DialogInterface.OnClickListener apkAction = (dialog12, which1) -> {
                         dialog12.dismiss();
+                        if (which1 < 0) {
+                            runApkFunction(which1, file, fileName, filePath);
+                            return;
+                        }
                         if (which1 == 0) SignatureKeyDialog.show(context, file, false);
                         else if (which1 == 1) {
                             View ll = LayoutInflater.from(context).inflate(R.layout.dialog_opt, null);
@@ -734,7 +743,8 @@ public class ApkInfoDialogs {
                             }
                         }
                     }
-                    }).show();
+                    };
+                    showFunctionGrid(functionContainer, display, dialog, items, functionOrder, apkAction);
                 })
                 .setPositiveButton(R.string.install, (dialog, which) -> InstallUtil.installApkWithDialog(context, file))
                 .setNegativeButton(R.string.view, (dialog, which) -> openZipFile(file))
@@ -960,6 +970,177 @@ public class ApkInfoDialogs {
 
     private int dp(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    // ------------------------------------------------------------------ APK function grid
+
+    private static final int ACT_RES_SHRINK = -1;
+    private static final int ACT_DATA_REUSE = -2;
+    private static final int ACT_LOGGER = -3;
+    private static final int ACT_FILE_PROVIDER = -4;
+    private static final int ACT_XML_TRANSLATE = -5;
+    private static final int ACT_XML_BATCH = -6;
+    private static final int ACT_RES_OBFUSCATE = -7;
+    private static final int ACT_DEX_DECRYPT = -8;
+    private static final int ACT_DEX_OBFUSCATE = -9;
+    private static final int ACT_DEX_RESPLIT = -10;
+
+    private static final int[] MT_FUNCTION_ORDER = {
+            0, 1, 5, ACT_RES_SHRINK, 7, ACT_DATA_REUSE, ACT_LOGGER, ACT_FILE_PROVIDER,
+            ACT_XML_TRANSLATE, ACT_XML_BATCH, ACT_RES_OBFUSCATE, 3, ACT_DEX_DECRYPT,
+            ACT_DEX_OBFUSCATE, ACT_DEX_RESPLIT
+    };
+    private static final int[] MP_EXTRA_ORDER = {2, 6, 8, 9, 10, 11, 12, 13};
+
+    /**
+     * Display order for the two-column grid. Built-in index 4 (the combined "protect"
+     * dialog) is dropped on purpose: MT splits it into the separate RES/DEX entries above
+     * and both of those still reach the same engine. Indices 14+ are plugin/external
+     * actions and keep their original numbering so the dispatch chain below is unchanged.
+     */
+    private static int[] buildFunctionOrder(int itemCount) {
+        java.util.List<Integer> order = new java.util.ArrayList<>();
+        for (int code : MT_FUNCTION_ORDER) order.add(code);
+        for (int code : MP_EXTRA_ORDER) order.add(code);
+        for (int code = 14; code < itemCount; code++) order.add(code);
+        int[] result = new int[order.size()];
+        for (int i = 0; i < result.length; i++) result[i] = order.get(i);
+        return result;
+    }
+
+    /** Swaps the dialog body between the info card and the MT-style function grid. */
+    private void showFunctionGrid(FrameLayout container, View infoView, DialogInterface owner,
+                                  String[] labels, int[] order,
+                                  DialogInterface.OnClickListener dispatch) {
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        boolean showingInfo = container.getChildCount() == 0 || container.getChildAt(0) == infoView;
+        container.removeAllViews();
+        container.addView(showingInfo
+                ? buildFunctionGrid(labels, order, owner, dispatch)
+                : infoView, params);
+    }
+
+    private View buildFunctionGrid(String[] labels, int[] order, DialogInterface owner,
+                                   DialogInterface.OnClickListener dispatch) {
+        View root = LayoutInflater.from(context).inflate(R.layout.apk_function_grid, null, false);
+        LinearLayout list = root.findViewById(R.id.functionGridList);
+        int count = order.length;
+        int leftCount = (count + 1) / 2;
+        for (int r = 0; r < leftCount; r++) {
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setWeightSum(2f);
+            addFunctionCell(row, labels[order[r]], order[r], owner, dispatch);
+            int right = leftCount + r;
+            if (right < count) {
+                addFunctionCell(row, labels[order[right]], order[right], owner, dispatch);
+            } else {
+                View spacer = new View(context);
+                spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
+                row.addView(spacer);
+            }
+            list.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        return root;
+    }
+
+    private void addFunctionCell(LinearLayout row, String label, final int code,
+                                 DialogInterface owner, DialogInterface.OnClickListener dispatch) {
+        TextView cell = (TextView) LayoutInflater.from(context)
+                .inflate(R.layout.item_function_grid, row, false);
+        cell.setText(label);
+        cell.setOnClickListener(v -> dispatch.onClick(owner, code));
+        row.addView(cell);
+    }
+
+    /** Entry point for the MT-only action codes (everything >= 0 stays on the legacy chain). */
+    private void runApkFunction(int code, File file, String fileName, String filePath) {
+        switch (code) {
+            case ACT_RES_SHRINK:
+                runResourceShrink(file);
+                break;
+            case ACT_RES_OBFUSCATE:
+                runProtect(file, 0, false, true);
+                break;
+            case ACT_DEX_OBFUSCATE: {
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                int level = settings.getInt("dexLevel", 0);
+                if (level <= 0) level = 3;
+                runProtect(file, level, settings.getBoolean("confuseZip", false),
+                        settings.getBoolean("skipManifest", false));
+                break;
+            }
+            default:
+                Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
+                break;
+        }
+    }
+
+    /** Standalone "RES resource shrinking": the deep optimizer without the full optimize pass. */
+    private void runResourceShrink(File file) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean sign = settings.getBoolean("autosign", true);
+        SignWrapper[] wrapper = new SignWrapper[1];
+        Runnable doShrink = () -> new MaterialAlertDialogBuilder(context)
+                .setTitle(context.rss.getString(R.string.res_shrink))
+                .setMessage(context.rss.getString(R.string.deep_optimize_warning))
+                .setPositiveButton(context.rss.getString(R.string.opt), (d, w) -> {
+                    ProgressManager pm = new ProgressManager(context, true).show();
+                    APKLogger logger = pm.getLogger();
+                    new Thread(() -> {
+                        try {
+                            File out = ApkDeepOptimizer.optimize(context, file,
+                                    settings.getStringSet("filesToDelete", null), settings, logger);
+                            if (sign) wrapper[0].signApk(out);
+                            pm.dismiss();
+                            context.handler.post(() ->
+                                    context.loadFolderInPane(file.getParentFile(), pane1, false));
+                        } catch (Exception e) {
+                            pm.dismiss();
+                            new ErrorUtil(context).showError(e);
+                        }
+                    }).start();
+                })
+                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                .show();
+        if (sign) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doShrink.run();
+        });
+        else doShrink.run();
+    }
+
+    /**
+     * Runs apkeditor's Protector with an explicit dex level. {@code dexLevel == 0} keeps
+     * DexConfuser out, so this doubles as MT's separate "RES resource obfuscation" entry.
+     */
+    private void runProtect(File file, int dexLevel, boolean confuseZip, boolean skipManifest) {
+        ProtectorOptions options = new ProtectorOptions();
+        options.inputFile = file;
+        options.dexLevel = dexLevel;
+        options.confuse_zip = confuseZip;
+        options.skipManifest = skipManifest;
+        options.force = true;
+        options.outputFile = options.generateOutputFromInput(file);
+        ProgressManager pm = new ProgressManager(context, true).show();
+        APKLogger logger = pm.getLogger();
+        new Thread(() -> {
+            try {
+                options.newCommandExecutor(logger).runCommand();
+                logger.close();
+                pm.dismiss();
+                context.handler.post(() -> {
+                    Extensions.showMessage(context, context.rss.getString(R.string.protectd));
+                    context.loadFolderInPane(file.getParentFile(), pane1, false);
+                });
+            } catch (Exception e) {
+                pm.dismiss();
+                context.handler.post(logger::close);
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
     }
 
 }

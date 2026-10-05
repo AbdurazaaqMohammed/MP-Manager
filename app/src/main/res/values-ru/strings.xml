@@ -1448,4 +1448,15 @@
     <string name="xlate_state_empty">пусто</string>
     <string name="xlate_state_complete">заполнено</string>
     <string name="xlate_state_partial">%1$d/%2$d · %3$d%%</string>
+    <string name="res_shrink">Сокращение ресурсов</string>
+    <string name="inject_logger">Внедрение журналирования</string>
+    <string name="xml_translation_mode">Режим перевода XML</string>
+    <string name="xml_batch_replace">Массовая замена XML</string>
+    <string name="res_obfuscate">Обфускация ресурсов</string>
+    <string name="dex_obfuscate_defense">Обфускация DEX</string>
+    <string name="dex_resplit">Переразделение DEX</string>
+    <string name="data_reuse_multiplex">Оптимизация повторного использования данных</string>
+    <string name="inject_file_provider">Внедрение файлового провайдера</string>
+    <string name="dex_string_decrypt">Расшифровка строк DEX</string>
+    <string name="function_in_development">Функция ещё в разработке</string>
 </resources>

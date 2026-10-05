@@ -1921,4 +1921,15 @@ Deleted %2$s · %3$s</string>
     <string name="xlate_state_empty">empty</string>
     <string name="xlate_state_complete">complete</string>
     <string name="xlate_state_partial">%1$d/%2$d · %3$d%%</string>
+    <string name="res_shrink">Shrink resources</string>
+    <string name="inject_logger">Inject logging</string>
+    <string name="xml_translation_mode">XML translation mode</string>
+    <string name="xml_batch_replace">XML batch replace</string>
+    <string name="res_obfuscate">Obfuscate resources</string>
+    <string name="dex_obfuscate_defense">DEX obfuscation</string>
+    <string name="dex_resplit">Re-split DEX</string>
+    <string name="data_reuse_multiplex">Data reuse optimization</string>
+    <string name="inject_file_provider">Inject file provider</string>
+    <string name="dex_string_decrypt">DEX string decryption</string>
+    <string name="function_in_development">This feature is still in development</string>
 </resources>
