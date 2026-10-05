@@ -684,14 +684,13 @@ public class ApkInfoDialogs {
                                         doClone.run();
                                     }); else doClone.run();
                                 }).show();
-                    } else if (which1 == 6) signatures.showCertificateDialog(file);
-                    else if (which1 == 7) signatures.killSignatureVerification(file, fileName);
-                    else if (which1 == 8) overlay.showAddToastDialog(file, filePath);
-                    else if (which1 == 9) overlay.showRemoveAllToastsDialog(file);
-                    else if (which1 == 10) signatures.removeSignature(file);
-                    else if (which1 == 11) signatures.showSignatureHealthDialog(file);
-                    else if (which1 == 12) manifestEditor.showManifestTogglesDialog(file);
-                    else if (which1 == 13) manifestEditor.showPermissionsDialog(file);
+                    }                     else if (which1 == 6) signatures.showCertificateDialog(file);
+                    else if (which1 == 7) overlay.showAddToastDialog(file, filePath);
+                    else if (which1 == 8) overlay.showRemoveAllToastsDialog(file);
+                    else if (which1 == 9) signatures.removeSignature(file);
+                    else if (which1 == 10) signatures.showSignatureHealthDialog(file);
+                    else if (which1 == 11) manifestEditor.showManifestTogglesDialog(file);
+                    else if (which1 == 12) manifestEditor.showPermissionsDialog(file);
                     else {
                         // Third-party APK action: indices 0-13 are built-ins above.
                         int pluginIndex = which1 - 14;

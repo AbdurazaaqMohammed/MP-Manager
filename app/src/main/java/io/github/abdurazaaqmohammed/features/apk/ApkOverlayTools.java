@@ -118,7 +118,6 @@ import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.ToastInjectorUtil;
 import io.github.abdurazaaqmohammed.utils.OverlayInjectorUtil;
 import io.github.abdurazaaqmohammed.utils.OverlayProfiles;
-import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
 import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 

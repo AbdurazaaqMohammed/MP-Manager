@@ -1,17 +1,8 @@
 package io.github.abdurazaaqmohammed.features.apk;
 
-import android.content.SharedPreferences;
 import android.graphics.Typeface;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.CompoundButton;
-import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-
-import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkVerifier;
 import com.reandroid.apk.APKLogger;
@@ -24,11 +15,9 @@ import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
-import io.github.abdurazaaqmohammed.utils.SignatureKillerUtil;
 import io.github.abdurazaaqmohammed.utils.SignatureStripUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -52,71 +41,6 @@ public class ApkSignatureTools {
         this.dialogUtil = dialogUtil;
         this.uiHelper = uiHelper;
         this.pane1 = pane1;
-    }
-
-    public void killSignatureVerification(File file, String fileName) {
-        View layout = LayoutInflater.from(context).inflate(R.layout.dialog_kill_signature, null);
-
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-        final boolean[] sign = new boolean[1];
-        CompoundButton autosign = layout.findViewById(R.id.autosign);
-        autosign.setText(R.string.auto_sign);
-        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
-        autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
-
-        String[] killMethods = {"MT", "RePairip"};
-        final int[] selectedMethod = {0};
-        AutoCompleteTextView methodDropdown = layout.findViewById(R.id.method_dropdown);
-        methodDropdown.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, killMethods));
-        methodDropdown.setText(killMethods[0], false);
-        methodDropdown.setOnItemClickListener((parent, view, position, id) -> selectedMethod[0] = position);
-
-        layout.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
-
-        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                .setTitle(context.getString(R.string.kill_signature_verification))
-                .setMessage(context.getString(R.string.kill_signature_warning))
-                .setView(layout)
-                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
-                .setPositiveButton(context.getString(R.string.kill), (dialog2, which3) -> {
-                    SignWrapper[] wrapper = new SignWrapper[1];
-                    final Runnable doKill;
-                    if (selectedMethod[0] == 1) {
-                        doKill = () -> {
-                            ProgressManager pm = new ProgressManager(context, true).show();
-                            new Thread(() -> {
-                                try {
-                                    File result = PairipRemoverUtil.removePairip(context, file);
-                                    if (sign[0]) wrapper[0].signApk(result);
-                                    pm.dismiss();
-                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                } catch (Exception e) {
-                                    pm.dismiss();
-                                    new ErrorUtil(context).showError(e);
-                                }
-                            }).start();
-                        };
-                    } else {
-                        doKill = () -> {
-                            ProgressManager pm = new ProgressManager(context, true).show();
-                            new Thread(() -> {
-                                try {
-                                    File result = SignatureKillerUtil.apply(context, file);
-                                    if (sign[0]) wrapper[0].signApk(result);
-                                    pm.dismiss();
-                                    context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
-                                } catch (Exception e) {
-                                    pm.dismiss();
-                                    new ErrorUtil(context).showError(e);
-                                }
-                            }).start();
-                        };
-                    }
-                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                        wrapper[0] = sw;
-                        doKill.run();
-                    }); else doKill.run();
-                    }).show());
     }
 
     public void showCertificateDialog(File apkFile) {
