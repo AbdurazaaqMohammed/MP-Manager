@@ -122,7 +122,12 @@ public final class ApkStringsTranslator {
 
     /** Last-resort lookup by path suffix, for APKs whose table is not where we expected it. */
     private static FileHeader findBySuffix(ZipFile zf, String suffix) {
-        List<FileHeader> headers = zf.getFileHeaders();
+        List<FileHeader> headers;
+        try {
+            headers = zf.getFileHeaders();
+        } catch (Exception e) {
+            return null;
+        }
         if (headers == null) return null;
         for (FileHeader header : headers) {
             if (header != null && !header.isDirectory() && header.getFileName().endsWith(suffix)) {
