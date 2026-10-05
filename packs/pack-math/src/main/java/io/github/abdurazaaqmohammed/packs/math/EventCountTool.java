@@ -40,7 +40,7 @@ public class EventCountTool extends BaseToolPlugin {
         LinearLayout box = ToolViewFactory.container(context);
         ToolViewFactory.addTitle(box, "Event Countdown");
         EditText titleInput = ToolViewFactory.makeInput(box, "Event name", InputType.TYPE_CLASS_TEXT);
-        EditText dateInput = ToolViewFactory.makeInput(box, "Date yyyy-MM-dd HH:mm", InputType.TYPE_CLASS_DATETIME);
+        EditText dateInput = ToolViewFactory.makeDateTimeField(box, "Date & time");
         try {
             String savedTitle = context.getSharedPreferences("tools", Context.MODE_PRIVATE).getString("event_title", "");
             String savedDate = context.getSharedPreferences("tools", Context.MODE_PRIVATE).getString("event_date", "");

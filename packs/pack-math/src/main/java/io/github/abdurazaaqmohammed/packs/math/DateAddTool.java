@@ -28,7 +28,7 @@ public class DateAddTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
         ToolViewFactory.addTitle(box, "Date Adder");
-        EditText dateInput = ToolViewFactory.makeInput(box, "Start yyyy-MM-dd", InputType.TYPE_CLASS_DATETIME);
+        EditText dateInput = ToolViewFactory.makeDateField(box, "Start date");
         dateInput.setText(DateTime.todayIso());
         EditText daysInput = ToolViewFactory.makeInput(box, "Days to add (negative subtracts)",
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);

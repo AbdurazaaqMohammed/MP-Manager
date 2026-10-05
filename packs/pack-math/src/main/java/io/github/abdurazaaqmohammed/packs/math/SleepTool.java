@@ -32,7 +32,7 @@ public class SleepTool extends BaseToolPlugin {
         LinearLayout box = ToolViewFactory.container(context);
         ToolViewFactory.addTitle(box, "Sleep Cycles");
         ToolViewFactory.addLabel(box, "Each cycle is 90 minutes. Wake at the end of a cycle.");
-        EditText wakeInput = ToolViewFactory.makeInput(box, "Wake time HH:mm", InputType.TYPE_CLASS_DATETIME);
+        EditText wakeInput = ToolViewFactory.makeTimeField(box, "Wake time");
         wakeInput.setText("07:00");
         TextView output = ToolViewFactory.makeOutput(box);
         MaterialButton bedBtn = ToolViewFactory.makeButton(box, "Best bedtimes");

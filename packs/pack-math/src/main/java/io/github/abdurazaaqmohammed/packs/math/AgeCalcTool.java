@@ -28,8 +28,7 @@ public class AgeCalcTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
         ToolViewFactory.addTitle(box, "Age Calculator");
-        ToolViewFactory.addLabel(box, "Use yyyy-MM-dd.");
-        EditText birthInput = ToolViewFactory.makeInput(box, "Birth date", InputType.TYPE_CLASS_DATETIME);
+        EditText birthInput = ToolViewFactory.makeDateField(box, "Birth date");
         birthInput.setText("2000-01-01");
         TextView output = ToolViewFactory.makeOutput(box);
         MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");

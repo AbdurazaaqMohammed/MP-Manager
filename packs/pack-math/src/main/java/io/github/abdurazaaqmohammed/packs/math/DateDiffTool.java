@@ -28,9 +28,8 @@ public class DateDiffTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
         ToolViewFactory.addTitle(box, "Date Calculator");
-        ToolViewFactory.addLabel(box, "Use yyyy-MM-dd, for example 2024-01-31.");
-        EditText d1 = ToolViewFactory.makeInput(box, "Start date", InputType.TYPE_CLASS_DATETIME);
-        EditText d2 = ToolViewFactory.makeInput(box, "End date", InputType.TYPE_CLASS_DATETIME);
+        EditText d1 = ToolViewFactory.makeDateField(box, "Start date");
+        EditText d2 = ToolViewFactory.makeDateField(box, "End date");
         String today = DateTime.todayIso();
         d1.setText(today);
         d2.setText(today);
