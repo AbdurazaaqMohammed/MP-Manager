@@ -4,8 +4,11 @@ import android.content.Context;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import io.github.abdurazaaqmohammed.utils.RootManager;
 
@@ -18,17 +21,25 @@ import io.github.abdurazaaqmohammed.utils.RootManager;
  */
 public class ShizukuFile extends File {
 
+    private static final long UNKNOWN_SIZE = -1L;
+
     private final boolean directory;
     private final long size;
+    private final long lastModified;
 
-    public ShizukuFile(String pathname, boolean directory, long size) {
+    public ShizukuFile(String pathname, boolean directory, long size, long lastModified) {
         super(pathname);
         this.directory = directory;
         this.size = size;
+        this.lastModified = lastModified;
+    }
+
+    public ShizukuFile(String pathname, boolean directory, long size) {
+        this(pathname, directory, size, 0L);
     }
 
     public ShizukuFile(String pathname) {
-        this(pathname, guessIsDirectory(pathname), 0);
+        this(pathname, guessIsDirectory(pathname), UNKNOWN_SIZE, 0L);
     }
 
     private static boolean guessIsDirectory(String path) {
@@ -78,9 +89,9 @@ public class ShizukuFile extends File {
                 try {
                     size = Long.parseLong(parts[4]);
                 } catch (NumberFormatException e) {
-                    size = 0;
+                    size = UNKNOWN_SIZE;
                 }
-                return new ShizukuFile(join(parent, name), type == 'd', size);
+                return new ShizukuFile(join(parent, name), type == 'd', size, 0L);
             }
             return null;
         }
@@ -93,9 +104,26 @@ public class ShizukuFile extends File {
         try {
             size = Long.parseLong(parts[4]);
         } catch (NumberFormatException e) {
-            size = 0;
+            size = UNKNOWN_SIZE;
         }
-        return new ShizukuFile(join(parent, name), type == 'd' || type == 'l' && name.indexOf('.') < 0, size);
+        long mtime = parseLsTime(parts[5], parts[6]);
+        return new ShizukuFile(join(parent, name), type == 'd' || type == 'l' && name.indexOf('.') < 0, size, mtime);
+    }
+
+    /**
+     * Parse the "2026-01-01" + "10:00" pair from {@code ls -l} into epoch millis. Returns 0 when the
+     * shape is not recognized: toybox prints "Mon DD HH:MM" for recently modified files and some
+     * builds omit the year, and a wrong timestamp is worse than an unknown one.
+     */
+    private static long parseLsTime(String date, String time) {
+        if (date == null || time == null || date.length() < 10) return 0L;
+        if (date.charAt(4) != '-' || date.charAt(7) != '-'
+                || date.charAt(0) < '0' || date.charAt(0) > '9') return 0L;
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).parse(date + " " + time).getTime();
+        } catch (ParseException e) {
+            return 0L;
+        }
     }
 
     private static String join(String parent, String name) {
@@ -126,9 +154,19 @@ public class ShizukuFile extends File {
         return true;
     }
 
+    /**
+     * Cache-only, like {@link #isDirectory()}: the app cannot stat these paths directly, and
+     * FileSorting calls this from its comparator, so a live stat here would fork a shell per
+     * comparison and ANR on large directories such as Android/data.
+     */
+    @Override
+    public long lastModified() {
+        return lastModified;
+    }
+
     @Override
     public long length() {
-        return size > 0 ? size : super.length();
+        return size != UNKNOWN_SIZE ? size : super.length();
     }
 
     @Override
