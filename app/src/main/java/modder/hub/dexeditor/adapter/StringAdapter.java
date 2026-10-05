@@ -123,6 +123,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
         holder.input.setSelection(holder.input.getText() == null ? 0 : holder.input.getText().length());
         holder.input.addTextChangedListener(holder.watcher);
         holder.watcher.original = original;
+        holder.watcher.input = holder.input;
         // Colour the staged cell rather than the original, so "edited" is visible without
         // hiding the text being edited.
         holder.input.setTextColor(pending == null ? COLOR_NORMAL : COLOR_MODIFIED);
@@ -220,9 +221,11 @@ import io.github.abdurazaaqmohammed.MPManager.R;
             notifyEditsChanged();
         }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder {
         final TextView stringText;
         final TextInputEditText input;
+        // Inner, not static: the watcher calls back into the adapter to stage the edit, and
+        // a static ViewHolder cannot reach the outer instance.
         final Watcher watcher = new Watcher();
 
         ViewHolder(View itemView) {
@@ -236,6 +239,9 @@ import io.github.abdurazaaqmohammed.MPManager.R;
      *  position, so recycling cannot route a keystroke to the wrong entry. */
     class Watcher implements TextWatcher {
         String original;
+        /** The field this watcher drives, set at bind time. Held as a field because
+         *  afterTextChanged has no handle on the holder. */
+        TextInputEditText input;
 
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -250,6 +256,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
             if (original == null) return;
             String value = editable == null ? "" : editable.toString();
             stageEdit(original, value);
+            if (input == null) return;
             input.setTextColor(value.isEmpty() || value.equals(original)
                     ? COLOR_NORMAL : COLOR_MODIFIED);
         }
