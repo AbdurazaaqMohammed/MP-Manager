@@ -449,7 +449,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             } else if(requestCode == 757) {
                 if (data == null || data.getData() == null) return;
-                handleModifiedFileResult(data.getData(), data.getStringExtra("zipEntryPath"), data.getStringExtra("zipFilePath"));
+                String[] batch = data.getStringArrayExtra("zipEntryPaths");
+                if (batch != null && batch.length > 0) {
+                    apkResults.handleModifiedEntriesResult(data.getData(), batch,
+                            data.getStringExtra("zipFilePath"),
+                            data.getStringExtra("modifiedRoot"));
+                } else {
+                    handleModifiedFileResult(data.getData(), data.getStringExtra("zipEntryPath"), data.getStringExtra("zipFilePath"));
+                }
             }
         }
     }

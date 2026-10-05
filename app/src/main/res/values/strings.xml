@@ -1844,6 +1844,8 @@ Deleted %2$s · %3$s</string>
     <!-- XML translation mode -->
     <string name="xlate_search_strings">Filter keys or source text</string>
     <string name="xlate_no_resource_table">No usable resources.arsc in this APK</string>
+    <string name="xlate_no_layout_text">No untranslated text found in this APK\'s layouts</string>
+    <string name="xlate_xml_count">%1$d strings · %2$d staged · %3$d files</string>
     <string name="xlate_source_language">Translate from</string>
     <string name="xlate_strings_count">%1$d shown / %2$d staged of %3$d</string>
     <string name="xlate_row_detail">String detail</string>

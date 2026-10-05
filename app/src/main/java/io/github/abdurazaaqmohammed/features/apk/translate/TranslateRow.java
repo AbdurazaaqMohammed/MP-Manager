@@ -36,6 +36,14 @@ public final class TranslateRow {
     /** The value as it stands in the config, i.e. the text to translate. */
     public final String current;
 
+    /**
+     * Archive entry this literal was read from, and its line inside that file's decoded XML.
+     * Only the layout scanner fills these in; arsc and dex rows leave them null/-1 because a
+     * string resource is addressed by key rather than by position in a file.
+     */
+    public String filePath;
+    public int xmlIndex = -1;
+
     private String translation;
     private Origin origin;
     private boolean selected = true;

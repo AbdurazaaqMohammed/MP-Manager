@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Everything lives in the overflow so the bar reads back + title + dots, exactly like MT's
+  translation mode.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/xlate_menu_run"
+        android:title="@string/xlate_run"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_apply"
+        android:title="@string/xlate_apply"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_source_language"
+        android:title="@string/xlate_source_language"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_settings"
+        android:title="@string/xlate_settings"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_revert"
+        android:title="@string/xlate_revert"
+        app:showAsAction="never" />
+
+</menu>

@@ -1371,6 +1371,8 @@
     <!-- XML translation mode -->
     <string name="xlate_search_strings">Фильтр по имени или тексту</string>
     <string name="xlate_no_resource_table">В этом APK нет пригодного resources.arsc</string>
+    <string name="xlate_no_layout_text">В макетах этого APK нет текста для перевода</string>
+    <string name="xlate_xml_count">%1$d строк · %2$d подготовлено · %3$d файлов</string>
     <string name="xlate_source_language">Перевести с</string>
     <string name="xlate_strings_count">Показано %1$d / подготовлено %2$d из %3$d</string>
     <string name="xlate_row_detail">Сведения о строке</string>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Full-width band naming the layout file the rows below it came from. MT groups this way so a
+  scan over hundreds of layouts stays navigable without a search box.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/xml_group_label"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurfaceVariant"
+    android:ellipsize="middle"
+    android:paddingStart="10dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="6dp"
+    android:singleLine="true"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    android:textSize="14sp" />

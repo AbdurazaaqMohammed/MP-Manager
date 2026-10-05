@@ -106,7 +106,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkSignatureTools;
-import io.github.abdurazaaqmohammed.features.apk.translate.ArscTranslationModeActivity;
+import io.github.abdurazaaqmohammed.features.apk.translate.XmlTranslationModeActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
@@ -1196,13 +1196,6 @@ public class ApkInfoDialogs {
         return null;
     }
 
-    private static String arscEntryName(File apk) throws IOException {
-        try (ZipFile zipFile = new ZipFile(apk)) {
-            ZipEntry entry = findArscEntry(zipFile);
-            return entry == null ? null : entry.getName();
-        }
-    }
-
     private File extractArsc(ZipFile zipFile, ZipEntry entry) throws IOException {
         File dir = new File(context.getCacheDir(), "arsc");
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create " + dir);
@@ -1218,20 +1211,14 @@ public class ApkInfoDialogs {
     }
 
     /**
-     * MT's "XML translation mode". The activity re-extracts the table itself when given
-     * {@code apkPath}, so only the entry name has to be resolved here.
+     * MT's "XML translation mode": walk the APK's layout files, lift every literal that was
+     * written straight into an attribute, and batch-translate them to Chinese.
      */
     private void startArscTranslation(File file) {
         try {
-            String entryName = arscEntryName(file);
-            if (entryName == null) {
-                Extensions.showMessage(context, context.rss.getString(R.string.xlate_no_resource_table));
-                return;
-            }
-            Intent intent = new Intent(context, ArscTranslationModeActivity.class)
-                    .putExtra("apkPath", file.getAbsolutePath())
-                    .putExtra("zipEntryPath", entryName);
-            context.startActivityForResult(intent, 757);
+            Intent intent = new Intent(context, XmlTranslationModeActivity.class)
+                    .putExtra("apkPath", file.getAbsolutePath());
+            context.startActivity(intent);
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
         }

@@ -1841,6 +1841,8 @@ Layout Inspector
     <!-- XML translation mode -->
     <string name="xlate_search_strings">过滤键名或原文</string>
     <string name="xlate_no_resource_table">该 APK 没有可用的 resources.arsc</string>
+    <string name="xlate_no_layout_text">该 APK 的布局中没有可翻译的文本</string>
+    <string name="xlate_xml_count">%1$d 条 · %2$d 已翻译 · %3$d 个文件</string>
     <string name="xlate_source_language">翻译自</string>
     <string name="xlate_strings_count">显示 %1$d / 已暂存 %2$d，共 %3$d</string>
     <string name="xlate_row_detail">字符串详情</string>
