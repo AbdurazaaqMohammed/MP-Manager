@@ -90,7 +90,7 @@ import io.github.abdurazaaqmohammed.features.files.BookmarksController;
 import io.github.abdurazaaqmohammed.features.files.FileSearchController;
 import io.github.abdurazaaqmohammed.features.files.FtpController;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
-import io.github.abdurazaaqmohammed.features.files.SettingsController;
+import io.github.abdurazaaqmohammed.features.files.MainSettingsActivity;
 import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
 import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
 import io.github.abdurazaaqmohammed.features.files.SidebarController;
@@ -231,6 +231,13 @@ import io.github.ratul.topactivity.utils.PermissionUtil;
 import rikka.shizuku.Shizuku;
 
 public class MainActivity extends BaseActivity implements PaneNavigationController.Host {
+
+    private static java.lang.ref.WeakReference<MainActivity> CURRENT = new java.lang.ref.WeakReference<>(null);
+
+    public static MainActivity current() {
+        return CURRENT.get();
+    }
+
     boolean logEnabled;
     private File homeDir1;
     private File homeDir2;
@@ -252,8 +259,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private boolean systemTheme;
     public int theme;
     private boolean checkForUpdates;
-    public String lastVerChecked;
-    public long downloadId;
     private File[] currentPane1Files;
     private File[] currentPane2Files;
     private List<ZipEntryInfo> currentPane1ZipEntries;
@@ -264,7 +269,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final SidebarController sidebar = new SidebarController(this);
     private final BookmarksController bookmarksUI = new BookmarksController(this);
     private final MultiSelectController multiSelect = new MultiSelectController(this);
-    private final SettingsController settingsUI = new SettingsController(this);
     private final FtpController ftp = new FtpController(this);
     private final ApkResultHandler apkResults = new ApkResultHandler(this);
     private final UpdateController updates = new UpdateController(this);
@@ -1834,6 +1838,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     @Override
     protected void onResume() {
         super.onResume();
+        CURRENT = new java.lang.ref.WeakReference<>(this);
         try {
             updates.register();
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
@@ -1902,7 +1907,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void showSettingsDialog() {
-        settingsUI.showSettingsDialog();
+        startActivity(new Intent(this, MainSettingsActivity.class));
     }
 
 

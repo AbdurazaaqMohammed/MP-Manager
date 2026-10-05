@@ -158,6 +158,11 @@
             </intent-filter>
         </activity>
         <activity
+            android:name="io.github.abdurazaaqmohammed.features.files.MainSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+        <activity
             android:name="io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity"
             android:exported="false">
         </activity>

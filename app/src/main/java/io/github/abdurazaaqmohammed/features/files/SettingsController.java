@@ -8,6 +8,8 @@ import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -26,7 +28,8 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.activity.result.ActivityResult;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.os.LocaleListCompat;
 import androidx.preference.PreferenceManager;
@@ -52,9 +55,11 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
+import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
+import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.UpdateUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -65,31 +70,43 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 import net.lingala.zip4j.model.enums.CompressionLevel;
 
 import rikka.shizuku.Shizuku;
 
-/**
- * Settings dialog + sections extracted from MainActivity.
- */
 public class SettingsController {
 
-    private final MainActivity activity;
-
-    public SettingsController(MainActivity activity) {
-        this.activity = activity;
+    public interface ExternalSettingLauncher {
+        void launch(Intent intent, Consumer<ActivityResult> callback);
     }
 
-    public void showSettingsDialog() {
+    private final AppCompatActivity activity;
+    private final MainActivity host;
+    private final ExternalSettingLauncher externalSettingLauncher;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    public SettingsController(MainActivity activity) {
+        this(activity, activity, activity::launchExternalSetting);
+    }
+
+    public SettingsController(AppCompatActivity activity, MainActivity host,
+                              ExternalSettingLauncher externalSettingLauncher) {
+        this.activity = activity;
+        this.host = host;
+        this.externalSettingLauncher = externalSettingLauncher;
+    }
+
+    public void attach(ScrollView settingsDialog) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
-        ScrollView settingsDialog = (ScrollView) LayoutInflater.from(activity).inflate(R.layout.dialog_settings, null);
 
         MaterialButtonToggleGroup themeButtons = settingsDialog.findViewById(R.id.themeToggleGroup);
+        String currentThemeId = ThemeRegistry.getCurrentId(activity);
         themeButtons.check(
-                activity.isSystemTheme() ? R.id.systemThemeButton
-                        : activity.theme == R.style.Theme_MyApp_Light ? R.id.lightThemeButton
-                                : activity.theme == R.style.Theme_MyApp_Dark ? R.id.darkThemeButton
+                BuiltInThemes.SYSTEM_DEFAULT_ID.equals(currentThemeId) ? R.id.systemThemeButton
+                        : BuiltInThemes.LIGHT_ID.equals(currentThemeId) ? R.id.lightThemeButton
+                                : BuiltInThemes.DARK_ID.equals(currentThemeId) ? R.id.darkThemeButton
                                         : R.id.blackThemeButton);
         for (int i = 0; i < themeButtons.getChildCount(); i++) {
             View child = themeButtons.getChildAt(i);
@@ -128,19 +145,16 @@ public class SettingsController {
                     themeButtons.check(R.id.systemThemeButton);
                     pluginId = BuiltInThemes.SYSTEM_DEFAULT_ID;
                 }
-                activity.setSystemTheme(system);
-
+                applySystemThemeFlag(system);
                 ThemeRegistry.setCurrentId(activity, pluginId);
-                activity.theme = ThemeRegistry.currentStyleRes(activity);
-                // Keep legacy int pref in sync for any remaining readers.
-                settings.edit().putInt("theme", activity.theme).apply();
+                settings.edit().putInt("theme", ThemeRegistry.currentStyleRes(activity)).apply();
                 activity.recreate();
             }
         });
 
         CompoundButton logSwitch = settingsDialog.findViewById(R.id.logToggle);
-        logSwitch.setChecked(activity.isLogEnabled());
-        logSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> activity.setLogEnabled(isChecked));
+        logSwitch.setChecked(isLogEnabled());
+        logSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> setLogEnabled(isChecked));
 
         CompoundButton playerModeSwitch = settingsDialog.findViewById(R.id.playerModeToggle);
         playerModeSwitch.setChecked(settings.getBoolean("player_open_activity", false));
@@ -158,14 +172,14 @@ public class SettingsController {
         sidebarBookmarksToggle.setChecked(settings.getBoolean("sidebar_show_bookmarks", true));
         sidebarBookmarksToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
             settings.edit().putBoolean("sidebar_show_bookmarks", isChecked).apply();
-            activity.refreshSidebar(activity.getSidebarSectionOrder());
+            refreshSidebar();
         });
 
         CompoundButton sidebarBookmarkGroupsToggle = settingsDialog.findViewById(R.id.sidebarBookmarkGroupsToggle);
         sidebarBookmarkGroupsToggle.setChecked(settings.getBoolean("sidebar_show_bookmark_groups", false));
         sidebarBookmarkGroupsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
             settings.edit().putBoolean("sidebar_show_bookmark_groups", isChecked).apply();
-            activity.refreshSidebar(activity.getSidebarSectionOrder());
+            refreshSidebar();
         });
 
         EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
@@ -177,7 +191,7 @@ public class SettingsController {
         CheckBox autosign = settingsDialog.findViewById(R.id.autosign);
         autosign.setChecked(settings.getBoolean("autosign", true));
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
-        settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(activity.uiHelper.showSignSettingsDialog());
+        settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(v -> SignatureKeyDialog.show(activity));
         setupAppearanceSettings(settingsDialog, settings);
         setupLanguageSettings(settingsDialog);
         setupFolderSettings(settingsDialog, settings);
@@ -186,20 +200,23 @@ public class SettingsController {
 
         View checkUpdateNow = settingsDialog.findViewById(R.id.checkUpdateNow);
         CompoundButton updateSwitch = settingsDialog.findViewById(R.id.checkUpdatesToggle);
-        updateSwitch.setChecked(activity.isCheckForUpdates());
-        updateSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> checkUpdateNow.setVisibility((activity.setCheckForUpdates(isChecked)) ? View.GONE : View.VISIBLE));
-        checkUpdateNow.setVisibility(activity.isCheckForUpdates() ? View.GONE : View.VISIBLE);
-        checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, activity));
-        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> activity.uiHelper.showAboutDialog());
-        setupPluginSettings(settingsDialog, settings);
-        AlertDialog settingsAlert = new MaterialAlertDialogBuilder(activity).setTitle(activity.getString(R.string.settings)).setView(settingsDialog).create();
-        settingsAlert.setOnDismissListener(d -> {
-            saveSuCommand(settingsDialog);
-            saveDateFormat(settingsDialog);
-            saveSearchHistoryLimit(settingsDialog);
-            refreshFileLists();
+        boolean checkForUpdates = isCheckForUpdates();
+        updateSwitch.setChecked(checkForUpdates);
+        updateSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            setCheckForUpdates(isChecked);
+            checkUpdateNow.setVisibility(isChecked ? View.GONE : View.VISIBLE);
         });
-        settingsAlert.show();
+        checkUpdateNow.setVisibility(checkForUpdates ? View.GONE : View.VISIBLE);
+        checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, activity));
+        settingsDialog.findViewById(R.id.about).setOnClickListener(v -> new UIHelper(activity).showAboutDialog());
+        setupPluginSettings(settingsDialog, settings);
+    }
+
+    public void persist(ScrollView root) {
+        saveSuCommand(root);
+        saveDateFormat(root);
+        saveSearchHistoryLimit(root);
+        refreshFileLists();
     }
 
     /**
@@ -372,7 +389,7 @@ public class SettingsController {
                 intent.putExtra(PluginContracts.EXTRA_VALUE, settings.getBoolean(key, false));
             }
             PluginTrust.ensureTrusted(activity, e.plugin, () ->
-                    activity.launchExternalSetting(intent, result -> {
+                    externalSettingLauncher.launch(intent, result -> {
                         try {
                             if (isAction || result.getResultCode() != Activity.RESULT_OK
                                     || result.getData() == null) return;
@@ -558,17 +575,17 @@ public class SettingsController {
 
         TextView homeTv1 = root.findViewById(R.id.homePathTv1);
         TextView homeTv2 = root.findViewById(R.id.homePathTv2);
-        homeTv1.setText(activity.getHomeDir1() != null ? activity.getHomeDir1().getPath() : "");
-        homeTv2.setText(activity.getHomeDir2() != null ? activity.getHomeDir2().getPath() : "");
+        homeTv1.setText(homeDirPath(1));
+        homeTv2.setText(homeDirPath(2));
         root.findViewById(R.id.pickHomeBtn1).setOnClickListener(v ->
                 pickDirInto(homeTv1, chosen -> {
                     settings.edit().putString("home1", chosen).apply();
-                    activity.setHomeDir1(new File(chosen));
+                    if (host != null) host.setHomeDir1(new File(chosen));
                 }));
         root.findViewById(R.id.pickHomeBtn2).setOnClickListener(v ->
                 pickDirInto(homeTv2, chosen -> {
                     settings.edit().putString("home2", chosen).apply();
-                    activity.setHomeDir2(new File(chosen));
+                    if (host != null) host.setHomeDir2(new File(chosen));
                 }));
 
         TextView appPathTv = root.findViewById(R.id.appPathTv);
@@ -610,8 +627,8 @@ public class SettingsController {
         preserveSwitch.setOnCheckedChangeListener((v, checked) ->
                 settings.edit().putBoolean("preserve_mtime", checked).apply());
 
-        root.findViewById(R.id.customizeMenuBtn).setOnClickListener(v ->
-                FileMenuCustomizer.show(activity));
+        View customizeMenuBtn = root.findViewById(R.id.customizeMenuBtn);
+        customizeMenuBtn.setOnClickListener(v -> FileMenuCustomizer.show(activity));
 
         CompoundButton fileMenuTwoColumnSwitch = root.findViewById(R.id.fileMenuTwoColumnSwitch);
         fileMenuTwoColumnSwitch.setChecked(FileMenuOrder.isTwoColumn(activity));
@@ -645,9 +662,9 @@ public class SettingsController {
         TextInputEditText suCommandEt = root.findViewById(R.id.suCommandEt);
         suCommandEt.setText(settings.getString("su_command", ""));
 
-        String labelNonRoot = activity.rss.getString(R.string.non_root);
-        String labelRoot = activity.rss.getString(R.string.root);
-        String labelShizuku = activity.rss.getString(R.string.shizuku_mode);
+        String labelNonRoot = activity.getString(R.string.non_root);
+        String labelRoot = activity.getString(R.string.root);
+        String labelShizuku = activity.getString(R.string.shizuku_mode);
         boolean shizukuSupported = Build.VERSION.SDK_INT >= 23;
         List<String> modeLabels = new ArrayList<>();
         modeLabels.add(labelNonRoot);
@@ -702,7 +719,7 @@ public class SettingsController {
                 Extensions.showMessage(activity, "Checking root…");
                 new Thread(() -> {
                     boolean ok = rootManager.isRootAvailable();
-                    activity.handler.post(() -> {
+                    handler.post(() -> {
                         if (ok) {
                             rootManager.setWorkingMode(RootManager.WorkingMode.ROOT);
                             rootStatusSwitch.setChecked(true);
@@ -762,7 +779,7 @@ public class SettingsController {
                 new Shizuku.OnRequestPermissionResultListener[1];
         holder[0] = (code, result) -> {
             ShizukuManager.removePermissionListener(holder[0]);
-            activity.handler.post(() -> {
+            handler.post(() -> {
                 if (result == PackageManager.PERMISSION_GRANTED) {
                     new Thread(() -> ShizukuManager.warmUp(activity)).start();
                 } else {
@@ -790,15 +807,68 @@ public class SettingsController {
     }
 
     private void refreshFileLists() {
+        if (host == null) return;
         try {
             for (int id : new int[]{R.id.listViewPane1, R.id.listViewPane2}) {
-                RecyclerView pane = activity.findViewById(id);
+                RecyclerView pane = host.findViewById(id);
                 if (pane != null && pane.getAdapter() != null) {
                     pane.getAdapter().notifyDataSetChanged();
                 }
             }
         } catch (Exception ignored) {
         }
+    }
+
+    private void refreshSidebar() {
+        if (host == null) return;
+        try {
+            host.refreshSidebar(host.getSidebarSectionOrder());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void applySystemThemeFlag(boolean system) {
+        if (host != null) host.setSystemTheme(system);
+    }
+
+    private boolean isLogEnabled() {
+        if (host != null) return host.isLogEnabled();
+        return PreferenceManager.getDefaultSharedPreferences(activity)
+                .getBoolean("logEnabled", false);
+    }
+
+    private void setLogEnabled(boolean enabled) {
+        if (host != null) {
+            host.setLogEnabled(enabled);
+            return;
+        }
+        PreferenceManager.getDefaultSharedPreferences(activity).edit()
+                .putBoolean("logEnabled", enabled).apply();
+    }
+
+    private boolean isCheckForUpdates() {
+        if (host != null) return host.isCheckForUpdates();
+        return PreferenceManager.getDefaultSharedPreferences(activity)
+                .getBoolean("checkForUpdates", true);
+    }
+
+    private void setCheckForUpdates(boolean enabled) {
+        if (host != null) {
+            host.setCheckForUpdates(enabled);
+            return;
+        }
+        PreferenceManager.getDefaultSharedPreferences(activity).edit()
+                .putBoolean("checkForUpdates", enabled).apply();
+    }
+
+    private String homeDirPath(int pane) {
+        if (host != null) {
+            File dir = pane == 1 ? host.getHomeDir1() : host.getHomeDir2();
+            return dir != null ? dir.getPath() : "";
+        }
+        String key = pane == 1 ? "home1" : "home2";
+        String path = PreferenceManager.getDefaultSharedPreferences(activity).getString(key, null);
+        return TextUtils.isEmpty(path) ? Environment.getExternalStorageDirectory().getPath() : path;
     }
 
     private void showRebootDialog() {
