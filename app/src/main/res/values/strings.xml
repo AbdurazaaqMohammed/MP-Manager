@@ -406,8 +406,6 @@
     <string name="search_exceed">The number of search results exceeds the limit, the search has been stopped</string>
     
     <!-- ApkToolsHandler strings -->
-    <string name="kill_signature_verification">Kill signature verification</string>
-    <string name="kill_signature_warning">Note: This feature is for security testing purposes only and is strictly forbidden to use it for any illegal activity</string>
     <string name="kill">Kill</string>
     <string name="select_activity">Select Activity</string>
     <string name="choose_font">Choose font (ttf/otf)</string>

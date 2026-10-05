@@ -402,8 +402,6 @@
     <string name="replacement_errors">Ошибки замены</string>
     <string name="fix_first">Сначала исправить</string>
     <string name="search_exceed">Количество результатов поиска превысило лимит, поиск остановлен</string>
-    <string name="kill_signature_verification">Отключить проверку подписи</string>
-    <string name="kill_signature_warning">Примечание: эта функция предназначена только для тестирования безопасности, использовать её в любых незаконных целях строго запрещено</string>
     <string name="kill">Отключить</string>
     <string name="select_activity">Выбрать Activity</string>
     <string name="choose_font">Выбрать шрифт (ttf/otf)</string>

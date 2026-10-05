@@ -402,8 +402,6 @@
     <string name="search_exceed">搜索结果数量超过限制，搜索已停止</string>
     
     <!-- ApkToolsHandler strings -->
-    <string name="kill_signature_verification">终止签名验证</string>
-    <string name="kill_signature_warning">注意：此功能仅用于安全测试目的，严禁用于任何非法活动</string>
     <string name="kill">终止</string>
     <string name="select_activity">选择 Activity</string>
     <string name="choose_font">选择字体 (ttf/otf)</string>
