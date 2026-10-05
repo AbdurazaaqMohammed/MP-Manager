@@ -221,13 +221,13 @@ public class DexTools {
         names.sort((a, b) -> Integer.compare(dexOrder(a), dexOrder(b)));
 
         boolean[] checked = new boolean[names.size()];
-        java.util.Arrays.fill(checked, true);
+        Arrays.fill(checked, true);
         new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.dex_multi_select)
                 .setMultiChoiceItems(names.toArray(new String[0]), checked,
                         (d, which, isChecked) -> checked[which] = isChecked)
                 .setNeutralButton(R.string.menu_select_all, (d, w) -> {
-                    java.util.Arrays.fill(checked, true);
+                    Arrays.fill(checked, true);
                     d.dismiss();
                     openDexTranslation(zipFile, dexPathList(zipFile, names));
                 })
