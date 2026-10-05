@@ -15,6 +15,8 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.common.io.Files;
@@ -23,13 +25,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 
 public class UIHelper {
-    private final MainActivity context;
+    private final AppCompatActivity context;
     public record AboutLibrary(String name, String author, String url, String licenseName,
                                 String licenseFile) {
     }
@@ -48,8 +49,8 @@ public class UIHelper {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(lib.name)
                 .setMessage(message.toString())
-                .setPositiveButton(context.rss.getString(R.string.github), (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lib.url))))
-                .setNegativeButton(context.rss.getString(R.string.close), null)
+                .setPositiveButton(context.getString(R.string.github), (dialog, which) -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lib.url))))
+                .setNegativeButton(context.getString(R.string.close), null)
                 .show();
     }
 
@@ -58,7 +59,7 @@ public class UIHelper {
 
         TextView versionText = aboutView.findViewById(R.id.aboutVersion);
         try {
-            versionText.setText(context.rss.getString(R.string.about_version, context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName));
+            versionText.setText(context.getString(R.string.about_version, context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName));
         } catch (PackageManager.NameNotFoundException ignored) {
         }
 
@@ -113,7 +114,7 @@ public class UIHelper {
         for (AboutLibrary lib : libraries) {
             View row = LayoutInflater.from(context).inflate(R.layout.dialog_about_item, libsContainer, false);
             ((TextView) row.findViewById(R.id.aboutLibName)).setText(lib.name);
-            ((TextView) row.findViewById(R.id.aboutLibAuthor)).setText(context.rss.getString(R.string.about_by_author, lib.author));
+            ((TextView) row.findViewById(R.id.aboutLibAuthor)).setText(context.getString(R.string.about_by_author, lib.author));
             TextView licenseText = row.findViewById(R.id.aboutLibLicense);
             licenseText.setText(lib.licenseName);
             if (licenseText.getBackground() instanceof GradientDrawable) {
@@ -125,12 +126,12 @@ public class UIHelper {
         }
 
         new MaterialAlertDialogBuilder(context)
-                .setPositiveButton(context.rss.getString(R.string.close), null)
+                .setPositiveButton(context.getString(R.string.close), null)
                 .setView(aboutView)
                 .show();
     }
 
-    public UIHelper (MainActivity context) {
+    public UIHelper (AppCompatActivity context) {
         this.context = context;
     }
 

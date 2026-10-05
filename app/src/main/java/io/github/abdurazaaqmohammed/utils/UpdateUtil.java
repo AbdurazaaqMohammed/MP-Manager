@@ -5,14 +5,19 @@ import static android.content.Context.DOWNLOAD_SERVICE;
 import android.app.DownloadManager;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textview.MaterialTextView;
@@ -25,13 +30,20 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 
 public class UpdateUtil {
-    public static void checkForUpdates(boolean toast, MainActivity context) {
+
+    public static final String PREF_LAST_VER_CHECKED = "lastVerChecked";
+    public static final String PREF_DOWNLOAD_ID = "downloadId";
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
+
+    public static void checkForUpdates(boolean toast, AppCompatActivity context) {
+        Resources rss = context.getResources();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        String lastVerChecked = prefs.getString(PREF_LAST_VER_CHECKED, null);
         new Thread(() -> {
             try {
                 HttpURLConnection conn = getHttpURLConnection();
@@ -75,10 +87,8 @@ public class UpdateUtil {
                             break;
                         }
                     }
-                    Resources rss = context.rss;
-
                     if (newVer) {
-                        if (!toast && !TextUtils.isEmpty(context.lastVerChecked) && context.lastVerChecked.equals(latestVersion))
+                        if (!toast && !TextUtils.isEmpty(lastVerChecked) && lastVerChecked.equals(latestVersion))
                             return;
                         String ending = ".apk";
                         String filename = "MP-Manager." + latestVersion + ending;
@@ -93,7 +103,7 @@ public class UpdateUtil {
                         tv.setPadding(p, p, p, p);
 
                         String finalLatestVersion = latestVersion;
-                        context.handler.post(() -> {
+                        MAIN_HANDLER.post(() -> {
                             AlertDialog alertDialog = new MaterialAlertDialogBuilder(context)
                                     .setTitle(rss.getString(R.string.new_ver, finalLatestVersion)).setView(tv)
                                     .setPositiveButton(rss.getString(R.string.download), (dialog, which) -> {
@@ -106,13 +116,15 @@ public class UpdateUtil {
                                                 .setNotificationVisibility(
                                                         DownloadManager.Request.VISIBILITY_VISIBLE
                                                                 | DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                                        context.downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request);
-                                    })
+                                        long downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request);
+                                                prefs.edit().putLong(PREF_DOWNLOAD_ID, downloadId).apply();
+                                            })
                                     .setNegativeButton("Go to GitHub Release", (dialog, which) -> context
                                             .startActivity(new Intent(Intent.ACTION_VIEW).setData(Uri.parse(
                                                     "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/latest"))))
                                     .setNeutralButton(rss.getString(android.R.string.cancel), null).create();
-                            alertDialog.setOnDismissListener(dialog -> context.lastVerChecked = finalLatestVersion);
+                            alertDialog.setOnDismissListener(dialog -> prefs.edit()
+                                    .putString(PREF_LAST_VER_CHECKED, finalLatestVersion).apply());
                             alertDialog.show();
                             alertDialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnLongClickListener(v -> {
                                 Extensions.showMessage(context, link);

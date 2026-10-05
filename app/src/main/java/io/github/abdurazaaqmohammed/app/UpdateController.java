@@ -9,16 +9,19 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 
+import androidx.preference.PreferenceManager;
+
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.UpdateUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
 
 /**
  * App-update download completion handling extracted from MainActivity.
- * downloadId/lastVerChecked stay on MainActivity (written by UpdateUtil).
+ * downloadId is persisted in DefaultSharedPreferences (written by UpdateUtil).
  */
 public class UpdateController {
 
@@ -28,8 +31,8 @@ public class UpdateController {
         public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
 
-            if (id == activity.downloadId) {
-                activity.downloadId = -1;
+            if (id == getDownloadId()) {
+                setDownloadId(-1);
                 DownloadManager.Query query = new DownloadManager.Query();
                 query.setFilterById(id);
                 DownloadManager downloadManager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
@@ -53,6 +56,16 @@ public class UpdateController {
         this.activity = activity;
     }
 
+    private long getDownloadId() {
+        return PreferenceManager.getDefaultSharedPreferences(activity)
+                .getLong(UpdateUtil.PREF_DOWNLOAD_ID, -1);
+    }
+
+    private void setDownloadId(long id) {
+        PreferenceManager.getDefaultSharedPreferences(activity).edit()
+                .putLong(UpdateUtil.PREF_DOWNLOAD_ID, id).apply();
+    }
+
     public void register() {
         try {
             if (Build.VERSION.SDK_INT > 32) {
@@ -74,23 +87,24 @@ public class UpdateController {
     }
 
     private void checkPendingUpdateDownload() {
-        if (activity.downloadId == -1) return;
+        long downloadId = getDownloadId();
+        if (downloadId == -1) return;
         try {
             DownloadManager downloadManager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
             DownloadManager.Query query = new DownloadManager.Query();
-            query.setFilterById(activity.downloadId);
+            query.setFilterById(downloadId);
             try (Cursor cursor = downloadManager.query(query)) {
                 if (cursor.moveToFirst()) {
                     int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
                     if (DownloadManager.STATUS_SUCCESSFUL == cursor.getInt(statusIndex)) {
-                        activity.downloadId = -1;
+                        setDownloadId(-1);
                         int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
                         promptInstallDownloadedUpdate(cursor.getString(uriIndex));
                     } else if (DownloadManager.STATUS_FAILED == cursor.getInt(statusIndex)) {
-                        activity.downloadId = -1;
+                        setDownloadId(-1);
                     }
                 } else {
-                    activity.downloadId = -1;
+                    setDownloadId(-1);
                 }
             }
         } catch (Exception ignored) {

@@ -33,8 +33,8 @@ public final class FileMenuCustomizer {
     private FileMenuCustomizer() {
     }
 
-    public static void show(MainActivity context) {
-        DialogUtil dialogUtil = context.dialogUtil;
+    public static void show(android.app.Activity context) {
+        DialogUtil dialogUtil = new DialogUtil(context);
         List<String> order = new ArrayList<>(FileMenuOrder.load(context));
         List<FileMenuOrder.MenuItem> items = new ArrayList<>();
         for (String id : order) {
@@ -108,11 +108,11 @@ public final class FileMenuCustomizer {
     }
 
     private static class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.Holder> {
-        private final MainActivity context;
+        private final android.app.Activity context;
         private final List<FileMenuOrder.MenuItem> items;
         private final boolean grid;
 
-        OrderAdapter(MainActivity context, List<FileMenuOrder.MenuItem> items, boolean grid) {
+        OrderAdapter(android.app.Activity context, List<FileMenuOrder.MenuItem> items, boolean grid) {
             this.context = context;
             this.items = items;
             this.grid = grid;
