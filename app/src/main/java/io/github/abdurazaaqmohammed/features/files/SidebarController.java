@@ -103,8 +103,8 @@ public class SidebarController {
             @Override
             public void onEntryStorageLongPressed(SidebarAdapter.SidebarEntry entry, View view) {
                 PopupMenu menu = new PopupMenu(activity, view);
-                menu.getMenu().add(R.string.manage_storage);
-                menu.getMenu().add(R.string.open_location);
+                menu.getMenu().add(0, R.string.manage_storage, 0, R.string.manage_storage);
+                menu.getMenu().add(0, R.string.open_location, 1, R.string.open_location);
                 menu.setOnMenuItemClickListener(item -> {
                     if (item.getItemId() == R.string.manage_storage) {
                         activity.startActivity(new Intent(activity, StorageManagerActivity.class));
