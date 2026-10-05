@@ -18,16 +18,11 @@ public class NetworkPack implements ToolPack {
 
     @Override
     public int version() {
-        return 1;
+        return 2;
     }
 
     @Override
     public List<ToolPlugin> tools() {
-        return Arrays.<ToolPlugin>asList(
-                new ConnectivityTool(),
-                new NfcTool(),
-                new BluetoothTool(),
-                new QrGenTool(),
-                new QrScanTool());
+        return java.util.Collections.<ToolPlugin>singletonList(new NetworkSuiteTool());
     }
 }
