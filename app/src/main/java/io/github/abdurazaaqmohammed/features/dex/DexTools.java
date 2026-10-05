@@ -79,7 +79,7 @@ import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
-import io.github.abdurazaaqmohammed.features.apk.translate.DexTranslationActivity;
+import io.github.abdurazaaqmohammed.features.apk.translate.DexTranslationModeActivity;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
 /**
@@ -224,7 +224,8 @@ public class DexTools {
         java.util.Arrays.fill(checked, true);
         new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.dex_multi_select)
-                .setMultiChoiceItems(names, checked, (d, which, isChecked) -> checked[which] = isChecked)
+                .setMultiChoiceItems(names.toArray(new String[0]), checked,
+                        (d, which, isChecked) -> checked[which] = isChecked)
                 .setNeutralButton(R.string.menu_select_all, (d, w) -> {
                     java.util.Arrays.fill(checked, true);
                     d.dismiss();
@@ -275,7 +276,7 @@ public class DexTools {
 
     private void openDexTranslation(File zipFile, ArrayList<String> dexPaths) {
         if (dexPaths == null || dexPaths.isEmpty()) return;
-        Intent intent = new Intent(context, DexTranslationActivity.class)
+        Intent intent = new Intent(context, DexTranslationModeActivity.class)
                 .putExtra("theme", context.theme)
                 .putStringArrayListExtra("dex_paths", dexPaths);
         // The screen needs the APK to hand back through setResult(757); without it the edited dex

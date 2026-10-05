@@ -15,9 +15,7 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference;
 import com.android.tools.smali.dexlib2.iface.value.EncodedValue;
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue;
 import com.android.tools.smali.smali.SmaliOptions;
-import com.android.tools.smali.smali2.Smali;
-import com.reandroid.apkeditor.Util;
-
+import com.android.tools.smali.smali.Smali;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -67,16 +65,10 @@ public class DexStringsTranslator {
         }
     }
 
-    private final File apk;
     private final List<DexEntry> entries;
 
-    private DexStringsTranslator(File apk, List<DexEntry> entries) {
-        this.apk = apk;
+    private DexStringsTranslator(List<DexEntry> entries) {
         this.entries = entries;
-    }
-
-    public File apk() {
-        return apk;
     }
 
     public List<DexEntry> entries() {
@@ -90,14 +82,14 @@ public class DexStringsTranslator {
         return entries.get(0).entryName + " +" + (entries.size() - 1);
     }
 
-    public static DexStringsTranslator open(File apk, List<String> paths) throws IOException {
+    public static DexStringsTranslator open(List<String> paths) throws IOException {
         List<DexEntry> entries = new ArrayList<>();
         for (String path : paths) {
             File f = new File(path);
             if (f.isFile()) entries.add(new DexEntry(f.getName(), f));
         }
         if (entries.isEmpty()) throw new IOException("No readable dex files");
-        return new DexStringsTranslator(apk, entries);
+        return new DexStringsTranslator(entries);
     }
 
     /**
@@ -165,11 +157,10 @@ public class DexStringsTranslator {
         for (DexEntry entry : entries) {
             changed += patchDex(entry, replacements);
         }
-        if (changed > 0 && apk != null && apk.isFile()) {
-            // Hand the edited dex files back to whoever opened the APK: the file list owns the
-            // backup, the zip injection and the signing prompt.
-            Util.writeApk(apk, Util.getZipEngine(apk));
-        }
+        // The archive itself is not touched here. The edited files live side by side in one
+        // directory, and ApkResultHandler already knows to add every *.dex in that directory to
+        // the APK - which is exactly right for a multidex translation, and would be wrong if this
+        // class injected them one at a time.
         return changed;
     }
 

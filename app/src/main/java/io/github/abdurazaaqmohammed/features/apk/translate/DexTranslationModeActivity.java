@@ -150,8 +150,7 @@ public class DexTranslationModeActivity extends BaseActivity {
         progress.setVisibility(View.VISIBLE);
         new Thread(() -> {
             try {
-                DexStringsTranslator t = DexStringsTranslator.open(
-                        apkPath == null ? null : new File(apkPath), pathsOf(dexFiles));
+                DexStringsTranslator t = DexStringsTranslator.open(pathsOf(dexFiles));
                 List<String> all = t.literals();
                 List<TranslateRow> rows = new ArrayList<>();
                 int skipped = 0;
@@ -164,7 +163,9 @@ public class DexTranslationModeActivity extends BaseActivity {
                         skipped++;
                     }
                 }
-                rows.sort(String::compareTo);
+                // Literal order, not row order: a dex has no key to sort by, and an unsorted
+                // constant-pool walk groups related strings unpredictably.
+                rows.sort((a, b) -> a.current.compareTo(b.current));
                 final DexStringsTranslator opened = t;
                 final int hidden = skipped;
                 runOnUiThread(() -> {
