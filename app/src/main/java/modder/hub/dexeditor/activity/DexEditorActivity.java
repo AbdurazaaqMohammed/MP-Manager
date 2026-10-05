@@ -2047,9 +2047,6 @@ public class DexEditorActivity extends AppCompatActivity {
 
                     StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], btnApply, text), theme == R.style.Theme_MyApp_Light ? Color.BLACK : Color.WHITE);
                     holder[0] = stringAdapter;
-                    // Typing in a row stages an edit without touching the dialog, so the Apply
-                    // button has to react to the adapter rather than only to the dialog's OK.
-                    stringAdapter.setOnEditsChangedListener(has -> btnApply.setVisibility(has ? View.VISIBLE : View.GONE));
 
                     btnReload.setOnClickListener(v -> {
                         stringAdapter.clearModifications();
