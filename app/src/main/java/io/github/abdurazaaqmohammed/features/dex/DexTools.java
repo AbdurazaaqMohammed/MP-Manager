@@ -116,14 +116,12 @@ public class DexTools {
                 context.getString(R.string.arsc_plus),
                 context.getString(R.string.arsc_editor),
                 context.getString(R.string.translation_mode),
-                context.getString(R.string.arsc_translate_quick),
                 context.getString(R.string.querier_title)};
         // A null mode means "not an ArscEditorPlusActivity mode"; the index tells which.
         String[] modes = {
                 ArscEditorPlusActivity.MODE_PLUS,
                 ArscEditorPlusActivity.MODE_EDITOR,
                 null,
-                ArscEditorPlusActivity.MODE_TRANSLATE,
                 ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.open_with))
@@ -138,7 +136,7 @@ public class DexTools {
                                 .putExtra("zipEntryPath", entryPath);
                     } else {
                         // Simple MT-style "ARSC Editor" lives in its own activity;
-                        // Plus / Quick translate / Querier stay in ArscEditorPlusActivity.
+                        // Plus and Querier stay in ArscEditorPlusActivity.
                         Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
                                 ? ArscEditorActivity.class
                                 : ArscEditorPlusActivity.class;

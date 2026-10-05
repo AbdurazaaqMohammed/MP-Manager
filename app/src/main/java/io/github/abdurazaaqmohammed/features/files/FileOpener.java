@@ -903,14 +903,12 @@ public class FileOpener {
                 context.rss.getString(R.string.arsc_editor_plus),
                 context.rss.getString(R.string.arsc_editor),
                 context.rss.getString(R.string.translation_mode),
-                context.rss.getString(R.string.arsc_translate_quick),
                 context.rss.getString(R.string.resource_querier)};
         // A null mode means "not an ArscEditorPlusActivity mode"; the index tells which.
         String[] modes = {
                 ArscEditorPlusActivity.MODE_PLUS,
                 ArscEditorPlusActivity.MODE_EDITOR,
                 null,
-                ArscEditorPlusActivity.MODE_TRANSLATE,
                 ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(R.string.open_with)

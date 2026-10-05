@@ -183,6 +183,71 @@ public final class ArscConfigManager {
         }
     }
 
+    /** How much of a config is actually filled in. */
+    public static final class Stats {
+        /** Entries the config holds a value for. */
+        public final int filled;
+        /** Entries the default config defines, i.e. the denominator. */
+        public final int total;
+
+        Stats(int filled, int total) {
+            this.filled = filled;
+            this.total = total;
+        }
+
+        /**
+         * A config nobody filled in yet is not "0% translated", it is a language pack that was
+         * created but never worked on, and the two deserve different wording in the list.
+         */
+        public boolean isEmpty() {
+            return filled == 0;
+        }
+
+        public boolean isComplete() {
+            return total > 0 && filled >= total;
+        }
+
+        public int percent() {
+            return total <= 0 ? 0 : Math.min(100, (int) ((filled * 100L) / total));
+        }
+    }
+
+    /**
+     * Counts the entries of one config, and how many the default config defines.
+     *
+     * <p>The default config is the denominator because it is the set of strings the app actually
+     * uses; a language pack copied from it can never hold more entries than that.
+     */
+    public Stats stats(String qualifier) {
+        TypeBlock block = block(qualifier);
+        int filled = 0;
+        if (block != null) {
+            for (ResourceEntry re : data.stringEntries("")) {
+                if (re == null) continue;
+                String name = name(re);
+                if (name.isEmpty()) continue;
+                try {
+                    Entry entry = block.getEntry(name);
+                    if (entry != null && !entry.isNull()) filled++;
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        int total = 0;
+        TypeBlock base = block("");
+        if (base != null) {
+            for (ResourceEntry re : data.stringEntries("")) {
+                if (re == null || name(re).isEmpty()) continue;
+                try {
+                    Entry entry = base.getEntry(re.getName());
+                    if (entry != null && !entry.isNull()) total++;
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return new Stats(filled, total);
+    }
+
     /** Entries of one config that carry a value, resolved to the arsc handles. */
     public List<ResourceEntry> entries(String qualifier) {
         List<ResourceEntry> out = new ArrayList<>();

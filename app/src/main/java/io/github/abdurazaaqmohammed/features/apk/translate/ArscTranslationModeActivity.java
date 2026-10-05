@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -43,42 +44,51 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 /**
- * MT Manager's translation mode: locale configs of {@code resources.arsc} are the unit of work.
+ * MT Manager's translation mode.
  *
- * <p>The flow is the one MT documents, in the same order:
+ * <p>Opening it parses {@code resources.arsc} and lists every language series the APK was built
+ * from - each {@code res/values-xx/strings.xml} it was compiled with becomes one config - so the
+ * language is the first thing you choose and its strings are the second. The two live in one
+ * activity because they share a single parsed resource table.
+ *
+ * <p>Building a language pack follows MT's documented order:
  * <ol>
- *   <li>Long-press a config and <b>copy</b> it, typing a new qualifier such as {@code -zh-rCN}.
- *       Every entry is carried over with its original value, so the new config still reads as the
+ *   <li>Long-press a series and <b>copy</b> it, typing a new qualifier such as {@code -zh-rCN}.
+ *       Every entry is carried over with its original value, so the copy still reads as the
  *       source language.</li>
- *   <li>Switch to that config and <b>translate</b> it. Because the copy left the values in the
- *       source language, this is exactly the "the text under -zh-rCN is not Chinese yet" state
- *       MT describes.</li>
- *   <li>Save. Inside an APK the validated table is handed back through {@code setResult(757)},
+ *   <li>Open the new series and <b>translate</b> it. This is the "the text under -zh-rCN is not
+ *       Chinese yet" state MT describes.</li>
+ *   <li>Apply. Inside an APK the validated table is handed back through {@code setResult(757)},
  *       so the file list keeps owning the backup, the zip injection and the signing prompt.</li>
  * </ol>
- *
- * <p>Reached from the open-with dialog on {@code resources.arsc}, which is where MT puts it. A
- * loose {@code .arsc} file works too; there is simply no APK to inject back into.
  */
 public class ArscTranslationModeActivity extends BaseActivity {
+
+    /** Which of the two pages is showing. */
+    private enum Page { LANGUAGES, ENTRIES }
 
     private File apk;
     private String zipEntryPath = "resources.arsc";
     private ApkStringsTranslator translator;
 
     private MaterialToolbar toolbar;
-    private TextView pathLine;
+    private LinearProgressIndicator progress;
+    private View languagesPage;
+    private View entriesPage;
+    private LocaleAdapter localeAdapter;
+    private TranslateRowAdapter entryAdapter;
     private TextView configLine;
     private TextView engineLine;
     private TextView countView;
-    private LinearProgressIndicator progress;
-    private TranslateRowAdapter adapter;
 
+    private Page page = Page.LANGUAGES;
     private String configQualifier = "";
     private String engineId = TranslateStore.ENGINE_MANUAL;
-    /** config -> config it was copied from, so the engine knows what language it is reading. */
+    private Locale uiLocale = Locale.getDefault();
+    /** config -> config it was copied from, so an engine knows what language it is reading. */
     private final Map<String, String> copiedFrom = new LinkedHashMap<>();
 
+    private final List<LocaleRow> allLocales = new ArrayList<>();
     private final List<TranslateRow> allRows = new ArrayList<>();
     private boolean loading;
     private boolean modified;
@@ -96,6 +106,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
             return;
         }
         apk = apkPath == null ? null : new File(apkPath);
+        uiLocale = Locale.getDefault();
 
         engineId = TranslateStore.engine(this);
         configQualifier = TranslateStore.lastConfig(this);
@@ -103,14 +114,115 @@ public class ArscTranslationModeActivity extends BaseActivity {
 
         setContentView(R.layout.activity_arsc_translation_mode);
         toolbar = findViewById(R.id.xlate_toolbar);
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        toolbar.setNavigationOnClickListener(v -> confirmExit());
         toolbar.inflateMenu(R.menu.menu_arsc_translation_mode);
         toolbar.setOnMenuItemClickListener(this::onMenu);
 
+        progress = findViewById(R.id.xlate_progress);
+        progress.setVisibility(View.GONE);
+
+        languagesPage = findViewById(R.id.xlate_languages_page);
+        entriesPage = findViewById(R.id.xlate_entries_page);
+        configLine = findViewById(R.id.xlate_config_line);
+        engineLine = findViewById(R.id.xlate_engine_line);
+        countView = findViewById(R.id.xlate_count);
+
+        setupLanguagesPage();
+        setupEntriesPage();
+
+        if (apk != null && !apk.isFile()) {
+            Extensions.showMessage(this, R.string.file_no_longer_available);
+            finish();
+            return;
+        }
+        load(arscPath);
+    }
+
+    // ---------------------------------------------------------------- page 1
+
+    private void setupLanguagesPage() {
+        RecyclerView list = findViewById(R.id.xlate_languages_list);
+        list.setLayoutManager(new LinearLayoutManager(this));
+        localeAdapter = new LocaleAdapter(new LocaleAdapter.Listener() {
+            @Override
+            public void onOpen(LocaleRow row) {
+                openEntries(row);
+            }
+
+            @Override
+            public void onLongPress(LocaleRow row) {
+                showConfigActions(row);
+            }
+        });
+        list.setAdapter(localeAdapter);
+        findViewById(R.id.xlate_add_config).setOnClickListener(v -> showCopyConfigDialog(null));
+        EditText search = findViewById(R.id.xlate_languages_search);
+        search.addTextChangedListener(watcher(this::refreshLocaleFilter));
+    }
+
+    /**
+     * Rebuilds the language list off the UI thread: it walks every string resource once per
+     * config to count what is filled in, which is far too slow to do inline.
+     */
+    private void reloadLocales() {
+        if (translator == null || loading) return;
+        loading = true;
+        progress.setVisibility(View.VISIBLE);
+        final ApkStringsTranslator current = translator;
+        final Map<String, String> origins = new LinkedHashMap<>(copiedFrom);
+        final Locale ui = uiLocale;
+        new Thread(() -> {
+            List<LocaleRow> rows = new ArrayList<>();
+            try {
+                List<String> configs = current.configs().configs();
+                // The default config is the fallback for every locale, so it always belongs on
+                // the list even when a table carries no values at all.
+                if (!configs.contains("")) configs.add(0, "");
+                for (String qualifier : configs) {
+                    String name = qualifier.isEmpty()
+                            ? getString(R.string.xlate_config_default)
+                            : Locales.displayName(qualifier, ui);
+                    String from = origins.get(Locales.normalize(qualifier));
+                    rows.add(LocaleRow.of(qualifier, name,
+                            current.configs().stats(qualifier), from != null, from));
+                }
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    loading = false;
+                    progress.setVisibility(View.GONE);
+                    new ErrorUtil(this).showError(e);
+                });
+                return;
+            }
+            runOnUiThread(() -> {
+                loading = false;
+                progress.setVisibility(View.GONE);
+                allLocales.clear();
+                allLocales.addAll(rows);
+                localeAdapter.submit(rows);
+                if (translator != null) {
+                    String pkg = translator.configs().packageName();
+                    toolbar.setSubtitle(pkg == null ? "" : pkg);
+                }
+                if (page == Page.LANGUAGES) showPage(Page.LANGUAGES);
+            });
+        }).start();
+    }
+
+    private void refreshLocaleFilter(String query) {
+        String q = query == null ? "" : query.trim().toLowerCase();
+        List<LocaleRow> filtered = new ArrayList<>();
+        for (LocaleRow row : allLocales) {
+            if (q.isEmpty() || row.searchKey().contains(q)) filtered.add(row);
+        }
+        localeAdapter.submit(filtered);
+    }
+
+    // ---------------------------------------------------------------- page 2
+
+    private void setupEntriesPage() {
         RecyclerView list = findViewById(R.id.xlate_strings_list);
         list.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new TranslateRowAdapter(new TranslateRowAdapter.Listener() {
+        entryAdapter = new TranslateRowAdapter(new TranslateRowAdapter.Listener() {
             @Override
             public void onRowChanged(TranslateRow row) {
                 // Fires per keystroke, so only the cheap dirty marker is refreshed here.
@@ -128,103 +240,29 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 showRowDetail(row);
             }
         });
-        list.setAdapter(adapter);
-
-        pathLine = findViewById(R.id.xlate_path_line);
-        configLine = findViewById(R.id.xlate_config_line);
-        engineLine = findViewById(R.id.xlate_engine_line);
-        countView = findViewById(R.id.xlate_count);
-        progress = findViewById(R.id.xlate_progress);
-        progress.setVisibility(View.GONE);
-
-        findViewById(R.id.xlate_config_bar).setOnClickListener(v -> showConfigPicker());
-        findViewById(R.id.xlate_config_bar).setOnLongClickListener(v -> {
-            showConfigActions(configQualifier);
-            return true;
-        });
+        list.setAdapter(entryAdapter);
         findViewById(R.id.xlate_select_all).setOnClickListener(v -> {
-            adapter.selectAll(true);
+            entryAdapter.selectAll(true);
             markModified();
         });
         findViewById(R.id.xlate_clear_staged).setOnClickListener(v -> {
-            adapter.revertAll();
+            entryAdapter.revertAll();
             markModified();
         });
         findViewById(R.id.xlate_translate).setOnClickListener(v -> runEngine());
         findViewById(R.id.xlate_apply).setOnClickListener(v -> applyTranslations());
         EditText search = findViewById(R.id.xlate_strings_search);
-        search.addTextChangedListener(watcher(this::refreshFilter));
-
-        if (apk != null && !apk.isFile()) {
-            Extensions.showMessage(this, R.string.file_no_longer_available);
-            finish();
-            return;
-        }
-        load();
+        search.addTextChangedListener(watcher(this::refreshEntryFilter));
     }
 
-    // ---------------------------------------------------------------- loading
-
-    private void load() {
-        loading = true;
-        progress.setVisibility(View.VISIBLE);
-        final String arscPath = getIntent().getStringExtra("path");
-        final File apkFile = apk;
-        new Thread(() -> {
-            ApkStringsTranslator opened = null;
-            String error = null;
-            try {
-                opened = apkFile != null
-                        ? ApkStringsTranslator.openFromApk(this, apkFile)
-                        : ApkStringsTranslator.openArsc(new File(arscPath));
-            } catch (Exception e) {
-                error = e.getMessage();
-            }
-            ApkStringsTranslator ready = opened;
-            String message = error;
-            runOnUiThread(() -> {
-                loading = false;
-                progress.setVisibility(View.GONE);
-                if (ready == null) {
-                    pathLine.setText(apkFile == null ? arscPath : apkFile.getName());
-                    configLine.setText(R.string.xlate_no_resource_table);
-                    engineLine.setText(message == null ? "" : message);
-                    setActionsEnabled(false);
-                    return;
-                }
-                translator = ready;
-                String pkg = ready.configs().packageName();
-                pathLine.setText(pkg == null ? "" : pkg + "  ·  " + ArscConfigManager.TYPE);
-                pickInitialConfig();
-                reloadRows();
-            });
-        }).start();
+    private void openEntries(LocaleRow row) {
+        if (row == null) return;
+        configQualifier = row.qualifier;
+        TranslateStore.setLastConfig(this, configQualifier);
+        showPage(Page.ENTRIES);
+        reloadRows();
     }
 
-    /**
-     * MT leaves you on the config you were last working in. Falling back to a non-default config
-     * is deliberate: translating the default config in place would overwrite the source language
-     * the APK ships with.
-     */
-    private void pickInitialConfig() {
-        List<String> configs = translator.configs().configs();
-        if (configs.contains(configQualifier)) return;
-        for (String qualifier : configs) {
-            if (!qualifier.isEmpty()) {
-                configQualifier = qualifier;
-                return;
-            }
-        }
-        configQualifier = configs.isEmpty() ? "" : configs.get(0);
-    }
-
-    private void setActionsEnabled(boolean enabled) {
-        findViewById(R.id.xlate_translate).setEnabled(enabled);
-        findViewById(R.id.xlate_apply).setEnabled(enabled);
-        findViewById(R.id.xlate_config_bar).setEnabled(enabled);
-    }
-
-    /** Rebuilds the row list off the UI thread: walking every string resource is not cheap. */
     private void reloadRows() {
         if (translator == null || loading) return;
         loading = true;
@@ -249,106 +287,200 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 progress.setVisibility(View.GONE);
                 allRows.clear();
                 allRows.addAll(rows);
-                adapter.resetDirty();
-                adapter.submit(rows);
+                entryAdapter.resetDirty();
+                entryAdapter.submit(rows);
                 modified = false;
-                updateHeader();
+                updateEntryHeader();
+            });
+        }).start();
+    }
+
+    private void refreshEntryFilter(String query) {
+        String q = query == null ? "" : query.trim().toLowerCase();
+        List<TranslateRow> filtered = new ArrayList<>();
+        for (TranslateRow row : allRows) {
+            if (q.isEmpty() || row.searchKey().contains(q)) filtered.add(row);
+        }
+        entryAdapter.submit(filtered);
+        refreshCounts();
+    }
+
+    private void updateEntryHeader() {
+        String name = Locales.normalize(configQualifier).isEmpty()
+                ? getString(R.string.xlate_config_default)
+                : Locales.displayName(configQualifier, uiLocale);
+        configLine.setText(name + "   (" + Locales.normalize(configQualifier) + ")");
+        engineLine.setText(getString(R.string.xlate_engine_line, engineLabel(), sourceLabel()));
+        refreshCounts();
+    }
+
+    private String sourceLabel() {
+        String from = copiedFrom.get(Locales.normalize(configQualifier));
+        if (from != null && !from.isEmpty()) {
+            return Locales.displayName(from, uiLocale);
+        }
+        return Locales.byBcp47(TranslateStore.sourceBcp47(this)).label;
+    }
+
+    private void markModified() {
+        if (!modified) {
+            modified = true;
+            toolbar.setSubtitle("*");
+        }
+    }
+
+    private void refreshCounts() {
+        if (countView == null) return;
+        int staged = 0;
+        for (TranslateRow row : allRows) {
+            if (row.isApplicable()) staged++;
+        }
+        countView.setText(getString(R.string.xlate_strings_count,
+                entryAdapter.getItemCount(), staged, allRows.size()));
+    }
+
+    // ---------------------------------------------------------------- paging
+
+    private void showPage(Page next) {
+        page = next;
+        boolean languages = next == Page.LANGUAGES;
+        languagesPage.setVisibility(languages ? View.VISIBLE : View.GONE);
+        entriesPage.setVisibility(languages ? View.GONE : View.VISIBLE);
+        toolbar.setNavigationIcon(languages ? null
+                : androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        toolbar.setTitle(languages ? R.string.translation_mode : R.string.xlate_edit_strings);
+        toolbar.setNavigationOnClickListener(languages ? null : v -> leaveEntries());
+        // Only the entries page has anything to run or configure.
+        for (int i = 0; i < toolbar.getMenu().size(); i++) {
+            toolbar.getMenu().getItem(i).setVisible(!languages);
+        }
+        if (languages) {
+            toolbar.setSubtitle(translator == null ? ""
+                    : String.valueOf(translator.configs().packageName()));
+        } else {
+            updateEntryHeader();
+        }
+    }
+
+    /** Leaving the entries page goes back to the language list; a save prompt comes first. */
+    private void leaveEntries() {
+        if (modified) {
+            confirmDiscard(new Runnable() {
+                @Override
+                public void run() {
+                    modified = false;
+                    showPage(Page.LANGUAGES);
+                    reloadLocales();
+                }
+            });
+            return;
+        }
+        showPage(Page.LANGUAGES);
+        reloadLocales();
+    }
+
+    // ---------------------------------------------------------------- loading
+
+    private void load(String arscPath) {
+        loading = true;
+        progress.setVisibility(View.VISIBLE);
+        final String path = arscPath;
+        final File apkFile = apk;
+        new Thread(() -> {
+            ApkStringsTranslator opened = null;
+            String error = null;
+            try {
+                opened = apkFile != null
+                        ? ApkStringsTranslator.openFromApk(this, apkFile)
+                        : ApkStringsTranslator.openArsc(new File(path));
+            } catch (Exception e) {
+                error = e.getMessage();
+            }
+            ApkStringsTranslator ready = opened;
+            String message = error;
+            runOnUiThread(() -> {
+                loading = false;
+                progress.setVisibility(View.GONE);
+                if (ready == null) {
+                    Extensions.showMessage(this, R.string.xlate_no_resource_table);
+                    findViewById(R.id.xlate_add_config).setEnabled(false);
+                    toolbar.setSubtitle(message == null ? "" : message);
+                    return;
+                }
+                translator = ready;
+                showPage(Page.LANGUAGES);
+                reloadLocales();
             });
         }).start();
     }
 
     // ---------------------------------------------------------------- configs
 
-    private void showConfigPicker() {
-        if (translator == null) return;
-        List<String> configs = translator.configs().configs();
-        if (configs.isEmpty()) {
-            showAddConfigDialog();
-            return;
-        }
-        String[] labels = new String[configs.size()];
-        int checked = 0;
-        for (int i = 0; i < configs.size(); i++) {
-            labels[i] = configLabel(configs.get(i));
-            if (configs.get(i).equals(configQualifier)) checked = i;
-        }
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.xlate_select_config)
-                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
-                    dialog.dismiss();
-                    configQualifier = configs.get(which);
-                    TranslateStore.setLastConfig(this, configQualifier);
-                    reloadRows();
-                })
-                .setNeutralButton(R.string.xlate_add_config, (d, w) -> showAddConfigDialog())
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
-    }
-
-    /** MT's long-press menu on a config. */
-    private void showConfigActions(String qualifier) {
-        if (translator == null) return;
-        boolean isDefault = Locales.normalize(qualifier).isEmpty();
+    /** MT's long-press menu on a language series. */
+    private void showConfigActions(LocaleRow row) {
+        if (translator == null || row == null) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         labels.add(getString(R.string.xlate_copy_config));
-        actions.add(() -> showCopyConfigDialog(qualifier));
-        labels.add(getString(R.string.xlate_add_config));
-        actions.add(this::showAddConfigDialog);
-        if (!isDefault) {
+        actions.add(() -> showCopyConfigDialog(row.qualifier));
+        if (!row.isDefault()) {
             labels.add(getString(R.string.xlate_delete_config));
-            actions.add(() -> confirmDeleteConfig(qualifier));
+            actions.add(() -> confirmDeleteConfig(row.qualifier));
         }
         String[] items = labels.toArray(new String[0]);
         new MaterialAlertDialogBuilder(this)
-                .setTitle(configLabel(qualifier))
+                .setTitle(row.name)
                 .setItems(items, (dialog, which) -> {
                     dialog.dismiss();
                     actions.get(which).run();
                 })
+                .setNeutralButton(R.string.xlate_add_config, (d, w) -> showCopyConfigDialog(null))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
-    /** MT's "添加配置": a qualifier with no values at all. */
-    private void showAddConfigDialog() {
-        promptForQualifier(getString(R.string.xlate_add_config), "", qualifier -> {
-            int copied = translator.configs().copyConfig(configQualifier, qualifier);
-            if (copied < 0 && !translator.configs().addEmptyConfig(qualifier)) {
-                Extensions.showMessage(this, R.string.xlate_config_failed);
-                return;
-            }
-            configQualifier = qualifier;
-            TranslateStore.setLastConfig(this, qualifier);
-            if (copied > 0) {
-                // Remember where the text came from: that is the language the engines read.
-                copiedFrom.put(qualifier, configQualifier);
-                TranslateStore.setCopiedFrom(this, copiedFrom);
-                Extensions.showMessage(this, getString(R.string.xlate_config_copied, copied));
-            }
-            reloadRows();
-        });
-    }
-
-    /** MT's "复制配置": carry every entry of a config into a new one. */
-    private void showCopyConfigDialog(String from) {
-        List<String> configs = translator.configs().configs();
-        configs.remove(Locales.normalize(from));
-        if (configs.isEmpty()) {
-            Extensions.showMessage(this, R.string.xlate_no_configs_to_copy);
+    /**
+     * MT's two ways of creating a language pack, both ending in the same qualifier prompt:
+     * copy an existing config (which carries its values over), or add an empty one.
+     *
+     * @param fromQualifier config to copy, or null to add an empty config
+     */
+    private void showCopyConfigDialog(String fromQualifier) {
+        if (translator == null) return;
+        List<String> sources = new ArrayList<>(translator.configs().configs());
+        if (fromQualifier != null) {
+            promptForQualifier(getString(R.string.xlate_copy_config), fromQualifier,
+                    target -> createConfigFrom(fromQualifier, target));
             return;
         }
-        String[] labels = new String[configs.size()];
-        for (int i = 0; i < configs.size(); i++) labels[i] = configLabel(configs.get(i));
+        if (sources.isEmpty()) {
+            promptForQualifier(getString(R.string.xlate_add_config), "",
+                    target -> addEmptyConfig(target));
+            return;
+        }
+        String[] labels = new String[sources.size()];
+        for (int i = 0; i < sources.size(); i++) labels[i] = displayName(sources.get(i));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.xlate_copy_from)
                 .setItems(labels, (dialog, which) -> {
                     dialog.dismiss();
-                    promptForQualifier(getString(R.string.xlate_copy_config), configs.get(which),
-                            target -> createConfigFrom(configs.get(which), target));
+                    promptForQualifier(getString(R.string.xlate_copy_config), sources.get(which),
+                            target -> createConfigFrom(sources.get(which), target));
                 })
+                .setNeutralButton(R.string.xlate_add_empty, (d, w) ->
+                        promptForQualifier(getString(R.string.xlate_add_config), "", this::addEmptyConfig))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    private void addEmptyConfig(String qualifier) {
+        if (!translator.configs().addEmptyConfig(qualifier)) {
+            Extensions.showMessage(this, R.string.xlate_config_failed);
+            return;
+        }
+        TranslateStore.setLastConfig(this, qualifier);
+        Extensions.showMessage(this, R.string.xlate_config_added);
+        reloadLocales();
     }
 
     private void createConfigFrom(String from, String to) {
@@ -357,18 +489,17 @@ public class ArscTranslationModeActivity extends BaseActivity {
             Extensions.showMessage(this, R.string.xlate_config_failed);
             return;
         }
-        configQualifier = to;
-        TranslateStore.setLastConfig(this, to);
-        copiedFrom.put(to, from);
+        copiedFrom.put(Locales.normalize(to), Locales.normalize(from));
         TranslateStore.setCopiedFrom(this, copiedFrom);
+        TranslateStore.setLastConfig(this, to);
         Extensions.showMessage(this, getString(R.string.xlate_config_copied, copied));
-        reloadRows();
+        reloadLocales();
     }
 
     private void confirmDeleteConfig(String qualifier) {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.xlate_delete_config)
-                .setMessage(getString(R.string.xlate_delete_config_confirm, configLabel(qualifier)))
+                .setMessage(getString(R.string.xlate_delete_config_confirm, displayName(qualifier)))
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     if (!translator.configs().deleteConfig(qualifier)) {
                         Extensions.showMessage(this, R.string.xlate_config_failed);
@@ -376,8 +507,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
                     }
                     copiedFrom.remove(Locales.normalize(qualifier));
                     TranslateStore.setCopiedFrom(this, copiedFrom);
-                    pickInitialConfig();
-                    reloadRows();
+                    reloadLocales();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -387,8 +517,9 @@ public class ArscTranslationModeActivity extends BaseActivity {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_xlate_qualifier, null);
         TextInputEditText input = view.findViewById(R.id.xlate_qualifier_input);
         input.setText(suggestion.isEmpty() ? "-zh-rCN" : suggestion);
-        if (!suggestion.isEmpty()) input.setSelection(input.getText() == null
-                ? 0 : input.getText().length());
+        if (!suggestion.isEmpty() && input.getText() != null) {
+            input.setSelection(input.getText().length());
+        }
         new MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(view)
@@ -429,57 +560,13 @@ public class ArscTranslationModeActivity extends BaseActivity {
         return Locales.normalize(q);
     }
 
-    private String configLabel(String qualifier) {
+    private String displayName(String qualifier) {
         String q = Locales.normalize(qualifier);
-        if (q.isEmpty()) return getString(R.string.xlate_config_default);
-        Locales.Lang lang = Locales.byQualifier(q);
-        String suffix = lang.qualifier.equals(q) ? "" : " (" + q + ")";
-        return lang.label + suffix;
+        return q.isEmpty() ? getString(R.string.xlate_config_default)
+                : Locales.displayName(q, uiLocale);
     }
 
-    // ---------------------------------------------------------------- rows
-
-    private void refreshFilter(String query) {
-        String q = query == null ? "" : query.trim().toLowerCase();
-        List<TranslateRow> filtered = new ArrayList<>();
-        for (TranslateRow row : allRows) {
-            if (q.isEmpty() || row.searchKey().contains(q)) filtered.add(row);
-        }
-        adapter.submit(filtered);
-        refreshCounts();
-    }
-
-    private void updateHeader() {
-        configLine.setText(getString(R.string.xlate_config_line, configLabel(configQualifier)));
-        engineLine.setText(getString(R.string.xlate_engine_line, engineLabel(),
-                sourceLabel()));
-        toolbar.setSubtitle(translator == null ? "" : translator.data().arscFile.getName());
-        refreshCounts();
-    }
-
-    private String sourceLabel() {
-        String from = copiedFrom.get(Locales.normalize(configQualifier));
-        Locales.Lang lang = from == null || from.isEmpty()
-                ? Locales.byBcp47(TranslateStore.sourceBcp47(this))
-                : Locales.byBcp47(ApkStringsTranslator.bcp47For(from));
-        return lang.label;
-    }
-
-    private void markModified() {
-        if (!modified) {
-            modified = true;
-            toolbar.setSubtitle("*");
-        }
-    }
-
-    private void refreshCounts() {
-        int staged = 0;
-        for (TranslateRow row : allRows) {
-            if (row.isApplicable()) staged++;
-        }
-        countView.setText(getString(R.string.xlate_strings_count,
-                adapter.getItemCount(), staged, allRows.size()));
-    }
+    // ---------------------------------------------------------------- engines
 
     private String engineLabel() {
         return switch (engineId) {
@@ -513,8 +600,6 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
-
-    // ---------------------------------------------------------------- engines
 
     private void runEngine() {
         if (translator == null || allRows.isEmpty()) {
@@ -571,7 +656,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
                     markModified();
-                    adapter.refreshValues();
+                    entryAdapter.refreshValues();
                     refreshCounts();
                     Extensions.showMessage(this, getString(R.string.xlate_engine_done, engineLabel()));
                 });
@@ -638,16 +723,11 @@ public class ArscTranslationModeActivity extends BaseActivity {
             pm.dismiss();
             runOnUiThread(() -> {
                 modified = false;
-                toolbar.setSubtitle(arsc.getName());
-                if (written == 0) {
-                    Extensions.showMessage(this, R.string.xlate_nothing_to_apply);
-                    reloadRows();
-                    return;
-                }
                 Extensions.showMessage(this, getString(R.string.xlate_applied, written, total));
                 if (apk == null) {
                     // A loose arsc was edited where it lies; nothing to inject.
                     reloadRows();
+                    reloadLocales();
                     return;
                 }
                 // Inside an APK the file list owns the backup, the zip injection and signing.
@@ -669,7 +749,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
         if (id == R.id.xlate_menu_translate) {
             runEngine();
         } else if (id == R.id.xlate_menu_add_config) {
-            showAddConfigDialog();
+            showCopyConfigDialog(null);
         } else if (id == R.id.xlate_menu_copy_config) {
             showCopyConfigDialog(configQualifier);
         } else if (id == R.id.xlate_menu_delete_config) {
@@ -702,7 +782,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 .setSingleChoiceItems(labels, checked, (dialog, which) -> {
                     dialog.dismiss();
                     TranslateStore.setSourceBcp47(this, all.get(which).bcp47);
-                    updateHeader();
+                    updateEntryHeader();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -818,7 +898,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
                     dialog.dismiss();
                     engineId = ids[which];
                     TranslateStore.setEngine(this, engineId);
-                    updateHeader();
+                    updateEntryHeader();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -846,10 +926,18 @@ public class ArscTranslationModeActivity extends BaseActivity {
             finish();
             return;
         }
+        confirmDiscard(this::finish);
+    }
+
+    /** Offers to keep the staged translations before throwing them away. */
+    private void confirmDiscard(Runnable onDiscard) {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.xlate_unsaved)
                 .setPositiveButton(R.string.xlate_apply, (d, w) -> applyTranslations())
-                .setNeutralButton(R.string.xlate_discard, (d, w) -> finish())
+                .setNeutralButton(R.string.xlate_discard, (d, w) -> {
+                    modified = false;
+                    onDiscard.run();
+                })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -865,6 +953,10 @@ public class ArscTranslationModeActivity extends BaseActivity {
 
     @Override
     public void onBackPressed() {
+        if (page == Page.ENTRIES) {
+            leaveEntries();
+            return;
+        }
         if (modified) {
             confirmExit();
             return;

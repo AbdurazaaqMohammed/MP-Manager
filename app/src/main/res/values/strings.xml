@@ -1879,9 +1879,7 @@ Deleted %2$s · %3$s</string>
 
 
     <!-- XML translation mode (MT-style, config centric) -->
-    <string name="xlate_config_line">Config: %1$s</string>
     <string name="xlate_config_default">Default</string>
-    <string name="xlate_select_config">Select a config</string>
     <string name="xlate_add_config">Add config</string>
     <string name="xlate_copy_config">Copy config</string>
     <string name="xlate_copy_from">Copy from which config</string>
@@ -1890,12 +1888,21 @@ Deleted %2$s · %3$s</string>
     <string name="xlate_config_copied">Copied %1$d entries; the text is still in the source language</string>
     <string name="xlate_config_exists">That config already exists</string>
     <string name="xlate_config_failed">Could not change the config</string>
-    <string name="xlate_no_configs_to_copy">No other config to copy from</string>
     <string name="xlate_qualifier">Qualifier</string>
     <string name="xlate_qualifier_hint">For example -zh-rCN, en-rGB or fr. A leading dash and values- are optional.</string>
     <string name="xlate_bad_qualifier">That is not a usable qualifier</string>
     <string name="xlate_engine_line">%1$s · reading %2$s</string>
-    <string name="arsc_translate_quick">Quick translate (per resource)</string>
     <string name="xlate_select_all">Select all</string>
     <string name="xlate_clear_staged">Revert all</string>
+
+    <!-- XML translation mode: language series list -->
+    <string name="xlate_edit_strings">Translate strings</string>
+    <string name="xlate_languages_hint">Language series found in this APK. Long-press one to copy it into a new language pack.</string>
+    <string name="xlate_search_languages">Filter languages</string>
+    <string name="xlate_add_empty">Add empty config</string>
+    <string name="xlate_config_added">Empty config added</string>
+    <string name="xlate_state_default">default</string>
+    <string name="xlate_state_empty">empty</string>
+    <string name="xlate_state_complete">complete</string>
+    <string name="xlate_state_partial">%1$d/%2$d · %3$d%%</string>
 </resources>

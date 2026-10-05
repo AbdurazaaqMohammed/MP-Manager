@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.features.apk.translate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -103,6 +104,33 @@ public final class Locales {
         if (qualifier == null) qualifier = "";
         Lang lang = BY_QUALIFIER.get(qualifier);
         return lang == null ? BY_QUALIFIER.get("") : lang;
+    }
+
+    /**
+     * Display name for any qualifier the APK happens to ship, not just the ones in the table.
+     *
+     * <p>The table above exists to drive the manual picker, but the language list on the
+     * translation screen is built from whatever is actually in the arsc, and an app can ship a
+     * locale nobody hardcoded. {@link Locale} answers for those, so the qualifier is only shown
+     * when even that fails.
+     *
+     * @param uiLocale locale to render the name in, i.e. the app's own language
+     */
+    public static String displayName(String qualifier, Locale uiLocale) {
+        String q = normalize(qualifier);
+        if (q.isEmpty()) return "";
+        Lang known = BY_QUALIFIER.get(q);
+        String bcp = guessBcp47(q);
+        if (bcp != null && !bcp.isEmpty() && !"und".equals(bcp)) {
+            Locale locale = Locale.forLanguageTag(bcp.replace("_", "-"));
+            String name = locale.getDisplayName(uiLocale);
+            if (name != null && !name.isEmpty()) {
+                // Languages without a region would otherwise all collapse to one row of "Chinese".
+                String suffix = locale.getCountry().isEmpty() ? "" : " (" + q + ")";
+                return name + suffix;
+            }
+        }
+        return known != null ? known.label : q;
     }
 
     /** @return the language for a BCP-47 tag, falling back to the default entry. */
