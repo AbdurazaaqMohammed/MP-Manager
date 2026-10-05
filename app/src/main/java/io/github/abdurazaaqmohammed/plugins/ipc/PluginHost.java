@@ -29,6 +29,7 @@ import java.util.List;
 public final class PluginHost {
 
     private static final String PREFS = "plugin_trust";
+    public static final String APK_MIME = "application/vnd.android.package-archive";
 
     private PluginHost() {
     }
@@ -59,8 +60,13 @@ public final class PluginHost {
         List<ExternalPlugin> out = new ArrayList<>();
         try {
             PackageManager pm = context.getPackageManager();
+            Intent queryIntent = new Intent(action);
+            if (PluginContracts.ACTION_APK.equals(action)) {
+                queryIntent.setType(PluginHost.APK_MIME);
+            }
             List<ResolveInfo> infos = pm.queryIntentActivities(
-                    new Intent(action), PackageManager.MATCH_DEFAULT_ONLY);
+                    queryIntent, PackageManager.MATCH_DEFAULT_ONLY
+                            | PackageManager.GET_META_DATA);
             if (infos == null) return out;
             for (ResolveInfo info : infos) {
                 if (info == null || info.activityInfo == null) continue;
