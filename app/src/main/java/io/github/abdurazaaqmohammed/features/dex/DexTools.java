@@ -66,6 +66,7 @@ import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.features.apk.translate.ArscTranslationModeActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
@@ -102,32 +103,56 @@ public class DexTools {
         this.pane1 = pane1;
         this.openWith = openWith;
     }
+    /**
+     * Open-with for {@code resources.arsc}.
+     *
+     * <p>The option order mirrors MT: plain editor, editor++, translation mode, resource querier.
+     * Translation mode is MT's locale-config workflow - copy a config, then translate it - and
+     * lives in its own activity; the older per-resource translate dialog stays available as
+     * "quick translate" so nothing that worked before stops working.
+     */
     private void showArscOpenWith(File arscFile, File zipFile, String entryPath) {
-        String[] options = {context.getString(R.string.arsc_plus), context.getString(R.string.arsc_editor), context.getString(R.string.translation_mode), context.getString(R.string.querier_title)};
+        String[] options = {
+                context.getString(R.string.arsc_plus),
+                context.getString(R.string.arsc_editor),
+                context.getString(R.string.translation_mode),
+                context.getString(R.string.arsc_translate_quick),
+                context.getString(R.string.querier_title)};
+        // A null mode means "not an ArscEditorPlusActivity mode"; the index tells which.
         String[] modes = {
                 ArscEditorPlusActivity.MODE_PLUS,
                 ArscEditorPlusActivity.MODE_EDITOR,
+                null,
                 ArscEditorPlusActivity.MODE_TRANSLATE,
                 ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(context.getString(R.string.open_with))
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
-                    // Simple MT-style "ARSC Editor" lives in its own activity;
-                    // Plus / Translation / Querier stay in ArscEditorPlusActivity.
-                    Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
-                            ? ArscEditorActivity.class
-                            : ArscEditorPlusActivity.class;
-                    Intent arscIntent = new Intent(context, target)
-                            .putExtra("path", arscFile.getAbsolutePath())
-                            .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
-                            .putExtra("zipEntryPath", entryPath)
-                            .putExtra("arscMode", modes[which]);
+                    Intent intent;
+                    boolean needsResult = zipFile != null;
+                    if (modes[which] == null) {
+                        intent = new Intent(context, ArscTranslationModeActivity.class)
+                                .putExtra("path", arscFile.getAbsolutePath())
+                                .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
+                                .putExtra("zipEntryPath", entryPath);
+                    } else {
+                        // Simple MT-style "ARSC Editor" lives in its own activity;
+                        // Plus / Quick translate / Querier stay in ArscEditorPlusActivity.
+                        Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
+                                ? ArscEditorActivity.class
+                                : ArscEditorPlusActivity.class;
+                        intent = new Intent(context, target)
+                                .putExtra("path", arscFile.getAbsolutePath())
+                                .putExtra("apkPath", zipFile == null ? null : zipFile.getAbsolutePath())
+                                .putExtra("zipEntryPath", entryPath)
+                                .putExtra("arscMode", modes[which]);
+                    }
                     // Inside an archive the editor only edits the extracted copy and
                     // returns it via setResult(757); MainActivity then shows the
                     // "APK/ZIP updated" prompt and injects the file itself.
-                    if (zipFile != null) context.startActivityForResult(arscIntent, 757);
-                    else context.startActivity(arscIntent);
+                    if (needsResult) context.startActivityForResult(intent, 757);
+                    else context.startActivity(intent);
                 }).create());
     }
 

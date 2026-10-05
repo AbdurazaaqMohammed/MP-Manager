@@ -67,17 +67,10 @@ public final class TranslateRowAdapter extends RecyclerView.Adapter<TranslateRow
         if (listener != null) listener.onSelectionChanged();
     }
 
-    public int selectedCount() {
-        int total = 0;
+    /** Puts every row back to the value its config holds, i.e. MT's undo for the whole screen. */
+    public void revertAll() {
         for (TranslateRow row : rows) {
-            if (row.isSelected()) total++;
-        }
-        return total;
-    }
-
-    public void clearStaged() {
-        for (TranslateRow row : rows) {
-            row.clearTranslation();
+            row.revert();
         }
         dirtyKeys.clear();
         notifyDataSetChanged();
@@ -107,7 +100,7 @@ public final class TranslateRowAdapter extends RecyclerView.Adapter<TranslateRow
     public void onBindViewHolder(@NonNull Holder holder, int position) {
         TranslateRow row = rows.get(position);
         holder.key.setText(row.key);
-        holder.source.setText(row.source);
+        holder.source.setText(row.current);
         holder.tag.setText(row.originTag());
         holder.check.setOnCheckedChangeListener(null);
         holder.check.setChecked(row.isSelected());

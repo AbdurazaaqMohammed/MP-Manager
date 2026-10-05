@@ -9,44 +9,50 @@ import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.value.Entry;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import io.github.abdurazaaqmohammed.arsc.ArscData;
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
 
 /**
- * Reads and writes the string resources of an APK.
+ * Reads and writes the string resources of a config, plus the plumbing to get the arsc out of an
+ * APK in the first place.
  *
- * <p>In a compiled APK the user-facing strings do not live in {@code res/values/strings.xml};
- * they are compiled into {@code resources.arsc}. Translating therefore means picking the
- * config to read from, staging a translation per key, and writing it back into the config for
- * the target language - creating that config if the APK has never shipped it.
- *
- * <p>Work happens on an extracted copy of the arsc. Nothing touches the APK until
- * {@link #save()} has produced a table that re-parsed cleanly, at which point the caller
- * pushes it back into the zip and offers signing, exactly like the arsc editor does.
+ * <p>Two sources are supported, because the entry point is reachable both ways:
+ * <ul>
+ *   <li><b>Inside an APK</b> - {@code resources.arsc} is copied into the cache and edited there.
+ *       The caller injects the result back into the APK and offers signing, so nothing here ever
+ *       rewrites the APK in place.</li>
+ *   <li><b>A loose {@code .arsc} file</b> - edited where it lies, saved in place, no injection.</li>
+ * </ul>
  */
 public final class ApkStringsTranslator {
 
     private static final String WORK_DIR = "xlate_work";
+    private static final String ARSC = "resources.arsc";
+    private static final int MAX_ARSC_BYTES = 192 * 1024 * 1024;
 
     private final File apk;
     private final ArscData data;
+    private final ArscConfigManager configs;
     /** Key -> arsc entry, so applying is O(1) per row instead of a full table rescan. */
     private final Map<String, ResourceEntry> byName = new HashMap<>();
 
     private ApkStringsTranslator(File apk, ArscData data) {
         this.apk = apk;
         this.data = data;
+        this.configs = new ArscConfigManager(data);
     }
 
+    /** Null when the file is a loose arsc rather than something extracted from an APK. */
     public File apk() {
         return apk;
     }
@@ -55,90 +61,80 @@ public final class ApkStringsTranslator {
         return data;
     }
 
+    public ArscConfigManager configs() {
+        return configs;
+    }
+
     /**
-     * Extracts {@code resources.arsc} from the APK into the cache and loads it.
+     * Opens the arsc of an APK, extracting it into the cache first.
      *
-     * @throws IOException when the APK has no readable resource table.
+     * @throws IOException when the APK carries no readable resource table
      */
-    public static ApkStringsTranslator open(Context context, File apk) throws IOException {
-        File workDir = new File(context.getCacheDir(), WORK_DIR + "/" + apk.getName());
-        if (!workDir.isDirectory() && !workDir.mkdirs() && !workDir.isDirectory()) {
-            throw new IOException("Cannot create " + workDir);
+    public static ApkStringsTranslator openFromApk(Context context, File apk) throws IOException {
+        File dir = new File(context.getCacheDir(), WORK_DIR + "/" + apk.getName());
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
+            throw new IOException("Cannot create " + dir);
         }
-        File arsc = new File(workDir, ApkXmlCatalog.ARSC);
+        File arsc = new File(dir, ARSC);
+        // A leftover from a crashed run would silently resurrect stale strings.
         arsc.delete();
-        ApkXmlCatalog catalog = ApkXmlCatalog.open(apk, false);
-        if (catalog.extractResourceTable(arsc) == null || !arsc.isFile() || arsc.length() == 0) {
-            throw new IOException("Cannot extract resources.arsc from " + apk.getName());
+        if (!copyZipEntry(apk, ARSC, arsc)) {
+            throw new IOException("Cannot read " + ARSC + " from " + apk.getName());
         }
-        return new ApkStringsTranslator(apk, ArscData.load(arsc, apk, ApkXmlCatalog.ARSC));
+        return new ApkStringsTranslator(apk, ArscData.load(arsc, apk, ARSC));
     }
 
-    /** Package that actually owns the string resources, usually {@code com.example.app}. */
-    public String primaryStringPackage() {
-        for (PackageBlock pkg : data.table.listPackages()) {
-            try {
-                if (pkg.getSpecTypePair("string") != null) return pkg.getName();
-            } catch (Exception ignored) {
-            }
-        }
-        return null;
+    /** Opens a loose {@code .arsc} file, editing it in place. */
+    public static ApkStringsTranslator openArsc(File arsc) throws IOException {
+        if (!arsc.isFile()) throw new IOException("No such file: " + arsc.getName());
+        return new ApkStringsTranslator(null, ArscData.load(arsc, null, ARSC));
     }
 
     /**
-     * Every language the APK already carries strings for, in qualifier form.
+     * Streams one entry out of a zip. Streaming rather than buffering matters here: the arsc of
+     * a large game is tens of megabytes and holding it twice is how you get an OOM on a phone.
      *
-     * <p>Only configs that actually hold at least one non-null entry count, otherwise an
-     * APK that merely reserves a config would show up as "already translated".
+     * @return true when the entry was copied
      */
-    public List<String> existingQualifiers() {
-        Set<String> out = new LinkedHashSet<>();
-        String pkgName = primaryStringPackage();
-        if (pkgName == null) return new ArrayList<>(out);
-        for (SpecTypePair spec : data.typesOf(pkgName)) {
-            if (spec == null || !"string".equals(safeTypeName(spec))) continue;
-            for (TypeBlock tb : data.configsOf(pkgName, "string")) {
-                try {
-                    if (!tb.isEmpty()) out.add(Locales.normalize(tb.getQualifiers()));
-                } catch (Exception ignored) {
+    private static boolean copyZipEntry(File zip, String entry, File dest) throws IOException {
+        try (ZipFile zf = new ZipFile(zip)) {
+            FileHeader header = zf.getFileHeader(entry);
+            if (header == null) return false;
+            if (header.getUncompressedSize() > MAX_ARSC_BYTES) {
+                throw new IOException("resources.arsc is too large: " + header.getUncompressedSize());
+            }
+            try (InputStream in = zf.getInputStream(header);
+                 OutputStream out = new FileOutputStream(dest)) {
+                byte[] buf = new byte[65536];
+                int total = 0;
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    total += n;
+                    if (total > MAX_ARSC_BYTES) throw new IOException("resources.arsc is too large");
+                    out.write(buf, 0, n);
                 }
             }
-        }
-        return new ArrayList<>(out);
-    }
-
-    private static String safeTypeName(SpecTypePair spec) {
-        try {
-            return spec.getTypeName();
-        } catch (Exception e) {
-            return null;
+            return dest.length() > 0;
         }
     }
 
     /**
-     * Builds the editable row list.
+     * Builds the editable rows for one config.
      *
-     * @param sourceQualifier config to read from, "" for the default one
-     * @param targetQualifier config to write into
-     * @param onlyMissing     drop rows that already have a value in the target config
-     * @param skipFormatted   drop values that machine translation would corrupt
+     * @param qualifier     the config being translated
+     * @param skipFormatted drop values a machine translator would corrupt
      */
-    public List<TranslateRow> rows(String sourceQualifier, String targetQualifier,
-                                   boolean onlyMissing, boolean skipFormatted) {
-        List<TranslateRow> out = new ArrayList<>();
-        String src = Locales.normalize(sourceQualifier);
-        String dst = Locales.normalize(targetQualifier);
-        for (ResourceEntry re : data.stringEntries("")) {
-            if (re == null) continue;
+    public List<TranslateRow> rows(String qualifier, boolean skipFormatted) {
+        String config = Locales.normalize(qualifier);
+        List<TranslateRow> out = new java.util.ArrayList<>();
+        byName.clear();
+        for (ResourceEntry re : configs.entries(config)) {
             String key = safeName(re);
             if (key.isEmpty()) continue;
-            String source = valueFor(re, src);
-            if (source == null) continue;
-            if (source.trim().isEmpty()) continue;
-            if (skipFormatted && TranslateRow.looksFormatted(source)) continue;
-            String existing = valueFor(re, dst);
-            if (onlyMissing && existing != null && !existing.trim().isEmpty()) continue;
-            TranslateRow row = new TranslateRow(key, safeType(re), src, dst, source, existing);
+            String value = valueFor(re, config);
+            if (value == null || value.trim().isEmpty()) continue;
+            if (skipFormatted && TranslateRow.looksFormatted(value)) continue;
+            TranslateRow row = new TranslateRow(key, safeType(re), config, value);
             row.setResource(re);
             byName.put(key, re);
             out.add(row);
@@ -150,7 +146,7 @@ public final class ApkStringsTranslator {
         try {
             return re.getType();
         } catch (Exception e) {
-            return "string";
+            return ArscConfigManager.TYPE;
         }
     }
 
@@ -163,24 +159,24 @@ public final class ApkStringsTranslator {
         }
     }
 
-    /** @return the value stored in the given config, or {@code null} when absent. */
-    private String valueFor(ResourceEntry re, String qualifier) {
-        String wanted = Locales.normalize(qualifier);
+    /** @return the value a config holds for this entry, or {@code null} when it has none. */
+    public String valueFor(ResourceEntry re, String qualifier) {
+        TypeBlock block = configs.block(qualifier);
+        if (block == null) return null;
         try {
-            for (ArscData.ConfigValue cv : data.configValues(re)) {
-                if (Locales.normalize(cv.qualifiers).equals(wanted)) return cv.value;
-            }
-        } catch (Exception ignored) {
+            Entry entry = block.getEntry(safeName(re));
+            if (entry == null || entry.isNull()) return null;
+            String value = entry.getValueAsString();
+            return value == null ? "" : value;
+        } catch (Exception e) {
+            return null;
         }
-        if (wanted.isEmpty()) return null;
-        return null;
     }
 
     /**
-     * Writes every applicable row into the target config, creating the config when the APK
-     * has never shipped that language.
+     * Writes every applicable row into the config it came from.
      *
-     * @return how many entries were written; the table is only valid to save afterwards.
+     * @return how many entries were written; the table is only valid to save afterwards
      */
     public int apply(List<TranslateRow> rows) {
         if (rows == null || rows.isEmpty()) return 0;
@@ -194,12 +190,13 @@ public final class ApkStringsTranslator {
     }
 
     private boolean writeOne(TranslateRow row) {
-        ResourceEntry re = row.getResource() != null ? row.getResource() : findResource(row.key);
+        ResourceEntry re = row.getResource() != null ? row.getResource() : byName.get(row.key);
         if (re == null) return false;
         try {
-            Entry entry = targetEntry(re, row.targetQualifier);
+            Entry entry = targetEntry(re, row.configQualifier);
             if (entry == null) return false;
             entry.setValueAsString(row.getTranslation());
+            row.setTargetEntry(entry);
             return true;
         } catch (Exception e) {
             return false;
@@ -207,65 +204,31 @@ public final class ApkStringsTranslator {
     }
 
     /**
-     * Resolves the arsc entry a translation must go into, creating the locale's
-     * {@code TypeBlock} and the entry itself when they do not exist yet.
+     * Resolves the arsc entry a translation goes into. A config copied through
+     * {@link ArscConfigManager#copyConfig} already has every entry, but one created empty does
+     * not, so the entry is created on demand here too.
      */
-    public Entry targetEntry(ResourceEntry re, String targetQualifier) {
-        PackageBlock pkg = data.packageByName(re.getPackageName());
+    public Entry targetEntry(ResourceEntry re, String qualifier) {
+        String pkgName = configs.packageName();
+        if (pkgName == null) return null;
+        PackageBlock pkg = data.packageByName(pkgName);
         if (pkg == null) return null;
         SpecTypePair spec = pkg.getSpecTypePair(re.getType());
         if (spec == null) return null;
-        TypeBlock block = spec.getOrCreateTypeBlock(Locales.normalize(targetQualifier));
-        if (block == null) return null;
-        return block.getOrCreateEntry(re.getName());
-    }
-
-    private ResourceEntry findResource(String key) {
-        ResourceEntry cached = byName.get(key);
-        if (cached != null) return cached;
-        // getResources() hands back an Iterator, so this loop cannot be a for-each.
-        Iterator<ResourceEntry> resources = data.table.getResources();
-        while (resources.hasNext()) {
-            ResourceEntry re;
-            try {
-                re = resources.next();
-            } catch (Exception e) {
-                continue;
-            }
-            if (re == null || !"string".equals(safeType(re))) continue;
-            if (key.equals(safeName(re))) {
-                byName.put(key, re);
-                return re;
-            }
+        TypeBlock block = configs.block(qualifier);
+        if (block == null) {
+            block = spec.getOrCreateTypeBlock(Locales.normalize(qualifier));
         }
-        return null;
+        if (block == null) return null;
+        return block.getOrCreateEntry(safeName(re));
     }
 
-    /**
-     * Validates and writes the staged table. The table is serialised, re-parsed as a sanity
-     * check and only then swapped in, so a bad write cannot destroy the extracted copy.
-     */
+    /** Writes the staged table out, after checking it still parses. */
     public void save() throws IOException {
         data.save();
     }
 
-    /** Guess for the default UI language, used to preselect the source config. */
-    public String guessSourceQualifier() {
-        List<String> qualifiers = existingQualifiers();
-        if (qualifiers.contains("en")) return "en";
-        String device = Locale.getDefault().toString();
-        String bcp = device.replace('_', '-');
-        for (String qualifier : qualifiers) {
-            String guess = Locales.guessBcp47(qualifier);
-            if (guess != null && guess.equalsIgnoreCase(bcp)) return qualifier;
-        }
-        for (String qualifier : qualifiers) {
-            if (!qualifier.isEmpty()) return qualifier;
-        }
-        return "";
-    }
-
-    /** BCP-47 tag for a qualifier, for handing to the online engines. */
+    /** @return BCP-47 tag for a qualifier, for the online engines. */
     public static String bcp47For(String qualifier) {
         String bcp = Locales.guessBcp47(qualifier);
         return bcp == null || bcp.isEmpty() ? "en" : bcp;

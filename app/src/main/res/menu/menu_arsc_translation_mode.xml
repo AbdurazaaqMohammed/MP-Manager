@@ -9,10 +9,24 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/xlate_menu_languages"
-        android:icon="@drawable/baseline_text_snippet_24"
-        android:title="@string/xlate_languages"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/xlate_menu_add_config"
+        android:title="@string/xlate_add_config"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_copy_config"
+        android:title="@string/xlate_copy_config"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_delete_config"
+        android:title="@string/xlate_delete_config"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/xlate_menu_source_language"
+        android:title="@string/xlate_source_language"
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/xlate_menu_glossary"

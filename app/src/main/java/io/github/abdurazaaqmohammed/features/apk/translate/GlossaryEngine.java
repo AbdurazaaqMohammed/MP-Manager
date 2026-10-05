@@ -56,7 +56,7 @@ public final class GlossaryEngine implements TranslationEngine {
                 callback.onProgress(done, rows.size());
                 continue;
             }
-            Glossary.Hit hit = glossary.lookup(row.source);
+            Glossary.Hit hit = glossary.lookup(row.current);
             if (hit == null) {
                 callback.onSkipped(row, "no-match");
             } else {

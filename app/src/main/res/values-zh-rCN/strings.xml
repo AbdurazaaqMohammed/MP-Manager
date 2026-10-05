@@ -1834,31 +1834,14 @@ Layout Inspector
 
 
     <!-- XML translation mode -->
-    <string name="xlate_mode">XML 翻译模式</string>
-    <string name="xlate_title">XML 翻译模式</string>
-    <string name="xlate_tab_xml">XML</string>
-    <string name="xlate_tab_strings">字符串</string>
-    <string name="xlate_search_xml">过滤 XML 条目</string>
     <string name="xlate_search_strings">过滤键名或原文</string>
-    <string name="xlate_xml_count">%1$d 个 XML 条目</string>
-    <string name="xlate_xml_entry_axml">二进制 XML，打开时解码 - %1$s</string>
-    <string name="xlate_xml_entry_text">纯文本 XML - %1$s</string>
-    <string name="xlate_decoding">正在解码 XML...</string>
-    <string name="xlate_view_decoded">查看解码结果</string>
-    <string name="xlate_open_editor">在编辑器中打开</string>
-    <string name="xlate_entry_saved">%1$s 已从编辑器返回</string>
     <string name="xlate_no_resource_table">该 APK 没有可用的 resources.arsc</string>
-    <string name="xlate_lang_line">%1$s  →  %2$s</string>
-    <string name="xlate_engine_line">引擎：%1$s</string>
-    <string name="xlate_target_language">翻译为</string>
     <string name="xlate_source_language">翻译自</string>
     <string name="xlate_strings_count">显示 %1$d / 已暂存 %2$d，共 %3$d</string>
     <string name="xlate_row_detail">字符串详情</string>
     <string name="xlate_copy_translation">复制译文</string>
     <string name="xlate_tokens">受保护占位符：%1$s</string>
     <string name="xlate_no_tokens">该值没有受保护占位符</string>
-    <string name="xlate_select_all">全选</string>
-    <string name="xlate_clear_staged">清空暂存</string>
     <string name="xlate_apply">应用译文</string>
     <string name="xlate_apply_anyway">仍然应用</string>
     <string name="xlate_run">运行引擎</string>
@@ -1872,14 +1855,12 @@ Layout Inspector
     <string name="xlate_tokens_lost">有译文缺少 %1$s，写入后可能导致应用运行崩溃。仍要应用吗？</string>
     <string name="xlate_applied">已应用 %1$d / %2$d 条字符串</string>
     <string name="xlate_network_warning">该应用的字符串将通过网络发送到所配置的翻译接口。</string>
-    <string name="xlate_languages">语言</string>
     <string name="xlate_engine">引擎</string>
     <string name="xlate_settings">翻译设置</string>
     <string name="xlate_endpoint">接口地址</string>
     <string name="xlate_endpoint_hint">用 %s 代表源语言、%s 代表目标语言、%s 代表待翻译文本。留空则使用内置接口。</string>
     <string name="xlate_api_key">API 密钥（可选）</string>
     <string name="xlate_batch">每次请求发送多条字符串</string>
-    <string name="xlate_only_missing">只处理目标语言缺失的字符串</string>
     <string name="xlate_skip_formatted">跳过含格式占位符或标记的值</string>
     <string name="xlate_glossary">离线词表</string>
     <string name="xlate_glossary_edit">编辑词表</string>
@@ -1893,4 +1874,25 @@ Layout Inspector
     <string name="engine_glossary">离线词表</string>
     <string name="engine_online">在线接口</string>
 
+
+    <!-- XML translation mode (MT-style, config centric) -->
+    <string name="xlate_config_line">配置：%1$s</string>
+    <string name="xlate_config_default">默认配置</string>
+    <string name="xlate_select_config">选择配置</string>
+    <string name="xlate_add_config">添加配置</string>
+    <string name="xlate_copy_config">复制配置</string>
+    <string name="xlate_copy_from">从哪个配置复制</string>
+    <string name="xlate_delete_config">删除配置</string>
+    <string name="xlate_delete_config_confirm">删除配置 %1$s 及其中的所有条目值？</string>
+    <string name="xlate_config_copied">已复制 %1$d 条，文本仍是源语言</string>
+    <string name="xlate_config_exists">该配置已存在</string>
+    <string name="xlate_config_failed">无法修改该配置</string>
+    <string name="xlate_no_configs_to_copy">没有其他配置可复制</string>
+    <string name="xlate_qualifier">限定符</string>
+    <string name="xlate_qualifier_hint">例如 -zh-rCN、en-rGB 或 fr。开头的短横线和 values- 可省略。</string>
+    <string name="xlate_bad_qualifier">这不是可用的限定符</string>
+    <string name="xlate_engine_line">%1$s · 源语言 %2$s</string>
+    <string name="arsc_translate_quick">快速翻译（逐条）</string>
+    <string name="xlate_select_all">全选</string>
+    <string name="xlate_clear_staged">全部还原</string>
 </resources>

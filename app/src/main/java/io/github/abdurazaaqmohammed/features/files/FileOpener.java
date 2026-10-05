@@ -85,6 +85,7 @@ import io.github.abdurazaaqmohammed.adapters.DialogAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
+import io.github.abdurazaaqmohammed.features.apk.translate.ArscTranslationModeActivity;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
@@ -893,30 +894,49 @@ public class FileOpener {
                 }).create());
     }
 
+    /**
+     * Open-with for a loose {@code .arsc} file. Same option order as the in-archive variant in
+     * DexTools, so both routes offer MT's translation mode at the same slot.
+     */
     private void showArscOpenWith(File arscFile, File apkFile, String entryPath) {
-        String[] options = {context.rss.getString(R.string.arsc_editor_plus), context.rss.getString(R.string.arsc_editor), context.rss.getString(R.string.translation_mode), context.rss.getString(R.string.resource_querier)};
+        String[] options = {
+                context.rss.getString(R.string.arsc_editor_plus),
+                context.rss.getString(R.string.arsc_editor),
+                context.rss.getString(R.string.translation_mode),
+                context.rss.getString(R.string.arsc_translate_quick),
+                context.rss.getString(R.string.resource_querier)};
+        // A null mode means "not an ArscEditorPlusActivity mode"; the index tells which.
         String[] modes = {
                 ArscEditorPlusActivity.MODE_PLUS,
                 ArscEditorPlusActivity.MODE_EDITOR,
+                null,
                 ArscEditorPlusActivity.MODE_TRANSLATE,
                 ArscEditorPlusActivity.MODE_QUERIER};
         dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
                 .setTitle(R.string.open_with)
                 .setSingleChoiceItems(options, -1, (dialog, which) -> {
                     dialog.dismiss();
-                    Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
-                            ? ArscEditorActivity.class
-                            : ArscEditorPlusActivity.class;
-                    Intent arscIntent = new Intent(context, target)
-                            .putExtra("path", arscFile.getAbsolutePath())
-                            .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())
-                            .putExtra("zipEntryPath", entryPath)
-                            .putExtra("arscMode", modes[which]);
+                    Intent intent;
+                    if (modes[which] == null) {
+                        intent = new Intent(context, ArscTranslationModeActivity.class)
+                                .putExtra("path", arscFile.getAbsolutePath())
+                                .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())
+                                .putExtra("zipEntryPath", entryPath);
+                    } else {
+                        Class<?> target = ArscEditorPlusActivity.MODE_EDITOR.equals(modes[which])
+                                ? ArscEditorActivity.class
+                                : ArscEditorPlusActivity.class;
+                        intent = new Intent(context, target)
+                                .putExtra("path", arscFile.getAbsolutePath())
+                                .putExtra("apkPath", apkFile == null ? null : apkFile.getAbsolutePath())
+                                .putExtra("zipEntryPath", entryPath)
+                                .putExtra("arscMode", modes[which]);
+                    }
                     // Inside an archive the editor only edits the extracted copy and
                     // returns it via setResult(757); MainActivity then shows the
                     // "APK/ZIP updated" prompt and injects the file itself.
-                    if (apkFile != null) context.startActivityForResult(arscIntent, 757);
-                    else context.startActivity(arscIntent);
+                    if (apkFile != null) context.startActivityForResult(intent, 757);
+                    else context.startActivity(intent);
                 }).create());
     }
 }

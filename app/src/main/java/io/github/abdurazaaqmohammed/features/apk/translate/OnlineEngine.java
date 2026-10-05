@@ -95,7 +95,7 @@ public final class OnlineEngine implements TranslationEngine {
             Exception failure = null;
             try {
                 List<String> payload = new ArrayList<>(group.size());
-                for (TranslateRow row : group) payload.add(FormatGuard.mask(row.source));
+                for (TranslateRow row : group) payload.add(FormatGuard.mask(row.current));
                 answer = request(endpoint, apiKey, sourceTag, targetTag, payload);
             } catch (Exception e) {
                 failure = e;
@@ -122,7 +122,7 @@ public final class OnlineEngine implements TranslationEngine {
             for (TranslateRow row : group) {
                 try {
                     String single = request(endpoint, apiKey, sourceTag, targetTag,
-                            List.of(FormatGuard.mask(row.source)));
+                            List.of(FormatGuard.mask(row.current)));
                     accept(row, single, callback);
                 } catch (Exception e) {
                     Log.d(TAG, "Request failed", e);
@@ -149,12 +149,12 @@ public final class OnlineEngine implements TranslationEngine {
      * "write it anyway".
      */
     private void accept(TranslateRow row, String answer, Callback callback) {
-        String restored = FormatGuard.unmask(answer, row.source);
+        String restored = FormatGuard.unmask(answer, row.current);
         if (restored == null || restored.trim().isEmpty()) {
             callback.onSkipped(row, "empty");
             return;
         }
-        String violation = FormatGuard.firstViolation(row.source, restored);
+        String violation = FormatGuard.firstViolation(row.current, restored);
         if (violation != null) {
             Log.d(TAG, "Rejected translation of " + row.key + ", lost token " + violation);
             // Silence would look like the engine ignored the string, so say why it was dropped.

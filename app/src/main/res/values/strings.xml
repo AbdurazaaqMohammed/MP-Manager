@@ -1837,31 +1837,14 @@ Deleted %2$s · %3$s</string>
 
 
     <!-- XML translation mode -->
-    <string name="xlate_mode">XML translation mode</string>
-    <string name="xlate_title">XML translation mode</string>
-    <string name="xlate_tab_xml">XML</string>
-    <string name="xlate_tab_strings">STRINGS</string>
-    <string name="xlate_search_xml">Filter XML entries</string>
     <string name="xlate_search_strings">Filter keys or source text</string>
-    <string name="xlate_xml_count">%1$d XML entries</string>
-    <string name="xlate_xml_entry_axml">Binary XML, decoded on open - %1$s</string>
-    <string name="xlate_xml_entry_text">Plain XML - %1$s</string>
-    <string name="xlate_decoding">Decoding XML...</string>
-    <string name="xlate_view_decoded">View decoded</string>
-    <string name="xlate_open_editor">Open in editor</string>
-    <string name="xlate_entry_saved">%1$s returned from the editor</string>
     <string name="xlate_no_resource_table">No usable resources.arsc in this APK</string>
-    <string name="xlate_lang_line">%1$s  →  %2$s</string>
-    <string name="xlate_engine_line">Engine: %1$s</string>
-    <string name="xlate_target_language">Translate into</string>
     <string name="xlate_source_language">Translate from</string>
     <string name="xlate_strings_count">%1$d shown / %2$d staged of %3$d</string>
     <string name="xlate_row_detail">String detail</string>
     <string name="xlate_copy_translation">Copy translation</string>
     <string name="xlate_tokens">Protected tokens: %1$s</string>
     <string name="xlate_no_tokens">No protected tokens in this value</string>
-    <string name="xlate_select_all">Select all</string>
-    <string name="xlate_clear_staged">Clear staged</string>
     <string name="xlate_apply">Apply translations</string>
     <string name="xlate_apply_anyway">Apply anyway</string>
     <string name="xlate_run">Run engine</string>
@@ -1875,14 +1858,12 @@ Deleted %2$s · %3$s</string>
     <string name="xlate_tokens_lost">A translation does not contain %1$s. Writing it can break the app at runtime. Apply anyway?</string>
     <string name="xlate_applied">Applied %1$d of %2$d strings</string>
     <string name="xlate_network_warning">Strings from this app will be sent to the configured translation endpoint over the network.</string>
-    <string name="xlate_languages">Languages</string>
     <string name="xlate_engine">Engine</string>
     <string name="xlate_settings">Translation settings</string>
     <string name="xlate_endpoint">Endpoint</string>
     <string name="xlate_endpoint_hint">Use %s for the source language, %s for the target language and %s for the text to translate. Leave empty for the built-in endpoint.</string>
     <string name="xlate_api_key">API key (optional)</string>
     <string name="xlate_batch">Send several strings per request</string>
-    <string name="xlate_only_missing">Only strings missing in the target language</string>
     <string name="xlate_skip_formatted">Skip values with format specifiers or markup</string>
     <string name="xlate_glossary">Offline glossary</string>
     <string name="xlate_glossary_edit">Edit glossary</string>
@@ -1896,4 +1877,25 @@ Deleted %2$s · %3$s</string>
     <string name="engine_glossary">Offline glossary</string>
     <string name="engine_online">Online API</string>
 
+
+    <!-- XML translation mode (MT-style, config centric) -->
+    <string name="xlate_config_line">Config: %1$s</string>
+    <string name="xlate_config_default">Default</string>
+    <string name="xlate_select_config">Select a config</string>
+    <string name="xlate_add_config">Add config</string>
+    <string name="xlate_copy_config">Copy config</string>
+    <string name="xlate_copy_from">Copy from which config</string>
+    <string name="xlate_delete_config">Delete config</string>
+    <string name="xlate_delete_config_confirm">Delete the config %1$s and every value in it?</string>
+    <string name="xlate_config_copied">Copied %1$d entries; the text is still in the source language</string>
+    <string name="xlate_config_exists">That config already exists</string>
+    <string name="xlate_config_failed">Could not change the config</string>
+    <string name="xlate_no_configs_to_copy">No other config to copy from</string>
+    <string name="xlate_qualifier">Qualifier</string>
+    <string name="xlate_qualifier_hint">For example -zh-rCN, en-rGB or fr. A leading dash and values- are optional.</string>
+    <string name="xlate_bad_qualifier">That is not a usable qualifier</string>
+    <string name="xlate_engine_line">%1$s · reading %2$s</string>
+    <string name="arsc_translate_quick">Quick translate (per resource)</string>
+    <string name="xlate_select_all">Select all</string>
+    <string name="xlate_clear_staged">Revert all</string>
 </resources>

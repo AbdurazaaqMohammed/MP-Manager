@@ -41,7 +41,7 @@ public final class ManualEngine implements TranslationEngine {
                 callback.onSkipped(row, "empty");
                 problems++;
             } else {
-                String violation = FormatGuard.firstViolation(row.source, row.getTranslation());
+                String violation = FormatGuard.firstViolation(row.current, row.getTranslation());
                 if (violation != null) {
                     callback.onSkipped(row, "token:" + violation);
                     problems++;

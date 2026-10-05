@@ -40,10 +40,15 @@ public final class Locales {
     }
 
     private static final Map<String, Lang> BY_QUALIFIER = new LinkedHashMap<>();
+    private static final Map<String, Lang> BY_BCP47 = new LinkedHashMap<>();
 
     private static void add(String qualifier, String bcp47, String label) {
         Lang lang = new Lang(qualifier, bcp47, label);
         BY_QUALIFIER.put(qualifier, lang);
+        // The default entry is also the answer for "en", so register it under both.
+        if (!BY_BCP47.containsKey(bcp47.toLowerCase())) {
+            BY_BCP47.put(bcp47.toLowerCase(), lang);
+        }
     }
 
     static {
@@ -97,6 +102,13 @@ public final class Locales {
     public static Lang byQualifier(String qualifier) {
         if (qualifier == null) qualifier = "";
         Lang lang = BY_QUALIFIER.get(qualifier);
+        return lang == null ? BY_QUALIFIER.get("") : lang;
+    }
+
+    /** @return the language for a BCP-47 tag, falling back to the default entry. */
+    public static Lang byBcp47(String tag) {
+        if (tag == null) tag = "";
+        Lang lang = BY_BCP47.get(tag.toLowerCase());
         return lang == null ? BY_QUALIFIER.get("") : lang;
     }
 

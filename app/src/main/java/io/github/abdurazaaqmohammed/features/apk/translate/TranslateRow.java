@@ -1,22 +1,23 @@
 package io.github.abdurazaaqmohammed.features.apk.translate;
 
 import com.reandroid.arsc.model.ResourceEntry;
+import com.reandroid.arsc.value.Entry;
 
 import java.util.Locale;
 
 /**
- * One translatable string resource: the source text pulled from the chosen config, the
- * translation staged for the target config, and the live {@link Entry} handles needed to
- * commit it.
+ * One string entry of the config currently being translated.
  *
- * <p>The arsc entry handles are resolved lazily and cached, because building them for a
- * large APK up front is both slow and pointless when most rows are never touched.
+ * <p>Deliberately single-config: MT copies a config to create a language pack, so the text
+ * being translated and the text being replaced live in the <em>same</em> place. That removes the
+ * source/target pair my first version carried and matches what the user actually sees - a value
+ * that still holds the original language until an engine or the human replaces it.
  */
 public final class TranslateRow {
 
     /** How the current translation was produced. Drives the badge shown on the row. */
     public enum Origin {
-        /** Nothing staged yet. */
+        /** Nothing staged; the value is whatever the config holds. */
         NONE,
         /** Typed by the user. */
         MANUAL,
@@ -25,38 +26,29 @@ public final class TranslateRow {
         /** Partial, token-by-token hit in the offline glossary. */
         GLOSSARY_PARTIAL,
         /** Returned by the online endpoint. */
-        ONLINE,
-        /** Already present in the target config, loaded for review. */
-        EXISTING
+        ONLINE
     }
 
     public final String key;
-    /** Resource type, always {@code string} here but kept for display. */
     public final String type;
-    /** Qualifier of the config the source text came from, "" for the default one. */
-    public final String sourceQualifier;
-    /** Qualifier of the config the translation will be written to. */
-    public final String targetQualifier;
-    public final String source;
-    /** Existing value in the target config, or null when the target config has none yet. */
-    public final String existing;
+    /** Qualifier of the config being edited, "" for the default one. */
+    public final String configQualifier;
+    /** The value as it stands in the config, i.e. the text to translate. */
+    public final String current;
 
     private String translation;
     private Origin origin;
     private boolean selected = true;
-    /** Live arsc handle for this key, so applying never has to look it up again. */
     private ResourceEntry resource;
+    private Entry targetEntry;
 
-    public TranslateRow(String key, String type, String sourceQualifier, String targetQualifier,
-                        String source, String existing) {
+    public TranslateRow(String key, String type, String configQualifier, String current) {
         this.key = key;
         this.type = type;
-        this.sourceQualifier = sourceQualifier == null ? "" : sourceQualifier;
-        this.targetQualifier = targetQualifier == null ? "" : targetQualifier;
-        this.source = source == null ? "" : source;
-        this.existing = existing;
-        this.translation = existing != null ? existing : "";
-        this.origin = existing != null ? Origin.EXISTING : Origin.NONE;
+        this.configQualifier = configQualifier == null ? "" : configQualifier;
+        this.current = current == null ? "" : current;
+        this.translation = this.current;
+        this.origin = Origin.NONE;
     }
 
     public String getTranslation() {
@@ -72,18 +64,18 @@ public final class TranslateRow {
         return origin;
     }
 
-    public void clearTranslation() {
-        this.translation = "";
+    /** Drops the staged text and shows the config's own value again. */
+    public void revert() {
+        this.translation = current;
         this.origin = Origin.NONE;
     }
 
-    /** True when the staged text differs from what the target config holds right now. */
+    /** True when the staged text differs from what the config holds. */
     public boolean isDirty() {
-        String current = existing == null ? "" : existing;
         return !current.equals(translation);
     }
 
-    /** True when the staged text is worth writing, i.e. non-blank and actually changed. */
+    /** True when the row is worth writing: ticked, non-blank and actually changed. */
     public boolean isApplicable() {
         return selected && !translation.trim().isEmpty() && isDirty();
     }
@@ -100,42 +92,53 @@ public final class TranslateRow {
         return resource;
     }
 
-    void setResource(ResourceEntry resource) {
+    public void setResource(ResourceEntry resource) {
         this.resource = resource;
     }
 
-    /** Short human label for the row badge. */
+    Entry getTargetEntry() {
+        return targetEntry;
+    }
+
+    void setTargetEntry(Entry entry) {
+        this.targetEntry = entry;
+    }
+
+    /** Short label for the row badge. */
     public String originTag() {
         return switch (origin) {
             case MANUAL -> "manual";
             case GLOSSARY_PHRASE -> "exact";
             case GLOSSARY_PARTIAL -> "partial";
             case ONLINE -> "online";
-            case EXISTING -> "current";
             case NONE -> "";
         };
     }
 
     /**
-     * Detects values that must not go through a machine translator: format specifiers,
-     * XML/HTML markup, and bare placeholders. Translating these silently corrupts the APK.
+     * Values a machine translator must not touch: format specifiers, positional placeholders,
+     * XML/HTML markup, bare URLs and dotted identifiers.
+     *
+     * <p>These are skipped by default rather than translated, because a mangled {@code %1$s}
+     * or a stripped tag produces a string that crashes or blanks the UI at runtime.
      */
     public static boolean looksFormatted(String value) {
         if (value == null) return false;
         String v = value.trim();
         if (v.isEmpty()) return false;
-        if (v.indexOf('%') >= 0 && v.matches(".*%\\d*\\$?[sdfxXoeEgGnaAfF].*")) return true;
-        if (v.indexOf('{') >= 0 && v.matches(".*\\{\\d+\\}.*")) return true;
+        if (v.contains("%") && v.matches("(?s).*%\\d*\\$[-#+ 0,(]*\\d*(?:\\.\\d+)?[a-zA-Z%].*")) return true;
+        if (v.contains("{") && v.matches("(?s).*\\{\\d+(?:,[^}]*)?\\}.*")) return true;
         if (v.startsWith("<") && v.endsWith(">")) return true;
-        // Pure URLs, paths, package names and single tokens carry no meaning to translate.
         if (v.matches("(?i)https?://\\S+")) return true;
         if (v.matches("[a-z0-9_]+(\\.[a-z0-9_]+)+")) return true;
-        if (v.matches("\\S+\\.(png|jpg|jpeg|gif|webp|svg|xml|json|txt|zip|apk|so|dex|ttf|mp4|mp3)")) return true;
+        if (v.matches("(?i)\\S+\\.(png|jpg|jpeg|gif|webp|svg|xml|json|txt|zip|apk|so|dex|ttf|mp4|mp3)")) {
+            return true;
+        }
         return false;
     }
 
-    /** Lower-cased search key covering name and source text, for the filter box. */
+    /** Lower-cased search key covering the entry name and its value. */
     public String searchKey() {
-        return (key + '\n' + source).toLowerCase(Locale.ROOT);
+        return (key + '\n' + current).toLowerCase(Locale.ROOT);
     }
 }

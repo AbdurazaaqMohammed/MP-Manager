@@ -1364,31 +1364,14 @@
     </string-array>
 
     <!-- XML translation mode -->
-    <string name="xlate_mode">Режим перевода XML</string>
-    <string name="xlate_title">Режим перевода XML</string>
-    <string name="xlate_tab_xml">XML</string>
-    <string name="xlate_tab_strings">СТРОКИ</string>
-    <string name="xlate_search_xml">Фильтр записей XML</string>
     <string name="xlate_search_strings">Фильтр по имени или тексту</string>
-    <string name="xlate_xml_count">Записей XML: %1$d</string>
-    <string name="xlate_xml_entry_axml">Двоичный XML, декодируется при открытии - %1$s</string>
-    <string name="xlate_xml_entry_text">Обычный XML - %1$s</string>
-    <string name="xlate_decoding">Декодирование XML...</string>
-    <string name="xlate_view_decoded">Показать декодированным</string>
-    <string name="xlate_open_editor">Открыть в редакторе</string>
-    <string name="xlate_entry_saved">%1$s возвращён из редактора</string>
     <string name="xlate_no_resource_table">В этом APK нет пригодного resources.arsc</string>
-    <string name="xlate_lang_line">%1$s  →  %2$s</string>
-    <string name="xlate_engine_line">Движок: %1$s</string>
-    <string name="xlate_target_language">Перевести на</string>
     <string name="xlate_source_language">Перевести с</string>
     <string name="xlate_strings_count">Показано %1$d / подготовлено %2$d из %3$d</string>
     <string name="xlate_row_detail">Сведения о строке</string>
     <string name="xlate_copy_translation">Копировать перевод</string>
     <string name="xlate_tokens">Защищённые токены: %1$s</string>
     <string name="xlate_no_tokens">В этом значении нет защищённых токенов</string>
-    <string name="xlate_select_all">Выбрать всё</string>
-    <string name="xlate_clear_staged">Очистить</string>
     <string name="xlate_apply">Применить перевод</string>
     <string name="xlate_apply_anyway">Всё равно применить</string>
     <string name="xlate_run">Запустить движок</string>
@@ -1402,14 +1385,12 @@
     <string name="xlate_tokens_lost">В переводе нет %1$s. Запись может сломать приложение. Применить всё равно?</string>
     <string name="xlate_applied">Применено %1$d из %2$d строк</string>
     <string name="xlate_network_warning">Строки этого приложения будут отправлены по сети на настроенную службу перевода.</string>
-    <string name="xlate_languages">Языки</string>
     <string name="xlate_engine">Движок</string>
     <string name="xlate_settings">Настройки перевода</string>
     <string name="xlate_endpoint">Адрес службы</string>
     <string name="xlate_endpoint_hint">%s - исходный язык, %s - целевой, %s - текст. Пусто - встроенная служба.</string>
     <string name="xlate_api_key">Ключ API (необязательно)</string>
     <string name="xlate_batch">Несколько строк в одном запросе</string>
-    <string name="xlate_only_missing">Только строки, отсутствующие в целевом языке</string>
     <string name="xlate_skip_formatted">Пропускать значения с подстановками и разметкой</string>
     <string name="xlate_glossary">Офлайн-словарь</string>
     <string name="xlate_glossary_edit">Изменить словарь</string>
@@ -1423,4 +1404,25 @@
     <string name="engine_glossary">Офлайн-словарь</string>
     <string name="engine_online">Онлайн-служба</string>
 
+
+    <!-- XML translation mode (MT-style, config centric) -->
+    <string name="xlate_config_line">Конфигурация: %1$s</string>
+    <string name="xlate_config_default">По умолчанию</string>
+    <string name="xlate_select_config">Выбор конфигурации</string>
+    <string name="xlate_add_config">Добавить конфигурацию</string>
+    <string name="xlate_copy_config">Копировать конфигурацию</string>
+    <string name="xlate_copy_from">Копировать из конфигурации</string>
+    <string name="xlate_delete_config">Удалить конфигурацию</string>
+    <string name="xlate_delete_config_confirm">Удалить конфигурацию %1$s вместе со всеми её значениями?</string>
+    <string name="xlate_config_copied">Скопировано %1$d записей; текст всё ещё на исходном языке</string>
+    <string name="xlate_config_exists">Такая конфигурация уже есть</string>
+    <string name="xlate_config_failed">Не удалось изменить конфигурацию</string>
+    <string name="xlate_no_configs_to_copy">Нет других конфигураций</string>
+    <string name="xlate_qualifier">Квалификатор</string>
+    <string name="xlate_qualifier_hint">Например -zh-rCN, en-rGB или fr. Начальное тире и values- необязательны.</string>
+    <string name="xlate_bad_qualifier">Такой квалификатор недопустим</string>
+    <string name="xlate_engine_line">%1$s · исходный язык %2$s</string>
+    <string name="arsc_translate_quick">Быстрый перевод (по одной)</string>
+    <string name="xlate_select_all">Выбрать всё</string>
+    <string name="xlate_clear_staged">Сбросить всё</string>
 </resources>

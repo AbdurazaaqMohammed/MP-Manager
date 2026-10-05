@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Page 2 of the XML translation mode: editable string resources of the APK. -->
+<!-- MT-style translation mode: everything hangs off the locale config, not off a key. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
     android:orientation="vertical">
 
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/xlate_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:title="@string/translation_mode" />
+
+    <!-- Breadcrumb: package . type . config, the last one being the working config. -->
     <LinearLayout
-        android:id="@+id/xlate_lang_bar"
+        android:id="@+id/xlate_config_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/colorSurfaceVariant"
@@ -20,10 +27,18 @@
         android:paddingBottom="8dp">
 
         <TextView
-            android:id="@+id/xlate_lang_line"
+            android:id="@+id/xlate_path_line"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceTitleSmall" />
+            android:ellipsize="middle"
+            android:singleLine="true"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <TextView
+            android:id="@+id/xlate_config_line"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
 
         <TextView
             android:id="@+id/xlate_engine_line"
@@ -37,10 +52,10 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="14dp"
-        android:paddingTop="8dp"
+        android:paddingStart="10dp"
+        android:paddingTop="6dp"
         android:paddingEnd="6dp"
-        android:paddingBottom="4dp">
+        android:paddingBottom="2dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/xlate_select_all"
@@ -72,6 +87,7 @@
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
         android:hint="@string/xlate_search_strings"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         app:endIconMode="clear_text"
         app:startIconDrawable="@drawable/search_24px">
 
@@ -98,10 +114,21 @@
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
         android:visibility="gone"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         app:trackCornerRadius="2dp" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/xlate_translate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="12dp"
+        android:text="@string/xlate_run" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/xlate_apply"
+        style="@style/Widget.Material3.Button.TonalButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="12dp"
