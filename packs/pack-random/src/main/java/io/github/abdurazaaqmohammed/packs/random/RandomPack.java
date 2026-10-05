@@ -18,15 +18,11 @@ public class RandomPack implements ToolPack {
 
     @Override
     public int version() {
-        return 2;
+        return 4;
     }
 
     @Override
     public List<ToolPlugin> tools() {
-        return Arrays.<ToolPlugin>asList(
-                new RandomTool(),
-                new PasswordTool(),
-                new StrengthTool(),
-                new UuidTool());
+        return java.util.Collections.<ToolPlugin>singletonList(new RandomSuiteTool());
     }
 }
