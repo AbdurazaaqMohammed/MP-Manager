@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Drawer row: round icon badge, label, and the organise-mode affordances.
+
+  A copy of item_dropdown_option.xml on purpose. That layout is shared with DropdownAdapter and
+  ExtractOptionAdapter, which are compact single-line pickers with no badge; giving them a 40dp
+  circle and a second line would change three screens to restyle one.
+
+  View ids match the shared layout so SidebarAdapter's findViewById calls keep working.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="2dp"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="8dp">
+
+    <ImageView
+        android:id="@+id/optionIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="14dp"
+        android:background="@drawable/bg_sidebar_icon_badge"
+        android:contentDescription="@string/option_icon_cd"
+        android:padding="10dp"
+        app:tint="?attr/colorOnSurface" />
+
+    <TextView
+        android:id="@+id/optionText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="16sp" />
+
+    <ImageButton
+        android:id="@+id/optionHideButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/hide"
+        android:padding="10dp"
+        android:visibility="invisible"
+        android:src="@drawable/visibility_off_24px"
+        app:tint="?attr/colorOnSurfaceVariant" />
+
+    <ImageView
+        android:id="@+id/optionDragHandle"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/drag_to_reorder"
+        android:padding="10dp"
+        android:visibility="invisible"
+        android:src="@drawable/drag_handle_24px"
+        app:tint="?attr/colorOnSurfaceVariant" />
+</LinearLayout>

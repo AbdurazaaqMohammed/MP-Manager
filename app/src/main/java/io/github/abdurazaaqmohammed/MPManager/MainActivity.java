@@ -833,6 +833,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             sidebarDrawer.setClipToOutline(true);
         }
+        // 78% of the display, the way MT Manager sizes its drawer. The dimen in the layout is only
+        // a fallback: a fixed width is a narrow column on a tablet and a near-full-width one on a
+        // small phone in landscape.
+        ViewGroup.LayoutParams drawerParams = sidebarDrawer.getLayoutParams();
+        drawerParams.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.78f);
+        sidebarDrawer.setLayoutParams(drawerParams);
         bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bookmarks_drawer));
         bottomSheetBehavior.setPeekHeight(0, false); // animate=false, keeps it hidden
         bottomSheetBehavior.setHideable(true); // allows fully hidden state

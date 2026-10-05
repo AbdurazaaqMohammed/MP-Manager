@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Drawer width. A fixed 280dp happens to look right on a 360dp phone but is a narrow column on a
+  tablet; MainActivity overrides this at runtime with a fraction of the display width, matching
+  how MT Manager sizes its drawer. The value here is only the pre-measurement fallback.
+-->
 <resources>
     <dimen name="popupWindowIconSize">28dp</dimen>
     <dimen name="popupWindowCopyIconSize">12dp</dimen>
+    <dimen name="sidebar_width">280dp</dimen>
 </resources>

@@ -284,7 +284,7 @@
 
     <LinearLayout
         android:id="@+id/sidebar_drawer"
-        android:layout_width="280dp"
+        android:layout_width="@dimen/sidebar_width"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@drawable/bg_sidebar"

@@ -1,11 +1,8 @@
 package io.github.abdurazaaqmohammed.adapters;
 
 import android.content.Context;
-import android.content.res.Resources;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,8 +17,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
-import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.MaterialColors;
 
 import java.io.File;
 import java.util.Collections;
@@ -37,7 +32,6 @@ import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
-import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
 
@@ -87,7 +81,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private String animateToggleSection;
 
     public SidebarAdapter(Context context, Callbacks callbacks) {
-        super(context, R.layout.item_dropdown_option);
+        super(context, R.layout.item_sidebar_row);
         this.context = context;
         this.callbacks = callbacks;
         sectionOrder.add("storage");
@@ -353,6 +347,19 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         return entries.size();
     }
 
+    /**
+     * Not inherited on purpose.
+     *
+     * <p>{@code getCount} is overridden to report {@link #entries} while ArrayAdapter keeps its own
+     * backing list, which stays empty. Framework paths that call {@code getItem} - accessibility,
+     * for one - would therefore index an empty list and throw. Reading through {@link #entries}
+     * makes the two consistent.
+     */
+    @Override
+    public SidebarEntry getItem(int position) {
+        return getEntry(position);
+    }
+
     public SidebarEntry getEntry(int position) {
         return position >= 0 && position < entries.size() ? entries.get(position) : null;
     }
@@ -477,6 +484,12 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             ((TextView) view.findViewById(R.id.tvUsedFree)).setText(context.getString(R.string.used,
                     FileSize.getHumanReadableFileSize(info.usedBytes), FileSize.getHumanReadableFileSize(info.freeBytes)));
             ((ProgressBar) view.findViewById(R.id.pbUsed)).setProgress(info.usedPercent());
+            // The primary volume gets the drive icon; anything else is removable media and reads
+            // better as a folder. Without this every row would carry the same glyph.
+            ((ImageView) view.findViewById(R.id.ivStorageIcon)).setImageResource(
+                    info.path != null && info.path.startsWith("/storage/emulated/0")
+                            ? R.drawable.baseline_insert_drive_file_24
+                            : R.drawable.folder_24px);
             view.setOnClickListener(v -> callbacks.onEntryClicked(entry, v));
             view.setOnLongClickListener(v -> {
                 callbacks.onEntryStorageLongPressed(entry, v);
@@ -485,7 +498,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             return view;
         }
         View view = convertView;
-        if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_dropdown_option, parent, false);
+        if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_sidebar_row, parent, false);
         ImageView icon = view.findViewById(R.id.optionIcon);
         TextView text = view.findViewById(R.id.optionText);
         ImageView dragHandle = view.findViewById(R.id.optionDragHandle);
@@ -509,22 +522,15 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             }
             return true;
         });
-        TypedValue value = new TypedValue();
-        Resources.Theme theme = context.getTheme();
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, value, true);
+        // Left at the layout's colour rather than tinted to the accent: the badge behind it is
+        // dark, and an accent-coloured glyph on it has poor contrast in the light theme.
         Drawable drawable = icon.getDrawable();
-        if (drawable != null) {
-            drawable = drawable.mutate();
-            ColorUtil.changeImageColor(drawable, value.data);
-            icon.setImageDrawable(drawable);
-        }
+        if (drawable != null) icon.setImageDrawable(drawable.mutate());
         view.setOnClickListener(v -> callbacks.onEntryClicked(entry, v));
         view.setOnLongClickListener(v -> {
             callbacks.onEntryLongPressed(entry, v);
             return true;
         });
-        int surfaceColor = MaterialColors.getColor(view, com.google.android.material.R.attr.colorSurfaceContainer, Color.TRANSPARENT);
-        if (view instanceof MaterialCardView card) card.setCardBackgroundColor(surfaceColor);
         return view;
     }
 }

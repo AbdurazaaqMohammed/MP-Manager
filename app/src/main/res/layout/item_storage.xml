@@ -17,14 +17,36 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/tvStorageName"
+        <!-- Round badge, same as the tool rows, so a volume reads as the same kind of thing as
+             anything else in the drawer. -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/storage"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/ivStorageIcon"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="14dp"
+                android:background="@drawable/bg_sidebar_icon_badge"
+                android:contentDescription="@string/option_icon_cd"
+                android:padding="10dp"
+                android:src="@drawable/baseline_insert_drive_file_24"
+                app:tint="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/tvStorageName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/storage"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -37,7 +59,7 @@
                 android:id="@+id/pbUsed"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="0dp"
-                android:layout_height="10dp"
+                android:layout_height="4dp"
                 android:layout_weight="1"
                 android:max="100"
                 android:progress="0"
