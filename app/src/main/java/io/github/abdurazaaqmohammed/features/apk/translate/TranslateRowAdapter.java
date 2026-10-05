@@ -99,9 +99,7 @@ public final class TranslateRowAdapter extends RecyclerView.Adapter<TranslateRow
     @Override
     public void onBindViewHolder(@NonNull Holder holder, int position) {
         TranslateRow row = rows.get(position);
-        holder.key.setText(row.key);
         holder.source.setText(row.current);
-        holder.tag.setText(row.originTag());
         holder.check.setOnCheckedChangeListener(null);
         holder.check.setChecked(row.isSelected());
         holder.check.setOnCheckedChangeListener((button, checked) -> {
@@ -142,18 +140,14 @@ public final class TranslateRowAdapter extends RecyclerView.Adapter<TranslateRow
 
     final class Holder extends RecyclerView.ViewHolder {
         final MaterialCheckBox check;
-        final TextView key;
         final TextView source;
-        final TextView tag;
         final TextInputEditText input;
         final Watcher watcher = new Watcher();
 
         Holder(@NonNull View view) {
             super(view);
             check = view.findViewById(R.id.xlate_row_check);
-            key = view.findViewById(R.id.xlate_row_key);
             source = view.findViewById(R.id.xlate_row_source);
-            tag = view.findViewById(R.id.xlate_row_tag);
             input = view.findViewById(R.id.xlate_row_input);
         }
     }

@@ -104,17 +104,6 @@ public final class TranslateRow {
         this.targetEntry = entry;
     }
 
-    /** Short label for the row badge. */
-    public String originTag() {
-        return switch (origin) {
-            case MANUAL -> "manual";
-            case GLOSSARY_PHRASE -> "exact";
-            case GLOSSARY_PARTIAL -> "partial";
-            case ONLINE -> "online";
-            case NONE -> "";
-        };
-    }
-
     /**
      * Values a machine translator must not touch: format specifiers, positional placeholders,
      * XML/HTML markup, bare URLs and dotted identifiers.

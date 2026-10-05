@@ -31,4 +31,15 @@
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorPrimary" />
 
+    <!-- Where the current translation came from. This used to be a badge on every row; with the
+         table reduced to two text cells it only makes sense here, and per-row badges were the
+         main reason a row read as three bands instead of two. -->
+    <TextView
+        android:id="@+id/xlate_detail_origin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
 </LinearLayout>

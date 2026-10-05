@@ -599,12 +599,27 @@ public class ArscTranslationModeActivity extends BaseActivity {
         ((TextView) view.findViewById(R.id.xlate_detail_tokens)).setText(tokens.isEmpty()
                 ? getString(R.string.xlate_no_tokens)
                 : getString(R.string.xlate_tokens, String.join("  ", tokens)));
+        // The origin badge left the row when the table dropped to two text cells, so say where
+        // the translation came from here instead of losing it.
+        ((TextView) view.findViewById(R.id.xlate_detail_origin)).setText(
+                getString(R.string.xlate_origin_label, originLabel(row)));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.xlate_row_detail)
                 .setView(view)
                 .setPositiveButton(R.string.xlate_copy_translation, (d, w) -> copy(row.getTranslation()))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    /** Where one row's translation came from, in words rather than the badge's four letters. */
+    private String originLabel(TranslateRow row) {
+        return switch (row.origin) {
+            case MANUAL -> getString(R.string.engine_manual);
+            case GLOSSARY_PHRASE -> getString(R.string.xlate_origin_glossary_exact);
+            case GLOSSARY_PARTIAL -> getString(R.string.xlate_origin_glossary_partial);
+            case ONLINE -> getString(R.string.engine_online);
+            case NONE -> getString(R.string.xlate_origin_none);
+        };
     }
 
     private void runEngine() {

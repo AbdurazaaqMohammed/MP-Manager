@@ -1878,6 +1878,10 @@ Deleted %2$s · %3$s</string>
     <string name="engine_manual">Manual</string>
     <string name="engine_glossary">Offline glossary</string>
     <string name="engine_online">Online API</string>
+    <string name="xlate_origin_none">No translation staged</string>
+    <string name="xlate_origin_glossary_exact">Offline glossary, exact match</string>
+    <string name="xlate_origin_glossary_partial">Offline glossary, partial match</string>
+    <string name="xlate_origin_label">Translation source: %1$s</string>
 
 
     <!-- XML translation mode (MT-style, config centric) -->

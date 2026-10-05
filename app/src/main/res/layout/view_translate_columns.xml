@@ -1,20 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Column headings for the string grid.
+  Headings for the string table.
 
-  The two headings line up with the columns of item_translate_row because both use the same
-  padding and the same divider insets. Keep them in step: changing one without the other makes
-  the headings point at the wrong column.
+  Cell widths, padding and divider insets must match item_translate_row.xml: the leading cell
+  stands in for the row checkbox, so the headings point at the text columns rather than at the
+  checkbox column. Change one layout without the other and the headings drift sideways.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/colorSurfaceVariant"
-    android:orientation="horizontal"
-    android:paddingStart="8dp"
-    android:paddingTop="5dp"
-    android:paddingEnd="8dp"
-    android:paddingBottom="5dp">
+    android:minHeight="32dp"
+    android:orientation="horizontal">
+
+    <!-- Stands in for the checkbox column so "Original" starts where the original does. -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="match_parent" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="?android:attr/listDivider" />
 
     <TextView
         android:id="@+id/xlate_column_original"
@@ -22,30 +29,33 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:ellipsize="end"
+        android:paddingStart="10dp"
+        android:paddingTop="7dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="7dp"
         android:singleLine="true"
         android:text="@string/xlate_column_original"
-android:textAppearance="?attr/textAppearanceLabelSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+        android:textAppearance="?attr/textAppearanceLabelSmall"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 
-    <!-- A fixed height, not match_parent: this row wraps its content, so a match_parent
-         divider has no resolved height to fill and would collapse to nothing. -->
     <View
         android:layout_width="1dp"
-        android:layout_height="16dp"
-        android:layout_gravity="center_vertical"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="match_parent"
         android:background="?android:attr/listDivider" />
 
     <TextView
         android:id="@+id/xlate_column_translation"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="10dp"
         android:layout_weight="1"
         android:ellipsize="end"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
         android:singleLine="true"
         android:text="@string/xlate_column_translation"
-        android:textAppearance="?attr/textAppearanceLabelMedium"
+        android:textAppearance="?attr/textAppearanceLabelSmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
 </LinearLayout>
