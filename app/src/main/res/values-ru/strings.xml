@@ -1369,6 +1369,8 @@
     <string name="xlate_source_language">Перевести с</string>
     <string name="xlate_strings_count">Показано %1$d / подготовлено %2$d из %3$d</string>
     <string name="xlate_row_detail">Сведения о строке</string>
+    <string name="xlate_column_original">Оригинал</string>
+    <string name="xlate_column_translation">Перевод</string>
     <string name="xlate_copy_translation">Копировать перевод</string>
     <string name="xlate_tokens">Защищённые токены: %1$s</string>
     <string name="xlate_no_tokens">В этом значении нет защищённых токенов</string>

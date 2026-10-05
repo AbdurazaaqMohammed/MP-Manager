@@ -118,6 +118,15 @@ public final class TranslateRowAdapter extends RecyclerView.Adapter<TranslateRow
         holder.input.addTextChangedListener(holder.watcher);
         holder.watcher.row = row;
 
+        // Tapping the original opens the detail dialog, so the read-only column is still a way
+        // into the format-token view that the two-column layout would otherwise hide.
+        holder.source.setOnClickListener(v -> {
+            int at = holder.getBindingAdapterPosition();
+            if (at != RecyclerView.NO_POSITION && listener != null) {
+                listener.onRowClicked(rows.get(at));
+            }
+        });
+
         holder.itemView.setOnClickListener(v -> {
             int at = holder.getBindingAdapterPosition();
             if (at != RecyclerView.NO_POSITION && listener != null) {

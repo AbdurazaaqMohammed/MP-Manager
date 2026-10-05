@@ -1839,6 +1839,8 @@ Layout Inspector
     <string name="xlate_source_language">翻译自</string>
     <string name="xlate_strings_count">显示 %1$d / 已暂存 %2$d，共 %3$d</string>
     <string name="xlate_row_detail">字符串详情</string>
+    <string name="xlate_column_original">原文</string>
+    <string name="xlate_column_translation">译文</string>
     <string name="xlate_copy_translation">复制译文</string>
     <string name="xlate_tokens">受保护占位符：%1$s</string>
     <string name="xlate_no_tokens">该值没有受保护占位符</string>

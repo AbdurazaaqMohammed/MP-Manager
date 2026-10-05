@@ -1842,6 +1842,8 @@ Deleted %2$s · %3$s</string>
     <string name="xlate_source_language">Translate from</string>
     <string name="xlate_strings_count">%1$d shown / %2$d staged of %3$d</string>
     <string name="xlate_row_detail">String detail</string>
+    <string name="xlate_column_original">Original</string>
+    <string name="xlate_column_translation">Translation</string>
     <string name="xlate_copy_translation">Copy translation</string>
     <string name="xlate_tokens">Protected tokens: %1$s</string>
     <string name="xlate_no_tokens">No protected tokens in this value</string>

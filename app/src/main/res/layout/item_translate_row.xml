@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One translatable string resource: key, source text, and the editable translation. -->
+<!--
+  One translatable string resource, as two columns: the APK's own text on the left, the
+  translation on the right.
+
+  The original is a plain read-only TextView rather than a disabled field, so it cannot be
+  focused, scrolled or edited by accident, and it costs nothing to lay out long values.
+  The translation stays an OutlinedBox so it still reads as something you type into, which
+  matters because that is the whole point of the screen.
+
+  Column widths mirror view_translate_columns.xml: same padding, same divider insets, and the
+  same key line stacked above the pair. Change one and the headings stop lining up.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingStart="14dp"
-    android:paddingTop="8dp"
-    android:paddingEnd="14dp"
-    android:paddingBottom="8dp">
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp">
 
+    <!-- Key and origin badge span the row; they belong to the string, not to either column. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,29 +51,57 @@
             android:textColor="?attr/colorPrimary" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/xlate_row_source"
+    <!-- minHeight gives the match_parent divider below something to resolve against, and keeps
+         a one-line row from looking cramped next to a wrapped one. -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:textAppearance="?attr/textAppearanceBodySmall" />
+        android:baselineAligned="false"
+        android:minHeight="40dp"
+        android:orientation="horizontal">
 
-
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/xlate_row_box"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/xlate_row_input"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/xlate_row_source"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:inputType="textMultiLine"
-            android:maxLines="4"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_weight="1"
+            android:paddingTop="4dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="4dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textIsSelectable="false" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="?android:attr/listDivider" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/xlate_row_box"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/xlate_row_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:maxLines="4"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <!-- Keeps stacked rows from reading as one block. -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:background="?android:attr/listDivider" />
 
 </LinearLayout>

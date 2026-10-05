@@ -175,6 +175,13 @@
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Headings for the two grid columns, kept outside the list so they stay put while
+             scrolling. -->
+        <include
+            layout="@layout/view_translate_columns"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/xlate_strings_list"
             android:layout_width="match_parent"
