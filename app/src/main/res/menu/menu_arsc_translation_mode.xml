@@ -3,9 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/xlate_menu_translate"
-        android:icon="@drawable/ic_translate_mt"
-        android:title="@string/xlate_run"
+        android:id="@+id/xlate_menu_apply"
+        android:icon="@drawable/baseline_check_circle_24"
+        android:title="@string/xlate_apply"
         app:showAsAction="ifRoom" />
 
     <item

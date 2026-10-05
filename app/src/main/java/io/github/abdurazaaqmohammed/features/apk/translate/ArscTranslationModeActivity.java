@@ -79,7 +79,6 @@ public class ArscTranslationModeActivity extends BaseActivity {
     private TranslateRowAdapter entryAdapter;
     private TextView configLine;
     private TextView engineLine;
-    private TextView countView;
 
     private Page page = Page.LANGUAGES;
     private String configQualifier = "";
@@ -124,7 +123,6 @@ public class ArscTranslationModeActivity extends BaseActivity {
         entriesPage = findViewById(R.id.xlate_entries_page);
         configLine = findViewById(R.id.xlate_config_line);
         engineLine = findViewById(R.id.xlate_engine_line);
-        countView = findViewById(R.id.xlate_count);
 
         setupLanguagesPage();
         setupEntriesPage();
@@ -224,33 +222,32 @@ public class ArscTranslationModeActivity extends BaseActivity {
         list.setLayoutManager(new LinearLayoutManager(this));
         entryAdapter = new TranslateRowAdapter(new TranslateRowAdapter.Listener() {
             @Override
-            public void onRowChanged(TranslateRow row) {
-                // Fires per keystroke, so only the cheap dirty marker is refreshed here.
-                markModified();
-            }
-
-            @Override
             public void onSelectionChanged() {
-                markModified();
                 refreshCounts();
             }
 
             @Override
             public void onRowClicked(TranslateRow row) {
-                showRowDetail(row);
+                showRowEditor(row);
             }
         });
         list.setAdapter(entryAdapter);
-        findViewById(R.id.xlate_select_all).setOnClickListener(v -> {
+
+        findViewById(R.id.xlate_bar_select_all).setOnClickListener(v -> {
             entryAdapter.selectAll(true);
-            markModified();
+            refreshCounts();
         });
-        findViewById(R.id.xlate_clear_staged).setOnClickListener(v -> {
-            entryAdapter.revertAll();
-            markModified();
+        findViewById(R.id.xlate_bar_edit).setOnClickListener(v -> editFirstSelected());
+        findViewById(R.id.xlate_bar_multi).setOnClickListener(v -> {
+            entryAdapter.setMultiSelect(!entryAdapter.isMultiSelect());
+            refreshCounts();
         });
-        findViewById(R.id.xlate_translate).setOnClickListener(v -> runEngine());
-        findViewById(R.id.xlate_apply).setOnClickListener(v -> applyTranslations());
+        findViewById(R.id.xlate_bar_translate).setOnClickListener(v -> runEngine());
+        findViewById(R.id.xlate_bar_filter).setOnClickListener(v -> {
+            EditText search = findViewById(R.id.xlate_strings_search);
+            search.setVisibility(search.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        });
+
         EditText search = findViewById(R.id.xlate_strings_search);
         search.addTextChangedListener(watcher(this::refreshEntryFilter));
     }
@@ -287,7 +284,6 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 progress.setVisibility(View.GONE);
                 allRows.clear();
                 allRows.addAll(rows);
-                entryAdapter.resetDirty();
                 entryAdapter.submit(rows);
                 modified = false;
                 updateEntryHeader();
@@ -323,20 +319,27 @@ public class ArscTranslationModeActivity extends BaseActivity {
     }
 
     private void markModified() {
-        if (!modified) {
-            modified = true;
-            toolbar.setSubtitle("*");
-        }
+        if (modified) return;
+        modified = true;
+        refreshCounts();
     }
 
+    /** Counter line under the title, MT Manager style: shown / total, plus the staged count. */
     private void refreshCounts() {
-        if (countView == null) return;
+        if (toolbar == null || page != Page.ENTRIES) return;
+        if (entryAdapter.isMultiSelect()) {
+            toolbar.setSubtitle(getString(R.string.xlate_multi_count, entryAdapter.selectedCount()));
+            return;
+        }
         int staged = 0;
         for (TranslateRow row : allRows) {
             if (row.isApplicable()) staged++;
         }
-        countView.setText(getString(R.string.xlate_strings_count,
-                entryAdapter.getItemCount(), staged, allRows.size()));
+        // The asterisk is the dirty marker; it prefixes the counter rather than replacing it, so
+        // an unsaved state is still visible now that the subtitle carries a number.
+        String counter = getString(R.string.xlate_strings_count,
+                entryAdapter.getItemCount(), staged, allRows.size());
+        toolbar.setSubtitle((modified ? "* " : "") + counter);
     }
 
     // ---------------------------------------------------------------- paging
@@ -590,6 +593,60 @@ public class ArscTranslationModeActivity extends BaseActivity {
         };
     }
 
+    /**
+     * The per-string editor: original above, translation field below, protected tokens named
+     * under them.
+     *
+     * <p>This is what a row tap opens, since the row itself carries no field. It also absorbs
+     * the old read-only detail sheet: with the key and origin no longer on the row, this dialog
+     * is the only place they can be shown, so there is nothing left for a separate viewer.
+     */
+    private void showRowEditor(TranslateRow row) {
+        if (row == null) return;
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_xlate_row_edit, null);
+        ((TextView) view.findViewById(R.id.xlate_detail_key)).setText(row.key);
+        ((TextView) view.findViewById(R.id.xlate_detail_source)).setText(row.current);
+        List<String> tokens = FormatGuard.tokens(row.current);
+        ((TextView) view.findViewById(R.id.xlate_detail_tokens)).setText(tokens.isEmpty()
+                ? getString(R.string.xlate_no_tokens)
+                : getString(R.string.xlate_tokens, String.join("  ", tokens)));
+
+        TextInputEditText input = view.findViewById(R.id.xlate_detail_input);
+        input.setText(row.getTranslation());
+        input.setSelection(input.getText() == null ? 0 : input.getText().length());
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.xlate_edit_title)
+                .setView(view)
+                .setPositiveButton(R.string.apply, (d, w) -> {
+                    row.setTranslation(input.getText() == null ? "" : input.getText().toString(),
+                            TranslateRow.Origin.MANUAL);
+                    markModified();
+                    entryAdapter.notifyDataSetChanged();
+                    refreshCounts();
+                })
+                .setNeutralButton(R.string.xlate_row_detail, (d, w) -> showRowDetail(row))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * Bottom bar "edit" while multi-select is on: open the editor on the selected rows in turn.
+     *
+     * <p>One at a time rather than a batch form, because each row has its own protected tokens
+     * and its own original to check the translation against; a shared field would hide exactly
+     * the context that makes a translation safe to write.
+     */
+    private void editFirstSelected() {
+        List<TranslateRow> targets = entryAdapter.actionable();
+        if (targets.isEmpty()) {
+            Extensions.showMessage(this, R.string.xlate_nothing_to_translate);
+            return;
+        }
+        showRowEditor(targets.get(0));
+    }
+
+    /** Read-only view of one string: where the translation came from, and the tokens. */
     private void showRowDetail(TranslateRow row) {
         if (row == null) return;
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_xlate_row, null);
@@ -599,8 +656,6 @@ public class ArscTranslationModeActivity extends BaseActivity {
         ((TextView) view.findViewById(R.id.xlate_detail_tokens)).setText(tokens.isEmpty()
                 ? getString(R.string.xlate_no_tokens)
                 : getString(R.string.xlate_tokens, String.join("  ", tokens)));
-        // The origin badge left the row when the table dropped to two text cells, so say where
-        // the translation came from here instead of losing it.
         ((TextView) view.findViewById(R.id.xlate_detail_origin)).setText(
                 getString(R.string.xlate_origin_label, originLabel(row)));
         new MaterialAlertDialogBuilder(this)
@@ -677,7 +732,7 @@ public class ArscTranslationModeActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
                     markModified();
-                    entryAdapter.refreshValues();
+                    entryAdapter.notifyDataSetChanged();
                     refreshCounts();
                     Extensions.showMessage(this, getString(R.string.xlate_engine_done, engineLabel()));
                 });
@@ -767,8 +822,8 @@ public class ArscTranslationModeActivity extends BaseActivity {
 
     private boolean onMenu(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.xlate_menu_translate) {
-            runEngine();
+        if (id == R.id.xlate_menu_apply) {
+            applyTranslations();
         } else if (id == R.id.xlate_menu_add_config) {
             showCopyConfigDialog(null);
         } else if (id == R.id.xlate_menu_copy_config) {

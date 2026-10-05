@@ -1882,6 +1882,11 @@ Deleted %2$s · %3$s</string>
     <string name="xlate_origin_glossary_exact">Offline glossary, exact match</string>
     <string name="xlate_origin_glossary_partial">Offline glossary, partial match</string>
     <string name="xlate_origin_label">Translation source: %1$s</string>
+    <string name="xlate_multi_select">Multi-select</string>
+    <string name="xlate_menu_edit">Edit string</string>
+    <string name="xlate_edit_title">Edit translation</string>
+    <string name="xlate_multi_count">%1$d selected</string>
+    <string name="xlate_multi_done">Done</string>
 
 
     <!-- XML translation mode (MT-style, config centric) -->

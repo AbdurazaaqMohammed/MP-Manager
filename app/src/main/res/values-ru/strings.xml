@@ -1409,6 +1409,11 @@
     <string name="xlate_origin_glossary_exact">Офлайн-словарь, точное совпадение</string>
     <string name="xlate_origin_glossary_partial">Офлайн-словарь, частичное совпадение</string>
     <string name="xlate_origin_label">Источник перевода: %1$s</string>
+    <string name="xlate_multi_select">Множественный выбор</string>
+    <string name="xlate_menu_edit">Изменить строку</string>
+    <string name="xlate_edit_title">Правка перевода</string>
+    <string name="xlate_multi_count">Выбрано: %1$d</string>
+    <string name="xlate_multi_done">Готово</string>
 
 
     <!-- XML translation mode (MT-style, config centric) -->

@@ -1,92 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  One translatable string resource, as a two-cell table row: the APK's own text on the left,
-  an empty cell on the right to type the translation into.
+  One translatable string resource: a single line of the APK's own text.
 
-  Deliberately bare. The key and the engine badge used to sit above the pair, which turned every
-  row into three bands and pushed the two texts you actually compare off the same screen line.
-  Both moved to the detail sheet instead, so the table stays one row per string.
+  No heading, no inline field. Tapping the row opens the editor dialog, which is how MT Manager
+  does it too, and it matters at this scale - a config can hold tens of thousands of entries,
+  and a RecyclerView row per entry cannot carry a live EditText without the list eating memory
+  as it scrolls.
 
-  Cell widths, cell padding and divider insets must match view_translate_columns.xml, otherwise
-  the headings stop lining up with the columns. The two layouts are a pair.
-
-  The original is a plain read-only TextView rather than a disabled field, so it cannot be
-  focused, scrolled or edited by accident. The translation keeps an OutlinedBox because being
-  able to type there is the whole point of the screen.
+  The checkbox only appears in multi-select mode, which is why it starts gone.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/xlate_row_check"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:baselineAligned="false"
-        android:minHeight="44dp"
-        android:orientation="horizontal">
+        android:layout_marginEnd="6dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:visibility="gone" />
 
-        <!-- Row selector. Narrow, because selecting which rows the engine and Apply act on is
-             still needed; it just should not compete with the text. -->
-        <com.google.android.material.checkbox.MaterialCheckBox
-            android:id="@+id/xlate_row_check"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:padding="0dp"
-            android:scaleX="0.9"
-            android:scaleY="0.9" />
-
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="?android:attr/listDivider" />
-
-        <TextView
-            android:id="@+id/xlate_row_source"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:paddingStart="10dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="8dp"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
-
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="?android:attr/listDivider" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/xlate_row_box"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="10dp"
-            android:layout_weight="1"
-            app:boxStrokeWidth="1dp"
-            app:boxStrokeWidthFocused="2dp">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/xlate_row_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="top|start"
-                android:inputType="textMultiLine"
-                android:maxLines="4"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
-        </com.google.android.material.textfield.TextInputLayout>
-    </LinearLayout>
-
-    <!-- Horizontal rule between rows, so the cells read as a grid rather than a wall of text. -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="?android:attr/listDivider" />
+    <TextView
+        android:id="@+id/xlate_row_source"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:textAppearance="?attr/textAppearanceBodyLarge" />
 
 </LinearLayout>

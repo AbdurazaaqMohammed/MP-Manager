@@ -1879,6 +1879,11 @@ Layout Inspector
     <string name="xlate_origin_glossary_exact">离线词库，完全匹配</string>
     <string name="xlate_origin_glossary_partial">离线词库，部分匹配</string>
     <string name="xlate_origin_label">译文来源：%1$s</string>
+    <string name="xlate_multi_select">多选</string>
+    <string name="xlate_menu_edit">编辑字符串</string>
+    <string name="xlate_edit_title">编辑译文</string>
+    <string name="xlate_multi_count">已选 %1$d 项</string>
+    <string name="xlate_multi_done">完成</string>
 
 
     <!-- XML translation mode (MT-style, config centric) -->
