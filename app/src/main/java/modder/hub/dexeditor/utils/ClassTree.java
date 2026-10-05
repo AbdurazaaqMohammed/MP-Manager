@@ -131,7 +131,6 @@ public class ClassTree {
      */
 
 
-    private String ALL_CLASSES_JSON;
     private String DELETED_CLASSES_JSON;
     private String EDITED_CLASSES_JSON;
     private final String workDir;
@@ -155,10 +154,34 @@ public class ClassTree {
 
     private Map<String, HashSet<String>> deletedClassJson = new HashMap<>();
     private final Map<String, String> typeToDexMap = new HashMap<>();
-    private final ConcurrentMap<String, String> pureSmaliCache = new ConcurrentHashMap<>();
-    private static final int SMALI_CACHE_MAX = 256;
-    private final Map<String, Integer> classDefIndex = new HashMap<>();
-    private final Object classDefIndexLock = new Object();
+    private final Map<String, DexBackedDexFile> dexFileByName = new HashMap<>();
+    // Concurrent so the hot edit path (saveClassDef / saveAllDexFiles) needs no monitor.
+    private final ConcurrentMap<String, Integer> classDefIndex = new ConcurrentHashMap<>(1 << 14);
+
+    /**
+     * Bounded LRU cache of disassembled classes.
+     *
+     * <p>The previous implementation was a {@link ConcurrentHashMap} that called {@code clear()}
+     * the moment it reached {@code SMALI_CACHE_MAX} entries. That is the worst possible policy for
+     * a full-dex search or browse: after 256 classes it throws away <em>everything</em>, including
+     * the entries it is actively re-reading, so classes get disassembled over and over. An LRU keeps
+     * the hot working set instead of flushing it wholesale.
+     *
+     * <p>Thread-safe: search fans out over a pool of workers that all read through this cache.
+     */
+    private final Map<String, String> pureSmaliCache =
+            Collections.synchronizedMap(new LinkedHashMap<String, String>(256, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                    return size() > smaliCacheMax();
+                }
+            });
+
+    /** Cap scales with the heap so a large device can cache more disassembly and a small one cannot OOM. */
+    private static int smaliCacheMax() {
+        long maxMb = Runtime.getRuntime().maxMemory() / (1024L * 1024L);
+        return (int) Math.max(256L, Math.min(4096L, maxMb / 8L));
+    }
 
     private static final Set<String> activeWorkDirs = new HashSet<>();
 
@@ -203,7 +226,6 @@ public class ClassTree {
         if (!dir.exists()) {
             dir.mkdirs();
         }
-        ALL_CLASSES_JSON = new File(dir, "allclasses.json").getAbsolutePath();
         DELETED_CLASSES_JSON = new File(dir, "deletedclasses.json").getAbsolutePath();
         EDITED_CLASSES_JSON = new File(dir, "editedclasses.json").getAbsolutePath();
     }
@@ -223,110 +245,131 @@ public class ClassTree {
         dexFiles = new ArrayList<>();
         classDefList.clear();
         typeToDexMap.clear();
-        if (classMap == null) {
-            classMap = new HashMap<>((int) (paths.size() * 4096 / 0.75f) + 16);
-        } else {
-            classMap.clear();
-        }
+        dexClassMap.clear();
+        dexFileByName.clear();
 
         final int n = paths.size();
+        List<DexLoadResult> results;
         if (n == 1) {
-            loadSingleDex(paths.get(0));
+            results = Collections.singletonList(loadSingleDex(paths.get(0)));
         } else {
             int numThreads = Math.min(n, Math.max(1, Runtime.getRuntime().availableProcessors()));
             ExecutorService pool = Executors.newFixedThreadPool(numThreads);
-            List<Future<?>> futures = new ArrayList<>(n);
-            for (String path : paths) {
-                futures.add(pool.submit(() -> {
-                    try {
-                        loadSingleDex(path);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }));
-            }
-            pool.shutdown();
-            for (Future<?> f : futures) {
-                try {
-                    f.get();
-                } catch (Exception e) {
-                    Throwable c = e.getCause() != null ? e.getCause() : e;
-                    if (c instanceof Exception) throw (Exception) c;
-                    throw new Exception(c);
-                }
-            }
-        }
-
-        synchronized (classDefIndexLock) {
-            classDefIndex.clear();
-            for (int i = 0; i < classDefList.size(); i++) {
-                classDefIndex.put(classDefList.get(i).getType(), i);
-            }
-        }
-
-        saveAllClassesJson(); // save all classes as json
-        // initClassMap() is now integrated into the loop above
-    }
-
-    private void loadSingleDex(String path) throws Exception {
-        byte[] read = read(path);
-        int verifyDexHeader = DexUtil.verifyDexHeader(read, 0);
-        synchronized (this) {
-            this.dexVersion = Math.max(this.dexVersion, verifyDexHeader);
-        }
-        DexBackedDexFile file = DexBackedDexFile.fromInputStream(Opcodes.forDexVersion(verifyDexHeader), new ByteArrayInputStream(read));
-
-        synchronized (dexFiles) {
-            dexFiles.add(file);
-        }
-
-        List<String> classNames = new ArrayList<>();
-        String fileName = new File(path).getName();
-        List<ClassDef> defs = new ArrayList<>();
-        for (ClassDef classDef : file.getClasses()) {
-            defs.add(classDef);
-            String type = classDef.getType();
-            synchronized (typeToDexMap) {
-                typeToDexMap.put(type, fileName);
-            }
-            String typeName = type.substring(1, type.length() - 1);
-            synchronized (classMap) {
-                if (!isClassDeleted(typeName)) {
-                    classMap.put(typeName, classDef);
-                }
-            }
-            classNames.add(type);
-        }
-        synchronized (classDefList) {
-            classDefList.addAll(defs);
-        }
-        synchronized (dexClassMap) {
-            dexClassMap.put(fileName, classNames);
-        }
-    }
-
-    // save all classes names in JSON during loading of initial dexes
-    private void saveAllClassesJson() throws IOException {
-        final String json;
-        synchronized (dexClassMap) {
-            json = new Gson().toJson(dexClassMap);
-        }
-        Thread writerThread = new Thread(() -> {
+            List<Future<DexLoadResult>> futures = new ArrayList<>(n);
             try {
-                File file = new File(ALL_CLASSES_JSON);
-                File parent = file.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
-                if (file.exists()) {
-                    file.delete();
+                for (String path : paths) {
+                    futures.add(pool.submit(() -> loadSingleDex(path)));
                 }
-                FileWriter writer = new FileWriter(ALL_CLASSES_JSON);
-                writer.write(json);
-                writer.close();
-            } catch (IOException ignored) {
+                results = new ArrayList<>(n);
+                for (Future<DexLoadResult> f : futures) {
+                    try {
+                        results.add(f.get());
+                    } catch (Exception e) {
+                        Throwable c = e.getCause() != null ? e.getCause() : e;
+                        for (Future<DexLoadResult> rest : futures) rest.cancel(true);
+                        if (c instanceof Exception) throw (Exception) c;
+                        throw new Exception(c);
+                    }
+                }
+            } finally {
+                pool.shutdown();
             }
-        }, "dexeditor-allclasses-json");
-        writerThread.setPriority(Thread.MIN_PRIORITY);
-        writerThread.start();
+        }
+
+        // Merge once, single threaded. Each dex was parsed into its own private maps by
+        // loadSingleDex(), so no locking is needed here and no lock is taken per class.
+        int totalClasses = 0;
+        for (DexLoadResult result : results) totalClasses += result.defs.size();
+        ((ArrayList<ClassDef>) classDefList).ensureCapacity(totalClasses);
+
+        for (DexLoadResult result : results) {
+            if (result.dexVersion > this.dexVersion) this.dexVersion = result.dexVersion;
+            dexFiles.add(result.dexFile);
+            dexFileByName.put(result.fileName, result.dexFile);
+            dexClassMap.put(result.fileName, result.classNames);
+            classDefList.addAll(result.defs);
+            typeToDexMap.putAll(result.typeToDex);
+        }
+
+        // Size the map for the real class count. The old sizing (paths.size() * 4096) forced a
+        // long chain of HashMap rehashes for any dex holding more than a few thousand classes.
+        classMap = new HashMap<>((int) (totalClasses / 0.75f) + 16);
+        for (DexLoadResult result : results) classMap.putAll(result.classMap);
+
+        classDefIndex.clear();
+        int index = 0;
+        for (ClassDef classDef : classDefList) {
+            classDefIndex.put(classDef.getType(), index++);
+        }
+        // initClassMap() is now integrated into the merge above.
+        // saveAllClassesJson() was removed: it Gson-serialised every class name to a multi-megabyte
+        // JSON file on each open and nothing ever read that file back.
+    }
+
+    /** Per-dex parse result. Each dex is built independently so no shared collection is touched
+     *  until the single-threaded merge in {@link #initMultiDex()}. */
+    private static final class DexLoadResult {
+        final DexBackedDexFile dexFile;
+        final String fileName;
+        final int dexVersion;
+        final List<ClassDef> defs;
+        final List<String> classNames;
+        final Map<String, ClassDef> classMap;
+        final Map<String, String> typeToDex;
+
+        DexLoadResult(DexBackedDexFile dexFile, String fileName, int dexVersion,
+                      List<ClassDef> defs, List<String> classNames,
+                      Map<String, ClassDef> classMap, Map<String, String> typeToDex) {
+            this.dexFile = dexFile;
+            this.fileName = fileName;
+            this.dexVersion = dexVersion;
+            this.defs = defs;
+            this.classNames = classNames;
+            this.classMap = classMap;
+            this.typeToDex = typeToDex;
+        }
+    }
+
+    private DexLoadResult loadSingleDex(String path) throws Exception {
+        byte[] buf = read(path);
+        int verifyDexHeader = DexUtil.verifyDexHeader(buf, 0);
+
+        // Build the dex straight from the buffer we already hold. DexBackedDexFile.fromInputStream()
+        // copies the whole stream into a second byte[], doubling peak memory and the load time.
+        // The 3-arg constructor is the public form of (opcodes, buf, offset, verifyMagic=false),
+        // so it behaves identically to fromInputStream() minus the redundant copy.
+        DexBackedDexFile file = new DexBackedDexFile(Opcodes.forDexVersion(verifyDexHeader), buf, 0);
+
+        Set<? extends ClassDef> classes = file.getClasses();
+        int classCount = classes.size();
+        List<ClassDef> defs = new ArrayList<>(classCount);
+        List<String> classNames = new ArrayList<>(classCount);
+        int capacity = (int) (classCount / 0.75f) + 16;
+        Map<String, ClassDef> localClassMap = new HashMap<>(capacity);
+        Map<String, String> localTypeToDex = new HashMap<>(capacity);
+
+        // Same test as the old isClassDeleted(), but resolved once per dex instead of a
+        // "L" + type + ";" concatenation plus a typeToDexMap lookup for every single class.
+        // NOTE: preserved as-is. loadDeletedClasses() runs *after* initMultiDex() in the
+        // constructor, so deletedClassJson is still empty here and this lookup never matches -
+        // exactly like the isClassDeleted() call it replaced. Re-ordering those two calls would
+        // make reopened sessions hide deleted classes from the tree; that is a behaviour change,
+        // so it is deliberately left for a separate decision.
+        String fileName = new File(path).getName();
+        HashSet<String> deleted = deletedClassJson.get(fileName);
+
+        for (ClassDef classDef : classes) {
+            String type = classDef.getType();
+            defs.add(classDef);
+            classNames.add(type);
+            localTypeToDex.put(type, fileName);
+            String typeName = type.substring(1, type.length() - 1);
+            if (deleted == null || !deleted.contains(typeName)) {
+                localClassMap.put(typeName, classDef);
+            }
+        }
+        return new DexLoadResult(file, fileName, verifyDexHeader,
+                defs, classNames, localClassMap, localTypeToDex);
     }
 
     // loading the deleted classes from JSON list
@@ -504,10 +547,8 @@ public class ClassTree {
 
         classMap.put(type, classDef);
 
-        Integer index;
-        synchronized (classDefIndexLock) {
-            index = classDefIndex.get("L" + type + ";");
-        }
+        String rawType = "L" + type + ";";
+        Integer index = classDefIndex.get(rawType);
         if (index != null) {
             classDefList.set(index, classDef);
         } else {
@@ -515,11 +556,9 @@ public class ClassTree {
                 for (int i = 0; i < classDefList.size(); i++) {
                     ClassDef existingDef = classDefList.get(i);
                     String existingType = existingDef.getType();
-                    if (existingType.equals("L" + type + ";")) {
+                    if (existingType.equals(rawType)) {
                         classDefList.set(i, classDef);
-                        synchronized (classDefIndexLock) {
-                            classDefIndex.put("L" + type + ";", i);
-                        }
+                        classDefIndex.put(rawType, i);
                         break;
                     }
                 }
@@ -578,9 +617,9 @@ public class ClassTree {
         String cached = pureSmaliCache.get(typeKey);
         if (cached != null) return cached;
         String fresh = getPureSmaliFromClassDef(classDef);
-        if (pureSmaliCache.size() >= SMALI_CACHE_MAX) {
-            pureSmaliCache.clear();
-        }
+        // The cache evicts itself: pureSmaliCache is an access-ordered LinkedHashMap that drops
+        // the least-recently-used entry once it exceeds smaliCacheMax(). No clear(), no manual
+        // size bookkeeping, and the classes actually being re-read stay resident.
         pureSmaliCache.put(typeKey, fresh);
         return fresh;
     }
@@ -676,58 +715,70 @@ public class ClassTree {
             dexBuilder.setIgnoreMethodAndFieldError(true);
 
             final Map<String, ClassDef> assembledDefs = new ConcurrentHashMap<>();
-            List<Future<?>> futures = new ArrayList<>(classCount);
-            for (String rawType : classNames) {
-                if (threadException[0] != null) break;
+            HashSet<String> deleted = deletedClassJson.get(fileName);
+            final HashSet<String> deletedSet = deleted;
 
+            // Chunk the work instead of submitting one Future per class.
+            // A 30k-class dex used to allocate 30k FutureTask objects plus 30k queue entries and
+            // 30k ThreadPoolExecutor queue offers, all to do ~30k tiny intern() calls. Handing each
+            // worker a contiguous slice collapses that to a handful of tasks while keeping every
+            // worker busy and the per-class work identical.
+            final int chunkSize = Math.max(64, (classCount + (numThreads * 8) - 1) / (numThreads * 8));
+            List<Future<?>> futures = new ArrayList<>((classCount + chunkSize - 1) / chunkSize);
+            for (int start = 0; start < classCount; start += chunkSize) {
+                final int from = start;
+                final int to = Math.min(start + chunkSize, classCount);
                 futures.add(executor.submit(() -> {
                     try {
-                        final String type = rawType.substring(1, rawType.length() - 1);
+                        for (int idx = from; idx < to; idx++) {
+                            if (threadException[0] != null) return null;
+                            final String rawType = classNames.get(idx);
+                            final String type = rawType.substring(1, rawType.length() - 1);
 
-                        HashSet<String> deleted = deletedClassJson.get(fileName);
-                        if (deleted != null && deleted.contains(type)) {
+                            if (deletedSet != null && deletedSet.contains(type)) {
+                                int p = processed.incrementAndGet();
+                                if (p % 100 == 0 || p == classCount) {
+                                    dexSaveProgress.onProgress(p, classCount);
+                                }
+                                continue;
+                            }
+
+                            final ClassDef defToIntern;
+                            String pending = pendingSmaliMap.get(type);
+                            if (pending != null) {
+                                if (processed.get() % 50 == 0) {
+                                    dexSaveProgress.onMessage("Assembling " + type + "...");
+                                }
+                                defToIntern = Smali.assemble(pending, SharedSmaliUtils.ASSEMBLE_OPTIONS, finalTargetDexVersion);
+                                assembledDefs.put(type, defToIntern);
+                            } else {
+                                defToIntern = classMap.get(type);
+                            }
+
+                            if (defToIntern == null) {
+                                int p = processed.incrementAndGet();
+                                if (p % 100 == 0 || p == classCount) {
+                                    dexSaveProgress.onProgress(p, classCount);
+                                }
+                                continue;
+                            }
+
+                            ClassDef strippedDef = defToIntern;
+                            if (compilationOptions.removeAllDebug || compilationOptions.removeDebugSource ||
+                                compilationOptions.removeDebugLine || compilationOptions.removeDebugParam ||
+                                compilationOptions.removeDebugPrologue || compilationOptions.removeDebugLocal) {
+                                strippedDef = new DebugInfoStripper(defToIntern, compilationOptions);
+                            }
+
+                            dexBuilder.internClassDef(strippedDef);
+
                             int p = processed.incrementAndGet();
+                            if (p % 200 == 0 || p == classCount) {
+                                dexSaveProgress.onMessage("Compiling...");
+                            }
                             if (p % 100 == 0 || p == classCount) {
                                 dexSaveProgress.onProgress(p, classCount);
                             }
-                            return null;
-                        }
-
-                        final ClassDef defToIntern;
-                        String pending = pendingSmaliMap.get(type);
-                        if (pending != null) {
-                            if (processed.get() % 50 == 0) {
-                                dexSaveProgress.onMessage("Assembling " + type + "...");
-                            }
-                            defToIntern = Smali.assemble(pending, SharedSmaliUtils.ASSEMBLE_OPTIONS, finalTargetDexVersion);
-                            assembledDefs.put(type, defToIntern);
-                        } else {
-                            defToIntern = classMap.get(type);
-                        }
-
-                        if (defToIntern == null) {
-                            int p = processed.incrementAndGet();
-                            if (p % 100 == 0 || p == classCount) {
-                                dexSaveProgress.onProgress(p, classCount);
-                            }
-                            return null;
-                        }
-
-                        ClassDef strippedDef = defToIntern;
-                        if (compilationOptions.removeAllDebug || compilationOptions.removeDebugSource ||
-                            compilationOptions.removeDebugLine || compilationOptions.removeDebugParam ||
-                            compilationOptions.removeDebugPrologue || compilationOptions.removeDebugLocal) {
-                            strippedDef = new DebugInfoStripper(defToIntern, compilationOptions);
-                        }
-
-                        dexBuilder.internClassDef(strippedDef);
-
-                        int p = processed.incrementAndGet();
-                        if (p % 200 == 0 || p == classCount) {
-                            dexSaveProgress.onMessage("Compiling...");
-                        }
-                        if (p % 100 == 0 || p == classCount) {
-                            dexSaveProgress.onProgress(p, classCount);
                         }
                     } catch (final Throwable t) {
                         Exception e = t instanceof Exception ? (Exception) t : new Exception(t);
@@ -737,14 +788,6 @@ public class ClassTree {
                     }
                     return null;
                 }));
-            }
-
-            if (threadException[0] != null) {
-                executor.shutdownNow();
-                for (Future<?> f : futures) {
-                    try { f.get(); } catch (Exception ignored) {}
-                }
-                throw threadException[0];
             }
 
             for (Future<?> f : futures) {
@@ -771,10 +814,7 @@ public class ClassTree {
                 for (Map.Entry<String, ClassDef> e : assembledDefs.entrySet()) {
                     String typeKey = e.getKey();
                     String rawType = "L" + typeKey + ";";
-                    Integer index;
-                    synchronized (classDefIndexLock) {
-                        index = classDefIndex.get(rawType);
-                    }
+                    Integer index = classDefIndex.get(rawType);
                     if (index != null) {
                         classDefList.set(index, e.getValue());
                     }
@@ -787,7 +827,15 @@ public class ClassTree {
 
             dexSaveProgress.onMessage("Writing file...");
             try {
-                MemoryDataStore memoryDataStore = new MemoryDataStore(classCount * 512);
+                // Size the scratch buffer from the original dex when we know it, and otherwise
+                // from a per-class estimate. MemoryDataStore grows by copying in fixed steps, so
+                // starting too small means repeatedly copying the whole buffer. The 512 B/class
+                // guess badly under-shoots for any dex with real code.
+                DexBackedDexFile original = dexFileByName.get(fileName);
+                int estimate = original != null && original.getFileSize() > 0
+                        ? (int) Math.min(Integer.MAX_VALUE - 64L, (long) original.getFileSize() * 12L / 10L + (1 << 20))
+                        : classCount * 1024;
+                MemoryDataStore memoryDataStore = new MemoryDataStore(Math.max(1 << 16, estimate));
                 dexBuilder.writeTo(memoryDataStore);
                 byte[] result = Arrays.copyOf(memoryDataStore.getBuffer(), memoryDataStore.getSize());
 
@@ -822,6 +870,11 @@ public class ClassTree {
         } finally {
             executor.shutdownNow();
         }
+
+        // The dexes on disk now already contain every pending edit and deletion, so stop
+        // reporting those dex files as "touched". Without this, every subsequent save would
+        // recompile each dex all over again even when nothing changed since the last save.
+        editedClassMap.clear();
 
         DexEditorActivity.isChanged = false;
         DexEditorActivity.isSaved = true;
@@ -955,9 +1008,8 @@ public class ClassTree {
         tree = null;
         curFile = null;
         pureSmaliCache.clear();
-        synchronized (classDefIndexLock) {
-            classDefIndex.clear();
-        }
+        classDefIndex.clear();
+        dexFileByName.clear();
         
         // Clean up cache directory (never while a load is still using it)
         if (workDir != null && !isWorkDirClaimed(workDir)) {

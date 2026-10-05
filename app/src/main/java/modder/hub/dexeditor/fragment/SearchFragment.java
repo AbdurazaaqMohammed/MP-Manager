@@ -77,6 +77,7 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -91,6 +92,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -126,6 +128,9 @@ import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
  * It supports Smali code, class names, methods, fields, and even raw integers/hex.
  */
 public class SearchFragment extends Fragment {
+
+    /** Minimum gap between two progress-dialog updates. Shared by both search tasks. */
+    private static final long PROGRESS_UPDATE_INTERVAL_MS = 100;
 
     private LinearLayout layoutSearchInfo;
     private View btnSearchInResults, btnReplaceInResults, btnClearResults;
@@ -810,7 +815,8 @@ public class SearchFragment extends Fragment {
         private AlertProgress progressDialog;
         private volatile boolean isStopped = false;
         private final AtomicBoolean isFinalized = new AtomicBoolean(false);
-        private long lastProgressUpdateTime = 0;
+        // Written and read by every worker thread -> must be atomic (see SearchTask).
+        private final AtomicLong lastProgressUpdateTime = new AtomicLong(0);
         private ExecutorService executor;
 
         UsageSearchTask(SearchFragment fragment, int kind, List<String> needles, int fieldMode, String displayQuery, String highlightQuery, String targetSlash, String targetName, String targetProto, Set<String> definingTypes) {
@@ -1224,16 +1230,21 @@ public class SearchFragment extends Fragment {
 
         private void updateProgress(int processed, int total) {
             long now = System.currentTimeMillis();
-            if (now - lastProgressUpdateTime > 100 || processed == total || isStopped) {
-                lastProgressUpdateTime = now;
-                mainHandler.post(() -> {
+            long last = lastProgressUpdateTime.get();
+            boolean isFinalUpdate = processed >= total;
+            if (!isFinalUpdate) {
+                if (now - last <= PROGRESS_UPDATE_INTERVAL_MS) return;
+                if (!lastProgressUpdateTime.compareAndSet(last, now)) return;
+            } else {
+                lastProgressUpdateTime.set(now);
+            }
+            mainHandler.post(() -> {
                     if (progressDialog != null && progressDialog.isShowing()) {
                         progressDialog.setMax(total);
                         progressDialog.setProgress(processed);
                         progressDialog.setMessage("Found: " + foundCount.get());
                     }
                 });
-            }
         }
 
         private void finalizeResults(List<TreeNode> results) {
@@ -1647,13 +1658,21 @@ public class SearchFragment extends Fragment {
      */
     private static class SearchTask {
         private static final Object POOL_MATCH_CACHE_LOCK = new Object();
+        /** Lazily materialised pool text: only built when the cheap fingerprint says "maybe". */
         private static final Map<DexBackedDexFile, char[]> POOL_TEXT_CACHE = new ConcurrentHashMap<>();
+        /** Per-dex fingerprint of the string pool, used as an O(1) conservative pre-filter. */
+        private static final Map<DexBackedDexFile, DexPoolFingerprint> POOL_FILTER_CACHE = new ConcurrentHashMap<>();
         private static final Map<DexBackedDexFile, ConcurrentHashMap<String, Boolean>> POOL_MATCH_CACHE = new ConcurrentHashMap<>();
 
         private final WeakReference<SearchFragment> fragmentRef;
         private final String query, path, type, highlightQuery;
         private final boolean searchSubfolders, matchCase, isRegex, exactlyMatch, finalIsNumberValid;
+        // Hoisted out of the per-class worker loop: these are constant for the whole search.
+        private final boolean typeIsInteger, typeIsClassName;
+        private final boolean queryHasDotOrSlash, queryHasNewline, poolPrefilterEnabled;
         private final List<String> scopeClasses, excludeList = new ArrayList<>();
+        /** excludeList in array form: tight per-class prefix scan without ListIterator overhead. */
+        private final String[] excludeArray;
         private final Pattern compiledPattern;
         private final long finalTargetValue;
         private final AtomicInteger foundCount = new AtomicInteger(0), processedCount = new AtomicInteger(0);
@@ -1663,7 +1682,8 @@ public class SearchFragment extends Fragment {
         private AlertProgress progressDialog;
         private volatile boolean isStopped = false, warningShown = false, hasConfirmedLargeSearch = false;
         private final AtomicBoolean isFinalized = new AtomicBoolean(false);
-        private long lastProgressUpdateTime = 0;
+        // Written by every worker thread and read by every worker thread -> must be atomic.
+        private final AtomicLong lastProgressUpdateTime = new AtomicLong(0);
         private ExecutorService executor;
 
         SearchTask(SearchFragment fragment, String query, String path, String type, boolean searchSubfolders, boolean matchCase, boolean isRegex, boolean exactlyMatch, boolean isHex, List<String> scopeClasses, boolean useExcludeList) {
@@ -1711,6 +1731,19 @@ public class SearchFragment extends Fragment {
                 }
             }
             this.compiledPattern = isRegex ? Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE) : null;
+
+            // Hoist everything the worker loop would otherwise recompute per class.
+            // The pool pre-filter is a *conservative* filter (it can only skip a class that provably
+            // cannot match), so widening the gate from >= 3 to >= 2 chars only makes it more useful;
+            // a 1-char query carries no bigram information so it is left unfiltered.
+            // Smali keywords/opcodes are not in the string pool, hence the isCommonSmaliWord exemption.
+            this.typeIsInteger = "Integer".equals(this.type);
+            this.typeIsClassName = "Class name".equals(this.type);
+            this.queryHasDotOrSlash = query.indexOf('.') >= 0 || query.indexOf('/') >= 0;
+            this.queryHasNewline = query.indexOf('\n') >= 0;
+            this.excludeArray = excludeList.toArray(new String[0]);
+            this.poolPrefilterEnabled = "Smali".equals(this.type) && !this.isRegex
+                    && query.length() >= 2 && !isCommonSmaliWord(query);
         }
 
         private void initSmaliKeywords() {
@@ -1770,6 +1803,7 @@ public class SearchFragment extends Fragment {
 
                 try {
                     POOL_TEXT_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
+                    POOL_FILTER_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
                     synchronized (POOL_MATCH_CACHE_LOCK) {
                         POOL_MATCH_CACHE.keySet().retainAll(DexEditorActivity.classTree.dexFiles);
                     }
@@ -1805,7 +1839,7 @@ public class SearchFragment extends Fragment {
                     if (isStopped) break;
                     executor.execute(() -> {
                         if (isStopped || Thread.currentThread().isInterrupted()) return;
-                        if (type.equals("Integer") && !finalIsNumberValid) {
+                        if (typeIsInteger && !finalIsNumberValid) {
                             updateProgress(processedCount.incrementAndGet(), finalTotal);
                             return;
                         }
@@ -1837,8 +1871,9 @@ public class SearchFragment extends Fragment {
                         String fullType = classDef.getType();
                         String className = fullType.substring(1, fullType.length() - 1);
 
-                        if (!excludeList.isEmpty()) {
-                            for (String excludePath : excludeList) {
+                        String[] excludes = excludeArray;
+                        if (excludes.length > 0) {
+                            for (String excludePath : excludes) {
                                 if (className.startsWith(excludePath)) {
                                     updateProgress(processedCount.incrementAndGet(), finalTotal);
                                     return;
@@ -1863,10 +1898,10 @@ public class SearchFragment extends Fragment {
                         // Class name is simple search
                         // only search the class node
                         // so its always faster
-                        if (type.equals("Class name")) {
+                        if (typeIsClassName) {
                             String clsNamePart = className.contains("/") ? className.substring(className.lastIndexOf('/') + 1) : className;
                             boolean match = false;
-                            if (query.contains(".") || query.contains("/")) {
+                            if (queryHasDotOrSlash) {
                                 if (checkMatch(className) || checkMatch(className.replace('/', '.')))
                                     match = true;
                             } else {
@@ -1898,26 +1933,26 @@ public class SearchFragment extends Fragment {
                                         // POOL-BASED PRE-FILTERING (Ultra Fast Optimization)
                                         // If query isn't in the DEX string pool and isn't a Smali keyword, skip the class.
                                         // Look we're using pre-filtering method to detect the search result for smali whoich may affect serach speed when there is large classes or small classes
-                                        if (!isRegex && query.length() >= 3 && !isCommonSmaliWord(query)) {
-                                            if (classDef instanceof DexBackedClassDef) {
-                                                DexBackedDexFile dex = ((DexBackedClassDef) classDef).dexFile;
-                                                if (!checkDexPool(dex, query, matchCase)) {
-                                                    updateProgress(processedCount.incrementAndGet(), finalTotal);
-                                                    return;
-                                                }
+                                        // The gate (poolPrefilterEnabled) is computed once in the constructor; the per-class
+                                        // check is now an O(1) fingerprint bit test instead of a full pool-text scan.
+                                        if (poolPrefilterEnabled && classDef instanceof DexBackedClassDef) {
+                                            DexBackedDexFile dex = ((DexBackedClassDef) classDef).dexFile;
+                                            if (!checkDexPool(dex, query, matchCase)) {
+                                                updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                                return;
                                             }
                                         }
                                         smali = generateSmali(classDef);
                                     }
 
-                                    if (!isRegex && !query.contains("\n")) {
+                                    if (!isRegex && !queryHasNewline) {
                                         if (!checkMatch(smali)) {
                                             updateProgress(processedCount.incrementAndGet(), finalTotal);
                                             return;
                                         }
                                     }
 
-                                    if (isRegex || query.contains("\n")) {
+                                    if (isRegex || queryHasNewline) {
                                             Pattern pattern = isRegex ? compiledPattern : Pattern.compile(Pattern.quote(query), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                                             Matcher matcher = pattern.matcher(smali);
                                             while (matcher.find()) {
@@ -2193,24 +2228,40 @@ public class SearchFragment extends Fragment {
 
         private void updateProgress(int processed, int total) {
             long now = System.currentTimeMillis();
-            if (now - lastProgressUpdateTime > 100 || processed == total || isStopped) {
-                lastProgressUpdateTime = now;
-                mainHandler.post(() -> {
-                    if (progressDialog != null && progressDialog.isShowing()) {
-                        progressDialog.setMax(total);
-                        progressDialog.setProgress(processed);
-                        progressDialog.setMessage("Found: " + foundCount.get());
-                    }
-                });
+            long last = lastProgressUpdateTime.get();
+            // The final update (processed == total) is always delivered so the dialog reaches 100%.
+            boolean isFinalUpdate = processed >= total;
+            if (!isFinalUpdate) {
+                // Rate limit: at most one UI post per interval, and only one worker wins the window.
+                // Previously `isStopped` forced a post for every remaining class, flooding the main thread.
+                if (now - last <= PROGRESS_UPDATE_INTERVAL_MS) return;
+                if (!lastProgressUpdateTime.compareAndSet(last, now)) return;
+            } else {
+                lastProgressUpdateTime.set(now);
             }
+            mainHandler.post(() -> {
+                if (progressDialog != null && progressDialog.isShowing()) {
+                    progressDialog.setMax(total);
+                    progressDialog.setProgress(processed);
+                    progressDialog.setMessage("Found: " + foundCount.get());
+                }
+            });
         }
 
         private boolean checkMatchInRange(String text, int start, int end) {
             if (isRegex) return compiledPattern != null && compiledPattern.matcher(text.substring(start, end)).find();
             boolean ignoreCase = !matchCase;
-            if (exactlyMatch) return (end - start == query.length()) && text.regionMatches(ignoreCase, start, query, 0, query.length());
-            for (int i = start; i <= end - query.length(); i++)
-                if (text.regionMatches(ignoreCase, i, query, 0, query.length())) return true;
+            int len = query.length();
+            int lastStart = end - len;
+            if (lastStart < start) return false; // range shorter than the query: no match possible
+            if (exactlyMatch) return (lastStart == start) && text.regionMatches(ignoreCase, start, query, 0, len);
+            if (!ignoreCase) {
+                // Fast path: String.indexOf is intrinsified, regionMatches(ignoreCase) is not.
+                int at = text.indexOf(query, start);
+                return at >= 0 && at <= lastStart;
+            }
+            for (int i = start; i <= lastStart; i++)
+                if (text.regionMatches(ignoreCase, i, query, 0, len)) return true;
             return false;
         }
 
@@ -2238,8 +2289,112 @@ public class SearchFragment extends Fragment {
             Boolean cached = matchCache.get(key);
             if (cached != null) return cached;
 
-            char[] text = POOL_TEXT_CACHE.computeIfAbsent(dex, k -> {
-                List<String> pool = k.getStringSection();
+            // Step 1 (cheap): fingerprint the dex string pool once and test |query| bits.
+            // A clear bit means the query provably cannot occur inside the pool text, so the
+            // class can be skipped without ever materialising or scanning the pool blob.
+            boolean found = maybeInDexPool(dex, query, matchCase);
+
+            // Step 2 (exact): only when the filter says "maybe" do we build the concatenated
+            // pool text (lazily, once per dex) and verify exactly.
+            if (found) {
+                char[] text = POOL_TEXT_CACHE.computeIfAbsent(dex, DexPoolFingerprint::buildPoolText);
+                found = regionContains(text, query, matchCase);
+            }
+            matchCache.put(key, found);
+            return found;
+        }
+
+        private static boolean maybeInDexPool(DexBackedDexFile dex, String query, boolean matchCase) {
+            DexPoolFingerprint fp = POOL_FILTER_CACHE.computeIfAbsent(dex, DexPoolFingerprint::new);
+            return fp.maybeContains(query, matchCase);
+        }
+
+        /**
+         * A compact, conservative fingerprint of a DEX string pool.
+         * <p>
+         * For every string in the pool it records the adjacent character pairs (bigrams) that occur
+         * inside it. A query can only be a substring of the concatenated pool text if all of its
+         * bigrams occur inside some pooled string, so a missing bigram proves the query is absent.
+         * <p>
+         * This may produce false positives (never false negatives); those are resolved by the exact
+         * {@link #regionContains(char[], String, boolean)} verification.
+         * <p>
+         * Memory is O(pool size) bits (~8-32 KB for a typical APK) instead of the multi-megabyte
+         * {@code char[]} blob built by the old implementation, and building it is a single linear
+         * pass over the pool with no intermediate StringBuilder/String/char[] copies.
+         * <p>
+         * Case-insensitivity is handled safely by storing, for each bigram, the hash of its
+         * lowercased and uppercased forms as well, and accepting a query bigram if any of those
+         * forms is present. That is a superset of every comparison
+         * {@link #regionMatchesAt(char[], int, String, boolean)} can accept, so the filter stays
+         * conservative. A case-sensitive query only tests the exact form.
+         */
+        private static final class DexPoolFingerprint {
+            private final BitSet bits;
+            private final int mask;
+
+            DexPoolFingerprint(DexBackedDexFile dex) {
+                List<String> pool = dex.getStringSection();
+                int count = pool.size();
+
+                // Size the filter so even a string-heavy dex keeps a low collision rate,
+                // but never exceed 2^21 bits (256 KB) per dex.
+                long target = Math.min(1L << 21, Math.max(1L << 16, (long) count * 64L));
+                int bitsCount = 1 << 16;
+                while (bitsCount < target) bitsCount <<= 1;
+
+                BitSet set = new BitSet(bitsCount);
+                int m = bitsCount - 1;
+
+                for (int i = 0; i < count; i++) {
+                    String s = pool.get(i);
+                    if (s == null) continue;
+                    int len = s.length();
+                    for (int j = 0; j + 1 < len; j++) {
+                        char a = s.charAt(j), b = s.charAt(j + 1);
+                        set.set(hashPair(a, b) & m);
+                        char la = Character.toLowerCase(a), lb = Character.toLowerCase(b);
+                        if (la != a || lb != b) set.set(hashPair(la, lb) & m);
+                        char ua = Character.toUpperCase(a), ub = Character.toUpperCase(b);
+                        if (ua != a || ub != b) set.set(hashPair(ua, ub) & m);
+                    }
+                }
+                this.bits = set;
+                this.mask = m;
+            }
+
+            /**
+             * @return false only when the query is provably absent from this dex's string pool.
+             */
+            boolean maybeContains(String query, boolean matchCase) {
+                int len = query.length();
+                if (len < 2) return true; // a single char carries no bigram information
+                // A query containing '\n' can match across the '\n' separators of the concatenated
+                // pool text, which the per-string fingerprint cannot see. Fall back to the exact
+                // scan for those (they were also exact-scanned before, so behaviour is unchanged).
+                if (query.indexOf('\n') >= 0) return true;
+                for (int j = 0; j + 1 < len; j++) {
+                    char a = query.charAt(j), b = query.charAt(j + 1);
+                    if (bits.get(hashPair(a, b) & mask)) continue;
+                    if (matchCase) return false;
+                    if (bits.get(hashPair(Character.toLowerCase(a), Character.toLowerCase(b)) & mask)) continue;
+                    if (bits.get(hashPair(Character.toUpperCase(a), Character.toUpperCase(b)) & mask)) continue;
+                    return false;
+                }
+                return true;
+            }
+
+            /** FNV-1a over a character pair, with a final avalanche mix for bit distribution. */
+            private static int hashPair(char a, char b) {
+                int h = 0x811C9DC5;
+                h = (h ^ a) * 0x01000193;
+                h = (h ^ b) * 0x01000193;
+                return h ^ (h >>> 15);
+            }
+
+            /** Original pool-text builder, now only reached on the exact-verification path. */
+            static char[] buildPoolText(DexBackedDexFile dex) {
+                List<String> pool = dex.getStringSection();
                 int count = pool.size();
                 StringBuilder sb = new StringBuilder(Math.max(1024, count * 32));
                 for (int i = 0; i < count; i++) {
@@ -2249,11 +2404,7 @@ public class SearchFragment extends Fragment {
                     }
                 }
                 return sb.toString().toCharArray();
-            });
-
-            boolean found = regionContains(text, query, matchCase);
-            matchCache.put(key, found);
-            return found;
+            }
         }
 
         private static boolean regionContains(char[] text, String query, boolean matchCase) {
