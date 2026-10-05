@@ -657,33 +657,43 @@ public class HexEditorActivity extends BaseActivity {
 
 
     private void saveChanges() {
+        saveChanges(null);
+    }
+
+    private void saveChanges(Runnable onSaved) {
         if (mods.isEmpty()) {
-            Extensions.showMessage(this, getString(R.string.hex_nothing_to_save));
+            if (onSaved != null) onSaved.run();
             return;
         }
         if (readOnly) {
-            Extensions.showMessage(this, getString(R.string.hex_read_only));
+            if (onSaved == null) Extensions.showMessage(this, getString(R.string.hex_read_only));
+            else finish();
             return;
         }
         if (RootStaging.needsWriteConfirm(rootOriginalPath)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.editor_write_system))
                     .setMessage(getString(R.string.editor_write_system_msg, rootOriginalPath))
-                    .setPositiveButton(android.R.string.ok, (d, w) -> saveChangesRoot())
+                    .setPositiveButton(android.R.string.ok, (d, w) -> saveChangesRoot(onSaved))
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
             return;
         }
-        saveChangesRoot();
+        saveChangesRoot(onSaved);
     }
 
-    private void saveChangesRoot() {
+    private void saveChangesRoot(Runnable onSaved) {
         backupForSave();
         try (RandomAccessFile w = new RandomAccessFile(file, "rw")) {
             for (Map.Entry<Integer, Integer> entry : mods.entrySet()) {
                 w.seek(entry.getKey());
                 w.writeByte(entry.getValue());
             }
+            mods.clear();
+            undoStack.clear();
+            redoStack.clear();
+            adapter.notifyDataSetChanged();
+            updateStatus();
             Extensions.showMessage(this, R.string.saved);
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
@@ -700,6 +710,7 @@ public class HexEditorActivity extends BaseActivity {
                 }
             }).start();
         }
+        if (onSaved != null) onSaved.run();
     }
 
     private void backupForSave() {
@@ -765,8 +776,20 @@ public class HexEditorActivity extends BaseActivity {
                 .setTitle(getString(R.string.hex_unsaved))
                 .setMessage(getString(R.string.hex_discard_unsaved))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.delete, (d, w) -> finish())
+                .setPositiveButton(R.string.save, (d, w) -> saveChanges(this::finish))
+                .setNeutralButton(R.string.delete, (d, w) -> finish())
                 .show();
+    }
+
+    /** Shared by the toolbar up-arrow and the system back gesture. */
+    private void handleBack() {
+        onBackPressed();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        handleBack();
+        return true;
     }
 
     @Override
