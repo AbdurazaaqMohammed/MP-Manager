@@ -52,12 +52,6 @@
         android:text="@string/xlate_batch" />
 
     <com.google.android.material.checkbox.MaterialCheckBox
-        android:id="@+id/xlate_only_missing_check"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/xlate_only_missing" />
-
-    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/xlate_skip_formatted_check"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
