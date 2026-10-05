@@ -1,0 +1,31 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'io.github.abdurazaaqmohammed.apkkit'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 19
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.zxing:core:3.5.3'
+    implementation 'androidx.viewpager2:viewpager2:1.0.0'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+    implementation 'com.google.guava:guava:33.6.0-android'
+    implementation 'com.beust:jcommander:1.82'
+    implementation 'net.lingala.zip4j:zip4j:2.11.6'
+    implementation 'commons-io:commons-io:2.22.0'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.85.2'
+    implementation files('../app/libs/antlr.jar')
+    implementation files('../app/libs/JCommand.jar')
+}

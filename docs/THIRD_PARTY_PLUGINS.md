@@ -102,9 +102,17 @@ A full working example with all five lives in `samples/plugin-sample/`.
 
 ### APK dialog (`ACTION_APK`)
 
-- Fire-and-forget. In: data URI (read grant) + `EXTRA_APK_NAME`.
-  Return `RESULT_OK` to acknowledge. Your entry is appended after the
-  built-ins in the More list.
+- Host starts your activity for result. In: data URI (a staged copy of the
+  APK in the host cache, read+write grant) + `EXTRA_APK_NAME`.
+- Heavy lifting belongs to shared code that lives **once**, in the host:
+  `com.reandroid`, smali, apksig, etc. live in the `:apkkit` module
+  (implementation for the host, compileOnly for plugins). At runtime a
+  plugin DexClassLoads its kill/transform classes with the **host APK's
+  dexloader as parent**, so references to the universal classes resolve
+  from the host while plugin-only classes (your kill-sig helpers,
+  `com.antik`, staged assets) resolve from the plugin's own dex/assets.
+  See `samples/plugin-kill-sig` for a full example.
+- Your entry is appended after the built-ins in the More list.
 
 ## 5. Conventions (required)
 
