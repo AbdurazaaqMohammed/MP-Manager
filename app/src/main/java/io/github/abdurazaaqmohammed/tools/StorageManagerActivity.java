@@ -235,15 +235,9 @@ public class StorageManagerActivity extends BaseActivity {
         LinearLayout autoRow = new LinearLayout(this);
         autoRow.setOrientation(LinearLayout.HORIZONTAL);
         box.addView(autoRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        MaterialButton autoSel = new MaterialButton(this);
-        autoSel.setText(getString(R.string.storage_auto_selected));
-        autoRow.addView(autoSel, sp);
-        MaterialButton autoAll = new MaterialButton(this);
-        autoAll.setText(getString(R.string.storage_auto_all));
-        autoRow.addView(autoAll, sp);
-        MaterialButton rootCheck = new MaterialButton(this);
-        rootCheck.setText(getString(R.string.storage_root_check));
-        autoRow.addView(rootCheck, sp);
+        MaterialButton autoClear = new MaterialButton(this);
+        autoClear.setText(getString(R.string.storage_auto_clear));
+        autoRow.addView(autoClear, sp);
         TextView autoHint = new TextView(this);
         autoHint.setText(getString(R.string.storage_no_root_hint));
         autoHint.setTextSize(12);
@@ -273,65 +267,17 @@ public class StorageManagerActivity extends BaseActivity {
         loadCache.setOnClickListener(v -> loadCaches());
         clearSel.setOnClickListener(v -> clearCaches(true));
         clearAll.setOnClickListener(v -> clearCaches(false));
-        autoSel.setOnClickListener(v -> autoClearCaches(true));
-        autoAll.setOnClickListener(v -> autoClearCaches(false));
-        rootCheck.setOnClickListener(v -> showRootCheck(rootCheck));
-        refreshVolumes();
-    }
-
-    private void showRootCheck(MaterialButton button) {
-        button.setEnabled(false);
-        Extensions.showMessage(this, getString(R.string.storage_probing_root));
-        new Thread(() -> {
-            StringBuilder out = new StringBuilder();
-            try {
-                RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
-                out.append("root available: ").append(rm.isRootAvailable()).append("\n");
-                out.append("working mode: ").append(rm.getWorkingMode()).append("\n");
-                out.append("file ops: ").append(rm.isRootFileOpsEnabled()).append("\n");
-                RootManager.ShellResult id = rm.execute("id 2>&1", 10);
-                out.append("id: ").append(id.isSuccess() ? id.output().trim() : "fail " + safeErr(id)).append("\n");
-                RootManager.ShellResult ctx = rm.execute("cat /proc/self/attr/current 2>&1", 10);
-                out.append("selinux: ").append(ctx.isSuccess() ? ctx.output().trim() : "fail " + safeErr(ctx)).append("\n");
-                RootManager.ShellResult plain = rm.execute("ls -1A -- /data/data 2>/dev/null | wc -l", 15);
-                out.append("plain count: ").append(plain.isSuccess() ? plain.output().trim() : "fail " + safeErr(plain)).append("\n");
-                RootManager.ShellResult named = rm.execute("ls -ld /data/data/com.android.settings 2>&1", 15);
-                out.append("named probe: ").append(named.isSuccess() ? named.output().trim() : "fail " + safeErr(named)).append("\n");
-                RootManager.ShellResult ns = rm.execute("nsenter --help >/dev/null 2>&1 && echo yes || echo no", 10);
-                out.append("nsenter: ").append(ns.isSuccess() ? ns.output().trim() : "fail").append("\n");
-                RootManager.ShellResult global = rm.executeGlobalNs("ls -1A -- /data/data 2>/dev/null | wc -l", 15);
-                out.append("global-ns count: ").append(global.isSuccess() ? global.output().trim() : "fail " + safeErr(global)).append("\n");
-                out.append("prefers global ns: ").append(rm.prefersGlobalNs()).append("\n");
-            } catch (Exception e) {
-                out.append("error: ").append(e.getMessage()).append("\n");
+        autoClear.setOnClickListener(v -> {
+            boolean anyChecked = false;
+            for (CacheRow r : cacheRows) {
+                if (r.checked) {
+                    anyChecked = true;
+                    break;
+                }
             }
-            String text = out.toString();
-            handler.post(() -> {
-                button.setEnabled(true);
-                ScrollView scroll = new ScrollView(StorageManagerActivity.this);
-                TextView body = new TextView(StorageManagerActivity.this);
-                body.setText(text.trim());
-                body.setTypeface(Typeface.MONOSPACE);
-                body.setTextIsSelectable(true);
-                int p = dp(16);
-                body.setPadding(p, p, p, p);
-                scroll.addView(body);
-                new MaterialAlertDialogBuilder(StorageManagerActivity.this)
-                        .setTitle(getString(R.string.storage_root_check))
-                        .setView(scroll)
-                        .setPositiveButton(getString(android.R.string.copy), (d, w) -> {
-                            try {
-                                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                                cm.setPrimaryClip(ClipData.newPlainText("rootcheck", body.getText().toString()));
-                                Extensions.showMessage(StorageManagerActivity.this, getString(R.string.copied));
-                            } catch (Exception ignored) {
-                            }
-                        })
-                        .setNeutralButton(getString(R.string.storage_test_rw), (d, w) -> runRootRoundTrip(body))
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show();
-            });
-        }).start();
+            autoClearCaches(anyChecked);
+        });
+        refreshVolumes();
     }
 
     private String safeErr(RootManager.ShellResult r) {
@@ -1126,8 +1072,24 @@ public class StorageManagerActivity extends BaseActivity {
             try {
                 long size = Long.parseLong(t.substring(0, tab).trim()) * factor;
                 String path = t.substring(tab).trim();
-                String[] parts = path.split("/");
-                if (parts.length >= 4) out.put(parts[3], size);
+                String pkg = null;
+                if (path.startsWith("/data/data/")) {
+                    String rest = path.substring("/data/data/".length());
+                    int slash = rest.indexOf('/');
+                    if (slash > 0) pkg = rest.substring(0, slash);
+                } else if (path.startsWith("/data/user_de/")) {
+                    String rest = path.substring("/data/user_de/".length());
+                    int slash = rest.indexOf('/');
+                    if (slash > 0) {
+                        String rest2 = rest.substring(slash + 1);
+                        int slash2 = rest2.indexOf('/');
+                        if (slash2 > 0) pkg = rest2.substring(0, slash2);
+                    }
+                }
+                if (pkg != null && !pkg.isEmpty()) {
+                    Long prev = out.get(pkg);
+                    out.put(pkg, (prev == null ? 0L : prev) + size);
+                }
             } catch (Exception ignored) {
             }
         }
@@ -1166,13 +1128,10 @@ public class StorageManagerActivity extends BaseActivity {
                                     "/data/data/" + pkg + "/code_cache",
                                     "/data/media/0/Android/data/" + pkg + "/cache"
                             };
-                            StringBuilder script = new StringBuilder("for d in");
+                            StringBuilder script = new StringBuilder();
                             for (String dir : dirs) {
-                                script.append(" ").append(RootManager.escapeShellArg(dir));
+                                script.append("rm -rf ").append(RootManager.escapeShellArg(dir)).append("; ");
                             }
-                            script.append("; do [ -d \"$d\" ] || continue; ");
-                            script.append("find \"$d\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null || exit 3; ");
-                            script.append("done; ");
                             script.append("echo ALLDONE");
                             RootManager.ShellResult r = rm.executeFs(script.toString(), 30);
                             boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("ALLDONE");
