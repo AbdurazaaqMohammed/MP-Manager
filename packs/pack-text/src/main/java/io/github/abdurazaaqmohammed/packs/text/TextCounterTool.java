@@ -37,7 +37,14 @@ public class TextCounterTool extends BaseToolPlugin {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                output.setText(TextStats.summary(s == null ? "" : s.toString()));
+                String t = s == null ? "" : s.toString();
+                int words = TextStats.words(t);
+                int mins = words / 200;
+                int secs = (words % 200) * 60 / 200;
+                int noSpaces = t.replace(" ", "").replace("\n", "").replace("\t", "").length();
+                output.setText(TextStats.summary(t)
+                        + "\nChars (no spaces): " + noSpaces
+                        + "\nReading time: ~" + (mins > 0 ? mins + "m " : "") + secs + "s");
             }
             public void afterTextChanged(Editable s) {
             }

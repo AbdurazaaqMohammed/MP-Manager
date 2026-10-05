@@ -18,23 +18,11 @@ public class TextPack implements ToolPack {
 
     @Override
     public int version() {
-        return 3;
+        return 4;
     }
 
     @Override
     public List<ToolPlugin> tools() {
-        return Arrays.<ToolPlugin>asList(
-                new TextCounterTool(),
-                new HashTool(),
-                new Base64Tool(),
-                new UrlCodecTool(),
-                new BinaryTool(),
-                new CaesarTool(),
-                new CaseConvTool(),
-                new MorseTool(),
-                new JsonTool(),
-                new LoremTool(),
-                new RegexTool(),
-                new ColorConvTool());
+        return java.util.Collections.<ToolPlugin>singletonList(new TextSuiteTool());
     }
 }
