@@ -664,6 +664,28 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
     }
 
+    private Consumer<ActivityResult> pendingExternalApk;
+    private final ActivityResultLauncher<Intent> externalApkLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        Consumer<ActivityResult> cb = pendingExternalApk;
+        pendingExternalApk = null;
+        if (cb != null) {
+            try {
+                cb.accept(result);
+            } catch (Exception ignored) {
+            }
+        }
+    });
+
+    /** Launches an external APK-plugin activity; result goes to cb (may be null). */
+    public void launchExternalApk(Intent intent, Consumer<ActivityResult> cb) {
+        try {
+            pendingExternalApk = cb;
+            externalApkLauncher.launch(intent);
+        } catch (Exception ignored) {
+            pendingExternalApk = null;
+        }
+    }
+
     /** Launches an external setting config activity; result goes to cb (may be null). */
     public void launchExternalSetting(Intent intent, Consumer<ActivityResult> cb) {
         try {
@@ -686,25 +708,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }});
 
     private void setupSystemBars() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.sidebar_drawer), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.bookmarks_drawer), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(systemBars.left, v.getPaddingTop(), systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        // Global insets are applied in BaseActivity.
 
-        boolean lightBars = theme == R.style.Theme_MyApp_Light;
+
+        boolean lightBars;
+        String pluginId = ThemeRegistry.getCurrentId(this);
+        if (pluginId == null || BuiltInThemes.SYSTEM_DEFAULT_ID.equals(pluginId)) {
+            lightBars = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                    == android.content.res.Configuration.UI_MODE_NIGHT_NO;
+        } else {
+            lightBars = BuiltInThemes.LIGHT_ID.equals(pluginId) || theme == R.style.Theme_MyApp_Light;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            int surfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
+            int surfaceColor = BuiltInThemes.BLACK_ID.equals(pluginId) ? Color.BLACK : MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT);
             getWindow().setStatusBarColor(surfaceColor);
             getWindow().setNavigationBarColor(surfaceColor);
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
