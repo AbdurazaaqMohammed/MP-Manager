@@ -249,11 +249,11 @@ public class EntryDialogs {
                                 try {
                                     AccessManager.delete(context, file.getAbsolutePath(), true);
                                 } catch (Exception e) {
-                                    if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                    if (file.isDirectory()) Util.deleteDir(file);
                                     else file.delete();
                                 }
                             } else {
-                                if (file.isDirectory()) Util.deleteDir(file, pm, total);
+                                if (file.isDirectory()) Util.deleteDir(file);
                                 else file.delete();
                             }
                             context.handler.post(() -> {

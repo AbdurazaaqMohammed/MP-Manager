@@ -5,6 +5,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
@@ -23,6 +24,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
 import android.text.InputType;
@@ -41,6 +43,8 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -164,7 +168,6 @@ public class ApkInfoDialogs {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
 
         View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_decompile_options, null);
-
         MaterialAutoCompleteTextView frameworkVersion = dialogView.findViewById(R.id.frameworkVersion);
         MaterialAutoCompleteTextView decodeTypes = dialogView.findViewById(R.id.decodeTypes);
         MaterialAutoCompleteTextView dexLibrary = dialogView.findViewById(R.id.dexLibrary);
@@ -692,8 +695,8 @@ public class ApkInfoDialogs {
                     else if (which1 == 11) manifestEditor.showManifestTogglesDialog(file);
                     else if (which1 == 12) manifestEditor.showPermissionsDialog(file);
                     else {
-                        // Third-party APK action: indices 0-13 are built-ins above.
-                        int pluginIndex = which1 - 14;
+                        // Third-party APK action: indices 0-12 are built-ins above.
+                        int pluginIndex = which1 - 13;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
                             ApkMoreAction ext = pluginMore.get(pluginIndex);
                             if (ext != null) {
@@ -703,41 +706,160 @@ public class ApkInfoDialogs {
                                 }
                             }
                         } else {
-                            int extIndex = which1 - 14 - pluginMore.size();
+                            int extIndex = which1 - 13 - pluginMore.size();
                             if (extIndex >= 0 && extIndex < externalApk.size()) {
                                 ExternalActions.Entry found =
                                         externalApk.get(extIndex);
-                                if (found != null) {
-                                    try {
-                                        Uri apkUri = FileProvider.getUriForFile(
-                                                context, context.getPackageName() + ".provider", file);
-                                        Intent extIntent = PluginHost.explicitIntent(
-                                                found.plugin, PluginContracts.ACTION_APK);
-                                        extIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                                        extIntent.putExtra(PluginContracts.EXTRA_PLUGIN_ID,
-                                                found.plugin.pluginId);
-                                        extIntent.putExtra(PluginContracts.EXTRA_APK_NAME,
-                                                fileName);
-                                        extIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                    if (found != null) {
                                         try {
-                                            context.grantUriPermission(found.plugin.packageName, apkUri,
-                                                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                        } catch (Exception ignored) {
-                                        }
-                                        PluginTrust.ensureTrusted(
-                                                context, found.plugin, () -> {
-                                                    try {
-                                                        context.startActivity(extIntent);
-                                                    } catch (Exception ignored) {
-                                                    }
-                                                });
-                                    } catch (Exception e2) {
-                                        try {
-                                            Extensions.showMessage(context, "Cannot share this APK with the plugin");
-                                        } catch (Exception ignored) {
+                                            File stageDir = new File(context.getCacheDir(), "apk_plugin_stage");
+                                            if (!stageDir.exists()) stageDir.mkdirs();
+                                            File staged = new File(stageDir, file.getName());
+                                            try (InputStream in = new FileInputStream(file);
+                                                 FileOutputStream out = new FileOutputStream(staged)) {
+                                                byte[] buf = new byte[65536];
+                                                int n;
+                                                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                                            }
+                                            Uri apkUri = FileProvider.getUriForFile(
+                                                    context, context.getPackageName() + ".provider", staged);
+                                            Intent extIntent = PluginHost.explicitIntent(
+                                                    found.plugin, PluginContracts.ACTION_APK);
+                                            extIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                                            extIntent.putExtra(PluginContracts.EXTRA_PLUGIN_ID,
+                                                    found.plugin.pluginId);
+                                            extIntent.putExtra(PluginContracts.EXTRA_APK_NAME,
+                                                    fileName);
+                                            extIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                            try {
+                                                context.grantUriPermission(found.plugin.packageName, apkUri,
+                                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                            } catch (Exception ignored) {
+                                            }
+                                            PluginTrust.ensureTrusted(
+                                                    context, found.plugin, () -> {
+                                                        java.util.List<String> choiceLabels = new java.util.ArrayList<>();
+                                                        java.util.List<String> choiceIds = new java.util.ArrayList<>();
+                                                        String choicesMeta = null;
+                                                        String autoSignMeta = null;
+                                                        if (found.plugin.meta != null) {
+                                                            Bundle meta = found.plugin.meta;
+                                                            choicesMeta = meta.getString(PluginContracts.META_APK_CHOICES);
+                                                            autoSignMeta = meta.getString(PluginContracts.META_APK_AUTO_SIGN);
+                                                        }
+                                                        if (choicesMeta != null && !choicesMeta.isEmpty()) {
+                                                            for (String pair : choicesMeta.split(",")) {
+                                                                String[] parts = pair.split("\\|");
+                                                                if (parts.length == 2) {
+                                                                    choiceLabels.add(parts[0]);
+                                                                    choiceIds.add(parts[1]);
+                                                                } else if (parts.length == 1 && !parts[0].isEmpty()) {
+                                                                    choiceLabels.add(parts[0]);
+                                                                    choiceIds.add(parts[0]);
+                                                                }
+                                                            }
+                                                        }
+                                                        final boolean offerSign = autoSignMeta != null && (autoSignMeta.equals("1") || autoSignMeta.equalsIgnoreCase("true"));
+                                                        final int[] selectedChoice = {0};
+                                                        final boolean[] selectedSign = {autoSignMeta != null && (autoSignMeta.equals("1") || autoSignMeta.equalsIgnoreCase("true"))};
+                                                        final java.util.function.Consumer<androidx.activity.result.ActivityResult> runPlugin = result -> {
+                                                            try {
+                                                                if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                                                                    Intent data = result.getData();
+                                                                    String outName = data == null ? null : data.getStringExtra(
+                                                                            PluginContracts.EXTRA_OUTPUT_NAME);
+                                                                    if (outName == null || outName.isEmpty()
+                                                                            || outName.contains("/") || outName.contains("\\")) {
+                                                                        int dot = fileName.lastIndexOf('.');
+                                                                        outName = (dot > 0 ? fileName.substring(0, dot) : fileName) + "_killed.apk";
+                                                                    }
+                                                                    File outFile = new File(file.getParentFile(), outName);
+                                                                    int i = 1;
+                                                                    while (outFile.exists()) {
+                                                                        int d = outName.lastIndexOf('.');
+                                                                        outFile = new File(file.getParentFile(),
+                                                                                (d > 0 ? outName.substring(0, d) : outName) + "_" + (++i) + (d > 0 ? outName.substring(d) : ""));
+                                                                    }
+                                                                    try (InputStream in = new FileInputStream(staged);
+                                                                         FileOutputStream out = new FileOutputStream(outFile)) {
+                                                                        byte[] buf = new byte[65536];
+                                                                        int n;
+                                                                        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                                                                    }
+                                                                    String msg = data == null ? null : data.getStringExtra(
+                                                                            PluginContracts.EXTRA_MESSAGE);
+                                                                    if (msg == null || msg.isEmpty()) msg = "Done";
+                                                                    if (selectedSign[0]) {
+                                                                        final String m = msg;
+                                                                        File finalOutFile = outFile;
+                                                                        SignWrapper.requireAuth(context, sw -> {
+                                                                            try {
+                                                                                sw.signApk(finalOutFile);
+                                                                                Extensions.showMessage(context, m);
+                                                                            } catch (Exception e) {
+                                                                                new ErrorUtil(context).showError(e);
+                                                                            } finally {
+                                                                                context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                                                            }
+                                                                        });
+                                                                    } else {
+                                                                        Extensions.showMessage(context, msg);
+                                                                        context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                                                    }
+                                                                }
+                                                            } catch (Exception ignored) {
+                                                            } finally {
+                                                                try { staged.delete(); } catch (Exception ignored) {
+                                                                }
+                                                            }
+                                                        };
+                                                        if (choiceLabels.isEmpty() && !offerSign) {
+                                                            context.launchExternalApk(extIntent, runPlugin);
+                                                        } else {
+                                                            LinearLayout box = new LinearLayout(context);
+                                                            box.setOrientation(LinearLayout.VERTICAL);
+                                                            int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                                            box.setPadding(pad, pad, pad, pad);
+                                                            RadioGroup group = new RadioGroup(context);
+                                                            for (int i = 0; i < choiceLabels.size(); i++) {
+                                                                RadioButton rb = new RadioButton(context);
+                                                                rb.setText(choiceLabels.get(i));
+                                                                rb.setId(i);
+                                                                group.addView(rb);
+                                                            }
+                                                            if (!choiceLabels.isEmpty()) {
+                                                                ((RadioButton) group.getChildAt(0)).setChecked(true);
+                                                                final int[] sel = selectedChoice;
+                                                                group.setOnCheckedChangeListener((g, id) -> sel[0] = id);
+                                                            }
+                                                            box.addView(group);
+                                                            CheckBox signing = new CheckBox(context);
+                                                            signing.setText(R.string.auto_sign);
+                                                            signing.setChecked(selectedSign[0]);
+                                                            signing.setOnCheckedChangeListener((bv, v) -> selectedSign[0] = v);
+                                                            box.addView(signing);
+                                                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                                                                    .setTitle(found.plugin.label != null ? String.valueOf(found.plugin.label) : found.title)
+                                                                    .setView(box)
+                                                                    .setNegativeButton(android.R.string.cancel, null)
+                                                                    .setPositiveButton(android.R.string.ok, (d, w) -> {
+                                                                        int ch = selectedChoice[0];
+                                                                        if (ch >= 0 && ch < choiceIds.size()) extIntent.putExtra("method", choiceIds.get(ch));
+                                                                        extIntent.putExtra("sign", selectedSign[0]);
+                                                                        context.launchExternalApk(extIntent, runPlugin);
+                                                                    })
+                                                                    .show();
+                                                        }
+                                                    });
+                                        } catch (Exception e2) {
+                                            try {
+                                                Extensions.showMessage(context, "Cannot share this APK with the plugin");
+                                            } catch (Exception ignored) {
+                                            }
                                         }
                                     }
-                                }
                             }
                         }
                     }
