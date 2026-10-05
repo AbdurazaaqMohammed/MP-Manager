@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -27,17 +26,6 @@
             android:singleLine="true" />
 
     </com.google.android.material.textfield.TextInputLayout>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="18dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="18dp"
-        android:paddingBottom="4dp"
-        android:text="Tool packs"
-        android:textAppearance="?attr/textAppearanceTitleSmall"
-        android:textColor="?attr/colorPrimary" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tools_grid"
