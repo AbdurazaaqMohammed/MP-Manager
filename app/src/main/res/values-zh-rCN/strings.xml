@@ -1841,8 +1841,8 @@ Layout Inspector
     <string name="xlate_search_xml">过滤 XML 条目</string>
     <string name="xlate_search_strings">过滤键名或原文</string>
     <string name="xlate_xml_count">%1$d 个 XML 条目</string>
-    <string name="xlate_xml_entry_axml">二进制 XML，打开时解码 - %2$s</string>
-    <string name="xlate_xml_entry_text">纯文本 XML - %2$s</string>
+    <string name="xlate_xml_entry_axml">二进制 XML，打开时解码 - %1$s</string>
+    <string name="xlate_xml_entry_text">纯文本 XML - %1$s</string>
     <string name="xlate_decoding">正在解码 XML...</string>
     <string name="xlate_view_decoded">查看解码结果</string>
     <string name="xlate_open_editor">在编辑器中打开</string>

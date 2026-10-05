@@ -1844,8 +1844,8 @@ Deleted %2$s · %3$s</string>
     <string name="xlate_search_xml">Filter XML entries</string>
     <string name="xlate_search_strings">Filter keys or source text</string>
     <string name="xlate_xml_count">%1$d XML entries</string>
-    <string name="xlate_xml_entry_axml">Binary XML, decoded on open - %2$s</string>
-    <string name="xlate_xml_entry_text">Plain XML - %2$s</string>
+    <string name="xlate_xml_entry_axml">Binary XML, decoded on open - %1$s</string>
+    <string name="xlate_xml_entry_text">Plain XML - %1$s</string>
     <string name="xlate_decoding">Decoding XML...</string>
     <string name="xlate_view_decoded">View decoded</string>
     <string name="xlate_open_editor">Open in editor</string>

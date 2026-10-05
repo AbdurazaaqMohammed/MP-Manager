@@ -1371,8 +1371,8 @@
     <string name="xlate_search_xml">Фильтр записей XML</string>
     <string name="xlate_search_strings">Фильтр по имени или тексту</string>
     <string name="xlate_xml_count">Записей XML: %1$d</string>
-    <string name="xlate_xml_entry_axml">Двоичный XML, декодируется при открытии - %2$s</string>
-    <string name="xlate_xml_entry_text">Обычный XML - %2$s</string>
+    <string name="xlate_xml_entry_axml">Двоичный XML, декодируется при открытии - %1$s</string>
+    <string name="xlate_xml_entry_text">Обычный XML - %1$s</string>
     <string name="xlate_decoding">Декодирование XML...</string>
     <string name="xlate_view_decoded">Показать декодированным</string>
     <string name="xlate_open_editor">Открыть в редакторе</string>
