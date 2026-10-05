@@ -77,7 +77,7 @@ public final class PackPrompts {
             action.setEnabled(false);
             Runnable doDownload = () -> startDownload(activity, pack, onInstalled, action);
             if (!pack.hasChecksum()) {
-                new AlertDialog.Builder(activity)
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
                         .setTitle(pack.title)
                         .setMessage("No checksum is published for this pack build. Install only if you trust the source. Continue?")
                         .setNegativeButton(R.string.cancel, (d, w) -> action.setEnabled(true))

@@ -56,7 +56,7 @@ public final class PluginTrust {
                         + " permissions. Allow it to integrate with MP-Manager?");
             }
             msg.append("\n\nCertificate (SHA-256):\n").append(fingerprint(digest));
-            new AlertDialog.Builder(activity)
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
                     .setTitle(title)
                     .setMessage(msg.toString())
                     .setNegativeButton(R.string.cancel, null)

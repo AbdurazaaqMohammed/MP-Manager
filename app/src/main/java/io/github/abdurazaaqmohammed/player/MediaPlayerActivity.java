@@ -615,7 +615,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         String[] items = {getString(R.string.keep_screen_on, (playerManager.isKeepScreenOn() ? "ON" : "OFF")),
                 getString(R.string.skip_duration_X, (playerManager.getSkipDuration() / 1000)),
                 getString(R.string.close_player)};
-        new AlertDialog.Builder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.player_settings)
                 .setItems(items, (d, which) -> {
                     switch (which) {
@@ -626,7 +626,7 @@ public class MediaPlayerActivity extends BaseActivity implements
                         case 1:
                             int[] durations = {5000, 10000, 15000, 30000};
                             String[] labels = {"5s", "10s", "15s", "30s"};
-                            new AlertDialog.Builder(this)
+                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                                     .setTitle(R.string.skip_duration)
                                     .setSingleChoiceItems(labels, -1, (d2, w) -> {
                                         if (w >= 0 && w < durations.length) {
