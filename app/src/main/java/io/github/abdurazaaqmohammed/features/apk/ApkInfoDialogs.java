@@ -1031,10 +1031,10 @@ public class ApkInfoDialogs {
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setWeightSum(2f);
-            addFunctionCell(row, labels[order[r]], order[r], owner, dispatch);
+            addFunctionCell(row, functionLabel(labels, order[r]), order[r], owner, dispatch);
             int right = leftCount + r;
             if (right < count) {
-                addFunctionCell(row, labels[order[right]], order[right], owner, dispatch);
+                addFunctionCell(row, functionLabel(labels, order[right]), order[right], owner, dispatch);
             } else {
                 View spacer = new View(context);
                 spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
@@ -1044,6 +1044,24 @@ public class ApkInfoDialogs {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
         return root;
+    }
+
+    /** Built-in codes are positions in {@code items}; MT-only codes carry their own string. */
+    private String functionLabel(String[] items, int code) {
+        if (code >= 0) return items[code];
+        switch (code) {
+            case ACT_RES_SHRINK: return context.rss.getString(R.string.res_shrink);
+            case ACT_DATA_REUSE: return context.rss.getString(R.string.data_reuse_multiplex);
+            case ACT_LOGGER: return context.rss.getString(R.string.inject_logger);
+            case ACT_FILE_PROVIDER: return context.rss.getString(R.string.inject_file_provider);
+            case ACT_XML_TRANSLATE: return context.rss.getString(R.string.xml_translation_mode);
+            case ACT_XML_BATCH: return context.rss.getString(R.string.xml_batch_replace);
+            case ACT_RES_OBFUSCATE: return context.rss.getString(R.string.res_obfuscate);
+            case ACT_DEX_DECRYPT: return context.rss.getString(R.string.dex_string_decrypt);
+            case ACT_DEX_OBFUSCATE: return context.rss.getString(R.string.dex_obfuscate_defense);
+            case ACT_DEX_RESPLIT: return context.rss.getString(R.string.dex_resplit);
+            default: return String.valueOf(code);
+        }
     }
 
     private void addFunctionCell(LinearLayout row, String label, final int code,
