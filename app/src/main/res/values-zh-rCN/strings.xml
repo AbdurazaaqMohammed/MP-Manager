@@ -248,6 +248,10 @@
     <string name="installed_version">已安装版本</string>
     <string name="not_installed">未安装</string>
     <string name="downgrade">降级</string>
+    <string name="permissions_loading">正在读取权限…</string>
+    <string name="permissions_need_root">修改这些权限需要 Root 权限</string>
+    <string name="tap_to_edit">点击编辑</string>
+    <string name="symbolic_rwx">rwx</string>
     <string name="permissions">权限</string>
     <string name="quick_edit">快速编辑</string>
     <string name="compare_apks">比较 APK</string>

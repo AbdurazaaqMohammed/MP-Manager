@@ -28,8 +28,9 @@ public class PermissionsEditorHelper {
     private CheckBox groupRead, groupWrite, groupExec;
     private CheckBox otherRead, otherWrite, otherExec;
     private CheckBox setUid, setGid, sticky;
-    private TextView symbolicPreview;
+    private EditText symbolicInput;
     private EditText numericInput;
+    private boolean syncing;
 
     public PermissionsEditorHelper(MainActivity context) {
         this.context = context;
@@ -99,13 +100,42 @@ public class PermissionsEditorHelper {
         specialRow.addView(sticky);
         root.addView(specialRow);
 
-        symbolicPreview = new TextView(context);
-        symbolicPreview.setText(getSymbolicString());
-        symbolicPreview.setTypeface(Typeface.MONOSPACE);
-        symbolicPreview.setTextSize(14);
-        symbolicPreview.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
-        symbolicPreview.setPadding(0, dp(8), 0, dp(4));
-        root.addView(symbolicPreview);
+        // rwx and the octal number are two views of one value, so both are editable: typing
+        // either one repaints the checkboxes, and ticking a checkbox rewrites both.
+        TextView symLabel = new TextView(context);
+        symLabel.setText(R.string.symbolic_rwx);
+        symLabel.setTextSize(13);
+        symbolicInput = new EditText(context);
+        symbolicInput.setTextSize(14);
+        symbolicInput.setTypeface(Typeface.MONOSPACE);
+        symbolicInput.setSingleLine(true);
+        symbolicInput.setText(getSymbolicString());
+        symbolicInput.setSelectAllOnFocus(true);
+        symbolicInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(10) });
+        symbolicInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        symbolicInput.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        symbolicInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                if (syncing) return;
+                int[] bits = parseSymbolic(s.toString());
+                if (bits == null) return;
+                setCheckboxesFromBits(bits);
+                syncing = true;
+                numericInput.setText(String.valueOf(getNumericValue()));
+                syncing = false;
+            }
+        });
+        LinearLayout symbolicRow = new LinearLayout(context);
+        symbolicRow.setOrientation(LinearLayout.HORIZONTAL);
+        symbolicRow.setGravity(Gravity.CENTER_VERTICAL);
+        symbolicRow.setPadding(0, dp(8), 0, dp(4));
+        symbolicRow.addView(symLabel);
+        TextInputLayout symbolicBox = UiFields.wrap(context, symbolicInput, null, 0);
+        symbolicBox.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        symbolicRow.addView(symbolicBox);
+        root.addView(symbolicRow);
 
         LinearLayout numericRow = new LinearLayout(context);
         numericRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -119,19 +149,29 @@ public class PermissionsEditorHelper {
         numericInput.setTypeface(Typeface.MONOSPACE);
         numericInput.setText(String.valueOf(permBits[4]));
         numericInput.setSelectAllOnFocus(true);
-        numericInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(4) });
+        numericInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(10) });
         numericInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         numericInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
                 String val = s.toString().trim();
+                if (syncing) return;
+                // Pasting an ls-style mode into the numeric field works too.
+                int[] fromSymbolic = parseSymbolic(val);
+                if (fromSymbolic != null) {
+                    setCheckboxesFromBits(fromSymbolic);
+                    syncing = true;
+                    numericInput.setText(String.valueOf(getNumericValue()));
+                    syncing = false;
+                    return;
+                }
                 if (val.length() == 3 || val.length() == 4) {
                     try {
                         int num = Integer.parseInt(val);
                         int[] bits = parseNumericPerms(String.valueOf(num));
                         setCheckboxesFromBits(bits);
-                        symbolicPreview.setText(getSymbolicString());
+                        syncSymbolic();
                     } catch (NumberFormatException ignored) {}
                 }
             }
@@ -144,8 +184,10 @@ public class PermissionsEditorHelper {
         root.addView(numericRow);
 
         View.OnClickListener permListener = v -> {
-            symbolicPreview.setText(getSymbolicString());
+            syncing = true;
             numericInput.setText(String.valueOf(getNumericValue()));
+            symbolicInput.setText(getSymbolicString());
+            syncing = false;
         };
         for (CheckBox cb : new CheckBox[]{ownerRead, ownerWrite, ownerExec, groupRead, groupWrite, groupExec,
                 otherRead, otherWrite, otherExec, setUid, setGid, sticky}) {
@@ -153,6 +195,61 @@ public class PermissionsEditorHelper {
         }
 
         return root;
+    }
+
+    /** Writes the checkbox state into the rwx field without echoing back into the checkboxes. */
+    private void syncSymbolic() {
+        syncing = true;
+        symbolicInput.setText(getSymbolicString());
+        syncing = false;
+    }
+
+    /**
+     * Reads an ls-style mode such as {@code rwxr-xr-x} into the same five-slot layout the numeric
+     * parser produces. Returns null while the field is incomplete so a half-typed mode is ignored
+     * rather than reset.
+     */
+    private int[] parseSymbolic(String text) {
+        String clean = text == null ? "" : text.trim();
+        if (clean.length() < 9) return null;
+        int special = 0;
+        int[] bits = new int[5];
+        for (int row = 0; row < 3; row++) {
+            char cr = clean.charAt(row * 3);
+            char cw = clean.charAt(row * 3 + 1);
+            char cx = clean.charAt(row * 3 + 2);
+            if ((cr != 'r' && cr != '-') || (cw != 'w' && cw != '-') || (cx != 'x' && cx != 's'
+                    && cx != 'S' && cx != 't' && cx != 'T' && cx != '-')) {
+                return null;
+            }
+            bits[row] = (cr == 'r' ? 4 : 0) | (cw == 'w' ? 2 : 0) | (cx == 'x' ? 1 : 0);
+            // The upper-case forms mean the bit is set without the execute bit beside it.
+            if (cx == 's' || cx == 'S') special |= row == 0 ? 4 : row == 1 ? 2 : 0;
+            if (cx == 't' || cx == 'T') special |= 1;
+        }
+        bits[3] = special;
+        bits[4] = special * 1000 + bits[0] * 100 + bits[1] * 10 + bits[2];
+        return bits;
+    }
+
+    /**
+     * Renders an octal mode such as 755 as {@code rwxr-xr-x} without needing the editor to have
+     * been built, which is what the no-root apply path needs.
+     */
+    public String toSymbolicFor(String octal) {
+        int[] bits = parseNumericPerms(octal);
+        StringBuilder sb = new StringBuilder();
+        String[] names = {"owner", "group", "other"};
+        for (int row = 0; row < 3; row++) {
+            sb.append((bits[row] & 4) != 0 ? 'r' : '-');
+            sb.append((bits[row] & 2) != 0 ? 'w' : '-');
+            boolean exec = (bits[row] & 1) != 0;
+            boolean special = row == 0 ? bits[3] == 4 : row == 1 ? bits[3] == 2 : bits[3] == 1;
+            char specialChar = row == 0 ? 's' : row == 1 ? 's' : 't';
+            char upperChar = row == 0 ? 'S' : row == 1 ? 'S' : 'T';
+            sb.append(exec ? (special ? specialChar : 'x') : (special ? upperChar : '-'));
+        }
+        return sb.toString();
     }
 
     public String getSymbolicString() {

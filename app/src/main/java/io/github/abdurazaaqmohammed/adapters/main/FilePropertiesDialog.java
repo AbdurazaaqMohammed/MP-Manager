@@ -137,49 +137,12 @@ public class FilePropertiesDialog {
             }
         }
 
-        RootManager rm = RootManager.getInstance(context);
-        if (!isInZip && !multi && rm.isRootFileOpsEnabled() && rm.isRootAvailable()) {
-            TextView permsTitle = new TextView(context);
-            permsTitle.setText(R.string.root_permissions);
-            permsTitle.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
-            permsTitle.setPadding(0, dp(12), 0, dp(4));
-            propRows.addView(permsTitle);
-
-            View permsEditor = permissionsEditor.createPermissionsEditor("0000");
-            propRows.addView(permsEditor);
-
-            new Thread(() -> {
-                String perms = rm.getPermissions(file.getAbsolutePath());
-                context.handler.post(() -> {
-                    if (perms != null) {
-                        int[] bits = parsePermsForEditor(perms);
-                        String numeric = String.valueOf(bits[0] * 1000 + bits[1] * 100 + bits[2] * 10 + bits[3]);
-                        propRows.removeView(permsEditor);
-                        View refreshedEditor = permissionsEditor.createPermissionsEditor(numeric);
-                        propRows.addView(refreshedEditor, propRows.getChildCount() - 1);
-                    }
-                });
-            }).start();
-
-            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                    .setTitle(context.getString(R.string.properties))
-                    .setView(wrapInScroll(propView))
-                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                        String permsStr = String.valueOf(permissionsEditor.getNumericValue());
-                        if (!permsStr.equals("0")) {
-                            new Thread(() -> {
-                                try {
-                                    rm.chmod(file.getAbsolutePath(), permsStr);
-                                    Extensions.showMessage(context, R.string.permissions_updated);
-                                } catch (Exception e) {
-                                    context.handler.post(() ->
-                                            new ErrorUtil(context).showError(e));
-                                }
-                            }).start();
-                        }
-                    })
-                    .create());
-            return;
+        if (!isInZip && !multi) {
+            // Always offered, root or not: the row shows the current mode and the dialog reports
+            // why a change could not be applied instead of the entry quietly disappearing.
+            TextView permsRow = addPropertyRow(propRows,
+                    context.getString(R.string.permissions), context.getString(R.string.tap_to_edit));
+            permsRow.setOnClickListener(v -> showPermissionsDialog(file));
         }
 
         Map<String, String> propHashes = new HashMap<>();
@@ -334,6 +297,93 @@ public class FilePropertiesDialog {
         row.addView(valueView);
         container.addView(row);
         return valueView;
+    }
+
+    /**
+     * Standalone permissions dialog: reads the current mode, shows the nine-box grid plus the
+     * rwx/octal pair, and applies the mode on confirm.
+     *
+     * <p>Without root the mode is read with {@link java.nio.file.Files} where the app may see the
+     * path, so the dialog still shows the truth; applying needs root and says so plainly when it
+     * is missing rather than closing as if it had worked.
+     */
+    private void showPermissionsDialog(File file) {
+        RootManager rm = RootManager.getInstance(context);
+        PermissionsEditorHelper editor = new PermissionsEditorHelper(context);
+        TextView loading = new TextView(context);
+        loading.setText(R.string.permissions_loading);
+        loading.setPadding(dp(24), dp(24), dp(24), dp(24));
+        androidx.appcompat.app.AlertDialog dialog = dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.permissions))
+                .setView(loading)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, null)
+                .create();
+
+        new Thread(() -> {
+            String mode = readMode(rm, file);
+            context.handler.post(() -> {
+                View content = editor.createPermissionsEditor(mode);
+                ViewGroup parent = (ViewGroup) loading.getParent();
+                int index = parent.indexOfChild(loading);
+                parent.removeView(loading);
+                parent.addView(content, index);
+                dialog.setOnShowListener(d -> dialog.getButton(
+                        androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    String numeric = String.valueOf(editor.getNumericValue());
+                    dialog.dismiss();
+                    applyMode(rm, file, numeric);
+                }));
+            });
+        }).start();
+        dialogUtil.styleAlertDialog(dialog);
+    }
+
+    /** Current octal mode, preferring root's stat and falling back to the app's own view. */
+    private String readMode(RootManager rm, File file) {
+        try {
+            String viaRoot = rm.getPermissions(file.getAbsolutePath());
+            if (!TextUtils.isEmpty(viaRoot)) return viaRoot;
+        } catch (Exception ignored) {
+        }
+        try {
+            java.nio.file.attribute.PosixFileAttributes attr = java.nio.file.Files
+                    .readAttributes(file.toPath(), java.nio.file.attribute.PosixFileAttributes.class);
+            return String.format("%04o", attr.permissions().toOctalValue() & 07777);
+        } catch (Exception ignored) {
+        }
+        return "0000";
+    }
+
+    private void applyMode(RootManager rm, File file, String numeric) {
+        new Thread(() -> {
+            try {
+                if (!rm.isRootAvailable()) {
+                    // Without root only the app's own files can be changed, and only downwards.
+                    try {
+                        java.nio.file.Files.setPosixFilePermissions(file.toPath(),
+                                java.nio.file.attribute.PosixFilePermissions.fromString(toRwx(numeric)));
+                        context.handler.post(() ->
+                                Extensions.showMessage(context, R.string.permissions_updated));
+                        return;
+                    } catch (Exception inner) {
+                        context.handler.post(() -> Extensions.showMessage(context,
+                                context.getString(R.string.permissions_need_root)));
+                        return;
+                    }
+                }
+                rm.chmod(file.getAbsolutePath(), numeric);
+                context.handler.post(() ->
+                        Extensions.showMessage(context, R.string.permissions_updated));
+            } catch (Exception e) {
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+            }
+        }).start();
+    }
+
+    private String toRwx(String numeric) {
+        PermissionsEditorHelper helper = new PermissionsEditorHelper(context);
+        return helper.toSymbolicFor(numeric);
     }
 
     private int dp(int dp) {

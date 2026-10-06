@@ -253,6 +253,10 @@
     <string name="installed_version">Installed version</string>
     <string name="not_installed">Not installed</string>
     <string name="downgrade">Downgrade</string>
+    <string name="permissions_loading">Reading permissions…</string>
+    <string name="permissions_need_root">Root access is required to change these permissions</string>
+    <string name="tap_to_edit">Tap to edit</string>
+    <string name="symbolic_rwx">rwx</string>
     <string name="permissions">Permissions</string>
     <string name="quick_edit">Quick edit</string>
     <string name="compare_apks">Compare APKs</string>

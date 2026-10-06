@@ -251,6 +251,10 @@
     <string name="installed_version">Установленная версия</string>
     <string name="not_installed">Не установлено</string>
     <string name="downgrade">Понизить версию</string>
+    <string name="permissions_loading">Чтение прав…</string>
+    <string name="permissions_need_root">Для изменения прав нужен root-доступ</string>
+    <string name="tap_to_edit">Нажмите, чтобы изменить</string>
+    <string name="symbolic_rwx">rwx</string>
     <string name="permissions">Разрешения</string>
     <string name="quick_edit">Быстрое редактирование</string>
     <string name="compare_apks">Сравнить APK</string>
