@@ -1443,10 +1443,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
         // Directories the app cannot enter appear in listFiles but only lead to a failed open.
-        // Anywhere under the filesystem root those rows are dropped. canRead() lies under the root
-        // backend (it reports through stat, which root can always answer), so the test is whether
-        // the directory actually yields an entry.
-        if (files != null && isUnderRootListing(folderPath)) {
+        // Any listing that lives under the filesystem root - at whatever depth - drops them, so
+        // the tree never shows an entry that cannot be opened.
+        if (files != null && folderPath != null && folderPath.startsWith("/")) {
             files = Arrays.stream(files)
                     .filter(f -> !f.isDirectory() || canOpenDirectory(f))
                     .toArray(File[]::new);
@@ -2173,20 +2172,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * like any other folder; paths that are actually refused simply fail to open
      * and report the reason, rather than disappearing silently.
      */
-    /**
-     * True for "/" itself and for any first-level directory below it, whatever the parent happens
-     * to be. Those are the places where SELinux hides whole subtrees from an unprivileged app, so
-     * their listings get the unreadable-directory filter.
-     */
-    private static boolean isUnderRootListing(String folderPath) {
-        if (TextUtils.isEmpty(folderPath)) return false;
-        String normalized = folderPath.endsWith("/") && folderPath.length() > 1
-                ? folderPath.substring(0, folderPath.length() - 1) : folderPath;
-        if ("/".equals(normalized)) return true;
-        // Exactly one level below the root: /data but not /data/system.
-        return normalized.startsWith("/") && normalized.indexOf('/', 1) < 0;
-    }
-
     private File[] filesystemRootEntries() {
         String[] known = getResources().getStringArray(R.array.filesystem_root_paths);
         List<File> out = new ArrayList<>();
