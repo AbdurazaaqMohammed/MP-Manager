@@ -138,8 +138,14 @@ public class SidebarController {
 
             @Override
             public void onEntryLongPressed(SidebarAdapter.SidebarEntry entry, View view) {
-                if (!sidebarOrganizeMode && entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
+                if (sidebarOrganizeMode) return;
+                if (entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
                     showSidebarBookmarkMenu(entry, view);
+                } else if (entry.type() == SidebarAdapter.EntryType.REMOTE
+                        && entry.remote() != null) {
+                    // Long press is how a saved connection gets adjusted, whichever row is
+                    // showing: no need for the tap-to-menu detour on the live one.
+                    showRemoteRowMenu(entry.remote(), view);
                 }
             }
 
@@ -469,8 +475,8 @@ public class SidebarController {
             File file = entry.file();
             activity.loadFolderInPane(file.isFile() ? file.getParentFile() : file, activity.lastPaneSelected == 1);
         } else if (entry.type() == SidebarAdapter.EntryType.REMOTE) {
-            // A tap connects; the same row offers edit/delete when it is already the live pane,
-            // which is where a saved connection is most often adjusted.
+            // A tap connects, or offers edit/delete on the connection that is already live.
+            // Long press reaches the same menu on any row, connected or not.
             RemoteCredentials c = entry.remote();
             if (c != null && activity.isRemoteConnectedTo(c)) {
                 showRemoteRowMenu(c, anchorView);
