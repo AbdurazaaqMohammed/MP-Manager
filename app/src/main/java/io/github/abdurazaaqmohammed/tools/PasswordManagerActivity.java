@@ -183,7 +183,7 @@ public class PasswordManagerActivity extends BaseActivity {
     private void updateBwUi() {
         if (bwVault != null) {
             bwStatus.setText(bwEntries.isEmpty()
-                    ? R.string.bw_empty
+                    ? getString(R.string.bw_empty)
                     : getString(R.string.bw_unlocked, bwEntries.size()));
             bwAction.setText(R.string.bw_sync);
             bwLogout.setVisibility(View.VISIBLE);
