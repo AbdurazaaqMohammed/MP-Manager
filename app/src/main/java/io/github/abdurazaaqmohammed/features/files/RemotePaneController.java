@@ -56,6 +56,7 @@ public class RemotePaneController {
 
     private RemoteFileSystem fs;
     private String currentPath = "/";
+    private RemoteCredentials connectedCredentials;
     private int activePane = 1;
 
     public RemotePaneController(MainActivity activity) {
@@ -70,6 +71,30 @@ public class RemotePaneController {
      *
      * @return true when the pane is now showing the remote listing
      */
+    /** True when the remote pane is already showing this saved profile. */
+    public boolean isConnectedTo(RemoteCredentials credentials) {
+        return fs != null && connectedCredentials != null
+                && connectedCredentials.id().equals(credentials.id());
+    }
+
+    /** Drops a saved profile and, when it was the live one, closes the remote pane. */
+    public void removeProfile(RemoteCredentials credentials) {
+        profiles.remove(credentials.id());
+        if (isConnectedTo(credentials)) {
+            connectedCredentials = null;
+            if (fs != null) {
+                try {
+                    fs.disconnect();
+                    fs.close();
+                } catch (Exception ignored) {
+                }
+                fs = null;
+            }
+        }
+        Extensions.showMessage(activity,
+                activity.rss.getString(R.string.remote_profile_removed, credentials.host()));
+    }
+
     public boolean connectAndLoad(RemoteCredentials credentials, boolean pane1) {
         // FTP goes to the application's own client: it already handles
         // transfers, file operations and server mode, all of which this
@@ -104,6 +129,7 @@ public class RemotePaneController {
                         return;
                     }
                     fs = ready;
+                    connectedCredentials = credentials;
                     currentPath = ready.root();
                     applyListing(entries);
                 });
@@ -362,7 +388,7 @@ public class RemotePaneController {
      *
      * @param existing the profile to edit, or null to create a new one
      */
-    private void showFormDialog(RemoteCredentials existing) {
+    public void showFormDialog(RemoteCredentials existing) {
         List<RemoteCredentials.Kind> kinds = creatableKinds();
 
         LinearLayout box = new LinearLayout(activity);

@@ -31,6 +31,7 @@ import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
+import io.github.abdurazaaqmohammed.domain.remote.RemoteCredentials;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -103,7 +104,7 @@ public class SidebarController {
                     if (entry != null && entry.type() != SidebarAdapter.EntryType.HEADER) startSidebarDrag(view, entry);
                     return;
                 }
-                openSidebarEntry(entry);
+                openSidebarEntry(entry, view);
             }
 
             @Override
@@ -198,7 +199,7 @@ public class SidebarController {
                 }
                 return;
             }
-            if (entry != null) openSidebarEntry(entry);
+            if (entry != null) openSidebarEntry(entry, view);
         });
         sidebarList.setOnItemLongClickListener((parent, view, position, id) -> {
             if (!sidebarOrganizeMode) return false;
@@ -420,7 +421,7 @@ public class SidebarController {
         }
     }
 
-    private void openSidebarEntry(SidebarAdapter.SidebarEntry entry) {
+    private void openSidebarEntry(SidebarAdapter.SidebarEntry entry, View anchorView) {
         if (sidebarOrganizeMode) return;
         if (entry == null || entry.type() == SidebarAdapter.EntryType.HEADER) return;
         if (entry.type() == SidebarAdapter.EntryType.STORAGE) {
@@ -435,10 +436,37 @@ public class SidebarController {
         } else if (entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
             File file = entry.file();
             activity.loadFolderInPane(file.isFile() ? file.getParentFile() : file, activity.lastPaneSelected == 1);
+        } else if (entry.type() == SidebarAdapter.EntryType.REMOTE) {
+            // A tap connects; the same row offers edit/delete when it is already the live pane,
+            // which is where a saved connection is most often adjusted.
+            RemoteCredentials c = entry.remote();
+            if (c != null && activity.remotePane().isConnectedTo(c)) {
+                showRemoteRowMenu(entry, c, anchorView);
+            } else if (c != null) {
+                activity.remotePane().connectAndLoad(c, activity.lastPaneSelected == 1);
+            }
+            activity.closeSidebarDrawer();
+            return;
         } else {
             openSidebarTool(entry.id());
         }
         activity.closeSidebarDrawer();
+    }
+
+    /** Edit or delete a saved connection, mirroring what the old profile dialog offered. */
+    private void showRemoteRowMenu(SidebarAdapter.SidebarEntry entry, RemoteCredentials c, View anchor) {
+        PopupMenu menu = new PopupMenu(activity, anchor != null ? anchor : sidebarList);
+        menu.getMenu().add(R.string.remote_edit);
+        menu.getMenu().add(R.string.remote_delete);
+        menu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.string.remote_edit) {
+                activity.remotePane().showFormDialog(c);
+            } else {
+                activity.remotePane().removeProfile(c);
+            }
+            return true;
+        });
+        menu.show();
     }
 
     private void openSidebarTool(String id) {

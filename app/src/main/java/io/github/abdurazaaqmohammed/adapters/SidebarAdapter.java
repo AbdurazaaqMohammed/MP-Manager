@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.data.remote.RemoteProfiles;
+import io.github.abdurazaaqmohammed.domain.remote.RemoteCredentials;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -38,11 +40,17 @@ import io.github.abdurazaaqmohammed.utils.StorageUtil;
 public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     public enum EntryType {
-        HEADER, STORAGE, TOOL, BOOKMARK
+        HEADER, STORAGE, TOOL, BOOKMARK, REMOTE
     }
 
     public record SidebarEntry(EntryType type, String section, String id, String label, int icon,
-                               File file, StorageUtil.StorageInfo storage) {
+                               File file, StorageUtil.StorageInfo storage,
+                               RemoteCredentials remote) {
+
+        public SidebarEntry(EntryType type, String section, String id, String label, int icon,
+                            File file, StorageUtil.StorageInfo storage) {
+            this(type, section, id, label, icon, file, storage, null);
+        }
 
         public String dragPayload() {
                 return type.name() + "\u0001" + section + "\u0001" + (id == null ? "" : id);
@@ -236,14 +244,14 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     /**
-     * Remote storage stays a plain shortcut: it is a connection rather than a mounted volume, so
-     * there is nothing to report a usage bar for.
+     * Every saved connection gets its own row, the way MT Manager lists network volumes beside the
+     * local ones. With nothing configured the section is dropped by the empty-section rule.
      */
     private void addRemoteEntry(String section) {
-        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, "remote",
-                context.getString(R.string.remote_connections),
-                R.drawable.cloud_download_24px, null, null);
-        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
+        for (RemoteCredentials c : new RemoteProfiles(context).load()) {
+            entries.add(new SidebarEntry(EntryType.REMOTE, section, c.id(), c.host(),
+                    R.drawable.cloud_download_24px, null, null, c));
+        }
     }
 
     private void addBookmarks(String group, String section, List<File> files) {
@@ -259,7 +267,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private void addTools() {
-        String[] defaults = {"extract", "ftp_server", "color_picker", "layout", "smali_reference", "activity_log", "password_manager", "recycle_bin", "tools", "settings"};
+        String[] defaults = {"extract", "ftp_server", "color_picker", "layout", "smali_reference", "activity_log", "password_manager", "recycle_bin", "tools"};
         List<String> order = new ArrayList<>();
         for (String id : toolOrder) if (!order.contains(id)) order.add(id);
         for (String id : defaults) if (!order.contains(id)) order.add(id);
@@ -521,13 +529,17 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         text.setText(entry.label);
         text.setEnabled(!hidden);
         text.setAlpha(hidden ? 0.55f : 1f);
-        // Bookmarks carry their location on a second line, the way MT Manager lists them; tools
-        // have no meaningful path so the line stays collapsed.
+        // Bookmarks carry their location on a second line and connections their protocol, the way MT
+        // Manager lists them; tools have neither, so the line stays collapsed.
         File bookmark = entry.file;
         File location = bookmark == null ? null
                 : (bookmark.isDirectory() ? bookmark : bookmark.getParentFile());
         if (entry.type == EntryType.BOOKMARK && location != null) {
             subtitle.setText(location.getAbsolutePath());
+            subtitle.setVisibility(View.VISIBLE);
+        } else if (entry.type == EntryType.REMOTE && entry.remote != null) {
+            // The title already is the host, so the second line carries the protocol only.
+            subtitle.setText(entry.remote.kind().name());
             subtitle.setVisibility(View.VISIBLE);
         } else {
             subtitle.setVisibility(View.GONE);
