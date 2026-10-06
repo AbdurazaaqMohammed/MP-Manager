@@ -356,10 +356,6 @@ public class StorageManagerActivity extends BaseActivity {
             Extensions.showMessage(this, getString(R.string.storage_nothing_selected));
             return;
         }
-        if (RootPermissionHelper.isRootShellReady(this)) {
-            clearCaches(selectedOnly);
-            return;
-        }
         if (!CacheCleaner.isServiceEnabled(this)) {
             boolean elevated = RootPermissionHelper.hasElevatedShell(this);
             new MaterialAlertDialogBuilder(this)
@@ -1001,13 +997,13 @@ public class StorageManagerActivity extends BaseActivity {
             }
             for (ApplicationInfo app : apps) {
                 long cache = -1;
-                if (rootSizes.containsKey(app.packageName)) {
-                    cache = rootSizes.get(app.packageName);
-                } else if (statsReady) {
+                if (statsReady) {
                     cache = queryCacheBytes26(app);
+                } else if (rootSizes.containsKey(app.packageName)) {
+                    cache = rootSizes.get(app.packageName);
                 }
                 if (cache < 0) continue;
-                if (cache == 0 && !rootReady) continue;
+                if (cache == 0 && !statsReady) continue;
                 String label;
                 try {
                     label = String.valueOf(pm.getApplicationLabel(app));
@@ -1044,12 +1040,9 @@ public class StorageManagerActivity extends BaseActivity {
         Map<String, Long> out = new HashMap<>();
         try {
             RootManager rm = RootManager.getInstance(this);
-            RootManager.ShellResult r = rm.executeFs("du -sb /data/data/*/cache 2>/dev/null", 60);
+            RootManager.ShellResult r = rm.executeFs("du -sk /data/data/*/cache /data/data/*/code_cache /data/user_de/*/*/cache /data/user_de/*/*/code_cache /data/media/*/Android/data/*/cache 2>/dev/null", 60);
             if (r.isSuccess() && r.output() != null && !r.output().trim().isEmpty()) {
-                parseDuOutput(r.output(), 1L, out);
-            } else {
-                RootManager.ShellResult k = rm.executeFs("du -sk /data/data/*/cache 2>/dev/null", 60);
-                if (k.isSuccess() && k.output() != null) parseDuOutput(k.output(), 1024L, out);
+                parseDuOutput(r.output(), 1024L, out);
             }
         } catch (Exception ignored) {
         }
@@ -1071,14 +1064,18 @@ public class StorageManagerActivity extends BaseActivity {
                     String rest = path.substring("/data/data/".length());
                     int slash = rest.indexOf('/');
                     if (slash > 0) pkg = rest.substring(0, slash);
-                } else if (path.startsWith("/data/user_de/")) {
-                    String rest = path.substring("/data/user_de/".length());
-                    int slash = rest.indexOf('/');
-                    if (slash > 0) {
-                        String rest2 = rest.substring(slash + 1);
-                        int slash2 = rest2.indexOf('/');
-                        if (slash2 > 0) pkg = rest2.substring(0, slash2);
+                } else if (path.startsWith("/data/user_de/") || path.startsWith("/data/user/")) {
+                    String rest = path.substring(path.startsWith("/data/user_de/") ? "/data/user_de/".length() : "/data/user/".length());
+                    int s1 = rest.indexOf('/');
+                    if (s1 > 0) {
+                        String rest2 = rest.substring(s1 + 1);
+                        int s2 = rest2.indexOf('/');
+                        if (s2 > 0) pkg = rest2.substring(0, s2);
                     }
+                } else if (path.contains("/Android/data/")) {
+                    String rest = path.substring(path.indexOf("/Android/data/") + "/Android/data/".length());
+                    int slash = rest.indexOf('/');
+                    if (slash > 0) pkg = rest.substring(0, slash);
                 }
                 if (pkg != null && !pkg.isEmpty()) {
                     Long prev = out.get(pkg);
@@ -1120,21 +1117,27 @@ public class StorageManagerActivity extends BaseActivity {
                             String[] dirs = new String[]{
                                     "/data/data/" + pkg + "/cache",
                                     "/data/data/" + pkg + "/code_cache",
+                                    "/data/user_de/0/" + pkg + "/cache",
                                     "/data/media/0/Android/data/" + pkg + "/cache"
                             };
-                            StringBuilder script = new StringBuilder();
+                            StringBuilder script = new StringBuilder("rm -rf");
                             for (String dir : dirs) {
-                                script.append("rm -rf ").append(RootManager.escapeShellArg(dir)).append("; ");
+                                script.append(' ').append(RootManager.escapeShellArg(dir));
                             }
-                            script.append("echo ALLDONE");
-                            RootManager.ShellResult r = rm.executeFs(script.toString(), 30);
-                            boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("ALLDONE");
+                            script.append(" 2>/dev/null; ec=$?; ");
+                            for (String dir : dirs) {
+                                script.append("if [ -e ").append(RootManager.escapeShellArg(dir)).append(" ] || [ -L ").append(RootManager.escapeShellArg(dir)).append(" ]; then echo LEFT: ").append(RootManager.escapeShellArg(dir)).append("; fi; ");
+                            }
+                            script.append("echo RM_EXIT=$ec");
+                            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+                            boolean clearedOk = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0") && !r.output().contains("LEFT:");
                             if (clearedOk) {
                                 ok++;
                             } else {
                                 failures.add(pkg);
                                 if (firstError.isEmpty()) {
                                     String err = r.error() == null ? "" : r.error().trim();
+                                    if (err.isEmpty() && r.output() != null) err = r.output().trim();
                                     if (!err.isEmpty()) firstError = err.length() > 300 ? err.substring(0, 300) : err;
                                 }
                             }
