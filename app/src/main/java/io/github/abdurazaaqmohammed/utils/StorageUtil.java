@@ -135,7 +135,18 @@ public class StorageUtil {
             info.usedBytes = info.totalBytes - info.freeBytes;
         } catch (Exception ignored) {
         }
-        return info.totalBytes > 0 ? info : null;
+        if (info.totalBytes <= 0 || !isBrowsable(new File("/"))) return null;
+        return info;
+    }
+
+    /**
+     * True when the directory can actually be listed. A volume row that opens onto a folder the
+     * app may not read is worse than no row at all, so the drawer drops it. An empty directory is
+     * still browsable; only a denied or non-directory path is not.
+     */
+    private static boolean isBrowsable(@NonNull File dir) {
+        if (!dir.isDirectory() || !dir.canRead()) return false;
+        return dir.list() != null;
     }
 
     public static void populateStorageUI(@NonNull MainActivity ctx, @NonNull LinearLayout storageContainer) {
