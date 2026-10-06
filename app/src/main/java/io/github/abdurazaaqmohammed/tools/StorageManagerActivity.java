@@ -424,8 +424,17 @@ public class StorageManagerActivity extends BaseActivity {
                 } catch (Exception ignored) {
                 }
                 Extensions.showMessage(StorageManagerActivity.this, getString(R.string.storage_cleared_x, cleared, total));
-                loadCaches();
-                refreshVolumes();
+                List<String> remaining = new ArrayList<>();
+                new Thread(() -> {
+                    for (CacheCleaner.QueueItem it : targets) {
+                        rootEmptyCacheDirsWithVerify(it.packageName);
+                        remaining.add(it.packageName);
+                    }
+                    handler.post(() -> {
+                        loadCaches();
+                        refreshVolumes();
+                    });
+                }).start();
             }
         });
         if (!started) {
@@ -434,6 +443,31 @@ public class StorageManagerActivity extends BaseActivity {
             } catch (Exception ignored) {
             }
             Extensions.showMessage(this, getString(R.string.storage_enable_service_first));
+        }
+    }
+
+    private void rootEmptyCacheDirsWithVerify(String pkg) {
+        try {
+            RootManager rm = RootManager.getInstance(StorageManagerActivity.this);
+            String[] dirs = new String[]{
+                    "/data/data/" + pkg + "/cache",
+                    "/data/data/" + pkg + "/code_cache",
+                    "/data/user_de/0/" + pkg + "/cache",
+                    "/data/media/0/Android/data/" + pkg + "/cache"
+            };
+            StringBuilder script = new StringBuilder("rm -rf");
+            for (String dir : dirs) {
+                script.append(' ').append(RootManager.escapeShellArg(dir));
+            }
+            script.append(" 2>/dev/null; ec=$?; echo RM_EXIT=$ec");
+            RootManager.ShellResult r = rm.executeFs(script.toString(), 60);
+            boolean ok = r.isSuccess() && r.output() != null && r.output().contains("RM_EXIT=0");
+            if (!ok) {
+                String err = r.error() == null ? "" : r.error().trim();
+                if (err.isEmpty() && r.output() != null) err = r.output().trim();
+                Extensions.showMessage(StorageManagerActivity.this, err.isEmpty() ? getString(R.string.storage_cleared_x, 0, 1) : err);
+            }
+        } catch (Exception ignored) {
         }
     }
 
