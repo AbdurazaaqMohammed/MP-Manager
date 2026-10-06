@@ -307,24 +307,44 @@ public class RootManager {
                 BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader stderr = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
+                StringBuilder output = new StringBuilder();
+                StringBuilder error = new StringBuilder();
+                Thread drainOut = new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = stdout.readLine()) != null) {
+                            if (output.length() > 0) output.append("\n");
+                            output.append(line);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                });
+                Thread drainErr = new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = stderr.readLine()) != null) {
+                            if (error.length() > 0) error.append("\n");
+                            error.append(line);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                });
+                drainOut.start();
+                drainErr.start();
+
                 boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
                 if (!finished) {
                     process.destroyForcibly();
-                    return new ShellResult(-1, "", "Command timed out");
                 }
-
-                StringBuilder output = new StringBuilder();
-                StringBuilder error = new StringBuilder();
-                String line;
-                while ((line = stdout.readLine()) != null) {
-                    if (output.length() > 0) output.append("\n");
-                    output.append(line);
+                try {
+                    drainOut.join(2000);
+                    drainErr.join(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-                while ((line = stderr.readLine()) != null) {
-                    if (error.length() > 0) error.append("\n");
-                    error.append(line);
+                if (!finished) {
+                    return new ShellResult(-1, output.toString(), error.toString().isEmpty() ? "Command timed out" : error.toString());
                 }
-
                 return new ShellResult(process.exitValue(), output.toString(), error.toString());
             } catch (Exception e) {
                 return new ShellResult(-1, "", e.getMessage());
@@ -437,26 +457,46 @@ public class RootManager {
                 stdin.writeBytes("exit\n");
                 stdin.flush();
 
+                BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                StringBuilder output = new StringBuilder();
+                StringBuilder error = new StringBuilder();
+                Thread drainOut = new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = stdout.readLine()) != null) {
+                            if (output.length() > 0) output.append("\n");
+                            output.append(line);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                });
+                Thread drainErr = new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = stderrReader.readLine()) != null) {
+                            if (error.length() > 0) error.append("\n");
+                            error.append(line);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                });
+                drainOut.start();
+                drainErr.start();
+
                 boolean finished = process.waitFor(30, TimeUnit.SECONDS);
                 if (!finished) {
                     process.destroyForcibly();
-                    return new ShellResult(-1, "", "Command timed out");
                 }
-
-                StringBuilder output = new StringBuilder();
-                StringBuilder error = new StringBuilder();
-                BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                String line;
-                while ((line = stdout.readLine()) != null) {
-                    if (output.length() > 0) output.append("\n");
-                    output.append(line);
+                try {
+                    drainOut.join(2000);
+                    drainErr.join(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-                while ((line = stderrReader.readLine()) != null) {
-                    if (error.length() > 0) error.append("\n");
-                    error.append(line);
+                if (!finished) {
+                    return new ShellResult(-1, output.toString(), error.toString().isEmpty() ? "Command timed out" : error.toString());
                 }
-
                 return new ShellResult(process.exitValue(), output.toString(), error.toString());
             } catch (Exception e) {
                 return new ShellResult(-1, "", e.getMessage());
@@ -486,22 +526,22 @@ public class RootManager {
     }
 
     public boolean exists(String path) {
-        ShellResult result = executeFs("test -e " + escapeShellArg(path) + " && echo yes || echo no", 30);
+        ShellResult result = executeFs("test -e " + escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public boolean isDirectory(String path) {
-        ShellResult result = executeFs("test -d " + escapeShellArg(path) + " && echo yes || echo no", 30);
+        ShellResult result = executeFs("test -d " + escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public boolean isFile(String path) {
-        ShellResult result = executeFs("test -f " + escapeShellArg(path) + " && echo yes || echo no", 30);
+        ShellResult result = executeFs("test -f " + escapeShellArg(emulatedAlias(path)) + " && echo yes || echo no", 30);
         return result.isSuccess() && result.output.trim().equals("yes");
     }
 
     public long getFileSize(String path) {
-        ShellResult result = executeFs("stat -c %s " + escapeShellArg(path), 30);
+        ShellResult result = executeFs("stat -c %s " + escapeShellArg(emulatedAlias(path)), 30);
         if (result.isSuccess()) {
             try {
                 return Long.parseLong(result.output.trim());
@@ -510,6 +550,15 @@ public class RootManager {
             }
         }
         return -1;
+    }
+
+    static String emulatedAlias(String path) {
+        if (path == null) return null;
+        if (path.equals("/storage/emulated")) return "/data/media";
+        if (path.startsWith("/storage/emulated/")) {
+            return "/data/media/" + path.substring("/storage/emulated/".length());
+        }
+        return path;
     }
 
     public String getPermissions(String path) {
@@ -1008,8 +1057,8 @@ public class RootManager {
             return new RootEntry(path, false, false, false, 0L, 0L, null);
         }
         try {
-            ShellResult r = executeFs("stat -c '%n\037%F\037%s\037%Y\037%a' "
-                    + escapeShellArg(path) + " 2>/dev/null", 30);
+            ShellResult r = executeFs("stat -cL '%n\037%F\037%s\037%Y\037%a' "
+                    + escapeShellArg(emulatedAlias(path)) + " 2>/dev/null", 30);
             if (r.isSuccess() && r.output != null && !r.output.trim().isEmpty()) {
                 String line = r.output.split("\\r?\\n")[0];
                 String[] parts = line.split("\037", -1);
@@ -1098,19 +1147,35 @@ public class RootManager {
     }
 
     private File[] listRootFilesFresh(String dirPath) {
-        File[] primary = listRootFilesLsLong(dirPath);
-        if (!isAppDataDir(dirPath)) {
-            if (primary != null && primary.length > 0) return primary;
-            File[] portable = listRootFilesPortable(dirPath);
-            if (portable != null && portable.length > 0) return portable;
-            return primary != null ? primary : portable;
+        String actual = emulatedAlias(dirPath);
+        File[] primary = listRootFilesLsLong(actual);
+        if (!isAppDataDir(actual)) {
+            if (primary != null && primary.length > 0) return remapParent(primary, dirPath);
+            File[] portable = listRootFilesPortable(actual);
+            if (portable != null && portable.length > 0) return remapParent(portable, dirPath);
+            return primary != null ? remapParent(primary, dirPath) : portable;
         }
-        if (primary != null && primary.length >= 30) return primary;
-        File[] explicit = listAppDataDirsExplicit(dirPath);
+        if (primary != null && primary.length >= 30) return remapParent(primary, dirPath);
+        File[] explicit = listAppDataDirsExplicit(actual);
         File[] merged = unionRootFiles(primary, explicit);
-        if (merged != null && merged.length > 0) return merged;
-        File[] portable = listRootFilesPortable(dirPath);
-        return unionRootFiles(merged, portable);
+        if (merged != null && merged.length > 0) return remapParent(merged, dirPath);
+        File[] portable = listRootFilesPortable(actual);
+        return remapParent(unionRootFiles(merged, portable), dirPath);
+    }
+
+    private static File[] remapParent(File[] files, String newParent) {
+        if (files == null) return null;
+        for (int i = 0; i < files.length; i++) {
+            File f = files[i];
+            if (f == null) continue;
+            if (f instanceof RootFile) {
+                RootFile r = (RootFile) f;
+                files[i] = new RootFile(newParent, r.getName(), r.exists(), r.isDirectory(), r.isFile(), r.length(), r.lastModified(), r.getRootMode());
+            } else {
+                files[i] = new File(newParent, f.getName());
+            }
+        }
+        return files;
     }
 
     private File[] listRootFilesLsLong(String dirPath) {
@@ -1118,6 +1183,8 @@ public class RootManager {
         ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(dirPath) + " 2>/dev/null", 15);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
+        List<Integer> linkIdx = new ArrayList<>();
+        List<String> linkNames = new ArrayList<>();
         for (String line : result.output.split("\\r?\\n")) {
             String trimmed = line.trim();
             if (trimmed.isEmpty() || trimmed.startsWith("total ")) continue;
@@ -1145,8 +1212,45 @@ public class RootManager {
                 mtime = dateParts.length == 3 ? parseLsTime(dateParts[0], dateParts[1], dateParts[2]) : 0L;
             }
             String mode = matcher.group(1).length() > 1 ? matcher.group(1).substring(1) : null;
-            files.add(new RootFile(dirPath, name, true, type == 'd', type != 'd',
+            if (type == 'l') {
+                linkIdx.add(files.size());
+                linkNames.add(name);
+            }
+            files.add(new RootFile(dirPath, name, true, type == 'd', type == '-',
                     type == 'd' ? 0L : Math.max(0L, size), mtime, mode));
+        }
+        if (!linkNames.isEmpty()) {
+            StringBuilder cmd = new StringBuilder();
+            for (int i = 0; i < linkNames.size(); i++) {
+                if (i > 0) cmd.append(' ');
+                String p = escapeShellArg(dirPath + "/" + linkNames.get(i));
+                cmd.append("if [ -d ").append(p).append(" ]; then echo LINK_DIR_").append(i).append("; elif [ -e ").append(p).append(" ] || [ -L ").append(p).append(" ]; then echo LINK_FILE_").append(i).append("; fi;");
+            }
+            try {
+                ShellResult r = executeFs(cmd.toString(), 15);
+                if (r.isSuccess() && r.output != null) {
+                    List<Boolean> linkIsDir = new ArrayList<>();
+                    List<Boolean> linkIsFile = new ArrayList<>();
+                    for (int i = 0; i < linkNames.size(); i++) {
+                        linkIsDir.add(Boolean.FALSE);
+                        linkIsFile.add(Boolean.FALSE);
+                    }
+                    for (String l : r.output.split("\\r?\\n")) {
+                        String t = l.trim();
+                        if (t.startsWith("LINK_DIR_")) {
+                            linkIsDir.set(Integer.parseInt(t.substring("LINK_DIR_".length())), Boolean.TRUE);
+                        } else if (t.startsWith("LINK_FILE_")) {
+                            linkIsFile.set(Integer.parseInt(t.substring("LINK_FILE_".length())), Boolean.TRUE);
+                        }
+                    }
+                    for (int i = 0; i < linkNames.size(); i++) {
+                        File old = files.get(linkIdx.get(i));
+                        boolean isDir = linkIsDir.get(i);
+                        files.set(linkIdx.get(i), new RootFile(old.getPath(), true, isDir, linkIsFile.get(i), 0L, old.lastModified(), null));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
         }
         return files.toArray(new File[0]);
     }
@@ -1274,7 +1378,10 @@ public class RootManager {
 
     public File[] listRootFilesPortable(String dirPath) {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
-        ShellResult result = executeFs("ls -1Ap -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+        ShellResult result = executeFs("ls -1ALp -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+        if (result == null || !result.isSuccess() || result.output == null || result.output.trim().isEmpty()) {
+            result = executeFs("ls -1Ap -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+        }
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
         for (String line : result.output.split("\\r?\\n")) {

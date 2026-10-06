@@ -326,9 +326,9 @@ public final class AccessManager {
             Backend backend = active(context);
             if (backend == Backend.ROOT) {
                 RootManager.ShellResult r = RootManager.getInstance(context).execute(
-                        "du -sb " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
+                        "du -sk " + RootManager.escapeShellArg(path) + " 2>/dev/null", 15);
                 if (r.isSuccess() && r.output() != null) {
-                    return Long.parseLong(r.output().trim().split("\\s+")[0]);
+                    return Long.parseLong(r.output().trim().split("\\s+")[0]) * 1024L;
                 }
                 return -1;
             }
