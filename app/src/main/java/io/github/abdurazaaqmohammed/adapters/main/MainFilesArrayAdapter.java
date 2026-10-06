@@ -168,7 +168,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 new EntryDialogs.State() {
                     @Override
                     public Object[] values() {
-                        return values;
+                        return MainFilesArrayAdapter.this.values;
                     }
 
                     @Override
