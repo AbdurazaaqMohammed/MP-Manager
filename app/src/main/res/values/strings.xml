@@ -872,6 +872,7 @@ Layout Inspector
     <string name="storage_load">Load</string>
     <string name="storage_clear_selected">Clear selected</string>
     <string name="storage_clear_all">Clear all</string>
+    <string name="storage_clear_mode">Clear mode</string>
     <string name="storage_auto_clear">Auto-clear</string>
     <string name="storage_auto_selected">Auto-clear selected</string>
     <string name="storage_auto_all">Auto-clear all</string>

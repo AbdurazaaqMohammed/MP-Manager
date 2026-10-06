@@ -34,6 +34,7 @@ import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -214,6 +215,26 @@ public class StorageManagerActivity extends BaseActivity {
         cacheStatus = new TextView(this);
         cacheStatus.setTextSize(13);
         box.addView(cacheStatus);
+        TextView modeLabel = new TextView(this);
+        modeLabel.setText(getString(R.string.storage_clear_mode));
+        modeLabel.setTextSize(13);
+        box.addView(modeLabel);
+        android.widget.Spinner modeSpinner = new android.widget.Spinner(this);
+        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"Root", "Accessibility"});
+        modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        modeSpinner.setAdapter(modeAdapter);
+        final android.content.SharedPreferences clearModePrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
+        int modeIndex = clearModePrefs.getInt("cache_clear_mode", 0);
+        modeSpinner.setSelection(modeIndex);
+        modeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                clearModePrefs.edit().putInt("cache_clear_mode", position).apply();
+            }
+
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+        box.addView(modeSpinner);
         LinearLayout cacheRow = new LinearLayout(this);
         cacheRow.setOrientation(LinearLayout.HORIZONTAL);
         box.addView(cacheRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -226,16 +247,6 @@ public class StorageManagerActivity extends BaseActivity {
         MaterialButton clearAll = new MaterialButton(this);
         clearAll.setText(getString(R.string.storage_clear_all));
         box.addView(clearAll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout autoRow = new LinearLayout(this);
-        autoRow.setOrientation(LinearLayout.HORIZONTAL);
-        box.addView(autoRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        MaterialButton autoClear = new MaterialButton(this);
-        autoClear.setText(getString(R.string.storage_auto_clear));
-        autoRow.addView(autoClear, sp);
-        TextView autoHint = new TextView(this);
-        autoHint.setText(getString(R.string.storage_no_root_hint));
-        autoHint.setTextSize(12);
-        box.addView(autoHint);
         cacheList = new ListView(this);
         cacheList.setOnTouchListener((v, event) -> {
             int action = event.getAction();
@@ -259,18 +270,17 @@ public class StorageManagerActivity extends BaseActivity {
             return true;
         });
         loadCache.setOnClickListener(v -> loadCaches());
-        clearSel.setOnClickListener(v -> clearCaches(true));
-        clearAll.setOnClickListener(v -> clearCaches(false));
-        autoClear.setOnClickListener(v -> {
-            boolean anyChecked = false;
-            for (CacheRow r : cacheRows) {
-                if (r.checked) {
-                    anyChecked = true;
-                    break;
-                }
-            }
-            autoClearCaches(anyChecked);
+        clearSel.setOnClickListener(v -> {
+            int mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
+            if (mode == 1) autoClearCaches(true);
+            else clearCaches(true);
         });
+        clearAll.setOnClickListener(v -> {
+            int mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
+            if (mode == 1) autoClearCaches(false);
+            else clearCaches(false);
+        });
+
         refreshVolumes();
     }
 
