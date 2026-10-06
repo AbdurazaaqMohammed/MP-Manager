@@ -144,7 +144,7 @@ public class FilePropertiesDialog {
             permsRow.setOnClickListener(v -> showPermissionsDialog(file));
             new Thread(() -> {
                 String mode = readMode(RootManager.getInstance(context), file);
-                context.handler.post(() -> permsRow.setText(mode));
+                context.handler.post(() -> permsRow.setText(describeMode(mode)));
             }).start();
         }
 
@@ -408,6 +408,16 @@ public class FilePropertiesDialog {
     private String toRwx(String numeric) {
         PermissionsEditorHelper helper = new PermissionsEditorHelper(context);
         return helper.toSymbolicFor(numeric);
+    }
+
+    /** {@code 644} rendered as {@code rw-r--r-- (644)}, matching the way the editor is labelled. */
+    private String describeMode(String numeric) {
+        if (TextUtils.isEmpty(numeric)) return "-";
+        try {
+            return toRwx(numeric) + " (" + numeric + ")";
+        } catch (Exception ignored) {
+            return numeric;
+        }
     }
 
     private int dp(int dp) {
