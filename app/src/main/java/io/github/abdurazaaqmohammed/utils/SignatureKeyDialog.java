@@ -261,7 +261,12 @@ public class SignatureKeyDialog {
                                                 try (ZipFile zf = new ZipFile(signedSplitApk)) {
                                                     zf.addFiles(Arrays.asList(cacheDir.listFiles()));
                                                 }
-                                            } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
+                                                FileUtils.swapWithBackup(file, signedSplitApk);
+                                            } else {
+                                                File signedApk = FileUtils.getUnusedFile(file2);
+                                                signWrapper.signApk(file, signedApk);
+                                                FileUtils.swapWithBackup(file, signedApk);
+                                            }
                                             pm.dismiss();
                                             activity.runOnUiThread(() -> {
                                                 Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));
@@ -311,7 +316,12 @@ public class SignatureKeyDialog {
                                     try (ZipFile zf = new ZipFile(signedSplitApk)) {
                                         zf.addFiles(Arrays.asList(cacheDir.listFiles()));
                                     }
-                                } else signWrapper.signApk(file, FileUtils.getUnusedFile(file2));
+                                    FileUtils.swapWithBackup(file, signedSplitApk);
+                                } else {
+                                    File signedApk = FileUtils.getUnusedFile(file2);
+                                    signWrapper.signApk(file, signedApk);
+                                    FileUtils.swapWithBackup(file, signedApk);
+                                }
                                 pm.dismiss();
                                 activity.runOnUiThread(() -> {
                                     Extensions.showMessage(activity, activity.getString(R.string.signed, sigFileName));

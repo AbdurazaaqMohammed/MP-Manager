@@ -24,6 +24,7 @@ import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -88,6 +89,7 @@ public class ApkSignatureTools {
                                 try {
                                     File result = PairipRemoverUtil.removePairip(context, file);
                                     if (sign[0]) wrapper[0].signApk(result);
+                                    FileUtils.swapWithBackup(file, result);
                                     pm.dismiss();
                                     context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                                 } catch (Exception e) {
@@ -103,6 +105,7 @@ public class ApkSignatureTools {
                                 try {
                                     File result = SignatureKillerUtil.apply(context, file);
                                     if (sign[0]) wrapper[0].signApk(result);
+                                    FileUtils.swapWithBackup(file, result);
                                     pm.dismiss();
                                     context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                                 } catch (Exception e) {
@@ -160,6 +163,7 @@ public class ApkSignatureTools {
                         String msg = context.rss.getString(R.string.signing, apk.getName());
                         pm.setText(msg);
                         logger.logMessage(msg);
+                        FileUtils.backupBeforeWrite(apk);
                         sw.signApk(apk);
                     }
                     pm.dismiss();

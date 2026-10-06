@@ -111,6 +111,7 @@ import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -2608,6 +2609,7 @@ public class ApkOverlayTools {
                 try {
                     File result = OverlayInjectorUtil.addOverlayToActivities(context, file, selectedActivities, toast, dialog, logger);
                     if (sign) wrapper[0].signApk(result);
+                    FileUtils.swapWithBackup(file, result);
                     pm.dismiss();
                     context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                 } catch (Exception e) {
@@ -2659,6 +2661,7 @@ public class ApkOverlayTools {
                 try {
                     File result = ToastInjectorUtil.removeAllToasts(context, file, logger);
                     if (sign) wrapper[0].signApk(result);
+                    FileUtils.swapWithBackup(file, result);
                     pm.dismiss();
                     context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                 } catch (Exception e) {

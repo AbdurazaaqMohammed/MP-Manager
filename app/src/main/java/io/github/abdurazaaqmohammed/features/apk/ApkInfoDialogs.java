@@ -476,6 +476,7 @@ public class ApkInfoDialogs {
                                                         opt = ApkDeepOptimizer.optimize(context, opt, settings.getStringSet("filesToDelete", null), settings, logger);
                                                     }
                                                     if (sign[0]) wrapper[0].signApk(opt);
+                                                    FileUtils.swapWithBackup(file, opt);
                                                     pm.dismiss();
                                                     context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                                                 } catch (Exception e) {
@@ -557,6 +558,7 @@ public class ApkInfoDialogs {
                                     String pXmlFilePath = publicXmlPath[0];
                                     if (!TextUtils.isEmpty(pXmlFilePath)) options.publicXml = new File(pXmlFilePath);
                                     options.newCommandExecutor(logger).runCommand();
+                                    FileUtils.swapWithBackup(file, options.outputFile);
                                     logger.close();
                                     pm.dismiss();
                                     Extensions.showMessage(context, context.getString(R.string.refactored, fileName));
@@ -631,6 +633,7 @@ public class ApkInfoDialogs {
                             new Thread(() -> {
                                 try {
                                     options.newCommandExecutor(logger).runCommand();
+                                    FileUtils.swapWithBackup(file, options.outputFile);
                                     logger.close();
                                     pm.dismiss();
                                     context.handler.post(() -> { dialog2.dismiss(); Extensions.showMessage(context, context.rss.getString(R.string.protectd)); });
@@ -674,6 +677,7 @@ public class ApkInfoDialogs {
                                         if (sign[0]) {
                                             wrapper[0].signApk(cloned);
                                         }
+                                        FileUtils.swapWithBackup(file, cloned);
                                         pm.dismiss();
                                         context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
                                     } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
@@ -1129,6 +1133,7 @@ public class ApkInfoDialogs {
                             File out = ApkDeepOptimizer.optimize(context, file,
                                     settings.getStringSet("filesToDelete", null), settings, logger);
                             if (sign) wrapper[0].signApk(out);
+                            FileUtils.swapWithBackup(file, out);
                             pm.dismiss();
                             context.handler.post(() ->
                                     context.loadFolderInPane(file.getParentFile(), pane1, false));
@@ -1164,6 +1169,7 @@ public class ApkInfoDialogs {
         new Thread(() -> {
             try {
                 options.newCommandExecutor(logger).runCommand();
+                FileUtils.swapWithBackup(file, options.outputFile);
                 logger.close();
                 pm.dismiss();
                 context.handler.post(() -> {
@@ -1246,6 +1252,7 @@ public class ApkInfoDialogs {
                     directory.save();
                     module.writeApk(out, (path, method, length) -> {});
                     if (sign) wrapper[0].signApk(out);
+                    FileUtils.swapWithBackup(file, out);
                     logger.close();
                     pm.dismiss();
                     context.handler.post(() -> {

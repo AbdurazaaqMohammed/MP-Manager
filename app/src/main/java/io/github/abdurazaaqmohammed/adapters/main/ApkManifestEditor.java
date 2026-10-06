@@ -294,6 +294,7 @@ public class ApkManifestEditor {
 
             try (InputStream is = FileUtils.getInputStream(files[0])) {
                 pm.show().setText(context.rss.getString(R.string.adding, files[0]));
+                FileUtils.backupBeforeWrite(apkFile);
                 replaceZipEntry(apkFile,
                         iconPath != null ? iconPath : "res/mipmap-xxhdpi-v4/ic_launcher.png",
                         is);

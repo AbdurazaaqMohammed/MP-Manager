@@ -107,6 +107,57 @@ public class FileUtils {
         return getUnusedFile(new File(file));
     }
 
+    /** Backup path used by every feature that rewrites an APK in place: {@code xxx.apk.bak}. */
+    public static File backupFileOf(File original) {
+        File absolute = original.getAbsoluteFile();
+        return new File(absolute.getParentFile(), absolute.getName() + ".bak");
+    }
+
+    /**
+     * Copy {@code original} to {@code xxx.apk.bak} before an in-place rewrite. An older backup
+     * of the same name is replaced, so the backup always holds the file as it was on entry.
+     */
+    public static void backupBeforeWrite(File original) throws IOException {
+        if (original == null || !original.isFile()) throw new IOException("Missing " + original);
+        File backup = backupFileOf(original);
+        if (backup.exists() && !backup.delete() && backup.exists())
+            throw new IOException("Cannot replace " + backup);
+        copyFile(original, backup);
+    }
+
+    /**
+     * Publish a freshly written output over the file it was derived from: the original moves to
+     * {@code xxx.apk.bak} (an older backup is replaced) and the output takes the original name.
+     * Runs only after the feature succeeded, so a failure leaves the original untouched.
+     */
+    public static void swapWithBackup(File original, File produced) throws IOException {
+        if (original == null || !original.isFile()) throw new IOException("Missing " + original);
+        if (produced == null || !produced.isFile()) throw new IOException("Missing " + produced);
+        if (original.getCanonicalFile().equals(produced.getCanonicalFile())) return;
+
+        File backup = backupFileOf(original);
+        if (backup.exists() && !backup.delete() && backup.exists())
+            throw new IOException("Cannot replace " + backup);
+        if (!original.renameTo(backup)) throw new IOException("Cannot back up " + original);
+
+        if (moveFile(produced, original)) return;
+
+        // Put the original back rather than leave the caller with neither file.
+        if (original.exists()) original.delete();
+        backup.renameTo(original);
+        throw new IOException("Cannot move " + produced + " onto " + original);
+    }
+
+    private static boolean moveFile(File from, File to) {
+        if (from.renameTo(to)) return true;
+        try {
+            copyFile(from, to);
+            return to.isFile();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static void copyFolder(File src, File dest) throws IOException {
         if (src.isDirectory()) {
             if (!dest.exists()) {

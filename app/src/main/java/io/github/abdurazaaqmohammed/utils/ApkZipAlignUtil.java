@@ -59,6 +59,7 @@ public final class ApkZipAlignUtil {
             if (stillBad != null) {
                 throw new IOException("Could not make " + apk.getName() + " installable: " + stillBad);
             }
+            FileUtils.backupBeforeWrite(apk);
             replaceFile(tmp, apk);
             return true;
         } finally {
