@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.core.ui.util;
 
+import android.R;
 import android.app.Activity;
 import android.content.Context;
 
@@ -34,7 +35,7 @@ public final class ThemeDialogs {
         BaseDialog.builder(context)
                 .setTitle("Theme")
                 .setSingleChoiceItems(names, checked, (d, which) -> selected[0] = which)
-                .setPositiveButton(android.R.string.ok, (d, which) -> {
+                .setPositiveButton(R.string.ok, (d, which) -> {
                     ThemeRegistry.setCurrentId(context, themes.get(selected[0]).id());
                     if (context instanceof Activity) {
                         try {
@@ -43,7 +44,7 @@ public final class ThemeDialogs {
                         }
                     }
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(R.string.cancel, null)
                 .show();
     }
 }

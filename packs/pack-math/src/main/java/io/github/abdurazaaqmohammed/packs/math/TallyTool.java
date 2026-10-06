@@ -3,12 +3,15 @@ package io.github.abdurazaaqmohammed.packs.math;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -90,7 +93,7 @@ public class TallyTool extends BaseToolPlugin {
         tapCard.setCardElevation(ToolViewFactory.dp(context, 2));
         tapCard.setClickable(true);
         tapCard.setFocusable(true);
-        tapCard.setRippleColor(android.content.res.ColorStateList.valueOf(
+        tapCard.setRippleColor(ColorStateList.valueOf(
                 MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, 0xFFDDDDDD)));
         FrameLayout cardContent = new FrameLayout(context);
         countView = new TextView(context);
@@ -157,7 +160,7 @@ public class TallyTool extends BaseToolPlugin {
         return root;
     }
 
-    private static class SimpleWatcher implements android.text.TextWatcher {
+    private static class SimpleWatcher implements TextWatcher {
 
         private final Runnable r;
 
@@ -174,7 +177,7 @@ public class TallyTool extends BaseToolPlugin {
         }
 
         @Override
-        public void afterTextChanged(android.text.Editable s) {
+        public void afterTextChanged(Editable s) {
             r.run();
         }
     }

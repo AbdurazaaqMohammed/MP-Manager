@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.packs.notes;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.util.Base64;
 
 import java.security.SecureRandom;
@@ -92,7 +93,7 @@ public final class NoteCrypto {
             if (keyBytes == null) return null;
             SecretKey key = new SecretKeySpec(keyBytes, "AES");
             byte[] data = plain.getBytes("UTF-8");
-            boolean modern = android.os.Build.VERSION.SDK_INT >= 21;
+            boolean modern = Build.VERSION.SDK_INT >= 21;
             int ivLen = modern ? 12 : 16;
             byte[] iv = new byte[ivLen];
             new SecureRandom().nextBytes(iv);

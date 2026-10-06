@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.packs.random;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPack;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,6 +23,6 @@ public class RandomPack implements ToolPack {
 
     @Override
     public List<ToolPlugin> tools() {
-        return java.util.Collections.<ToolPlugin>singletonList(new RandomSuiteTool());
+        return Collections.<ToolPlugin>singletonList(new RandomSuiteTool());
     }
 }

@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
@@ -31,8 +30,9 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.codehasan.colorpicker.extensions.Extensions;
 
 public class MediaPlayerActivity extends BaseActivity implements
         PlayerManager.PlaybackCallback,
@@ -615,7 +615,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         String[] items = {getString(R.string.keep_screen_on, (playerManager.isKeepScreenOn() ? "ON" : "OFF")),
                 getString(R.string.skip_duration_X, (playerManager.getSkipDuration() / 1000)),
                 getString(R.string.close_player)};
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.player_settings)
                 .setItems(items, (d, which) -> {
                     switch (which) {
@@ -626,7 +626,7 @@ public class MediaPlayerActivity extends BaseActivity implements
                         case 1:
                             int[] durations = {5000, 10000, 15000, 30000};
                             String[] labels = {"5s", "10s", "15s", "30s"};
-                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                            new MaterialAlertDialogBuilder(this)
                                     .setTitle(R.string.skip_duration)
                                     .setSingleChoiceItems(labels, -1, (d2, w) -> {
                                         if (w >= 0 && w < durations.length) {

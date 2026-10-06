@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.plugins.ipc;
 import android.R;
 import android.app.Activity;
 
-import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost.ExternalPlugin;
 
@@ -56,7 +56,7 @@ public final class PluginTrust {
                         + " permissions. Allow it to integrate with MP-Manager?");
             }
             msg.append("\n\nCertificate (SHA-256):\n").append(fingerprint(digest));
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+            new MaterialAlertDialogBuilder(activity)
                     .setTitle(title)
                     .setMessage(msg.toString())
                     .setNegativeButton(R.string.cancel, null)

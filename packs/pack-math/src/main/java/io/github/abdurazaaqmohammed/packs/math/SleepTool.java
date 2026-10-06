@@ -1,7 +1,6 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
 import android.content.Context;
-import android.text.InputType;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;

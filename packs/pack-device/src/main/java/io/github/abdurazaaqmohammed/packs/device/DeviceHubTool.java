@@ -1,8 +1,6 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -11,7 +9,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.TrafficStats;
-import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,9 +16,6 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.view.Display;
-import android.view.GestureDetector;
-import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -216,7 +210,7 @@ public class DeviceHubTool extends BaseToolPlugin {
                 handler.post(() -> ToolViewFactory.copyText(context, "device-hub", report));
             });
         });
-        java.util.List<PagedShell.Page> pages = new ArrayList<>();
+        List<PagedShell.Page> pages = new ArrayList<>();
         for (int i = 0; i < TABS.length; i++) {
             final int index = i;
             pages.add(new PagedShell.Page() {

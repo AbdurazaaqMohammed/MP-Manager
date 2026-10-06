@@ -89,7 +89,6 @@ import java.util.Objects;
 
 import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
-import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 

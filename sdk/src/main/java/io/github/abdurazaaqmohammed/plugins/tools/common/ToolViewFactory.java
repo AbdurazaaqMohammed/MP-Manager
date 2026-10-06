@@ -16,6 +16,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.fragment.app.FragmentActivity;
+
 import com.google.android.material.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
@@ -112,7 +114,7 @@ public final class ToolViewFactory {
                     input.setText(String.format(Locale.US, "%04d-%02d-%02d",
                             cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)));
                 });
-                androidx.fragment.app.FragmentActivity fa = (androidx.fragment.app.FragmentActivity) box.getContext();
+                FragmentActivity fa = (FragmentActivity) box.getContext();
                 picker.show(fa.getSupportFragmentManager(), "date");
             } catch (Exception ignored) {
             }
@@ -137,13 +139,13 @@ public final class ToolViewFactory {
                         MaterialTimePicker time = new MaterialTimePicker.Builder()
                                 .setTimeFormat(TimeFormat.CLOCK_24H).setTitleText("Time").build();
                         time.addOnPositiveButtonClickListener(t2 -> input.setText(date + String.format(Locale.US, " %02d:%02d", time.getHour(), time.getMinute())));
-                        androidx.fragment.app.FragmentActivity fa2 = (androidx.fragment.app.FragmentActivity) box.getContext();
+                        FragmentActivity fa2 = (FragmentActivity) box.getContext();
                         time.show(fa2.getSupportFragmentManager(), "time");
                     } catch (Exception ignored) {
                         input.setText(date + " 09:00");
                     }
                 });
-                androidx.fragment.app.FragmentActivity fa = (androidx.fragment.app.FragmentActivity) box.getContext();
+                FragmentActivity fa = (FragmentActivity) box.getContext();
                 picker.show(fa.getSupportFragmentManager(), "date");
             } catch (Exception ignored) {
             }
@@ -161,7 +163,7 @@ public final class ToolViewFactory {
                 MaterialTimePicker time = new MaterialTimePicker.Builder()
                         .setTimeFormat(TimeFormat.CLOCK_24H).setTitleText(hint).build();
                 time.addOnPositiveButtonClickListener(t2 -> input.setText(String.format(Locale.US, "%02d:%02d", time.getHour(), time.getMinute())));
-                androidx.fragment.app.FragmentActivity fa = (androidx.fragment.app.FragmentActivity) box.getContext();
+                FragmentActivity fa = (FragmentActivity) box.getContext();
                 time.show(fa.getSupportFragmentManager(), "time");
             } catch (Exception ignored) {
             }

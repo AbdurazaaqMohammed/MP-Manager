@@ -176,7 +176,7 @@ public class CalculatorTool extends BaseToolPlugin {
         nav.setLabelVisibilityMode(
                 NavigationBarView.LABEL_VISIBILITY_LABELED);
         nav.setSelectedItemId(NAV_CALC);
-        java.util.List<PagedShell.Page> pages = new ArrayList<>();
+        List<PagedShell.Page> pages = new ArrayList<>();
         pages.add(new PagedShell.Page() {
             @Override
             public String title() {

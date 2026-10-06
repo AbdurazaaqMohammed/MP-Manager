@@ -1,10 +1,14 @@
 package io.github.abdurazaaqmohammed.core.ui.base;
 
+import android.R;
 import android.os.Bundle;
 import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 
@@ -20,14 +24,14 @@ public abstract class BaseActivity extends AppCompatActivity {
         // Theme must be set before super.onCreate so inflation uses it.
         ThemeRegistry.applySaved(this);
         super.onCreate(savedInstanceState);
-        View content = getWindow().getDecorView().findViewById(android.R.id.content);
+        View content = getWindow().getDecorView().findViewById(R.id.content);
         if (content != null){
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-                androidx.core.graphics.Insets sys = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() | androidx.core.view.WindowInsetsCompat.Type.displayCutout());
+            ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+                Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
                 v.setPadding(sys.left, sys.top, sys.right, sys.bottom);
-                return androidx.core.view.WindowInsetsCompat.CONSUMED;
+                return WindowInsetsCompat.CONSUMED;
             });
-            androidx.core.view.ViewCompat.requestApplyInsets(content);
+            ViewCompat.requestApplyInsets(content);
         }
     }
 

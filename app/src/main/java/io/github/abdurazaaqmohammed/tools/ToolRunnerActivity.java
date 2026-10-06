@@ -25,7 +25,6 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
-import io.github.rosemoe.sora.util.Chars;
 
 /**
  * Thin host for toolkit screens.
@@ -173,7 +172,7 @@ public class ToolRunnerActivity extends BaseActivity {
         return (int) (v * getResources().getDisplayMetrics().density);
     }
 
-    private void fitViewport(android.widget.ScrollView scroll, LinearLayout box,
+    private void fitViewport(ScrollView scroll, LinearLayout box,
                              View content, int pad) {
         try {
             scroll.setFillViewport(true);

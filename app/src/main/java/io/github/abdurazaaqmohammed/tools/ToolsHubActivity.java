@@ -36,6 +36,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -190,7 +191,7 @@ public class ToolsHubActivity extends BaseActivity {
             msg.append("\n\nCertificate (SHA-256):\n").append(shortDigest(digest));
             msg.append("\n\nStatus: ").append(trusted ? "Trusted" : "Not trusted");
             AlertDialog.Builder builder =
-                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    new MaterialAlertDialogBuilder(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
@@ -281,7 +282,7 @@ public class ToolsHubActivity extends BaseActivity {
         if (installed) {
             remove.setVisibility(View.VISIBLE);
             remove.setOnClickListener(v -> {
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                new MaterialAlertDialogBuilder(this)
                         .setTitle(pack.title)
                         .setMessage("Remove this pack and its " + pack.tools.size() + " tools?")
                         .setNegativeButton(android.R.string.cancel, null)

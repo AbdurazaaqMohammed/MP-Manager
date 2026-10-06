@@ -1,8 +1,6 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -26,11 +24,9 @@ import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.exifinterface.media.ExifInterface;
-import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 

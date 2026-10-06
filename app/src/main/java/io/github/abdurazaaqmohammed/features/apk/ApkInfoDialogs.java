@@ -1,59 +1,34 @@
 package io.github.abdurazaaqmohammed.features.apk;
 
 import android.annotation.SuppressLint;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
+import android.app.Activity;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Paint;
-import android.graphics.Shader;
-import android.graphics.SweepGradient;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
-import android.util.Base64;
-import android.view.ActionMode;
-import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.adapters.main.ApkManifestEditor;
@@ -64,15 +39,13 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
-import io.github.abdurazaaqmohammed.utils.ApkZipAlignUtil;
-import io.github.abdurazaaqmohammed.utils.SignatureStripUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import androidx.activity.result.ActivityResult;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
-import androidx.core.text.HtmlCompat;
 import androidx.preference.PreferenceManager;
 
 import com.android.apksig.ApkVerifier;
@@ -83,7 +56,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkModule;
 import com.reandroid.apkeditor.Util;
@@ -96,28 +68,22 @@ import com.reandroid.archive.ArchiveFile;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
-import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
-import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;
-import io.github.abdurazaaqmohammed.features.apk.ApkSignatureTools;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
-import io.github.abdurazaaqmohammed.utils.ApkCompareUtil;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
@@ -128,10 +94,6 @@ import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.abdurazaaqmohammed.utils.ToastInjectorUtil;
-import io.github.abdurazaaqmohammed.utils.OverlayInjectorUtil;
-import io.github.abdurazaaqmohammed.utils.OverlayProfiles;
-import io.github.abdurazaaqmohammed.utils.PairipRemoverUtil;
 import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
@@ -362,7 +324,7 @@ public class ApkInfoDialogs {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton(R.string.more, (dialog, which) -> {
-                    List<String> moreTitles = new ArrayList<>(Arrays.asList(new String[]{context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.kill_signature_verification), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)}));
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)));
                     // Third-party APK actions appended after the 14 built-ins.
                     final List<ApkMoreAction> pluginMore =
                             ExtensionRegistry.apkActions();
@@ -687,7 +649,7 @@ public class ApkInfoDialogs {
                                         doClone.run();
                                     }); else doClone.run();
                                 }).show();
-                    }                     else if (which1 == 6) signatures.showCertificateDialog(file);
+                    } else if (which1 == 6) signatures.showCertificateDialog(file);
                     else if (which1 == 7) overlay.showAddToastDialog(file, filePath);
                     else if (which1 == 8) overlay.showRemoveAllToastsDialog(file);
                     else if (which1 == 9) signatures.removeSignature(file);
@@ -740,8 +702,8 @@ public class ApkInfoDialogs {
                                             }
                                             PluginTrust.ensureTrusted(
                                                     context, found.plugin, () -> {
-                                                        java.util.List<String> choiceLabels = new java.util.ArrayList<>();
-                                                        java.util.List<String> choiceIds = new java.util.ArrayList<>();
+                                                        List<String> choiceLabels = new ArrayList<>();
+                                                        List<String> choiceIds = new ArrayList<>();
                                                         String choicesMeta = null;
                                                         String autoSignMeta = null;
                                                         if (found.plugin.meta != null) {
@@ -764,9 +726,9 @@ public class ApkInfoDialogs {
                                                         final boolean offerSign = autoSignMeta != null && (autoSignMeta.equals("1") || autoSignMeta.equalsIgnoreCase("true"));
                                                         final int[] selectedChoice = {0};
                                                         final boolean[] selectedSign = {autoSignMeta != null && (autoSignMeta.equals("1") || autoSignMeta.equalsIgnoreCase("true"))};
-                                                        final java.util.function.Consumer<androidx.activity.result.ActivityResult> runPlugin = result -> {
+                                                        final Consumer<ActivityResult> runPlugin = result -> {
                                                             try {
-                                                                if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                                                                if (result.getResultCode() == Activity.RESULT_OK) {
                                                                     Intent data = result.getData();
                                                                     String outName = data == null ? null : data.getStringExtra(
                                                                             PluginContracts.EXTRA_OUTPUT_NAME);
@@ -840,7 +802,7 @@ public class ApkInfoDialogs {
                                                             signing.setChecked(selectedSign[0]);
                                                             signing.setOnCheckedChangeListener((bv, v) -> selectedSign[0] = v);
                                                             box.addView(signing);
-                                                            new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                                                            new MaterialAlertDialogBuilder(context)
                                                                     .setTitle(found.plugin.label != null ? String.valueOf(found.plugin.label) : found.title)
                                                                     .setView(box)
                                                                     .setNegativeButton(android.R.string.cancel, null)

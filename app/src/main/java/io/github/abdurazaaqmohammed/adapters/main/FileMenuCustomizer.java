@@ -1,10 +1,10 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
+import android.app.Activity;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -33,7 +32,7 @@ public final class FileMenuCustomizer {
     private FileMenuCustomizer() {
     }
 
-    public static void show(android.app.Activity context) {
+    public static void show(Activity context) {
         DialogUtil dialogUtil = new DialogUtil(context);
         List<String> order = new ArrayList<>(FileMenuOrder.load(context));
         List<FileMenuOrder.MenuItem> items = new ArrayList<>();
@@ -108,11 +107,11 @@ public final class FileMenuCustomizer {
     }
 
     private static class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.Holder> {
-        private final android.app.Activity context;
+        private final Activity context;
         private final List<FileMenuOrder.MenuItem> items;
         private final boolean grid;
 
-        OrderAdapter(android.app.Activity context, List<FileMenuOrder.MenuItem> items, boolean grid) {
+        OrderAdapter(Activity context, List<FileMenuOrder.MenuItem> items, boolean grid) {
             this.context = context;
             this.items = items;
             this.grid = grid;

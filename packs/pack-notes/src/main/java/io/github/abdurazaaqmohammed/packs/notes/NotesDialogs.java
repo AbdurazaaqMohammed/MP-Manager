@@ -9,6 +9,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
@@ -39,7 +41,7 @@ public class NotesDialogs {
         this.accent = accent;
     }
 
-    public androidx.appcompat.app.AlertDialog items(String title, List<String> options,
+    public AlertDialog items(String title, List<String> options,
                                                  final OnItem onItem) {
         String[] arr = options.toArray(new String[0]);
         return new MaterialAlertDialogBuilder(context)
@@ -123,7 +125,7 @@ public void colors(String title, int selected, final OnColor onColor) {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         grid.addView(rowB, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        final androidx.appcompat.app.AlertDialog dialog =
+        final AlertDialog dialog =
                 new MaterialAlertDialogBuilder(context)
                         .setTitle(title)
                         .setView(grid)
@@ -154,7 +156,7 @@ public void colors(String title, int selected, final OnColor onColor) {
         LinearLayout box = NotesUi.column(context);
         box.setPadding(NotesUi.dp(context, 18), NotesUi.dp(context, 6),
                 NotesUi.dp(context, 18), NotesUi.dp(context, 6));
-        final androidx.appcompat.app.AlertDialog dialog =
+        final AlertDialog dialog =
                 new MaterialAlertDialogBuilder(context)
                         .setTitle(title)
                         .setView(box)
@@ -178,7 +180,7 @@ public void colors(String title, int selected, final OnColor onColor) {
             box.addView(chip, p);
         }
         dialog.setOnShowListener(d -> dialog.getButton(
-                        androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)
+                        AlertDialog.BUTTON_NEUTRAL)
                 .setOnClickListener(v -> prompt("New tag", "Tag name", "", value -> {
                     onTags.accept(value);
                     dialog.dismiss();

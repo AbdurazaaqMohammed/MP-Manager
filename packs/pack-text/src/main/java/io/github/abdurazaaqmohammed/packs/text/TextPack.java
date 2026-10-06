@@ -3,7 +3,7 @@ package io.github.abdurazaaqmohammed.packs.text;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPack;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,6 +23,6 @@ public class TextPack implements ToolPack {
 
     @Override
     public List<ToolPlugin> tools() {
-        return java.util.Collections.<ToolPlugin>singletonList(new TextSuiteTool());
+        return Collections.<ToolPlugin>singletonList(new TextSuiteTool());
     }
 }

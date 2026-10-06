@@ -3,15 +3,11 @@ package io.github.abdurazaaqmohammed.tools;
 import android.annotation.TargetApi;
 import android.app.ProgressDialog;
 import android.app.usage.StorageStatsManager;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -44,12 +40,10 @@ import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.core.content.FileProvider;
-import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 

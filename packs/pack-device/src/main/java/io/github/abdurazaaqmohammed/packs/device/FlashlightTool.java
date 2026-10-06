@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -18,12 +19,15 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
@@ -37,7 +41,10 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.MaterialColors;
+import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
@@ -176,7 +183,7 @@ public class FlashlightTool extends BaseToolPlugin {
             findTorchCamera();
         } catch (Throwable t) {
             try {
-                android.util.Log.e("FlashlightTool", "findTorchCamera failed", t);
+                Log.e("FlashlightTool", "findTorchCamera failed", t);
             } catch (Exception ignored) {
             }
             torchCameraId = null;
@@ -225,7 +232,7 @@ public class FlashlightTool extends BaseToolPlugin {
                 new String[]{"strobe_24px", "bolt_24px", "colorize_24px"},
                 android.R.drawable.ic_menu_help);
         nav.setLabelVisibilityMode(
-                com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED);
+                NavigationBarView.LABEL_VISIBILITY_LABELED);
         nav.setSelectedItemId(TAB_TORCH);
         List<PagedShell.Page> pages = new ArrayList<>();
         pages.add(new PagedShell.Page() {
@@ -240,7 +247,7 @@ public class FlashlightTool extends BaseToolPlugin {
                     return wrap(buildTorchPage(ctx));
                 } catch (Throwable t) {
                     try {
-                        android.util.Log.e("FlashlightTool", "torch page failed", t);
+                        Log.e("FlashlightTool", "torch page failed", t);
                     } catch (Exception ignored) {
                     }
                     return errorPage(ctx, "Torch", t);
@@ -259,7 +266,7 @@ public class FlashlightTool extends BaseToolPlugin {
                     return wrap(buildScreenPage(ctx));
                 } catch (Throwable t) {
                     try {
-                        android.util.Log.e("FlashlightTool", "screen page failed", t);
+                        Log.e("FlashlightTool", "screen page failed", t);
                     } catch (Exception ignored) {
                     }
                     return errorPage(ctx, "Screen", t);
@@ -278,7 +285,7 @@ public class FlashlightTool extends BaseToolPlugin {
                     return wrap(buildStrobePage(ctx));
                 } catch (Throwable t) {
                     try {
-                        android.util.Log.e("FlashlightTool", "strobe page failed", t);
+                        Log.e("FlashlightTool", "strobe page failed", t);
                     } catch (Exception ignored) {
                     }
                     return errorPage(ctx, "Strobe", t);
@@ -312,7 +319,7 @@ public class FlashlightTool extends BaseToolPlugin {
             if (shell != null) shell.select(tab);
         } catch (Throwable t) {
             try {
-                android.util.Log.e("FlashlightTool", "showTab failed", t);
+                Log.e("FlashlightTool", "showTab failed", t);
             } catch (Exception ignored) {
             }
         }
@@ -447,7 +454,7 @@ public class FlashlightTool extends BaseToolPlugin {
         if (torchPower == null) return;
         torchPower.setText(torchOn ? "ON — tap to turn off" : "OFF — tap to turn on");
         try {
-            torchPower.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+            torchPower.setBackgroundTintList(ColorStateList.valueOf(
                     torchOn ? Color.parseColor("#0F9D58") : Color.parseColor("#5F6368")));
             torchPower.setTextColor(Color.WHITE);
         } catch (Exception ignored) {
@@ -550,7 +557,7 @@ public class FlashlightTool extends BaseToolPlugin {
             sw.setMinimumWidth(ToolViewFactory.dp(context, 48));
             try {
                 sw.setBackgroundTintList(
-                        android.content.res.ColorStateList.valueOf(color));
+                        ColorStateList.valueOf(color));
             } catch (Exception ignored) {
                 sw.setBackgroundColor(color);
             }
@@ -665,11 +672,11 @@ public class FlashlightTool extends BaseToolPlugin {
             w.setAttributes(lp);
             if (Build.VERSION.SDK_INT >= 30) {
                 try {
-                    android.view.WindowInsetsController ic = w.getInsetsController();
+                    WindowInsetsController ic = w.getInsetsController();
                     if (ic != null) {
-                        ic.hide(android.view.WindowInsets.Type.statusBars()
-                                | android.view.WindowInsets.Type.navigationBars());
-                        ic.setSystemBarsBehavior(android.view.WindowInsetsController
+                        ic.hide(WindowInsets.Type.statusBars()
+                                | WindowInsets.Type.navigationBars());
+                        ic.setSystemBarsBehavior(WindowInsetsController
                                 .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
                     }
                 } catch (Exception ignored) {
@@ -727,14 +734,14 @@ public class FlashlightTool extends BaseToolPlugin {
         warn.setAlpha(0.8f);
         page.addView(warn);
         ToolViewFactory.addLabel(page, "Pattern");
-        com.google.android.material.textfield.TextInputLayout layout =
-                new com.google.android.material.textfield.TextInputLayout(context, null,
+        TextInputLayout layout =
+                new TextInputLayout(context, null,
                         com.google.android.material.R.attr.textInputOutlinedExposedDropdownMenuStyle);
         layout.setHint("Pattern");
-        com.google.android.material.textfield.MaterialAutoCompleteTextView field =
-                new com.google.android.material.textfield.MaterialAutoCompleteTextView(
+        MaterialAutoCompleteTextView field =
+                new MaterialAutoCompleteTextView(
                         layout.getContext());
-        android.widget.ArrayAdapter<String> ad = new android.widget.ArrayAdapter<>(context,
+        ArrayAdapter<String> ad = new ArrayAdapter<>(context,
                 android.R.layout.simple_list_item_1, PATTERNS);
         field.setAdapter(ad);
         field.setText(PATTERNS[patternIndex], false);
@@ -805,11 +812,11 @@ public class FlashlightTool extends BaseToolPlugin {
         morseRow = new LinearLayout(context);
         morseRow.setOrientation(LinearLayout.VERTICAL);
         morseRow.setVisibility(patternIndex == 3 ? View.VISIBLE : View.GONE);
-        com.google.android.material.textfield.TextInputLayout ml =
-                new com.google.android.material.textfield.TextInputLayout(context);
+        TextInputLayout ml =
+                new TextInputLayout(context);
         ml.setHint("Text to flash (A-Z 0-9)");
-        com.google.android.material.textfield.TextInputEditText me =
-                new com.google.android.material.textfield.TextInputEditText(ml.getContext());
+        TextInputEditText me =
+                new TextInputEditText(ml.getContext());
         me.setText(morseText);
         me.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -857,7 +864,7 @@ public class FlashlightTool extends BaseToolPlugin {
         if (strobePower == null) return;
         strobePower.setText(blinkRunning ? "Stop" : "Start flashing");
         try {
-            strobePower.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+            strobePower.setBackgroundTintList(ColorStateList.valueOf(
                     blinkRunning ? Color.parseColor("#B3261E") : Color.parseColor("#0F9D58")));
             strobePower.setTextColor(Color.WHITE);
         } catch (Exception ignored) {
@@ -1055,11 +1062,11 @@ public class FlashlightTool extends BaseToolPlugin {
 
     private void minutesRow(LinearLayout box, String label, int current,
                             MinutesPick pick) {
-        com.google.android.material.textfield.TextInputLayout layout =
-                new com.google.android.material.textfield.TextInputLayout(host);
+        TextInputLayout layout =
+                new TextInputLayout(host);
         layout.setHint(label);
-        com.google.android.material.textfield.TextInputEditText field =
-                new com.google.android.material.textfield.TextInputEditText(layout.getContext());
+        TextInputEditText field =
+                new TextInputEditText(layout.getContext());
         field.setInputType(InputType.TYPE_CLASS_NUMBER);
         field.setText(String.valueOf(Math.max(0, current)));
         field.addTextChangedListener(new TextWatcher() {

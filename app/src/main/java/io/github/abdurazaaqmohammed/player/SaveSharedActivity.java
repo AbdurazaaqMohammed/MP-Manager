@@ -1,8 +1,6 @@
 package io.github.abdurazaaqmohammed.player;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -12,10 +10,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
-import androidx.preference.PreferenceManager;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.DynamicColors;
 
 import java.io.File;
 import java.io.FileOutputStream;

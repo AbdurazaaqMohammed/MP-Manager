@@ -65,15 +65,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
-import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.AccessFlags;
-import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.StringWriter;
-import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;

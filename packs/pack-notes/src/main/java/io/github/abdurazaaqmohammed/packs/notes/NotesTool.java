@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.packs.notes;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -11,13 +12,15 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -25,15 +28,19 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
@@ -503,8 +510,8 @@ public class NotesTool extends BaseToolPlugin {
 
     private void toast(String message) {
         try {
-            android.widget.Toast.makeText(context, message,
-                    android.widget.Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, message,
+                    Toast.LENGTH_SHORT).show();
         } catch (Exception ignored) {
         }
     }
@@ -774,8 +781,8 @@ public class NotesTool extends BaseToolPlugin {
         ScrollView scroll = new ScrollView(context);
         scroll.addView(box, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context);
+        MaterialAlertDialogBuilder builder =
+                new MaterialAlertDialogBuilder(context);
         builder.setTitle("Statistics");
         builder.setView(scroll);
         builder.setPositiveButton("Close", null);
@@ -909,16 +916,16 @@ public class NotesTool extends BaseToolPlugin {
             settings.setTheme(index);
             if (index == NoteSettings.THEME_LIGHT || index == NoteSettings.THEME_DARK) {
                 try {
-                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    AppCompatDelegate.setDefaultNightMode(
                             index == NoteSettings.THEME_DARK
-                                    ? androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                                    : androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
+                                    ? AppCompatDelegate.MODE_NIGHT_YES
+                                    : AppCompatDelegate.MODE_NIGHT_NO);
                 } catch (Exception ignored) {
                 }
             } else {
                 try {
-                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-                            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                    AppCompatDelegate.setDefaultNightMode(
+                            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
                 } catch (Exception ignored) {
                 }
             }
@@ -1011,9 +1018,9 @@ public class NotesTool extends BaseToolPlugin {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         grid.addView(rowB, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        final com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context);
-        androidx.appcompat.app.AlertDialog dialog = builder.setTitle("Accent colour")
+        final MaterialAlertDialogBuilder builder =
+                new MaterialAlertDialogBuilder(context);
+        AlertDialog dialog = builder.setTitle("Accent colour")
                 .setView(grid).setNegativeButton("App default", (d, w) -> {
                     settings.setAccent(-1);
                     applyAccent();
@@ -1096,8 +1103,8 @@ public class NotesTool extends BaseToolPlugin {
             Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
             pick.setType("*/*");
             pick.addCategory(Intent.CATEGORY_OPENABLE);
-            if (context instanceof android.app.Activity) {
-                ((android.app.Activity) context).startActivityForResult(pick, requestCode);
+            if (context instanceof Activity) {
+                ((Activity) context).startActivityForResult(pick, requestCode);
             } else {
                 toast("Open the notes tool first");
             }
@@ -1110,17 +1117,17 @@ public class NotesTool extends BaseToolPlugin {
     public void onActivityResult(int reqCode, int resultCode, Intent data) {
         if (reqCode != requestCode || data == null || data.getData() == null) return;
         try {
-            java.io.InputStream in = context.getContentResolver()
+            InputStream in = context.getContentResolver()
                     .openInputStream(data.getData());
             if (in == null) return;
-            java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             byte[] chunk = new byte[8192];
             int read;
             while ((read = in.read(chunk)) > 0) buffer.write(chunk, 0, read);
             in.close();
             String text = buffer.toString("UTF-8");
             boolean json = text.trim().startsWith("{") || text.trim().startsWith("[");
-            dialogs.items("Import notes", java.util.Arrays.asList(
+            dialogs.items("Import notes", Arrays.asList(
                     json ? "Merge into current notes" : "Add as a new note",
                     json ? "Replace all notes" : "Add as a new note"), index -> {
                         if (json) {

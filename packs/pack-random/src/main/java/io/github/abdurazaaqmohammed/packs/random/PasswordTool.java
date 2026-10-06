@@ -1,11 +1,9 @@
 package io.github.abdurazaaqmohammed.packs.random;
 
 import android.content.Context;
-import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;

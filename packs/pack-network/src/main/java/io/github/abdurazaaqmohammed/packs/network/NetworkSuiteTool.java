@@ -2,6 +2,8 @@ package io.github.abdurazaaqmohammed.packs.network;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -14,13 +16,12 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.navigation.NavigationBarView;
 
 import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
-import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.tools.common.PagedShell;
-import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -209,14 +210,14 @@ public class NetworkSuiteTool extends BaseToolPlugin {
     }
 
     private static void stylePair(MaterialButton a, MaterialButton b, int selected) {
-        int primary = com.google.android.material.color.MaterialColors.getColor(a.getContext(),
+        int primary = MaterialColors.getColor(a.getContext(),
                 com.google.android.material.R.attr.colorPrimary, 0xFF1B73E8);
-        int surface = com.google.android.material.color.MaterialColors.getColor(a.getContext(),
+        int surface = MaterialColors.getColor(a.getContext(),
                 com.google.android.material.R.attr.colorSurfaceContainerHigh, 0xFFEEEEEE);
-        a.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selected == 0 ? primary : surface));
-        a.setTextColor(selected == 0 ? android.graphics.Color.WHITE : com.google.android.material.color.MaterialColors.getColor(a.getContext(), com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.BLACK));
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selected == 1 ? primary : surface));
-        b.setTextColor(selected == 1 ? android.graphics.Color.WHITE : com.google.android.material.color.MaterialColors.getColor(a.getContext(), com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.BLACK));
+        a.setBackgroundTintList(ColorStateList.valueOf(selected == 0 ? primary : surface));
+        a.setTextColor(selected == 0 ? Color.WHITE : MaterialColors.getColor(a.getContext(), com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        b.setBackgroundTintList(ColorStateList.valueOf(selected == 1 ? primary : surface));
+        b.setTextColor(selected == 1 ? Color.WHITE : MaterialColors.getColor(a.getContext(), com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
     }
 
     private static void navItem(Context context, Menu menu, int id, String title,

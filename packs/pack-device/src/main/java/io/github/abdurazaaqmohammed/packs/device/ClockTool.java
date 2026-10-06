@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -13,6 +14,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,6 +35,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -44,12 +48,17 @@ import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.tools.common.PagedShell;
 import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
+import io.github.abdurazaaqmohammed.ui.views.ColorWheelView;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 public class ClockTool extends BaseToolPlugin {
 
@@ -301,7 +310,7 @@ public class ClockTool extends BaseToolPlugin {
 
     private void setAppBarVisible(boolean visible) {
         try {
-            View root = ((android.app.Activity) host).getWindow().getDecorView();
+            View root = ((Activity) host).getWindow().getDecorView();
             setToolbarVisibleRecursive(root, visible);
         } catch (Exception ignored) {
         }
@@ -524,8 +533,8 @@ public class ClockTool extends BaseToolPlugin {
         };
         digitalSection.addView(timeFormatSeg);
 
-        com.google.android.material.materialswitch.MaterialSwitch dateSwitch =
-                new com.google.android.material.materialswitch.MaterialSwitch(host);
+        MaterialSwitch dateSwitch =
+                new MaterialSwitch(host);
         dateSwitch.setText("Show date");
         dateSwitch.setChecked(showDate);
         dateSwitch.setOnCheckedChangeListener((b, on) -> {
@@ -647,9 +656,9 @@ public class ClockTool extends BaseToolPlugin {
         return t;
     }
 
-    private void pickColor(String title, java.util.function.Consumer<Integer> setter) {
-        io.github.abdurazaaqmohammed.ui.views.ColorWheelView wheel =
-                new io.github.abdurazaaqmohammed.ui.views.ColorWheelView(host);
+    private void pickColor(String title, Consumer<Integer> setter) {
+        ColorWheelView wheel =
+                new ColorWheelView(host);
         LinearLayout root = new LinearLayout(host);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = ToolViewFactory.dp(host, 16);
@@ -718,7 +727,7 @@ public class ClockTool extends BaseToolPlugin {
             public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        hexInput.addTextChangedListener(new android.text.TextWatcher() {
+        hexInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -744,7 +753,7 @@ public class ClockTool extends BaseToolPlugin {
             }
 
             @Override
-            public void afterTextChanged(android.text.Editable s) {
+            public void afterTextChanged(Editable s) {
             }
         });
 
@@ -794,8 +803,8 @@ public class ClockTool extends BaseToolPlugin {
             Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
             pick.setType("image/*");
             pick.addCategory(Intent.CATEGORY_OPENABLE);
-            if (host instanceof android.app.Activity) {
-                ((android.app.Activity) host).startActivityForResult(pick, REQ_IMAGE);
+            if (host instanceof Activity) {
+                ((Activity) host).startActivityForResult(pick, REQ_IMAGE);
             }
         } catch (Exception e) {
             ToolViewFactory.toast(host, "No picker");
@@ -807,8 +816,8 @@ public class ClockTool extends BaseToolPlugin {
             Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
             pick.setType("*/*");
             pick.addCategory(Intent.CATEGORY_OPENABLE);
-            if (host instanceof android.app.Activity) {
-                ((android.app.Activity) host).startActivityForResult(pick, REQ_FONT);
+            if (host instanceof Activity) {
+                ((Activity) host).startActivityForResult(pick, REQ_FONT);
             }
         } catch (Exception e) {
             ToolViewFactory.toast(host, "No picker");
@@ -831,10 +840,10 @@ public class ClockTool extends BaseToolPlugin {
         } else if (requestCode == REQ_FONT) {
             try {
                 InputStream in = host.getContentResolver().openInputStream(uri);
-                java.io.File dir = host.getExternalFilesDir(null);
+                File dir = host.getExternalFilesDir(null);
                 if (dir == null) dir = host.getCacheDir();
-                java.io.File out = new java.io.File(dir, "clock_font.ttf");
-                java.io.FileOutputStream fos = new java.io.FileOutputStream(out);
+                File out = new File(dir, "clock_font.ttf");
+                FileOutputStream fos = new FileOutputStream(out);
                 byte[] buf = new byte[4096];
                 int r;
                 while ((r = in.read(buf)) > 0) fos.write(buf, 0, r);
@@ -1060,13 +1069,13 @@ public class ClockTool extends BaseToolPlugin {
                     String dateText;
                     switch (dateFormat) {
                         case 1:
-                            dateText = new java.text.SimpleDateFormat("d MMM yyyy", Locale.US).format(now.getTime());
+                            dateText = new SimpleDateFormat("d MMM yyyy", Locale.US).format(now.getTime());
                             break;
                         case 2:
-                            dateText = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now.getTime());
+                            dateText = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now.getTime());
                             break;
                         default:
-                            dateText = new java.text.SimpleDateFormat("EEEE, d MMMM yyyy", Locale.US).format(now.getTime());
+                            dateText = new SimpleDateFormat("EEEE, d MMMM yyyy", Locale.US).format(now.getTime());
                     }
                     float dateSize = timeSize * 0.34f;
                     paint.setTextSize(dateSize);

@@ -17,7 +17,6 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.TrafficStats;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;

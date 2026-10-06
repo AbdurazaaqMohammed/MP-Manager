@@ -14,20 +14,18 @@ import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
@@ -197,8 +195,8 @@ public class WallpaperTool extends BaseToolPlugin {
         gradientHolder[0] = true;
         ToolViewFactory.addLabel(box, "Gradient direction");
         String[] dirs = new String[]{"Vertical", "Horizontal", "Diagonal", "Radial"};
-        com.google.android.material.button.MaterialButtonToggleGroup dirToggle =
-                new com.google.android.material.button.MaterialButtonToggleGroup(context);
+        MaterialButtonToggleGroup dirToggle =
+                new MaterialButtonToggleGroup(context);
         dirToggle.setSingleSelection(true);
         dirToggle.setSelectionRequired(true);
         for (String d : dirs) {

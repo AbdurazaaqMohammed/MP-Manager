@@ -1,16 +1,13 @@
 package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -29,31 +26,17 @@ import net.lingala.zip4j.model.ZipParameters;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
-import com.android.tools.smali.baksmali.Baksmali;
-import com.android.tools.smali.baksmali.BaksmaliOptions;
-import com.android.tools.smali.dexlib2.DexFileFactory;
-import com.android.tools.smali.dexlib2.Opcodes;
-import com.android.tools.smali.dexlib2.VersionMap;
-import com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef;
-import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
-import com.android.tools.smali.dexlib2.dexbacked.raw.HeaderItem;
-import com.android.tools.smali.dexlib2.iface.ClassDef;
-
 import org.apache.commons.io.FilenameUtils;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -65,12 +48,7 @@ import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
-import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
-import io.github.abdurazaaqmohammed.utils.DexMergeUtil;
-import io.github.abdurazaaqmohammed.utils.DexStringUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -78,8 +56,6 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
-import io.github.codehasan.colorpicker.extensions.Extensions;
-import modder.hub.dexeditor.activity.DexEditorActivity;
 
 public class FileOperationsHelper {
 

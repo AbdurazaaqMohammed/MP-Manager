@@ -16,7 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.util.List;
@@ -77,7 +77,7 @@ public final class PackPrompts {
             action.setEnabled(false);
             Runnable doDownload = () -> startDownload(activity, pack, onInstalled, action);
             if (!pack.hasChecksum()) {
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+                new MaterialAlertDialogBuilder(activity)
                         .setTitle(pack.title)
                         .setMessage("No checksum is published for this pack build. Install only if you trust the source. Continue?")
                         .setNegativeButton(R.string.cancel, (d, w) -> action.setEnabled(true))

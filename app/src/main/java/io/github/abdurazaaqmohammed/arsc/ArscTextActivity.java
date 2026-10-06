@@ -1,8 +1,6 @@
 package io.github.abdurazaaqmohammed.arsc;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,10 +17,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
-import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.reandroid.arsc.chunk.TypeBlock;
 import com.reandroid.arsc.model.ResourceEntry;

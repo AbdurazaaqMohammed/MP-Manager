@@ -18,16 +18,11 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewParent;
-import android.view.inputmethod.EditorInfo;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -35,10 +30,8 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -161,7 +154,7 @@ public class RecorderTool extends BaseToolPlugin {
         nav.setLabelVisibilityMode(
                 NavigationBarView.LABEL_VISIBILITY_LABELED);
         nav.setSelectedItemId(TAB_AUDIO);
-        java.util.List<PagedShell.Page> pages = new ArrayList<>();
+        List<PagedShell.Page> pages = new ArrayList<>();
         pages.add(new PagedShell.Page() {
             @Override
             public String title() {

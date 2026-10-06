@@ -2,8 +2,6 @@ package io.github.abdurazaaqmohammed.ui.activities;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.SpannableString;
@@ -29,7 +27,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
-import androidx.preference.PreferenceManager;
+
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 

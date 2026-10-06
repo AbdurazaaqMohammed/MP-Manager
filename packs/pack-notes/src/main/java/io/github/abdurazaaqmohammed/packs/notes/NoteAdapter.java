@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.packs.notes;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -191,7 +192,7 @@ note.pinned = !note.pinned;
 
 TextView preview = NotesUi.label(ctx, "", 13.5f, NotesUi.onSurfaceVariant(ctx));
         preview.setMaxLines(settings.previewLines());
-        preview.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        preview.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         pp.topMargin = NotesUi.dp(ctx, 4);

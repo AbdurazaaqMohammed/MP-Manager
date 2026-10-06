@@ -5,6 +5,9 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import java.util.Base64;
+import java.util.Random;
+
 public class TextLogicTest {
 
     @Test
@@ -17,7 +20,7 @@ public class TextLogicTest {
 
     @Test
     public void codecs() throws Exception {
-        assertEquals("aGVsbG8=", java.util.Base64.getEncoder().encodeToString("hello".getBytes()));
+        assertEquals("aGVsbG8=", Base64.getEncoder().encodeToString("hello".getBytes()));
         assertEquals("hello world", TextCodecs.binaryDecode(TextCodecs.binaryEncode("hello world")));
         assertEquals("Khoor", TextCodecs.caesarShift("Hello", 3));
         assertEquals("abc", TextCodecs.caesarShift("xyz", 3));
@@ -44,7 +47,7 @@ public class TextLogicTest {
 
     @Test
     public void loremGenerates() {
-        String out = Lorem.generate(2, new java.util.Random(0));
+        String out = Lorem.generate(2, new Random(0));
         assertTrue(out.length() > 20);
     }
 }

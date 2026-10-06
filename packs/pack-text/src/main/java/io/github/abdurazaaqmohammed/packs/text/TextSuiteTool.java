@@ -14,6 +14,7 @@ import android.widget.TextView;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.navigation.NavigationBarView;
@@ -264,7 +265,7 @@ public class TextSuiteTool extends BaseToolPlugin {
     private void showTool(int group, ToolPlugin tool) {
         LinearLayout page = new LinearLayout(host);
         page.setOrientation(LinearLayout.VERTICAL);
-        com.google.android.material.button.MaterialButton back = new com.google.android.material.button.MaterialButton(host, null,
+        MaterialButton back = new MaterialButton(host, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         back.setText("‹ " + GROUP_NAMES[group]);
         back.setOnClickListener(v -> {

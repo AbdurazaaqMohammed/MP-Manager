@@ -1,15 +1,17 @@
 package io.github.abdurazaaqmohammed.packs.notes;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.graphics.Typeface;
-import android.text.ClipboardManager;
 import android.text.Editable;
-import android.text.Spanned;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
@@ -100,13 +102,13 @@ public View build() {
         titleField.setHintTextColor(NotesUi.withAlpha(NotesUi.onSurfaceVariant(context), 140));
         titleField.setPadding(NotesUi.dp(context, 18), NotesUi.dp(context, 10),
                 NotesUi.dp(context, 18), NotesUi.dp(context, 6));
-        titleField.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        titleField.setBackgroundColor(Color.TRANSPARENT);
         root.addView(titleField, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         bodyField = new EditText(context);
         bodyField.setGravity(Gravity.TOP | Gravity.START);
-        bodyField.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        bodyField.setBackgroundColor(Color.TRANSPARENT);
         bodyField.setText(note.plain());
         bodyField.setTextSize(16 * settings.textScale());
         bodyField.setLineSpacing(0f, settings.lineSpacing());
@@ -116,9 +118,9 @@ public View build() {
         bodyField.setHintTextColor(NotesUi.withAlpha(NotesUi.onSurfaceVariant(context), 130));
         bodyField.setPadding(NotesUi.dp(context, 18), NotesUi.dp(context, 4),
                 NotesUi.dp(context, 18), NotesUi.dp(context, 120));
-        bodyField.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        bodyField.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         root.addView(bodyField, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
@@ -346,9 +348,9 @@ private View buildChecklistPane() {
             String text = Markdown.plain(lines[i]);
             boolean done = Markdown.isDoneBullet(lines[i].trim());
             LinearLayout row = NotesUi.row(context);
-            final android.widget.CheckBox box = new android.widget.CheckBox(context);
+            final CheckBox box = new CheckBox(context);
             box.setChecked(done);
-            box.setButtonTintList(android.content.res.ColorStateList.valueOf(accent));
+            box.setButtonTintList(ColorStateList.valueOf(accent));
             box.setOnCheckedChangeListener((b, checked) -> {
                 String[] current = note.plain().split("\n", -1);
                 if (index < 0 || index >= current.length) return;
@@ -365,7 +367,7 @@ private View buildChecklistPane() {
             field.setTextSize(15 * settings.textScale());
             field.setTextColor(NotesUi.onSurface(context));
             field.setSingleLine(true);
-            field.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            field.setBackgroundColor(Color.TRANSPARENT);
             final boolean[] dirtyFlag = {false};
             field.addTextChangedListener(new SimpleWatcher() {
                 @Override

@@ -40,7 +40,6 @@ import android.annotation.SuppressLint;
 import androidx.annotation.NonNull;
 
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
-import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.DebugItemType;
 import com.android.tools.smali.dexlib2.HiddenApiRestriction;
@@ -66,7 +65,6 @@ import com.android.tools.smali.dexlib2.iface.value.ArrayEncodedValue;
 import com.android.tools.smali.dexlib2.iface.value.EncodedValue;
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter;
-import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
 import com.android.tools.smali.dexlib2.util.DexUtil;
 import com.android.tools.smali.dexlib2.writer.builder.DexBuilder;
@@ -78,13 +76,11 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -106,7 +102,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nonnull;

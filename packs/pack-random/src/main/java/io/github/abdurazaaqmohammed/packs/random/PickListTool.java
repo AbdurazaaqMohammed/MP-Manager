@@ -15,6 +15,8 @@ import io.github.abdurazaaqmohammed.plugins.api.BaseToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.api.ToolCategories;
 import io.github.abdurazaaqmohammed.plugins.tools.common.ToolViewFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class PickListTool extends BaseToolPlugin {
@@ -38,7 +40,7 @@ public class PickListTool extends BaseToolPlugin {
         Random random = new Random();
         pick.setOnClickListener(v -> {
             String[] lines = input.getText().toString().split("[,\\n]+");
-            java.util.List<String> items = new java.util.ArrayList<>();
+            List<String> items = new ArrayList<>();
             for (String l : lines) {
                 String t = l.trim();
                 if (!t.isEmpty()) items.add(t);

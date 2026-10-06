@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
@@ -357,8 +359,8 @@ public String exportJson() {
         try {
             String trimmed = json.trim();
             if (trimmed.startsWith("{")) {
-                com.google.gson.JsonObject root =
-                        new com.google.gson.JsonParser().parse(trimmed).getAsJsonObject();
+                JsonObject root =
+                        new JsonParser().parse(trimmed).getAsJsonObject();
                 if (root.has("notes")) trimmed = root.get("notes").toString();
             }
             Type type = new TypeToken<List<Note>>() {
