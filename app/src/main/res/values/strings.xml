@@ -1990,4 +1990,28 @@ Deleted %2$s · %3$s</string>
     <string name="xml_no_match">No matches found</string>
     <string name="xml_bad_regex">Invalid regular expression</string>
     <string name="xml_replaced_x">Replaced %1$d in %2$d file(s)</string>
+
+    <string name="bw_section">Bitwarden vault</string>
+    <string name="bw_not_connected">Not connected</string>
+    <string name="bw_locked">Locked — %1$s</string>
+    <string name="bw_unlocked">Unlocked — %1$d entries</string>
+    <string name="bw_connect">Connect</string>
+    <string name="bw_unlock">Unlock</string>
+    <string name="bw_sync">Sync</string>
+    <string name="bw_logout">Log out</string>
+    <string name="bw_server">Server address</string>
+    <string name="bw_email">Email</string>
+    <string name="bw_password">Master password</string>
+    <string name="bw_connecting">Connecting…</string>
+    <string name="bw_syncing">Syncing…</string>
+    <string name="bw_failed">Failed: %1$s</string>
+    <string name="bw_two_factor">Two-factor code</string>
+    <string name="bw_copied">Password copied</string>
+    <string name="bw_copied_username">Username copied</string>
+    <string name="bw_copied_code">Code copied</string>
+    <string name="bw_copy_password">Copy password</string>
+    <string name="bw_copy_username">Copy username</string>
+    <string name="bw_copy_code">Copy code</string>
+    <string name="bw_empty">The vault is empty</string>
+    <string name="bw_wrong_password">Wrong master password</string>
 </resources>

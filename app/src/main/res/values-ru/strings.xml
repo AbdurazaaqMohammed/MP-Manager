@@ -1518,4 +1518,28 @@
     <string name="xml_no_match">Совпадений не найдено</string>
     <string name="xml_bad_regex">Недопустимое регулярное выражение</string>
     <string name="xml_replaced_x">Заменено %1$d в %2$d файлах</string>
+
+    <string name="bw_section">Bitwarden хранилище</string>
+    <string name="bw_not_connected">Не подключено</string>
+    <string name="bw_locked">Заблокировано — %1$s</string>
+    <string name="bw_unlocked">Разблокировано — записей: %1$d</string>
+    <string name="bw_connect">Подключить</string>
+    <string name="bw_unlock">Разблокировать</string>
+    <string name="bw_sync">Синхронизировать</string>
+    <string name="bw_logout">Выйти</string>
+    <string name="bw_server">Адрес сервера</string>
+    <string name="bw_email">Эл. почта</string>
+    <string name="bw_password">Мастер-пароль</string>
+    <string name="bw_connecting">Подключение…</string>
+    <string name="bw_syncing">Синхронизация…</string>
+    <string name="bw_failed">Ошибка: %1$s</string>
+    <string name="bw_two_factor">Код двухфакторной аутентификации</string>
+    <string name="bw_copied">Пароль скопирован</string>
+    <string name="bw_copied_username">Логин скопирован</string>
+    <string name="bw_copied_code">Код скопирован</string>
+    <string name="bw_copy_password">Копировать пароль</string>
+    <string name="bw_copy_username">Копировать логин</string>
+    <string name="bw_copy_code">Копировать код</string>
+    <string name="bw_empty">Хранилище пусто</string>
+    <string name="bw_wrong_password">Неверный мастер-пароль</string>
 </resources>

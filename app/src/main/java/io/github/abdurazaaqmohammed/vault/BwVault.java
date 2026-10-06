@@ -1,0 +1,240 @@
+package io.github.abdurazaaqmohammed.vault;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Bitwarden-compatible vault state for the self-hosted client: password login, unlock of a
+ * persisted session, sync parsing and per-entry decryption.
+ *
+ * <p>Pure Java (org.json + {@link BwApi} + {@link BwCrypto}), deliberately free of any Android
+ * dependency so the whole flow stays testable on the JVM. Session persistence is the caller's
+ * business: it serialises to/from JSON and the UI stores that string.
+ */
+public final class BwVault {
+
+    private BwVault() {
+    }
+
+    /** Persisted authentication material; safe to store, contains no secrets by itself. */
+    public static final class Session {
+        public String server;
+        public String email;
+        public String deviceId;
+        public String accessToken;
+        public String refreshToken;
+        /** User key encrypted with the stretched master key; the only way back in. */
+        public String encryptedKey;
+        /** Epoch millis at which {@link #accessToken} stops being accepted. */
+        public long expiresAt;
+        public BwCrypto.KdfConfig kdf;
+
+        public String toJSON() {
+            JSONObject o = new JSONObject();
+            putQuiet(o, "server", server);
+            putQuiet(o, "email", email);
+            putQuiet(o, "deviceId", deviceId);
+            putQuiet(o, "accessToken", accessToken);
+            putQuiet(o, "refreshToken", refreshToken);
+            putQuiet(o, "encryptedKey", encryptedKey);
+            putQuiet(o, "expiresAt", expiresAt);
+            if (kdf != null) {
+                JSONObject k = new JSONObject();
+                putQuiet(k, "type", kdf.type);
+                putQuiet(k, "iterations", kdf.iterations);
+                putQuiet(k, "memoryMB", kdf.memoryMB);
+                putQuiet(k, "parallelism", kdf.parallelism);
+                putQuiet(o, "kdf", k);
+            }
+            return o.toString();
+        }
+
+        public static Session fromJSON(String raw) {
+            if (raw == null || raw.isEmpty()) return null;
+            try {
+                JSONObject o = new JSONObject(raw);
+                Session s = new Session();
+                s.server = o.optString("server", null);
+                s.email = o.optString("email", null);
+                s.deviceId = o.optString("deviceId", null);
+                s.accessToken = o.optString("accessToken", null);
+                s.refreshToken = o.optString("refreshToken", null);
+                s.encryptedKey = o.optString("encryptedKey", null);
+                s.expiresAt = o.optLong("expiresAt", 0);
+                JSONObject k = o.optJSONObject("kdf");
+                if (k != null) {
+                    s.kdf = new BwCrypto.KdfConfig(
+                            k.optInt("type", BwCrypto.KDF_PBKDF2),
+                            k.optInt("iterations", 600000),
+                            k.optInt("memoryMB", 0),
+                            k.optInt("parallelism", 0));
+                }
+                if (s.server == null || s.email == null || s.encryptedKey == null) return null;
+                return s;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        private static void putQuiet(JSONObject o, String key, Object value) {
+            try {
+                o.put(key, value);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /** One decrypted vault entry; non-login cipher types carry a name only. */
+    public static final class Entry {
+        public final String id;
+        public final String name;
+        public final String username;
+        public final String password;
+        public final String totp;
+
+        Entry(String id, String name, String username, String password, String totp) {
+            this.id = id;
+            this.name = name;
+            this.username = username;
+            this.password = password;
+            this.totp = totp;
+        }
+    }
+
+    /** Everything a screen needs after a successful login or unlock. */
+    public static final class Result {
+        public final Session session;
+        public final List<Entry> entries;
+        /** Kept only in memory so a re-sync does not need the master password again. */
+        public final BwCrypto.SymKey userKey;
+
+        Result(Session session, List<Entry> entries, BwCrypto.SymKey userKey) {
+            this.session = session;
+            this.entries = entries;
+            this.userKey = userKey;
+        }
+    }
+
+    /** First login against a self-hosted server: prelogin, password grant, sync. */
+    public static Result login(String server, String email, String password, String deviceId,
+                               String twoFactorToken) throws Exception {
+        BwCrypto.KdfConfig kdf = BwApi.prelogin(server, email);
+        return authenticate(server, email, password, kdf, deviceId, twoFactorToken);
+    }
+
+    /**
+     * Unlock a persisted session with the master password. Key derivation is offline; the token
+     * is refreshed only when it is (about to be) expired, then the vault is fetched.
+     */
+    public static Result unlock(Session s, String password) throws Exception {
+        if (s.kdf == null) throw new Exception("saved session has no KDF parameters");
+        byte[] masterKey = BwCrypto.deriveMasterKey(password, s.email, s.kdf);
+        BwCrypto.SymKey stretched = BwCrypto.stretchMasterKey(masterKey);
+        BwCrypto.SymKey userKey;
+        try {
+            userKey = BwCrypto.decryptUserKey(stretched, s.encryptedKey);
+        } catch (Exception e) {
+            throw new Exception("wrong master password");
+        }
+        refreshIfExpired(s);
+        return fetch(s, userKey);
+    }
+
+    /** Re-sync an unlocked vault without asking for the password again. */
+    public static Result resync(Session s, BwCrypto.SymKey userKey) throws Exception {
+        refreshIfExpired(s);
+        return fetch(s, userKey);
+    }
+
+    // ------------------------------------------------------------------ internals
+
+    private static Result authenticate(String server, String email, String password,
+                                       BwCrypto.KdfConfig kdf, String deviceId,
+                                       String twoFactorToken) throws Exception {
+        byte[] masterKey = BwCrypto.deriveMasterKey(password, email, kdf);
+        String masterKeyHash = BwCrypto.deriveMasterKeyHash(masterKey, password);
+        BwApi.TokenResult token = BwApi.loginPassword(server, email, masterKeyHash, deviceId,
+                "MP Manager", null, twoFactorToken);
+
+        Session s = new Session();
+        s.server = server;
+        s.email = email;
+        s.deviceId = deviceId;
+        s.kdf = kdf;
+        apply(s, token);
+        if (s.encryptedKey == null || s.encryptedKey.isEmpty()) {
+            throw new Exception("server did not return the encrypted vault key");
+        }
+
+        BwCrypto.SymKey stretched = BwCrypto.stretchMasterKey(masterKey);
+        BwCrypto.SymKey userKey;
+        try {
+            userKey = BwCrypto.decryptUserKey(stretched, s.encryptedKey);
+        } catch (Exception e) {
+            throw new Exception("could not unlock the vault key");
+        }
+        return fetch(s, userKey);
+    }
+
+    private static void refreshIfExpired(Session s) throws Exception {
+        if (s.accessToken == null || s.refreshToken == null) {
+            throw new Exception("session has no tokens");
+        }
+        if (s.expiresAt > System.currentTimeMillis() + 60_000L) return;
+        apply(s, BwApi.refresh(s.server, s.refreshToken));
+    }
+
+    private static void apply(Session s, BwApi.TokenResult t) {
+        s.accessToken = t.accessToken;
+        if (t.refreshToken != null && !t.refreshToken.isEmpty()) s.refreshToken = t.refreshToken;
+        s.expiresAt = System.currentTimeMillis() + t.expiresInSeconds * 1000L;
+        if (t.encryptedKey != null && !t.encryptedKey.isEmpty()) s.encryptedKey = t.encryptedKey;
+    }
+
+    private static Result fetch(Session s, BwCrypto.SymKey userKey) throws Exception {
+        JSONObject sync = BwApi.sync(s.server, s.accessToken);
+        return parse(s, userKey, sync);
+    }
+
+    private static Result parse(Session s, BwCrypto.SymKey userKey, JSONObject sync)
+            throws Exception {
+        JSONObject profile = sync.optJSONObject("Profile");
+        if (profile != null) {
+            String key = profile.optString("Key", null);
+            if (key != null && !key.isEmpty()) s.encryptedKey = key;
+        }
+        List<Entry> entries = new ArrayList<>();
+        JSONArray ciphers = sync.optJSONArray("Ciphers");
+        if (ciphers != null) {
+            for (int i = 0; i < ciphers.length(); i++) {
+                JSONObject c = ciphers.optJSONObject(i);
+                if (c == null) continue;
+                try {
+                    String name = BwCrypto.decryptToString(userKey, c.optString("Name", null));
+                    if (name == null) continue;
+                    String username = null;
+                    String password = null;
+                    String totp = null;
+                    if (c.optInt("Type", -1) == 0) {  // 0 = login, the only type with secrets
+                        JSONObject login = c.optJSONObject("Login");
+                        if (login != null) {
+                            username = BwCrypto.decryptToString(userKey,
+                                    login.optString("Username", null));
+                            password = BwCrypto.decryptToString(userKey,
+                                    login.optString("Password", null));
+                            totp = BwCrypto.decryptToString(userKey,
+                                    login.optString("Totp", null));
+                        }
+                    }
+                    entries.add(new Entry(c.optString("Id", ""), name, username, password, totp));
+                } catch (Exception corrupt) {
+                    // One undecryptable entry must not take the whole vault down.
+                }
+            }
+        }
+        return new Result(s, entries, userKey);
+    }
+}

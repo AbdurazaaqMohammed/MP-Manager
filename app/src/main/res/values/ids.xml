@@ -6,4 +6,8 @@
     <item name="arsc_menu_more" type="id" />
     <!-- ARSC Plus: fragment container for the Sora text editor -->
     <item name="arsc_text_editor_container" type="id" />
+    <!-- Bitwarden dialog fields (ids are assigned programmatically) -->
+    <item name="bw_field_server" type="id" />
+    <item name="bw_field_email" type="id" />
+    <item name="bw_field_password" type="id" />
 </resources>
