@@ -189,6 +189,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         for (String section : sectionOrder) {
             if ("bookmarks".equals(section) && !showBookmarks) continue;
             if (section.startsWith(BOOKMARK_GROUP_PREFIX) && !showGroups) continue;
+            int headerIndex = entries.size();
             entries.add(new SidebarEntry(EntryType.HEADER, section, section,
                     sectionTitle(section), 0, null, null));
             if (Boolean.TRUE.equals(collapsed.get(section))) continue;
@@ -208,6 +209,11 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 addBookmarks(group, section, groups.getOrDefault(group, new ArrayList<>()));
             } else {
                 addTools();
+            }
+            // An expanded section that produced no rows drops its heading too, the way MT Manager
+            // hides an empty group. A collapsed one keeps it: that heading is how it gets reopened.
+            if (entries.size() == headerIndex + 1 && !Boolean.TRUE.equals(collapsed.get(section))) {
+                entries.remove(headerIndex);
             }
         }
         notifyDataSetChanged();
