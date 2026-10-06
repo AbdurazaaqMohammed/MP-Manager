@@ -1952,6 +1952,11 @@ Deleted %2$s · %3$s</string>
     <string name="file_provider_injected">File provider injected</string>
     <string name="file_provider_exists">File provider already injected</string>
     <string name="dex_string_decrypt">DEX string decryption</string>
+    <string name="dex_decrypt_desc">Statically restores encrypted const-string call sites by running their decrypt functions. Leave the signature empty for automatic detection.</string>
+    <string name="dex_decrypt_fn_hint">Decrypt method signature (e.g. Lfoo/StringFog;->decrypt — * works)</string>
+    <string name="dex_decrypt_advanced">Use enhanced algorithm (match every String-returning static call)</string>
+    <string name="dex_decrypt_none">No encrypted strings found</string>
+    <string name="dex_decrypt_count">Decrypted %1$d string(s)</string>
     <string name="function_in_development">This feature is still in development</string>
     <string name="dex_resplit_hint">Max classes per dex</string>
     <string name="dex_resplit_done">Re-split %1$d classes</string>

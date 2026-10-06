@@ -1949,6 +1949,11 @@ Layout Inspector
     <string name="file_provider_injected">文件提供器注入完成</string>
     <string name="file_provider_exists">该 APK 已注入文件提供器</string>
     <string name="dex_string_decrypt">DEX字符串解密</string>
+    <string name="dex_decrypt_desc">静态还原被加密的 const-string：执行其解密函数并写回明文。签名留空则自动识别。</string>
+    <string name="dex_decrypt_fn_hint">解密方法签名（如 Lfoo/StringFog;->decrypt，支持 * 通配）</string>
+    <string name="dex_decrypt_advanced">使用加强版算法（匹配所有返回 String 的静态调用）</string>
+    <string name="dex_decrypt_none">未找到可解密的字符串</string>
+    <string name="dex_decrypt_count">已解密 %1$d 处字符串</string>
     <string name="function_in_development">该功能开发中</string>
     <string name="dex_resplit_hint">每个 dex 最大类数</string>
     <string name="dex_resplit_done">已重新划分 %1$d 个类</string>

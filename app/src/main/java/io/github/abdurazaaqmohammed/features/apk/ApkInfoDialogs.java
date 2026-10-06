@@ -111,6 +111,8 @@ import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DataReuseOptimizer;
+import io.github.abdurazaaqmohammed.utils.DexDecryptInjector;
+import io.github.abdurazaaqmohammed.utils.DexStringDecryptor;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileProviderInjector;
@@ -1123,6 +1125,9 @@ public class ApkInfoDialogs {
             case ACT_FILE_PROVIDER:
                 runFileProvider(file);
                 break;
+            case ACT_DEX_DECRYPT:
+                showDexDecryptDialog(file);
+                break;
             default:
                 Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
                 break;
@@ -1397,6 +1402,51 @@ public class ApkInfoDialogs {
             doLog.run();
         });
         else doLog.run();
+    }
+
+    private void showDexDecryptDialog(File file) {
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_dex_decrypt, null);
+        EditText sigInput = view.findViewById(R.id.ds_sig_input);
+        CheckBox advancedBox = view.findViewById(R.id.ds_advanced);
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.dex_string_decrypt))
+                .setView(view)
+                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                .setPositiveButton(context.rss.getString(android.R.string.ok), (dialog, which) ->
+                        runDexDecrypt(file, sigInput.getText().toString().trim(),
+                                advancedBox.isChecked())).create());
+    }
+
+    private void runDexDecrypt(File file, String customSignature, boolean advanced) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean sign = settings.getBoolean("autosign", true);
+        SignWrapper[] wrapper = new SignWrapper[1];
+        Runnable doDecrypt = () -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    File out = DexDecryptInjector.inject(context, file,
+                            new DexStringDecryptor.Options(customSignature, advanced,
+                                    logger::logMessage), logger);
+                    if (sign) wrapper[0].signApk(out);
+                    FileUtils.swapWithBackup(file, out);
+                    logger.close();
+                    pm.dismiss();
+                    context.handler.post(() ->
+                            context.loadFolderInPane(file.getParentFile(), pane1, false));
+                } catch (Exception e) {
+                    pm.dismiss();
+                    context.handler.post(logger::close);
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        };
+        if (sign) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doDecrypt.run();
+        });
+        else doDecrypt.run();
     }
 
 }
