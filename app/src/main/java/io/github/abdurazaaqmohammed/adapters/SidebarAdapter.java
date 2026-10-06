@@ -516,10 +516,10 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         // Bookmarks carry their location on a second line, the way MT Manager lists them; tools
         // have no meaningful path so the line stays collapsed.
         File bookmark = entry.file;
-        File parent = bookmark == null ? null
+        File location = bookmark == null ? null
                 : (bookmark.isDirectory() ? bookmark : bookmark.getParentFile());
-        if (entry.type == EntryType.BOOKMARK && parent != null) {
-            subtitle.setText(parent.getAbsolutePath());
+        if (entry.type == EntryType.BOOKMARK && location != null) {
+            subtitle.setText(location.getAbsolutePath());
             subtitle.setVisibility(View.VISIBLE);
         } else {
             subtitle.setVisibility(View.GONE);
