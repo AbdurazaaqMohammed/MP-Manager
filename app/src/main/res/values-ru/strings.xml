@@ -825,6 +825,11 @@
     <string name="sidebar_layout_inspector">Инспектор компоновки</string>
     <string name="sidebar_wifi">Менеджер Wi-Fi</string>
     <string name="sidebar_tools">Плагины</string>
+    <string name="sidebar_apk_mcp">APK MCP</string>
+    <string name="apk_mcp_running">Сервер запущен: %1$s</string>
+    <string name="apk_mcp_stopped">Сервер не запущен.</string>
+    <string name="apk_mcp_hint">Подключите AI-клиент транспортом \"http\" по адресу выше; доступ только с этого устройства.</string>
+    <string name="apk_mcp_failed">Не удалось запустить: нет свободного порта.</string>
     <string name="color_stop">Стоп</string>
     <string name="color_start">Старт</string>
     <string name="storage_manager">Менеджер хранилища</string>

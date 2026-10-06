@@ -917,6 +917,11 @@ Layout Inspector
     <string name="sidebar_layout_inspector">布局检查器</string>
     <string name="sidebar_wifi">Wi-Fi 管理器</string>
     <string name="sidebar_tools">插件</string>
+    <string name="sidebar_apk_mcp">APK MCP</string>
+    <string name="apk_mcp_running">服务已运行：%1$s</string>
+    <string name="apk_mcp_stopped">服务未运行。</string>
+    <string name="apk_mcp_hint">在 AI 客户端中用 type 为 \"http\" 的传输连接上方地址，仅本机可连。</string>
+    <string name="apk_mcp_failed">启动失败：没有可用端口。</string>
     <string name="color_stop">停止</string>
     <string name="color_start">开始</string>
     <string name="storage_manager">存储管理器</string>

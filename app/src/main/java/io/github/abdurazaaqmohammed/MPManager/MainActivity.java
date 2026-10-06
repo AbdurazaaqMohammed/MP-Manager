@@ -2151,6 +2151,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ftp.showFtpServerDialog();
     }
 
+    /** Sidebar shortcut: embedded APK MCP server toggle. Called by SidebarController. */
+    public void showApkMcpDialog() {
+        io.github.abdurazaaqmohammed.features.mcp.ApkMcpDialogs.show(this);
+    }
+
     /**
      * Opens the filesystem root in the active pane.
      *

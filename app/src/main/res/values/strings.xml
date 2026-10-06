@@ -936,6 +936,11 @@ Layout Inspector
     <string name="sidebar_layout_inspector">Layout Inspector</string>
     <string name="sidebar_wifi">Wi-Fi Manager</string>
     <string name="sidebar_tools">Plugins</string>
+    <string name="sidebar_apk_mcp">APK MCP</string>
+    <string name="apk_mcp_running">Server running at %1$s</string>
+    <string name="apk_mcp_stopped">Server is not running.</string>
+    <string name="apk_mcp_hint">Point an AI client at it with transport type \"http\" and the URL above; only this device can connect.</string>
+    <string name="apk_mcp_failed">Could not start: no free port.</string>
     <string name="plugin_open">Open</string>
     <string name="plugin_create_shortcut">Create shortcut</string>
     <string name="plugin_expand">Expand</string>

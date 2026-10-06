@@ -512,6 +512,9 @@ public class SidebarController {
             case "extract":
                 activity.startActivityForResult(new Intent(activity, APKExtractorActivity.class), 11);
                 break;
+            case "apk_mcp":
+                activity.showApkMcpDialog();
+                break;
             case "ftp_server":
                 activity.showFtpServerDialog();
                 break;
