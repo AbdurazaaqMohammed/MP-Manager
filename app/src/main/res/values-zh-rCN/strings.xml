@@ -1938,7 +1938,8 @@ Layout Inspector
     <string name="data_reuse_step_opt">正在复用原包数据段…</string>
     <string name="data_reuse_step_v2v3">正在原地写入 V2/V3 签名…</string>
     <string name="data_reuse_saved">已优化：%1$s → %2$s（减少 %3$s）</string>
-    <string name="data_reuse_no_host">未在本包中找到原包条目 %1$s</string>
+    <string name="data_reuse_no_host">本包内未找到原包（需要一个以存储方式打包的 ZIP 条目，例如 assets/base.apk）</string>
+    <string name="data_reuse_host">使用原包条目：%1$s</string>
     <string name="data_reuse_not_stored">原包条目 %1$s 以压缩方式打包，必须以存储（不压缩）方式打包才能优化</string>
     <string name="data_reuse_no_shared">没有与原包完全相同的文件，无需优化</string>
     <string name="data_reuse_check_failed">优化后内容校验失败，已中止</string>

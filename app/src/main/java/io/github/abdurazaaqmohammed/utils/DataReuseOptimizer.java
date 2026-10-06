@@ -6,6 +6,8 @@ import com.reandroid.apk.APKLogger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Enumeration;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -27,6 +29,9 @@ public final class DataReuseOptimizer {
     /** The entry the outer APK stores the original APK in. */
     public static final String HOST_ENTRY = "assets/base.apk";
 
+    /** Smallest size worth testing for a nested APK; the scan only reads four bytes anyway. */
+    private static final long MIN_HOST_SIZE = 4096L;
+
     private DataReuseOptimizer() {
     }
 
@@ -35,7 +40,7 @@ public final class DataReuseOptimizer {
      * place afterwards. The caller swaps the result over the original file.
      */
     public static File optimize(Context context, File inputApk, APKLogger logger, SignWrapper signer) throws Exception {
-        checkHostEntry(context, inputApk);
+        String hostEntry = locateHostEntry(context, inputApk, logger);
         long inputLength = inputApk.length();
 
         File workDir = new File(context.getCacheDir(), "multiplex_" + System.currentTimeMillis());
@@ -51,7 +56,7 @@ public final class DataReuseOptimizer {
 
             logger.logMessage(context.getString(R.string.data_reuse_step_opt));
             try {
-                DataMultiplexing.optimize(v1Signed, output, HOST_ENTRY, false);
+                DataMultiplexing.optimize(v1Signed, output, hostEntry, false);
             } catch (IOException e) {
                 String message = e.getMessage();
                 if (message != null && message.startsWith("No multiplexable data")) {
@@ -78,15 +83,56 @@ public final class DataReuseOptimizer {
         }
     }
 
-    private static void checkHostEntry(Context context, File inputApk) throws IOException {
+    /**
+     * Finds the entry the original APK is stored in: the conventional {@link #HOST_ENTRY} when it
+     * is usable, otherwise the largest stored entry carrying a zip magic number, since packers do
+     * not all agree on a path. Throws a localized error when the package embeds no original APK,
+     * or when the conventional entry exists but is compressed.
+     */
+    private static String locateHostEntry(Context context, File inputApk, APKLogger logger) throws IOException {
         try (ZipFile zipFile = new ZipFile(inputApk)) {
-            ZipEntry host = zipFile.getEntry(HOST_ENTRY);
-            if (host == null) {
-                throw new IOException(context.getString(R.string.data_reuse_no_host, HOST_ENTRY));
+            ZipEntry preferred = zipFile.getEntry(HOST_ENTRY);
+            String compressedHost = null;
+            if (preferred != null && preferred.getMethod() != ZipEntry.STORED) {
+                compressedHost = context.getString(R.string.data_reuse_not_stored, HOST_ENTRY);
+            } else if (preferred != null && hasZipMagic(zipFile, preferred)) {
+                logger.logMessage(context.getString(R.string.data_reuse_host, HOST_ENTRY));
+                return HOST_ENTRY;
             }
-            if (host.getMethod() != ZipEntry.STORED) {
-                throw new IOException(context.getString(R.string.data_reuse_not_stored, HOST_ENTRY));
+
+            String hostEntry = null;
+            long hostSize = -1;
+            for (Enumeration<? extends ZipEntry> entries = zipFile.entries(); entries.hasMoreElements(); ) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory() || entry.getMethod() != ZipEntry.STORED) {
+                    continue;
+                }
+                long size = entry.getSize();
+                if (size < MIN_HOST_SIZE || size <= hostSize) {
+                    continue;
+                }
+                if (!hasZipMagic(zipFile, entry)) {
+                    continue;
+                }
+                hostEntry = entry.getName();
+                hostSize = size;
             }
+            if (hostEntry != null) {
+                logger.logMessage(context.getString(R.string.data_reuse_host, hostEntry));
+                return hostEntry;
+            }
+            if (compressedHost != null) {
+                throw new IOException(compressedHost);
+            }
+            throw new IOException(context.getString(R.string.data_reuse_no_host));
+        }
+    }
+
+    private static boolean hasZipMagic(ZipFile zipFile, ZipEntry entry) throws IOException {
+        byte[] head = new byte[4];
+        try (InputStream input = zipFile.getInputStream(entry)) {
+            return input.read(head) == 4
+                    && head[0] == 'P' && head[1] == 'K' && head[2] == 3 && head[3] == 4;
         }
     }
 
