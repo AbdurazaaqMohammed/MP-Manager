@@ -85,6 +85,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         this.context = context;
         this.callbacks = callbacks;
         sectionOrder.add("storage");
+        sectionOrder.add("network");
         sectionOrder.add("bookmarks");
         sectionOrder.add("tools");
     }
@@ -98,7 +99,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 if (section != null && !sectionOrder.contains(section)) sectionOrder.add(section);
             }
         }
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "network", "bookmarks", "tools"}) {
             if (!sectionOrder.contains(section)) sectionOrder.add(section);
         }
         this.showBookmarks = showBookmarks;
@@ -205,7 +206,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                     entries.add(new SidebarEntry(EntryType.STORAGE, section, info.path,
                             info.name, 0, null, info));
                 }
-                // Remote storage is a place you browse rather than a volume, so it carries no bar.
+            } else if ("network".equals(section)) {
+                // Remote connections live under their own heading, the way MT Manager keeps
+                // network volumes apart from the local ones.
                 addRemoteEntry(section);
             } else if ("bookmarks".equals(section)) {
                 addBookmarks("bookmarks", section, defaultBookmarks);
@@ -226,6 +229,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
 
     private String sectionTitle(String section) {
         if ("storage".equals(section)) return context.getString(R.string.sidebar_local);
+        if ("network".equals(section)) return context.getString(R.string.sidebar_network);
         if ("bookmarks".equals(section)) return context.getString(R.string.bookmarks);
         if (section.startsWith(BOOKMARK_GROUP_PREFIX)) return section.substring(BOOKMARK_GROUP_PREFIX.length());
         return context.getString(R.string.tools_section);

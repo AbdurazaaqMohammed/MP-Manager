@@ -11,6 +11,7 @@ import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -19,6 +20,7 @@ import android.widget.TextView;
 import androidx.preference.PreferenceManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -27,6 +29,8 @@ import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
+import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
+import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
 import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
@@ -42,6 +46,7 @@ import io.github.abdurazaaqmohammed.tools.SmaliReferenceActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
+import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -58,6 +63,12 @@ import java.util.Set;
  * until the bookmarks UI slice moves.
  */
 public class SidebarController {
+
+    private static final int MENU_THEME = 1;
+    private static final int MENU_ADD_NETWORK = 2;
+    private static final int MENU_ADD_LOCAL = 3;
+    private static final int MENU_TOOL_GROUPS = 4;
+    private static final int MENU_SETTINGS = 5;
 
     private final MainActivity activity;
     private SidebarAdapter sidebarAdapter;
@@ -154,7 +165,7 @@ public class SidebarController {
             if (saved != null) sectionOrder.addAll(saved);
         } catch (Exception ignored) {
         }
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "network", "bookmarks", "tools"}) {
             if (!sectionOrder.contains(section)) sectionOrder.add(section);
         }
         if (prefs.getBoolean("sidebar_show_bookmark_groups", false)) {
@@ -173,7 +184,7 @@ public class SidebarController {
         sidebarAdapter.setToolOrder(toolOrder);
         sidebarAdapter.setHiddenItems(prefs.getStringSet("sidebar_hidden_items", Collections.emptySet()));
         java.util.Set<String> collapsed = prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet());
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "network", "bookmarks", "tools"}) {
             sidebarAdapter.setCollapsedState(section, collapsed.contains(section));
         }
         refreshSidebar(sectionOrder);
@@ -204,11 +215,13 @@ public class SidebarController {
             });
         }
         ImageButton organizeButton = activity.findViewById(R.id.sidebarOrganizeButton);
+        // Long press keeps the drag-and-drop organiser reachable now that the glyph itself is the
+        // overflow menu MT Manager shows there.
         organizeButton.setOnLongClickListener(v -> {
-            Snackbar.make(activity.findViewById(android.R.id.content), R.string.organize_sidebar, Snackbar.LENGTH_SHORT).show();
-            return false;
+            setSidebarOrganizeMode(!sidebarOrganizeMode);
+            return true;
         });
-        organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
+        organizeButton.setOnClickListener(this::showSidebarOverflowMenu);
 
         ImageButton themeButton = activity.findViewById(R.id.sidebarThemeButton);
         if (themeButton != null) {
@@ -223,6 +236,72 @@ public class SidebarController {
             }
         }
         registerStorageRefreshReceiver();
+    }
+
+    /**
+     * MT Manager's drawer overflow: theme, add a network or local volume, tool groups, settings.
+     * Long-pressing the same glyph still toggles the drag-and-drop organiser.
+     */
+    private void showSidebarOverflowMenu(View anchor) {
+        PopupMenu menu = new PopupMenu(activity, anchor);
+        boolean followsSystem = BuiltInThemes.SYSTEM_DEFAULT_ID.equals(
+                ThemeRegistry.getCurrentId(activity));
+        menu.getMenu().add(0, MENU_THEME, 0, R.string.sidebar_theme_follow_system);
+        menu.getMenu().add(0, MENU_ADD_NETWORK, 1, R.string.sidebar_add_network);
+        menu.getMenu().add(0, MENU_ADD_LOCAL, 2, R.string.sidebar_add_local);
+        menu.getMenu().add(0, MENU_TOOL_GROUPS, 3, R.string.sidebar_manage_tool_groups);
+        menu.getMenu().add(0, MENU_SETTINGS, 4, R.string.settings);
+        menu.getMenu().setGroupCheckable(0, MENU_THEME, true, followsSystem);
+        menu.getMenu().findItem(MENU_THEME).setChecked(followsSystem);
+        menu.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == MENU_THEME) {
+                // The entry is a toggle: picking it when it is already checked leaves the theme
+                // alone instead of re-applying the same id.
+                if (!followsSystem) {
+                    ThemeRegistry.setCurrentId(activity, BuiltInThemes.SYSTEM_DEFAULT_ID);
+                    activity.recreate();
+                }
+            } else if (id == MENU_ADD_NETWORK) {
+                activity.showRemoteConnectionsDialog();
+            } else if (id == MENU_ADD_LOCAL) {
+                showAddLocalStorageDialog();
+            } else if (id == MENU_TOOL_GROUPS) {
+                setSidebarOrganizeMode(true);
+            } else if (id == MENU_SETTINGS) {
+                activity.showSettingsDialog();
+            }
+            return true;
+        });
+        menu.show();
+    }
+
+    /** Adds a bookmark for an arbitrary path, seeded with whatever the active pane shows. */
+    private void showAddLocalStorageDialog() {
+        EditText pathInput = new EditText(activity);
+        pathInput.setSingleLine(true);
+        pathInput.setTextSize(16f);
+        int pad = (int) (20 * activity.getResources().getDisplayMetrics().density);
+        pathInput.setPadding(pad, pad / 2, pad, pad / 2);
+        File seed = activity.lastPaneSelected == 1 ? activity.pane1Folder : activity.pane2Folder;
+        if (seed != null) pathInput.setText(seed.getAbsolutePath());
+
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle(activity.getString(R.string.sidebar_add_local))
+                .setView(pathInput)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String path = pathInput.getText().toString().trim();
+                    if (path.isEmpty()) return;
+                    File dir = new File(path);
+                    if (!dir.exists()) {
+                        Extensions.showMessage(activity, R.string.sidebar_local_missing);
+                        return;
+                    }
+                    activity.addBookmark(dir);
+                    activity.closeSidebarDrawer();
+                })
+                .show();
     }
 
     private boolean handleOrganizeTouch(MotionEvent event) {
@@ -307,7 +386,7 @@ public class SidebarController {
             if (saved != null) order.addAll(saved);
         } catch (Exception ignored) {
         }
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "network", "bookmarks", "tools"}) {
             if (!order.contains(section)) order.add(section);
         }
         if (PreferenceManager.getDefaultSharedPreferences(activity)

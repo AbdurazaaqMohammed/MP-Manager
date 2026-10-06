@@ -703,6 +703,12 @@ Layout Inspector
     <string name="menu_items">Menu items</string>
     <string name="option_icon_cd">Option Icon</string>
     <string name="storage">Storage</string>
+    <string name="sidebar_theme_follow_system">Theme follows system</string>
+    <string name="sidebar_add_network">Add network storage</string>
+    <string name="sidebar_add_local">Add local storage</string>
+    <string name="sidebar_manage_tool_groups">Manage tool groups</string>
+    <string name="sidebar_local_missing">That path does not exist</string>
+    <string name="sidebar_network">Network</string>
     <string name="sidebar_local">Local</string>
     <string name="tools_section">Tools</string>
     <string name="show_bookmarks_sidebar">Show bookmarks in sidebar</string>
