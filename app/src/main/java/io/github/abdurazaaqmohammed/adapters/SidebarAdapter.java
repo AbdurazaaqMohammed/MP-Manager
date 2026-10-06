@@ -462,10 +462,10 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             });
             ImageView toggle = view.findViewById(R.id.sidebarSectionToggle);
             boolean collapsed = isCollapsed(entry.section);
-            // MT Manager points the caret up while a section is open, so the arrow reads as
-            // "collapse me" instead of "expand me".
             Drawable d = ResourcesCompat.getDrawable(context.getResources(), collapsed ? R.drawable.arrow_drop_down_24px : R.drawable.arrow_drop_up_24px, null);
             toggle.setImageDrawable(d.mutate());
+            // MT Manager draws the caret pointing up while a section is open, so the arrow reads
+            // as "collapse me" instead of "expand me"; the row keeps a downward arrow when folded.
             toggle.setContentDescription(context.getString(collapsed ? R.string.sidebar_expand : R.string.sidebar_collapse));
             ((View) toggle.getParent()).setOnClickListener(v -> callbacks.onHeaderToggle(entry));
             toggle.animate().cancel();

@@ -310,8 +310,8 @@
             android:paddingBottom="14dp">
 
             <ImageView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:importantForAccessibility="no"
                 android:src="@mipmap/ic_launcher" />
 
@@ -319,7 +319,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:orientation="vertical">
 
                 <TextView
@@ -329,40 +329,37 @@
                     android:maxLines="1"
                     android:text="@string/app_name"
                     android:textColor="#FFFFFF"
-                    android:textSize="21sp"
+                    android:textSize="19sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/sidebarSubtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="1dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#B3FFFFFF"
-                    android:textSize="13sp" />
+                    android:textColor="#8AFFFFFF"
+                    android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- The dark drawable carries a 48dp intrinsic size, so it needs the padding to sit at
-                 the 24dp the header buttons are meant to read at. -->
             <ImageButton
                 android:id="@+id/sidebarThemeButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="4dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/dialog_theme"
-                android:padding="8dp"
-                android:src="@drawable/dark"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_dark_mode_24"
                 app:tint="#FFFFFF" />
 
             <ImageButton
                 android:id="@+id/sidebarOrganizeButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/organize_sidebar"
-                android:padding="8dp"
+                android:padding="6dp"
                 android:src="@drawable/baseline_more_vert_24"
                 app:tint="#FFFFFF" />
         </LinearLayout>
@@ -395,18 +392,5 @@
                 android:paddingBottom="8dp" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/sidebarCollapseButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="14dp"
-            android:layout_marginBottom="22dp"
-            android:background="@drawable/bg_sidebar_collapse_button"
-            android:contentDescription="@string/close"
-            android:padding="10dp"
-            android:src="@drawable/arrow_drop_up_24px"
-            app:tint="#FFFFFF" />
     </FrameLayout>
 </io.github.abdurazaaqmohammed.ui.MyDrawerLayout>

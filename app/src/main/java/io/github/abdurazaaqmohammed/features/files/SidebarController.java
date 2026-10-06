@@ -214,10 +214,6 @@ public class SidebarController {
         if (themeButton != null) {
             themeButton.setOnClickListener(v -> ThemeDialogs.showThemeChooser(activity));
         }
-        View collapseButton = activity.findViewById(R.id.sidebarCollapseButton);
-        if (collapseButton != null) {
-            collapseButton.setOnClickListener(v -> activity.closeSidebarDrawer());
-        }
         TextView subtitle = activity.findViewById(R.id.sidebarSubtitle);
         if (subtitle != null) {
             try {
@@ -295,7 +291,9 @@ public class SidebarController {
             organizeDragEntry = null;
         }
         ImageButton organizeButton = activity.findViewById(R.id.sidebarOrganizeButton);
-        organizeButton.setImageResource(enabled ? R.drawable.baseline_check_circle_24 : R.drawable.drag_handle_24px);
+        // Back to the overflow glyph when organising ends: leaving the drag handle behind is what
+        // made the header read as a menu bar instead of MT Manager's "..." affordance.
+        organizeButton.setImageResource(enabled ? R.drawable.baseline_check_circle_24 : R.drawable.baseline_more_vert_24);
         String msg = activity.getString(enabled ? R.string.organize_sidebar : R.string.done_organizing_sidebar);
         organizeButton.setContentDescription(msg);
         Snackbar.make(activity.findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
