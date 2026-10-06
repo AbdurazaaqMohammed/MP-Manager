@@ -1934,6 +1934,14 @@ Layout Inspector
     <string name="dex_obfuscate_defense">DEX混淆对抗</string>
     <string name="dex_resplit">DEX重新划分</string>
     <string name="data_reuse_multiplex">数据复用优化</string>
+    <string name="data_reuse_step_v1">正在用 V1 签名（apksig）…</string>
+    <string name="data_reuse_step_opt">正在复用原包数据段…</string>
+    <string name="data_reuse_step_v2v3">正在原地写入 V2/V3 签名…</string>
+    <string name="data_reuse_saved">已优化：%1$s → %2$s（减少 %3$s）</string>
+    <string name="data_reuse_no_host">未在本包中找到原包条目 %1$s</string>
+    <string name="data_reuse_not_stored">原包条目 %1$s 以压缩方式打包，必须以存储（不压缩）方式打包才能优化</string>
+    <string name="data_reuse_no_shared">没有与原包完全相同的文件，无需优化</string>
+    <string name="data_reuse_check_failed">优化后内容校验失败，已中止</string>
     <string name="inject_file_provider">注入文件提供器</string>
     <string name="dex_string_decrypt">DEX字符串解密</string>
     <string name="function_in_development">该功能开发中</string>

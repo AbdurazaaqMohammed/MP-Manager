@@ -45,6 +45,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
+import io.github.abdurazaaqmohammed.multiplex.apksign.key.SignatureKey;
 
 public class SignWrapper {
 
@@ -252,34 +253,58 @@ public class SignWrapper {
     }
 
     private ApkSigner.SignerConfig createSignerConfig() throws Exception {
-        if (isPk8OrPemKey()) {
-            return createPk8SignerConfig();
-        }
-        return createKeyStoreSignerConfig();
+        SigningKey signingKey = loadSigningKey();
+        return buildSignerConfig(signingKey.privateKey, signingKey.certificate);
     }
 
-    private ApkSigner.SignerConfig createPk8SignerConfig() throws Exception {
+    private SigningKey loadSigningKey() throws Exception {
+        if (isPk8OrPemKey()) {
+            return loadPk8Key();
+        }
+        return loadKeyStoreKey();
+    }
+
+    /**
+     * Returns the configured signing key so other code can sign without going through apksig,
+     * which would rebuild the zip (and break the data multiplexing optimization).
+     */
+    public SignatureKey getSignatureKey() throws Exception {
+        final SigningKey signingKey = loadSigningKey();
+        return new SignatureKey() {
+            @Override
+            public X509Certificate getCertificate() {
+                return signingKey.certificate;
+            }
+
+            @Override
+            public PrivateKey getPrivateKey() {
+                return signingKey.privateKey;
+            }
+        };
+    }
+
+    private SigningKey loadPk8Key() throws Exception {
         File pk8 = findPk8File();
         File pem = findPemFile();
         if (pk8 != null && pem != null) {
-            return buildSignerConfig(readPrivateKey(pk8), readCertificate(pem));
+            return new SigningKey(readPrivateKey(pk8), readCertificate(pem));
         }
         if (pem != null) {
             byte[] pemBytes = readAllBytes(pem);
             if (extractPemBlock(pemBytes, PRIVATE_KEY_PEM) != null && extractPemBlock(pemBytes, CERTIFICATE_PEM) != null) {
-                return buildSignerConfig(readPrivateKey(pem), readCertificate(pem));
+                return new SigningKey(readPrivateKey(pem), readCertificate(pem));
             }
         }
         throw new IOException("Could not load pk8/pem signing key from " + key.getPath()
                 + ". Expected a .pk8 and a .pem file with the same name in the same directory.");
     }
 
-    private ApkSigner.SignerConfig createKeyStoreSignerConfig() throws Exception {
+    private SigningKey loadKeyStoreKey() throws Exception {
         Exception lastError = null;
         String[] types = {"PKCS12", "JKS", "BKS"};
         for (String type : types) {
             try {
-                return loadKeyStoreConfig(type);
+                return loadKeyStoreKeyPair(type);
             } catch (Exception e) {
                 lastError = e;
             }
@@ -287,7 +312,7 @@ public class SignWrapper {
         throw new IOException("Failed to load signing key from " + key.getPath(), lastError);
     }
 
-    private ApkSigner.SignerConfig loadKeyStoreConfig(String type) throws Exception {
+    private SigningKey loadKeyStoreKeyPair(String type) throws Exception {
         if (type.equals("PKCS12")) {
             PKCS12KeyStoreSpi.BCPKCS12KeyStore keyStore = new PKCS12KeyStoreSpi.BCPKCS12KeyStore();
             try (InputStream in = FileUtils.getInputStream(key)) {
@@ -295,14 +320,24 @@ public class SignWrapper {
             }
             String alias = keyStore.engineAliases().nextElement();
             KeyStore.PrivateKeyEntry entry = (KeyStore.PrivateKeyEntry) keyStore.engineGetEntry(alias, new KeyStore.PasswordProtection(password));
-            return buildSignerConfig(entry.getPrivateKey(), (X509Certificate) keyStore.engineGetCertificate(alias));
+            return new SigningKey(entry.getPrivateKey(), (X509Certificate) keyStore.engineGetCertificate(alias));
         }
         try (InputStream in = FileUtils.getInputStream(key)) {
             KeyStore keyStore = KeyStore.getInstance(type);
             keyStore.load(in, password);
             String alias = keyStore.aliases().nextElement();
             KeyStore.PrivateKeyEntry entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(alias, new KeyStore.PasswordProtection(password));
-            return buildSignerConfig(entry.getPrivateKey(), (X509Certificate) keyStore.getCertificate(alias));
+            return new SigningKey(entry.getPrivateKey(), (X509Certificate) keyStore.getCertificate(alias));
+        }
+    }
+
+    private static final class SigningKey {
+        final PrivateKey privateKey;
+        final X509Certificate certificate;
+
+        SigningKey(PrivateKey privateKey, X509Certificate certificate) {
+            this.privateKey = privateKey;
+            this.certificate = certificate;
         }
     }
 

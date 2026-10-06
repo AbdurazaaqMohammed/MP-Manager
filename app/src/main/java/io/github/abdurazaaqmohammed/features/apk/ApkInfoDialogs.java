@@ -110,6 +110,7 @@ import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
+import io.github.abdurazaaqmohammed.utils.DataReuseOptimizer;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -1115,6 +1116,9 @@ public class ApkInfoDialogs {
             case ACT_LOGGER:
                 showLoggerDialog(file);
                 break;
+            case ACT_DATA_REUSE:
+                runDataReuse(file);
+                break;
             default:
                 Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
                 break;
@@ -1154,6 +1158,30 @@ public class ApkInfoDialogs {
             doShrink.run();
         });
         else doShrink.run();
+    }
+
+    /**
+     * Data reuse optimization: the outer zip shares its data segments with the original APK
+     * embedded at {@code assets/base.apk}. Signing is part of the feature (apksig for V1 before
+     * optimizing, in-place V2/V3 afterwards), so it always authenticates, unlike autosign.
+     */
+    private void runDataReuse(File file) {
+        SignWrapper.requireAuth(context, wrapper -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    File out = DataReuseOptimizer.optimize(context, file, logger, wrapper);
+                    FileUtils.swapWithBackup(file, out);
+                    pm.dismiss();
+                    context.handler.post(() ->
+                            context.loadFolderInPane(file.getParentFile(), pane1, false));
+                } catch (Exception e) {
+                    pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        });
     }
 
     /**

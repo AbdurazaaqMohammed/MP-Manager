@@ -1464,6 +1464,14 @@
     <string name="dex_obfuscate_defense">Обфускация DEX</string>
     <string name="dex_resplit">Переразделение DEX</string>
     <string name="data_reuse_multiplex">Оптимизация повторного использования данных</string>
+    <string name="data_reuse_step_v1">Подпись V1 (apksig)…</string>
+    <string name="data_reuse_step_opt">Повторное использование сегментов оригинального APK…</string>
+    <string name="data_reuse_step_v2v3">Запись подписи V2/V3 на месте…</string>
+    <string name="data_reuse_saved">Оптимизировано: %1$s → %2$s (сэкономлено %3$s)</string>
+    <string name="data_reuse_no_host">Запись оригинального APK %1$s не найдена</string>
+    <string name="data_reuse_not_stored">Запись оригинального APK %1$s сжата; для оптимизации она должна храниться без сжатия</string>
+    <string name="data_reuse_no_shared">Нет файлов, совпадающих с оригинальным APK, оптимизация не требуется</string>
+    <string name="data_reuse_check_failed">Проверка содержимого после оптимизации не пройдена, отмена</string>
     <string name="inject_file_provider">Внедрение файлового провайдера</string>
     <string name="dex_string_decrypt">Расшифровка строк DEX</string>
     <string name="function_in_development">Функция ещё в разработке</string>

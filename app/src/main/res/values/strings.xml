@@ -1937,6 +1937,14 @@ Deleted %2$s · %3$s</string>
     <string name="dex_obfuscate_defense">DEX obfuscation</string>
     <string name="dex_resplit">Re-split DEX</string>
     <string name="data_reuse_multiplex">Data reuse optimization</string>
+    <string name="data_reuse_step_v1">Signing with V1 (apksig)…</string>
+    <string name="data_reuse_step_opt">Reusing the original APK data segments…</string>
+    <string name="data_reuse_step_v2v3">Writing V2/V3 signature in place…</string>
+    <string name="data_reuse_saved">Optimized: %1$s → %2$s (saved %3$s)</string>
+    <string name="data_reuse_no_host">Original APK entry %1$s was not found in this APK</string>
+    <string name="data_reuse_not_stored">Original APK entry %1$s is compressed; it must be stored (uncompressed) to be optimized</string>
+    <string name="data_reuse_no_shared">No files identical to the original APK, nothing to optimize</string>
+    <string name="data_reuse_check_failed">Content check after optimization failed, aborted</string>
     <string name="inject_file_provider">Inject file provider</string>
     <string name="dex_string_decrypt">DEX string decryption</string>
     <string name="function_in_development">This feature is still in development</string>
