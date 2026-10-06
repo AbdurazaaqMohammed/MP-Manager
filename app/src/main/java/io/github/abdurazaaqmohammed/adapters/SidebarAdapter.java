@@ -214,7 +214,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     private String sectionTitle(String section) {
-        if ("storage".equals(section)) return context.getString(R.string.storage);
+        if ("storage".equals(section)) return context.getString(R.string.sidebar_local);
         if ("bookmarks".equals(section)) return context.getString(R.string.bookmarks);
         if (section.startsWith(BOOKMARK_GROUP_PREFIX)) return section.substring(BOOKMARK_GROUP_PREFIX.length());
         return context.getString(R.string.tools_section);

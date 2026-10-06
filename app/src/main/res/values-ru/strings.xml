@@ -601,6 +601,7 @@
     <string name="menu_items">Пункты меню</string>
     <string name="option_icon_cd">Значок пункта</string>
     <string name="storage">Хранилище</string>
+    <string name="sidebar_local">Локальные</string>
     <string name="more_options">Дополнительные параметры</string>
     <string name="destination_path">Путь назначения</string>
     <string name="alias_key_name_hint">Псевдоним / имя ключа</string>

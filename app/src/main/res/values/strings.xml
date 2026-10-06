@@ -703,6 +703,7 @@ Layout Inspector
     <string name="menu_items">Menu items</string>
     <string name="option_icon_cd">Option Icon</string>
     <string name="storage">Storage</string>
+    <string name="sidebar_local">Local</string>
     <string name="tools_section">Tools</string>
     <string name="show_bookmarks_sidebar">Show bookmarks in sidebar</string>
     <string name="include_bookmark_groups_sidebar">Include bookmark groups in sidebar</string>

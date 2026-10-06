@@ -14,6 +14,7 @@ import android.view.ViewConfiguration;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.PopupMenu;
+import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -26,6 +27,7 @@ import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
+import io.github.abdurazaaqmohammed.core.ui.util.ThemeDialogs;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
@@ -207,6 +209,19 @@ public class SidebarController {
             return false;
         });
         organizeButton.setOnClickListener(v -> setSidebarOrganizeMode(!sidebarOrganizeMode));
+
+        ImageButton themeButton = activity.findViewById(R.id.sidebarThemeButton);
+        if (themeButton != null) {
+            themeButton.setOnClickListener(v -> ThemeDialogs.showThemeChooser(activity));
+        }
+        TextView subtitle = activity.findViewById(R.id.sidebarSubtitle);
+        if (subtitle != null) {
+            try {
+                subtitle.setText(activity.getPackageManager()
+                        .getPackageInfo(activity.getPackageName(), 0).versionName);
+            } catch (Exception ignored) {
+            }
+        }
         registerStorageRefreshReceiver();
     }
 

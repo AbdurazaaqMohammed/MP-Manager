@@ -7,5 +7,5 @@
 <resources>
     <dimen name="popupWindowIconSize">28dp</dimen>
     <dimen name="popupWindowCopyIconSize">12dp</dimen>
-    <dimen name="sidebar_width">280dp</dimen>
+    <dimen name="sidebar_width">320dp</dimen>
 </resources>
