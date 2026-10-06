@@ -1443,10 +1443,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
         // Directories the app cannot enter appear in listFiles but only lead to a failed open.
-        // Anywhere under the filesystem root those rows are dropped, so the tree never shows an
-        // entry that cannot be entered.
+        // Anywhere under the filesystem root those rows are dropped. canRead() lies under the root
+        // backend (it reports through stat, which root can always answer), so the test is whether
+        // the directory actually yields an entry.
         if (files != null && isUnderRootListing(folderPath)) {
-            files = Arrays.stream(files).filter(f -> !f.isDirectory() || f.canRead()).toArray(File[]::new);
+            files = Arrays.stream(files)
+                    .filter(f -> !f.isDirectory() || canOpenDirectory(f))
+                    .toArray(File[]::new);
         }
         // Listing "/" is refused on some devices while its children are not, so
         // fall back to the standard top-level directories and let the pane show
@@ -1673,6 +1676,28 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void loadFolderInPane(File folder, boolean pane1) {
         loadFolderInPane(folder, pane1, true);
+    }
+
+    /**
+     * Whether a directory row in the browser would actually open. Under the root or Shizuku backend
+     * the local File answers for the wrong uid, so the backend is asked instead.
+     */
+    private boolean canOpenDirectory(File dir) {
+        try {
+            if (dir.canRead() && dir.list() != null) return true;
+        } catch (Exception ignored) {
+        }
+        // Only the rows the app cannot read itself are worth a backend round trip, so this stays
+        // off the common path: under root almost nothing reaches it.
+        try {
+            if (AccessManager.fileOpsOn(this)) {
+                // The backend lists as root or Shizuku, so its answer is the one that matters; the
+                // local File would be answering for the app's own uid.
+                return AccessManager.listWithStat(this, dir.getAbsolutePath()) != null;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     private boolean canListViaRoot(File folder) {
@@ -2167,10 +2192,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         List<File> out = new ArrayList<>();
         for (String path : known) {
             File dir = new File(path);
-            // Only directories that can actually be opened belong in the list. A path that exists
-            // but that the app may not read is worse than absent: it opens onto an error, so it is
-            // dropped here instead of failing one tap later.
-            if (dir.isDirectory() && dir.canRead()) out.add(dir);
+            // The fallback exists precisely because "/" itself cannot be listed, so it must not
+            // apply the readability filter the normal listing uses - doing so empties it out.
+            if (dir.isDirectory()) out.add(dir);
         }
         return out.toArray(new File[0]);
     }
