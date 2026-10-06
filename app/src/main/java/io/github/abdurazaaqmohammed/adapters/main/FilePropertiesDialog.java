@@ -349,8 +349,8 @@ public class FilePropertiesDialog {
         try {
             java.nio.file.attribute.PosixFileAttributes attr = java.nio.file.Files
                     .readAttributes(file.toPath(), java.nio.file.attribute.PosixFileAttributes.class);
-            int octal = java.nio.file.attribute.PosixFilePermissions.toString(attr.permissions());
-            return octalToDigits(octal);
+            String symbolic = java.nio.file.attribute.PosixFilePermissions.toString(attr.permissions());
+            return octalToDigits(symbolic);
         } catch (Exception ignored) {
         }
         return "0000";
