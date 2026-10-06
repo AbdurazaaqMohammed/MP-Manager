@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.view.DragEvent;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -251,8 +252,10 @@ public class SidebarController {
         menu.getMenu().add(0, MENU_ADD_LOCAL, 2, R.string.sidebar_add_local);
         menu.getMenu().add(0, MENU_TOOL_GROUPS, 3, R.string.sidebar_manage_tool_groups);
         menu.getMenu().add(0, MENU_SETTINGS, 4, R.string.settings);
-        menu.getMenu().setGroupCheckable(0, MENU_THEME, true, followsSystem);
-        menu.getMenu().findItem(MENU_THEME).setChecked(followsSystem);
+        // android.view.Menu exposes no group-wide checkable switch, so the tick goes on the item.
+        MenuItem themeItem = menu.getMenu().findItem(MENU_THEME);
+        themeItem.setCheckable(true);
+        themeItem.setChecked(followsSystem);
         menu.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
             if (id == MENU_THEME) {
@@ -267,7 +270,7 @@ public class SidebarController {
             } else if (id == MENU_ADD_LOCAL) {
                 showAddLocalStorageDialog();
             } else if (id == MENU_TOOL_GROUPS) {
-                setSidebarOrganizeMode(true);
+                if (!sidebarOrganizeMode) setSidebarOrganizeMode(true);
             } else if (id == MENU_SETTINGS) {
                 activity.showSettingsDialog();
             }
