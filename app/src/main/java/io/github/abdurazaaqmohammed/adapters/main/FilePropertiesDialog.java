@@ -103,10 +103,13 @@ public class FilePropertiesDialog {
 
         long size = 0;
         if (multi) {
-            for (int p : selectedPositions) {
-                Object o = values[p];
-                if (o instanceof File) size += ((File) o).length();
-                else if (o instanceof ZipEntryInfo) size += ((ZipEntryInfo) o).getSize();
+            if (values != null && selectedPositions != null) {
+                for (int p : selectedPositions) {
+                    if (p < 0 || p >= values.length) continue;
+                    Object o = values[p];
+                    if (o instanceof File) size += ((File) o).length();
+                    else if (o instanceof ZipEntryInfo) size += ((ZipEntryInfo) o).getSize();
+                }
             }
         } else size = isInZip ? entry.getSize() : file.length();
         TextView sizeValue = addPropertyRow(propRows, context.getString(R.string.size), Formatter.formatFileSize(context, size));

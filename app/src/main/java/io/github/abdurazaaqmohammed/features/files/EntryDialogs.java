@@ -90,11 +90,16 @@ public class EntryDialogs {
         Object[] values = state.values();
         if (multi) {
             StringBuilder sb = new StringBuilder();
-            for (int i : state.selectedPositions())
+            for (int i : state.selectedPositions()) {
+                if (i < 0 || i >= values.length) continue;
                 sb.append(',').append(state.isInZip() ? ((ZipEntryInfo) values[i]).getName() : ((File) values[i]).getName());
-            return sb.deleteCharAt(0);
+            }
+            return sb.length() == 0 ? "" : sb.deleteCharAt(0);
         }
-        return state.isInZip() ? ((ZipEntryInfo) values[position]).getName() : ((File) values[position]).getName();
+        if (position >= 0 && position < values.length) {
+            return state.isInZip() ? ((ZipEntryInfo) values[position]).getName() : ((File) values[position]).getName();
+        }
+        return "";
     }
 
     public void showRenameDialog(int position, File file, ZipEntryInfo entry, String fileName, boolean multi) {
