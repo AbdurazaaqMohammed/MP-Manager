@@ -1442,6 +1442,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
+        // A directory the app may not enter shows up in listFiles but only leads to a failed
+        // open, so it is filtered here rather than at the tap.
+        if (files != null && rootListingPath) {
+            files = Arrays.stream(files).filter(f -> !f.isDirectory() || f.canRead()).toArray(File[]::new);
+        }
         // Listing "/" is refused on some devices while its children are not, so
         // fall back to the standard top-level directories and let the pane show
         // them like any other folder.
@@ -2147,9 +2152,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         List<File> out = new ArrayList<>();
         for (String path : known) {
             File dir = new File(path);
-            // Only include directories that exist: a handful are absent on some
-            // builds, and a dead entry would just confuse the list.
-            if (dir.exists()) out.add(dir);
+            // Only directories that can actually be opened belong in the list. A path that exists
+            // but that the app may not read is worse than absent: it opens onto an error, so it is
+            // dropped here instead of failing one tap later.
+            if (dir.isDirectory() && dir.canRead()) out.add(dir);
         }
         return out.toArray(new File[0]);
     }
