@@ -370,7 +370,7 @@
     <string name="remote_kind_webdav">WebDAV (HTTPS, port 443)</string>
     <string name="remote_kind_s3">S3 / MinIO</string>
     <string name="remote_kind_sftp">SFTP over SSH (port 22)</string>
-    <string name="sidebar_root">Filesystem root (/)</string>
+    <string name="sidebar_root">Root</string>
     <string name="root_unavailable">Filesystem root is not available</string>
     <string name="root_denied">Cannot list the filesystem root: this device policy blocks it. Grant Shizuku to browse it.</string>
     <string name="root_index_note">The device policy blocks reading the root directory itself. These are the usual top-level directories; tap one to try it.</string>

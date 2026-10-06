@@ -118,6 +118,26 @@ public class StorageUtil {
         return list;
     }
 
+    /**
+     * Usage of the filesystem root, shown next to the internal volume so the root row carries the
+     * same progress bar and capacity line. Returns null when {@code /} cannot be stat'ed, which is
+     * what happens on devices that hide it from unprivileged apps.
+     */
+    public static StorageInfo getRootInfo(@NonNull Context ctx) {
+        StorageInfo info = new StorageInfo();
+        info.name = ctx.getString(R.string.sidebar_root);
+        info.path = "/";
+        try {
+            StatFs fs = new StatFs("/");
+            long blockSize = fs.getBlockSizeLong();
+            info.totalBytes = blockSize * fs.getBlockCountLong();
+            info.freeBytes = blockSize * fs.getAvailableBlocksLong();
+            info.usedBytes = info.totalBytes - info.freeBytes;
+        } catch (Exception ignored) {
+        }
+        return info.totalBytes > 0 ? info : null;
+    }
+
     public static void populateStorageUI(@NonNull MainActivity ctx, @NonNull LinearLayout storageContainer) {
         storageContainer.removeAllViews();
 

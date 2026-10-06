@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Handset glyph for the filesystem-root row, the counterpart of the storage-card icon the
+     primary volume uses. Single filled path so it stays legible inside a 24dp circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M17,1H7C5.9,1 5,1.9 5,3v18c0,1.1 0.9,2 2,2h10c1.1,0 2,-0.9 2,-2V3C19,1.9 18.1,1 17,1zM12,21c-0.83,0 -1.5,-0.67 -1.5,-1.5S11.17,18 12,18s1.5,0.67 1.5,1.5S12.83,21 12,21zM17,17H7V5h10V17z" />
+</vector>

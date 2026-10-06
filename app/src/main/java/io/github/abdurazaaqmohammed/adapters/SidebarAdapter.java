@@ -194,13 +194,18 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                     sectionTitle(section), 0, null, null));
             if (Boolean.TRUE.equals(collapsed.get(section))) continue;
             if ("storage".equals(section)) {
+                // The root volume reads like any other volume: a phone icon plus its usage bar,
+                // which is how MT Manager lists it.
+                StorageUtil.StorageInfo root = StorageUtil.getRootInfo(context);
+                if (root != null) {
+                    entries.add(new SidebarEntry(EntryType.STORAGE, section, root.path,
+                            root.name, 0, null, root));
+                }
                 for (StorageUtil.StorageInfo info : storage) {
                     entries.add(new SidebarEntry(EntryType.STORAGE, section, info.path,
                             info.name, 0, null, info));
                 }
-                // The filesystem root and remote storage are places you browse,
-                // so they belong with the volumes rather than among the tools.
-                addRootEntry(section);
+                // Remote storage is a place you browse rather than a volume, so it carries no bar.
                 addRemoteEntry(section);
             } else if ("bookmarks".equals(section)) {
                 addBookmarks("bookmarks", section, defaultBookmarks);
@@ -227,20 +232,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     }
 
     /**
-     * Filesystem root.
-     *
-     * <p>The root directory is mode 0755, so any unprivileged process may list
-     * its entries and traverse into subdirectories that grant "other" the x bit.
-     * That is ordinary Linux DAC, not root: no special permission is involved,
-     * and directories that deny access simply fail to open.
+     * Remote storage stays a plain shortcut: it is a connection rather than a mounted volume, so
+     * there is nothing to report a usage bar for.
      */
-    private void addRootEntry(String section) {
-        SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, "root",
-                context.getString(R.string.sidebar_root),
-                R.drawable.baseline_insert_drive_file_24, null, null);
-        if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
-    }
-
     private void addRemoteEntry(String section) {
         SidebarEntry entry = new SidebarEntry(EntryType.TOOL, section, "remote",
                 context.getString(R.string.remote_connections),
@@ -492,12 +486,16 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             ((TextView) view.findViewById(R.id.tvUsedFree)).setText(context.getString(R.string.used,
                     FileSize.getHumanReadableFileSize(info.usedBytes), FileSize.getHumanReadableFileSize(info.freeBytes)));
             ((ProgressBar) view.findViewById(R.id.pbUsed)).setProgress(info.usedPercent());
-            // The primary volume gets the drive icon; anything else is removable media and reads
-            // better as a folder. Without this every row would carry the same glyph.
-            ((ImageView) view.findViewById(R.id.ivStorageIcon)).setImageResource(
-                    info.path != null && info.path.startsWith("/storage/emulated/0")
-                            ? R.drawable.baseline_insert_drive_file_24
-                            : R.drawable.folder_24px);
+            // Root gets the handset glyph, the primary volume the card glyph and anything else a
+            // folder - the same pairing MT Manager uses, so the three rows stay distinguishable.
+            ImageView storageIcon = view.findViewById(R.id.ivStorageIcon);
+            if ("/".equals(info.path)) {
+                storageIcon.setImageResource(R.drawable.baseline_phone_android_24);
+            } else if (info.path != null && info.path.startsWith("/storage/emulated/0")) {
+                storageIcon.setImageResource(R.drawable.baseline_insert_drive_file_24);
+            } else {
+                storageIcon.setImageResource(R.drawable.folder_24px);
+            }
             view.setOnClickListener(v -> callbacks.onEntryClicked(entry, v));
             view.setOnLongClickListener(v -> {
                 callbacks.onEntryStorageLongPressed(entry, v);

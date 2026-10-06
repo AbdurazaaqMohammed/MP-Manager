@@ -366,7 +366,7 @@
     <string name="remote_kind_webdav">WebDAV（HTTPS，端口 443）</string>
     <string name="remote_kind_s3">S3 / MinIO</string>
     <string name="remote_kind_sftp">SFTP over SSH（端口 22）</string>
-    <string name="sidebar_root">文件系统根目录 (/)</string>
+    <string name="sidebar_root">根目录</string>
     <string name="root_unavailable">无法访问文件系统根目录</string>
     <string name="root_denied">无法列出文件系统根目录：本机策略禁止。授予 Shizuku 后可浏览。</string>
     <string name="root_index_note">本机策略禁止读取根目录本身。以下是常见的顶层目录，点按即可尝试进入。</string>

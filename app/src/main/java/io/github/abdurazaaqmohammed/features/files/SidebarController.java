@@ -342,7 +342,14 @@ public class SidebarController {
         if (sidebarOrganizeMode) return;
         if (entry == null || entry.type() == SidebarAdapter.EntryType.HEADER) return;
         if (entry.type() == SidebarAdapter.EntryType.STORAGE) {
-            activity.loadFolderInPane(new File(entry.storage().path), activity.lastPaneSelected == 1);
+            String path = entry.storage().path;
+            // The root keeps its own route so the "unavailable" notice and the top-level fallback
+            // still apply now that it renders as a volume row instead of a tool row.
+            if ("/".equals(path)) {
+                activity.openFilesystemRoot();
+            } else {
+                activity.loadFolderInPane(new File(path), activity.lastPaneSelected == 1);
+            }
         } else if (entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
             File file = entry.file();
             activity.loadFolderInPane(file.isFile() ? file.getParentFile() : file, activity.lastPaneSelected == 1);
