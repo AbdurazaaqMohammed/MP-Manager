@@ -40,7 +40,7 @@ public class RootPermissionHelper {
     }
 
     public static boolean hasAccessibility(Context context) {
-        return hasAccessibilityFor(context, context.getPackageName() + ".topactivity.services.AccessibilityMonitoringService");
+        return hasAccessibilityFor(context, ACCESSIBILITY_SERVICE);
     }
 
     public static boolean hasAccessibilityFor(Context context, String serviceClass) {

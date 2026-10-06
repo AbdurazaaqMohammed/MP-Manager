@@ -136,6 +136,7 @@ import io.github.codehasan.colorpicker.services.ColorPickerService;
 import io.github.ratul.topactivity.extensions.ActivityExtensions;
 import io.github.ratul.topactivity.manager.ServiceManager;
 import io.github.ratul.topactivity.repository.DataRepository;
+import io.github.ratul.topactivity.services.AccessibilityMonitoringService;
 import io.github.ratul.topactivity.services.PackageMonitoringService;
 import io.github.ratul.topactivity.utils.PermissionUtil;
 
@@ -450,6 +451,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             RootPermissionHelper.tryAutoGrantInspector(MainActivity.this);
         } catch (Exception ignored) {
         }
+        if (RootPermissionHelper.hasAccessibility(this)
+                && AccessibilityMonitoringService.getInstance() == null) {
+            waitForAccessibilityService(0);
+            return;
+        }
+        startLayoutInspector();
+    }
+
+    private void waitForAccessibilityService(int attempt) {
+        if (attempt >= 20 || isFinishing() || isDestroyed()
+                || AccessibilityMonitoringService.getInstance() != null) {
+            startLayoutInspector();
+            return;
+        }
+        handler.postDelayed(() -> waitForAccessibilityService(attempt + 1), 200);
+    }
+
+    private void startLayoutInspector() {
         if (!PermissionUtil.requestMissingPermissions(this, this::requestNotificationPermission)) return;
         DataRepository.getInstance().updateStatus(true);
         Intent intent = new Intent(this, PackageMonitoringService.class);
