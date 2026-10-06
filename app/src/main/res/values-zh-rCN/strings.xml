@@ -395,7 +395,6 @@
         <item>/etc</item>
         <item>/tmp</item>
         <item>/bin</item>
-        <item>/d</item>
         <item>/lost+found</item>
         <item>/pltlib</item>
         <item>/post_data</item>

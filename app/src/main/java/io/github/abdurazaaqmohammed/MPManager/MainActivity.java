@@ -1437,26 +1437,27 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         File[] files = null;
         String folderPath = folder.getAbsolutePath();
         boolean rootListingPath = "/".equals(folderPath) || RootManager.isRootOnlyPath(folderPath);
+        // A listing handed over by root or Shizuku only contains what that backend can read, so
+        // the readability pass below has to skip it; only locally produced rows are filtered.
+        boolean backendListed = false;
         if (rootListingPath && AccessManager.active(this) == AccessManager.Backend.ROOT && AccessManager.fileOpsOn(this)) {
             files = AccessManager.listWithStat(this, folder.getAbsolutePath());
-            if (files != null) files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
+            if (files != null) {
+                backendListed = true;
+                files = Arrays.stream(files).filter(this::isNotHidden).toArray(File[]::new);
+            }
         }
         if (files == null) files = folder.listFiles(this::isNotHidden);
-        // Directories the app cannot enter appear in listFiles but only lead to a failed open.
-        // Any listing that lives under the filesystem root - at whatever depth - drops them, so
-        // the tree never shows an entry that cannot be opened.
-        if (files != null && folderPath != null && folderPath.startsWith("/")) {
-            files = Arrays.stream(files)
-                    .filter(f -> !f.isDirectory() || canOpenDirectory(f))
-                    .toArray(File[]::new);
-        }
         // Listing "/" is refused on some devices while its children are not, so
         // fall back to the standard top-level directories and let the pane show
         // them like any other folder.
         if (files == null && "/".equals(folderPath)) files = filesystemRootEntries();
         if (files == null || (files.length == 0 && shizukuDir)) {
             File[] viaShizuku = ShizukuFile.tryList(this, folder);
-            if (viaShizuku != null) files = viaShizuku;
+            if (viaShizuku != null) {
+                backendListed = true;
+                files = viaShizuku;
+            }
         }
         if (files == null) {
             if (shizukuDir) showShizukuGuideOnce(folder, pane1);
@@ -1471,6 +1472,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             files = AccessManager.listWithStat(this, folderPath);
 
                 if (files != null) {
+                    backendListed = true;
                     files = Arrays.stream(files)
                             .filter(this::isNotHidden)
                             .toArray(File[]::new);
@@ -1480,6 +1482,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 Extensions.showMessage(this, getString(R.string.open_folder_failed, folder.getName()));
                 return;
             }
+        }
+        // Every source has now produced its rows. Under the filesystem root a directory the app
+        // cannot enter is dropped rather than shown as a dead end, at whatever depth; files stay.
+        if (files != null && !backendListed && folderPath != null && folderPath.startsWith("/")) {
+            files = Arrays.stream(files).filter(this::canOpenEntry).toArray(File[]::new);
         }
         try {
             PreferenceManager.getDefaultSharedPreferences(this).edit()
@@ -1678,21 +1685,20 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     /**
-     * Whether a directory row in the browser would actually open. Under the root or Shizuku backend
-     * the local File answers for the wrong uid, so the backend is asked instead.
+     * Whether a row should stay in a listing produced locally. A path that does not exist - only
+     * the fallback list can synthesise one - is dropped, files are always kept, and a directory
+     * stays only if it can actually be opened, first asked locally and then through the backend
+     * when one is active.
      */
-    private boolean canOpenDirectory(File dir) {
+    private boolean canOpenEntry(File f) {
         try {
-            if (dir.canRead() && dir.list() != null) return true;
-        } catch (Exception ignored) {
-        }
-        // Only the rows the app cannot read itself are worth a backend round trip, so this stays
-        // off the common path: under root almost nothing reaches it.
-        try {
+            if (!f.exists()) return false;
+            if (!f.isDirectory()) return true;
+            if (f.canRead() && f.list() != null) return true;
             if (AccessManager.fileOpsOn(this)) {
                 // The backend lists as root or Shizuku, so its answer is the one that matters; the
                 // local File would be answering for the app's own uid.
-                return AccessManager.listWithStat(this, dir.getAbsolutePath()) != null;
+                return AccessManager.listWithStat(this, f.getAbsolutePath()) != null;
             }
         } catch (Exception ignored) {
         }
