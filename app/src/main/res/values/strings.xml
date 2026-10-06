@@ -872,6 +872,12 @@ Layout Inspector
     <string name="logger_no_oncreate">No onCreate found in %1$s</string>
     <string name="logger_skipped_abstract">Skipped abstract onCreate in %1$s</string>
     <string name="logger_generated">Generated %1$s</string>
+    <string name="logger_spy_path">Log file: %1$s</string>
+    <string name="logger_no_methods">No matching method found</string>
+    <string name="logger_too_many">%1$d methods matched, over the %2$d limit</string>
+    <string name="logger_injected_methods">Injected logging into %1$d method(s)</string>
+    <string name="spy_class">Class name (supports *, blank matches all)</string>
+    <string name="spy_method">Method name (supports *, blank matches all)</string>
     <string name="antisplit_merge">Merge</string>
     <string name="antisplit_splits">Splits (%1$d)</string>
     <string name="antisplit_base_suffix">%1$s (base)</string>

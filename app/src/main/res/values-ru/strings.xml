@@ -760,6 +760,12 @@
     <string name="logger_no_oncreate">OnCreate не найден в %1$s</string>
     <string name="logger_skipped_abstract">Пропущен абстрактный onCreate в %1$s</string>
     <string name="logger_generated">Сгенерировано %1$s</string>
+    <string name="logger_spy_path">Файл журнала: %1$s</string>
+    <string name="logger_no_methods">Подходящий метод не найден</string>
+    <string name="logger_too_many">Совпало методов: %1$d, лимит %2$d</string>
+    <string name="logger_injected_methods">Журналирование добавлено в %1$d метод(ов)</string>
+    <string name="spy_class">Имя класса (поддерживает *, пусто — все)</string>
+    <string name="spy_method">Имя метода (поддерживает *, пусто — все)</string>
     <string name="antisplit_merge">Объединить</string>
     <string name="antisplit_splits">Части (%1$d)</string>
     <string name="antisplit_base_suffix">%1$s (базовый)</string>

@@ -114,6 +114,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
+import io.github.abdurazaaqmohammed.utils.MethodLoggerInjector;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -1111,6 +1112,9 @@ public class ApkInfoDialogs {
             case ACT_DEX_RESPLIT:
                 showResplitDialog(file);
                 break;
+            case ACT_LOGGER:
+                showLoggerDialog(file);
+                break;
             default:
                 Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
                 break;
@@ -1273,6 +1277,51 @@ public class ApkInfoDialogs {
             doResplit.run();
         });
         else doResplit.run();
+    }
+
+    /** MT's "inject logging": choose which classes/methods to trace, then print into them. */
+    private void showLoggerDialog(File file) {
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_method_logger, null);
+        EditText classInput = view.findViewById(R.id.spy_class_input);
+        EditText methodInput = view.findViewById(R.id.spy_method_input);
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.inject_logger))
+                .setView(view)
+                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                .setPositiveButton(context.rss.getString(android.R.string.ok), (dialog, which) ->
+                        runMethodLogger(file, classInput.getText().toString().trim(),
+                                methodInput.getText().toString().trim())).create());
+    }
+
+    private void runMethodLogger(File file, String classPattern, String methodPattern) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        final boolean sign = settings.getBoolean("autosign", true);
+        SignWrapper[] wrapper = new SignWrapper[1];
+        Runnable doLog = () -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    File out = MethodLoggerInjector.inject(context, file,
+                            classPattern, methodPattern, logger);
+                    if (sign) wrapper[0].signApk(out);
+                    FileUtils.swapWithBackup(file, out);
+                    logger.close();
+                    pm.dismiss();
+                    context.handler.post(() ->
+                            context.loadFolderInPane(file.getParentFile(), pane1, false));
+                } catch (Exception e) {
+                    pm.dismiss();
+                    context.handler.post(logger::close);
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        };
+        if (sign) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doLog.run();
+        });
+        else doLog.run();
     }
 
 }

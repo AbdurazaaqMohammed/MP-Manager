@@ -853,6 +853,12 @@ Layout Inspector
     <string name="logger_no_oncreate">在 %1$s 中未找到 onCreate</string>
     <string name="logger_skipped_abstract">已跳过 %1$s 中的抽象 onCreate</string>
     <string name="logger_generated">已生成 %1$s</string>
+    <string name="logger_spy_path">日志文件：%1$s</string>
+    <string name="logger_no_methods">未找到匹配的方法</string>
+    <string name="logger_too_many">匹配到 %1$d 个方法，超过上限 %2$d</string>
+    <string name="logger_injected_methods">已为 %1$d 个方法注入日志</string>
+    <string name="spy_class">类名（支持 * 通配，留空匹配全部）</string>
+    <string name="spy_method">方法名（支持 * 通配，留空匹配全部）</string>
     <string name="antisplit_merge">合并</string>
     <string name="antisplit_splits">拆分 (%1$d)</string>
     <string name="antisplit_base_suffix">%1$s（基础）</string>
