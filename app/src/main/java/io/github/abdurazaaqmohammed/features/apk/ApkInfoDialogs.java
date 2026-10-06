@@ -113,6 +113,7 @@ import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DataReuseOptimizer;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileProviderInjector;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.MethodLoggerInjector;
@@ -1119,6 +1120,9 @@ public class ApkInfoDialogs {
             case ACT_DATA_REUSE:
                 runDataReuse(file);
                 break;
+            case ACT_FILE_PROVIDER:
+                runFileProvider(file);
+                break;
             default:
                 Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
                 break;
@@ -1178,6 +1182,49 @@ public class ApkInfoDialogs {
                             context.loadFolderInPane(file.getParentFile(), pane1, false));
                 } catch (Exception e) {
                     pm.dismiss();
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        });
+    }
+
+    /** MT's "inject file provider": confirm, then rewrite + sign into {@code <name>_dp.apk}. */
+    private void runFileProvider(File file) {
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.inject_file_provider))
+                .setMessage(context.rss.getString(R.string.file_provider_hint))
+                .setNegativeButton(context.rss.getString(android.R.string.cancel), null)
+                .setPositiveButton(context.rss.getString(android.R.string.ok), (dialog, which) ->
+                        startFileProviderInject(file))
+                .create());
+    }
+
+    private void startFileProviderInject(File file) {
+        SignWrapper.requireAuth(context, wrapper -> {
+            ProgressManager pm = new ProgressManager(context, true).show();
+            APKLogger logger = pm.getLogger();
+            new Thread(() -> {
+                try {
+                    File out = FileProviderInjector.inject(context, file, logger);
+                    if (out == null) {
+                        logger.close();
+                        pm.dismiss();
+                        context.handler.post(() -> Extensions.showMessage(context,
+                                context.rss.getString(R.string.file_provider_exists)));
+                        return;
+                    }
+                    wrapper.signApk(out);
+                    FileUtils.swapWithBackup(file, out);
+                    logger.close();
+                    pm.dismiss();
+                    context.handler.post(() -> {
+                        Extensions.showMessage(context,
+                                context.rss.getString(R.string.file_provider_injected));
+                        context.loadFolderInPane(file.getParentFile(), pane1, false);
+                    });
+                } catch (Exception e) {
+                    pm.dismiss();
+                    context.handler.post(logger::close);
                     new ErrorUtil(context).showError(e);
                 }
             }).start();

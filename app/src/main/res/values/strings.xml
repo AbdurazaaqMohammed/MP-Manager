@@ -1948,6 +1948,9 @@ Deleted %2$s · %3$s</string>
     <string name="data_reuse_no_shared">No files identical to the original APK, nothing to optimize</string>
     <string name="data_reuse_check_failed">Content check after optimization failed, aborted</string>
     <string name="inject_file_provider">Inject file provider</string>
+    <string name="file_provider_hint">Adds a documents provider that exports the app private data directories (data, user_de_data, android_data, android_obb) to file managers that support the Storage Access Framework, such as MT Manager. The modified APK must be reinstalled and opened once; apps with self-checks may stop working.</string>
+    <string name="file_provider_injected">File provider injected</string>
+    <string name="file_provider_exists">File provider already injected</string>
     <string name="dex_string_decrypt">DEX string decryption</string>
     <string name="function_in_development">This feature is still in development</string>
     <string name="dex_resplit_hint">Max classes per dex</string>

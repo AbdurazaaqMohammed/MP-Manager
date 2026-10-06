@@ -1945,6 +1945,9 @@ Layout Inspector
     <string name="data_reuse_no_shared">没有与原包完全相同的文件，无需优化</string>
     <string name="data_reuse_check_failed">优化后内容校验失败，已中止</string>
     <string name="inject_file_provider">注入文件提供器</string>
+    <string name="file_provider_hint">向 APK 注入文件提供器，把应用私有目录（data、user_de_data、android_data、android_obb）导出给支持存储访问框架的文件管理器（如 MT 管理器）。修改后的 APK 需重新安装并打开一次；有自校验的应用可能无法正常使用。</string>
+    <string name="file_provider_injected">文件提供器注入完成</string>
+    <string name="file_provider_exists">该 APK 已注入文件提供器</string>
     <string name="dex_string_decrypt">DEX字符串解密</string>
     <string name="function_in_development">该功能开发中</string>
     <string name="dex_resplit_hint">每个 dex 最大类数</string>

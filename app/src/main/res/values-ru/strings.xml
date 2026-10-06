@@ -1475,6 +1475,9 @@
     <string name="data_reuse_no_shared">Нет файлов, совпадающих с оригинальным APK, оптимизация не требуется</string>
     <string name="data_reuse_check_failed">Проверка содержимого после оптимизации не пройдена, отмена</string>
     <string name="inject_file_provider">Внедрение файлового провайдера</string>
+    <string name="file_provider_hint">Внедряет файловый провайдер, который экспортирует приватные каталоги приложения (data, user_de_data, android_data, android_obb) в файловые менеджеры с поддержкой SAF, например MT Manager. Изменённый APK необходимо переустановить и один раз открыть; приложения с самопроверкой могут перестать работать.</string>
+    <string name="file_provider_injected">Файловый провайдер внедрён</string>
+    <string name="file_provider_exists">Файловый провайдер уже внедрён</string>
     <string name="dex_string_decrypt">Расшифровка строк DEX</string>
     <string name="function_in_development">Функция ещё в разработке</string>
     <string name="dex_resplit_hint">Макс. классов на dex</string>
