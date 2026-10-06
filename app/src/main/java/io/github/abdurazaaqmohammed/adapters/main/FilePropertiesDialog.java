@@ -138,11 +138,14 @@ public class FilePropertiesDialog {
         }
 
         if (!isInZip && !multi) {
-            // Always offered, root or not: the row shows the current mode and the dialog reports
-            // why a change could not be applied instead of the entry quietly disappearing.
-            TextView permsRow = addPropertyRow(propRows,
-                    context.getString(R.string.permissions), context.getString(R.string.tap_to_edit));
+            // Always offered, root or not, and it shows the real mode instead of a placeholder:
+            // reading it twice (here and in the dialog) keeps the row truthful on the way out.
+            TextView permsRow = addPropertyRow(propRows, context.getString(R.string.permissions), "-");
             permsRow.setOnClickListener(v -> showPermissionsDialog(file));
+            new Thread(() -> {
+                String mode = readMode(RootManager.getInstance(context), file);
+                context.handler.post(() -> permsRow.setText(mode));
+            }).start();
         }
 
         Map<String, String> propHashes = new HashMap<>();
