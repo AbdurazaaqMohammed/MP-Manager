@@ -1,6 +1,8 @@
 package io.github.abdurazaaqmohammed.features.apk;
 
 import android.content.SharedPreferences;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -148,10 +150,10 @@ public final class XmlBatchReplace {
     }
 
     private void bindUnderline(AutoCompleteTextView input, View line) {
-        int idle = resolveColor(R.attr.colorOutline);
-        int focused = resolveColor(R.attr.colorPrimary);
+        Drawable idle = line.getBackground();
+        int focused = resolveColor(android.R.attr.colorAccent);
         input.setOnFocusChangeListener((v, hasFocus) ->
-                line.setBackgroundColor(hasFocus ? focused : idle));
+                line.setBackground(hasFocus ? new ColorDrawable(focused) : idle));
     }
 
     private int resolveColor(int attribute) {

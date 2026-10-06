@@ -50,7 +50,7 @@
         android:id="@+id/xml_find_line"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/colorOutline" />
+        android:background="?attr/colorOnSurfaceVariant" />
 
     <TextView
         android:layout_width="match_parent"
@@ -94,7 +94,7 @@
         android:id="@+id/xml_replace_line"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/colorOutline" />
+        android:background="?attr/colorOnSurfaceVariant" />
 
     <LinearLayout
         android:layout_width="match_parent"
