@@ -1942,7 +1942,7 @@ Deleted %2$s · %3$s</string>
     <string name="data_reuse_step_opt">Reusing the original APK data segments…</string>
     <string name="data_reuse_step_v2v3">Writing V2/V3 signature in place…</string>
     <string name="data_reuse_saved">Optimized: %1$s → %2$s (saved %3$s)</string>
-    <string name="data_reuse_no_host">No original APK found inside this package (expected a stored ZIP entry such as assets/base.apk)</string>
+    <string name="data_reuse_no_host">This package embeds no original APK (such as assets/base.apk). Data reuse only applies to packed APKs that carry their original package inside — regular APKs cannot be optimized.</string>
     <string name="data_reuse_host">Using host entry: %1$s</string>
     <string name="data_reuse_not_stored">Original APK entry %1$s is compressed; it must be stored (uncompressed) to be optimized</string>
     <string name="data_reuse_no_shared">No files identical to the original APK, nothing to optimize</string>
