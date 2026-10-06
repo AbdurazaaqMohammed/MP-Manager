@@ -26,6 +26,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
 
 public class StorageUtil {
+
     public static class StorageInfo {
         public String name;
         public String path;
@@ -113,6 +114,21 @@ public class StorageUtil {
             sys.freeBytes = bs2 * s2.getAvailableBlocksLong();
             sys.usedBytes = sys.totalBytes - sys.freeBytes;
             list.add(sys);
+        }
+
+        try {
+            if (AccessManager.fileOpsOn(ctx)) {
+                StorageInfo root = new StorageInfo();
+                root.name = "Root (/)";
+                root.path = "/";
+                StatFs s3 = new StatFs("/");
+                long bs3 = s3.getBlockSizeLong();
+                root.totalBytes = bs3 * s3.getBlockCountLong();
+                root.freeBytes = bs3 * s3.getAvailableBlocksLong();
+                root.usedBytes = root.totalBytes - root.freeBytes;
+                list.add(root);
+            }
+        } catch (Exception ignored) {
         }
 
         return list;
