@@ -168,6 +168,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 new EntryDialogs.State() {
                     @Override
                     public Object[] values() {
+                        // Use the adapter field, not the constructor parameter
                         return MainFilesArrayAdapter.this.values;
                     }
 

@@ -26,6 +26,7 @@ import com.reandroid.archive.io.CountingOutputStream;
 import com.reandroid.archive.io.ZipOutput;
 import com.reandroid.utils.io.FileUtil;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.zip.Deflater;
@@ -54,6 +55,13 @@ class OutputSource {
         LocalFileHeader lfh = getLocalFileHeader();
         InputSource inputSource = getInputSource();
         OutputStream rawStream = zipOutput.getOutputStream();
+        // Some input sources (e.g. BlockInputSource serializing a huge resources.arsc)
+        // emit millions of tiny writes. FileChannelOutputStream performs a syscall per
+        // write, which is catastrophic for large tables. Buffer here so those tiny
+        // writes are coalesced. The stream is flushed/closed below, so no data is lost.
+        if (!(rawStream instanceof BufferedOutputStream)) {
+            rawStream = new BufferedOutputStream(rawStream, BUFFERED_STREAM_SIZE);
+        }
         CountingOutputStream<OutputStream> rawCounter = new CountingOutputStream<>(rawStream);
         CountingOutputStream<DeflaterOutputStream> deflateCounter = null;
 
@@ -69,6 +77,8 @@ class OutputSource {
             rawCounter.close();
         }else {
             inputSource.write(rawCounter);
+            // Stored entries are not closed here, so flush the buffer explicitly.
+            rawCounter.flush();
         }
 
         lfh.setCompressedSize(rawCounter.getSize());
@@ -179,5 +189,6 @@ class OutputSource {
             apkLogger.logVerbose(msg);
         }
     }
+    private static final int BUFFERED_STREAM_SIZE = 256 * 1024;
     private static final long LOG_LARGE_FILE_SIZE = 2L * 1000 * 1024;
 }

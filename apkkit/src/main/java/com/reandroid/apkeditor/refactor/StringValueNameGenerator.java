@@ -21,7 +21,7 @@ public class StringValueNameGenerator {
     }
     public void refactor(){
         Map<Integer, ResourceEntry> resourceEntryMap = mapResourceEntries();
-        Map<Integer, String> nameMap = generate();
+        Map<Integer, String> nameMap = generate(new ArrayList<>(resourceEntryMap.values()));
         for(Map.Entry<Integer, String> entry:nameMap.entrySet()){
             ResourceEntry resourceEntry = resourceEntryMap.get(entry.getKey());
             String name = entry.getValue();
@@ -34,12 +34,11 @@ public class StringValueNameGenerator {
                 resourceEntry.getResourceId());
        return generated.equals(resourceEntry.getName());
     }
-    private Map<Integer, String> generate(){
+    private Map<Integer, String> generate(List<ResourceEntry> resourceEntryList){
         mGeneratedNames.clear();
         mSkipIds.clear();
         Map<Integer, String> results = new HashMap<>();
         Set<Integer> skipIds = this.mSkipIds;
-        List<ResourceEntry> resourceEntryList = listResources();
         for(ResourceEntry resourceEntry:resourceEntryList){
             if(!isGenerated(resourceEntry)){
                 skipIds.add(resourceEntry.getResourceId());
@@ -90,9 +89,6 @@ public class StringValueNameGenerator {
             }
         }
         return def;
-    }
-    private List<ResourceEntry> listResources(){
-        return new ArrayList<>(mapResourceEntries().values());
     }
     private Map<Integer, ResourceEntry> mapResourceEntries(){
         Map<Integer, ResourceEntry> results = new HashMap<>();

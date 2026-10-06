@@ -24,6 +24,7 @@ import com.reandroid.utils.HexUtil;
 import com.reandroid.utils.ObjectsUtil;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 public abstract class OffsetItem extends BlockItem implements DirectStreamReader,
         Comparable<OffsetItem> {
@@ -35,13 +36,10 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
     public static final Creator<OffsetItem> CREATOR_OFFSET32 = Helper.init32();
     public static final Creator<OffsetItem> CREATOR_SPARSE = Helper.initSparse();
 
-    private int mOffset;
+    protected int mOffset;
 
-    protected OffsetItem(int bytesLength) {
-        super(bytesLength);
-    }
     protected OffsetItem() {
-        this(4);
+        super(0);
     }
 
     public int getOffset() {
@@ -49,7 +47,7 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
     }
     public void setOffset(int offset) {
         if (offset != mOffset) {
-            writeOffset(offset);
+            validateOffset(offset);
             mOffset = offset;
         }
     }
@@ -60,13 +58,7 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
     public void setIdx(int idx) {
     }
 
-    protected abstract int readOffset();
-    protected abstract void writeOffset(int offset);
-
-    @Override
-    protected void onBytesChanged() {
-        super.onBytesChanged();
-        this.mOffset = readOffset();
+    protected void validateOffset(int offset) {
     }
 
     public boolean isNoEntry() {
@@ -123,6 +115,46 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
         }
     }
 
+    protected abstract int itemBytesLength();
+    protected abstract void parseOffset(byte[] bytes);
+    protected abstract void writeOffset(byte[] bytes);
+
+    @Override
+    public void onReadBytes(BlockReader reader) throws IOException {
+        byte[] bytes = new byte[itemBytesLength()];
+        reader.readFully(bytes);
+        parseOffset(bytes);
+    }
+
+    @Override
+    public byte[] getBytes() {
+        if(isNull()){
+            return null;
+        }
+        byte[] bytes = new byte[itemBytesLength()];
+        writeOffset(bytes);
+        return bytes;
+    }
+
+    @Override
+    public int countBytes() {
+        if(isNull()){
+            return 0;
+        }
+        return itemBytesLength();
+    }
+
+    @Override
+    protected int onWriteBytes(OutputStream stream) throws IOException {
+        if (isNull()) {
+            return 0;
+        }
+        byte[] bytes = new byte[itemBytesLength()];
+        writeOffset(bytes);
+        stream.write(bytes);
+        return bytes.length;
+    }
+
     public int compareOffset(OffsetItem offsetItem) {
         if (offsetItem == this) {
             return 0;
@@ -157,29 +189,39 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
     static class Offset16 extends OffsetItem {
 
         public Offset16() {
-            super(2);
         }
 
         @Override
-        protected int readOffset() {
-            int offset = getShortUnsigned(getBytesInternal(), 0);
+        protected void validateOffset(int offset) {
+            if (offset != NO_ENTRY) {
+                validateValueRange(offset / 4);
+            }
+        }
+
+        @Override
+        protected int itemBytesLength() {
+            return 2;
+        }
+
+        @Override
+        protected void parseOffset(byte[] bytes) {
+            int offset = getShortUnsigned(bytes, 0);
             if (offset == NO_ENTRY16) {
                 offset = NO_ENTRY;
             } else {
                 offset = offset * 4;
             }
-            return offset;
+            mOffset = offset;
         }
 
         @Override
-        protected void writeOffset(int offset) {
+        protected void writeOffset(byte[] bytes) {
+            int offset = mOffset;
             if (offset == NO_ENTRY) {
-                offset = NO_ENTRY16;
+                putShort(bytes, 0, NO_ENTRY16);
             } else {
-                offset = offset / 4;
-                validateValueRange(offset);
+                putShort(bytes, 0, mOffset / 4);
             }
-            putShort(getBytesInternal(), 0, offset);
         }
 
         @Override
@@ -192,17 +234,21 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
     static class Offset32 extends OffsetItem {
 
         public Offset32() {
-            super();
         }
 
         @Override
-        protected int readOffset() {
-            return getInteger(getBytesInternal(), 0);
+        protected int itemBytesLength() {
+            return 4;
         }
 
         @Override
-        protected void writeOffset(int offset) {
-            putInteger(getBytesInternal(), 0, offset);
+        protected void parseOffset(byte[] bytes) {
+            mOffset = getInteger(bytes, 0);
+        }
+
+        @Override
+        protected void writeOffset(byte[] bytes) {
+            putInteger(bytes, 0, mOffset);
         }
         @Override
         public int compareTo(OffsetItem offsetItem) {
@@ -215,7 +261,6 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
         private int mIdx;
 
         public Sparse() {
-            super();
         }
 
         @Override
@@ -228,7 +273,6 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
             if (idx != mIdx) {
                 validateValueRange(idx);
                 this.mIdx = idx;
-                putShort(getBytesInternal(), 0, idx);
             }
         }
         @Override
@@ -237,21 +281,25 @@ public abstract class OffsetItem extends BlockItem implements DirectStreamReader
         }
 
         @Override
-        protected void onBytesChanged() {
-            super.onBytesChanged();
-            this.mIdx = getShortUnsigned(getBytesInternal(), 0);
+        protected void validateOffset(int offset) {
+            validateValueRange(offset / 4);
         }
 
         @Override
-        protected int readOffset() {
-            return getShortUnsigned(getBytesInternal(), 2) * 4;
+        protected int itemBytesLength() {
+            return 4;
         }
 
         @Override
-        protected void writeOffset(int offset) {
-            int value = offset / 4;
-            validateValueRange(value);
-            putShort(getBytesInternal(), 2, value);
+        protected void parseOffset(byte[] bytes) {
+            mIdx = getShortUnsigned(bytes, 0);
+            mOffset = getShortUnsigned(bytes, 2) * 4;
+        }
+
+        @Override
+        protected void writeOffset(byte[] bytes) {
+            putShort(bytes, 0, mIdx);
+            putShort(bytes, 2, mOffset / 4);
         }
 
         @Override
