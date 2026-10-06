@@ -2159,6 +2159,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         remotePane().showConnectionsDialog();
     }
 
+    /** Overflow menu "Add network storage": pick the protocol, then fill the form. */
+    public void pickRemoteKind() {
+        remotePane().showKindPicker();
+    }
+
     /** Drawer row for a saved connection that is already live: edit or delete it. */
     public void editRemoteProfile(RemoteCredentials credentials) {
         remotePane().showFormDialog(credentials);

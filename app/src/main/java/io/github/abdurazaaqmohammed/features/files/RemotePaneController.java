@@ -384,11 +384,33 @@ public class RemotePaneController {
     }
 
     /**
+ * Protocol picker, the way MT Manager asks what kind of remote storage to add: a plain list, then
+ * the form for the picked kind. Editing skips this and goes straight to the form.
+ */
+public void showKindPicker() {
+        List<RemoteCredentials.Kind> kinds = creatableKinds();
+        String[] labels = new String[kinds.size()];
+        for (int i = 0; i < kinds.size(); i++) labels[i] = kindLabel(kinds.get(i));
+        androidx.appcompat.app.AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
+                .setTitle(R.string.sidebar_add_network)
+                .setItems(labels, (d, which) -> showFormDialog(null, kinds.get(which)))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
      * Add or edit a profile.
      *
      * @param existing the profile to edit, or null to create a new one
      */
     public void showFormDialog(RemoteCredentials existing) {
+        showFormDialog(existing, existing == null ? null : existing.kind());
+    }
+
+    /**
+     * @param forcedKind kind the caller already chose; null leaves the spinner in charge
+     */
+    public void showFormDialog(RemoteCredentials existing, RemoteCredentials.Kind forcedKind) {
         List<RemoteCredentials.Kind> kinds = creatableKinds();
 
         LinearLayout box = new LinearLayout(activity);
@@ -400,9 +422,13 @@ public class RemotePaneController {
         Spinner kindSpinner = new Spinner(activity);
         kindSpinner.setAdapter(new ArrayAdapter<>(activity,
                 android.R.layout.simple_spinner_dropdown_item, kindLabels));
-        int initial = existing == null ? 0 : Math.max(0, kinds.indexOf(existing.kind()));
+        int initial = existing != null ? Math.max(0, kinds.indexOf(existing.kind()))
+                : (forcedKind != null ? Math.max(0, kinds.indexOf(forcedKind)) : 0);
         kindSpinner.setSelection(initial);
-        box.addView(kindSpinner);
+        // The protocol was already picked in the list that led here, so the spinner would only
+        // offer to change the one thing the caller just decided.
+        if (forcedKind != null) kindSpinner.setVisibility(View.GONE);
+        else box.addView(kindSpinner);
 
         LinearLayout form = new LinearLayout(activity);
         form.setOrientation(LinearLayout.VERTICAL);

@@ -54,6 +54,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -267,11 +268,11 @@ public class SidebarController {
                     activity.recreate();
                 }
             } else if (id == MENU_ADD_NETWORK) {
-                activity.showRemoteConnectionsDialog();
+                activity.pickRemoteKind();
             } else if (id == MENU_ADD_LOCAL) {
                 showAddLocalStorageDialog();
             } else if (id == MENU_TOOL_GROUPS) {
-                if (!sidebarOrganizeMode) setSidebarOrganizeMode(true);
+                showToolGroupsDialog();
             } else if (id == MENU_SETTINGS) {
                 activity.showSettingsDialog();
             }
@@ -280,8 +281,39 @@ public class SidebarController {
         menu.show();
     }
 
-    /** Adds a bookmark for an arbitrary path, seeded with whatever the active pane shows. */
-    private void showAddLocalStorageDialog() {
+    /**
+     * MT Manager's "manage tool groups": a checkbox per tool, no drag handles and no ordering.
+     * Cancelling changes nothing; confirming stores the visible set.
+     */
+    private void showToolGroupsDialog() {
+        List<SidebarAdapter.SidebarEntry> tools = sidebarAdapter.allToolEntries();
+        String[] labels = new String[tools.size()];
+        boolean[] checked = new boolean[tools.size()];
+        Set<String> hiddenIds = new HashSet<>();
+        for (int i = 0; i < tools.size(); i++) {
+            SidebarAdapter.SidebarEntry tool = tools.get(i);
+            labels[i] = tool.label();
+            checked[i] = !sidebarAdapter.isToolHidden(tool.id());
+            if (!checked[i]) hiddenIds.add(tool.id());
+        }
+        androidx.appcompat.app.AlertDialog dialog = activity.dialogUtil.getDialogBuilder()
+                .setTitle(R.string.sidebar_manage_tool_groups)
+                .setMultiChoiceItems(labels, checked, (d, which, isChecked) -> {
+                    if (isChecked) hiddenIds.remove(tools.get(which).id());
+                    else hiddenIds.add(tools.get(which).id());
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    sidebarAdapter.setHiddenToolIds(hiddenIds);
+                    PreferenceManager.getDefaultSharedPreferences(activity).edit()
+                            .putStringSet("sidebar_hidden_items", sidebarAdapter.getHiddenItems())
+                            .apply();
+                    refreshSidebar(getSidebarSectionOrder());
+                })
+                .show();
+    }
+
+    /** Adds a bookmark for an arbitrary path, seeded with whatever the active pane shows. */    private void showAddLocalStorageDialog() {
         EditText pathInput = new EditText(activity);
         pathInput.setSingleLine(true);
         pathInput.setTextSize(16f);

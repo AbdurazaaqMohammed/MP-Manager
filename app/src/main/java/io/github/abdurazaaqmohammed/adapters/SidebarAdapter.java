@@ -266,6 +266,54 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         }
     }
 
+    /**
+     * Every tool that could appear in the section, ignoring the current hidden set. The manage
+     * dialog needs the unchecked ones too, otherwise a hidden tool could never be brought back.
+     */
+    public List<SidebarEntry> allToolEntries() {
+        List<SidebarEntry> all = new ArrayList<>();
+        rebuildIncludingHidden(all);
+        List<SidebarEntry> out = new ArrayList<>();
+        for (SidebarEntry e : all) {
+            if (e.type == EntryType.TOOL) out.add(e);
+        }
+        return out;
+    }
+
+    /** True when the tool is currently hidden, matched on its id rather than on its row. */
+    public boolean isToolHidden(String toolId) {
+        return hiddenItems.contains(EntryType.TOOL.name() + "\u0001" + toolId);
+    }
+
+    /** Applies a hidden set expressed as tool ids. */
+    public void setHiddenToolIds(Set<String> toolIds) {
+        Set<String> next = new HashSet<>(hiddenItems);
+        for (String id : toolIds) {
+            next.add(EntryType.TOOL.name() + "\u0001" + id);
+        }
+        // Anything not in the incoming list is a tool that was visible again.
+        for (String existing : new HashSet<>(hiddenItems)) {
+            if (!existing.startsWith(EntryType.TOOL.name() + "\u0001")) continue;
+            String id = existing.substring(EntryType.TOOL.name().length() + 1);
+            if (!toolIds.contains(id)) next.remove(existing);
+        }
+        hiddenItems.clear();
+        hiddenItems.addAll(next);
+    }
+
+    /** Rebuilds the whole list with the hidden set suspended, so callers can see every tool. */
+    private void rebuildIncludingHidden(List<SidebarEntry> sink) {
+        List<SidebarEntry> real = new ArrayList<>(entries);
+        Set<String> saved = new HashSet<>(hiddenItems);
+        hiddenItems.clear();
+        rebuild();
+        sink.addAll(entries);
+        entries.clear();
+        entries.addAll(real);
+        hiddenItems.clear();
+        hiddenItems.addAll(saved);
+    }
+
     private void addTools() {
         String[] defaults = {"extract", "ftp_server", "color_picker", "layout", "smali_reference", "activity_log", "password_manager", "recycle_bin", "tools"};
         List<String> order = new ArrayList<>();
