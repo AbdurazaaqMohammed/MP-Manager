@@ -305,13 +305,13 @@
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="20dp"
-            android:paddingTop="14dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="14dp">
+            android:paddingTop="10dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="10dp">
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:importantForAccessibility="no"
                 android:src="@mipmap/ic_launcher" />
 
@@ -384,12 +384,12 @@
                 android:id="@+id/sidebarList"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="?attr/colorSurfaceVariant"
+                android:background="?attr/colorSurface"
                 android:clipToPadding="false"
                 android:divider="@null"
                 android:dividerHeight="0dp"
                 android:paddingTop="0dp"
-                android:paddingBottom="8dp" />
+                android:paddingBottom="0dp" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
     </FrameLayout>

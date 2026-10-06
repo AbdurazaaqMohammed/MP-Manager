@@ -849,7 +849,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         // a fallback: a fixed width is a narrow column on a tablet and a near-full-width one on a
         // small phone in landscape.
         ViewGroup.LayoutParams drawerParams = sidebarDrawer.getLayoutParams();
-        drawerParams.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.78f);
+        drawerParams.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.82f);
         sidebarDrawer.setLayoutParams(drawerParams);
         bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bookmarks_drawer));
         bottomSheetBehavior.setPeekHeight(0, false); // animate=false, keeps it hidden
