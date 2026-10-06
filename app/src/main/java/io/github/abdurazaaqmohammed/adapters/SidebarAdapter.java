@@ -456,7 +456,9 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             });
             ImageView toggle = view.findViewById(R.id.sidebarSectionToggle);
             boolean collapsed = isCollapsed(entry.section);
-            Drawable d = ResourcesCompat.getDrawable(context.getResources(), collapsed ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px, null);
+            // MT Manager points the caret up while a section is open, so the arrow reads as
+            // "collapse me" instead of "expand me".
+            Drawable d = ResourcesCompat.getDrawable(context.getResources(), collapsed ? R.drawable.arrow_drop_down_24px : R.drawable.arrow_drop_up_24px, null);
             toggle.setImageDrawable(d.mutate());
             toggle.setContentDescription(context.getString(collapsed ? R.string.sidebar_expand : R.string.sidebar_collapse));
             ((View) toggle.getParent()).setOnClickListener(v -> callbacks.onHeaderToggle(entry));
@@ -501,6 +503,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         if (view == null) view = LayoutInflater.from(context).inflate(R.layout.item_sidebar_row, parent, false);
         ImageView icon = view.findViewById(R.id.optionIcon);
         TextView text = view.findViewById(R.id.optionText);
+        TextView subtitle = view.findViewById(R.id.optionSubtitle);
         ImageView dragHandle = view.findViewById(R.id.optionDragHandle);
         ImageButton hideButton = view.findViewById(R.id.optionHideButton);
         boolean hidden = isHidden(entry);
@@ -510,6 +513,17 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         text.setText(entry.label);
         text.setEnabled(!hidden);
         text.setAlpha(hidden ? 0.55f : 1f);
+        // Bookmarks carry their location on a second line, the way MT Manager lists them; tools
+        // have no meaningful path so the line stays collapsed.
+        File bookmark = entry.file;
+        File parent = bookmark == null ? null
+                : (bookmark.isDirectory() ? bookmark : bookmark.getParentFile());
+        if (entry.type == EntryType.BOOKMARK && parent != null) {
+            subtitle.setText(parent.getAbsolutePath());
+            subtitle.setVisibility(View.VISIBLE);
+        } else {
+            subtitle.setVisibility(View.GONE);
+        }
         view.setAlpha(hidden ? 0.7f : 1f);
         view.setTranslationY(0f);
         dragHandle.setVisibility(organizeMode && entry.type != EntryType.STORAGE ? View.VISIBLE : View.INVISIBLE);

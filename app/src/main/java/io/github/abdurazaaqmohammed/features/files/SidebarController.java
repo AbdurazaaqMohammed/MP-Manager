@@ -214,6 +214,10 @@ public class SidebarController {
         if (themeButton != null) {
             themeButton.setOnClickListener(v -> ThemeDialogs.showThemeChooser(activity));
         }
+        View collapseButton = activity.findViewById(R.id.sidebarCollapseButton);
+        if (collapseButton != null) {
+            collapseButton.setOnClickListener(v -> activity.closeSidebarDrawer());
+        }
         TextView subtitle = activity.findViewById(R.id.sidebarSubtitle);
         if (subtitle != null) {
             try {

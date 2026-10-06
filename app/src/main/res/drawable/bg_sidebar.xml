@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  The drawer itself is a plain rectangle: MT Manager's drawer has square corners, and a rounded
+  right edge only reads as a sheet floating over the file panes.
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="?attr/colorSurface" />
-    <corners
-        android:topRightRadius="16dp"
-        android:bottomRightRadius="16dp" />
 </shape>

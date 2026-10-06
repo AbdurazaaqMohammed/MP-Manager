@@ -282,21 +282,26 @@
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
-    <LinearLayout
+    <FrameLayout
         android:id="@+id/sidebar_drawer"
         android:layout_width="@dimen/sidebar_width"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@drawable/bg_sidebar"
-        android:orientation="vertical"
         android:clickable="true"
         android:focusable="true">
+
+    <LinearLayout
+        android:id="@+id/sidebarContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_sidebar"
+        android:orientation="vertical">
 
         <LinearLayout
             android:id="@+id/sidebarTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
+            android:background="@drawable/bg_sidebar_header"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="20dp"
@@ -305,8 +310,8 @@
             android:paddingBottom="14dp">
 
             <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:importantForAccessibility="no"
                 android:src="@mipmap/ic_launcher" />
 
@@ -323,8 +328,8 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/app_name"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="20sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -334,7 +339,7 @@
                     android:layout_marginTop="2dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textColor="#B3FFFFFF"
                     android:textSize="13sp" />
             </LinearLayout>
 
@@ -345,7 +350,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/dialog_theme"
                 android:src="@drawable/dark"
-                app:tint="?attr/colorOnSurface" />
+                app:tint="#FFFFFF" />
 
             <ImageButton
                 android:id="@+id/sidebarOrganizeButton"
@@ -353,8 +358,8 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/organize_sidebar"
-                android:src="@drawable/drag_handle_24px"
-                app:tint="?attr/colorOnSurface" />
+                android:src="@drawable/baseline_more_vert_24"
+                app:tint="#FFFFFF" />
         </LinearLayout>
 
         <LinearLayout
@@ -377,12 +382,26 @@
                 android:id="@+id/sidebarList"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="?attr/colorSurfaceVariant"
                 android:clipToPadding="false"
                 android:divider="@android:color/transparent"
-                android:dividerHeight="8dp"
-                android:paddingHorizontal="8dp"
-                android:paddingTop="4dp"
+                android:dividerHeight="10dp"
+                android:paddingTop="10dp"
                 android:paddingBottom="8dp" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/sidebarCollapseButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="22dp"
+            android:background="@drawable/bg_sidebar_collapse_button"
+            android:contentDescription="@string/close"
+            android:padding="10dp"
+            android:src="@drawable/arrow_drop_up_24px"
+            app:tint="#FFFFFF" />
+    </FrameLayout>
 </io.github.abdurazaaqmohammed.ui.MyDrawerLayout>

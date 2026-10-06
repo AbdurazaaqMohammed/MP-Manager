@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Drawer list row background: opaque surface colour so the grey list backdrop only shows in the
+  gaps between sections, plus the standard touch ripple.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorSurface" />
+        </shape>
+    </item>
+</ripple>

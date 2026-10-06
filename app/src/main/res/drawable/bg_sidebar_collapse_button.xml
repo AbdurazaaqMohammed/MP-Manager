@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Round collapse button that sits on the drawer's bottom edge, the affordance MT Manager uses to
+  push the drawer away without reaching for the content behind it.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#33FFFFFF">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#2E2E2E" />
+        </shape>
+    </item>
+</ripple>
