@@ -115,4 +115,12 @@
         <item>normal</item>
         <item>slow</item>
     </string-array>
+
+    <string-array name="xml_search_types">
+        <item>@string/xml_type_code</item>
+        <item>@string/xml_type_string</item>
+        <item>@string/xml_type_resid</item>
+        <item>@string/xml_type_color</item>
+        <item>@string/xml_type_int</item>
+    </string-array>
 </resources>

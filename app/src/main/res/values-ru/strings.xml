@@ -1464,4 +1464,19 @@
     <string name="dex_resplit_hint">Макс. классов на dex</string>
     <string name="dex_resplit_done">Переразделено классов: %1$d</string>
     <string name="dex_resplit_nothing">Переразделение не требуется</string>
+
+    <!-- XML batch replace -->
+    <string name="xml_find">Что искать</string>
+    <string name="xml_replace">Чем заменить</string>
+    <string name="xml_type_code">Код</string>
+    <string name="xml_type_string">Строка</string>
+    <string name="xml_type_resid">ID ресурса</string>
+    <string name="xml_type_color">Цвет</string>
+    <string name="xml_type_int">Целое</string>
+    <string name="xml_id_to_name">ID в имена</string>
+    <string name="xml_case_sensitive">С учётом регистра</string>
+    <string name="xml_regex_exp">Регулярное выражение</string>
+    <string name="xml_no_match">Совпадений не найдено</string>
+    <string name="xml_bad_regex">Недопустимое регулярное выражение</string>
+    <string name="xml_replaced_x">Заменено %1$d в %2$d файлах</string>
 </resources>

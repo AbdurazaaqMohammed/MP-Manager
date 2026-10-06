@@ -469,6 +469,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         apkResults.handleModifiedFileResult(uri, entryPath, zipFileExtra);
     }
 
+    public void handleModifiedEntriesResult(Uri uri, String[] entryPaths, String zipFileExtra,
+                                            String modifiedRoot) {
+        apkResults.handleModifiedEntriesResult(uri, entryPaths, zipFileExtra, modifiedRoot);
+    }
+
     public void openBookmarksDrawer() {
         findViewById(R.id.bookmarks_drawer).post(() -> {
             showHistory(navigation.historyFor(lastPaneSelected == 1));

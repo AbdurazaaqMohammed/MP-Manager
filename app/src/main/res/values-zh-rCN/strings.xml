@@ -1934,4 +1934,19 @@ Layout Inspector
     <string name="dex_resplit_hint">每个 dex 最大类数</string>
     <string name="dex_resplit_done">已重新划分 %1$d 个类</string>
     <string name="dex_resplit_nothing">无需重新划分</string>
+
+    <!-- XML批量替换 -->
+    <string name="xml_find">查找内容</string>
+    <string name="xml_replace">替换内容</string>
+    <string name="xml_type_code">代码</string>
+    <string name="xml_type_string">字符串</string>
+    <string name="xml_type_resid">资源ID</string>
+    <string name="xml_type_color">颜色</string>
+    <string name="xml_type_int">整数</string>
+    <string name="xml_id_to_name">ID转名称</string>
+    <string name="xml_case_sensitive">区分大小写</string>
+    <string name="xml_regex_exp">正则表达式</string>
+    <string name="xml_no_match">没有找到匹配内容</string>
+    <string name="xml_bad_regex">无效的正则表达式</string>
+    <string name="xml_replaced_x">已替换 %1$d 处，%2$d 个文件</string>
 </resources>

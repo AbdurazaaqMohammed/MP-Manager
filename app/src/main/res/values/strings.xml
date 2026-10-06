@@ -1937,4 +1937,19 @@ Deleted %2$s · %3$s</string>
     <string name="dex_resplit_hint">Max classes per dex</string>
     <string name="dex_resplit_done">Re-split %1$d classes</string>
     <string name="dex_resplit_nothing">No re-split needed</string>
+
+    <!-- XML batch replace -->
+    <string name="xml_find">Search for</string>
+    <string name="xml_replace">Replace with</string>
+    <string name="xml_type_code">Code</string>
+    <string name="xml_type_string">String</string>
+    <string name="xml_type_resid">Resource ID</string>
+    <string name="xml_type_color">Color</string>
+    <string name="xml_type_int">Integer</string>
+    <string name="xml_id_to_name">IDs to names</string>
+    <string name="xml_case_sensitive">Match case</string>
+    <string name="xml_regex_exp">Regular expression</string>
+    <string name="xml_no_match">No matches found</string>
+    <string name="xml_bad_regex">Invalid regular expression</string>
+    <string name="xml_replaced_x">Replaced %1$d in %2$d file(s)</string>
 </resources>

@@ -88,14 +88,9 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -107,7 +102,6 @@ import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkSignatureTools;
 import io.github.abdurazaaqmohammed.features.apk.translate.XmlTranslationModeActivity;
-import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
@@ -1186,30 +1180,6 @@ public class ApkInfoDialogs {
 
     // ---------------------------------------------------------------- MT grid: actions
 
-    /** The compiled resource table sits at the APK root or under res/, depending on the toolchain. */
-    private static ZipEntry findArscEntry(ZipFile zipFile) {
-        java.util.Enumeration<? extends ZipEntry> entries = zipFile.entries();
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            if (!entry.isDirectory() && entry.getName().endsWith("resources.arsc")) return entry;
-        }
-        return null;
-    }
-
-    private File extractArsc(ZipFile zipFile, ZipEntry entry) throws IOException {
-        File dir = new File(context.getCacheDir(), "arsc");
-        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create " + dir);
-        File out = new File(dir, "resources.arsc");
-        try (InputStream in = zipFile.getInputStream(entry);
-             FileOutputStream outStream = new FileOutputStream(out)) {
-            byte[] buffer = new byte[65536];
-            int length;
-            while ((length = in.read(buffer)) != -1) outStream.write(buffer, 0, length);
-        }
-        if (out.length() == 0) throw new IOException("Empty " + entry.getName());
-        return out;
-    }
-
     /**
      * MT's "XML translation mode": walk the APK's layout files, lift every literal that was
      * written straight into an attribute, and batch-translate them to Chinese.
@@ -1224,28 +1194,9 @@ public class ApkInfoDialogs {
         }
     }
 
-    /**
-     * MT's "XML batch replace": the full arsc editor, where every replace-all walks the whole
-     * string table. Unlike translation mode it reads the file straight off disk, so the table
-     * is extracted first; the 757 result lets MainActivity inject it back into the APK.
-     */
+    /** MT's "XML batch replace": one dialog that rewrites every XML inside the APK. */
     private void startArscBatchReplace(File file) {
-        try (ZipFile zipFile = new ZipFile(file)) {
-            ZipEntry entry = findArscEntry(zipFile);
-            if (entry == null) {
-                Extensions.showMessage(context, context.rss.getString(R.string.xlate_no_resource_table));
-                return;
-            }
-            File arsc = extractArsc(zipFile, entry);
-            Intent intent = new Intent(context, ArscEditorPlusActivity.class)
-                    .putExtra("path", arsc.getAbsolutePath())
-                    .putExtra("apkPath", file.getAbsolutePath())
-                    .putExtra("zipEntryPath", entry.getName())
-                    .putExtra("arscMode", ArscEditorPlusActivity.MODE_PLUS);
-            context.startActivityForResult(intent, 757);
-        } catch (Exception e) {
-            new ErrorUtil(context).showError(e);
-        }
+        XmlBatchReplace.show(context, dialogUtil, file);
     }
 
     /** MT's "re-split DEX": ask for the per-dex class cap, then rebalance the dex files. */
