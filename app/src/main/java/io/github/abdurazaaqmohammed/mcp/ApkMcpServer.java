@@ -224,7 +224,8 @@ public final class ApkMcpServer {
             try {
                 resp.put("jsonrpc", "2.0");
                 resp.put("id", id);
-                resp.put("error", new JSONObject().put("code", e.code).put("message", e.message));
+                resp.put("error", new JSONObject().put("code", e.code)
+                                .put("message", String.valueOf(e.getMessage())));
             } catch (Exception ignored) {
             }
         } catch (Exception e) {
@@ -240,7 +241,7 @@ public final class ApkMcpServer {
     }
 
     private static JSONObject dispatch(Context ctx, String method, JSONObject params)
-            throws RpcException {
+            throws Exception {
         switch (method) {
             case "initialize": {
                 JSONObject result = new JSONObject();

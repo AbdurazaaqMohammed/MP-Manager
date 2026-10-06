@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.mcp;
 
 import android.content.Context;
+import android.content.pm.ComponentInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -168,12 +169,12 @@ final class ApkMcpTools {
         return out.toString(2);
     }
 
-    private static JSONArray names(Object[] components) {
+    private static JSONArray names(Object[] components) throws Exception {
         JSONArray arr = new JSONArray();
         if (components == null) return arr;
         for (Object o : components) {
-            if (o instanceof PackageInfo.ComponentInfo) {
-                arr.put(((PackageInfo.ComponentInfo) o).name);
+            if (o instanceof ComponentInfo) {
+                arr.put(((ComponentInfo) o).name);
             }
         }
         return arr;
