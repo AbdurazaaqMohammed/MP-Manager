@@ -349,10 +349,31 @@ public class FilePropertiesDialog {
         try {
             java.nio.file.attribute.PosixFileAttributes attr = java.nio.file.Files
                     .readAttributes(file.toPath(), java.nio.file.attribute.PosixFileAttributes.class);
-            return String.format("%04o", attr.permissions().toOctalValue() & 07777);
+            int octal = java.nio.file.attribute.PosixFilePermissions.toString(attr.permissions());
+            return octalToDigits(octal);
         } catch (Exception ignored) {
         }
         return "0000";
+    }
+
+    /** {@code rw-r-----} to {@code 0640}, prefixed with the special digit when one is set. */
+    private static String octalToDigits(String symbolic) {
+        if (symbolic == null || symbolic.length() < 9) return "0000";
+        int special = 0;
+        StringBuilder digits = new StringBuilder(4);
+        for (int row = 0; row < 3; row++) {
+            char r = symbolic.charAt(row * 3);
+            char w = symbolic.charAt(row * 3 + 1);
+            char x = symbolic.charAt(row * 3 + 2);
+            int value = 0;
+            if (r == 'r') value |= 4;
+            if (w == 'w') value |= 2;
+            if (x == 'x' || x == 's' || x == 't') value |= 1;
+            if (x == 's' || x == 'S') special |= row == 0 ? 4 : row == 1 ? 2 : 0;
+            if (x == 't' || x == 'T') special |= 1;
+            digits.append(value);
+        }
+        return (special > 0 ? String.valueOf(special) : "") + digits;
     }
 
     private void applyMode(RootManager rm, File file, String numeric) {
