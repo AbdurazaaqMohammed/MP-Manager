@@ -89,6 +89,7 @@ import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
 import io.github.abdurazaaqmohammed.features.files.BookmarksController;
 import io.github.abdurazaaqmohammed.features.files.FileSearchController;
 import io.github.abdurazaaqmohammed.features.files.FtpController;
+import io.github.abdurazaaqmohammed.domain.remote.RemoteCredentials;
 import io.github.abdurazaaqmohammed.features.files.RemotePaneController;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
 import io.github.abdurazaaqmohammed.features.files.SettingsController;
@@ -2156,6 +2157,23 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Entry point for the "Remote storage" sidebar tool. */
     public void showRemoteConnectionsDialog() {
         remotePane().showConnectionsDialog();
+    }
+
+    /** Drawer row for a saved connection that is already live: edit or delete it. */
+    public void editRemoteProfile(RemoteCredentials credentials) {
+        remotePane().showFormDialog(credentials);
+    }
+
+    public void deleteRemoteProfile(RemoteCredentials credentials) {
+        remotePane().removeProfile(credentials);
+    }
+
+    public boolean isRemoteConnectedTo(RemoteCredentials credentials) {
+        return remotePane().isConnectedTo(credentials);
+    }
+
+    public boolean connectRemote(RemoteCredentials credentials) {
+        return remotePane().connectAndLoad(credentials, lastPaneSelected == 1);
     }
 
     public void showFtpClientDialog() {

@@ -440,10 +440,10 @@ public class SidebarController {
             // A tap connects; the same row offers edit/delete when it is already the live pane,
             // which is where a saved connection is most often adjusted.
             RemoteCredentials c = entry.remote();
-            if (c != null && activity.remotePane().isConnectedTo(c)) {
-                showRemoteRowMenu(entry, c, anchorView);
+            if (c != null && activity.isRemoteConnectedTo(c)) {
+                showRemoteRowMenu(c, anchorView);
             } else if (c != null) {
-                activity.remotePane().connectAndLoad(c, activity.lastPaneSelected == 1);
+                activity.connectRemote(c);
             }
             activity.closeSidebarDrawer();
             return;
@@ -454,15 +454,15 @@ public class SidebarController {
     }
 
     /** Edit or delete a saved connection, mirroring what the old profile dialog offered. */
-    private void showRemoteRowMenu(SidebarAdapter.SidebarEntry entry, RemoteCredentials c, View anchor) {
+    private void showRemoteRowMenu(RemoteCredentials c, View anchor) {
         PopupMenu menu = new PopupMenu(activity, anchor != null ? anchor : sidebarList);
         menu.getMenu().add(R.string.remote_edit);
         menu.getMenu().add(R.string.remote_delete);
         menu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.string.remote_edit) {
-                activity.remotePane().showFormDialog(c);
+                activity.editRemoteProfile(c);
             } else {
-                activity.remotePane().removeProfile(c);
+                activity.deleteRemoteProfile(c);
             }
             return true;
         });
