@@ -79,6 +79,7 @@ import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.ZipPassword;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
@@ -693,40 +694,46 @@ public class FileOperationsHelper {
         context.loadZipFolderInPane(f, adapter.currentZipPath, adapter.pane1, false);
     }
 
-    /** Last resort when no stored password worked: ask, then extract. */
-    private void askPasswordAndExtract(File archive, File destDir, boolean keepTime, File staged) {
-        final EditText input = new EditText(context);
-        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        input.setHint(R.string.enter_archive_password);
-        final ProgressManager pm = new ProgressManager(context, true);
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.archive_password_needed)
-                .setView(input)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    final String pw = input.getText() == null ? "" : input.getText().toString();
-                    if (pw.isEmpty()) return;
-                    pm.show();
-                    new Thread(() -> {
-                        Exception err = null;
-                        try {
-                            ArchiveUtil.extract(archive, destDir, keepTime, pw.toCharArray());
-                        } catch (Exception e) {
-                            err = e;
-                        }
-                        final Exception fe = err;
-                        pm.dismiss();
-                        context.handler.post(() -> {
-                            if (fe != null) {
-                                new ErrorUtil(context).showError(fe);
-                            } else {
-                                context.loadFolderInPane(archive.getParentFile(), adapter.pane1);
-                            }
-                        });
-                    }).start();
-                })
-                .show();
+    /**
+     * Last resort when no stored password worked: ask, then extract.
+     *
+     * <p>Runs on the extract worker thread -- {@link ZipPassword#prompt} posts
+     * the dialog itself to the main looper and blocks until answered, so a wrong
+     * guess can loop straight back into asking. The pane refresh is left to the
+     * caller so it happens exactly once.
+     */
+    private void askPasswordAndExtract(File archive, File destDir, boolean keepTime) {
+        while (true) {
+            String pw = ZipPassword.prompt(context);
+            if (pw == null || pw.isEmpty()) {
+                // Cancelled: drop the folder the extract step created.
+                deleteDirQuietly(destDir);
+                return;
+            }
+            final ProgressManager pm = new ProgressManager(context, true);
+            pm.show();
+            try {
+                ArchiveUtil.extract(archive, destDir, keepTime, pw.toCharArray());
+                ZipPassword.remember(archive, pw);
+                pm.dismiss();
+                return;
+            } catch (Exception e) {
+                // A wrong password can leave partial files behind: drop them so
+                // the next attempt starts from an empty folder.
+                deleteDirQuietly(destDir);
+                pm.dismiss();
+                context.handler.post(() ->
+                        Extensions.showMessage(context, R.string.wrong_password_or_corrupt));
+            }
+        }
+    }
+
+    private static void deleteDirQuietly(File f) {
+        if (f == null || !f.exists()) return;
+        File[] kids = f.listFiles();
+        if (kids != null) for (File k : kids) deleteDirQuietly(k);
+        //noinspection ResultOfMethodCallIgnored
+        f.delete();
     }
 
     public void extractArchive(File archive) {
@@ -755,13 +762,21 @@ public class FileOperationsHelper {
                 }
                 try {
                     boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
-                    if (PasswordedArchive.isEncryptedCandidate(readable)
-                            && !io.github.abdurazaaqmohammed.utils.ArchivePasswordStore.isEmpty(context)) {
+                    boolean encrypted = PasswordedArchive.isEncryptedCandidate(readable);
+                    if (encrypted && !io.github.abdurazaaqmohammed.utils.ArchivePasswordStore.isEmpty(context)) {
                         // Try the stored passwords in order first; only ask when
                         // none of them work.
                         PasswordedArchive.Result r = PasswordedArchive.extractWithStoredPasswords(
                                 context, readable, destDir, keepTime, null);
-                        if (!r.ok) askPasswordAndExtract(readable, destDir, keepTime, staged);
+                        if (!r.ok) {
+                            pm.dismiss();
+                            askPasswordAndExtract(readable, destDir, keepTime);
+                        }
+                    } else if (encrypted) {
+                        // Nothing stored yet: ask straight away instead of
+                        // failing with a raw library error.
+                        pm.dismiss();
+                        askPasswordAndExtract(readable, destDir, keepTime);
                     } else {
                         ArchiveUtil.extract(readable, destDir, keepTime);
                     }

@@ -94,7 +94,7 @@ public final class ZipPassword {
         }
     }
 
-    private static String prompt(Context context) {
+    public static String prompt(Context context) {
         String[] out = {null};
         CountDownLatch latch = new CountDownLatch(1);
         new Handler(Looper.getMainLooper()).post(() -> {

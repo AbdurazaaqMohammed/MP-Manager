@@ -98,10 +98,43 @@ public final class PasswordedArchive {
         return new Result(false, -1, lastError);
     }
 
-    /** Whether the archive looks like it needs a password at all. */
+    /**
+     * Whether the archive looks like it needs a password at all.
+     *
+     * <p>Probed by opening the header: header-encrypted archives (the7-Zip and
+     * rar -hp default) fail without the password, while zip answers directly
+     * from its central directory. A plain7z/rar no longer drags every stored
+     * password through a full extraction attempt.
+     */
     public static boolean isEncryptedCandidate(File archive) {
         String n = archive.getName().toLowerCase(java.util.Locale.ROOT);
-        return n.endsWith(".7z") || n.endsWith(".rar");
+        try {
+            if (n.endsWith(".zip")) {
+                try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(archive)) {
+                    return zf.isEncrypted();
+                }
+            }
+            if (n.endsWith(".7z")) {
+                try (org.apache.commons.compress.archivers.sevenz.SevenZFile f =
+                             new org.apache.commons.compress.archivers.sevenz.SevenZFile(archive)) {
+                    return false;
+                } catch (Exception headerLocked) {
+                    return true;
+                }
+            }
+            if (n.endsWith(".rar")) {
+                try (com.github.junrar.Archive rar = new com.github.junrar.Archive(archive)) {
+                    return rar.isPasswordProtected();
+                } catch (Exception headerLocked) {
+                    return true;
+                }
+            }
+        } catch (Exception unreadable) {
+            // A damaged central directory: let a plain extract surface the
+            // real error instead of asking for a password that cannot help.
+            return false;
+        }
+        return false;
     }
 
     /**

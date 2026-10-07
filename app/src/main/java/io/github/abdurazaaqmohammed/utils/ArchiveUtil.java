@@ -37,7 +37,7 @@ public class ArchiveUtil {
     public static boolean isSupportedArchive(String fileName) {
         if (fileName == null) return false;
         String lower = fileName.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".7z") || lower.endsWith(".rar") || lower.endsWith(".tar")
+        return lower.endsWith(".zip") || lower.endsWith(".7z") || lower.endsWith(".rar") || lower.endsWith(".tar")
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
                 || lower.endsWith(".tar.xz") || lower.endsWith(".txz")
@@ -55,7 +55,8 @@ public class ArchiveUtil {
     public static void extract(File archive, File destDir, boolean preserveTime) throws IOException {
         if (!destDir.exists()) destDir.mkdirs();
         String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime);
+        if (lower.endsWith(".zip")) extractZip(archive, destDir, preserveTime, null);
+        else if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime);
         else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime);
         else if (lower.endsWith(".tar")) extractTar(new FileInputStream(archive), destDir, preserveTime);
         else if (lower.endsWith(".tgz")) extractTar(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
@@ -80,9 +81,10 @@ public class ArchiveUtil {
             throws IOException {
         String lower = archive.getName().toLowerCase(Locale.ROOT);
         if (!destDir.exists()) destDir.mkdirs();
-        if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime, password);
+        if (lower.endsWith(".zip")) extractZip(archive, destDir, preserveTime, password);
+        else if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime, password);
         else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime, password);
-        else throw new IOException("Passwords are only supported for 7z and rar");
+        else throw new IOException("Passwords are only supported for zip, 7z and rar");
     }
 
     public static void create(File output, List<File> sources) throws IOException {
@@ -145,6 +147,36 @@ public class ArchiveUtil {
                     if (preserveTime && entry.getLastModifiedDate() != null) {
                         //noinspection ResultOfMethodCallIgnored
                         out.setLastModified(entry.getLastModifiedDate().getTime());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param password null for an unencrypted archive; a wrong password only
+     *                  surfaces once an encrypted entry has been read to the end,
+     *                  which is what makes trying several possible.
+     */
+    static void extractZip(File archive, File destDir, boolean preserveTime, char[] password)
+            throws IOException {
+        try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(archive)) {
+            if (password != null && password.length > 0) zf.setPassword(password);
+            for (net.lingala.zip4j.model.FileHeader fh : zf.getFileHeaders()) {
+                String name = sanitizeEntryName(fh.getFileName());
+                if (name.isEmpty()) continue;
+                File out = new File(destDir, name);
+                if (fh.isDirectory()) out.mkdirs();
+                else {
+                    File parent = out.getParentFile();
+                    if (parent != null) parent.mkdirs();
+                    try (InputStream is = zf.getInputStream(fh);
+                         OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
+                        copy(is, os);
+                    }
+                    if (preserveTime && fh.getLastModifiedTimeEpoch() > 0) {
+                        //noinspection ResultOfMethodCallIgnored
+                        out.setLastModified(fh.getLastModifiedTimeEpoch());
                     }
                 }
             }
