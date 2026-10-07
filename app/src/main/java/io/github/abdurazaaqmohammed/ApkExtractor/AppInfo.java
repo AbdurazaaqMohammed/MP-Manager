@@ -32,4 +32,7 @@ public class AppInfo {
     public String getVersionName() {
         return versionName.replace('/', '_');
     }
+    public int getVersionCode() {
+        return versionCode;
+    }
 }
