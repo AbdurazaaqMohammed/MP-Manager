@@ -121,7 +121,8 @@ public final class ArchiveEntryIO {
                 last = e;
             }
         }
-        if (!PasswordedArchive.isEncryptedCandidate(archive)) {
+        if (!PasswordedArchive.isEncryptedCandidate(archive)
+                && !(last instanceof org.apache.commons.compress.PasswordRequiredException)) {
             throw last != null ? last : new IOException("Cannot read " + archive.getName());
         }
         while (true) {
