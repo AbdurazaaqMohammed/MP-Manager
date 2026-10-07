@@ -61,6 +61,9 @@
     <string name="signed">Подписано %1$s</string>
     <string name="deleting">Удаление %1$s</string>
     <string name="compressing">Сжатие</string>
+    <string name="archive_password_needed">Этот архив зашифрован</string>
+    <string name="enter_archive_password">Пароль архива</string>
+    <string name="wrong_password_or_corrupt">Неверный пароль или файл повреждён</string>
     <string name="compress_password_hint">Пароль (только для zip, если пусто — без шифрования)</string>
     <string name="compress_pick_password">Выбрать из сохранённых паролей</string>
     <string name="compress_no_saved_passwords">Сохранённых паролей пока нет</string>

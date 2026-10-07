@@ -643,12 +643,28 @@ public class FileOperationsHelper {
             // "docs/" would land in destination/docs/. Pass an explicit name to avoid that.
             if(zipEntry.isDirectory()) {
                 String prefix = zipEntryPath.endsWith("/") ? zipEntryPath : zipEntryPath + "/";
+                java.util.List<FileHeader> toExtract = new java.util.ArrayList<>();
                 for(FileHeader fh : zf.getFileHeaders()) {
                     String name = fh.getFileName().replace('\\', '/');
                     if(!name.startsWith(prefix) || fh.isDirectory()) continue;
+                    toExtract.add(fh);
+                }
+                for (FileHeader fh : toExtract) {
+                    if (!fh.isEncrypted()) continue;
+                    if (io.github.abdurazaaqmohammed.utils.ZipPassword
+                            .resolve(context, zf, zipEntry.getZipFile(), fh) == null) return;
+                    break;
+                }
+                for (FileHeader fh : toExtract) {
+                    String name = fh.getFileName().replace('\\', '/');
                     zf.extractFile(fh, destinationPath, zipEntry.getName() + "/" + name.substring(prefix.length()));
                 }
-            } else zf.extractFile(zf.getFileHeader(zipEntryPath), destinationPath, zipEntry.getName());
+            } else {
+                FileHeader fh = zf.getFileHeader(zipEntryPath);
+                if (fh != null && fh.isEncrypted() && io.github.abdurazaaqmohammed.utils.ZipPassword
+                        .resolve(context, zf, zipEntry.getZipFile(), fh) == null) return;
+                zf.extractFile(fh, destinationPath, zipEntry.getName());
+            }
         }
     }
 

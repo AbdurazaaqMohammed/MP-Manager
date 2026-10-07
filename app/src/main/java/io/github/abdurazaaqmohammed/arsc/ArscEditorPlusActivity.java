@@ -1164,6 +1164,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 try (ZipFile zf = new ZipFile(zip)) {
                     for (FileHeader fh : zf.getFileHeaders()) {
                         if (!fh.isDirectory() && fh.getFileName().endsWith("resources.arsc")) {
+                            if (fh.isEncrypted() && io.github.abdurazaaqmohammed.utils.ZipPassword
+                                    .resolve(this, zf, zip, fh) == null) return;
                             zf.extractFile(fh, getCacheDir().getAbsolutePath(), tmp.getName());
                             found = true;
                             break;

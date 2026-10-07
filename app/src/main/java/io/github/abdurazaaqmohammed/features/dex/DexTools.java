@@ -261,6 +261,7 @@ public class DexTools {
         dir.mkdirs();
         ArrayList<String> out = new ArrayList<>();
         try (ZipFile zf = new ZipFile(zipFile)) {
+            io.github.abdurazaaqmohammed.utils.ZipPassword.apply(zf, zipFile);
             for (String name : names) {
                 FileHeader fh = zf.getFileHeader(name);
                 if (fh == null) continue;
@@ -330,6 +331,7 @@ public class DexTools {
         dexPreExtracts.put(key, session);
         new Thread(() -> {
             try (ZipFile zf = new ZipFile(zipFile)) {
+                io.github.abdurazaaqmohammed.utils.ZipPassword.apply(zf, zipFile);
                 FileHeader fh = zf.getFileHeader("classes.dex");
                 int i = 2;
                 while (fh != null) {
@@ -624,8 +626,11 @@ public class DexTools {
         String fullPath = zipEntry.getFullPath();
         if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
         else new Thread(() -> {
-            try (ZipFile zf = new ZipFile(zipFile);
-             InputStream is = zf.getInputStream(zf.getFileHeader(fullPath))) {
+            try (ZipFile zf = new ZipFile(zipFile)) {
+            FileHeader entryHeader = zf.getFileHeader(fullPath);
+            if (entryHeader == null) throw new IOException("Entry not found: " + fullPath);
+            if (entryHeader.isEncrypted() && io.github.abdurazaaqmohammed.utils.ZipPassword.resolve(context, zf, zipFile, entryHeader) == null) return;
+            try (InputStream is = zf.getInputStream(entryHeader)) {
             final String name = zipEntry.getName();
             String outputDir = context.getCacheDir() + File.separator + UUID.randomUUID();
             File tempFolder = new File(outputDir);
@@ -663,6 +668,7 @@ public class DexTools {
             } else {
                 FileUtils.copyFile(is, tempFile);
                 context.handler.post(() -> openWith.open(tempFile, name));
+            }
             }
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);

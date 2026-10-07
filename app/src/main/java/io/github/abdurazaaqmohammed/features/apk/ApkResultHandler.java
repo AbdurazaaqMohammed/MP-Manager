@@ -101,6 +101,7 @@ public class ApkResultHandler {
                                 pm.setText(activity.rss.getString(R.string.adding, modifiedFileName));
                                 new Thread(() -> {
                                     try (ZipFile zf = new ZipFile(zipFile)) {
+                                        io.github.abdurazaaqmohammed.utils.ZipPassword.apply(zf, zipFile);
                                         File backup = new File(zipFile.getParent(), zipFileName + ".bak");
                                         FileUtils.copyFile(zipFile, backup);
                                         if (modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
@@ -220,6 +221,7 @@ public class ApkResultHandler {
                                 }
                                 int written = 0;
                                 try (ZipFile zf = new ZipFile(zipFile)) {
+                                    io.github.abdurazaaqmohammed.utils.ZipPassword.apply(zf, zipFile);
                                     for (String entryPath : entryPaths) {
                                         File modified = new File(root, entryPath);
                                         if (!modified.isFile()) continue;
