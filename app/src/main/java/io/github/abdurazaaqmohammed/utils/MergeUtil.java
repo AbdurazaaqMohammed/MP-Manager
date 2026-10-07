@@ -113,6 +113,17 @@ public class MergeUtil {
 
     private static boolean matchesDevice(String entryName, MainActivity context) {
         String lower = entryName.toLowerCase(Locale.US);
+        String shortName = new File(lower).getName();
+        if (shortName.equals("base.apk")) return true;
+        boolean looksLikeConfig = shortName.contains("config.")
+                || shortName.contains("split_config")
+                || shortName.contains("density")
+                || shortName.contains("language")
+                || shortName.contains("dpi")
+                || shortName.contains("arm")
+                || shortName.contains("x86")
+                || shortName.contains("mips");
+        if (!looksLikeConfig) return true;
         int dpi = 320;
         try {
             dpi = context.getResources().getDisplayMetrics().densityDpi;
@@ -120,21 +131,34 @@ public class MergeUtil {
         }
         String bucket = dpi <= 120 ? "ldpi" : dpi <= 160 ? "mdpi" : dpi <= 213 ? "tvdpi"
                 : dpi <= 320 ? "xhdpi" : dpi <= 480 ? "xxhdpi" : "xxxhdpi";
-        if (lower.contains(bucket) || lower.contains("nodpi")) return true;
+        String normalized = lower.replace('_', '-');
+        String bucketDash = bucket.replace('_', '-');
+        if (normalized.contains(bucketDash) || lower.contains("nodpi")) return true;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 for (String abi : Build.SUPPORTED_ABIS) {
-                    if (abi != null && lower.contains(abi.toLowerCase(Locale.US))) return true;
+                    if (abi == null) continue;
+                    String a = abi.toLowerCase(Locale.US);
+                    String alt = a.replace('-', '_');
+                    String alt2 = a.replace('_', '-');
+                    if (lower.contains(a) || lower.contains(alt) || normalized.contains(alt2)) return true;
                 }
             } else {
                 String abi = Build.CPU_ABI;
-                if (abi != null && lower.contains(abi.toLowerCase(Locale.US))) return true;
+                if (abi != null) {
+                    String a = abi.toLowerCase(Locale.US);
+                    if (lower.contains(a) || lower.contains(a.replace('-', '_'))) return true;
+                }
             }
         } catch (Exception ignored) {
         }
         try {
             String lang = Locale.getDefault().getLanguage();
-            if (lang != null && !lang.isEmpty() && lower.contains("config." + lang.toLowerCase(Locale.US))) return true;
+            if (!TextUtils.isEmpty(lang)) {
+                String l = lang.toLowerCase(Locale.US);
+                if (lower.contains("config." + l) || lower.contains("config_" + l)
+                        || lower.contains("-" + l + ".") || lower.contains("_" + l + ".")) return true;
+            }
         } catch (Exception ignored) {
         }
         return false;
@@ -222,6 +246,7 @@ public class MergeUtil {
         if (deviceOnlySaved) applyDeviceSelection.run();
         deviceOnlySwitch.setOnCheckedChangeListener((b, checked) -> {
             if (checked) applyDeviceSelection.run();
+            else for (CheckBox cb : boxes) cb.setChecked(true);
         });
 
         new MaterialAlertDialogBuilder(context)
@@ -302,17 +327,17 @@ public class MergeUtil {
                 }
                 try(ApkModule mergedModule = bundle.mergeModules(false)) {
                     sanitizeManifest(mergedModule);
-                    if (options.extractNativeLibs) {
-                        try {
-                            mergedModule.setExtractNativeLibs(true);
-                        } catch (Exception e) {
-                            logger.logMessage(context.getString(R.string.logger_extract_native_libs, String.valueOf(e.getMessage())));
-                        }
+                    try {
+                        mergedModule.setExtractNativeLibs(options.extractNativeLibs);
+                    } catch (Exception e) {
+                        logger.logMessage(context.getString(R.string.logger_extract_native_libs, String.valueOf(e.getMessage())));
                     }
                     mergedModule.refreshTable();
                     mergedModule.refreshManifest();
                     logger.logMessage(context.getString(R.string.logger_writing_apk));
-                    File outputFile = FileUtils.getUnusedFile(new File(file.getParentFile(), file.getName().replaceFirst("\\.(?:xapk|aspk|apk[sm])", "_antisplit.apk")));
+                    String outName = file.getName().replaceFirst("(?i)\\.(xapk|aspk|apks|apkm)$", "_antisplit.apk");
+                    if (outName.equals(file.getName())) outName = file.getName() + "_antisplit.apk";
+                    File outputFile = FileUtils.getUnusedFile(new File(file.getParentFile(), outName));
                     mergedModule.writeApk(outputFile);
                     pm.dismiss();
                     if (options.autosign) {
