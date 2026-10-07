@@ -118,7 +118,12 @@ dependencies {
     implementation files('libs/JCommand.jar')
     implementation files('libs/bin-zip.jar')
     implementation files('libs/arsc-parser.jar')
-    implementation files('libs/commons-compress-1.21.jar')
+    // 1.27.1 replaces the bundled 1.21 jar: it carries years of 7z reader
+    // fixes, adds writing encrypted 7z (SevenZOutputFile(File, char[]), 1.23+)
+    // and per-method options (setContentMethods, dict size for LZMA2).
+    // commons-io was already a dependency; 1.26+ also needs commons-codec.
+    implementation 'org.apache.commons:commons-compress:1.27.1'
+    implementation 'commons-codec:commons-codec:1.17.1'
     implementation files('libs/xz-1.9.jar')
     implementation files('libs/junrar-7.5.5.jar')
     implementation("com.google.android.material:material:1.12.0")
