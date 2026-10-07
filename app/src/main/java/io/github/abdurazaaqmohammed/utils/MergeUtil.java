@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.utils;
 
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
+import com.google.android.material.textfield.TextInputLayout;
 import com.reandroid.apk.APKLogger;
 import com.reandroid.apk.ApkBundle;
 import com.reandroid.apk.ApkModule;
@@ -22,10 +23,18 @@ import com.reandroid.arsc.value.ValueType;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
+import net.lingala.zip4j.model.enums.CompressionMethod;
 
+import android.content.Context;
 import android.graphics.Typeface;
 import android.os.Build;
+import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -44,11 +53,95 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.zip.Deflater;
 
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 public class MergeUtil {
+    public static CompressionLevel getPreferredCompressionLevel(Context context) {
+        try {
+            String s = PreferenceManager.getDefaultSharedPreferences(context)
+                    .getString("compressLevel", CompressionLevel.NORMAL.name());
+            return CompressionLevel.valueOf(s);
+        } catch (Exception e) {
+            return CompressionLevel.NORMAL;
+        }
+    }
+
+    public static int toDeflaterLevel(CompressionLevel level) {
+        if (level == null) return Deflater.DEFAULT_COMPRESSION;
+        return switch (level) {
+            case NO_COMPRESSION -> Deflater.NO_COMPRESSION;
+            case FASTEST -> Deflater.BEST_SPEED;
+            case FASTER -> 2;
+            case FAST -> 3;
+            case MEDIUM_FAST -> 4;
+            case NORMAL -> Deflater.DEFAULT_COMPRESSION;
+            case HIGHER -> 7;
+            case MAXIMUM -> 8;
+            case PRE_ULTRA, ULTRA -> Deflater.BEST_COMPRESSION;
+            default -> Deflater.DEFAULT_COMPRESSION;
+        };
+    }
+
+    public static ZipParameters newPreferredZipParameters(Context context) {
+        CompressionLevel level = getPreferredCompressionLevel(context);
+        ZipParameters zp = new ZipParameters();
+        zp.setCompressionLevel(level);
+        zp.setCompressionMethod(level == CompressionLevel.NO_COMPRESSION
+                ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
+        return zp;
+    }
+
+    public static void applyPreferredCompression(ApkBundle bundle, Context context) {
+        try {
+            bundle.setCompressionLevel(toDeflaterLevel(getPreferredCompressionLevel(context)));
+        } catch (Exception ignored) { }
+    }
+
+
+    public static AutoCompleteTextView createCompressionDropdown(Context context) {
+        AutoCompleteTextView tv = new AutoCompleteTextView(context);
+        tv.setInputType(InputType.TYPE_NULL);
+        tv.setSingleLine(false);
+        List<String> levels = new ArrayList<>();
+        for (CompressionLevel cl : CompressionLevel.values()) levels.add(cl.name());
+        String current;
+        try {
+            current = PreferenceManager.getDefaultSharedPreferences(context)
+                    .getString("compressLevel", CompressionLevel.NORMAL.name());
+        } catch (Exception e) {
+            current = CompressionLevel.NORMAL.name();
+        }
+        tv.setText(current, false);
+        tv.setAdapter(new ArrayAdapter<>(context,
+                android.R.layout.simple_dropdown_item_1line, levels));
+        tv.setOnItemClickListener((p, v, pos, id) -> {
+            try {
+                PreferenceManager.getDefaultSharedPreferences(context).edit()
+                        .putString("compressLevel", levels.get(pos)).apply();
+            } catch (Exception ignored) { }
+        });
+        return tv;
+    }
+
+    /** Same dropdown wrapped in a labeled Material container for dialog rows. */
+    public static TextInputLayout createCompressionDropdownLayout(Context context) {
+        TextInputLayout layout =
+                new TextInputLayout(context);
+        try {
+            layout.setHint(context.getString(R.string.compression_level));
+        } catch (Exception ignored) {
+            layout.setHint("Compression level");
+        }
+        layout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        layout.addView(createCompressionDropdown(context),
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
+        return layout;
+    }
+
     public static class Options {
         public boolean autosign = true;
         public boolean deviceOnly = true;
@@ -225,9 +318,11 @@ public class MergeUtil {
         root.addView(deviceOnlySwitch);
 
         MaterialSwitch extractSwitch = new MaterialSwitch(context);
-        extractSwitch.setText("extractNativeLibs");
+        extractSwitch.setText(context.getString(R.string.set_extract_native_libs));
         extractSwitch.setChecked(extractSaved);
         root.addView(extractSwitch);
+
+        root.addView(createCompressionDropdownLayout(context));
 
         LinearLayout signRow = new LinearLayout(context);
         signRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -295,6 +390,7 @@ public class MergeUtil {
             File dir = new File(context.getCacheDir(), UUID.randomUUID().toString());
             try(ApkBundle bundle = new ApkBundle()) {
                 bundle.setAPKLogger(logger);
+                applyPreferredCompression(bundle, context);
                 if (options.splitNames != null && !options.splitNames.isEmpty()) {
                     if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
                         logger.logMessage(context.getString(R.string.logger_cannot_create_tmp));
@@ -374,6 +470,10 @@ public class MergeUtil {
     }
 
     public static File mergeBundle(ApkBundle bundle) throws IOException {
+        return mergeBundle(bundle, null);
+    }
+
+    public static File mergeBundle(ApkBundle bundle, Context context) throws IOException {
         for (ApkModule apkModule : bundle.getApkModuleList()) {
             String protect = Util.isProtected(apkModule);
             if (protect != null) {
@@ -382,6 +482,10 @@ public class MergeUtil {
         }
         try(ApkModule mergedModule = bundle.mergeModules(false)) {
             sanitizeManifest(mergedModule);
+            if (context != null) {
+                try { mergedModule.setCompressionLevel(toDeflaterLevel(getPreferredCompressionLevel(context))); }
+                catch (Exception ignored) { }
+            }
             mergedModule.refreshTable();
             mergedModule.refreshManifest();
             File outputFile = FileUtils.getUnusedFile(APKExtractorActivity.getAppFolder(), mergedModule.getPackageName() + ".apk");
