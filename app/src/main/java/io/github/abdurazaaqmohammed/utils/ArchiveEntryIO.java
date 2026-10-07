@@ -83,7 +83,7 @@ public final class ArchiveEntryIO {
                 password -> stageFile(archive, fileWant, mtime, new File(destDir, entry.getName()), password));
     }
 
-    private static String wantPath(ZipEntryInfo entry) {
+    private static String wantPath(ZipEntryInfo entry) throws NoSuchEntryException {
         String path = entry.getFullPath();
         if (path == null) throw new NoSuchEntryException(entry.getName());
         return path.replace('\\', '/');
