@@ -199,42 +199,82 @@ public final class BwVault {
         return parse(s, userKey, sync);
     }
 
-    private static Result parse(Session s, BwCrypto.SymKey userKey, JSONObject sync)
+    static Result parse(Session s, BwCrypto.SymKey userKey, JSONObject sync)
             throws Exception {
-        JSONObject profile = sync.optJSONObject("Profile");
+        // Official servers answer in PascalCase, NodeWarden in camelCase; accept both.
+        JSONObject profile = firstObject(sync, "Profile", "profile");
         if (profile != null) {
-            String key = profile.optString("Key", null);
-            if (key != null && !key.isEmpty()) s.encryptedKey = key;
+            String key = firstText(profile, "Key", "key");
+            if (hasText(key)) s.encryptedKey = key;
         }
         List<Entry> entries = new ArrayList<>();
-        JSONArray ciphers = sync.optJSONArray("Ciphers");
+        JSONArray ciphers = firstArray(sync, "Ciphers", "ciphers");
         if (ciphers != null) {
             for (int i = 0; i < ciphers.length(); i++) {
                 JSONObject c = ciphers.optJSONObject(i);
                 if (c == null) continue;
+                if (hasText(firstText(c, "DeletedDate", "deletedDate"))) continue;
                 try {
-                    String name = BwCrypto.decryptToString(userKey, c.optString("Name", null));
+                    // Per-cipher key (cipher key encryption): unwrap once, decrypt with it.
+                    BwCrypto.SymKey key = userKey;
+                    String wrapped = firstText(c, "Key", "key");
+                    if (hasText(wrapped)) {
+                        try {
+                            key = BwCrypto.decryptUserKey(userKey, wrapped);
+                        } catch (Exception undecryptable) {
+                            continue;
+                        }
+                    }
+                    String name = decryptField(key, c, "Name", "name");
                     if (name == null) continue;
                     String username = null;
                     String password = null;
                     String totp = null;
-                    if (c.optInt("Type", -1) == 0) {  // 0 = login, the only type with secrets
-                        JSONObject login = c.optJSONObject("Login");
-                        if (login != null) {
-                            username = BwCrypto.decryptToString(userKey,
-                                    login.optString("Username", null));
-                            password = BwCrypto.decryptToString(userKey,
-                                    login.optString("Password", null));
-                            totp = BwCrypto.decryptToString(userKey,
-                                    login.optString("Totp", null));
-                        }
+                    JSONObject login = firstObject(c, "Login", "login");
+                    if (login != null) {
+                        username = decryptField(key, login, "Username", "username");
+                        password = decryptField(key, login, "Password", "password");
+                        totp = decryptField(key, login, "Totp", "totp");
                     }
-                    entries.add(new Entry(c.optString("Id", ""), name, username, password, totp));
+                    String id = firstText(c, "Id", "id");
+                    entries.add(new Entry(hasText(id) ? id : "", name, username, password, totp));
                 } catch (Exception corrupt) {
                     // One undecryptable entry must not take the whole vault down.
                 }
             }
         }
         return new Result(s, entries, userKey);
+    }
+
+    /** Decrypt a field present under either PascalCase or camelCase; absent/null stays null. */
+    private static String decryptField(BwCrypto.SymKey key, JSONObject parent,
+                                       String pascal, String camel) throws Exception {
+        String raw = firstText(parent, pascal, camel);
+        if (!hasText(raw)) return null;
+        return BwCrypto.decryptToString(key, raw);
+    }
+
+    private static JSONObject firstObject(JSONObject o, String pascal, String camel) {
+        JSONObject r = o.optJSONObject(pascal);
+        return r != null ? r : o.optJSONObject(camel);
+    }
+
+    private static JSONArray firstArray(JSONObject o, String pascal, String camel) {
+        JSONArray r = o.optJSONArray(pascal);
+        return r != null ? r : o.optJSONArray(camel);
+    }
+
+    private static String firstText(JSONObject o, String pascal, String camel) {
+        String r = o.optString(pascal, null);
+        if (!hasText(r)) r = o.optString(camel, null);
+        return r;
+    }
+
+    /**
+     * Real text, not the literal "null": some org.json implementations turn an explicit
+     * JSON null into the string "null" instead of honouring the fallback.
+     */
+    private static boolean hasText(String v) {
+        return v != null && !v.isEmpty() && !"null".equals(v);
     }
 }

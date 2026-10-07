@@ -7,37 +7,48 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * RFC 6238 TOTP for the {@code Totp} field of a login entry. Understands the usual
- * {@code otpauth://totp/...} URIs with a Base32 secret; anything else (for example
- * NodeWarden's {@code steam://}) returns null and the UI simply hides the code.
+ * {@code otpauth://totp/...} URI and the bare Base32 secret NodeWarden stores;
+ * anything else (for example {@code steam://}) returns null and the UI hides the code.
  */
 public final class BwTotp {
 
     private BwTotp() {
     }
 
-    /** Current code for the given otpauth URI at {@code nowMillis}; null when unsupported. */
+    /**
+     * Current code for the given TOTP value at {@code nowMillis}; null when unsupported.
+     * Accepts the usual {@code otpauth://totp/...} URI and the bare Base32 secret that
+     * NodeWarden stores (then: 6 digits, 30 seconds, SHA1). {@code steam://} and friends
+     * return null and the UI simply hides the code.
+     */
     public static String code(String uri, long nowMillis) {
         try {
-            if (uri == null) return null;
-            String lower = uri.toLowerCase(Locale.ROOT);
-            if (!lower.startsWith("otpauth://totp/")) return null;
-
-            String query = uri.substring(uri.indexOf('?') + 1);
-            String secret = null;
+            if (uri == null || uri.isEmpty()) return null;
+            String secret;
             int digits = 6;
             int period = 30;
             String algorithm = "SHA1";
-            for (String part : query.split("&")) {
-                int eq = part.indexOf('=');
-                if (eq < 0) continue;
-                String key = part.substring(0, eq);
-                String value = part.substring(eq + 1);
-                if (key.equalsIgnoreCase("secret")) secret = value;
-                else if (key.equalsIgnoreCase("digits")) digits = Integer.parseInt(value);
-                else if (key.equalsIgnoreCase("period")) period = Integer.parseInt(value);
-                else if (key.equalsIgnoreCase("algorithm")) algorithm = value;
+            String lower = uri.toLowerCase(Locale.ROOT);
+            if (lower.startsWith("otpauth://totp/")) {
+                String found = null;
+                String query = uri.substring(uri.indexOf('?') + 1);
+                for (String part : query.split("&")) {
+                    int eq = part.indexOf('=');
+                    if (eq < 0) continue;
+                    String key = part.substring(0, eq);
+                    String value = part.substring(eq + 1);
+                    if (key.equalsIgnoreCase("secret")) found = value;
+                    else if (key.equalsIgnoreCase("digits")) digits = Integer.parseInt(value);
+                    else if (key.equalsIgnoreCase("period")) period = Integer.parseInt(value);
+                    else if (key.equalsIgnoreCase("algorithm")) algorithm = value;
+                }
+                if (found == null || found.isEmpty()) return null;
+                secret = found;
+            } else if (lower.contains("://")) {
+                return null;
+            } else {
+                secret = uri;
             }
-            if (secret == null || secret.isEmpty()) return null;
 
             byte[] key = base32(secret);
             long counter = nowMillis / 1000L / period;
