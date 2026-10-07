@@ -410,8 +410,8 @@ public class SettingsController {
 
     private void setupLanguageSettings(ScrollView root) {
         AutoCompleteTextView languageTv = root.findViewById(R.id.languageTv);
-        String[] langTags = {"", "en", "ru", "zh-CN"};
-        String[] langLabels = {activity.getString(R.string.language_system), "English", "Русский", "中文 (简体)"};
+        String[] langTags = {"", "en", "es", "ru", "zh-CN"};
+        String[] langLabels = {activity.getString(R.string.language_system), "English", "Español", "Русский", "中文 (简体)"};
         languageTv.setAdapter(new ArrayAdapter<>(activity,
                 android.R.layout.simple_dropdown_item_1line, langLabels));
         String current = AppCompatDelegate.getApplicationLocales().toLanguageTags();
