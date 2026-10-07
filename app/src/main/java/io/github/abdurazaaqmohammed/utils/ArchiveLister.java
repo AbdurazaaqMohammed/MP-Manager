@@ -277,7 +277,7 @@ public final class ArchiveLister {
         boolean isDir = fh.isDirectory() || entryName.endsWith("/");
         String cleaned = isDir ? entryName.replaceAll("/+$", "") : entryName;
         String name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/') + 1);
-        long size = fh.getUncompressedSize() < 0 ? 0 : fh.getUncompressedSize();
+        long size = fh.getUnpSize() < 0 ? 0 : fh.getUnpSize();
         long mtime = fh.getMTime() != null ? fh.getMTime().getTime() : 0L;
         return new ZipEntryInfo(name, entryName, isDir, isDir ? 0L : size, mtime, archive);
     }
