@@ -1561,4 +1561,7 @@
     <string name="bw_empty">Хранилище пусто</string>
     <string name="bw_restored_files">Восстановлено обычных паролей из хранилища: %1$d</string>
     <string name="bw_wrong_password">Неверный мастер-пароль</string>
+    <string name="split_volume_size">Размер тома</string>
+    <string name="split_volume_none">Один файл</string>
+    <string name="split_volume_append_unsupported">Разбиение на тома не поддерживает добавление в существующий архив</string>
 </resources>

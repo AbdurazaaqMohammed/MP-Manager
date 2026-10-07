@@ -2023,4 +2023,7 @@ Layout Inspector
     <string name="bw_empty">保险库为空</string>
     <string name="bw_restored_files">已从保险库恢复 %1$d 个常用密码</string>
     <string name="bw_wrong_password">主密码错误</string>
+    <string name="split_volume_size">分卷大小</string>
+    <string name="split_volume_none">不分卷（单文件）</string>
+    <string name="split_volume_append_unsupported">分卷压缩无法添加到已存在的压缩包</string>
 </resources>

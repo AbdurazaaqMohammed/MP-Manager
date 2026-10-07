@@ -436,6 +436,13 @@ public class EntryDialogs {
         compressLevelInput.setText(io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.label(context, settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name())));
         compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.labels(context)));
         compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
+
+        // Split volumes: zip4j can only split while creating the archive.
+        AutoCompleteTextView splitVolumeInput = compressView.findViewById(R.id.compress_split);
+        List<String> splitVolumes = io.github.abdurazaaqmohammed.utils.SplitVolumeUtil.sizes();
+        splitVolumeInput.setText(io.github.abdurazaaqmohammed.utils.SplitVolumeUtil.label(context, settings.getString("splitVolume", "0")));
+        splitVolumeInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, io.github.abdurazaaqmohammed.utils.SplitVolumeUtil.labels(context)));
+        splitVolumeInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("splitVolume", splitVolumes.get(position2)).apply());
         // Password, with the stored ones a tap away: typing the same password for
         // every archive is exactly what the password manager is for.
         final TextInputEditText passwordInput = compressView.findViewById(R.id.compress_password);
@@ -580,6 +587,16 @@ public class EntryDialogs {
                     if (compressionLevel == CompressionLevel.NO_COMPRESSION)
                         zipParameters.setCompressionMethod(CompressionMethod.STORE);
                     CharSequence pw = passwordField == null ? null : passwordField.getText();
+                    final long splitLength = io.github.abdurazaaqmohammed.utils.SplitVolumeUtil
+                            .toBytes(settings.getString("splitVolume", "0"));
+                    if (splitLength > 0 && finalOutput.exists()) {
+                        // Splitting happens while the archive is written, so an
+                        // existing file cannot be extended into volumes.
+                        pm.dismiss();
+                        Extensions.showMessage(context, R.string.split_volume_append_unsupported);
+                        return;
+                    }
+                    final List<File> stagedVolumes = new ArrayList<>();
 
                     try (ZipFile zf = new ZipFile(finalOutput)) {
                         if (!TextUtils.isEmpty(pw)) {
@@ -587,12 +604,35 @@ public class EntryDialogs {
                             zipParameters.setEncryptionMethod(EncryptionMethod.AES);
                             zf.setPassword(pw.toString().toCharArray());
                         }
-                        for (File source : finalSources) {
-                            if (source.isDirectory())
-                                zf.addFolder(source, zipParameters);
-                            else zf.addFile(source, zipParameters);
+                        if (splitLength > 0) {
+                            // One call builds the volumes; it refuses to run when
+                            // the archive exists, which is checked above.
+                            zf.createSplitZipFile(new ArrayList<>(finalSources), zipParameters, true, splitLength);
+                        } else {
+                            for (File source : finalSources) {
+                                if (source.isDirectory())
+                                    zf.addFolder(source, zipParameters);
+                                else zf.addFile(source, zipParameters);
+                            }
                         }
-                        if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                        if (finalToRoot) {
+                            if (splitLength > 0) {
+                                File[] siblings = finalOutput.getParentFile() == null ? null
+                                        : finalOutput.getParentFile().listFiles();
+                                if (siblings != null) {
+                                    for (File volume : siblings) {
+                                        // zip4j writes name.zip.001, name.zip.002, ...
+                                        if (volume.getName().startsWith(finalOutput.getName() + ".")) {
+                                            AccessManager.uploadFile(context, volume,
+                                                    new File(outputZip.getParentFile(), volume.getName()).getAbsolutePath());
+                                            stagedVolumes.add(volume);
+                                        }
+                                    }
+                                }
+                            } else {
+                                AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
+                            }
+                        }
                         pm.dismiss();
                     } catch (Exception e) {
                         pm.dismiss();
@@ -603,6 +643,10 @@ public class EntryDialogs {
                         if (finalStageTmp != null && !finalToRoot) Util.deleteDir(finalStageTmp);
                         else if (finalStageTmp != null && finalToRoot && !finalOutput.equals(outputZip)) {
                             // Keep only the delivered archive; drop staged sources.
+                            for (File volume : stagedVolumes) {
+                                //noinspection ResultOfMethodCallIgnored
+                                volume.delete();
+                            }
                             for (File s : finalSources) {
                                 if (s.getParentFile() != null && s.getParentFile().equals(finalStageTmp)
                                         && !s.equals(finalOutput)) Util.deleteDir(s);

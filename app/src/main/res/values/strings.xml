@@ -2026,4 +2026,7 @@ Deleted %2$s · %3$s</string>
     <string name="bw_empty">The vault is empty</string>
     <string name="bw_restored_files">Restored %1$d usual passwords from the vault</string>
     <string name="bw_wrong_password">Wrong master password</string>
+    <string name="split_volume_size">Split volume size</string>
+    <string name="split_volume_none">Single file</string>
+    <string name="split_volume_append_unsupported">Split volumes cannot be added to an existing archive</string>
 </resources>
