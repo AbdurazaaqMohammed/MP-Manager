@@ -370,13 +370,54 @@ public class EntryDialogs {
         dialogUtil.styleAlertDialog(deleteDialog.create());
     }
 
+    /** The archive the current pane is browsing inside, null on a normal folder. */
+    private File archiveOfCurrentPane() {
+        for (Object o : state.values()) {
+            if (o instanceof ZipEntryInfo) return ((ZipEntryInfo) o).getZipFile();
+        }
+        return null;
+    }
+
+    /**
+     * The zip entries a compress action should pack: the selection, or the single
+     * entry the menu was opened on. The ".." row carries no path and is skipped.
+     */
+    private List<ZipEntryInfo> zipEntriesForCompress(boolean multi, Object[] values, String fileName) {
+        List<ZipEntryInfo> entries = new ArrayList<>();
+        if (multi) {
+            for (int i : state.selectedPositions()) {
+                if (i >= 0 && i < values.length && values[i] instanceof ZipEntryInfo z
+                        && z.getFullPath() != null) {
+                    entries.add(z);
+                }
+            }
+        } else {
+            for (Object o : values) {
+                if (o instanceof ZipEntryInfo z && z.getFullPath() != null
+                        && z.getName().equals(fileName)) {
+                    entries.add(z);
+                    break;
+                }
+            }
+        }
+        return entries;
+    }
+
     public void showCompressDialog(File file, String fileName, boolean multi) {
         boolean isInZip = state.isInZip();
+        File parentFile2;
+        String parentFileName;
         if (isInZip) {
-            return;
+            // Inside an archive the new archive belongs next to that archive;
+            // the entries themselves are staged out of it once the work starts.
+            File archive = archiveOfCurrentPane();
+            if (archive == null || archive.getParentFile() == null) return;
+            parentFile2 = archive.getParentFile();
+            parentFileName = FilenameUtils.removeExtension(archive.getName());
+        } else {
+            parentFile2 = file.getParentFile();
+            parentFileName = parentFile2.getName();
         }
-        File parentFile2 = file.getParentFile();
-        String parentFileName = parentFile2.getName();
         MaterialAlertDialogBuilder compressDialog = dialogUtil.getDialogBuilder();
         compressDialog.setTitle(context.rss.getString(R.string.compress));
         View compressView = LayoutInflater.from(context).inflate(R.layout.compress_dialog, null);
@@ -452,9 +493,30 @@ public class EntryDialogs {
         new Thread(() -> {
 
                 List<File> sources = new ArrayList<>();
-                if (multi) {
+                File zipEntryStage = null;
+                if (state.isInZip()) {
+                    // Entries only exist inside the archive, so they are staged
+                    // into a cache folder first and its contents get archived --
+                    // that keeps the entry names as the archive root.
+                    zipEntryStage = new File(context.getCacheDir(),
+                            "zip_entries_" + System.currentTimeMillis());
+                    //noinspection ResultOfMethodCallIgnored
+                    zipEntryStage.mkdirs();
+                    for (ZipEntryInfo entry : zipEntriesForCompress(multi, values, fileName)) {
+                        fileOps.extractZipEntry(entry, zipEntryStage);
+                    }
+                    File[] staged = zipEntryStage.listFiles();
+                    if (staged != null) sources.addAll(java.util.Arrays.asList(staged));
+                } else if (multi) {
                     for (int i : state.selectedPositions()) sources.add((File) values[i]);
                 } else sources.add(file);
+                if (sources.isEmpty()) {
+                    if (zipEntryStage != null) Util.deleteDir(zipEntryStage);
+                    pm.dismiss();
+                    context.handler.post(() ->
+                            Extensions.showMessage(context, R.string.no_files_selected));
+                    return;
+                }
 
                 boolean compressElevated = AccessManager.fileOpsOn(context);
                 File compressStageTmp = null;
@@ -530,6 +592,7 @@ public class EntryDialogs {
                         new ErrorUtil(context).showError(e);
                     } finally {
                         context.handler.post(context::reloadCurrentFolder);
+                        if (zipEntryStage != null) Util.deleteDir(zipEntryStage);
                         if (finalStageTmp != null && !finalToRoot) Util.deleteDir(finalStageTmp);
                         else if (finalStageTmp != null && finalToRoot && !finalOutput.equals(outputZip)) {
                             // Keep only the delivered archive; drop staged sources.
@@ -567,6 +630,7 @@ public class EntryDialogs {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
                     } finally {
+                        if (zipEntryStage != null) Util.deleteDir(zipEntryStage);
                         if (finalStageTmp != null) Util.deleteDir(finalStageTmp);
                     }
                 }
