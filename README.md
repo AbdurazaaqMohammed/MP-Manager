@@ -1,368 +1,338 @@
 # <img src="./app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="48"> MP Manager
 
-A free dual pane, Material Design file manager for Android with focus on APKs and the goal to be an open source alternative to MT Manager
+一款免费的双栏 Material Design 安卓文件管理器，专注 APK 操作，目标是成为 MT Manager 的开源替代品
 
-Interface languages: English, Simplified Chinese and Russian.
+界面语言：简体中文、英文、俄语
 
 <p align="center">
-  <img src="./images/Ss1.png" width="200" alt="MP Manager screenshot"> <img src="./images/Ss2.png" width="200" alt="MP Manager screenshot">
+  <img src="./images/Ss1.png" width="200" alt="MP Manager 截图"> <img src="./images/Ss2.png" width="200" alt="MP Manager 截图">
 </p>
 
 [![GitHub Release](https://img.shields.io/github/v/release/AbdurazaaqMohammed/MP-Manager?style=for-the-badge&logo=github&label=Download&color=purple)](https://github.com/AbdurazaaqMohammed/MP-Manager/releases)
 
 [![Telegram Discussion](https://img.shields.io/badge/Telegram%20Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/MP_Manager_Discussion)
-## Features
 
-### File Manager
+## 功能
 
-<details><summary>Dual pane navigation</summary>
+### 文件管理
 
-Browse two folders side by side. This makes it easy to move or copy files from one pane to the other.
+<details><summary>双栏浏览</summary>
 
-A separate home folder can be set for each pane.
+左右并排浏览两个文件夹，移动或复制文件只需在两栏之间操作。
 
-There are back and forward buttons, button to sync both panes to the same folder, new file/folder button, parent folder button.
+每个栏位都可以单独设置默认主目录。
 
-<!-- TODO: Add video
-![Dual pane navigation](./images/navigation.mp4)
+提供后退、前进按钮，一键让两栏同步到同一文件夹，新建文件/文件夹按钮，以及返回上级目录按钮。
+
+<!-- TODO: 添加视频
+![双栏浏览](./images/navigation.mp4)
 -->
 </details>
 
-<details><summary>Bookmarks and history</summary>
+<details><summary>书签与历史记录</summary>
 
-Add any folder to bookmarks and manage them from a bottom drawer. The drawer has tabs for bookmarks and navigation history and opens by swiping up on the bottom bar.
+把任意文件夹加入书签，并从底部抽屉统一管理。抽屉包含书签与访问历史两个标签页，从底部栏向上滑出即可打开。
 
-Bookmarks can be deleted by long pressing on one.
+长按书签可以删除。
 
 <p align="center">
-  <img src="./images/bookmarks.png" width="200" alt="Bookmarks and history drawer">
+  <img src="./images/bookmarks.png" width="200" alt="书签与历史记录抽屉">
   <br>
-  <em>The bookmarks and history drawer</em>
+  <em>书签与历史记录抽屉</em>
 </p>
 </details>
 
-<details><summary>Filtering, sorting and hidden files</summary>
+<details><summary>过滤、排序与隐藏文件</summary>
 
-Filter the current folder as you type. Sort by name, size, date or type, reverse order, and choose whether a sort applies only to the current folder or everywhere. You can hide files from the list, show or hide system hidden files such as dot folders, and edit the list of manually hidden files later.
+输入内容即可过滤当前文件夹。可按名称、大小、日期或类型排序，可反转顺序，并可选择排序只对当前文件夹生效还是全局生效。可以隐藏文件列表中的条目、显示或隐藏以点开头的系统隐藏目录，并可随时编辑手动隐藏的列表。
 
 <p align="center">
-  <img src="./images/filter.png" width="200" alt="Filter the current folder"> <img src="./images/sort.png" width="200" alt="Sort dialog"> <img src="./images/hidefiles.png" width="200" alt="File hiding">
+  <img src="./images/filter.png" width="200" alt="过滤当前文件夹"> <img src="./images/sort.png" width="200" alt="排序对话框"> <img src="./images/hidefiles.png" width="200" alt="文件隐藏">
   <br>
-  <em>Filter the current folder</em> &nbsp;·&nbsp; <em>Choose a sorting mode</em> &nbsp;·&nbsp; <em>Hide files from the list</em>
+  <em>过滤当前文件夹</em> &nbsp;·&nbsp; <em>选择排序方式</em> &nbsp;·&nbsp; <em>在列表中隐藏文件</em>
 </p>
 </details>
 
-<details><summary>Advanced search</summary>
+<details><summary>高级搜索</summary>
 
-Search the current folder by file name and optionally recurse into subfolders. Advanced options include match case, regular expressions, searching for text inside file contents, and minimum or maximum file size. Recent searches are saved for quick reuse.
+按文件名搜索当前文件夹，可选择递归进入子目录。高级选项包括区分大小写、正则表达式、搜索文件内容中的文本，以及最小或最大文件大小。最近的搜索记录会保存下来便于复用。
 
 <p align="center">
-  <img src="./images/search.png" width="200" alt="Search dialog">
+  <img src="./images/search.png" width="200" alt="搜索对话框">
   <br>
-  <em>The advanced search dialog</em>
+  <em>高级搜索对话框</em>
 </p>
 </details>
 
-<details><summary>File operations</summary>
+<details><summary>文件操作</summary>
 
-Create files and folders, rename, copy, move and delete with progress reporting.
+新建文件与文件夹，重命名、复制、移动、删除，均带进度显示。
 
-Extract, add files in ZIP, APK, auto sign option in APK
+解压、向 ZIP/APK 内添加文件、APK 自动签名选项。
 
-Rename several files at once using templates with prefix, suffix, numbering and find/replace.
+支持批量重命名，可用模板添加前缀、后缀、编号以及查找替换。
 
-Root and Shizuku mode: file operations, including anything inside archives, can run
-through either. In Shizuku mode a device policy that blocks reading the filesystem
-root still allows browsing it through Shizuku.
+Root 与 Shizuku 模式：包括压缩包内部在内的所有文件操作都可以通过这两种方式执行。在 Shizuku 模式下，即使设备策略禁止读取文件系统根目录，也可以借助 Shizuku 浏览它。
 
-<!-- TODO: Add screenshots/videos
-![Multi rename dialog](./images/multi-rename.jpg)
-![Compress dialog](./images/compress.jpg)
+<!-- TODO: 添加截图/视频
+![批量重命名对话框](./images/multi-rename.jpg)
+![压缩对话框](./images/compress.jpg)
 -->
 </details>
 
-<details><summary>Archives</summary>
+<details><summary>压缩包</summary>
 
-Read and write zip, 7z, rar and tar formats (including the `.tar.gz`, `.tar.bz2` and
-`.tar.xz` variants, plus single-file gzip, bzip2 and xz streams). Encrypted archives
-are supported for reading.
+支持读取与创建 zip、7z、rar、tar 相关格式（包括 `.tar.gz`、`.tar.bz2`、`.tar.xz`，以及单文件的 gzip、bzip2、xz 流），读取加密压缩包同样受支持。
 
-Archives open **in a pane**, not only through a dialog: 7z, rar and tar listings load
-in the background exactly like zip, and a password-protected archive asks for its
-password at that point.
+压缩包会直接在栏位中打开，而不只是弹出一个对话框：7z、rar、tar 的列表与 zip 一样在后台加载；遇到加密压缩包，就在此处询问密码。
 
-Extract reports **per-entry progress with a working cancel button** -- cancelling stops
-the current entry, deletes its half-written file and keeps everything already written.
-Selecting several archives and choosing extract runs them one after another under a
-single dialog.
+解压会显示**逐条目的进度，并提供可用的取消按钮**——取消会停止当前条目、删除它写到一半的文件，并保留已经写完的内容。选中多个压缩包后执行解压，会在同一个对话框中依次完成。
 
-Inside an archive the long-press menu works on the entries: extract one entry or the
-whole selection (next to the archive, or into the other pane when it shows a folder),
-compress the selected entries into a new archive, rename, delete, share, open with
-another app and compute checksums. Editing an entry and saving writes it back into the
-archive; writing is limited to formats that support it, and the app refuses up front
-instead of quietly dropping the change.
+在压缩包内部，长按菜单直接作用于条目：提取单个条目或整个选中集合（解压到压缩包同级目录，或解压到正在显示文件夹的对面栏位）、把选中条目压缩成新压缩包、重命名、删除、分享、用其他应用打开、计算校验和。编辑条目并保存会写回压缩包内部；只有支持写入的格式才能写回，遇到不支持的格式应用会提前拒绝，而不是悄悄丢弃修改。
 
-Creating archives supports a compression level, and zip additionally supports AES
-encryption with a password. Other formats are created unencrypted.
+创建压缩包时可选择压缩等级；zip 还额外支持带密码的 AES 加密，其余格式以无加密方式创建。
 
-<!-- TODO: Add screenshots/videos -->
+<!-- TODO: 添加截图/视频 -->
 </details>
 
-<details><summary>Password manager and Bitwarden vault</summary>
+<details><summary>密码管理器和 Bitwarden 密码库</summary>
 
-The password manager keeps an **ordered list of archive passwords**. Extracting an
-encrypted archive tries them in order and only asks when none of them work, and the
-compress dialog can pick one instead of typing it. The list can be reordered, edited
-and deleted from the sidebar.
+密码管理器保存一份**有序的压缩包密码列表**。解压加密压缩包时会按顺序逐个尝试，只有全部失败才会询问密码；压缩时也可以直接从列表中选用，无需手动输入。列表可在侧边栏中重排、修改和删除。
 
-It can connect to a **Bitwarden-compatible server** -- NodeWarden first, official
-servers work too -- and log in, unlock and sync. Entries show name, user name, password,
-URIs, notes and the TOTP code (both `otpauth://` URIs and the bare Base32 secret
-NodeWarden stores). Deleted entries are skipped and field casing is accepted from
-either server. With a vault connected the archive password list is backed up into a
-dedicated cipher in it and restored when the local list is empty.
+它还可以连接**兼容 Bitwarden 协议的服务器**——优先支持 NodeWarden，官方服务器同样可用——并可登录、解锁与同步。条目展示名称、用户名、密码、URIs、备注以及 TOTP 验证码（既支持 `otpauth://` URI，也支持 NodeWarden 存储的裸 Base32 密钥）。已删除的条目会被跳过，字段大小写兼容两种服务器。连接密码库后，压缩包密码列表会自动备份到其中的一个专用 cipher；本地列表为空时自动恢复。
 
-All connections can go through an optional SOCKS5 or HTTP proxy.
+所有连接都可以走可选的 SOCKS5 或 HTTP 代理。
 
-<!-- TODO: Add screenshots/videos -->
+<!-- TODO: 添加截图/视频 -->
 </details>
 
-<details><summary>File properties and sharing</summary>
+<details><summary>文件属性与分享</summary>
 
-View type, size and last modified date, and copy any value to the clipboard with a long press. Share files or open them with another app.
+查看类型、大小和最后修改时间，长按可把任意值复制到剪贴板。分享文件，或用其他应用打开。
 
-<!-- TODO: Add screenshots/videos -->
+<!-- TODO: 添加截图/视频 -->
 </details>
 
-### Media
+### 媒体
 
-<details><summary>Built-in audio and video player</summary>
+<details><summary>内置音频与视频播放器</summary>
 
-Play audio and video files without leaving the app. A mini player dialog with artwork, seek bar and playback controls can play in the background or expand into a full player.
+无需离开应用即可播放音视频文件。迷你播放器对话框带有封面、进度条和播放控制，可在后台播放，也可展开为完整播放器。
 
-<!-- TODO: Add screenshots/videos
-![Mini player](./images/mini-player.jpg)
-![Full player](./images/full-player.mp4)
+<!-- TODO: 添加截图/视频
+![迷你播放器](./images/mini-player.jpg)
+![完整播放器](./images/full-player.mp4)
 -->
 </details>
 
-<details><summary>Image viewer</summary>
+<details><summary>图片查看器</summary>
 
-Open images with swipe between pictures in directory. EXIF metadata is shown for supported files, images can be deleted or shared from the viewer.
+打开图片后可在目录内左右滑动切换。支持的文件会显示 EXIF 元数据，可在查看器内删除或分享图片。
 
-<!-- TODO: Add screenshots/videos
-![Image viewer](./images/image-viewer.jpg)
+<!-- TODO: 添加截图/视频
+![图片查看器](./images/image-viewer.jpg)
 -->
 </details>
 
-### APK Tools
+### APK 工具
 
-<details><summary>APK information and install</summary>
+<details><summary>APK 信息与安装</summary>
 
-Tap an APK to see its icon, name, version code and name, package name, signature schemes used (V1, V2, V3, V4) and whether it is protected. You can view files inside the APK and more features outlined below.
+点击 APK 查看图标、名称、版本号与版本名、包名、使用的签名方案（V1、V2、V3、V4）以及是否被加固保护。还可以在应用内查看 APK 内部文件，以及下文列出的更多功能。
 
-Installing both regular and split APKS is supported.
+支持安装普通 APK 与分体 APK（split APK）。
 
 <p align="center">
-  <img src="./images/apkdialog.png" width="200" alt="APK info dialog">
+  <img src="./images/apkdialog.png" width="200" alt="APK 信息对话框">
   <br>
-  <em>The APK info dialog</em>
+  <em>APK 信息对话框</em>
 </p>
 </details>
 
-<details><summary>Sign APK and split APKs</summary>
+<details><summary>签名 APK 与分体 APK</summary>
 
-Sign APKs and split APKs with your own or default (Debug) key. Signing supports JKS and PKCS12 keystores as well as PK8/PEM keys, and new keys can be generated inside the app.
+使用你自己的密钥或默认（Debug）密钥对 APK 和分体 APK 签名。签名支持 JKS 与 PKCS12 密钥库，也支持 PK8/PEM 密钥，并且可以在应用内生成新密钥。
 
-Automatic signing after modifying an APK can be toggled and configured.
+修改 APK 后是否自动签名可以开关并配置。
 
-Biometrics can be used as alternative to entering password every time.
+可以使用生物识别代替每次输入密码。
 
-<!-- TODO: Add screenshots/videos
-![Sign settings](./images/sign-settings.jpg)
+<!-- TODO: 添加截图/视频
+![签名设置](./images/sign-settings.jpg)
 -->
 </details>
 
-<details><summary>Decompile, build and protect</summary>
+<details><summary>反编译、构建与加固</summary>
 
-All functions from [REAndroid APKEditor](https://github.com/REAndroid/APKEditor) are available: Decompile an APK, Build an APK from a decompiled folder, merge (AntiSplit), Refactor obfuscated resource names and Protect.
+完整提供 [REAndroid APKEditor](https://github.com/REAndroid/APKEditor) 的全部功能：反编译 APK、从反编译目录重新构建 APK、合并（AntiSplit）、重命名混淆资源名（Refactor）以及加固保护。
 
 <p align="center">
-  <img src="./images/decomp.png" width="200" alt="Decompiling">
+  <img src="./images/decomp.png" width="200" alt="反编译">
   <br>
-  <em>Decompiling</em>
+  <em>正在反编译</em>
 </p>
 </details>
 
-<details><summary>Quick edit APK attributes</summary>
+<details><summary>快速修改 APK 属性</summary>
 
-Change the launcher icon, app name, install location, version code and name, min SDK and target SDK quickly in a dialog. Every activity and property in the manifest can also be edited from a tree view, including disabling entries.
+在对话框中快速修改启动图标、应用名称、安装位置、版本号与版本名、最低与目标 SDK。清单文件中的每一项属性都可以在树形视图中编辑，包括禁用某些条目。
 
 <p align="center">
-  <img src="./images/quick-edit.png" width="200" alt="Quick edit attributes dialog">
+  <img src="./images/quick-edit.png" width="200" alt="快速修改属性对话框">
   <br>
-  <em>Fast edit attributes</em>
+  <em>快速修改属性</em>
 </p>
 </details>
 
-<details><summary>APK optimization and cloning</summary>
+<details><summary>APK 优化与克隆</summary>
 
-Optimize APKs by removing chosen files, with a default list of common tracker and metadata files that can be edited. You can [clone an APK](https://github.com/developer-krushna/ApkCloner) with a new package name.
+通过删除指定文件优化 APK，内置常见追踪器与元数据文件的默认列表且可编辑。可用[克隆 APK](https://github.com/developer-krushna/ApkCloner)功能生成新的包名。
 
 <p align="center">
-  <img src="./images/clone.png" width="200" alt="Clone APK dialog">
+  <img src="./images/clone.png" width="200" alt="克隆 APK 对话框">
   <br>
-  <em>The clone APK dialog</em>
+  <em>克隆 APK 对话框</em>
 </p>
 </details>
 
-<details><summary>Dex editing</summary>
+<details><summary>Dex 编辑</summary>
 
-Edit dex files with [DEX Editor Pro](https://github.com/developer-krushna/Dex-Editor-Android) by developer-krushna. When editing a dex file inside an APK you can choose which dex files to load. Saving asks whether to add the modified file back into the APK and sign it, and a .bak backup is created upon modifying an APK.
+借助 developer-krushna 的 [DEX Editor Pro](https://github.com/developer-krushna/Dex-Editor-Android) 编辑 dex 文件。编辑 APK 内部的 dex 文件时可选择加载哪些 dex。保存时会询问是否把修改后的文件写回 APK 并签名，修改 APK 时会自动生成 .bak 备份。
 
 <p align="center">
-  <img src="./images/multidex.png" width="200" alt="Dex selection"> <img src="./images/dexe.png" width="200" alt="Dex Editor">
+  <img src="./images/multidex.png" width="200" alt="选择 dex"> <img src="./images/dexe.png" width="200" alt="Dex 编辑器">
   <br>
-  <em>Choose which dex files to load</em> &nbsp;·&nbsp; <em>The integrated dex editor</em>
+  <em>选择要加载的 dex 文件</em> &nbsp;·&nbsp; <em>内置 dex 编辑器</em>
 </p>
 </details>
 
-### Editing and Comparing
+### 编辑与对比
 
-<details><summary>Text editor</summary>
+<details><summary>文本编辑器</summary>
 
-A full text editor based on [Sora Editor](https://github.com/Rosemoe/sora-editor) with a customizable bottom bar, regex find and replace, and many editor features.
+基于 [Sora Editor](https://github.com/Rosemoe/sora-editor) 的完整文本编辑器，底部工具栏可自定义，支持正则查找替换等大量编辑功能。
 
-Binary Android XML (AXML) files can be decoded for editing and re-encoded on save automatically.
+二进制 Android XML（AXML）文件可解码后编辑，保存时自动重新编码。
 
 <p align="center">
-  <img src="./images/axml.png" width="200" alt="AXML decoded in the editor">
+  <img src="./images/axml.png" width="200" alt="编辑器中的 AXML">
   <br>
-  <em>Editing a decoded AXML file</em>
+  <em>正在编辑解码后的 AXML</em>
 </p>
 </details>
 
-<details><summary>Compare tools</summary>
+<details><summary>对比工具</summary>
 
-Compare two text files, two ZIP/APK files, or two resources.arsc files. Select one item in each pane and the matching compare option appears in the file menu.
+可对比两个文本文件、两个 ZIP/APK 文件或两个 resources.arsc 文件。在两个栏位各选中一个条目，文件菜单中就会出现对应的对比项。
 
 <p align="center">
-  <img src="./images/compared.png" width="200" alt="Compare ARSC"> <img src="./images/diff.png" width="200" alt="Diff view">
+  <img src="./images/compared.png" width="200" alt="对比 ARSC"> <img src="./images/diff.png" width="200" alt="差异视图">
   <br>
-  <em>Comparing resources.arsc files</em> &nbsp;·&nbsp; <em>The diff view</em>
+  <em>正在对比 resources.arsc</em> &nbsp;·&nbsp; <em>差异视图</em>
 </p>
 </details>
 
-### APK Extractor
+### APK 提取
 
-<details><summary>Extract and share APK parts</summary>
+<details><summary>提取并分享 APK 组成部分</summary>
 
-Extract APKs in batch and pull out specific parts: the app icon, resources.arsc, classes.dex, AndroidManifest.xml, base.apk, splits and native libs, as well as the launch activity. Split APKs can be merged into a single APK before extracting, and anything can be shared directly.
+批量提取 APK，或单独取出其中某一部分：应用图标、resources.arsc、classes.dex、AndroidManifest.xml、base.apk、分体以及原生库，还可以取出启动 Activity。分体 APK 可以先合并为一个 APK 再提取，任何结果都能直接分享。
 
-<!-- TODO: Add screenshots/videos -->
+<!-- TODO: 添加截图/视频 -->
 </details>
 
 ### FTP
 
-<details><summary>FTP server</summary>
+<details><summary>FTP 服务端</summary>
 
-Use FTP server with custom port, username and password. The server keeps a notification while running so it can be stopped easily. Connection settings can be saved as profiles, and the device IP can be copied or shared.
+使用可自定义端口、用户名和密码的 FTP 服务端。运行期间会保持一条通知，方便随时停止。连接信息可保存为配置档案，设备 IP 可直接复制或分享。
 
 <p align="center">
-  <img src="./images/ftps.png" width="200" alt="FTP server dialog">
+  <img src="./images/ftps.png" width="200" alt="FTP 服务端对话框">
   <br>
-  <em>The FTP server dialog</em>
+  <em>FTP 服务端对话框</em>
 </p>
 </details>
 
-<details><summary>FTP client</summary>
+<details><summary>FTP 客户端</summary>
 
-Connect to an FTP server and browse remote folders in either pane, with the same navigation controls as local files. Files can be uploaded from the device, and connection details can be saved as profiles (to connect to multiple devices easily).
+连接 FTP 服务器并可在任意栏位浏览远程文件夹，导航控件与本地文件一致。可以从设备上传文件，连接信息可保存为配置档案（便于连接多台设备）。
 
 <p align="center">
-  <img src="./images/ftpc.png" width="200" alt="FTP client dialog">
+  <img src="./images/ftpc.png" width="200" alt="FTP 客户端对话框">
   <br>
-  <em>The FTP client dialog</em>
+  <em>FTP 客户端对话框</em>
 </p>
 </details>
 
-### Utilities
+### 实用工具
 
-<details><summary>Screen color picker</summary>
+<details><summary>屏幕取色器</summary>
 
-[Use a floating overlay to find out colors anywhere on the screen.](https://github.com/codehasan/ScreenColorPicker)
+[使用悬浮窗在屏幕任意位置取色。](https://github.com/codehasan/ScreenColorPicker)
 
 <p align="center">
-  <img src="./images/colorpicker.png" width="200" alt="Screen color picker dialog"> <img src="./images/colorpicking.png" width="200" alt="Screen color picker active">
+  <img src="./images/colorpicker.png" width="200" alt="取色器对话框"> <img src="./images/colorpicking.png" width="200" alt="正在取色">
   <br>
-  <em>Configuration dialog</em>&nbsp;·&nbsp;
-  <em>Picking color</em>
+  <em>配置对话框</em>&nbsp;·&nbsp;
+  <em>正在取色</em>
 </p>
 </details>
 
-<details><summary>Layout inspector</summary>
+<details><summary>布局检查器</summary>
 
-[Inspect the view hierarchy of any app through a floating overlay window.](https://github.com/AbdurazaaqMohammed/Layout-Inspector)
+[通过悬浮窗查看任意应用的视图层级。](https://github.com/AbdurazaaqMohammed/Layout-Inspector)
 
 <p align="center">
-  <img src="./images/li.png" width="200" alt="Layout Inspector">
+  <img src="./images/li.png" width="200" alt="布局检查器">
   <br>
-  <em>Layout Inspection</em>
+  <em>布局检查</em>
 </p>
 </details></details>
 
-<details><summary>Command Helper</summary>
+<details><summary>命令助手</summary>
 
-Command Helper is a simple but powerful tool. It allows you to create templates for commands that can then be quickly applied to any file you select.
+命令助手是一个简单但强大的工具。可以为命令创建模板，随后快速应用到任意选中的文件上。
 
-It can generate commands for several files at once, preview them, copy or run them directly in Termux.
+它可以为多个文件批量生成命令、预览命令，并直接复制或在 Termux 中运行。
 
-* In this way you can quickly run command line tools like dex2c etc. on files via MP Manager
+* 这样就能通过 MP Manager 快速对文件执行 dex2c 等命令行工具
 
 <p align="center">
-  <img src="./images/cmdhp.png" width="200" alt="Profile creation"> <img src="./images/cmdh.png" width="200" alt="Generated command">
+  <img src="./images/cmdhp.png" width="200" alt="创建配置"> <img src="./images/cmdh.png" width="200" alt="生成的命令">
   <br>
-  <em>Creating a command profile</em> &nbsp;·&nbsp; <em>The generated command</em>
+  <em>创建命令配置</em> &nbsp;·&nbsp; <em>生成的命令</em>
 </p>
 </details>
 
-<details><summary>Appearance and storage info</summary>
+<details><summary>外观与存储信息</summary>
 
-Choose between system, light, dark and black theme all with Material theme and Dynamic Colors. The sidebar shows mounted storages with used and free space available.
+可在系统、浅色、深色与纯黑主题之间切换，均为 Material 主题并支持动态取色。侧边栏会显示已挂载的存储及其已用与可用空间。
 
 <p align="center">
-  <img src="./images/sidebar.png" width="200" alt="Sidebar with storage info">
+  <img src="./images/sidebar.png" width="200" alt="带存储信息的侧边栏">
   <br>
-  <em>The sidebar with storage usage</em>
+  <em>显示存储占用的侧边栏</em>
 </p>
 </details>
 
-<details><summary>Plugins and tool packs</summary>
+<details><summary>插件与工具包</summary>
 
-The file menu can be extended from outside the app. A plugin is a normal installed app
-that answers explicit intents: it never inherits the host's root, Shizuku, all-files or
-network access, a crashing plugin cannot take the host down, and files cross the
-boundary as one-shot `content://` grants rather than raw paths. The first time a plugin
-is seen its label, package and certificate digest are shown and pinned.
+文件菜单可以从应用外部扩展。插件是一个正常安装的独立应用，通过显式 intent 响应调用：它不会继承主应用的 root、Shizuku、全部文件访问或网络权限，插件崩溃也不会拖垮主应用，文件通过一次性的 `content://` 授权传递，而不是原始路径。首次遇到某个插件时，会显示其名称、包名与证书指纹并固定下来。
 
-There is also a first-party pack format, loaded in process through `DexClassLoader`.
-It is restricted to APKs signed with the host's own certificate, so it cannot be used
-to run third-party code inside the app.
+此外还有一方（first-party）工具包格式，通过 `DexClassLoader` 在进程内加载。它被限制为只能加载与主应用使用同一证书签名的 APK，因此不能借此在应用内运行第三方代码。
 
-See [docs/THIRD_PARTY_PLUGINS.md](./docs/THIRD_PARTY_PLUGINS.md) for the intent
-contracts and a step by step setup.
+接入用的 intent 契约与详细步骤见 [docs/THIRD_PARTY_PLUGINS.md](./docs/THIRD_PARTY_PLUGINS.md)。
 
-<!-- TODO: Add screenshots/videos -->
+<!-- TODO: 添加截图/视频 -->
 </details>
 
-# Todo
+# 待办
 
-This app still has lots of work to do and probably many bugs to fix but you can try it
+这个应用仍有大量工作要做，也可能有不少 bug，但欢迎试用
 
-* Add patcher to support multiple patch formats like APK Editor and Lucky Patcher
-* Add improvements to APK optimization
-* Create encrypted archives in formats other than zip: the Java writers available here
-  have no write-side password support, so this needs a different engine
-* Move entries between folders inside the same archive
-* Split archives into volumes
+* 增加补丁工具，支持像 APK Editor 和 Lucky Patcher 那样的多种补丁格式
+* 继续改进 APK 优化
+* 支持 zip 以外格式的加密创建：现有可用的 Java 写入库都不支持写入密码，需要更换其他引擎
+* 支持在同一个压缩包内的不同文件夹之间移动条目
+* 支持分卷压缩
