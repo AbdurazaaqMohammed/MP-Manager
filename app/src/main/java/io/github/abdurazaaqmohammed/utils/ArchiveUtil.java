@@ -438,17 +438,21 @@ public class ArchiveUtil {
      * Maps the shared compression level onto a LZMA2 dictionary size, the one
      * knob SevenZOutputFile exposes. -1 keeps the library default; smaller
      * dictionaries trade ratio for speed and memory, exactly what the level
-     * promises.
+     * promises. zip4j levels mirror java.util.zip.Deflater 0..9.
      */
     private static long sevenZDictSize(net.lingala.zip4j.model.enums.CompressionLevel level) {
         if (level == null) return -1;
-        switch (level) {
-            case FASTEST: return 1L << 20;   // 1 MiB
-            case FAST:    return 4L << 20;   // 4 MiB
-            case NORMAL:  return 16L << 20;  // 16 MiB
-            case GOOD:    return 32L << 20;  // 32 MiB
-            case ULTRA:   return 64L << 20;  // 64 MiB, the 7-Zip desktop default
-            default:      return -1;
+        switch (Math.max(0, Math.min(9, level.getLevel()))) {
+            case 1: return 1L << 20;   // 1 MiB
+            case 2: return 2L << 20;
+            case 3: return 4L << 20;
+            case 4: return 8L << 20;
+            case 5: return 16L << 20;
+            case 6: return 24L << 20;
+            case 7: return 32L << 20;
+            case 8: return 48L << 20;
+            case 9: return 64L << 20;  // 64 MiB, the 7-Zip desktop default
+            default: return -1;
         }
     }
 
