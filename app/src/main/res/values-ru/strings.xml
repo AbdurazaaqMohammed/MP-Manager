@@ -402,7 +402,6 @@
     <string name="replacement_errors">Ошибки замены</string>
     <string name="fix_first">Сначала исправить</string>
     <string name="search_exceed">Количество результатов поиска превысило лимит, поиск остановлен</string>
-    <string name="kill">Отключить</string>
     <string name="select_activity">Выбрать Activity</string>
     <string name="choose_font">Выбрать шрифт (ttf/otf)</string>
     <string name="next_button">Далее</string>
@@ -625,7 +624,6 @@
     <string name="installed_successfully">%1$s успешно установлено</string>
     <string name="paste_from">Вставить из</string>
     <string name="inspector">Инспектор</string>
-    <string name="method">Метод</string>
     <string name="multi_select">Множественный выбор</string>
     <string name="select_same_type">Выбрать файлы того же типа</string>
     <string name="add_group">Добавить группу</string>
@@ -824,10 +822,6 @@
     <string name="storage_clear_all">Очистить всё</string>
     <string name="storage_auto_selected">Автоочистка выбранного</string>
     <string name="storage_auto_all">Автоочистка всего</string>
-    <string name="storage_root_check">Проверка root</string>
-    <string name="storage_no_root_hint">Нет root? Автоочистка сама откроет информацию о каждом приложении и нажмёт «Очистить кэш», используя специальные возможности.</string>
-    <string name="storage_probing_root">Проверка root</string>
-    <string name="storage_test_rw">Проверить чтение+запись</string>
     <string name="storage_testing_rw">Проверка чтения+записи с root</string>
     <string name="storage_roundtrip_done">Проверка завершена</string>
     <string name="storage_nothing_selected">Ничего не выбрано, сначала нажмите «Загрузить»</string>
@@ -973,7 +967,6 @@
     <string name="hex_paste_from_x">Вставить из %1$s</string>
     <string name="hex_nothing_to_paste">Нечего вставлять</string>
     <string name="hex_pasted_n">Вставлено байтов: %1$d</string>
-    <string name="hex_nothing_to_save">Нечего сохранять</string>
     <string name="hex_revert">Отменить изменения</string>
     <string name="hex_revert_msg">Отбросить все несохранённые изменения?</string>
     <string name="hex_go_offset">Перейти к смещению</string>
@@ -1025,8 +1018,6 @@
     <string name="me_edit_entries">Редактировать записи манифеста</string>
     <string name="me_manifest_saved">Манифест сохранён</string>
     <string name="me_perms_n">Разрешения (%1$d)</string>
-    <string name="me_remove_unchecked">Удалить неотмеченные</string>
-    <string name="me_perms_removed">Удалено разрешений: %1$d</string>
     <string name="me_toggles">Переключатели манифеста</string>
     <string name="me_toggles_applied">Применено переключателей: %1$d</string>
     <string name="me_decode_fail">Не удалось декодировать AndroidManifest.xml</string>

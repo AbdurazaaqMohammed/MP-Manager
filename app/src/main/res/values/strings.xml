@@ -411,7 +411,6 @@
     <string name="search_exceed">The number of search results exceeds the limit, the search has been stopped</string>
     
     <!-- ApkToolsHandler strings -->
-    <string name="kill">Kill</string>
     <string name="select_activity">Select Activity</string>
     <string name="choose_font">Choose font (ttf/otf)</string>
     <string name="next_button">Next</string>
@@ -669,7 +668,6 @@ Layout Inspector
     <string name="installed_successfully">%1$s installed successfully</string>
     <string name="paste_from">Paste from</string>
     <string name="inspector">Inspector</string>
-    <string name="method">Method</string>
     <string name="multi_select">Multi select</string>
     <string name="select_same_type">Select same type files</string>
     <string name="add_group">Add Group</string>
@@ -950,13 +948,8 @@ Layout Inspector
     <string name="storage_clear_selected">Clear selected</string>
     <string name="storage_clear_all">Clear all</string>
     <string name="storage_clear_mode">Clear mode</string>
-    <string name="storage_auto_clear">Auto-clear</string>
     <string name="storage_auto_selected">Auto-clear selected</string>
     <string name="storage_auto_all">Auto-clear all</string>
-    <string name="storage_root_check">Root check</string>
-    <string name="storage_no_root_hint">No root? Auto-clear opens each app info and taps Clear cache for you using accessibility.</string>
-    <string name="storage_probing_root">Probing root</string>
-    <string name="storage_test_rw">Test read+write</string>
     <string name="storage_testing_rw">Testing root read+write</string>
     <string name="storage_roundtrip_done">Round-trip done</string>
     <string name="storage_nothing_selected">Nothing selected, tap Load first</string>
@@ -1102,7 +1095,6 @@ Layout Inspector
     <string name="hex_paste_from_x">Paste from %1$s</string>
     <string name="hex_nothing_to_paste">Nothing to paste</string>
     <string name="hex_pasted_n">Pasted %1$d bytes</string>
-    <string name="hex_nothing_to_save">Nothing to save</string>
     <string name="hex_revert">Revert changes</string>
     <string name="hex_revert_msg">Discard all unsaved changes?</string>
     <string name="hex_go_offset">Go to offset</string>
@@ -1154,8 +1146,6 @@ Layout Inspector
     <string name="me_edit_entries">Edit Manifest Entries</string>
     <string name="me_manifest_saved">Manifest saved</string>
     <string name="me_perms_n">Permissions (%1$d)</string>
-    <string name="me_remove_unchecked">Remove unchecked</string>
-    <string name="me_perms_removed">%1$d permissions removed</string>
     <string name="me_toggles">Manifest toggles</string>
     <string name="me_toggles_applied">%1$d toggles applied</string>
     <string name="me_decode_fail">Failed to decode AndroidManifest.xml</string>

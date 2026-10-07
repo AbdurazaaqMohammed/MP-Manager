@@ -404,7 +404,6 @@
     <string name="fix_first">Corregir primero</string>
     <string name="search_exceed">El número de resultados supera el límite, la búsqueda se ha detenido</string>
     <!-- ApkToolsHandler strings -->
-    <string name="kill">Terminar</string>
     <string name="select_activity">Seleccionar actividad</string>
     <string name="choose_font">Elegir fuente (ttf/otf)</string>
     <string name="next_button">Siguiente</string>
@@ -659,7 +658,6 @@ Layout Inspector
     <string name="installed_successfully">%1$s instalado correctamente</string>
     <string name="paste_from">Pegar desde</string>
     <string name="inspector">Inspector</string>
-    <string name="method">Método</string>
     <string name="multi_select">Selección múltiple</string>
     <string name="select_same_type">Seleccionar archivos del mismo tipo</string>
     <string name="add_group">Añadir grupo</string>
@@ -940,13 +938,8 @@ Layout Inspector
     <string name="storage_clear_selected">Borrar seleccionados</string>
     <string name="storage_clear_all">Borrar todo</string>
     <string name="storage_clear_mode">Modo de borrado</string>
-    <string name="storage_auto_clear">Autoborrado</string>
     <string name="storage_auto_selected">Autoborrado seleccionados</string>
     <string name="storage_auto_all">Autoborrado todo</string>
-    <string name="storage_root_check">Comprobación de root</string>
-    <string name="storage_no_root_hint">¿Sin root? El autoborrado abre la información de cada aplicación y toca Borrar caché por ti usando accesibilidad.</string>
-    <string name="storage_probing_root">Probando root</string>
-    <string name="storage_test_rw">Probar lectura+escritura</string>
     <string name="storage_testing_rw">Probando lectura+escritura con root</string>
     <string name="storage_roundtrip_done">Prueba completada</string>
     <string name="storage_nothing_selected">Nada seleccionado, toca Cargar primero</string>
@@ -1092,7 +1085,6 @@ Layout Inspector
     <string name="hex_paste_from_x">Pegar desde %1$s</string>
     <string name="hex_nothing_to_paste">Nada que pegar</string>
     <string name="hex_pasted_n">Pegados %1$d bytes</string>
-    <string name="hex_nothing_to_save">Nada que guardar</string>
     <string name="hex_revert">Revertir cambios</string>
     <string name="hex_revert_msg">¿Descartar todos los cambios sin guardar?</string>
     <string name="hex_go_offset">Ir al desplazamiento</string>
@@ -1144,8 +1136,6 @@ Layout Inspector
     <string name="me_edit_entries">Editar entradas del manifiesto</string>
     <string name="me_manifest_saved">Manifiesto guardado</string>
     <string name="me_perms_n">Permisos (%1$d)</string>
-    <string name="me_remove_unchecked">Quitar no marcados</string>
-    <string name="me_perms_removed">%1$d permisos eliminados</string>
     <string name="me_toggles">Opciones del manifiesto</string>
     <string name="me_toggles_applied">%1$d opciones aplicadas</string>
     <string name="me_decode_fail">No se pudo decodificar AndroidManifest.xml</string>

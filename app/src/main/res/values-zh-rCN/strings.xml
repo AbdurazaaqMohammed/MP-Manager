@@ -402,7 +402,6 @@
     <string name="search_exceed">搜索结果数量超过限制，搜索已停止</string>
     
     <!-- ApkToolsHandler strings -->
-    <string name="kill">终止</string>
     <string name="select_activity">选择 Activity</string>
     <string name="choose_font">选择字体 (ttf/otf)</string>
     <string name="next_button">下一步</string>
@@ -646,7 +645,6 @@ Layout Inspector
     <string name="installed_successfully">%1$s 安装成功</string>
     <string name="paste_from">粘贴自</string>
     <string name="inspector">检查器</string>
-    <string name="method">方法</string>
     <string name="multi_select">多选</string>
     <string name="select_same_type">选择相同类型文件</string>
     <string name="add_group">添加分组</string>
@@ -845,10 +843,6 @@ Layout Inspector
     <string name="storage_clear_all">全部清除</string>
     <string name="storage_auto_selected">自动清除所选</string>
     <string name="storage_auto_all">全部自动清除</string>
-    <string name="storage_root_check">Root 检查</string>
-    <string name="storage_no_root_hint">没有 root？自动清除会使用无障碍打开每个应用信息并为您点击清除缓存。</string>
-    <string name="storage_probing_root">正在探测 root</string>
-    <string name="storage_test_rw">测试读+写</string>
     <string name="storage_testing_rw">正在测试 root 读+写</string>
     <string name="storage_roundtrip_done">往返完成</string>
     <string name="storage_nothing_selected">未选择任何内容，请先点击加载</string>
@@ -994,7 +988,6 @@ Layout Inspector
     <string name="hex_paste_from_x">粘贴自 %1$s</string>
     <string name="hex_nothing_to_paste">无可粘贴内容</string>
     <string name="hex_pasted_n">已粘贴 %1$d 字节</string>
-    <string name="hex_nothing_to_save">无可保存内容</string>
     <string name="hex_revert">还原更改</string>
     <string name="hex_revert_msg">丢弃所有未保存的更改？</string>
     <string name="hex_go_offset">转到偏移量</string>
@@ -1046,8 +1039,6 @@ Layout Inspector
     <string name="me_edit_entries">编辑 Manifest 条目</string>
     <string name="me_manifest_saved">Manifest 已保存</string>
     <string name="me_perms_n">权限 (%1$d)</string>
-    <string name="me_remove_unchecked">移除未勾选项</string>
-    <string name="me_perms_removed">已移除 %1$d 个权限</string>
     <string name="me_toggles">Manifest 开关</string>
     <string name="me_toggles_applied">已应用 %1$d 个开关</string>
     <string name="me_decode_fail">解码 AndroidManifest.xml 失败</string>
