@@ -152,6 +152,10 @@ public class EntryDialogs {
                     String s = renameInput.getText().toString();
                     if (isInZip) {
                         File zipFile = entry.getZipFile();
+                        if (!io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(zipFile)) {
+                            Extensions.showMessage(context, R.string.archive_op_unsupported);
+                            return;
+                        }
                         try (ZipFile zf = new ZipFile(zipFile)) {
                             String entryName = entry.getName();
                             if (entry.isDirectory()) {
@@ -542,7 +546,16 @@ public class EntryDialogs {
                         String pw = passwordField == null || passwordField.getText() == null
                                 ? "" : passwordField.getText().toString();
                         if (!pw.isEmpty() && !finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
+                            pm.dismiss();
                             Extensions.showMessage(context, R.string.archive_encrypt_zip_only);
+                            return;
+                        }
+                        // "Add to existing" on a non-zip would truncate the archive
+                        // through ArchiveUtil.create; only zip supports appending.
+                        if (finalOutput.exists()
+                                && !finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
+                            pm.dismiss();
+                            Extensions.showMessage(context, R.string.archive_op_unsupported);
                             return;
                         }
                         ArchiveUtil.create(finalOutput, finalSources,

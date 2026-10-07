@@ -73,10 +73,7 @@ public final class ZipPassword {
                 remember(zip, password);
                 return password;
             }
-            if (context instanceof android.app.Activity activity) {
-                new Handler(Looper.getMainLooper()).post(() ->
-                        Extensions.showMessage(activity, R.string.wrong_password_or_corrupt));
-            }
+            toastWrongPassword(context);
         }
     }
 
@@ -91,6 +88,19 @@ public final class ZipPassword {
             return true;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * Wrong-password feedback, safe from any thread: the toast hops to the main
+     * looper itself so worker-thread extract and prompt loops can call it directly.
+     */
+    public static void toastWrongPassword(Context context) {
+        if (context instanceof android.app.Activity activity) {
+            activity.runOnUiThread(() -> {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                Extensions.showMessage(activity, R.string.wrong_password_or_corrupt);
+            });
         }
     }
 

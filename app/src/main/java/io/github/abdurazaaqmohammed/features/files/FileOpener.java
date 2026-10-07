@@ -683,6 +683,13 @@ public class FileOpener {
     private File stageZipEntry(ZipEntryInfo zipEntry) throws IOException {
         if (zipEntry == null || zipEntry.isDirectory() || zipEntry.getFullPath() == null) throw new IOException(context.getString(R.string.cannot_open_item));
         File out = new File(context.getCacheDir(), "zip_entry_" + System.currentTimeMillis() + "_" + zipEntry.getName().replaceAll("[^a-zA-Z0-9._-]", "_"));
+        if (io.github.abdurazaaqmohammed.utils.ArchiveEntryIO.handles(zipEntry.getZipFile())) {
+            if (!io.github.abdurazaaqmohammed.utils.ArchiveEntryIO.stage(context, zipEntry, out)) {
+                out.delete();
+                throw new IOException(context.getString(R.string.cannot_open_item));
+            }
+            return out;
+        }
         try (ZipFile zf = new ZipFile(zipEntry.getZipFile())) {
             FileHeader fh = zf.getFileHeader(zipEntry.getFullPath());
             if (fh == null || fh.isDirectory()) throw new IOException(context.getString(R.string.cannot_open_item));

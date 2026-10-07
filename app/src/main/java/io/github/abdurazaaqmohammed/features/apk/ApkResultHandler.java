@@ -72,6 +72,10 @@ public class ApkResultHandler {
             Extensions.showMessage(activity, R.string.archive_no_longer_open);
             return;
         }
+        if (!io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(zipFile)) {
+            Extensions.showMessage(activity, R.string.archive_op_unsupported);
+            return;
+        }
                     SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
                     String entryName = (entryPath != null && !entryPath.isEmpty()) ? entryPath : null;
                     String modifiedFileName = entryName != null
@@ -179,6 +183,10 @@ public class ApkResultHandler {
         final File zipFile = resolved;
         if (zipFile == null || !zipFile.isFile()) {
             Extensions.showMessage(activity, R.string.archive_no_longer_open);
+            return;
+        }
+        if (!io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(zipFile)) {
+            Extensions.showMessage(activity, R.string.archive_op_unsupported);
             return;
         }
 

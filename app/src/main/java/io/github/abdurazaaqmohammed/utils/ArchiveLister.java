@@ -208,13 +208,7 @@ public final class ArchiveLister {
     }
 
     private static void postWrongPassword(Context context) {
-        if (context instanceof android.app.Activity activity) {
-            activity.runOnUiThread(() -> {
-                if (activity.isFinishing() || activity.isDestroyed()) return;
-                io.github.codehasan.colorpicker.extensions.Extensions.showMessage(
-                        activity, io.github.abdurazaaqmohammed.MPManager.R.string.wrong_password_or_corrupt);
-            });
-        }
+        ZipPassword.toastWrongPassword(context);
     }
 
     private static List<ZipEntryInfo> listZip(File archive) throws IOException {

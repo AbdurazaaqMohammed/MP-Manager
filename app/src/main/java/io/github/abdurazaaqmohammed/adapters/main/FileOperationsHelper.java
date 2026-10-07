@@ -172,6 +172,12 @@ public class FileOperationsHelper {
     }
 
     public void move(Object item) throws IOException {
+        // Refuse before copying anything: a cut out of a 7z/rar/tar pane would
+        // otherwise copy first and then fail to delete the source entry.
+        if (adapter.isInZip && adapter.currentZipPath != null
+                && !io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(new File(adapter.currentZipPath))) {
+            throw new IOException(context.getString(R.string.archive_op_unsupported));
+        }
         if (adapter.isMultiSelectMode() && !adapter.getSelectedFiles().isEmpty()) {
             List<Object> itemsToMove = adapter.getSelectedFiles();
             if (adapter.isInZip) {
@@ -435,6 +441,15 @@ public class FileOperationsHelper {
     }
 
     public boolean copyToZip(List items, File zipFile, String currentPath) throws IOException {
+        if (!io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(zipFile)) {
+            throw new IOException(context.getString(R.string.archive_op_unsupported));
+        }
+        for (Object item : items) {
+            if (item instanceof ZipEntryInfo entryItem && entryItem.getZipFile() != null
+                    && !io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(entryItem.getZipFile())) {
+                throw new IOException(context.getString(R.string.archive_op_unsupported));
+            }
+        }
         final boolean isApk = zipFile.getName().endsWith(".apk");
         final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         final CountDownLatch latch = new CountDownLatch(1);
@@ -639,6 +654,11 @@ public class FileOperationsHelper {
         String destinationPath = destinationFolder.getPath();
         String zipEntryPath = zipEntry.getFullPath();
         if (zipEntryPath == null) return;
+        if (io.github.abdurazaaqmohammed.utils.ArchiveEntryIO.handles(zipEntry.getZipFile())) {
+            // Cancelling the password prompt leaves the destination untouched.
+            io.github.abdurazaaqmohammed.utils.ArchiveEntryIO.extract(context, zipEntry, destinationFolder);
+            return;
+        }
         try (ZipFile zf = new ZipFile(zipEntry.getZipFile())) {
             // zip4j preserves the entry's internal path when extracting, so a file inside
             // "docs/" would land in destination/docs/. Pass an explicit name to avoid that.
@@ -675,6 +695,9 @@ public class FileOperationsHelper {
 
     public void deleteZipEntry(ZipEntryInfo... entryToDelete) throws IOException {
         File f = entryToDelete[0].getZipFile();
+        if (!io.github.abdurazaaqmohammed.utils.ArchiveUtil.canWriteBack(f)) {
+            throw new IOException(context.getString(R.string.archive_op_unsupported));
+        }
         List<String> toDelete = new ArrayList<>();
         try(ZipFile zf = new ZipFile(f)) {
             for(FileHeader fh : zf.getFileHeaders()) {

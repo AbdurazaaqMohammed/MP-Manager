@@ -521,9 +521,11 @@ public class DexTools {
                 if (zipFile != null) {
                     context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(dexFile)));
                 } else {
+                    boolean staged = underCacheDir(dexFile.getParentFile());
                     context.handler.post(() -> {
-                        Extensions.showMessage(context, context.rss.getString(R.string.repaired_to, dexFile.getName()));
-                        context.loadFolderInPane(dexFile.getParentFile(), pane1);
+                        Extensions.showMessage(context, context.rss.getString(R.string.repaired_to,
+                                staged ? dexFile.getAbsolutePath() : dexFile.getName()));
+                        if (!staged) context.loadFolderInPane(dexFile.getParentFile(), pane1);
                     });
                 }
             } catch (Exception e) {
@@ -611,9 +613,11 @@ public class DexTools {
                 DexBackedDexFile dex = new DexBackedDexFile(Opcodes.forApi(api), bytes);
                 Baksmali.disassembleDexFile(dex, outDir, Math.max(1, Runtime.getRuntime().availableProcessors()), options);
                 pm.dismiss();
+                boolean staged = underCacheDir(outDir.getParentFile());
                 context.handler.post(() -> {
-                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to, outDir.getName()));
-                    context.loadFolderInPane(outDir.getParentFile(), pane1);
+                    Extensions.showMessage(context, context.rss.getString(R.string.smali_saved_to,
+                            staged ? outDir.getAbsolutePath() : outDir.getName()));
+                    if (!staged) context.loadFolderInPane(outDir.getParentFile(), pane1);
                 });
             } catch (Exception e) {
                 pm.dismiss();
@@ -622,10 +626,20 @@ public class DexTools {
         }).start();
     }
 
-    public void handleZipEntryClick(ZipEntryInfo zipEntry) {        File zipFile = zipEntry.getZipFile();
+    public void handleZipEntryClick(ZipEntryInfo zipEntry) {
+        File zipFile = zipEntry.getZipFile();
         String fullPath = zipEntry.getFullPath();
-        if(zipEntry.isDirectory()) context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
-        else new Thread(() -> {
+        if (zipEntry.isDirectory()) {
+            context.loadZipFolderInPane(zipFile, fullPath, pane1, false);
+        } else if (io.github.abdurazaaqmohammed.utils.ArchiveLister.isNonZipBrowsableName(zipFile.getName())) {
+            new Thread(() -> {
+                try {
+                    handleNonZipEntryClick(zipFile, zipEntry);
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        } else new Thread(() -> {
             try (ZipFile zf = new ZipFile(zipFile)) {
             FileHeader entryHeader = zf.getFileHeader(fullPath);
             if (entryHeader == null) throw new IOException("Entry not found: " + fullPath);
@@ -674,6 +688,72 @@ public class DexTools {
             new ErrorUtil(context).showError(e);
         }
         }).start();
+    }
+
+    /**
+     * Tap on a 7z/rar/tar entry: stage the file into the cache and reuse the
+     * loose-file flows. Write-back happens through the normal result paths,
+     * which refuse non-zip archives with archive_op_unsupported instead of
+     * truncating them.
+     */
+    private void handleNonZipEntryClick(File zipFile, ZipEntryInfo zipEntry) throws Exception {
+        final String name = zipEntry.getName();
+        File tempFolder = new File(context.getCacheDir(), UUID.randomUUID().toString());
+        //noinspection ResultOfMethodCallIgnored
+        tempFolder.mkdirs();
+        File tempFile = new File(tempFolder, name);
+        if (!io.github.abdurazaaqmohammed.utils.ArchiveEntryIO.stage(context, zipEntry, tempFile)) return;
+        if (name.endsWith(".dex")) {
+            context.handler.post(() -> showDexOptionsDialog(tempFile, null, null, name));
+        } else if (name.endsWith(".xml")) {
+            boolean isAxml;
+            try (InputStream is = new FileInputStream(tempFile)) {
+                isAxml = FileUtils.isAxml(is);
+            }
+            String rssPath = null;
+            if (isAxml) {
+                File stagedRss = stageResourcesArsc(zipFile);
+                if (stagedRss != null) rssPath = stagedRss.getPath();
+            }
+            // TextEditor switches on hasExtra("axml"), so the flag must only appear
+            // for real binary XML; a false value would force the axml decoder.
+            Intent intent = new Intent(context, TextEditorActivity.class)
+                    .putExtra("path", tempFile.getPath())
+                    .putExtra("zf", zipFile.getPath())
+                    .putExtra("zipEntryPath", zipEntry.getFullPath());
+            if (isAxml) intent.putExtra("axml", true);
+            if (rssPath != null) intent.putExtra("rssPath", rssPath);
+            context.startActivityForResult(intent, 757);
+        } else if (name.equals("resources.arsc")) {
+            context.handler.post(() -> showArscOpenWith(tempFile, zipFile, zipEntry.getFullPath()));
+        } else {
+            context.handler.post(() -> openWith.open(tempFile, name));
+        }
+    }
+
+    /** Best effort: the entry list is usually cached from the pane listing, so this rarely prompts. */
+    private File stageResourcesArsc(File zipFile) {
+        try {
+            List<ZipEntryInfo> flat = io.github.abdurazaaqmohammed.utils.ArchiveLister.listResolved(context, zipFile);
+            if (flat == null) return null;
+            for (ZipEntryInfo e : flat) {
+                if (e.isDirectory() || !"resources.arsc".equals(e.getFullPath().replace('\\', '/'))) continue;
+                File out = new File(context.getCacheDir(), "rss_" + System.currentTimeMillis() + ".arsc");
+                return io.github.abdurazaaqmohammed.utils.ArchiveEntryIO.stage(context, e, out) ? out : null;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    /** Staged-from-archive copies live under the cache; never navigate the pane into it. */
+    private boolean underCacheDir(File dir) {
+        if (dir == null) return false;
+        try {
+            return dir.getCanonicalPath().startsWith(context.getCacheDir().getCanonicalPath() + File.separator);
+        } catch (Exception e) {
+            return dir.getAbsolutePath().startsWith(context.getCacheDir().getPath() + File.separator);
+        }
     }
 
     private void showDexStringReplaceDialog(File dexFile, File zipFileOrNull) {
@@ -746,9 +826,11 @@ public class DexTools {
                     FileUtils.copyFile(tmpOut, dexFile);
                     tmpOut.delete();
                     pm.dismiss();
+                    boolean staged = underCacheDir(dexFile.getParentFile());
                     context.handler.post(() -> {
-                        Extensions.showMessage(context, context.rss.getString(R.string.fo_replaced, dexFile.getName()));
-                        context.loadFolderInPane(dexFile.getParentFile(), pane1);
+                        Extensions.showMessage(context, context.rss.getString(R.string.fo_replaced,
+                                staged ? dexFile.getAbsolutePath() : dexFile.getName()));
+                        if (!staged) context.loadFolderInPane(dexFile.getParentFile(), pane1);
                     });
                 }
             } catch (Exception e) {

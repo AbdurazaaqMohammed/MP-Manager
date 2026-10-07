@@ -251,6 +251,10 @@ public class RenameUtil {
 
     private static void executeRenameZip(MainActivity context, List<RenamePlan> plans, String currentZipPath, boolean pane1) {
         File zipFile = ((ZipEntryInfo) plans.get(0).item).getZipFile();
+        if (!ArchiveUtil.canWriteBack(zipFile)) {
+            Extensions.showMessage(context, R.string.archive_op_unsupported);
+            return;
+        }
         ProgressManager pm = new ProgressManager(context, true).show();
         Handler handler = context.handler;
         new Thread(() -> {

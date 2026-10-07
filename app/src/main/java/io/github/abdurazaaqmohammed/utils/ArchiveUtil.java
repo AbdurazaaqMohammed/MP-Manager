@@ -44,6 +44,17 @@ public class ArchiveUtil {
                 || lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz");
     }
 
+    /**
+     * True when this file may be modified in place. Only zip is written back today;
+     * 7z, rar and tar stay read-only until the in-archive editors land, so callers
+     * refuse instead of truncating the archive.
+     */
+    public static boolean canWriteBack(File file) {
+        if (file == null) return false;
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        return !isSupportedArchive(name) || name.endsWith(".zip");
+    }
+
     public static String[] getSupportedCreateExts() {
         return new String[] { ".zip", ".7z", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".gz", ".bz2", ".xz" };
     }
@@ -332,7 +343,7 @@ public class ArchiveUtil {
         }
     }
 
-    private static String sanitizeEntryName(String entryName) {
+    static String sanitizeEntryName(String entryName) {
         String cleaned = entryName.replace('\\', '/');
         while (cleaned.startsWith("/")) cleaned = cleaned.substring(1);
         cleaned = cleaned.replaceAll("\\.\\./", "");

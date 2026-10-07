@@ -68,6 +68,7 @@
     <string name="compress_pick_password">Выбрать из сохранённых паролей</string>
     <string name="compress_no_saved_passwords">Сохранённых паролей пока нет</string>
     <string name="archive_encrypt_zip_only">Шифрованный архив должен быть .zip</string>
+    <string name="archive_op_unsupported">Эта операция поддерживается только для ZIP-архивов</string>
     <string name="compress">Сжать</string>
     <string name="hist">История поиска</string>
     <string name="filename">Имя файла</string>
