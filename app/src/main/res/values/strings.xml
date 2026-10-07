@@ -1459,6 +1459,12 @@ Layout Inspector
     <string name="replace_line">Replace line</string>
     <string name="no_matches_found">No matches found</string>
     <string name="reload_file">Reload file</string>
+    <string name="save_as_axml">Save as AXML (compiled)</string>
+    <string name="save_as_plain_xml">Save as plain XML</string>
+    <string name="compile_axml_title">Compile as AXML?</string>
+    <string name="compile_axml_msg">This .xml file looks like Android manifest/resources XML. Save it compiled (binary AXML) or as plain text?</string>
+    <string name="save_axml">Save as AXML</string>
+    <string name="save_plain">Save as plain text</string>
     <string name="overriding_methods_found">%1$d overriding methods found. Do you want to search for usages of the overriding methods?</string>
     <string name="only_this_method">Only this method</string>
     <string name="clearing_method">Clearing method…</string>

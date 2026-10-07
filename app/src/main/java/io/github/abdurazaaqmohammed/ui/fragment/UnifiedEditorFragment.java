@@ -185,6 +185,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         void onSaveRequested();
         void onCloseRequested();
         void onPreferencesRequested();
+        default boolean isAxmlMode() { return false; }
+        default void onToggleAxmlMode() { }
+        default void onSaveAsPlainRequested() { }
+        default void onSaveAsAxmlRequested() { }
     }
     private EditorCallback callback;
 
@@ -658,6 +662,8 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     public void setAxml(boolean axml) { this.axml = axml; }
 
+    public boolean isAxml() { return axml; }
+
     public boolean isSaved() { return saved; }
     public void markSaved() { saved = true; }
 
@@ -1109,13 +1115,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private void showSubFileMenu(View anchor) {
         PopupMenu popupMenu = new PopupMenu(requireContext(), anchor);
         forceShowIcons(popupMenu);
-        String[] options = { getString(R.string.reload_file), getString(R.string.reload_with_charset), getString(R.string.set_encoding), getString(R.string.set_linebreak_type), getString(R.string.stats) };
-        int[] icons = {
-                R.drawable.baseline_refresh_24, R.drawable.baseline_refresh_24,
-                R.drawable.baseline_settings_24, R.drawable.baseline_swap_horiz_24,
-                R.drawable.baseline_info_24 };
-        for (int i = 0; i < options.length; i++) {
-            popupMenu.getMenu().add(0, i, 0, options[i]).setIcon(icons[i]);
+        List<String> opts = new ArrayList<>();
+        List<Integer> icns = new ArrayList<>();
+        opts.add(getString(R.string.reload_file)); icns.add(R.drawable.baseline_refresh_24);
+        opts.add(getString(R.string.reload_with_charset)); icns.add(R.drawable.baseline_refresh_24);
+        opts.add(getString(R.string.set_encoding)); icns.add(R.drawable.baseline_settings_24);
+        opts.add(getString(R.string.set_linebreak_type)); icns.add(R.drawable.baseline_swap_horiz_24);
+        opts.add(getString(R.string.stats)); icns.add(R.drawable.baseline_info_24);
+        boolean showAxmlToggle = callback != null;
+        if (showAxmlToggle) {
+            opts.add(callback.isAxmlMode()
+                    ? getString(R.string.save_as_plain_xml) : getString(R.string.save_as_axml));
+            icns.add(R.drawable.baseline_text_snippet_24);
+        }
+        for (int i = 0; i < opts.size(); i++) {
+            popupMenu.getMenu().add(0, i, 0, opts.get(i)).setIcon(icns.get(i));
         }
         popupMenu.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
@@ -1124,6 +1138,7 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 case 2: showCharsetDialog(false); break;
                 case 3: showLinebreakDialog(); break;
                 case 4: showStatistics(); break;
+                case 5: if (callback != null) callback.onToggleAxmlMode(); break;
             }
             return true;
         });
