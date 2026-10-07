@@ -1001,8 +1001,7 @@ public class APKExtractorActivity extends BaseActivity {
             case 3:
                 new Thread(() -> {
                     final String classes = "classes", dex = ".dex";
-                    ZipParameters zp = new ZipParameters();
-                    zp.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
+                    ZipParameters zp = MergeUtil.newPreferredZipParameters(APKExtractorActivity.this);
                     FileHeader fh;
                     for (int j = 0, itemsToProcessSize = itemsToProcess.size(); j < itemsToProcessSize; j++) {
                         AppInfo ai = adapter.filteredAppInfoList.get(itemsToProcess.get(j));
@@ -1168,11 +1167,12 @@ public class APKExtractorActivity extends BaseActivity {
                 File finalOutput;
                 if (split && antisplit) try (ApkBundle bundle = new ApkBundle()) {
                     bundle.loadApkDirectory(apkDirectory, false);
+                    MergeUtil.applyPreferredCompression(bundle, APKExtractorActivity.this);
                     APKLogger logger = pm.getLogger();
                     try {
                         bundle.setAPKLogger(logger);
                         finalOutput = FileUtils.getUnusedFile(output);
-                        MergeUtil.mergeBundle(bundle).renameTo(finalOutput);
+                        MergeUtil.mergeBundle(bundle, APKExtractorActivity.this).renameTo(finalOutput);
                     } finally {
                         logger.close();
                     }
@@ -1180,8 +1180,7 @@ public class APKExtractorActivity extends BaseActivity {
                 else {
                     finalOutput = FileUtils.getUnusedFile(output);
                     if (split) try (ZipFile zf = new ZipFile(finalOutput)) {
-                        ZipParameters zp = new ZipParameters();
-                        zp.setCompressionLevel(CompressionLevel.NO_COMPRESSION);
+                        ZipParameters zp = MergeUtil.newPreferredZipParameters(APKExtractorActivity.this);
                         File[] apkFiles = apkDirectory.listFiles();
                         if (apkFiles == null) throw new IOException("Cannot list " + apkDirectory);
                         for (File f : apkFiles) {
@@ -1240,10 +1239,11 @@ public class APKExtractorActivity extends BaseActivity {
                     if (antisplit) {
                         try (ApkBundle bundle = new ApkBundle()) {
                             bundle.loadApkDirectory(new File(ai.filePath).getParentFile());
+                            MergeUtil.applyPreferredCompression(bundle, APKExtractorActivity.this);
                             APKLogger logger = pm.getLogger();
                             try {
                                 bundle.setAPKLogger(logger);
-                                File merged = MergeUtil.mergeBundle(bundle);
+                                File merged = MergeUtil.mergeBundle(bundle, APKExtractorActivity.this);
                                 fileUris.add(FileProvider.getUriForFile(this, authority, merged));
                                 mergedFiles.add(merged);
                             } finally {
@@ -1316,10 +1316,11 @@ public class APKExtractorActivity extends BaseActivity {
                     if (antisplit) {
                         try (ApkBundle bundle = new ApkBundle()) {
                             bundle.loadApkDirectory(new File(ai.filePath).getParentFile());
+                            MergeUtil.applyPreferredCompression(bundle, APKExtractorActivity.this);
                             APKLogger logger = pm.getLogger();
                             try {
                                 bundle.setAPKLogger(logger);
-                                toShare[0] = MergeUtil.mergeBundle(bundle);
+                                toShare[0] = MergeUtil.mergeBundle(bundle, APKExtractorActivity.this);
                             } finally {
                                 logger.close();
                             }
