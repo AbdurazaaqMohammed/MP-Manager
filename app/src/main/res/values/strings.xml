@@ -1489,6 +1489,8 @@ Layout Inspector
     <string name="check_update_now">Check Update Now</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="failed_to_check_for_update">Failed to check for update</string>
+    <string name="plugin_info">Plugin Info</string>
+    <string name="plugin_infos">Plugins are developed as Android apps. Install one and it will show up in this list. On first use you will be prompted to confirm its certificate fingerprint against the one its developer published. If it ever changes, you will be warned.\n\nA plugin can add entries to the sidebar, settings, file menu, text editor or APK dialog. Each plugin runs in its own app process with its own permissions, so a plugin cannot read your files unless you explicitly grant it storage access.\n\nTo make one, copy the samples/plugin-sample module, declare the hooks you use in the manifest, and follow the contract strings in PluginContracts. Then build an APK, host it anywhere, and share the fingerprint with your users.</string>
     <string-array name="editor_syntaxes">
         <item>Plain Text</item>
         <item>Java</item>
