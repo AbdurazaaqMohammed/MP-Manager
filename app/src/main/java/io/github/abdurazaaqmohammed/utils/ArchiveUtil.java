@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.compress.archivers.sevenz.SevenZMethod;
+import org.apache.commons.compress.archivers.sevenz.SevenZMethodConfiguration;
 import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -439,21 +440,22 @@ public class ArchiveUtil {
      * knob SevenZOutputFile exposes. -1 keeps the library default; smaller
      * dictionaries trade ratio for speed and memory, exactly what the level
      * promises. zip4j levels mirror java.util.zip.Deflater 0..9.
+     *
+     * <p>The xz match finder needs roughly 12 bytes of RAM per dictionary
+     * byte, so the desktop 7-Zip sizes (64 MiB for ULTRA) would need far more
+     * memory than even a largeHeap phone owns. The table is capped at 32 MiB
+     * and then halved until the encoder fits into ~35% of the app heap, which
+     * keeps "no memory left" from turning into an outright crash.
      */
     private static long sevenZDictSize(net.lingala.zip4j.model.enums.CompressionLevel level) {
         if (level == null) return -1;
-        switch (Math.max(0, Math.min(9, level.getLevel()))) {
-            case 1: return 1L << 20;   // 1 MiB
-            case 2: return 2L << 20;
-            case 3: return 4L << 20;
-            case 4: return 8L << 20;
-            case 5: return 16L << 20;
-            case 6: return 24L << 20;
-            case 7: return 32L << 20;
-            case 8: return 48L << 20;
-            case 9: return 64L << 20;  // 64 MiB, the 7-Zip desktop default
-            default: return -1;
-        }
+        int lv = Math.max(0, Math.min(9, level.getLevel()));
+        if (lv == 0) return -1; // handled as COPY before this point
+        final long mib = new long[] {-1, 1, 2, 4, 6, 8, 12, 16, 24, 32}[lv];
+        long dict = mib << 20;
+        long budget = (long) (Runtime.getRuntime().maxMemory() * 0.35);
+        while (dict > (1L << 20) && dict * 12 > budget) dict >>= 1;
+        return dict;
     }
 
     /**
