@@ -1542,6 +1542,6 @@
     <string name="bw_copy_username">Копировать логин</string>
     <string name="bw_copy_code">Копировать код</string>
     <string name="bw_empty">Хранилище пусто</string>
-    <string name="bw_restored_files">Восстановлено паролей из хранилища: %1$d</string>
+    <string name="bw_restored_files">Восстановлено обычных паролей из хранилища: %1$d</string>
     <string name="bw_wrong_password">Неверный мастер-пароль</string>
 </resources>

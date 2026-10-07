@@ -1066,7 +1066,7 @@ Layout Inspector
     <string name="gpg_wrong_key">没有匹配的私钥，或口令错误</string>
     <string name="password_manager">常用密码管理</string>
     <string name="password_manager_title">常用密码管理</string>
-    <string name="password_manager_description">把常用密码加到这里。解压加密压缩文件时会按顺序自动尝试，全部失败才手动输入；压缩文件时也可快速选择这些密码输入。</string>
+    <string name="password_manager_description">把常用密码加到这里。解压加密压缩文件时会按顺序自动尝试，全部失败才手动输入；压缩文件时也可快速选择这些密码输入。连接 NodeWarden 后，列表会自动备份到保险库，本地清空时可自动恢复。</string>
     <string name="password_manager_recent_header">最近匹配记录</string>
     <string name="password_manager_no_match">当前暂无记录</string>
     <string name="password_manager_no_match_detail">最近一次压缩文件密码成功匹配记录将会显示在此处。</string>
@@ -2011,6 +2011,6 @@ Layout Inspector
     <string name="bw_copy_username">复制用户名</string>
     <string name="bw_copy_code">复制验证码</string>
     <string name="bw_empty">保险库为空</string>
-    <string name="bw_restored_files">已从保险库恢复 %1$d 个文件密码</string>
+    <string name="bw_restored_files">已从保险库恢复 %1$d 个常用密码</string>
     <string name="bw_wrong_password">主密码错误</string>
 </resources>

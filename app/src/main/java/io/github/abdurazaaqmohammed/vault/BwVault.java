@@ -17,7 +17,7 @@ import java.util.List;
 public final class BwVault {
 
     /** Name of the dedicated cipher that backs up the app's archive password list. */
-    public static final String ARCHIVE_MARKER = "MP Manager 文件密码";
+    public static final String ARCHIVE_MARKER = "MP Manager 常用密码";
 
     private BwVault() {
     }
