@@ -18,11 +18,13 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -42,16 +44,19 @@ import net.lingala.zip4j.model.FileHeader;
 import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -82,6 +87,7 @@ import io.github.abdurazaaqmohammed.utils.LegacyUtils;
 import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.MimeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -561,6 +567,146 @@ public class FileOpener {
         }).start();
     }
 
+    private void showShellScriptDialog(File readable, File original, String fileName) {
+        boolean rootMode = false;
+        try {
+            rootMode = RootManager.getInstance(context).isRootMode();
+        } catch (Exception ignored) {
+        }
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+        root.setPadding(pad, pad, pad, pad);
+
+        TextView warning = new TextView(context);
+        warning.setText(context.getString(R.string.sh_warning));
+        root.addView(warning);
+
+        CheckBox rootBox = null;
+        if (rootMode) {
+            rootBox = new CheckBox(context);
+            rootBox.setText(R.string.sh_run_as_root);
+            root.addView(rootBox);
+        }
+        final CheckBox runAsRootBox = rootBox;
+
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(context.getString(R.string.sh_select_action) + ": " + fileName)
+                .setView(root)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.sh_edit, (dialog, which) -> context.startActivity(
+                        rootAwareEditorIntent(readable, original).putExtra("path", readable.getPath())))
+                .setPositiveButton(R.string.sh_execute, (dialog, which) -> executeShellScript(
+                        readable, runAsRootBox != null && runAsRootBox.isChecked()))
+                .create());
+    }
+
+    private void executeShellScript(File script, boolean asRoot) {
+        boolean rootMode = false;
+        try {
+            rootMode = RootManager.getInstance(context).isRootMode();
+        } catch (Exception ignored) {
+        }
+        if (asRoot && !rootMode) {
+            Extensions.showMessage(context, R.string.sh_root_unavailable);
+            return;
+        }
+        ProgressManager pm = new ProgressManager(context, true);
+        pm.show();
+        try {
+            pm.setText(context.getString(R.string.sh_executing));
+        } catch (Exception ignored) {
+        }
+        new Thread(() -> {
+            int exitCode = -1;
+            String out = "";
+            String err = "";
+            try {
+                if (asRoot) {
+                    RootManager.ShellResult r = RootManager.getInstance(context).execute(
+                            "sh " + RootManager.escapeShellArg(script.getAbsolutePath()), 120);
+                    exitCode = r.exitCode();
+                    out = r.output();
+                    err = r.error();
+                } else {
+                    Process process = new ProcessBuilder("sh", script.getAbsolutePath()).start();
+                    StringBuilder outSb = new StringBuilder();
+                    StringBuilder errSb = new StringBuilder();
+                    Thread drainOut = new Thread(() -> {
+                        try (BufferedReader br = new BufferedReader(
+                                new InputStreamReader(process.getInputStream()))) {
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                if (outSb.length() > 0) outSb.append('\n');
+                                outSb.append(line);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    Thread drainErr = new Thread(() -> {
+                        try (BufferedReader br = new BufferedReader(
+                                new InputStreamReader(process.getErrorStream()))) {
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                if (errSb.length() > 0) errSb.append('\n');
+                                errSb.append(line);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+                    drainOut.start();
+                    drainErr.start();
+                    boolean finished = process.waitFor(120, TimeUnit.SECONDS);
+                    if (!finished) {
+                        process.destroyForcibly();
+                        errSb.append("Command timed out");
+                    } else {
+                        exitCode = process.exitValue();
+                    }
+                    try {
+                        drainOut.join(2000);
+                        drainErr.join(2000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    out = outSb.toString();
+                    err = errSb.toString();
+                }
+            } catch (Exception e) {
+                err = String.valueOf(e.getMessage());
+            }
+            pm.dismiss();
+            final int code = exitCode;
+            final String stdout = out;
+            final String stderr = err;
+            context.handler.post(() -> showShellOutputDialog(code, stdout, stderr));
+        }).start();
+    }
+
+    private void showShellOutputDialog(int exitCode, String stdout, String stderr) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(context.getString(R.string.sh_exit_code, exitCode)).append("\n\n");
+        if (stderr != null && !stderr.isEmpty()) {
+            sb.append("STDERR:\n").append(stderr).append("\n\n");
+        }
+        sb.append("STDOUT:\n");
+        sb.append((stdout == null || stdout.isEmpty())
+                ? context.getString(R.string.sh_no_output) : stdout);
+        TextView tv = new TextView(context);
+        tv.setText(sb.toString());
+        tv.setTextIsSelectable(true);
+        tv.setTypeface(Typeface.MONOSPACE);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+        tv.setPadding(pad, pad / 2, pad, pad / 2);
+        ScrollView sv = new ScrollView(context);
+        sv.addView(tv);
+        dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                .setTitle(R.string.sh_output)
+                .setView(sv)
+                .setPositiveButton(android.R.string.ok, null)
+                .create());
+    }
+
     private void importSignature(File file, String fileName) {
         File keysDir = new File(Environment.getExternalStorageDirectory()
                 + File.separator + "MT2" + File.separator + "keys");
@@ -654,6 +800,8 @@ public class FileOpener {
                 withReadableCopy(file, readable -> showSplitApkMenu(readable, fileName));
             } else if (fileName.endsWith(".dex")) {
                 fileOps.showDexOptionsDialog(file, null, null, fileName);
+            } else if (fileName.endsWith(".sh")) {
+                withReadableCopy(file, readable -> showShellScriptDialog(readable, file, fileName));
             } else {
                 openWithDefaultOrDialog(file, fileName);
             }
