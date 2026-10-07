@@ -5,9 +5,11 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
+import android.text.TextUtils;
 
 import org.apache.commons.io.FilenameUtils;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -59,9 +61,61 @@ public class FileUtils {
     }
 
     public static boolean isAxml(InputStream inputStream) throws IOException {
-        try (InputStreamReader isr = new InputStreamReader(inputStream); BufferedReader abr = new BufferedReader(isr)) {
-            return !abr.readLine().startsWith("<?xml version=");
+        if (inputStream == null) return false;
+        boolean markSupported = inputStream.markSupported();
+        InputStream is = markSupported ? inputStream
+                : new BufferedInputStream(inputStream);
+        is.mark(8);
+        byte[] magic = new byte[8];
+        int read = 0;
+        try {
+            while (read < 8) {
+                int n = is.read(magic, read, 8 - read);
+                if (n == -1) break;
+                read += n;
+            }
+        } finally {
+            try { is.reset(); } catch (IOException ignored) { }
         }
+        if (read < 2) return false;
+        // Binary Android XML magic: chunk type RES_XML_TYPE (0x0003) + header size 0x0008 (LE)
+        // bytes: 03 00 08 00
+        if (read >= 4 && (magic[0] & 0xFF) == 0x03 && (magic[1] & 0xFF) == 0x00
+                && (magic[2] & 0xFF) == 0x08 && (magic[3] & 0xFF) == 0x00) {
+            return true;
+        }
+        // Plain-text XML (even without <?xml header) starts with optional BOM/whitespace then '<'.
+        // Binary garbage decoded as text could also contain '<', so magic check above is authoritative.
+        int i = 0;
+        // Skip UTF-8 BOM
+        if (read >= 3 && (magic[0] & 0xFF) == 0xEF && (magic[1] & 0xFF) == 0xBB && (magic[2] & 0xFF) == 0xBF) i = 3;
+        // Skip UTF-16 BOMs
+        else if (read >= 2 && (((magic[0] & 0xFF) == 0xFF && (magic[1] & 0xFF) == 0xFE)
+                || ((magic[0] & 0xFF) == 0xFE && (magic[1] & 0xFF) == 0xFF))) i = 2;
+        while (i < read && (magic[i] == ' ' || magic[i] == '\t' || magic[i] == '\r' || magic[i] == '\n')) i++;
+        if (i >= read) return false;
+        // NUL byte in the first bytes => binary, but not AXML magic => not AXML
+        for (int k = 0; k < read; k++) if (magic[k] == 0) return false;
+        return false;
+    }
+
+    public static boolean isAxml(File file) {
+        if (file == null || !file.isFile()) return false;
+        try (InputStream is = getInputStream(file)) {
+            return isAxml(is);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean looksLikeAxmlText(String text) {
+        if (text == null) return false;
+        String t = text.trim();
+        if (t.isEmpty() || t.charAt(0) != '<') return false;
+        return t.contains("xmlns:android=\"http://schemas.android.com/apk/res/android\"")
+                || t.contains("xmlns:android='http://schemas.android.com/apk/res/android'")
+                || t.contains("<manifest")
+                || t.contains("<resources");
     }
      public static File copyFileFromAssetsAndGetFile(String fileName, Context context) throws IOException {
         File destinationFile = new File(context.getFilesDir(), fileName);
