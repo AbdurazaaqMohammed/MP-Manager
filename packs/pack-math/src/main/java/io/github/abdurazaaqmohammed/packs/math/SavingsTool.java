@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -32,18 +34,18 @@ public class SavingsTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Savings Goal");
-        EditText targetInput = ToolViewFactory.makeInput(box, "Target amount",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_savings_goal, "Savings Goal"));
+        EditText targetInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_target_amount, "Target amount"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText savedInput = ToolViewFactory.makeInput(box, "Already saved",
+        EditText savedInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_already_saved, "Already saved"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText monthlyInput = ToolViewFactory.makeInput(box, "Monthly deposit",
+        EditText monthlyInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_monthly_deposit, "Monthly deposit"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText rateInput = ToolViewFactory.makeInput(box, "Annual percent, 0 for none",
+        EditText rateInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_annual_percent_0_for_none, "Annual percent, 0 for none"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        rateInput.setText("0");
+        rateInput.setText(PackRes.str("math", R.string.s_0, "0"));
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Plan");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_plan, "Plan"));
         goBtn.setOnClickListener(v -> {
             try {
                 double target = Double.parseDouble(targetInput.getText().toString());
@@ -51,12 +53,12 @@ public class SavingsTool extends BaseToolPlugin {
                 double monthly = Double.parseDouble(monthlyInput.getText().toString());
                 double annual = rateInput.getText().toString().isEmpty() ? 0 : Double.parseDouble(rateInput.getText().toString());
                 if (monthly <= 0) {
-                    output.setText("Monthly deposit must be positive");
+                    output.setText(PackRes.str("math", R.string.s_monthly_deposit_must_be_positive, "Monthly deposit must be positive"));
                     return;
                 }
                 int months = Money.savingsMonths(target, balance, monthly, annual);
                 if (months < 0) {
-                    output.setText("Goal unreachable in 100 years");
+                    output.setText(PackRes.str("math", R.string.s_goal_unreachable_in_100_years, "Goal unreachable in 100 years"));
                     return;
                 }
                 // Re-run the projection for the display balance.
@@ -71,7 +73,7 @@ public class SavingsTool extends BaseToolPlugin {
                 SimpleDateFormat f = new SimpleDateFormat("MMM yyyy", Locale.US);
                 output.setText(months + " months  (around " + f.format(c.getTime()) + ")\nProjected " + new DecimalFormat("0.00").format(projected));
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText(PackRes.str("math", R.string.s_check_inputs, "Check inputs"));
             }
         });
         return box;

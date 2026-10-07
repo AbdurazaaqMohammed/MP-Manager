@@ -13,6 +13,7 @@ import io.github.abdurazaaqmohammed.plugins.api.ToolPack;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.ext.AppExtension;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -117,6 +118,12 @@ public final class PackManager {
             return loaded;
         }
         try {
+            if (packId != null && !packId.isEmpty()) {
+                // Load the pack's own resources.arsc so its strings.xml is
+                // available to the tools for translation. Failure is tolerated:
+                // tools fall back to their inline English literals.
+                PackRes.register(packId, PackRes.load(context, apk.getAbsolutePath()));
+            }
             DexClassLoader loader = new DexClassLoader(
                     apk.getAbsolutePath(),
                     codeCacheDir(context).getAbsolutePath(),
@@ -323,6 +330,7 @@ public final class PackManager {
     }
 
     public static synchronized void unloadPack(String packId) {
+        PackRes.unregister(packId);
         PACK_VERSIONS.remove(packId);
         List<String> ids = LOADED.remove(packId);
         if (ids != null) {

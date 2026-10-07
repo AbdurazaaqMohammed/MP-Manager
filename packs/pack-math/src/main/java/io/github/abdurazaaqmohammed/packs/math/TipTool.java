@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -30,15 +32,15 @@ public class TipTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Tip Calculator");
-        EditText billInput = ToolViewFactory.makeInput(box, "Bill amount",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_tip_calculator, "Tip Calculator"));
+        EditText billInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_bill_amount, "Bill amount"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        TextView tipLabel = ToolViewFactory.addLabel(box, "Tip: 15%");
+        TextView tipLabel = ToolViewFactory.addLabel(box, PackRes.str("math", R.string.s_tip_15, "Tip: 15%"));
         SeekBar tipBar = new SeekBar(context);
         tipBar.setMax(40);
         tipBar.setProgress(15);
         box.addView(tipBar);
-        TextView peopleLabel = ToolViewFactory.addLabel(box, "People: 1");
+        TextView peopleLabel = ToolViewFactory.addLabel(box, PackRes.str("math", R.string.s_people_1, "People: 1"));
         SeekBar peopleBar = new SeekBar(context);
         peopleBar.setMax(19);
         peopleBar.setProgress(0);
@@ -53,7 +55,7 @@ public class TipTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.00");
                 output.setText("Tip " + df.format(r[0]) + "  Total " + df.format(r[1]) + "  Each " + df.format(r[2]));
             } catch (Exception e) {
-                output.setText("Enter bill amount");
+                output.setText(PackRes.str("math", R.string.s_enter_bill_amount, "Enter bill amount"));
             }
         };
         tipBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

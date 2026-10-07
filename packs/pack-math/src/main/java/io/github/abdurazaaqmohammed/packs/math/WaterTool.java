@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Color;
 import android.text.Editable;
@@ -33,10 +35,10 @@ public class WaterTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Water Tracker");
-        EditText weightInput = ToolViewFactory.makeInput(box, "Weight in kg for target",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_water_tracker, "Water Tracker"));
+        EditText weightInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_weight_in_kg_for_target, "Weight in kg for target"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        weightInput.setText("70");
+        weightInput.setText(PackRes.str("math", R.string.s_70, "70"));
         TextView targetText = ToolViewFactory.makeOutput(box);
         TextView todayText = new TextView(context);
         todayText.setTextSize(40);
@@ -57,7 +59,7 @@ public class WaterTool extends BaseToolPlugin {
                 targetText.setText("Target " + target + " ml");
                 todayText.setText(drunk[0] + " ml");
             } catch (Exception e) {
-                targetText.setText("Enter weight");
+                targetText.setText(PackRes.str("math", R.string.s_enter_weight, "Enter weight"));
             }
         };
         render.run();
@@ -71,9 +73,9 @@ public class WaterTool extends BaseToolPlugin {
             }
         });
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton add250 = ToolViewFactory.makeRowButton(row, "+250", 1f);
-        MaterialButton add500 = ToolViewFactory.makeRowButton(row, "+500", 1f);
-        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, "Reset", 1f);
+        MaterialButton add250 = ToolViewFactory.makeRowButton(row, PackRes.str("math", R.string.s_250, "+250"), 1f);
+        MaterialButton add500 = ToolViewFactory.makeRowButton(row, PackRes.str("math", R.string.s_500, "+500"), 1f);
+        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, PackRes.str("math", R.string.s_reset, "Reset"), 1f);
         final Runnable persist = () -> {
             try {
                 context.getSharedPreferences("tools", Context.MODE_PRIVATE).edit().putInt("water_" + todayKey, drunk[0]).apply();
@@ -94,7 +96,7 @@ public class WaterTool extends BaseToolPlugin {
         });
         resetBtn.setOnClickListener(v -> {
             drunk[0] = 0;
-            todayText.setText("0 ml");
+            todayText.setText(PackRes.str("math", R.string.s_0_ml, "0 ml"));
             persist.run();
         });
         return box;

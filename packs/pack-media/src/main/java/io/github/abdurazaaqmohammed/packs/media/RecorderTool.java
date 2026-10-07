@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.media;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
@@ -323,7 +325,7 @@ public class RecorderTool extends BaseToolPlugin {
         audioStatus = ToolViewFactory.makeOutput(box);
         audioStatus.setText(T("rec_ready", "Ready"));
         recTimerText = new TextView(context);
-        recTimerText.setText("00:00");
+        recTimerText.setText(PackRes.str("media", R.string.s_00_00, "00:00"));
         recTimerText.setTextSize(40);
         recTimerText.setTypeface(Typeface.MONOSPACE);
         recTimerText.setGravity(Gravity.CENTER);
@@ -376,7 +378,7 @@ public class RecorderTool extends BaseToolPlugin {
         box.addView(playWaveView, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 90)));
         playTimeText = new TextView(context);
-        playTimeText.setText("00:00 / 00:00");
+        playTimeText.setText(PackRes.str("media", R.string.s_00_00_00_00, "00:00 / 00:00"));
         playTimeText.setTypeface(Typeface.MONOSPACE);
         box.addView(playTimeText);
         playSeek = new SeekBar(context);
@@ -409,7 +411,7 @@ public class RecorderTool extends BaseToolPlugin {
         playBtn = ToolViewFactory.makeRowButton(playRow, T("rec_play", "Play"), 1f);
         final MaterialButton stopPlayBtn = ToolViewFactory.makeRowButton(playRow,
                 T("rec_stop", "Stop"), 1f);
-        final MaterialButton speedBtn = ToolViewFactory.makeRowButton(playRow, "1x", 1f);
+        final MaterialButton speedBtn = ToolViewFactory.makeRowButton(playRow, PackRes.str("media", R.string.s_1x, "1x"), 1f);
         final float[] speeds = new float[]{1f, 1.25f, 1.5f, 2f};
         final int[] speedIdx = new int[]{0};
         speedBtn.setOnClickListener(v -> {
@@ -680,7 +682,7 @@ public class RecorderTool extends BaseToolPlugin {
         recBtn.setText(T("rec_record", "Record"));
         pauseBtn.setEnabled(false);
         pauseBtn.setText(T("rec_pause", "Pause"));
-        if (recTimerText != null) recTimerText.setText("00:00");
+        if (recTimerText != null) recTimerText.setText(PackRes.str("media", R.string.s_00_00, "00:00"));
         if (recOutFile != null && recOutFile.exists()) {
             RecCommon.saveAmps(recOutFile, recAmps);
             audioStatus.setText(T("rec_saved", "Saved") + " " + recOutFile.getName());

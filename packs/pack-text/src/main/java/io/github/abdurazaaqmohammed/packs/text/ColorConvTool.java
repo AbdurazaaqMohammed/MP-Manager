@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Color;
 import android.text.Editable;
@@ -32,9 +34,9 @@ public class ColorConvTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Color Converter");
-        EditText hexInput = ToolViewFactory.makeInput(box, "HEX, e.g. #1B73E8", InputType.TYPE_CLASS_TEXT);
-        hexInput.setText("#1B73E8");
+        ToolViewFactory.addTitle(box, PackRes.str("text", R.string.s_color_converter, "Color Converter"));
+        EditText hexInput = ToolViewFactory.makeInput(box, PackRes.str("text", R.string.s_hex_e_g_1b73e8, "HEX, e.g. #1B73E8"), InputType.TYPE_CLASS_TEXT);
+        hexInput.setText(PackRes.str("text", R.string.s_1b73e8, "#1B73E8"));
         View swatch = new View(context);
         box.addView(swatch, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
         TextView output = ToolViewFactory.makeOutput(box);
@@ -56,7 +58,7 @@ public class ColorConvTool extends BaseToolPlugin {
                         + "HEX #" + String.format(Locale.US, "%02X%02X%02X", r, g, b);
                 output.setText(sb);
             } catch (Exception e) {
-                output.setText("Enter a valid HEX color");
+                output.setText(PackRes.str("text", R.string.s_enter_a_valid_hex_color, "Enter a valid HEX color"));
             }
         };
         hexInput.addTextChangedListener(new TextWatcher() {
@@ -70,14 +72,14 @@ public class ColorConvTool extends BaseToolPlugin {
         });
         compute.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton randomBtn = ToolViewFactory.makeRowButton(row, "Random", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton randomBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_random, "Random"), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_copy, "Copy"), 1f);
         randomBtn.setOnClickListener(v -> {
             Random r = new Random();
             hexInput.setText(String.format(Locale.US, "#%02X%02X%02X", r.nextInt(256), r.nextInt(256), r.nextInt(256)));
         });
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "color", output.getText().toString()));
+                ToolViewFactory.copyText(context, PackRes.str("text", R.string.s_color, "color"), output.getText().toString()));
         return box;
     }
 }

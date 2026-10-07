@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -29,14 +31,14 @@ public class EmiTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "EMI Calculator");
-        EditText pInput = ToolViewFactory.makeInput(box, "Loan amount",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_emi_calculator, "EMI Calculator"));
+        EditText pInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_loan_amount, "Loan amount"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText rInput = ToolViewFactory.makeInput(box, "Annual interest percent",
+        EditText rInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_annual_interest_percent, "Annual interest percent"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText nInput = ToolViewFactory.makeInput(box, "Months", InputType.TYPE_CLASS_NUMBER);
+        EditText nInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_months, "Months"), InputType.TYPE_CLASS_NUMBER);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate, "Calculate"));
         goBtn.setOnClickListener(v -> {
             try {
                 double p = Double.parseDouble(pInput.getText().toString());
@@ -46,7 +48,7 @@ public class EmiTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.00");
                 output.setText("EMI " + df.format(r[0]) + "  Total " + df.format(r[1]) + "  Interest " + df.format(r[2]));
             } catch (Exception e) {
-                output.setText("Invalid input");
+                output.setText(PackRes.str("math", R.string.s_invalid_input, "Invalid input"));
             }
         });
         return box;

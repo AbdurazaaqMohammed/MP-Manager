@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.notes;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -149,7 +151,7 @@ public class NotesTool extends BaseToolPlugin {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         fab = new ExtendedFloatingActionButton(context);
-        fab.setText("New note");
+        fab.setText(PackRes.str("notes", R.string.s_new_note, "New note"));
         fab.setBackgroundTintList(ColorStateList.valueOf(accent));
         fab.setTextColor(NotesUi.onPrimary(context));
         fab.setOnClickListener(v -> createNote());
@@ -191,7 +193,7 @@ public class NotesTool extends BaseToolPlugin {
 
         TextInputLayout searchBox = new TextInputLayout(context);
         searchBox.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-        searchBox.setHint("Search notes, tags, text");
+        searchBox.setHint(PackRes.str("notes", R.string.s_search_notes_tags_text, "Search notes, tags, text"));
         searchBox.setEndIconMode(TextInputLayout.END_ICON_CLEAR_TEXT);
         searchField = new TextInputEditText(searchBox.getContext());
         searchField.setSingleLine(true);
@@ -783,9 +785,9 @@ public class NotesTool extends BaseToolPlugin {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         MaterialAlertDialogBuilder builder =
                 new MaterialAlertDialogBuilder(context);
-        builder.setTitle("Statistics");
+        builder.setTitle(PackRes.str("notes", R.string.s_statistics, "Statistics"));
         builder.setView(scroll);
-        builder.setPositiveButton("Close", null);
+        builder.setPositiveButton(PackRes.str("notes", R.string.s_close, "Close"), null);
         builder.show();
     }
 
@@ -1020,11 +1022,11 @@ public class NotesTool extends BaseToolPlugin {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         final MaterialAlertDialogBuilder builder =
                 new MaterialAlertDialogBuilder(context);
-        AlertDialog dialog = builder.setTitle("Accent colour")
-                .setView(grid).setNegativeButton("App default", (d, w) -> {
+        AlertDialog dialog = builder.setTitle(PackRes.str("notes", R.string.s_accent_colour, "Accent colour"))
+                .setView(grid).setNegativeButton(PackRes.str("notes", R.string.s_app_default, "App default"), (d, w) -> {
                     settings.setAccent(-1);
                     applyAccent();
-                }).setPositiveButton("Close", null).create();
+                }).setPositiveButton(PackRes.str("notes", R.string.s_close, "Close"), null).create();
         for (int i = 0; i < NotesUi.ACCENTS.length; i++) {
             final int index = i;
             View swatch = new View(context);

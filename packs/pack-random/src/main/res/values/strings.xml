@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_password">Generate secure passwords</string>
+    <string name="subtitle_pick">Pick a random entry from a list</string>
+    <string name="subtitle_random">Randomizer, passwords, UUIDs, tokens</string>
+    <string name="subtitle_strength">Entropy and crack estimates</string>
+    <string name="subtitle_token">Secure random hex tokens</string>
+    <string name="subtitle_uuid">Generate random UUIDs</string>
+    <string name="title_password">Password Generator</string>
+    <string name="title_pick">List Picker</string>
+    <string name="title_random">Random Tools</string>
+    <string name="title_strength">Password Strength</string>
+    <string name="title_token">Token Generator</string>
+    <string name="title_uuid">UUID Generator</string>
+</resources>

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -238,7 +240,7 @@ public class ClockTool extends BaseToolPlugin {
         clockHolder.addView(clockView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         exitChip = new Chip(host);
-        ((Chip) exitChip).setText("Exit fullscreen");
+        ((Chip) exitChip).setText(PackRes.str("device", R.string.s_exit_fullscreen, "Exit fullscreen"));
         exitChip.setVisibility(View.GONE);
         exitChip.setOnClickListener(v -> setFullscreen(false));
         FrameLayout.LayoutParams ecp = new FrameLayout.LayoutParams(
@@ -370,7 +372,7 @@ public class ClockTool extends BaseToolPlugin {
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
         Chip add = new Chip(host);
-        add.setText("+ Profile");
+        add.setText(PackRes.str("device", R.string.s_profile, "+ Profile"));
         add.setOnClickListener(v -> showSettingsDialog());
         chipsRow.addView(add);
     }
@@ -535,7 +537,7 @@ public class ClockTool extends BaseToolPlugin {
 
         MaterialSwitch dateSwitch =
                 new MaterialSwitch(host);
-        dateSwitch.setText("Show date");
+        dateSwitch.setText(PackRes.str("device", R.string.s_show_date, "Show date"));
         dateSwitch.setChecked(showDate);
         dateSwitch.setOnCheckedChangeListener((b, on) -> {
             showDate = on;
@@ -621,29 +623,29 @@ public class ClockTool extends BaseToolPlugin {
         digitalSection.addView(pickImage2);
 
         EditText name = new EditText(host);
-        name.setHint("Profile name");
+        name.setHint(PackRes.str("device", R.string.s_profile_name, "Profile name"));
         box.addView(name);
         MaterialButton save = new MaterialButton(host);
-        save.setText("Save as profile");
+        save.setText(PackRes.str("device", R.string.s_save_as_profile, "Save as profile"));
         save.setOnClickListener(v -> {
             String n = name.getText().toString().trim();
             if (n.isEmpty()) {
-                ToolViewFactory.toast(host, "Enter a profile name");
+                ToolViewFactory.toast(host, PackRes.str("device", R.string.s_enter_a_profile_name, "Enter a profile name"));
                 return;
             }
             saveProfile(n);
             selectedProfile = n;
             renderProfileChips();
-            ToolViewFactory.toast(host, "Saved");
+            ToolViewFactory.toast(host, PackRes.str("device", R.string.s_saved, "Saved"));
         });
         box.addView(save);
 
         ScrollView sc = new ScrollView(host);
         sc.addView(box);
         new MaterialAlertDialogBuilder(host)
-                .setTitle("Clock settings")
+                .setTitle(PackRes.str("device", R.string.s_clock_settings, "Clock settings"))
                 .setView(sc)
-                .setPositiveButton("Close", null)
+                .setPositiveButton(PackRes.str("device", R.string.s_close, "Close"), null)
                 .show();
     }
 
@@ -674,7 +676,7 @@ public class ClockTool extends BaseToolPlugin {
         swatchParams.rightMargin = ToolViewFactory.dp(host, 8);
         previewRow.addView(previewSwatch, swatchParams);
         EditText hexInput = new EditText(host);
-        hexInput.setHint("#RRGGBB");
+        hexInput.setHint(PackRes.str("device", R.string.s_rrggbb, "#RRGGBB"));
         hexInput.setSingleLine(true);
         previewRow.addView(hexInput, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -760,7 +762,7 @@ public class ClockTool extends BaseToolPlugin {
         new MaterialAlertDialogBuilder(host)
                 .setTitle(title)
                 .setView(root)
-                .setPositiveButton("Apply", (d, w) -> {
+                .setPositiveButton(PackRes.str("device", R.string.s_apply, "Apply"), (d, w) -> {
                     try {
                         String hex = hexInput.getText().toString().trim();
                         if (!hex.startsWith("#")) hex = "#" + hex;
@@ -776,7 +778,7 @@ public class ClockTool extends BaseToolPlugin {
                         setter.accept(wheel.getColor(alphaBar.getProgress()));
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(PackRes.str("device", R.string.s_cancel, "Cancel"), null)
                 .show();
     }
 
@@ -807,7 +809,7 @@ public class ClockTool extends BaseToolPlugin {
                 ((Activity) host).startActivityForResult(pick, REQ_IMAGE);
             }
         } catch (Exception e) {
-            ToolViewFactory.toast(host, "No picker");
+            ToolViewFactory.toast(host, PackRes.str("device", R.string.s_no_picker, "No picker"));
         }
     }
 
@@ -820,7 +822,7 @@ public class ClockTool extends BaseToolPlugin {
                 ((Activity) host).startActivityForResult(pick, REQ_FONT);
             }
         } catch (Exception e) {
-            ToolViewFactory.toast(host, "No picker");
+            ToolViewFactory.toast(host, PackRes.str("device", R.string.s_no_picker, "No picker"));
         }
     }
 
@@ -853,7 +855,7 @@ public class ClockTool extends BaseToolPlugin {
                 if (clockView != null) clockView.setFont(clockFontPath, clockFontStyle);
                 touchSettings();
             } catch (Exception e) {
-                ToolViewFactory.toast(host, "Could not load font");
+                ToolViewFactory.toast(host, PackRes.str("device", R.string.s_could_not_load_font, "Could not load font"));
             }
         }
     }

@@ -62,7 +62,7 @@ public final class PluginRegistry {
         };
     }
 
-    public static String[] categoriesInOrder() {
-        return ToolRegistry.categoriesInOrder();
+    public static String[] categoriesInOrder(Context context) {
+        return ToolRegistry.categoriesInOrder(context);
     }
 }

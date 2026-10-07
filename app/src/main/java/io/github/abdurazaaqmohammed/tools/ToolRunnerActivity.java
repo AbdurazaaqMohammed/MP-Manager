@@ -17,6 +17,7 @@ import com.google.android.material.color.MaterialColors;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
 import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
@@ -42,7 +43,7 @@ public class ToolRunnerActivity extends BaseActivity {
         String toolTitle = getIntent().getStringExtra("tool_title");
         if (toolTitle == null || toolTitle.isEmpty()) {
             ToolRegistry.ToolItem found = ToolRegistry.findById(this, toolId);
-            toolTitle = found == null ? "Tool" : found.title();
+            toolTitle = found == null ? getString(R.string.tool_default_title) : found.title();
         }
         if (toolId == null) {
             toolId = "calc";
@@ -84,9 +85,9 @@ public class ToolRunnerActivity extends BaseActivity {
                     }
                     return;
                 }
-                loadError = "The tool opened but did not return a view.";
+                loadError = getString(R.string.tool_no_view);
             } else {
-                loadError = "The installed pack does not provide the \"" + toolId + "\" tool.";
+                loadError = getString(R.string.tool_missing, toolId);
             }
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
@@ -115,7 +116,7 @@ public class ToolRunnerActivity extends BaseActivity {
         err.setOrientation(LinearLayout.VERTICAL);
         err.setPadding(pad, pad, pad, pad);
         TextView head = new TextView(this);
-        head.setText("Tool failed to load");
+        head.setText(R.string.tool_failed_load);
         head.setTextSize(18);
         err.addView(head);
         TextView msg = new TextView(this);
@@ -123,7 +124,7 @@ public class ToolRunnerActivity extends BaseActivity {
         msg.setTextSize(14);
         err.addView(msg);
         MaterialButton retry = new MaterialButton(this);
-        retry.setText("Retry");
+        retry.setText(R.string.tool_retry);
         retry.setOnClickListener(v -> recreate());
         err.addView(retry);
         box.addView(err);

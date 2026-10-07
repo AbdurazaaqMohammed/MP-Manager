@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,10 +36,10 @@ public class MeasureTool extends BaseToolPlugin {
         group.setSelectionRequired(true);
         MaterialButton rulerBtn = new MaterialButton(context);
         rulerBtn.setId(View.generateViewId());
-        rulerBtn.setText("Ruler");
+        rulerBtn.setText(PackRes.str("device", R.string.s_ruler, "Ruler"));
         MaterialButton protractorBtn = new MaterialButton(context);
         protractorBtn.setId(View.generateViewId());
-        protractorBtn.setText("Protractor");
+        protractorBtn.setText(PackRes.str("device", R.string.s_protractor, "Protractor"));
         for (MaterialButton b : new MaterialButton[]{rulerBtn, protractorBtn}) {
             group.addView(b, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -31,7 +33,7 @@ public class CookingTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Cooking Converter");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_cooking_converter, "Cooking Converter"));
         String[] ingredients = new String[]{"Water", "Milk", "Flour", "Sugar", "Butter", "Rice", "Oats", "Oil"};
         double[] gramsPerCup = new double[]{236.0, 240.0, 120.0, 200.0, 227.0, 185.0, 90.0, 218.0};
         Spinner ingSpinner = new Spinner(context);
@@ -40,10 +42,10 @@ public class CookingTool extends BaseToolPlugin {
         ingAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         ingSpinner.setAdapter(ingAdapter);
         box.addView(ingSpinner);
-        EditText cupsInput = ToolViewFactory.makeInput(box, "Cups",
+        EditText cupsInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_cups, "Cups"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        cupsInput.setText("1");
-        EditText gramsInput = ToolViewFactory.makeInput(box, "Grams",
+        cupsInput.setText(PackRes.str("math", R.string.s_1, "1"));
+        EditText gramsInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_grams, "Grams"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         TextView output = ToolViewFactory.makeOutput(box);
         final boolean[] syncing = new boolean[]{false};
@@ -56,7 +58,7 @@ public class CookingTool extends BaseToolPlugin {
                     output.setText(new DecimalFormat("0.#").format(grams) + " g  (" + new DecimalFormat("0.#").format(grams / 28.3495) + " oz)");
                 }
             } catch (Exception e) {
-                output.setText("Enter cups or grams");
+                output.setText(PackRes.str("math", R.string.s_enter_cups_or_grams, "Enter cups or grams"));
             }
         };
         ingSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

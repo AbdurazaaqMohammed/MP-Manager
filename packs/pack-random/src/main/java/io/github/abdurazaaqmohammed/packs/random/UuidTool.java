@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.random;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,8 +29,8 @@ public class UuidTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "UUID Generator");
-        TextView countLabel = ToolViewFactory.addLabel(box, "Count: 5");
+        ToolViewFactory.addTitle(box, PackRes.str("random", R.string.s_uuid_generator, "UUID Generator"));
+        TextView countLabel = ToolViewFactory.addLabel(box, PackRes.str("random", R.string.s_count_5, "Count: 5"));
         SeekBar countBar = new SeekBar(context);
         countBar.setMax(19);
         countBar.setProgress(4);
@@ -57,11 +59,11 @@ public class UuidTool extends BaseToolPlugin {
         });
         generate.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, "New", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, PackRes.str("random", R.string.s_new, "New"), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, PackRes.str("random", R.string.s_copy, "Copy"), 1f);
         regenBtn.setOnClickListener(v -> generate.run());
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "uuid", output.getText().toString()));
+                ToolViewFactory.copyText(context, PackRes.str("random", R.string.s_uuid, "uuid"), output.getText().toString()));
         return box;
     }
 }

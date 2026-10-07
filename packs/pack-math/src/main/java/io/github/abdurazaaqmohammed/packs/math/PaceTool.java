@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -42,22 +44,22 @@ public class PaceTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Pace Calculator");
-        EditText distInput = ToolViewFactory.makeInput(box, "Distance in km",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_pace_calculator, "Pace Calculator"));
+        EditText distInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_distance_in_km, "Distance in km"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        distInput.setText("5");
+        distInput.setText(PackRes.str("math", R.string.s_5, "5"));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        EditText hInput = ToolViewFactory.makeRowInput(row, "hh", InputType.TYPE_CLASS_NUMBER, 1f, "0");
-        EditText mInput = ToolViewFactory.makeRowInput(row, "mm", InputType.TYPE_CLASS_NUMBER, 1f, "25");
-        EditText sInput = ToolViewFactory.makeRowInput(row, "ss", InputType.TYPE_CLASS_NUMBER, 1f, "0");
+        EditText hInput = ToolViewFactory.makeRowInput(row, PackRes.str("math", R.string.s_hh, "hh"), InputType.TYPE_CLASS_NUMBER, 1f, PackRes.str("math", R.string.s_0, "0"));
+        EditText mInput = ToolViewFactory.makeRowInput(row, PackRes.str("math", R.string.s_mm, "mm"), InputType.TYPE_CLASS_NUMBER, 1f, PackRes.str("math", R.string.s_25, "25"));
+        EditText sInput = ToolViewFactory.makeRowInput(row, PackRes.str("math", R.string.s_ss, "ss"), InputType.TYPE_CLASS_NUMBER, 1f, PackRes.str("math", R.string.s_0, "0"));
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate, "Calculate"));
         goBtn.setOnClickListener(v -> {
             try {
                 double dist = Double.parseDouble(distInput.getText().toString());
                 long secs = parseLongSafe(hInput.getText().toString()) * 3600 + parseLongSafe(mInput.getText().toString()) * 60 + parseLongSafe(sInput.getText().toString());
                 if (dist <= 0 || secs <= 0) {
-                    output.setText("Enter distance and time");
+                    output.setText(PackRes.str("math", R.string.s_enter_distance_and_time, "Enter distance and time"));
                     return;
                 }
                 double secPerKm = secs / dist;
@@ -70,7 +72,7 @@ public class PaceTool extends BaseToolPlugin {
                         + "10K in " + DateTime.formatDuration(Math.round(secPerKm * 10)) + "  Marathon in " + DateTime.formatDuration(Math.round(secPerKm * 42.195));
                 output.setText(b);
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText(PackRes.str("math", R.string.s_check_inputs, "Check inputs"));
             }
         });
         return box;

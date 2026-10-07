@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -35,7 +37,7 @@ public class ConverterTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Unit Converter");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_unit_converter, "Unit Converter"));
         String[] categories = UnitConverter.categories();
         Spinner catSpinner = new Spinner(context);
         ArrayAdapter<String> catAdapter =
@@ -47,10 +49,10 @@ public class ConverterTool extends BaseToolPlugin {
         box.addView(fromSpinner);
         Spinner toSpinner = new Spinner(context);
         box.addView(toSpinner);
-        EditText input = ToolViewFactory.makeInput(box, "Value",
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_value, "Value"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Result");
+        output.setText(PackRes.str("math", R.string.s_result, "Result"));
         catSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String[] units = UnitConverter.unitsForCategory(categories[position]);
@@ -93,7 +95,7 @@ public class ConverterTool extends BaseToolPlugin {
         };
         fromSpinner.setOnItemSelectedListener(convertListener);
         toSpinner.setOnItemSelectedListener(convertListener);
-        MaterialButton swapBtn = ToolViewFactory.makeButton(box, "Swap units");
+        MaterialButton swapBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_swap_units, "Swap units"));
         swapBtn.setOnClickListener(v -> {
             int f = fromSpinner.getSelectedItemPosition();
             int t = toSpinner.getSelectedItemPosition();
@@ -107,7 +109,7 @@ public class ConverterTool extends BaseToolPlugin {
         try {
             String s = input.getText().toString().trim();
             if (s.isEmpty()) {
-                output.setText("Result");
+                output.setText(PackRes.str("math", R.string.s_result, "Result"));
                 return;
             }
             double v = Double.parseDouble(s);
@@ -117,7 +119,7 @@ public class ConverterTool extends BaseToolPlugin {
             DecimalFormat df = new DecimalFormat("0.######");
             output.setText(df.format(v) + " " + f + " = " + df.format(r) + " " + t);
         } catch (Exception e) {
-            output.setText("Invalid input");
+            output.setText(PackRes.str("math", R.string.s_invalid_input, "Invalid input"));
         }
     }
 }

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -38,9 +40,9 @@ public class EventCountTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Event Countdown");
-        EditText titleInput = ToolViewFactory.makeInput(box, "Event name", InputType.TYPE_CLASS_TEXT);
-        EditText dateInput = ToolViewFactory.makeDateTimeField(box, "Date & time");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_event_countdown, "Event Countdown"));
+        EditText titleInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_event_name, "Event name"), InputType.TYPE_CLASS_TEXT);
+        EditText dateInput = ToolViewFactory.makeDateTimeField(box, PackRes.str("math", R.string.s_date_time, "Date & time"));
         try {
             String savedTitle = context.getSharedPreferences("tools", Context.MODE_PRIVATE).getString("event_title", "");
             String savedDate = context.getSharedPreferences("tools", Context.MODE_PRIVATE).getString("event_date", "");
@@ -59,7 +61,7 @@ public class EventCountTool extends BaseToolPlugin {
                 try {
                     String raw = dateInput.getText().toString().trim();
                     if (raw.isEmpty()) {
-                        output.setText("Enter event date");
+                        output.setText(PackRes.str("math", R.string.s_enter_event_date, "Enter event date"));
                         return;
                     }
                     SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
@@ -77,7 +79,7 @@ public class EventCountTool extends BaseToolPlugin {
                     }
                     output.setText(name + "\n" + parts[0] + "d " + String.format(Locale.US, "%02d:%02d:%02d", parts[1], parts[2], parts[3]));
                 } catch (Exception e) {
-                    output.setText("Use yyyy-MM-dd HH:mm");
+                    output.setText(PackRes.str("math", R.string.s_use_yyyy_mm_dd_hh_mm, "Use yyyy-MM-dd HH:mm"));
                 }
                 if (active) {
                     handler.postDelayed(this, 1000);
@@ -86,15 +88,15 @@ public class EventCountTool extends BaseToolPlugin {
         };
         active = true;
         handler.post(ticker);
-        MaterialButton saveBtn = ToolViewFactory.makeButton(box, "Save event");
+        MaterialButton saveBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_save_event, "Save event"));
         saveBtn.setOnClickListener(v -> {
             try {
                 context.getSharedPreferences("tools", Context.MODE_PRIVATE).edit()
                         .putString("event_title", titleInput.getText().toString().trim())
                         .putString("event_date", dateInput.getText().toString().trim()).apply();
-                ToolViewFactory.toast(context, "Saved");
+                ToolViewFactory.toast(context, PackRes.str("math", R.string.s_saved, "Saved"));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Save failed");
+                ToolViewFactory.toast(context, PackRes.str("math", R.string.s_save_failed, "Save failed"));
             }
         });
         return box;

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -28,11 +30,11 @@ public class CaesarTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Caesar Cipher");
-        EditText input = ToolViewFactory.makeInput(box, "Text",
+        ToolViewFactory.addTitle(box, PackRes.str("text", R.string.s_caesar_cipher, "Caesar Cipher"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("text", R.string.s_text, "Text"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(2);
-        TextView shiftLabel = ToolViewFactory.addLabel(box, "Shift: 3");
+        TextView shiftLabel = ToolViewFactory.addLabel(box, PackRes.str("text", R.string.s_shift_3, "Shift: 3"));
         SeekBar shiftBar = new SeekBar(context);
         shiftBar.setMax(25);
         shiftBar.setProgress(3);
@@ -49,11 +51,11 @@ public class CaesarTool extends BaseToolPlugin {
             }
         });
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Result");
+        output.setText(PackRes.str("text", R.string.s_result, "Result"));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, "Encrypt", 1f);
-        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, "Decrypt", 1f);
-        MaterialButton bruteBtn = ToolViewFactory.makeRowButton(row, "All shifts", 1f);
+        MaterialButton encBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_encrypt, "Encrypt"), 1f);
+        MaterialButton decBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_decrypt, "Decrypt"), 1f);
+        MaterialButton bruteBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_all_shifts, "All shifts"), 1f);
         encBtn.setOnClickListener(v -> output.setText(TextCodecs.caesarShift(input.getText().toString(), shift[0])));
         decBtn.setOnClickListener(v -> output.setText(TextCodecs.caesarShift(input.getText().toString(), 26 - (shift[0] % 26))));
         bruteBtn.setOnClickListener(v -> {

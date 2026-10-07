@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -28,21 +30,21 @@ public class FuelTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Fuel Calculator");
-        EditText distInput = ToolViewFactory.makeInput(box, "Distance in km",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_fuel_calculator, "Fuel Calculator"));
+        EditText distInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_distance_in_km, "Distance in km"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText fuelInput = ToolViewFactory.makeInput(box, "Fuel used in liters",
+        EditText fuelInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_fuel_used_in_liters, "Fuel used in liters"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText priceInput = ToolViewFactory.makeInput(box, "Price per liter (optional)",
+        EditText priceInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_price_per_liter_optional, "Price per liter (optional)"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate, "Calculate"));
         goBtn.setOnClickListener(v -> {
             try {
                 double dist = Double.parseDouble(distInput.getText().toString());
                 double fuel = Double.parseDouble(fuelInput.getText().toString());
                 if (dist <= 0 || fuel <= 0) {
-                    output.setText("Distance and fuel must be above zero");
+                    output.setText(PackRes.str("math", R.string.s_distance_and_fuel_must_be_above_zero, "Distance and fuel must be above zero"));
                     return;
                 }
                 double per100 = fuel / dist * 100.0;
@@ -59,7 +61,7 @@ public class FuelTool extends BaseToolPlugin {
                 }
                 output.setText(b.toString());
             } catch (Exception e) {
-                output.setText("Enter distance and fuel");
+                output.setText(PackRes.str("math", R.string.s_enter_distance_and_fuel, "Enter distance and fuel"));
             }
         });
         return box;

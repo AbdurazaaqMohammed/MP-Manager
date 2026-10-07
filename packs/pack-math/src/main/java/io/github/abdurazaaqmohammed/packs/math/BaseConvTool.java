@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -30,9 +32,9 @@ public class BaseConvTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Base Converter");
-        EditText input = ToolViewFactory.makeInput(box, "Number", InputType.TYPE_CLASS_TEXT);
-        input.setText("255");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_base_converter, "Base Converter"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_number, "Number"), InputType.TYPE_CLASS_TEXT);
+        input.setText(PackRes.str("math", R.string.s_255, "255"));
         String[] bases = new String[]{"Binary (2)", "Octal (8)", "Decimal (10)", "Hex (16)"};
         int[] radix = new int[]{2, 8, 10, 16};
         Spinner fromBase = new Spinner(context);
@@ -48,7 +50,7 @@ public class BaseConvTool extends BaseToolPlugin {
                 output.setText(TextCodecs.baseConvert(
                         input.getText().toString(), radix[fromBase.getSelectedItemPosition()]));
             } catch (Exception e) {
-                output.setText("Invalid for selected base");
+                output.setText(PackRes.str("math", R.string.s_invalid_for_selected_base, "Invalid for selected base"));
             }
         };
         final Runnable computeRef = compute;

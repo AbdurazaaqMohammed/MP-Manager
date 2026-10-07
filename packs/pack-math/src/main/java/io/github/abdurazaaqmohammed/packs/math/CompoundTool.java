@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -31,16 +33,16 @@ public class CompoundTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Interest Calculator");
-        EditText pInput = ToolViewFactory.makeInput(box, "Initial amount",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_interest_calculator, "Interest Calculator"));
+        EditText pInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_initial_amount, "Initial amount"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        pInput.setText("10000");
-        EditText rInput = ToolViewFactory.makeInput(box, "Annual percent",
+        pInput.setText(PackRes.str("math", R.string.s_10000, "10000"));
+        EditText rInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_annual_percent, "Annual percent"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        rInput.setText("8");
-        EditText yInput = ToolViewFactory.makeInput(box, "Years",
+        rInput.setText(PackRes.str("math", R.string.s_8, "8"));
+        EditText yInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_years, "Years"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        yInput.setText("5");
+        yInput.setText(PackRes.str("math", R.string.s_5, "5"));
         String[] freqs = new String[]{"Yearly", "Half-yearly", "Quarterly", "Monthly"};
         int[] perYear = new int[]{1, 2, 4, 12};
         Spinner freqSpinner = new Spinner(context);
@@ -50,11 +52,11 @@ public class CompoundTool extends BaseToolPlugin {
         freqSpinner.setAdapter(freqAdapter);
         freqSpinner.setSelection(3);
         box.addView(freqSpinner);
-        EditText sipInput = ToolViewFactory.makeInput(box, "Monthly deposit, 0 for none",
+        EditText sipInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_monthly_deposit_0_for_none, "Monthly deposit, 0 for none"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        sipInput.setText("0");
+        sipInput.setText(PackRes.str("math", R.string.s_0, "0"));
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate, "Calculate"));
         goBtn.setOnClickListener(v -> {
             try {
                 double p = Double.parseDouble(pInput.getText().toString());
@@ -67,7 +69,7 @@ public class CompoundTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.00");
                 output.setText("Lump sum grows to " + df.format(lump) + "\nDeposits grow to " + df.format(sipFv) + "\nTotal " + df.format(lump + sipFv));
             } catch (Exception e) {
-                output.setText("Check inputs");
+                output.setText(PackRes.str("math", R.string.s_check_inputs, "Check inputs"));
             }
         });
         return box;

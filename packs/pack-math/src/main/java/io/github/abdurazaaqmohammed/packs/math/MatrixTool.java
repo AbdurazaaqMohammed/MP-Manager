@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.Gravity;
@@ -42,15 +44,15 @@ public class MatrixTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Matrix 2x2");
-        ToolViewFactory.addLabel(box, "Matrix A");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_matrix_2x2, "Matrix 2x2"));
+        ToolViewFactory.addLabel(box, PackRes.str("math", R.string.s_matrix_a, "Matrix A"));
         LinearLayout aRow1 = ToolViewFactory.makeRow(box);
         EditText a11 = numCell(context, aRow1, "1");
         EditText a12 = numCell(context, aRow1, "2");
         LinearLayout aRow2 = ToolViewFactory.makeRow(box);
         EditText a21 = numCell(context, aRow2, "3");
         EditText a22 = numCell(context, aRow2, "4");
-        ToolViewFactory.addLabel(box, "Matrix B");
+        ToolViewFactory.addLabel(box, PackRes.str("math", R.string.s_matrix_b, "Matrix B"));
         LinearLayout bRow1 = ToolViewFactory.makeRow(box);
         EditText b11 = numCell(context, bRow1, "5");
         EditText b12 = numCell(context, bRow1, "6");
@@ -64,7 +66,7 @@ public class MatrixTool extends BaseToolPlugin {
         opSpinner.setAdapter(opAdapter);
         box.addView(opSpinner);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Compute");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_compute, "Compute"));
         goBtn.setOnClickListener(v -> {
             try {
                 double x11 = Double.parseDouble(a11.getText().toString());
@@ -101,7 +103,7 @@ public class MatrixTool extends BaseToolPlugin {
                 }
                 output.setText(result);
             } catch (Exception e) {
-                output.setText("Fill all cells");
+                output.setText(PackRes.str("math", R.string.s_fill_all_cells, "Fill all cells"));
             }
         });
         return box;

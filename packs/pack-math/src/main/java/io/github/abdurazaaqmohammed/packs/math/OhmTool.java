@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -44,18 +46,18 @@ public class OhmTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Ohm Law Solver");
-        ToolViewFactory.addLabel(box, "Fill any two values, leave the rest empty.");
-        EditText vInput = ToolViewFactory.makeInput(box, "Voltage V",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_ohm_law_solver, "Ohm Law Solver"));
+        ToolViewFactory.addLabel(box, PackRes.str("math", R.string.s_fill_any_two_values_leave_the_rest_empty, "Fill any two values, leave the rest empty."));
+        EditText vInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_voltage_v, "Voltage V"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText iInput = ToolViewFactory.makeInput(box, "Current A",
+        EditText iInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_current_a, "Current A"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText rInput = ToolViewFactory.makeInput(box, "Resistance Ohm",
+        EditText rInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_resistance_ohm, "Resistance Ohm"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText pInput = ToolViewFactory.makeInput(box, "Power W",
+        EditText pInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_power_w, "Power W"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Solve");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_solve, "Solve"));
         goBtn.setOnClickListener(v -> {
             try {
                 Double V = parseDoubleOrNull(vInput.getText().toString());
@@ -91,7 +93,7 @@ public class OhmTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.####");
                 output.setText("V=" + fmtNull(V, df) + "  I=" + fmtNull(I, df) + "  R=" + fmtNull(R, df) + "  P=" + fmtNull(P, df));
             } catch (Exception e) {
-                output.setText("Enter at least two values");
+                output.setText(PackRes.str("math", R.string.s_enter_at_least_two_values, "Enter at least two values"));
             }
         });
         return box;

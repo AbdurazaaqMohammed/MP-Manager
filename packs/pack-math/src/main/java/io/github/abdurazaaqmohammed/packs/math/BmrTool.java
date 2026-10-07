@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -33,23 +35,23 @@ public class BmrTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Calorie Calculator");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_calorie_calculator, "Calorie Calculator"));
         RadioGroup genderGroup = new RadioGroup(context);
         genderGroup.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton maleBtn = new RadioButton(context);
         maleBtn.setId(View.generateViewId());
-        maleBtn.setText("Male");
+        maleBtn.setText(PackRes.str("math", R.string.s_male, "Male"));
         RadioButton femaleBtn = new RadioButton(context);
         femaleBtn.setId(View.generateViewId());
-        femaleBtn.setText("Female");
+        femaleBtn.setText(PackRes.str("math", R.string.s_female, "Female"));
         genderGroup.addView(maleBtn);
         genderGroup.addView(femaleBtn);
         genderGroup.check(maleBtn.getId());
         box.addView(genderGroup);
-        EditText ageInput = ToolViewFactory.makeInput(box, "Age in years", InputType.TYPE_CLASS_NUMBER);
-        EditText heightInput = ToolViewFactory.makeInput(box, "Height in cm",
+        EditText ageInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_age_in_years, "Age in years"), InputType.TYPE_CLASS_NUMBER);
+        EditText heightInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_height_in_cm, "Height in cm"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText weightInput = ToolViewFactory.makeInput(box, "Weight in kg",
+        EditText weightInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_weight_in_kg, "Weight in kg"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] activities = new String[]{"Sedentary", "Light", "Moderate", "Active", "Extra active"};
         double[] factors = new double[]{1.2, 1.375, 1.55, 1.725, 1.9};
@@ -62,7 +64,7 @@ public class BmrTool extends BaseToolPlugin {
         box.addView(actSpinner);
         TextView output = ToolViewFactory.makeOutput(box);
         final int maleId = maleBtn.getId();
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate, "Calculate"));
         goBtn.setOnClickListener(v -> {
             try {
                 int age = Integer.parseInt(ageInput.getText().toString().trim());
@@ -74,7 +76,7 @@ public class BmrTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0");
                 output.setText("BMR " + df.format(bmr) + " kcal  TDEE " + df.format(tdee) + " kcal");
             } catch (Exception e) {
-                output.setText("Enter age, height and weight");
+                output.setText(PackRes.str("math", R.string.s_enter_age_height_and_weight, "Enter age, height and weight"));
             }
         });
         return box;

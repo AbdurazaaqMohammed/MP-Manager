@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.random;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.Gravity;
@@ -26,19 +28,19 @@ public class TokenTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Token Generator");
-        EditText bytesInput = ToolViewFactory.makeInput(box, "Bytes (max 64)",
+        ToolViewFactory.addTitle(box, PackRes.str("random", R.string.s_token_generator, "Token Generator"));
+        EditText bytesInput = ToolViewFactory.makeInput(box, PackRes.str("random", R.string.s_bytes_max_64, "Bytes (max 64)"),
                 InputType.TYPE_CLASS_NUMBER);
-        bytesInput.setText("16");
+        bytesInput.setText(PackRes.str("random", R.string.s_16, "16"));
         TextView output = ToolViewFactory.makeOutput(box);
         output.setTextSize(20);
         output.setGravity(Gravity.CENTER);
-        MaterialButton gen = ToolViewFactory.makeButton(box, "Generate");
+        MaterialButton gen = ToolViewFactory.makeButton(box, PackRes.str("random", R.string.s_generate, "Generate"));
         gen.setOnClickListener(v -> {
             try {
                 int n = Integer.parseInt(bytesInput.getText().toString().trim());
                 if (n < 4 || n > 64) {
-                    output.setText("Use 4-64 bytes");
+                    output.setText(PackRes.str("random", R.string.s_use_4_64_bytes, "Use 4-64 bytes"));
                     return;
                 }
                 byte[] buf = new byte[n];
@@ -47,11 +49,11 @@ public class TokenTool extends BaseToolPlugin {
                 for (byte b : buf) sb.append(String.format("%02x", b));
                 output.setText(sb.toString());
             } catch (Exception e) {
-                output.setText("Check the number");
+                output.setText(PackRes.str("random", R.string.s_check_the_number, "Check the number"));
             }
         });
-        MaterialButton copy = ToolViewFactory.makeButton(box, "Copy");
-        copy.setOnClickListener(v -> ToolViewFactory.copyText(context, "token", output.getText().toString()));
+        MaterialButton copy = ToolViewFactory.makeButton(box, PackRes.str("random", R.string.s_copy, "Copy"));
+        copy.setOnClickListener(v -> ToolViewFactory.copyText(context, PackRes.str("random", R.string.s_token, "token"), output.getText().toString()));
         return box;
     }
 }

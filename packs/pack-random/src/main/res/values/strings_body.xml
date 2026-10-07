@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_0_9">0-9</string>
+    <string name="s_1">1</string>
+    <string name="s_100">100</string>
+    <string name="s_16">16</string>
+    <string name="s_a_z">A-Z</string>
+    <string name="s_a_z_2">a-z</string>
+    <string name="s_add_options_first">Add options first</string>
+    <string name="s_bytes_max_64">Bytes (max 64)</string>
+    <string name="s_check_the_number">Check the number</string>
+    <string name="s_coin">Coin</string>
+    <string name="s_comma_or_line_separated_options">Comma or line separated options</string>
+    <string name="s_copy">Copy</string>
+    <string name="s_copy_result">Copy result</string>
+    <string name="s_could_not_open_tool">Could not open tool</string>
+    <string name="s_count_5">Count: 5</string>
+    <string name="s_dice">Dice</string>
+    <string name="s_error">Error</string>
+    <string name="s_generate">Generate</string>
+    <string name="s_length_16">Length: 16</string>
+    <string name="s_list_picker">List Picker</string>
+    <string name="s_max">Max</string>
+    <string name="s_min">Min</string>
+    <string name="s_new">New</string>
+    <string name="s_number">Number</string>
+    <string name="s_password">password</string>
+    <string name="s_password_generator">Password Generator</string>
+    <string name="s_password_strength">Password Strength</string>
+    <string name="s_password_to_test">Password to test</string>
+    <string name="s_pick">pick</string>
+    <string name="s_pick_at_least_one_set">Pick at least one set</string>
+    <string name="s_pick_one">Pick one</string>
+    <string name="s_press_generate">Press Generate</string>
+    <string name="s_randomizer">Randomizer</string>
+    <string name="s_symbols">Symbols</string>
+    <string name="s_token">token</string>
+    <string name="s_token_generator">Token Generator</string>
+    <string name="s_type_a_password">Type a password</string>
+    <string name="s_use_4_64_bytes">Use 4-64 bytes</string>
+    <string name="s_uuid">uuid</string>
+    <string name="s_uuid_generator">UUID Generator</string>
+    <string name="s_x">—</string>
+    <string name="s_x_2">›</string>
+    <string name="s_x_3">-</string>
+    <string name="s_x_4">?</string>
+</resources>

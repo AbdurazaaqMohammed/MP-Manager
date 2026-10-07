@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.view.Gravity;
 import android.view.Menu;
@@ -244,7 +246,7 @@ public class TextSuiteTool extends BaseToolPlugin {
             texts.addView(s);
             row.addView(texts);
             TextView chev = new TextView(host);
-            chev.setText("›");
+            chev.setText(PackRes.str("text", R.string.s_x, "›"));
             chev.setTextSize(24);
             chev.setAlpha(0.5f);
             row.addView(chev);
@@ -280,7 +282,7 @@ public class TextSuiteTool extends BaseToolPlugin {
             hosted.add(tool);
         } catch (Exception e) {
             TextView err = new TextView(host);
-            err.setText("Could not open tool");
+            err.setText(PackRes.str("text", R.string.s_could_not_open_tool, "Could not open tool"));
             page.addView(err);
         }
         ScrollView sc = new ScrollView(host);

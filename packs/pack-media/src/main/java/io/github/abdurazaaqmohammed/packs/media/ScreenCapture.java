@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.media;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.ContentResolver;
@@ -105,7 +107,7 @@ public class ScreenCapture {
         status.setText(RecCommon.T(context, "rec_ready", "Ready"));
         box.addView(status);
         timerText = new TextView(context);
-        timerText.setText("00:00");
+        timerText.setText(PackRes.str("media", R.string.s_00_00, "00:00"));
         timerText.setTextSize(40);
         timerText.setTypeface(Typeface.MONOSPACE);
         timerText.setGravity(Gravity.CENTER);
@@ -406,7 +408,7 @@ public class ScreenCapture {
             pauseBtn.setText(RecCommon.T(context, "rec_pause", "Pause"));
             status.setText(RecCommon.T(context, "rec_recording", "Recording")
                     + " " + outFile.getName());
-            timerText.setText("00:00");
+            timerText.setText(PackRes.str("media", R.string.s_00_00, "00:00"));
             if (tick == null) {
                 tick = new Runnable() {
                     public void run() {
@@ -495,7 +497,7 @@ public class ScreenCapture {
         recBtn.setText(RecCommon.T(context, "rec_record", "Record"));
         pauseBtn.setEnabled(false);
         pauseBtn.setText(RecCommon.T(context, "rec_pause", "Pause"));
-        timerText.setText("00:00");
+        timerText.setText(PackRes.str("media", R.string.s_00_00, "00:00"));
         sizeText.setText("");
         if (save && outFile != null && outFile.exists() && outFile.length() > 0) {
             status.setText(RecCommon.T(context, "rec_saved", "Saved") + " " + outFile.getName());

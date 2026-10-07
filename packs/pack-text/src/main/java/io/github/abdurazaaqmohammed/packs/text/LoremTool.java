@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,8 +30,8 @@ public class LoremTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Lorem Generator");
-        TextView countLabel = ToolViewFactory.addLabel(box, "Paragraphs: 3");
+        ToolViewFactory.addTitle(box, PackRes.str("text", R.string.s_lorem_generator, "Lorem Generator"));
+        TextView countLabel = ToolViewFactory.addLabel(box, PackRes.str("text", R.string.s_paragraphs_3, "Paragraphs: 3"));
         SeekBar countBar = new SeekBar(context);
         countBar.setMax(9);
         countBar.setProgress(2);
@@ -52,11 +54,11 @@ public class LoremTool extends BaseToolPlugin {
         });
         generate.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, "New", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton regenBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_new, "New"), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, PackRes.str("text", R.string.s_copy, "Copy"), 1f);
         regenBtn.setOnClickListener(v -> generate.run());
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "lorem", output.getText().toString()));
+                ToolViewFactory.copyText(context, PackRes.str("text", R.string.s_lorem, "lorem"), output.getText().toString()));
         return box;
     }
 }

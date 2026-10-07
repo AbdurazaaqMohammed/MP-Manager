@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_00_00">00:00</string>
+    <string name="s_00_00_00_00">00:00 / 00:00</string>
+    <string name="s_1x">1x</string>
+    <string name="s_audio_saved">Audio saved</string>
+    <string name="s_engine_failed">Engine failed</string>
+    <string name="s_engine_not_ready">Engine not ready</string>
+    <string name="s_engine_starting">Engine starting...</string>
+    <string name="s_enter_text_first">Enter text first</string>
+    <string name="s_frequency_440_hz">Frequency: 440 Hz</string>
+    <string name="s_hello_from_tools_kit">Hello from Tools Kit</string>
+    <string name="s_metronome">Metronome</string>
+    <string name="s_open_failed">Open failed</string>
+    <string name="s_open_file">Open file</string>
+    <string name="s_pitch_1_0">Pitch: 1.0</string>
+    <string name="s_play">Play</string>
+    <string name="s_ready">Ready</string>
+    <string name="s_save_audio">Save audio</string>
+    <string name="s_save_audio_first">Save audio first</string>
+    <string name="s_save_failed">Save failed</string>
+    <string name="s_save_first">Save first</string>
+    <string name="s_save_length_3_s">Save length: 3 s</string>
+    <string name="s_save_timed_out">Save timed out</string>
+    <string name="s_save_wav">Save WAV</string>
+    <string name="s_share">Share</string>
+    <string name="s_share_audio">Share audio</string>
+    <string name="s_share_failed">Share failed</string>
+    <string name="s_speak">Speak</string>
+    <string name="s_speak_failed">Speak failed</string>
+    <string name="s_speak_text">Speak Text</string>
+    <string name="s_speed_1_0">Speed: 1.0</string>
+    <string name="s_start">Start</string>
+    <string name="s_stop">Stop</string>
+    <string name="s_stopped">Stopped</string>
+    <string name="s_tempo_120_bpm">Tempo: 120 BPM</string>
+    <string name="s_text_to_speak">Text to speak</string>
+    <string name="s_tone_failed">Tone failed</string>
+    <string name="s_tone_generator">Tone Generator</string>
+    <string name="s_waveform">Waveform</string>
+</resources>

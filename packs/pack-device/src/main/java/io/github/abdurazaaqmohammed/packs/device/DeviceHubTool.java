@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -187,27 +189,27 @@ public class DeviceHubTool extends BaseToolPlugin {
         row.setOrientation(LinearLayout.HORIZONTAL);
         MaterialButton refreshBtn = new MaterialButton(context, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        refreshBtn.setText("Refresh");
+        refreshBtn.setText(PackRes.str("device", R.string.s_refresh, "Refresh"));
         row.addView(refreshBtn, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         MaterialButton copyBtn = new MaterialButton(context, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        copyBtn.setText("Copy report");
+        copyBtn.setText(PackRes.str("device", R.string.s_copy_report, "Copy report"));
         row.addView(copyBtn, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         refreshBtn.setOnClickListener(v -> {
             try {
                 int cur = shell == null ? 0 : shell.current();
                 if (cur >= 0 && cur < live.length && live[cur] != null) live[cur].run();
-                ToolViewFactory.toast(context, "Refreshed");
+                ToolViewFactory.toast(context, PackRes.str("device", R.string.s_refreshed, "Refreshed"));
             } catch (Exception ignored) {
             }
         });
         copyBtn.setOnClickListener(v -> {
-            ToolViewFactory.toast(context, "Building report…");
+            ToolViewFactory.toast(context, PackRes.str("device", R.string.s_building_report, "Building report…"));
             bg(() -> {
                 final String report = buildReport(context);
-                handler.post(() -> ToolViewFactory.copyText(context, "device-hub", report));
+                handler.post(() -> ToolViewFactory.copyText(context, PackRes.str("device", R.string.s_device_hub, "device-hub"), report));
             });
         });
         List<PagedShell.Page> pages = new ArrayList<>();
@@ -702,14 +704,14 @@ public class DeviceHubTool extends BaseToolPlugin {
         sensorLiveText = new TextView(context);
         sensorLiveText.setTextSize(14);
         sensorLiveText.setTypeface(Typeface.MONOSPACE);
-        sensorLiveText.setText("Starting live feed…");
+        sensorLiveText.setText(PackRes.str("device", R.string.s_starting_live_feed, "Starting live feed…"));
         feed.addView(sensorLiveText);
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         feed.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         MaterialButton feedBtn = new MaterialButton(context);
-        feedBtn.setText("Live feed");
+        feedBtn.setText(PackRes.str("device", R.string.s_live_feed, "Live feed"));
         feedBtn.setOnClickListener(v -> {
             try {
                 startSensorsListener();
@@ -719,13 +721,13 @@ public class DeviceHubTool extends BaseToolPlugin {
         row.addView(feedBtn, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         MaterialButton altBtn = new MaterialButton(context);
-        altBtn.setText("Altimeter");
+        altBtn.setText(PackRes.str("device", R.string.s_altimeter, "Altimeter"));
         altBtn.setOnClickListener(v -> {
             try {
                 if (sensorManager == null) return;
                 Sensor pressure = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
                 if (pressure == null) {
-                    sensorLiveText.setText("No barometer on this device");
+                    sensorLiveText.setText(PackRes.str("device", R.string.s_no_barometer_on_this_device, "No barometer on this device"));
                     return;
                 }
                 startAltimeterListener(sensorLiveText, pressure);
@@ -852,7 +854,7 @@ public class DeviceHubTool extends BaseToolPlugin {
             try {
                 List<DeviceSys.Zone> list = DeviceSys.thermalZones();
                 if (list.isEmpty()) {
-                    max.setText("No thermal zones readable on this device");
+                    max.setText(PackRes.str("device", R.string.s_no_thermal_zones_readable_on_this_device, "No thermal zones readable on this device"));
                     return;
                 }
                 float hottest = -1000;
@@ -1060,7 +1062,7 @@ public class DeviceHubTool extends BaseToolPlugin {
             }
         }
         if (found == 0 && sensorLiveText != null) {
-            sensorLiveText.setText("No common sensors found");
+            sensorLiveText.setText(PackRes.str("device", R.string.s_no_common_sensors_found, "No common sensors found"));
         }
     }
 
@@ -1087,7 +1089,7 @@ public class DeviceHubTool extends BaseToolPlugin {
         try {
             sensorManager.registerListener(activeListener, pressure, SensorManager.SENSOR_DELAY_UI);
         } catch (Exception e) {
-            output.setText("Sensor error");
+            output.setText(PackRes.str("device", R.string.s_sensor_error, "Sensor error"));
         }
     }
 

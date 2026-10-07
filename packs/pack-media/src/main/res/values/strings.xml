@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_metronome">Keep tempo with beats</string>
+    <string name="subtitle_recorder">Record audio and video</string>
+    <string name="subtitle_tone">Play custom frequencies</string>
+    <string name="subtitle_tts">Speak typed text aloud</string>
+    <string name="title_metronome">Metronome</string>
+    <string name="title_recorder">Recorder</string>
+    <string name="title_tone">Tone Generator</string>
+    <string name="title_tts">Speak Text</string>
+</resources>

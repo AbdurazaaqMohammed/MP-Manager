@@ -2,9 +2,16 @@ package io.github.abdurazaaqmohammed.plugins.api;
 
 import android.content.Context;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 /**
  * Convenience base so each tool in plugins.tools.* only fills metadata
  * plus createView(). Keeps id/title/category boilerplate in one place.
+ *
+ * <p>Title and subtitle are resolved from the owning pack's strings.xml by
+ * convention keys {@code title_<id>} and {@code subtitle_<id>}; the English
+ * literals passed to the constructor are the fallback when the pack resource
+ * table is unavailable.
  */
 public abstract class BaseToolPlugin implements ToolPlugin {
 
@@ -21,8 +28,8 @@ public abstract class BaseToolPlugin implements ToolPlugin {
     }
 
     @Override public String id() { return id; }
-    @Override public String title(Context context) { return title; }
-    @Override public String subtitle(Context context) { return subtitle; }
+    @Override public String title(Context context) { return PackRes.str("title_" + id, title); }
+    @Override public String subtitle(Context context) { return PackRes.str("subtitle_" + id, subtitle); }
     @Override public String category(Context context) { return category; }
     @Override public int iconRes(Context context) { return 0; }
 }

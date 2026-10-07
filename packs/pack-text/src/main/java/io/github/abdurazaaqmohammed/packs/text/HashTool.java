@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -27,12 +29,12 @@ public class HashTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Hash Generator");
-        EditText input = ToolViewFactory.makeInput(box, "Text to hash",
+        ToolViewFactory.addTitle(box, PackRes.str("text", R.string.s_hash_generator, "Hash Generator"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("text", R.string.s_text_to_hash, "Text to hash"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Result appears here");
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Compute MD5 SHA-1 SHA-256 SHA-512");
+        output.setText(PackRes.str("text", R.string.s_result_appears_here, "Result appears here"));
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("text", R.string.s_compute_md5_sha_1_sha_256_sha_512, "Compute MD5 SHA-1 SHA-256 SHA-512"));
         goBtn.setOnClickListener(v -> {
             String s = input.getText().toString();
             try {
@@ -44,9 +46,9 @@ public class HashTool extends BaseToolPlugin {
                 output.setText("Error: " + e.getMessage());
             }
         });
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy");
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, PackRes.str("text", R.string.s_copy, "Copy"));
         copyBtn.setOnClickListener(v ->
-                ToolViewFactory.copyText(context, "hash", output.getText().toString()));
+                ToolViewFactory.copyText(context, PackRes.str("text", R.string.s_hash, "hash"), output.getText().toString()));
         return box;
     }
 }

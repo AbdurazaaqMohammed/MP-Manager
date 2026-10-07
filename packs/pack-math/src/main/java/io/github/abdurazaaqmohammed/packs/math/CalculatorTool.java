@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
@@ -351,7 +353,7 @@ public class CalculatorTool extends BaseToolPlugin {
             texts.addView(s);
             row.addView(texts);
             TextView chev = new TextView(host);
-            chev.setText("›");
+            chev.setText(PackRes.str("math", R.string.s_x, "›"));
             chev.setTextSize(24);
             chev.setAlpha(0.5f);
             row.addView(chev);
@@ -387,7 +389,7 @@ public class CalculatorTool extends BaseToolPlugin {
             hosted.add(tool);
         } catch (Exception e) {
             TextView err = new TextView(host);
-            err.setText("Could not open tool");
+            err.setText(PackRes.str("math", R.string.s_could_not_open_tool, "Could not open tool"));
             page.addView(err);
         }
         ScrollView sc = new ScrollView(host);
@@ -435,9 +437,9 @@ public class CalculatorTool extends BaseToolPlugin {
                 com.google.android.material.R.attr.colorPrimary, 0xFF000000));
         page.addView(resultView);
         LinearLayout topRow = ToolViewFactory.makeRow(page);
-        MaterialButton sciBtn = ToolViewFactory.makeRowButton(topRow, "fx", 1f);
-        MaterialButton histBtn = ToolViewFactory.makeRowButton(topRow, "History", 1f);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(topRow, "Copy", 1f);
+        MaterialButton sciBtn = ToolViewFactory.makeRowButton(topRow, PackRes.str("math", R.string.s_fx, "fx"), 1f);
+        MaterialButton histBtn = ToolViewFactory.makeRowButton(topRow, PackRes.str("math", R.string.s_history, "History"), 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(topRow, PackRes.str("math", R.string.s_copy, "Copy"), 1f);
         sciBtn.setOnClickListener(v -> {
             sciShown = !sciShown;
             sciPanel.setVisibility(sciShown ? View.VISIBLE : View.GONE);
@@ -446,7 +448,7 @@ public class CalculatorTool extends BaseToolPlugin {
             history.clear();
             renderHistory();
         });
-        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, "calc",
+        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, PackRes.str("math", R.string.s_calc, "calc"),
                 resultView.getText().toString()));
         sciPanel = new LinearLayout(context);
         sciPanel.setOrientation(LinearLayout.VERTICAL);
@@ -493,7 +495,7 @@ public class CalculatorTool extends BaseToolPlugin {
             case "C":
                 expr.setLength(0);
                 justEvaluated = false;
-                resultView.setText("0");
+                resultView.setText(PackRes.str("math", R.string.s_0, "0"));
                 break;
             case "⌫":
                 if (cur.length() > 0) expr.setLength(cur.length() - 1);
@@ -594,7 +596,7 @@ public class CalculatorTool extends BaseToolPlugin {
         try {
             double v = ExpressionEvaluator.eval(expr.toString());
             if (v == 0) {
-                resultView.setText("Error");
+                resultView.setText(PackRes.str("math", R.string.s_error, "Error"));
                 return;
             }
             String out = ExpressionEvaluator.format(1 / v);
@@ -613,7 +615,7 @@ public class CalculatorTool extends BaseToolPlugin {
         try {
             double v = ExpressionEvaluator.eval(expr.toString());
             if (v < 0 || v > 170 || v != Math.floor(v)) {
-                resultView.setText("Error");
+                resultView.setText(PackRes.str("math", R.string.s_error, "Error"));
                 return;
             }
             double r = 1;
@@ -624,7 +626,7 @@ public class CalculatorTool extends BaseToolPlugin {
             lastAns = out;
             justEvaluated = true;
         } catch (Exception ignored) {
-            resultView.setText("Error");
+            resultView.setText(PackRes.str("math", R.string.s_error, "Error"));
         }
     }
 
@@ -645,7 +647,7 @@ public class CalculatorTool extends BaseToolPlugin {
                 render();
             }
         } catch (Exception ignored) {
-            if (commit) resultView.setText("Error");
+            if (commit) resultView.setText(PackRes.str("math", R.string.s_error, "Error"));
         }
     }
 
@@ -658,7 +660,7 @@ public class CalculatorTool extends BaseToolPlugin {
             } catch (Exception ignored) {
             }
         } else if (s.isEmpty()) {
-            resultView.setText("0");
+            resultView.setText(PackRes.str("math", R.string.s_0, "0"));
         }
     }
 

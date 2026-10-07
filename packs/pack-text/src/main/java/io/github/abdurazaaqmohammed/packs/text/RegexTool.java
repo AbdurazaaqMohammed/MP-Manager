@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -30,19 +32,19 @@ public class RegexTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Regex Tester");
-        EditText patternInput = ToolViewFactory.makeInput(box, "Pattern, e.g. [a-z]+@[a-z]+", InputType.TYPE_CLASS_TEXT);
-        patternInput.setText("[a-z]+@[a-z]+");
+        ToolViewFactory.addTitle(box, PackRes.str("text", R.string.s_regex_tester, "Regex Tester"));
+        EditText patternInput = ToolViewFactory.makeInput(box, PackRes.str("text", R.string.s_pattern_e_g_a_z_a_z, "Pattern, e.g. [a-z]+@[a-z]+"), InputType.TYPE_CLASS_TEXT);
+        patternInput.setText(PackRes.str("text", R.string.s_a_z_a_z, "[a-z]+@[a-z]+"));
         CheckBox caseBox = new CheckBox(context);
-        caseBox.setText("Ignore case");
+        caseBox.setText(PackRes.str("text", R.string.s_ignore_case, "Ignore case"));
         box.addView(caseBox);
         CheckBox multiBox = new CheckBox(context);
-        multiBox.setText("Multiline");
+        multiBox.setText(PackRes.str("text", R.string.s_multiline, "Multiline"));
         box.addView(multiBox);
-        EditText testInput = ToolViewFactory.makeInput(box, "Test text",
+        EditText testInput = ToolViewFactory.makeInput(box, PackRes.str("text", R.string.s_test_text, "Test text"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         testInput.setMinLines(3);
-        testInput.setText("mail me at joe@example or ann@test");
+        testInput.setText(PackRes.str("text", R.string.s_mail_me_at_joe_example_or_ann_test, "mail me at joe@example or ann@test"));
         TextView output = ToolViewFactory.makeOutput(box);
         final Runnable compute = () -> {
             try {
@@ -66,12 +68,12 @@ public class RegexTool extends BaseToolPlugin {
                     total++;
                 }
                 if (total == 0) {
-                    output.setText("No matches");
+                    output.setText(PackRes.str("text", R.string.s_no_matches, "No matches"));
                 } else {
                     output.setText(total + (total == 1 ? " match" : " matches") + "\n" + b.toString().trim());
                 }
             } catch (Exception e) {
-                output.setText("Invalid pattern");
+                output.setText(PackRes.str("text", R.string.s_invalid_pattern, "Invalid pattern"));
             }
         };
         TextWatcher watcher = new TextWatcher() {

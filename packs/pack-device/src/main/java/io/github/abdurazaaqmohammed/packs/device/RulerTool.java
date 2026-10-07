@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -86,16 +88,16 @@ public class RulerTool extends BaseToolPlugin {
         rulerMode = 0;
         rulerCal = 1.0f;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Ruler");
-        ToolViewFactory.addLabel(box, "Place object along the top edge. Toggle units and calibrate with the slider.");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_ruler, "Ruler"));
+        ToolViewFactory.addLabel(box, PackRes.str("device", R.string.s_place_object_along_the_top_edge_toggle_units_and, "Place object along the top edge. Toggle units and calibrate with the slider."));
         RadioGroup group = new RadioGroup(context);
         group.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton cmBtn = new RadioButton(context);
         cmBtn.setId(View.generateViewId());
-        cmBtn.setText("cm");
+        cmBtn.setText(PackRes.str("device", R.string.s_cm, "cm"));
         RadioButton inchBtn = new RadioButton(context);
         inchBtn.setId(View.generateViewId());
-        inchBtn.setText("inch");
+        inchBtn.setText(PackRes.str("device", R.string.s_inch, "inch"));
         group.addView(cmBtn);
         group.addView(inchBtn);
         group.check(rulerMode == 1 ? inchBtn.getId() : cmBtn.getId());
@@ -107,7 +109,7 @@ public class RulerTool extends BaseToolPlugin {
         rp.setMargins(0, m8, 0, m8);
         box.addView(rulerView, rp);
         rulerInfo = ToolViewFactory.makeOutput(box);
-        ToolViewFactory.addLabel(box, "Calibration");
+        ToolViewFactory.addLabel(box, PackRes.str("device", R.string.s_calibration, "Calibration"));
         SeekBar calBar = new SeekBar(context);
         calBar.setMax(40);
         calBar.setProgress(20);

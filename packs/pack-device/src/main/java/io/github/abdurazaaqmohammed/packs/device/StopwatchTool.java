@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -62,15 +64,15 @@ public class StopwatchTool extends BaseToolPlugin {
         laps.clear();
         lapCount = 0;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Stopwatch");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_stopwatch, "Stopwatch"));
         TextView stopwatchText = ToolViewFactory.makeOutput(box);
         stopwatchText.setTextSize(32);
         stopwatchText.setGravity(Gravity.CENTER);
-        stopwatchText.setText("00:00.00");
+        stopwatchText.setText(PackRes.str("device", R.string.s_00_00_00, "00:00.00"));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, "Start", 1f);
-        MaterialButton lapBtn = ToolViewFactory.makeRowButton(row, "Lap", 1f);
-        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, "Reset", 1f);
+        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, PackRes.str("device", R.string.s_start, "Start"), 1f);
+        MaterialButton lapBtn = ToolViewFactory.makeRowButton(row, PackRes.str("device", R.string.s_lap, "Lap"), 1f);
+        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, PackRes.str("device", R.string.s_reset, "Reset"), 1f);
         ArrayAdapter<String> lapAdapter =
                 new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, laps);
         ListView lapList = new ListView(context);
@@ -89,11 +91,11 @@ public class StopwatchTool extends BaseToolPlugin {
             if (running) {
                 accum = elapsed();
                 running = false;
-                ((Button) v).setText("Start");
+                ((Button) v).setText(PackRes.str("device", R.string.s_start, "Start"));
             } else {
                 base = SystemClock.elapsedRealtime();
                 running = true;
-                ((Button) v).setText("Pause");
+                ((Button) v).setText(PackRes.str("device", R.string.s_pause, "Pause"));
                 handler.post(tick);
             }
         });
@@ -108,11 +110,11 @@ public class StopwatchTool extends BaseToolPlugin {
         resetBtn.setOnClickListener(v -> {
             running = false;
             accum = 0L;
-            stopwatchText.setText("00:00.00");
+            stopwatchText.setText(PackRes.str("device", R.string.s_00_00_00, "00:00.00"));
             laps.clear();
             lapAdapter.notifyDataSetChanged();
             lapCount = 0;
-            startBtn.setText("Start");
+            startBtn.setText(PackRes.str("device", R.string.s_start, "Start"));
         });
         return box;
     }

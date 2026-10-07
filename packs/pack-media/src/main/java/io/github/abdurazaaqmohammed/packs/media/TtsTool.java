@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.media;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -52,24 +54,24 @@ public class TtsTool extends BaseToolPlugin {
             s.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             context.startActivity(Intent.createChooser(s, "Share"));
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "Share failed");
+            ToolViewFactory.toast(context, PackRes.str("media", R.string.s_share_failed, "Share failed"));
         }
     }
 
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Speak Text");
-        EditText input = ToolViewFactory.makeInput(box, "Text to speak",
+        ToolViewFactory.addTitle(box, PackRes.str("media", R.string.s_speak_text, "Speak Text"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("media", R.string.s_text_to_speak, "Text to speak"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(3);
-        input.setText("Hello from Tools Kit");
-        TextView pitchLabel = ToolViewFactory.addLabel(box, "Pitch: 1.0");
+        input.setText(PackRes.str("media", R.string.s_hello_from_tools_kit, "Hello from Tools Kit"));
+        TextView pitchLabel = ToolViewFactory.addLabel(box, PackRes.str("media", R.string.s_pitch_1_0, "Pitch: 1.0"));
         SeekBar pitchBar = new SeekBar(context);
         pitchBar.setMax(150);
         pitchBar.setProgress(50);
         box.addView(pitchBar);
-        TextView rateLabel = ToolViewFactory.addLabel(box, "Speed: 1.0");
+        TextView rateLabel = ToolViewFactory.addLabel(box, PackRes.str("media", R.string.s_speed_1_0, "Speed: 1.0"));
         SeekBar rateBar = new SeekBar(context);
         rateBar.setMax(150);
         rateBar.setProgress(50);
@@ -77,22 +79,22 @@ public class TtsTool extends BaseToolPlugin {
         final float[] pitch = new float[]{1.0f};
         final float[] rate = new float[]{1.0f};
         final TextView status = ToolViewFactory.makeOutput(box);
-        status.setText("Engine starting...");
+        status.setText(PackRes.str("media", R.string.s_engine_starting, "Engine starting..."));
         try {
             ttsEngine = new TextToSpeech(context.getApplicationContext(), code -> {
                 try {
                     if (code == TextToSpeech.SUCCESS) {
                         ttsEngine.setLanguage(Locale.US);
-                        status.setText("Ready");
+                        status.setText(PackRes.str("media", R.string.s_ready, "Ready"));
                     } else {
-                        status.setText("Engine failed");
+                        status.setText(PackRes.str("media", R.string.s_engine_failed, "Engine failed"));
                     }
                 } catch (Exception e) {
-                    status.setText("Engine failed");
+                    status.setText(PackRes.str("media", R.string.s_engine_failed, "Engine failed"));
                 }
             });
         } catch (Exception e) {
-            status.setText("Engine failed");
+            status.setText(PackRes.str("media", R.string.s_engine_failed, "Engine failed"));
         }
         pitchBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
@@ -115,16 +117,16 @@ public class TtsTool extends BaseToolPlugin {
             }
         });
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton speakBtn = ToolViewFactory.makeRowButton(row, "Speak", 1f);
-        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, "Stop", 1f);
+        MaterialButton speakBtn = ToolViewFactory.makeRowButton(row, PackRes.str("media", R.string.s_speak, "Speak"), 1f);
+        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, PackRes.str("media", R.string.s_stop, "Stop"), 1f);
         speakBtn.setOnClickListener(v -> {
             String t = input.getText().toString().trim();
             if (t.isEmpty()) {
-                ToolViewFactory.toast(context, "Enter text first");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_enter_text_first, "Enter text first"));
                 return;
             }
             if (ttsEngine == null) {
-                ToolViewFactory.toast(context, "Engine not ready");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_engine_not_ready, "Engine not ready"));
                 return;
             }
             try {
@@ -136,7 +138,7 @@ public class TtsTool extends BaseToolPlugin {
                     ttsEngine.speak(t, TextToSpeech.QUEUE_FLUSH, null);
                 }
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Speak failed");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_speak_failed, "Speak failed"));
             }
         });
         stopBtn.setOnClickListener(v -> {
@@ -148,17 +150,17 @@ public class TtsTool extends BaseToolPlugin {
             }
         });
         LinearLayout ttsRow2 = ToolViewFactory.makeRow(box);
-        MaterialButton saveAudioBtn = ToolViewFactory.makeRowButton(ttsRow2, "Save audio", 1f);
-        MaterialButton shareAudioBtn = ToolViewFactory.makeRowButton(ttsRow2, "Share audio", 1f);
-        MaterialButton openAudioBtn = ToolViewFactory.makeRowButton(ttsRow2, "Open file", 1f);
+        MaterialButton saveAudioBtn = ToolViewFactory.makeRowButton(ttsRow2, PackRes.str("media", R.string.s_save_audio, "Save audio"), 1f);
+        MaterialButton shareAudioBtn = ToolViewFactory.makeRowButton(ttsRow2, PackRes.str("media", R.string.s_share_audio, "Share audio"), 1f);
+        MaterialButton openAudioBtn = ToolViewFactory.makeRowButton(ttsRow2, PackRes.str("media", R.string.s_open_file, "Open file"), 1f);
         saveAudioBtn.setOnClickListener(v -> {
             String t = input.getText().toString().trim();
             if (t.isEmpty()) {
-                ToolViewFactory.toast(context, "Enter text first");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_enter_text_first, "Enter text first"));
                 return;
             }
             if (ttsEngine == null) {
-                ToolViewFactory.toast(context, "Engine not ready");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_engine_not_ready, "Engine not ready"));
                 return;
             }
             try {
@@ -174,7 +176,7 @@ public class TtsTool extends BaseToolPlugin {
                     rc = ttsEngine.synthesizeToFile(t, null, out.getAbsolutePath());
                 }
                 if (rc != TextToSpeech.SUCCESS) {
-                    ToolViewFactory.toast(context, "Save failed");
+                    ToolViewFactory.toast(context, PackRes.str("media", R.string.s_save_failed, "Save failed"));
                     return;
                 }
                 status.setText("Saving " + out.getName());
@@ -185,21 +187,21 @@ public class TtsTool extends BaseToolPlugin {
                         if (out.exists() && out.length() > 0) {
                             ttsLastFile = out;
                             status.setText("Saved " + out.getName());
-                            ToolViewFactory.toast(context, "Audio saved");
+                            ToolViewFactory.toast(context, PackRes.str("media", R.string.s_audio_saved, "Audio saved"));
                         } else if (tries < 40) {
                             handler.postDelayed(this, 500);
                         } else {
-                            status.setText("Save timed out");
+                            status.setText(PackRes.str("media", R.string.s_save_timed_out, "Save timed out"));
                         }
                     }
                 }, 500);
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Save failed");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_save_failed, "Save failed"));
             }
         });
         shareAudioBtn.setOnClickListener(v -> {
             if (ttsLastFile != null && ttsLastFile.exists()) shareFile(context, ttsLastFile, "audio/*");
-            else ToolViewFactory.toast(context, "Save audio first");
+            else ToolViewFactory.toast(context, PackRes.str("media", R.string.s_save_audio_first, "Save audio first"));
         });
         openAudioBtn.setOnClickListener(v -> {
             if (ttsLastFile != null && ttsLastFile.exists()) {
@@ -210,10 +212,10 @@ public class TtsTool extends BaseToolPlugin {
                     i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     context.startActivity(Intent.createChooser(i, "Open audio"));
                 } catch (Exception e) {
-                    ToolViewFactory.toast(context, "Open failed");
+                    ToolViewFactory.toast(context, PackRes.str("media", R.string.s_open_failed, "Open failed"));
                 }
             } else {
-                ToolViewFactory.toast(context, "Save audio first");
+                ToolViewFactory.toast(context, PackRes.str("media", R.string.s_save_audio_first, "Save audio first"));
             }
         });
         return box;

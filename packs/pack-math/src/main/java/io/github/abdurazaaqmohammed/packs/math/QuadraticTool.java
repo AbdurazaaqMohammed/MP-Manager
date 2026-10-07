@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -28,19 +30,19 @@ public class QuadraticTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Quadratic Solver");
-        ToolViewFactory.addLabel(box, "Solves a x squared plus b x plus c equals 0.");
-        EditText aInput = ToolViewFactory.makeInput(box, "a",
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_quadratic_solver, "Quadratic Solver"));
+        ToolViewFactory.addLabel(box, PackRes.str("math", R.string.s_solves_a_x_squared_plus_b_x_plus_c_equals_0, "Solves a x squared plus b x plus c equals 0."));
+        EditText aInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_a, "a"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        aInput.setText("1");
-        EditText bInput = ToolViewFactory.makeInput(box, "b",
+        aInput.setText(PackRes.str("math", R.string.s_1, "1"));
+        EditText bInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_b, "b"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        bInput.setText("-3");
-        EditText cInput = ToolViewFactory.makeInput(box, "c",
+        bInput.setText(PackRes.str("math", R.string.s_3, "-3"));
+        EditText cInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_c, "c"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        cInput.setText("2");
+        cInput.setText(PackRes.str("math", R.string.s_2, "2"));
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Solve");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_solve, "Solve"));
         goBtn.setOnClickListener(v -> {
             try {
                 double a = Double.parseDouble(aInput.getText().toString());
@@ -49,7 +51,7 @@ public class QuadraticTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.####");
                 if (a == 0) {
                     if (b == 0) {
-                        output.setText("Not an equation");
+                        output.setText(PackRes.str("math", R.string.s_not_an_equation, "Not an equation"));
                     } else {
                         output.setText("Linear root x = " + df.format(-c / b));
                     }
@@ -74,7 +76,7 @@ public class QuadraticTool extends BaseToolPlugin {
                 sb.append("Vertex (").append(df.format(vx)).append(", ").append(df.format(vy)).append(")");
                 output.setText(sb.toString());
             } catch (Exception e) {
-                output.setText("Enter a, b and c");
+                output.setText(PackRes.str("math", R.string.s_enter_a_b_and_c, "Enter a, b and c"));
             }
         });
         return box;

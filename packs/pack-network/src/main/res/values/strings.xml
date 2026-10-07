@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_bluetooth">View bonded devices</string>
+    <string name="subtitle_connectivity">Network, Bluetooth, NFC info</string>
+    <string name="subtitle_network">Connectivity hub, radios, QR tools</string>
+    <string name="subtitle_nfc">Scan NFC tags</string>
+    <string name="subtitle_qrgen">Text, URL, Wi-Fi to QR</string>
+    <string name="subtitle_qrscan">Scan barcodes with camera</string>
+    <string name="title_bluetooth">Bluetooth Pairs</string>
+    <string name="title_connectivity">Connectivity Hub</string>
+    <string name="title_network">Network Tools</string>
+    <string name="title_nfc">NFC Reader</string>
+    <string name="title_qrgen">QR Generator</string>
+    <string name="title_qrscan">QR Scanner</string>
+</resources>

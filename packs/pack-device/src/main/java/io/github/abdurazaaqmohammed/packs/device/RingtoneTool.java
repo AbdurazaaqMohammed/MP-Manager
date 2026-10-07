@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.database.Cursor;
 import android.media.Ringtone;
@@ -36,7 +38,7 @@ public class RingtoneTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Ringtone Preview");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_ringtone_preview, "Ringtone Preview"));
         String[] types = new String[]{"Ringtones", "Alarms", "Notifications"};
         int[] typeVals = new int[]{RingtoneManager.TYPE_RINGTONE, RingtoneManager.TYPE_ALARM, RingtoneManager.TYPE_NOTIFICATION};
         Spinner typeSpinner = new Spinner(context);
@@ -88,10 +90,10 @@ public class RingtoneTool extends BaseToolPlugin {
                 current = RingtoneManager.getRingtone(context, uris.get(position));
                 current.play();
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Play failed");
+                ToolViewFactory.toast(context, PackRes.str("device", R.string.s_play_failed, "Play failed"));
             }
         });
-        MaterialButton stopBtn = ToolViewFactory.makeButton(box, "Stop preview");
+        MaterialButton stopBtn = ToolViewFactory.makeButton(box, PackRes.str("device", R.string.s_stop_preview, "Stop preview"));
         stopBtn.setOnClickListener(v -> {
             try {
                 if (current != null) {

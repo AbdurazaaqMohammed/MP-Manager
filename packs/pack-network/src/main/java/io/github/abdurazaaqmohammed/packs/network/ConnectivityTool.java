@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.network;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -121,11 +123,11 @@ public class ConnectivityTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Connectivity Hub");
+        ToolViewFactory.addTitle(box, PackRes.str("network", R.string.s_connectivity_hub, "Connectivity Hub"));
         LinearLayout net = ToolViewFactory.container(context);
         box.addView(net);
         TextView netTitle = new TextView(context);
-        netTitle.setText("Network");
+        netTitle.setText(PackRes.str("network", R.string.s_network, "Network"));
         netTitle.setTextSize(16);
         netTitle.setTypeface(null, Typeface.BOLD);
         net.addView(netTitle);
@@ -136,7 +138,7 @@ public class ConnectivityTool extends BaseToolPlugin {
         LinearLayout data = ToolViewFactory.container(context);
         box.addView(data);
         TextView dataTitle = new TextView(context);
-        dataTitle.setText("Data usage");
+        dataTitle.setText(PackRes.str("network", R.string.s_data_usage, "Data usage"));
         dataTitle.setTextSize(16);
         dataTitle.setTypeface(null, Typeface.BOLD);
         data.addView(dataTitle);
@@ -150,15 +152,15 @@ public class ConnectivityTool extends BaseToolPlugin {
         };
         refresh.run();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton r = ToolViewFactory.makeRowButton(row, "Refresh", 1f);
-        MaterialButton c = ToolViewFactory.makeRowButton(row, "Copy", 1f);
+        MaterialButton r = ToolViewFactory.makeRowButton(row, PackRes.str("network", R.string.s_refresh, "Refresh"), 1f);
+        MaterialButton c = ToolViewFactory.makeRowButton(row, PackRes.str("network", R.string.s_copy, "Copy"), 1f);
         r.setOnClickListener(v -> refresh.run());
-        c.setOnClickListener(v -> ToolViewFactory.copyText(context, "connectivity",
+        c.setOnClickListener(v -> ToolViewFactory.copyText(context, PackRes.str("network", R.string.s_connectivity, "connectivity"),
                 netText.getText() + "\n\n" + dataText.getText()));
-        ToolViewFactory.addLabel(box, "Short-range radios");
+        ToolViewFactory.addLabel(box, PackRes.str("network", R.string.s_short_range_radios, "Short-range radios"));
         LinearLayout row2 = ToolViewFactory.makeRow(box);
-        MaterialButton btBtn = ToolViewFactory.makeRowButton(row2, "Bluetooth pairs", 1f);
-        MaterialButton nfcBtn = ToolViewFactory.makeRowButton(row2, "NFC reader", 1f);
+        MaterialButton btBtn = ToolViewFactory.makeRowButton(row2, PackRes.str("network", R.string.s_bluetooth_pairs, "Bluetooth pairs"), 1f);
+        MaterialButton nfcBtn = ToolViewFactory.makeRowButton(row2, PackRes.str("network", R.string.s_nfc_reader, "NFC reader"), 1f);
         btBtn.setOnClickListener(v -> openTool(context, "bluetooth", "Bluetooth Pairs"));
         nfcBtn.setOnClickListener(v -> openTool(context, "nfc", "NFC Reader"));
         return box;

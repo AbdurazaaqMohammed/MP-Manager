@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.Gravity;
@@ -39,11 +41,11 @@ public class FractionTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Fraction Calculator");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_fraction_calculator, "Fraction Calculator"));
         LinearLayout row1 = ToolViewFactory.makeRow(box);
         EditText aInput = cell(context, row1, "1");
         TextView slash1 = new TextView(context);
-        slash1.setText("—");
+        slash1.setText(PackRes.str("math", R.string.s_x_2, "—"));
         slash1.setGravity(Gravity.CENTER);
         slash1.setTextSize(20);
         row1.addView(slash1, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.4f));
@@ -57,13 +59,13 @@ public class FractionTool extends BaseToolPlugin {
         LinearLayout row2 = ToolViewFactory.makeRow(box);
         EditText cInput = cell(context, row2, "1");
         TextView slash2 = new TextView(context);
-        slash2.setText("—");
+        slash2.setText(PackRes.str("math", R.string.s_x_2, "—"));
         slash2.setGravity(Gravity.CENTER);
         slash2.setTextSize(20);
         row2.addView(slash2, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.4f));
         EditText dInput = cell(context, row2, "3");
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton goBtn = ToolViewFactory.makeButton(box, "Calculate");
+        MaterialButton goBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate, "Calculate"));
         goBtn.setOnClickListener(v -> {
             try {
                 long a = Long.parseLong(aInput.getText().toString().trim());
@@ -71,7 +73,7 @@ public class FractionTool extends BaseToolPlugin {
                 long c = Long.parseLong(cInput.getText().toString().trim());
                 long d = Long.parseLong(dInput.getText().toString().trim());
                 if (b == 0 || d == 0) {
-                    output.setText("Denominator cannot be 0");
+                    output.setText(PackRes.str("math", R.string.s_denominator_cannot_be_0, "Denominator cannot be 0"));
                     return;
                 }
                 long num;
@@ -88,7 +90,7 @@ public class FractionTool extends BaseToolPlugin {
                     den = b * d;
                 } else {
                     if (c == 0) {
-                        output.setText("Cannot divide by zero");
+                        output.setText(PackRes.str("math", R.string.s_cannot_divide_by_zero, "Cannot divide by zero"));
                         return;
                     }
                     num = a * d;
@@ -104,7 +106,7 @@ public class FractionTool extends BaseToolPlugin {
                 DecimalFormat df = new DecimalFormat("0.####");
                 output.setText(num + " / " + den + "  =  " + df.format((double) num / den));
             } catch (Exception e) {
-                output.setText("Enter four integers");
+                output.setText(PackRes.str("math", R.string.s_enter_four_integers, "Enter four integers"));
             }
         });
         return box;

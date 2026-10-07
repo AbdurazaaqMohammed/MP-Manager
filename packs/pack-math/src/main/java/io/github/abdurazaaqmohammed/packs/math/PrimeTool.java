@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.View;
@@ -29,16 +31,16 @@ public class PrimeTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Prime Tools");
-        EditText input = ToolViewFactory.makeInput(box, "Number up to 1000000000", InputType.TYPE_CLASS_NUMBER);
-        input.setText("97");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_prime_tools, "Prime Tools"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_number_up_to_1000000000, "Number up to 1000000000"), InputType.TYPE_CLASS_NUMBER);
+        input.setText(PackRes.str("math", R.string.s_97, "97"));
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton checkBtn = ToolViewFactory.makeButton(box, "Check prime and factorize");
+        MaterialButton checkBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_check_prime_and_factorize, "Check prime and factorize"));
         checkBtn.setOnClickListener(v -> {
             try {
                 long n = Long.parseLong(input.getText().toString().trim());
                 if (n < 0 || n > 1000000000L) {
-                    output.setText("Enter 0 to 1000000000");
+                    output.setText(PackRes.str("math", R.string.s_enter_0_to_1000000000, "Enter 0 to 1000000000"));
                     return;
                 }
                 StringBuilder b = new StringBuilder();
@@ -49,15 +51,15 @@ public class PrimeTool extends BaseToolPlugin {
                 }
                 output.setText(b.toString());
             } catch (Exception e) {
-                output.setText("Enter an integer");
+                output.setText(PackRes.str("math", R.string.s_enter_an_integer, "Enter an integer"));
             }
         });
-        MaterialButton listBtn = ToolViewFactory.makeButton(box, "List primes up to N (max 10000)");
+        MaterialButton listBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_list_primes_up_to_n_max_10000, "List primes up to N (max 10000)"));
         listBtn.setOnClickListener(v -> {
             try {
                 int n = Integer.parseInt(input.getText().toString().trim());
                 if (n < 2 || n > 10000) {
-                    output.setText("Enter 2 to 10000");
+                    output.setText(PackRes.str("math", R.string.s_enter_2_to_10000, "Enter 2 to 10000"));
                     return;
                 }
                 List<Integer> primes = Primes.listUpTo(n);
@@ -70,7 +72,7 @@ public class PrimeTool extends BaseToolPlugin {
                 }
                 output.setText(primes.size() + " primes\n" + b);
             } catch (Exception e) {
-                output.setText("Enter an integer");
+                output.setText(PackRes.str("math", R.string.s_enter_an_integer, "Enter an integer"));
             }
         });
         return box;

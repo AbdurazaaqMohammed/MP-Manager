@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -39,14 +41,14 @@ public class LevelTool extends BaseToolPlugin {
     private void startSensors() {
         if (sensorManager == null) {
             if (levelText != null) {
-                levelText.setText("No sensors on this device");
+                levelText.setText(PackRes.str("device", R.string.s_no_sensors_on_this_device, "No sensors on this device"));
             }
             return;
         }
         Sensor accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         if (accel == null) {
             if (levelText != null) {
-                levelText.setText("Accelerometer not available");
+                levelText.setText(PackRes.str("device", R.string.s_accelerometer_not_available, "Accelerometer not available"));
             }
             return;
         }
@@ -78,7 +80,7 @@ public class LevelTool extends BaseToolPlugin {
             sensorManager.registerListener(listener, accel, SensorManager.SENSOR_DELAY_UI);
         } catch (Exception e) {
             if (levelText != null) {
-                levelText.setText("Sensor error");
+                levelText.setText(PackRes.str("device", R.string.s_sensor_error, "Sensor error"));
             }
         }
     }
@@ -87,12 +89,12 @@ public class LevelTool extends BaseToolPlugin {
     public View createView(Context context, ViewGroup container) {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Bubble Level");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_bubble_level, "Bubble Level"));
         levelView = new LevelView(context);
         box.addView(levelView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 220)));
         levelText = ToolViewFactory.makeOutput(box);
-        levelText.setText("Waiting for sensors");
+        levelText.setText(PackRes.str("device", R.string.s_waiting_for_sensors, "Waiting for sensors"));
         levelText.setGravity(Gravity.CENTER);
         startSensors();
         return box;

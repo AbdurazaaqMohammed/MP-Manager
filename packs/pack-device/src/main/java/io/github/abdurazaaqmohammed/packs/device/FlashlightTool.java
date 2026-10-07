@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
@@ -155,7 +157,7 @@ public class FlashlightTool extends BaseToolPlugin {
                     new String[]{Manifest.permission.CAMERA}, 9001);
         } catch (Exception ignored) {
         }
-        ToolViewFactory.toast(host, "Camera permission needed, then tap again");
+        ToolViewFactory.toast(host, PackRes.str("device", R.string.s_camera_permission_needed_then_tap_again, "Camera permission needed, then tap again"));
     }
 
     private void setTorchSilent(boolean on) {
@@ -389,7 +391,7 @@ public class FlashlightTool extends BaseToolPlugin {
         page.setOrientation(LinearLayout.VERTICAL);
         int pad = ToolViewFactory.dp(context, 16);
         page.setPadding(pad, pad, pad, pad);
-        ToolViewFactory.addLabel(page, "Camera flash torch");
+        ToolViewFactory.addLabel(page, PackRes.str("device", R.string.s_camera_flash_torch, "Camera flash torch"));
         torchPower = new MaterialButton(context);
         torchPower.setTextSize(20);
         torchPower.setAllCaps(false);
@@ -464,7 +466,7 @@ public class FlashlightTool extends BaseToolPlugin {
     private void refreshTorchInfo() {
         if (torchInfo == null) return;
         if (torchCameraId == null) {
-            torchInfo.setText("No flash found on this device");
+            torchInfo.setText(PackRes.str("device", R.string.s_no_flash_found_on_this_device, "No flash found on this device"));
         } else {
             torchInfo.setText("Flash: camera " + torchCameraId
                     + (torchMaxStrength > 1 ? "  •  " + torchMaxStrength + " brightness levels" : ""));
@@ -480,7 +482,7 @@ public class FlashlightTool extends BaseToolPlugin {
             return;
         }
         if (Build.VERSION.SDK_INT < 23 || torchCameraId == null) {
-            ToolViewFactory.toast(host, "Flash not available");
+            ToolViewFactory.toast(host, PackRes.str("device", R.string.s_flash_not_available, "Flash not available"));
             return;
         }
         if (!hasCameraPerm()) {
@@ -538,7 +540,7 @@ public class FlashlightTool extends BaseToolPlugin {
         page.setOrientation(LinearLayout.VERTICAL);
         int spad = ToolViewFactory.dp(context, 16);
         page.setPadding(spad, spad, spad, spad);
-        ToolViewFactory.addLabel(page, "Whole display becomes the light");
+        ToolViewFactory.addLabel(page, PackRes.str("device", R.string.s_whole_display_becomes_the_light, "Whole display becomes the light"));
         screenPreview = new View(context);
         screenPreview.setBackgroundColor(screenColor);
         screenPreview.setMinimumHeight(ToolViewFactory.dp(context, 72));
@@ -610,7 +612,7 @@ public class FlashlightTool extends BaseToolPlugin {
                     }
                 });
         MaterialButton show = new MaterialButton(context);
-        show.setText("Show full-screen light");
+        show.setText(PackRes.str("device", R.string.s_show_full_screen_light, "Show full-screen light"));
         show.setMinHeight(ToolViewFactory.dp(context, 64));
         show.setOnClickListener(v -> showScreenDialog());
         page.addView(show, new LinearLayout.LayoutParams(
@@ -628,7 +630,7 @@ public class FlashlightTool extends BaseToolPlugin {
         root.setBackgroundColor(color);
         root.setClickable(true);
         TextView pill = new TextView(host);
-        pill.setText("Tap anywhere to turn off");
+        pill.setText(PackRes.str("device", R.string.s_tap_anywhere_to_turn_off, "Tap anywhere to turn off"));
         pill.setTextColor(Color.WHITE);
         pill.setTextSize(14);
         pill.setGravity(Gravity.CENTER);
@@ -733,11 +735,11 @@ public class FlashlightTool extends BaseToolPlugin {
         warn.setTextSize(13);
         warn.setAlpha(0.8f);
         page.addView(warn);
-        ToolViewFactory.addLabel(page, "Pattern");
+        ToolViewFactory.addLabel(page, PackRes.str("device", R.string.s_pattern, "Pattern"));
         TextInputLayout layout =
                 new TextInputLayout(context, null,
                         com.google.android.material.R.attr.textInputOutlinedExposedDropdownMenuStyle);
-        layout.setHint("Pattern");
+        layout.setHint(PackRes.str("device", R.string.s_pattern, "Pattern"));
         MaterialAutoCompleteTextView field =
                 new MaterialAutoCompleteTextView(
                         layout.getContext());
@@ -814,7 +816,7 @@ public class FlashlightTool extends BaseToolPlugin {
         morseRow.setVisibility(patternIndex == 3 ? View.VISIBLE : View.GONE);
         TextInputLayout ml =
                 new TextInputLayout(context);
-        ml.setHint("Text to flash (A-Z 0-9)");
+        ml.setHint(PackRes.str("device", R.string.s_text_to_flash_a_z_0_9, "Text to flash (A-Z 0-9)"));
         TextInputEditText me =
                 new TextInputEditText(ml.getContext());
         me.setText(morseText);
@@ -873,7 +875,7 @@ public class FlashlightTool extends BaseToolPlugin {
 
     private void startBlink() {
         if (Build.VERSION.SDK_INT < 23 || torchCameraId == null) {
-            ToolViewFactory.toast(host, "Flash not available");
+            ToolViewFactory.toast(host, PackRes.str("device", R.string.s_flash_not_available, "Flash not available"));
             return;
         }
         if (!hasCameraPerm()) {
@@ -886,7 +888,7 @@ public class FlashlightTool extends BaseToolPlugin {
         }
         timeline = buildTimeline();
         if (timeline.length == 0) {
-            ToolViewFactory.toast(host, "Nothing to flash");
+            ToolViewFactory.toast(host, PackRes.str("device", R.string.s_nothing_to_flash, "Nothing to flash"));
             return;
         }
         blinkRunning = true;

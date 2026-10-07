@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -78,7 +80,7 @@ public class TallyTool extends BaseToolPlugin {
                 ToolViewFactory.dp(context, 8), ToolViewFactory.dp(context, 8));
 
         EditText nameInput = new EditText(context);
-        nameInput.setHint("Counter name");
+        nameInput.setHint(PackRes.str("math", R.string.s_counter_name, "Counter name"));
         nameInput.setText(prefs().getString("tally_name", ""));
         nameInput.setSingleLine(true);
         nameInput.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -264,7 +266,7 @@ public class TallyTool extends BaseToolPlugin {
 
     private void undo() {
         if (lastCount < 0) {
-            ToolViewFactory.toast(host, "Nothing to undo");
+            ToolViewFactory.toast(host, PackRes.str("math", R.string.s_nothing_to_undo, "Nothing to undo"));
             return;
         }
         count = lastCount;
@@ -275,21 +277,21 @@ public class TallyTool extends BaseToolPlugin {
 
     private void confirmReset() {
         new MaterialAlertDialogBuilder(host)
-                .setTitle("Reset count?")
-                .setMessage("This will set the counter back to 0.")
-                .setPositiveButton("Reset", (d, w) -> {
+                .setTitle(PackRes.str("math", R.string.s_reset_count, "Reset count?"))
+                .setMessage(PackRes.str("math", R.string.s_this_will_set_the_counter_back_to_0, "This will set the counter back to 0."))
+                .setPositiveButton(PackRes.str("math", R.string.s_reset, "Reset"), (d, w) -> {
                     lastCount = count;
                     count = 0;
                     prefs().edit().putInt("tally_count", 0).apply();
                     render();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(PackRes.str("math", R.string.s_cancel, "Cancel"), null)
                 .show();
     }
 
     private void copy() {
         String name = prefs().getString("tally_name", "");
-        ToolViewFactory.copyText(host, "count",
+        ToolViewFactory.copyText(host, PackRes.str("math", R.string.s_count, "count"),
                 (name == null || name.trim().isEmpty() ? "Count" : name.trim()) + ": " + count);
     }
 

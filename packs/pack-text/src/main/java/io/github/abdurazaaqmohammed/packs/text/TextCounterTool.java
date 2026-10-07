@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.text;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -27,12 +29,12 @@ public class TextCounterTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Text Counter");
-        EditText input = ToolViewFactory.makeInput(box, "Type or paste text",
+        ToolViewFactory.addTitle(box, PackRes.str("text", R.string.s_text_counter, "Text Counter"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("text", R.string.s_type_or_paste_text, "Type or paste text"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(5);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Chars: 0  Words: 0  Lines: 0");
+        output.setText(PackRes.str("text", R.string.s_chars_0_words_0_lines_0, "Chars: 0  Words: 0  Lines: 0"));
         input.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }

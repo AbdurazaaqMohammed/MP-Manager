@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -31,18 +33,18 @@ public class ProtractorTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Protractor");
-        ToolViewFactory.addLabel(box, "Touch the dial to measure an angle from 0 to 180 degrees.");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_protractor, "Protractor"));
+        ToolViewFactory.addLabel(box, PackRes.str("device", R.string.s_touch_the_dial_to_measure_an_angle_from_0_to_180, "Touch the dial to measure an angle from 0 to 180 degrees."));
         ProtractorView protractorView = new ProtractorView(context);
         box.addView(protractorView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 260)));
         TextView protractorText = ToolViewFactory.makeOutput(box);
-        protractorText.setText("Angle: 0 deg");
+        protractorText.setText(PackRes.str("device", R.string.s_angle_0_deg, "Angle: 0 deg"));
         protractorView.setListener(deg -> protractorText.setText("Angle: " + new DecimalFormat("0.0").format(deg) + " deg"));
-        MaterialButton resetBtn = ToolViewFactory.makeButton(box, "Reset");
+        MaterialButton resetBtn = ToolViewFactory.makeButton(box, PackRes.str("device", R.string.s_reset, "Reset"));
         resetBtn.setOnClickListener(v -> {
             protractorView.setAngle(0f);
-            protractorText.setText("Angle: 0 deg");
+            protractorText.setText(PackRes.str("device", R.string.s_angle_0_deg, "Angle: 0 deg"));
         });
         return box;
     }

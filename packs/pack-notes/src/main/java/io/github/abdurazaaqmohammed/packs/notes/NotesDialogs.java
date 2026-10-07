@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.notes;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.Gravity;
@@ -47,7 +49,7 @@ public class NotesDialogs {
         return new MaterialAlertDialogBuilder(context)
                 .setTitle(title)
                 .setItems(arr, (dialog, which) -> onItem.pick(which))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(PackRes.str("notes", R.string.s_cancel, "Cancel"), null)
                 .show();
     }
 
@@ -55,7 +57,7 @@ public class NotesDialogs {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(title)
                 .setMessage(body)
-                .setPositiveButton("OK", null)
+                .setPositiveButton(PackRes.str("notes", R.string.s_ok, "OK"), null)
                 .show();
     }
 
@@ -63,7 +65,7 @@ public class NotesDialogs {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(title)
                 .setMessage(body)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(PackRes.str("notes", R.string.s_cancel, "Cancel"), null)
                 .setPositiveButton(positive, (d, w) -> onYes.run())
                 .show();
     }
@@ -81,8 +83,8 @@ public class NotesDialogs {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(title)
                 .setView(box)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Save", (d, w) -> onText.accept(field.getText().toString()))
+                .setNegativeButton(PackRes.str("notes", R.string.s_cancel, "Cancel"), null)
+                .setPositiveButton(PackRes.str("notes", R.string.s_save, "Save"), (d, w) -> onText.accept(field.getText().toString()))
                 .show();
     }
 
@@ -91,7 +93,7 @@ public class NotesDialogs {
         field.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         field.setMaxLines(1);
         field.setGravity(Gravity.CENTER);
-        field.setHint("\u2022\u2022\u2022\u2022");
+        field.setHint(PackRes.str("notes", R.string.s_u2022_u2022_u2022_u2022, "\u2022\u2022\u2022\u2022"));
         field.setTextSize(22);
         field.setBackground(NotesUi.stroke(NotesUi.surfaceHigh(context),
                 NotesUi.withAlpha(accent, 120), NotesUi.dp(context, 14), NotesUi.dp(context, 1)));
@@ -110,8 +112,8 @@ public class NotesDialogs {
                 .setTitle(title)
                 .setView(box)
                 .setCancelable(false)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Continue", (d, w) -> onPin.accept(field.getText().toString()))
+                .setNegativeButton(PackRes.str("notes", R.string.s_cancel, "Cancel"), null)
+                .setPositiveButton(PackRes.str("notes", R.string.s_continue, "Continue"), (d, w) -> onPin.accept(field.getText().toString()))
                 .show();
     }
 
@@ -129,8 +131,8 @@ public void colors(String title, int selected, final OnColor onColor) {
                 new MaterialAlertDialogBuilder(context)
                         .setTitle(title)
                         .setView(grid)
-                        .setNegativeButton("No colour", (d, w) -> onColor.accept(-1))
-                        .setPositiveButton("Done", null)
+                        .setNegativeButton(PackRes.str("notes", R.string.s_no_colour, "No colour"), (d, w) -> onColor.accept(-1))
+                        .setPositiveButton(PackRes.str("notes", R.string.s_done, "Done"), null)
                         .create();
         for (int i = 0; i < NotesUi.NOTE_COLORS.length; i++) {
             final int index = i;
@@ -160,9 +162,9 @@ public void colors(String title, int selected, final OnColor onColor) {
                 new MaterialAlertDialogBuilder(context)
                         .setTitle(title)
                         .setView(box)
-                        .setNeutralButton("New tag", null)
-                        .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Done", null)
+                        .setNeutralButton(PackRes.str("notes", R.string.s_new_tag, "New tag"), null)
+                        .setNegativeButton(PackRes.str("notes", R.string.s_cancel, "Cancel"), null)
+                        .setPositiveButton(PackRes.str("notes", R.string.s_done, "Done"), null)
                         .create();
         for (String tag : available) {
             TextView chip = NotesUi.label(context, "#" + tag, 14, accent);

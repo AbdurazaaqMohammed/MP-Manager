@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.random;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.InputType;
 import android.view.Gravity;
@@ -29,22 +31,22 @@ public class RandomTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Randomizer");
-        EditText minInput = ToolViewFactory.makeInput(box, "Min",
+        ToolViewFactory.addTitle(box, PackRes.str("random", R.string.s_randomizer, "Randomizer"));
+        EditText minInput = ToolViewFactory.makeInput(box, PackRes.str("random", R.string.s_min, "Min"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText maxInput = ToolViewFactory.makeInput(box, "Max",
+        EditText maxInput = ToolViewFactory.makeInput(box, PackRes.str("random", R.string.s_max, "Max"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        minInput.setText("1");
-        maxInput.setText("100");
+        minInput.setText(PackRes.str("random", R.string.s_1, "1"));
+        maxInput.setText(PackRes.str("random", R.string.s_100, "100"));
         TextView output = ToolViewFactory.makeOutput(box);
         output.setTextSize(40);
         output.setGravity(Gravity.CENTER);
-        output.setText("-");
+        output.setText(PackRes.str("random", R.string.s_x_3, "-"));
         Random random = new Random();
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton numBtn = ToolViewFactory.makeRowButton(row, "Number", 1f);
-        MaterialButton diceBtn = ToolViewFactory.makeRowButton(row, "Dice", 1f);
-        MaterialButton coinBtn = ToolViewFactory.makeRowButton(row, "Coin", 1f);
+        MaterialButton numBtn = ToolViewFactory.makeRowButton(row, PackRes.str("random", R.string.s_number, "Number"), 1f);
+        MaterialButton diceBtn = ToolViewFactory.makeRowButton(row, PackRes.str("random", R.string.s_dice, "Dice"), 1f);
+        MaterialButton coinBtn = ToolViewFactory.makeRowButton(row, PackRes.str("random", R.string.s_coin, "Coin"), 1f);
         numBtn.setOnClickListener(v -> {
             try {
                 int min = Integer.parseInt(minInput.getText().toString().trim());
@@ -57,7 +59,7 @@ public class RandomTool extends BaseToolPlugin {
                 output.setText(String.valueOf(min + random.nextInt(max - min + 1)));
                 ToolViewFactory.vibrateTick(context);
             } catch (Exception e) {
-                output.setText("?");
+                output.setText(PackRes.str("random", R.string.s_x_4, "?"));
             }
         });
         diceBtn.setOnClickListener(v -> {

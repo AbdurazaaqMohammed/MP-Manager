@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.network;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
@@ -54,14 +56,14 @@ public class QrScanTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "QR Scanner");
-        MaterialButton scanBtn = ToolViewFactory.makeButton(box, "Scan with camera");
+        ToolViewFactory.addTitle(box, PackRes.str("network", R.string.s_qr_scanner, "QR Scanner"));
+        MaterialButton scanBtn = ToolViewFactory.makeButton(box, PackRes.str("network", R.string.s_scan_with_camera, "Scan with camera"));
         scanBtn.setOnClickListener(v -> {
             try {
                 Activity activity = (Activity) context;
                 if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, 9005);
-                    ToolViewFactory.toast(context, "Camera permission needed, then tap Scan");
+                    ToolViewFactory.toast(context, PackRes.str("network", R.string.s_camera_permission_needed_then_tap_scan, "Camera permission needed, then tap Scan"));
                     return;
                 }
                 startQrScan(activity);
@@ -70,28 +72,28 @@ public class QrScanTool extends BaseToolPlugin {
             }
         });
         qrScanOutput = ToolViewFactory.makeOutput(box);
-        qrScanOutput.setText("No scan yet");
+        qrScanOutput.setText(PackRes.str("network", R.string.s_no_scan_yet, "No scan yet"));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, "Copy", 1f);
-        MaterialButton shareBtn = ToolViewFactory.makeRowButton(row, "Share", 1f);
+        MaterialButton copyBtn = ToolViewFactory.makeRowButton(row, PackRes.str("network", R.string.s_copy, "Copy"), 1f);
+        MaterialButton shareBtn = ToolViewFactory.makeRowButton(row, PackRes.str("network", R.string.s_share, "Share"), 1f);
         copyBtn.setOnClickListener(v -> {
             if (qrScanOutput != null) {
-                ToolViewFactory.copyText(context, "qr", qrScanOutput.getText().toString());
+                ToolViewFactory.copyText(context, PackRes.str("network", R.string.s_qr, "qr"), qrScanOutput.getText().toString());
             }
         });
         shareBtn.setOnClickListener(v -> {
             if (qrScanOutput == null) return;
             String text = qrScanOutput.getText().toString();
             if (text.isEmpty()) {
-                ToolViewFactory.toast(context, "Nothing to share");
+                ToolViewFactory.toast(context, PackRes.str("network", R.string.s_nothing_to_share, "Nothing to share"));
                 return;
             }
             Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
             context.startActivity(Intent.createChooser(share, "Share scan"));
         });
         // Manual entry fallback when the camera flow is unavailable.
-        EditText manual = ToolViewFactory.makeInput(box, "Or paste code text", InputType.TYPE_CLASS_TEXT);
-        MaterialButton manualBtn = ToolViewFactory.makeButton(box, "Use pasted text");
+        EditText manual = ToolViewFactory.makeInput(box, PackRes.str("network", R.string.s_or_paste_code_text, "Or paste code text"), InputType.TYPE_CLASS_TEXT);
+        MaterialButton manualBtn = ToolViewFactory.makeButton(box, PackRes.str("network", R.string.s_use_pasted_text, "Use pasted text"));
         manualBtn.setOnClickListener(v -> {
             if (qrScanOutput != null) {
                 qrScanOutput.setText(manual.getText().toString());

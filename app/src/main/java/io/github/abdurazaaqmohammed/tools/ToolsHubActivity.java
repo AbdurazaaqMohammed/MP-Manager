@@ -54,6 +54,7 @@ import io.github.abdurazaaqmohammed.plugins.packs.PackCatalog;
 import io.github.abdurazaaqmohammed.plugins.packs.PackDescriptor;
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
 import io.github.abdurazaaqmohammed.plugins.packs.PackPrompts;
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -71,13 +72,13 @@ public class ToolsHubActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tools_hub);
         toolbar = findViewById(R.id.tools_toolbar);
-        toolbar.setSubtitle("Loading");
+        toolbar.setSubtitle(getString(R.string.tools_hub_loading));
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
-        toolbar.getMenu().add("Theme").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-        toolbar.getMenu().add("Refresh packs").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        toolbar.getMenu().add(getString(R.string.tools_hub_theme)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        toolbar.getMenu().add(getString(R.string.tools_hub_refresh_packs)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         toolbar.setOnMenuItemClickListener(item -> {
-            if ("Refresh packs".contentEquals(item.getTitle())) {
+            if (getString(R.string.tools_hub_refresh_packs).contentEquals(item.getTitle())) {
                 refreshCatalog();
                 return true;
             }
@@ -117,13 +118,13 @@ public class ToolsHubActivity extends BaseActivity {
     }
 
     private void refreshCatalog() {
-        Toast.makeText(this, "Refreshing pack catalog…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.tools_hub_refreshing), Toast.LENGTH_SHORT).show();
         PackCatalog.refreshAsync(this, fresh -> runOnUiThread(() -> {
             if (fresh != null && !fresh.isEmpty()) {
                 catalog = fresh;
-                Toast.makeText(this, "Catalog updated", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.tools_hub_updated), Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "Could not refresh, keeping cached catalog", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.tools_hub_refresh_failed), Toast.LENGTH_SHORT).show();
             }
             rebuildPacks();
         }));
@@ -188,14 +189,15 @@ public class ToolsHubActivity extends BaseActivity {
             String digest = PluginHost.certDigest(this, ext.packageName);
             StringBuilder msg = new StringBuilder();
             msg.append(ext.packageName);
-            msg.append("\n\nCertificate (SHA-256):\n").append(shortDigest(digest));
-            msg.append("\n\nStatus: ").append(trusted ? "Trusted" : "Not trusted");
+            msg.append("\n\n").append(getString(R.string.tools_hub_certificate)).append("\n").append(shortDigest(digest));
+            msg.append("\n\n").append(getString(R.string.tools_hub_status)).append(" ")
+                    .append(getString(trusted ? R.string.tools_hub_trusted : R.string.tools_hub_not_trusted));
             AlertDialog.Builder builder =
                     new MaterialAlertDialogBuilder(this)
                             .setTitle(String.valueOf(ext.label))
                             .setMessage(msg.toString())
                             .setNegativeButton(android.R.string.cancel, null)
-                            .setNeutralButton("App info", (d, w) -> {
+                            .setNeutralButton(R.string.tools_hub_app_info, (d, w) -> {
                                 try {
                                     Intent info = new Intent(
                                             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -205,14 +207,14 @@ public class ToolsHubActivity extends BaseActivity {
                                 }
                             });
             if (trusted) {
-                builder.setPositiveButton("Disable", (d, w) -> {
+                builder.setPositiveButton(R.string.tools_hub_disable, (d, w) -> {
                     PluginHost.setTrusted(this, ext.packageName,
                             PluginHost.pinnedDigest(this, ext.packageName),
                             String.valueOf(ext.label), false);
                     rebuildPacks();
                 });
             } else {
-                builder.setPositiveButton("Trust", (d, w) -> {
+                builder.setPositiveButton(R.string.tools_hub_trust, (d, w) -> {
                     String fresh = PluginHost.certDigest(this, ext.packageName);
                     if (fresh != null) {
                         PluginHost.setTrusted(this, ext.packageName, fresh,
@@ -226,8 +228,8 @@ public class ToolsHubActivity extends BaseActivity {
         }
     }
 
-    private static String shortDigest(String hex) {
-        if (hex == null || hex.isEmpty()) return "(unavailable)";
+    private String shortDigest(String hex) {
+        if (hex == null || hex.isEmpty()) return getString(R.string.tools_hub_cert_unavailable);
         if (hex.length() <= 32) return hex;
         return hex.substring(0, 16) + "…" + hex.substring(hex.length() - 8);
     }
@@ -241,8 +243,8 @@ public class ToolsHubActivity extends BaseActivity {
                 installedTools += pack.tools.size();
             }
         }
-        toolbar.setSubtitle(allTools.size() + " included · " + installedTools
-                + " from " + installedPacks + "/" + catalog.size() + " packs");
+        toolbar.setSubtitle(getString(R.string.tools_hub_summary, allTools.size(), installedTools,
+                installedPacks, catalog.size()));
         if (adapter != null) {
             adapter.setRows(displayRows());
         }
@@ -251,7 +253,7 @@ public class ToolsHubActivity extends BaseActivity {
     private void bindPackCard(View card, PackDescriptor pack) {
         boolean installed = PackManager.isInstalled(this, pack.id);
         TextView title = card.findViewById(R.id.pack_title);
-        title.setText(pack.title + " (" + pack.tools.size() + ")  v" + pack.versionName);
+        title.setText(getString(R.string.tools_hub_pack_title, pack.title, pack.tools.size(), pack.versionName));
         boolean expanded = expandedPacks.contains(pack.id);
         ImageButton expand = card.findViewById(R.id.pack_expand);
         expand.setImageResource(expanded
@@ -266,9 +268,9 @@ public class ToolsHubActivity extends BaseActivity {
         TextView desc = card.findViewById(R.id.pack_description);
         desc.setText(pack.description);
         MaterialButton action = card.findViewById(R.id.pack_action);
-        action.setText(installed
-                ? (pack.version > PackManager.installedVersion(this, pack.id) ? "Update" : "Open")
-                : "Get");
+        action.setText(getString(installed
+                ? (pack.version > PackManager.installedVersion(this, pack.id) ? R.string.tools_hub_update : R.string.tools_hub_open)
+                : R.string.tools_hub_get));
 
         LinearLayout toolsBox = card.findViewById(R.id.pack_tools);
         toolsBox.removeAllViews();
@@ -284,9 +286,9 @@ public class ToolsHubActivity extends BaseActivity {
             remove.setOnClickListener(v -> {
                 new MaterialAlertDialogBuilder(this)
                         .setTitle(pack.title)
-                        .setMessage("Remove this pack and its " + pack.tools.size() + " tools?")
+                        .setMessage(getString(R.string.tools_hub_remove_msg, pack.tools.size()))
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton("Remove", (d, w) -> {
+                        .setPositiveButton(R.string.tools_hub_remove, (d, w) -> {
                             PackManager.uninstallPack(this, pack.id);
                             rebuildPacks();
                         })
@@ -326,11 +328,11 @@ public class ToolsHubActivity extends BaseActivity {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         texts.setLayoutParams(textsParams);
         TextView title = new TextView(this);
-        title.setText(tool.title);
+        title.setText(packToolTitle(tool));
         title.setTextSize(14);
         texts.addView(title);
         TextView sub = new TextView(this);
-        sub.setText(tool.subtitle);
+        sub.setText(packToolSubtitle(tool));
         sub.setTextSize(12);
         sub.setAlpha(0.6f);
         texts.addView(sub);
@@ -385,11 +387,11 @@ public class ToolsHubActivity extends BaseActivity {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.setAction("io.github.abdurazaaqmohammed.MPManager.TOOL_" + tool.id);
             intent.putExtra("tool_id", tool.id);
-            intent.putExtra("tool_title", tool.title);
+            intent.putExtra("tool_title", packToolTitle(tool));
             ShortcutInfo info =
                     new ShortcutInfo.Builder(this, "tool_" + tool.id)
-                            .setShortLabel(tool.title)
-                            .setLongLabel(tool.title + " — " + tool.subtitle)
+                            .setShortLabel(packToolTitle(tool))
+                            .setLongLabel(packToolTitle(tool) + " — " + packToolSubtitle(tool))
                             .setIcon(Icon.createWithResource(
                                     this, R.drawable.tools_24px))
                             .setIntent(intent)
@@ -407,19 +409,19 @@ public class ToolsHubActivity extends BaseActivity {
         props.selection_type = FilePickerDialog.FILE_SELECT;
         props.root = Environment.getExternalStorageDirectory();
         FilePickerDialog picker = new FilePickerDialog(this, props);
-        picker.setTitle("Pick " + pack.id + ".apk");
+        picker.setTitle(getString(R.string.tools_hub_pick_apk, pack.id));
         picker.setDialogSelectionListener(files -> {
             if (files == null || files.length == 0 || files[0] == null) return;
             File picked = new File(files[0]);
             if (!picked.getName().toLowerCase().endsWith(".apk")) {
-                Toast.makeText(this, "Not an APK file", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.tools_hub_not_apk), Toast.LENGTH_SHORT).show();
                 return;
             }
             new Thread(() -> {
                 String error = PackManager.installFromFile(this, pack, picked);
                 runOnUiThread(() -> {
                     if (error == null) {
-                        Toast.makeText(this, pack.title + " installed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, getString(R.string.tools_hub_installed_toast, pack.title), Toast.LENGTH_SHORT).show();
                         rebuildPacks();
                     } else {
                         Toast.makeText(this, error, Toast.LENGTH_LONG).show();
@@ -433,8 +435,18 @@ public class ToolsHubActivity extends BaseActivity {
     private void openPackTool(PackDescriptor pack, PackDescriptor.ToolMeta tool) {
         Intent intent = new Intent(this, ToolRunnerActivity.class);
         intent.putExtra("tool_id", tool.id);
-        intent.putExtra("tool_title", tool.title);
+        intent.putExtra("tool_title", packToolTitle(tool));
         startActivity(intent);
+    }
+
+    /** Localized tool title from the owning pack's strings.xml, else catalog text. */
+    static String packToolTitle(PackDescriptor.ToolMeta tool) {
+        return PackRes.str("title_" + tool.id, tool.title);
+    }
+
+    /** Localized tool subtitle from the owning pack's strings.xml, else catalog text. */
+    static String packToolSubtitle(PackDescriptor.ToolMeta tool) {
+        return PackRes.str("subtitle_" + tool.id, tool.subtitle);
     }
 
     private List<ToolRegistry.ToolItem> filterTools(String query) {
@@ -450,7 +462,7 @@ public class ToolsHubActivity extends BaseActivity {
     }
     private List<Object> buildRows(List<ToolRegistry.ToolItem> items) {
         Map<String, List<ToolRegistry.ToolItem>> grouped = new LinkedHashMap<>();
-        for (String cat : ToolRegistry.categoriesInOrder()) grouped.put(cat, new ArrayList<>());
+        for (String cat : ToolRegistry.categoriesInOrder(this)) grouped.put(cat, new ArrayList<>());
         for (ToolRegistry.ToolItem item : items) {
             List<ToolRegistry.ToolItem> bucket = grouped.get(item.category());
             if (bucket == null) {
@@ -526,9 +538,11 @@ public class ToolsHubActivity extends BaseActivity {
                     int count = 0;
                     for (int i = position + 1; i < rows.size()
                             && rows.get(i) instanceof PluginHost.ExternalPlugin; i++) count++;
-                    ((HeaderHolder) holder).label.setText("External plugins  (" + count + ")");
+                    ((HeaderHolder) holder).label.setText(
+                            ToolsHubActivity.this.getString(R.string.tools_hub_external_plugins_n, count));
                 } else if (row instanceof PacksSection) {
-                    ((HeaderHolder) holder).label.setText("Tool packs");
+                    ((HeaderHolder) holder).label.setText(
+                            ToolsHubActivity.this.getString(R.string.tools_hub_tool_packs));
                 } else {
                     String cat = (String) row;
                     int count = 0;
@@ -550,7 +564,8 @@ public class ToolsHubActivity extends BaseActivity {
                     trusted = PluginHost.isTrusted(h.card.getContext(), ext.packageName);
                 } catch (Exception ignored) {
                 }
-                h.subtitle.setText(ext.packageName + "  •  " + (trusted ? "Trusted" : "Not trusted"));
+                h.subtitle.setText(ext.packageName + "  •  " + ToolsHubActivity.this.getString(
+                        trusted ? R.string.tools_hub_trusted : R.string.tools_hub_not_trusted));
                 h.card.setOnClickListener(v -> showExternalDialog(ext));
             } else if (holder instanceof ToolViewHolder h) {
                 ToolRegistry.ToolItem item = (ToolRegistry.ToolItem) row;

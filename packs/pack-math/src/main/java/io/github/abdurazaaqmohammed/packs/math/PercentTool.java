@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -31,26 +33,26 @@ public class PercentTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Percentage Calculator");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_percentage_calculator, "Percentage Calculator"));
         RadioGroup modeGroup = new RadioGroup(context);
         modeGroup.setOrientation(RadioGroup.VERTICAL);
         RadioButton m1 = new RadioButton(context);
         m1.setId(View.generateViewId());
-        m1.setText("X percent of Y");
+        m1.setText(PackRes.str("math", R.string.s_x_percent_of_y, "X percent of Y"));
         RadioButton m2 = new RadioButton(context);
         m2.setId(View.generateViewId());
-        m2.setText("X is what percent of Y");
+        m2.setText(PackRes.str("math", R.string.s_x_is_what_percent_of_y, "X is what percent of Y"));
         RadioButton m3 = new RadioButton(context);
         m3.setId(View.generateViewId());
-        m3.setText("Percent change from X to Y");
+        m3.setText(PackRes.str("math", R.string.s_percent_change_from_x_to_y, "Percent change from X to Y"));
         modeGroup.addView(m1);
         modeGroup.addView(m2);
         modeGroup.addView(m3);
         modeGroup.check(m1.getId());
         box.addView(modeGroup);
-        EditText xInput = ToolViewFactory.makeInput(box, "X",
+        EditText xInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_x_3, "X"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        EditText yInput = ToolViewFactory.makeInput(box, "Y",
+        EditText yInput = ToolViewFactory.makeInput(box, PackRes.str("math", R.string.s_y, "Y"),
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         TextView output = ToolViewFactory.makeOutput(box);
         final int id1 = m1.getId();
@@ -65,19 +67,19 @@ public class PercentTool extends BaseToolPlugin {
                     output.setText(df.format(Money.percentOf(x, y)));
                 } else if (mode == id2) {
                     if (y == 0) {
-                        output.setText("Y must not be zero");
+                        output.setText(PackRes.str("math", R.string.s_y_must_not_be_zero, "Y must not be zero"));
                         return;
                     }
                     output.setText(df.format(Money.whatPercent(x, y)) + "%");
                 } else {
                     if (x == 0) {
-                        output.setText("X must not be zero");
+                        output.setText(PackRes.str("math", R.string.s_x_must_not_be_zero, "X must not be zero"));
                         return;
                     }
                     output.setText(df.format(Money.percentChange(x, y)) + "%");
                 }
             } catch (Exception e) {
-                output.setText("Enter X and Y");
+                output.setText(PackRes.str("math", R.string.s_enter_x_and_y, "Enter X and Y"));
             }
         };
         final Runnable computeRef = compute;

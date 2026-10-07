@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.network;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -159,10 +161,10 @@ public class NetworkSuiteTool extends BaseToolPlugin {
         segRow.setOrientation(LinearLayout.HORIZONTAL);
         MaterialButton genBtn = new MaterialButton(context, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        genBtn.setText("Generate");
+        genBtn.setText(PackRes.str("network", R.string.s_generate, "Generate"));
         MaterialButton scanBtn = new MaterialButton(context, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        scanBtn.setText("Scan");
+        scanBtn.setText(PackRes.str("network", R.string.s_scan, "Scan"));
         segRow.addView(genBtn, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         segRow.addView(scanBtn, new LinearLayout.LayoutParams(0,

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.media.AudioManager;
 import android.view.View;
@@ -26,11 +28,11 @@ public class VolumeTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Volume Panel");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_volume_panel, "Volume Panel"));
         AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (audio == null) {
             TextView t = ToolViewFactory.makeOutput(box);
-            t.setText("Audio service unavailable");
+            t.setText(PackRes.str("device", R.string.s_audio_service_unavailable, "Audio service unavailable"));
             return box;
         }
         int[] streams = new int[]{AudioManager.STREAM_MUSIC, AudioManager.STREAM_ALARM, AudioManager.STREAM_RING, AudioManager.STREAM_NOTIFICATION};
@@ -62,13 +64,13 @@ public class VolumeTool extends BaseToolPlugin {
             });
             box.addView(bar);
         }
-        MaterialButton muteBtn = ToolViewFactory.makeButton(box, "Mute music stream");
+        MaterialButton muteBtn = ToolViewFactory.makeButton(box, PackRes.str("device", R.string.s_mute_music_stream, "Mute music stream"));
         muteBtn.setOnClickListener(v -> {
             try {
                 audio.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
-                ToolViewFactory.toast(context, "Music muted, use sliders to restore");
+                ToolViewFactory.toast(context, PackRes.str("device", R.string.s_music_muted_use_sliders_to_restore, "Music muted, use sliders to restore"));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Failed");
+                ToolViewFactory.toast(context, PackRes.str("device", R.string.s_failed, "Failed"));
             }
         });
         return box;

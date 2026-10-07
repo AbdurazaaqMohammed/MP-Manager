@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.notes;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -93,7 +95,7 @@ public View build() {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         titleField = new TextInputEditText(context);
-        titleField.setHint("Title");
+        titleField.setHint(PackRes.str("notes", R.string.s_title, "Title"));
         titleField.setSingleLine(true);
         titleField.setText(note.title);
         titleField.setTextSize(22);
@@ -114,7 +116,7 @@ public View build() {
         bodyField.setLineSpacing(0f, settings.lineSpacing());
         bodyField.setTypeface(Typeface.create(settings.fontFamily(), Typeface.NORMAL));
         bodyField.setTextColor(NotesUi.onSurface(context));
-        bodyField.setHint("Start writing\u2026");
+        bodyField.setHint(PackRes.str("notes", R.string.s_start_writing_u2026, "Start writing\u2026"));
         bodyField.setHintTextColor(NotesUi.withAlpha(NotesUi.onSurfaceVariant(context), 130));
         bodyField.setPadding(NotesUi.dp(context, 18), NotesUi.dp(context, 4),
                 NotesUi.dp(context, 18), NotesUi.dp(context, 120));
@@ -323,7 +325,7 @@ private View buildChecklistPane() {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         MaterialButton add = new MaterialButton(context, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        add.setText("+  Add item");
+        add.setText(PackRes.str("notes", R.string.s_add_item, "+  Add item"));
         add.setTextSize(13);
         add.setOnClickListener(v -> {
             String body = note.plain();

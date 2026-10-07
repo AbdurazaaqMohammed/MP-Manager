@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.device;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
@@ -50,7 +52,7 @@ public class GpsTool extends BaseToolPlugin {
             locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         }
         if (locationManager == null) {
-            ToolViewFactory.toast(context, "Location unavailable");
+            ToolViewFactory.toast(context, PackRes.str("device", R.string.s_location_unavailable, "Location unavailable"));
             return;
         }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -58,12 +60,12 @@ public class GpsTool extends BaseToolPlugin {
                 ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 9003);
             } catch (Exception ignored) {
             }
-            ToolViewFactory.toast(context, "Location permission needed, then tap Start");
+            ToolViewFactory.toast(context, PackRes.str("device", R.string.s_location_permission_needed_then_tap_start, "Location permission needed, then tap Start"));
             return;
         }
         try {
             if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                ToolViewFactory.toast(context, "Enable GPS first");
+                ToolViewFactory.toast(context, PackRes.str("device", R.string.s_enable_gps_first, "Enable GPS first"));
             }
         } catch (Exception ignored) {
         }
@@ -100,7 +102,7 @@ public class GpsTool extends BaseToolPlugin {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, gpsListener);
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000, 5, gpsListener);
         } catch (Exception e) {
-            ToolViewFactory.toast(context, "GPS failed");
+            ToolViewFactory.toast(context, PackRes.str("device", R.string.s_gps_failed, "GPS failed"));
         }
     }
 
@@ -121,15 +123,15 @@ public class GpsTool extends BaseToolPlugin {
         gpsSum = 0;
         gpsCount = 0;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "GPS Speedometer");
+        ToolViewFactory.addTitle(box, PackRes.str("device", R.string.s_gps_speedometer, "GPS Speedometer"));
         gpsText = ToolViewFactory.makeOutput(box);
         gpsText.setTextSize(36);
         gpsText.setGravity(Gravity.CENTER);
-        gpsText.setText("0.0 km/h");
+        gpsText.setText(PackRes.str("device", R.string.s_0_0_km_h, "0.0 km/h"));
         LinearLayout row = ToolViewFactory.makeRow(box);
-        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, "Start", 1f);
-        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, "Stop", 1f);
-        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, "Reset", 1f);
+        MaterialButton startBtn = ToolViewFactory.makeRowButton(row, PackRes.str("device", R.string.s_start, "Start"), 1f);
+        MaterialButton stopBtn = ToolViewFactory.makeRowButton(row, PackRes.str("device", R.string.s_stop, "Stop"), 1f);
+        MaterialButton resetBtn = ToolViewFactory.makeRowButton(row, PackRes.str("device", R.string.s_reset, "Reset"), 1f);
         startBtn.setOnClickListener(v -> {
             gpsRunning = true;
             startGpsUpdates(context);
@@ -139,7 +141,7 @@ public class GpsTool extends BaseToolPlugin {
             gpsMax = 0;
             gpsSum = 0;
             gpsCount = 0;
-            gpsText.setText("0.0 km/h");
+            gpsText.setText(PackRes.str("device", R.string.s_0_0_km_h, "0.0 km/h"));
         });
         return box;
     }

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.media;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.graphics.Color;
 import android.media.AudioManager;
@@ -54,8 +56,8 @@ public class MetronomeTool extends BaseToolPlugin {
         metronomeBpm = 120;
         metronomeTick = null;
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Metronome");
-        TextView bpmLabel = ToolViewFactory.addLabel(box, "Tempo: 120 BPM");
+        ToolViewFactory.addTitle(box, PackRes.str("media", R.string.s_metronome, "Metronome"));
+        TextView bpmLabel = ToolViewFactory.addLabel(box, PackRes.str("media", R.string.s_tempo_120_bpm, "Tempo: 120 BPM"));
         SeekBar bpmBar = new SeekBar(context);
         bpmBar.setMax(210);
         bpmBar.setProgress(90);
@@ -65,7 +67,7 @@ public class MetronomeTool extends BaseToolPlugin {
         box.addView(metronomeFlash, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
         TextView beatText = ToolViewFactory.makeOutput(box);
         beatText.setGravity(Gravity.CENTER);
-        beatText.setText("Stopped");
+        beatText.setText(PackRes.str("media", R.string.s_stopped, "Stopped"));
         bpmBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
                 metronomeBpm = 30 + progress;
@@ -76,18 +78,18 @@ public class MetronomeTool extends BaseToolPlugin {
             public void onStopTrackingTouch(SeekBar s) {
             }
         });
-        MaterialButton toggleBtn = ToolViewFactory.makeButton(box, "Start");
+        MaterialButton toggleBtn = ToolViewFactory.makeButton(box, PackRes.str("media", R.string.s_start, "Start"));
         toggleBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (metronomeRunning) {
                     metronomeRunning = false;
-                    toggleBtn.setText("Start");
-                    beatText.setText("Stopped");
+                    toggleBtn.setText(PackRes.str("media", R.string.s_start, "Start"));
+                    beatText.setText(PackRes.str("media", R.string.s_stopped, "Stopped"));
                     return;
                 }
                 metronomeRunning = true;
                 metronomeBeat = 0;
-                toggleBtn.setText("Stop");
+                toggleBtn.setText(PackRes.str("media", R.string.s_stop, "Stop"));
                 if (metronomeTick == null) {
                     metronomeTick = new Runnable() {
                         public void run() {

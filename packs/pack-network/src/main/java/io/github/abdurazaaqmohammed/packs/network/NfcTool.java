@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.network;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -82,21 +84,21 @@ public class NfcTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "NFC Reader");
+        ToolViewFactory.addTitle(box, PackRes.str("network", R.string.s_nfc_reader_2, "NFC Reader"));
         nfcText = ToolViewFactory.makeOutput(box);
         try {
             NfcAdapter adapter = NfcAdapter.getDefaultAdapter(context);
             if (adapter == null) {
-                nfcText.setText("No NFC hardware on this device");
+                nfcText.setText(PackRes.str("network", R.string.s_no_nfc_hardware_on_this_device, "No NFC hardware on this device"));
                 return box;
             }
             if (!adapter.isEnabled()) {
-                nfcText.setText("Turn on NFC, then hold a tag to the phone");
+                nfcText.setText(PackRes.str("network", R.string.s_turn_on_nfc_then_hold_a_tag_to_the_phone, "Turn on NFC, then hold a tag to the phone"));
             } else {
-                nfcText.setText("Hold a tag to the phone");
+                nfcText.setText(PackRes.str("network", R.string.s_hold_a_tag_to_the_phone, "Hold a tag to the phone"));
             }
         } catch (Exception e) {
-            nfcText.setText("NFC unavailable");
+            nfcText.setText(PackRes.str("network", R.string.s_nfc_unavailable, "NFC unavailable"));
             return box;
         }
         try {
@@ -104,8 +106,8 @@ public class NfcTool extends BaseToolPlugin {
             enableDispatch(host);
         } catch (Exception ignored) {
         }
-        MaterialButton copyBtn = ToolViewFactory.makeButton(box, "Copy tag info");
-        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, "nfc", nfcText.getText().toString()));
+        MaterialButton copyBtn = ToolViewFactory.makeButton(box, PackRes.str("network", R.string.s_copy_tag_info, "Copy tag info"));
+        copyBtn.setOnClickListener(v -> ToolViewFactory.copyText(context, PackRes.str("network", R.string.s_nfc, "nfc"), nfcText.getText().toString()));
         return box;
     }
 
@@ -165,7 +167,7 @@ public class NfcTool extends BaseToolPlugin {
             nfcText.setText(b.toString());
         } catch (Exception e) {
             if (nfcText != null) {
-                nfcText.setText("Read failed");
+                nfcText.setText(PackRes.str("network", R.string.s_read_failed, "Read failed"));
             }
         }
     }

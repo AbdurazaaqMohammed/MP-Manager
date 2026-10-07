@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.network;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -53,24 +55,24 @@ public class BluetoothTool extends BaseToolPlugin {
                 } catch (Exception ignored) {
                 }
                 if (btText != null) {
-                    btText.setText("Bluetooth permission needed, then tap Refresh");
+                    btText.setText(PackRes.str("network", R.string.s_bluetooth_permission_needed_then_tap_refresh, "Bluetooth permission needed, then tap Refresh"));
                 }
                 return;
             }
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null) {
                 if (btText != null) {
-                    btText.setText("No Bluetooth hardware");
+                    btText.setText(PackRes.str("network", R.string.s_no_bluetooth_hardware, "No Bluetooth hardware"));
                 }
             } else if (!adapter.isEnabled()) {
                 if (btText != null) {
-                    btText.setText("Bluetooth is off, turn it on and refresh");
+                    btText.setText(PackRes.str("network", R.string.s_bluetooth_is_off_turn_it_on_and_refresh, "Bluetooth is off, turn it on and refresh"));
                 }
             } else {
                 Set<BluetoothDevice> bonded = adapter.getBondedDevices();
                 if (bonded == null || bonded.isEmpty()) {
                     if (btText != null) {
-                        btText.setText("No paired devices");
+                        btText.setText(PackRes.str("network", R.string.s_no_paired_devices, "No paired devices"));
                     }
                 } else {
                     if (btText != null) {
@@ -84,7 +86,7 @@ public class BluetoothTool extends BaseToolPlugin {
             }
         } catch (Exception e) {
             if (btText != null) {
-                btText.setText("Bluetooth unavailable");
+                btText.setText(PackRes.str("network", R.string.s_bluetooth_unavailable, "Bluetooth unavailable"));
             }
         }
         btAdapter.notifyDataSetChanged();
@@ -93,7 +95,7 @@ public class BluetoothTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Paired Bluetooth");
+        ToolViewFactory.addTitle(box, PackRes.str("network", R.string.s_paired_bluetooth, "Paired Bluetooth"));
         btText = ToolViewFactory.makeOutput(box);
         ListView listView = new ListView(context);
         btNames.clear();
@@ -101,14 +103,14 @@ public class BluetoothTool extends BaseToolPlugin {
         listView.setAdapter(btAdapter);
         box.addView(listView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 240)));
-        MaterialButton refreshBtn = ToolViewFactory.makeButton(box, "Refresh");
+        MaterialButton refreshBtn = ToolViewFactory.makeButton(box, PackRes.str("network", R.string.s_refresh, "Refresh"));
         refreshBtn.setOnClickListener(v -> refreshBtList(context));
-        MaterialButton openBtn = ToolViewFactory.makeButton(box, "Open Bluetooth settings");
+        MaterialButton openBtn = ToolViewFactory.makeButton(box, PackRes.str("network", R.string.s_open_bluetooth_settings, "Open Bluetooth settings"));
         openBtn.setOnClickListener(v -> {
             try {
                 context.startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
             } catch (Exception e) {
-                ToolViewFactory.toast(context, "Cannot open settings");
+                ToolViewFactory.toast(context, PackRes.str("network", R.string.s_cannot_open_settings, "Cannot open settings"));
             }
         });
         refreshBtList(context);

@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.random;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
@@ -29,18 +31,18 @@ public class StrengthTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Password Strength");
-        EditText input = ToolViewFactory.makeInput(box, "Password to test",
+        ToolViewFactory.addTitle(box, PackRes.str("random", R.string.s_password_strength, "Password Strength"));
+        EditText input = ToolViewFactory.makeInput(box, PackRes.str("random", R.string.s_password_to_test, "Password to test"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         TextView output = ToolViewFactory.makeOutput(box);
-        output.setText("Type a password");
+        output.setText(PackRes.str("random", R.string.s_type_a_password, "Type a password"));
         input.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String p = s.toString();
                 if (p.isEmpty()) {
-                    output.setText("Type a password");
+                    output.setText(PackRes.str("random", R.string.s_type_a_password, "Type a password"));
                     return;
                 }
                 double entropy = Passwords.entropyBits(p);

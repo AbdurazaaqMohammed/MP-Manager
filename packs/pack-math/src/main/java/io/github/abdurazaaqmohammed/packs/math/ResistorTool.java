@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,16 +43,16 @@ public class ResistorTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Resistor Decoder");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_resistor_decoder, "Resistor Decoder"));
         String[] colors = new String[]{"Black", "Brown", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Gray", "White", "Gold", "Silver"};
         RadioGroup modeGroup = new RadioGroup(context);
         modeGroup.setOrientation(RadioGroup.HORIZONTAL);
         RadioButton fourBtn = new RadioButton(context);
         fourBtn.setId(View.generateViewId());
-        fourBtn.setText("4-band");
+        fourBtn.setText(PackRes.str("math", R.string.s_4_band, "4-band"));
         RadioButton fiveBtn = new RadioButton(context);
         fiveBtn.setId(View.generateViewId());
-        fiveBtn.setText("5-band");
+        fiveBtn.setText(PackRes.str("math", R.string.s_5_band, "5-band"));
         modeGroup.addView(fourBtn);
         modeGroup.addView(fiveBtn);
         modeGroup.check(fourBtn.getId());
@@ -76,7 +78,7 @@ public class ResistorTool extends BaseToolPlugin {
                     int d1 = digitVal[digits.get(0)];
                     int d2 = digitVal[digits.get(1)];
                     if (d1 < 0 || d2 < 0) {
-                        output.setText("Gold/Silver invalid as digits");
+                        output.setText(PackRes.str("math", R.string.s_gold_silver_invalid_as_digits, "Gold/Silver invalid as digits"));
                         return;
                     }
                     int mult = digitVal[digits.get(2)];
@@ -87,7 +89,7 @@ public class ResistorTool extends BaseToolPlugin {
                     int d2 = digitVal[digits.get(1)];
                     int d3 = digitVal[digits.get(2)];
                     if (d1 < 0 || d2 < 0 || d3 < 0) {
-                        output.setText("Gold/Silver invalid as digits");
+                        output.setText(PackRes.str("math", R.string.s_gold_silver_invalid_as_digits, "Gold/Silver invalid as digits"));
                         return;
                     }
                     int mult = digitVal[digits.get(3)];
@@ -96,7 +98,7 @@ public class ResistorTool extends BaseToolPlugin {
                 }
                 output.setText(formatOhms(value) + "  Tol " + tol + "%");
             } catch (Exception e) {
-                output.setText("Pick band colors");
+                output.setText(PackRes.str("math", R.string.s_pick_band_colors, "Pick band colors"));
             }
         };
         final AdapterView.OnItemSelectedListener bandListener = new AdapterView.OnItemSelectedListener() {

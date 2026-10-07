@@ -1,5 +1,7 @@
 package io.github.abdurazaaqmohammed.packs.math;
 
+import io.github.abdurazaaqmohammed.plugins.res.PackRes;
+
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,29 +28,29 @@ public class DateDiffTool extends BaseToolPlugin {
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
-        ToolViewFactory.addTitle(box, "Date Calculator");
-        EditText d1 = ToolViewFactory.makeDateField(box, "Start date");
-        EditText d2 = ToolViewFactory.makeDateField(box, "End date");
+        ToolViewFactory.addTitle(box, PackRes.str("math", R.string.s_date_calculator, "Date Calculator"));
+        EditText d1 = ToolViewFactory.makeDateField(box, PackRes.str("math", R.string.s_start_date, "Start date"));
+        EditText d2 = ToolViewFactory.makeDateField(box, PackRes.str("math", R.string.s_end_date, "End date"));
         String today = DateTime.todayIso();
         d1.setText(today);
         d2.setText(today);
         TextView output = ToolViewFactory.makeOutput(box);
-        MaterialButton calcBtn = ToolViewFactory.makeButton(box, "Calculate difference");
+        MaterialButton calcBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_calculate_difference, "Calculate difference"));
         calcBtn.setOnClickListener(v -> {
             try {
                 output.setText(DateTime.diff(d1.getText().toString(), d2.getText().toString()));
             } catch (Exception e) {
-                output.setText("Use yyyy-MM-dd");
+                output.setText(PackRes.str("math", R.string.s_use_yyyy_mm_dd, "Use yyyy-MM-dd"));
             }
         });
-        MaterialButton ageBtn = ToolViewFactory.makeButton(box, "Age from start date to today");
+        MaterialButton ageBtn = ToolViewFactory.makeButton(box, PackRes.str("math", R.string.s_age_from_start_date_to_today, "Age from start date to today"));
         ageBtn.setOnClickListener(v -> {
             try {
                 output.setText(DateTime.ageFrom(d1.getText().toString()));
             } catch (IllegalArgumentException e) {
-                output.setText("Birth date is in the future");
+                output.setText(PackRes.str("math", R.string.s_birth_date_is_in_the_future, "Birth date is in the future"));
             } catch (Exception e) {
-                output.setText("Use yyyy-MM-dd");
+                output.setText(PackRes.str("math", R.string.s_use_yyyy_mm_dd, "Use yyyy-MM-dd"));
             }
         });
         return box;
