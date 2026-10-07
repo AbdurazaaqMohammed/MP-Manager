@@ -318,6 +318,7 @@ public class ApkManifestEditor {
         } catch (Exception ignored) { }
 
         String finalAppName = appName;
+        String finalPkgName = pkgName;
         String finalVerCode = verCode;
         String finalVerName = verName;
         String finalTargetSdkVersion = targetSdkVersion;
@@ -333,6 +334,13 @@ public class ApkManifestEditor {
         AlertDialog menuDialog = dialogUtil.getDialogBuilder()
                 .setCustomTitle(uiHelper.getTitle(rss.getString(R.string.me_fast_attrs)))
                 .setPositiveButton(rss.getString(R.string.done), (dialog, which) -> {
+                    CharSequence pkgNameInputText = pkgNameInput != null ? pkgNameInput.getText() : null;
+                    String pkgNameSelected = TextUtils.isEmpty(pkgNameInputText) ? "" : pkgNameInputText.toString().trim();
+                    boolean pkgNameChanged = !pkgNameSelected.isEmpty() && (!finalPkgName.equals(pkgNameSelected));
+                    if (pkgNameChanged && !pkgNameSelected.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")) {
+                        Extensions.showMessage(context, rss.getString(R.string.invalid_pkg_name));
+                        return;
+                    }
                     CharSequence appNameInputText = appNameInput.getText();
                     String appNameSelected = TextUtils.isEmpty(appNameInputText) ? "" : appNameInputText.toString();
                     boolean appNameChanged = (!finalAppName.equals(appNameSelected));
@@ -353,6 +361,7 @@ public class ApkManifestEditor {
                     StringBuilder sb = new StringBuilder();
                     String[] options = {
                             rss.getString(R.string.me_icon),
+                            rss.getString(R.string.pkgName),
                             rss.getString(R.string.appname),
                             rss.getString(R.string.install_location),
                             rss.getString(R.string.version_code),
@@ -362,12 +371,13 @@ public class ApkManifestEditor {
                             rss.getString(R.string.me_edit_all)
                     };
 
-                    if(appNameChanged) sb.append(options[1]).append(", ");
-                    if(installLocationChanged) sb.append(options[2]).append(", ");
-                    if(verCodeChanged) sb.append(options[3]).append(", ");
-                    if(verNameChanged) sb.append(options[4]).append(", ");
-                    if(minSdkVersionChanged) sb.append(options[5]).append(", ");
-                    if(targetSdkVersionChanged) sb.append(options[6]);
+                    if(pkgNameChanged) sb.append(options[1]).append(", ");
+                    if(appNameChanged) sb.append(options[2]).append(", ");
+                    if(installLocationChanged) sb.append(options[3]).append(", ");
+                    if(verCodeChanged) sb.append(options[4]).append(", ");
+                    if(verNameChanged) sb.append(options[5]).append(", ");
+                    if(minSdkVersionChanged) sb.append(options[6]).append(", ");
+                    if(targetSdkVersionChanged) sb.append(options[7]);
                     sb.append(rss.getString(R.string.me_updated));
                     SignWrapper[] wrapper = new SignWrapper[1];
                     Runnable doEdit = () -> {
@@ -383,7 +393,9 @@ public class ApkManifestEditor {
                                         for (int i = 0, entriesSize = entries.size(); i < entriesSize; i++) {
                                             XMLEntry e = entries.get(i);
                                             String tag = e.getTag();
-                                            if (appNameChanged && tag.contains("android:label"))
+                                            if (pkgNameChanged && tag.trim().equals("package"))
+                                                e.setValue(pkgNameSelected);
+                                            else if (appNameChanged && tag.contains("android:label"))
                                                 e.setValue(appNameSelected);
                                             else if (verCodeChanged && tag.contains("android:versionCode"))
                                                 e.setValue(verCodeSelected);
@@ -687,6 +699,10 @@ public class ApkManifestEditor {
     public void removeManifestPermission(File apkFile, String perm) throws Exception {
         List<XMLEntry> entries = decodeManifest(apkFile);
         if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
+        Set<String> targets = new HashSet<>(perms);
+        int removed = 0;
+        // Decoder emits "<uses-permission" open row followed by attribute rows
+        // ("    android:name=\"...\"" merged with "/>"). Remove the whole span.
         for (int i = entries.size() - 1; i >= 0; i--) {
             XMLEntry item = entries.get(i);
             if (item.getTag().contains("uses-permission") && perm.equals(item.getValue())) entries.remove(i);
