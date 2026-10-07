@@ -659,21 +659,26 @@ public class EntryDialogs {
                     try {
                         String pw = passwordField == null || passwordField.getText() == null
                                 ? "" : passwordField.getText().toString();
-                        if (!pw.isEmpty() && !finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
+                        boolean out7z = finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".7z");
+                        if (!pw.isEmpty() && !out7z) {
                             pm.dismiss();
                             Extensions.showMessage(context, R.string.archive_encrypt_zip_only);
                             return;
                         }
                         // "Add to existing" on a non-zip would truncate the archive
                         // through ArchiveUtil.create; only zip supports appending.
-                        if (finalOutput.exists()
-                                && !finalOutput.getName().toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
+                        if (finalOutput.exists()) {
                             pm.dismiss();
                             Extensions.showMessage(context, R.string.archive_op_unsupported);
                             return;
                         }
+                        // The level spinner works for 7z too (LZMA2 dictionary
+                        // size / COPY); zip reads it in its own branch above.
+                        net.lingala.zip4j.model.enums.CompressionLevel level =
+                                net.lingala.zip4j.model.enums.CompressionLevel.valueOf(
+                                        settings.getString("compressLevel", net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION.name()));
                         ArchiveUtil.create(finalOutput, finalSources,
-                                pw.isEmpty() ? null : pw.toCharArray());
+                                pw.isEmpty() ? null : pw.toCharArray(), level);
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
                         context.handler.post(context::reloadCurrentFolder);

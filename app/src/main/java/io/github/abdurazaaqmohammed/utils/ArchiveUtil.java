@@ -154,24 +154,36 @@ public class ArchiveUtil {
         create(output, sources, null);
     }
 
+    public static void create(File output, List<File> sources, char[] password) throws IOException {
+        create(output, sources, password, null);
+    }
+
     /**
      * Creates an archive, encrypting it when a password is given.
      *
-     * <p>Only zip can be encrypted here: it goes through zip4j, which supports AES
-     * encryption. The 7z writer in commons-compress has no password support, so a
-     * password with a 7z target is refused rather than quietly ignored.
+     * <p>zip goes through zip4j (AES), 7z through commons-compress 1.23+'s
+     * SevenZOutputFile(File, char[]) (AES-256 + SHA-256); other formats still
+     * refuse a password rather than quietly ignoring one.
+     *
+     * <p>{@code level} applies where the format has a knob: zip maps it onto
+     * the zip4j deflater level, 7z onto a LZMA2 dictionary size (or a plain
+     * COPY stream for NO_COMPRESSION); the stream formats and tar ignore it.
      */
-    public static void create(File output, List<File> sources, char[] password) throws IOException {
+    public static void create(File output, List<File> sources, char[] password,
+                              net.lingala.zip4j.model.enums.CompressionLevel level) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".zip")) {
-            createZip(output, sources, password);
+            createZip(output, sources, password, level);
+            return;
+        }
+        if (lower.endsWith(".7z")) {
+            create7z(output, sources, password, level);
             return;
         }
         if (password != null && password.length > 0) {
-            throw new IOException("Encrypted archives can only be created as .zip");
+            throw new IOException("Encrypted archives can only be created as .zip or .7z");
         }
-        if (lower.endsWith(".7z")) create7z(output, sources);
-        else if (lower.endsWith(".tar")) createTar(new FileOutputStream(output), sources);
+        if (lower.endsWith(".tar")) createTar(new FileOutputStream(output), sources);
         else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
         else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
         else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new FileOutputStream(output)), sources);
@@ -403,13 +415,40 @@ public class ArchiveUtil {
         }
     }
 
-    private static void create7z(File output, List<File> sources) throws IOException {
-        // No password: the SevenZOutputFile in commons-compress 1.21 has no
-        // password constructor, so this build cannot write an encrypted 7z. It
-        // can still read one.
-        try (SevenZOutputFile sevenZOutput = new SevenZOutputFile(output)) {
-            sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
+    private static void create7z(File output, List<File> sources, char[] password,
+                                 net.lingala.zip4j.model.enums.CompressionLevel level) throws IOException {
+        try (SevenZOutputFile sevenZOutput = password == null || password.length == 0
+                ? new SevenZOutputFile(output)
+                : new SevenZOutputFile(output, password)) {
+            if (level == net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION) {
+                sevenZOutput.setContentCompression(SevenZMethod.COPY);
+            } else {
+                sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
+                long dictSize = sevenZDictSize(level);
+                if (dictSize > 0) {
+                    sevenZOutput.setContentMethods(java.util.Collections.singletonList(
+                            new SevenZMethodConfiguration(SevenZMethod.LZMA2, dictSize)));
+                }
+            }
             for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName());
+        }
+    }
+
+    /**
+     * Maps the shared compression level onto a LZMA2 dictionary size, the one
+     * knob SevenZOutputFile exposes. -1 keeps the library default; smaller
+     * dictionaries trade ratio for speed and memory, exactly what the level
+     * promises.
+     */
+    private static long sevenZDictSize(net.lingala.zip4j.model.enums.CompressionLevel level) {
+        if (level == null) return -1;
+        switch (level) {
+            case FASTEST: return 1L << 20;   // 1 MiB
+            case FAST:    return 4L << 20;   // 4 MiB
+            case NORMAL:  return 16L << 20;  // 16 MiB
+            case GOOD:    return 32L << 20;  // 32 MiB
+            case ULTRA:   return 64L << 20;  // 64 MiB, the 7-Zip desktop default
+            default:      return -1;
         }
     }
 
@@ -420,10 +459,20 @@ public class ArchiveUtil {
      * structure rather than landing flat.
      */
     static void createZip(File output, List<File> sources, char[] password) throws IOException {
+        createZip(output, sources, password, null);
+    }
+
+    static void createZip(File output, List<File> sources, char[] password,
+                          net.lingala.zip4j.model.enums.CompressionLevel level) throws IOException {
         net.lingala.zip4j.ZipFile zip = new net.lingala.zip4j.ZipFile(output);
         net.lingala.zip4j.model.ZipParameters params =
                 new net.lingala.zip4j.model.ZipParameters();
         params.setCompressionMethod(net.lingala.zip4j.model.enums.CompressionMethod.DEFLATE);
+        if (level != null) {
+            params.setCompressionLevel(level);
+            if (level == net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION)
+                params.setCompressionMethod(net.lingala.zip4j.model.enums.CompressionMethod.STORE);
+        }
         if (password != null && password.length > 0) {
             // zip4j 2.11: the password lives on ZipFile, and encryption is
             // enabled by flag plus method rather than by one setter.

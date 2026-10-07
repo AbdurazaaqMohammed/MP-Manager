@@ -1127,7 +1127,7 @@ Layout Inspector
     <string name="compress_password_hint">密码（仅 zip 支持，留空则不加密）</string>
     <string name="compress_pick_password">从已保存密码中选择</string>
     <string name="compress_no_saved_passwords">还没有保存任何密码</string>
-    <string name="archive_encrypt_zip_only">加密压缩包必须是 .zip 格式</string>
+    <string name="archive_encrypt_zip_only">加密压缩包必须是 .zip 或 .7z 格式</string>
     <string name="archive_op_unsupported">此操作仅支持 ZIP 压缩包</string>
     <string name="enter_archive_password">压缩包密码</string>
     <string name="archive_password_needed">该压缩包已加密</string>
