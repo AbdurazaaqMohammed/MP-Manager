@@ -47,6 +47,7 @@ public class PasswordManagerActivity extends BaseActivity {
     private static final String BW_DEVICE = "device_id";
     private static final String BW_LAST_SERVER = "last_server";
     private static final String BW_LAST_EMAIL = "last_email";
+    private static final String BW_LAST_PROXY = "last_proxy";
 
     private final List<String> items = new ArrayList<>();
     private Adapter adapter;
@@ -203,11 +204,15 @@ public class PasswordManagerActivity extends BaseActivity {
 
     private void promptBwConnect() {
         LinearLayout form = bwForm(2);
+        addBwField(form, R.id.bw_field_proxy, R.string.bw_proxy,
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI, true);
         EditText server = form.findViewById(R.id.bw_field_server);
         EditText email = form.findViewById(R.id.bw_field_email);
         EditText password = form.findViewById(R.id.bw_field_password);
+        EditText proxy = form.findViewById(R.id.bw_field_proxy);
         server.setText(bwPrefs().getString(BW_LAST_SERVER, "http://127.0.0.1:8080"));
         email.setText(bwPrefs().getString(BW_LAST_EMAIL, ""));
+        proxy.setText(bwPrefs().getString(BW_LAST_PROXY, ""));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.bw_section)
                 .setView(form)
@@ -215,7 +220,8 @@ public class PasswordManagerActivity extends BaseActivity {
                 .setPositiveButton(R.string.bw_connect, (d, w) -> bwLogin(
                         server.getText().toString().trim(),
                         email.getText().toString().trim(),
-                        password.getText().toString(), null))
+                        password.getText().toString(),
+                        proxy.getText().toString().trim(), null))
                 .show();
     }
 
@@ -231,7 +237,7 @@ public class PasswordManagerActivity extends BaseActivity {
                 .show();
     }
 
-    private void promptBwTwoFactor(String server, String email, String password) {
+    private void promptBwTwoFactor(String server, String email, String password, String proxy) {
         final EditText code = new EditText(this);
         code.setInputType(InputType.TYPE_CLASS_NUMBER);
         code.setHint(R.string.bw_two_factor);
@@ -240,7 +246,7 @@ public class PasswordManagerActivity extends BaseActivity {
                 .setView(code)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (d, w) -> bwLogin(server, email,
-                        password, code.getText().toString().trim()))
+                        password, proxy, code.getText().toString().trim()))
                 .show();
     }
 
@@ -273,16 +279,18 @@ public class PasswordManagerActivity extends BaseActivity {
         box.addView(field);
     }
 
-    private void bwLogin(String server, String email, String password, String twoFactor) {
+    private void bwLogin(String server, String email, String password, String proxy,
+                         String twoFactor) {
         if (server.isEmpty() || email.isEmpty() || password.isEmpty()) return;
         setBwBusy(true, R.string.bw_connecting);
         new Thread(() -> {
             try {
                 BwVault.Result result =
-                        BwVault.login(server, email, password, bwDeviceId(), twoFactor);
+                        BwVault.login(server, email, password, bwDeviceId(), twoFactor, proxy);
                 bwPrefs().edit()
                         .putString(BW_LAST_SERVER, server)
                         .putString(BW_LAST_EMAIL, email)
+                        .putString(BW_LAST_PROXY, proxy)
                         .putString(BW_SESSION, result.session.toJSON())
                         .apply();
                 finishBw(result, null);
@@ -290,7 +298,7 @@ public class PasswordManagerActivity extends BaseActivity {
                 if (e.twoFactorRequired && twoFactor == null) {
                     runOnUiThread(() -> {
                         setBwBusy(false, null);
-                        promptBwTwoFactor(server, email, password);
+                        promptBwTwoFactor(server, email, password, proxy);
                     });
                 } else {
                     finishBw(null, e);

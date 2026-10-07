@@ -8,6 +8,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -60,14 +62,15 @@ public final class BwApi {
 
     // ------------------------------------------------------------------ endpoints
 
-    public static BwCrypto.KdfConfig prelogin(String host, String email) throws IOException {
+    public static BwCrypto.KdfConfig prelogin(String host, String email, String proxy)
+            throws IOException {
         JSONObject body = new JSONObject();
         try {
             body.put("email", email);
         } catch (Exception ignored) {
         }
         JSONObject answer = post(host, "/identity/accounts/prelogin",
-                "application/json", body.toString().getBytes(StandardCharsets.UTF_8), null);
+                "application/json", body.toString().getBytes(StandardCharsets.UTF_8), null, proxy);
         return BwCrypto.KdfConfig.fromPrelogin(answer);
     }
 
@@ -78,7 +81,8 @@ public final class BwApi {
      */
     public static TokenResult loginPassword(String host, String email, String masterKeyHash,
                                             String deviceId, String deviceName,
-                                            String newDeviceOtp, String twoFactorToken)
+                                            String newDeviceOtp, String twoFactorToken,
+                                            String proxy)
             throws IOException, LoginFailed {
         Form form = new Form()
                 .param("scope", "api offline_access")
@@ -98,13 +102,13 @@ public final class BwApi {
         try {
             return new TokenResult(post(host, "/identity/connect/token",
                     "application/x-www-form-urlencoded",
-                    form.toString().getBytes(StandardCharsets.UTF_8), null));
+                    form.toString().getBytes(StandardCharsets.UTF_8), null, proxy));
         } catch (HttpError e) {
             throw toLoginFailed(e);
         }
     }
 
-    public static TokenResult refresh(String host, String refreshToken)
+    public static TokenResult refresh(String host, String refreshToken, String proxy)
             throws IOException, LoginFailed {
         String form = new Form()
                 .param("grant_type", "refresh_token")
@@ -114,15 +118,16 @@ public final class BwApi {
         try {
             return new TokenResult(post(host, "/identity/connect/token",
                     "application/x-www-form-urlencoded",
-                    form.getBytes(StandardCharsets.UTF_8), null));
+                    form.getBytes(StandardCharsets.UTF_8), null, proxy));
         } catch (HttpError e) {
             throw toLoginFailed(e);
         }
     }
 
     /** Raw vault state: folders, ciphers, profile. Decryption happens on the client side. */
-    public static JSONObject sync(String host, String accessToken) throws IOException {
-        return get(host, "/api/sync", accessToken);
+    public static JSONObject sync(String host, String accessToken, String proxy)
+            throws IOException {
+        return get(host, "/api/sync", accessToken, proxy);
     }
 
     // ------------------------------------------------------------------ plumbing
@@ -179,8 +184,9 @@ public final class BwApi {
         }
     }
 
-    private static JSONObject get(String host, String path, String bearer) throws IOException {
-        HttpURLConnection c = open(host, path);
+    private static JSONObject get(String host, String path, String bearer, String proxy)
+            throws IOException {
+        HttpURLConnection c = open(host, path, proxy);
         try {
             c.setRequestMethod("GET");
             if (bearer != null) c.setRequestProperty("Authorization", "Bearer " + bearer);
@@ -191,8 +197,8 @@ public final class BwApi {
     }
 
     private static JSONObject post(String host, String path, String contentType, byte[] body,
-                                   String bearer) throws IOException {
-        HttpURLConnection c = open(host, path);
+                                   String bearer, String proxy) throws IOException {
+        HttpURLConnection c = open(host, path, proxy);
         try {
             c.setRequestMethod("POST");
             c.setDoOutput(true);
@@ -207,12 +213,49 @@ public final class BwApi {
         }
     }
 
-    private static HttpURLConnection open(String host, String path) throws IOException {
+    private static HttpURLConnection open(String host, String path, String proxy)
+            throws IOException {
         String base = host.endsWith("/") ? host.substring(0, host.length() - 1) : host;
-        HttpURLConnection c = (HttpURLConnection) new URL(base + path).openConnection();
+        URL url = new URL(base + path);
+        Proxy p = parseProxy(proxy);
+        HttpURLConnection c = (HttpURLConnection) (p != null ? url.openConnection(p) : url.openConnection());
         c.setConnectTimeout(TIMEOUT_MS);
         c.setReadTimeout(TIMEOUT_MS);
         return c;
+    }
+
+    /**
+     * {@code socks5://host:port}, {@code http://host:port} or a bare {@code host:port}
+     * (treated as SOCKS5, the common local-proxy case). Empty/null means direct.
+     */
+    static Proxy parseProxy(String raw) throws IOException {
+        if (raw == null) return null;
+        String rest = raw.trim();
+        if (rest.isEmpty()) return null;
+        String scheme = "socks5";
+        int schemeEnd = rest.indexOf("://");
+        if (schemeEnd >= 0) {
+            scheme = rest.substring(0, schemeEnd).toLowerCase(java.util.Locale.ROOT);
+            rest = rest.substring(schemeEnd + 3);
+        }
+        int slash = rest.indexOf('/');
+        if (slash >= 0) rest = rest.substring(0, slash);
+        int at = rest.lastIndexOf('@');
+        if (at >= 0) rest = rest.substring(at + 1);  // proxy auth is not supported
+        int colon = rest.lastIndexOf(':');
+        if (colon < 0) throw new IOException("proxy must be host:port");
+        int port;
+        try {
+            port = Integer.parseInt(rest.substring(colon + 1));
+        } catch (NumberFormatException e) {
+            throw new IOException("bad proxy port");
+        }
+        Proxy.Type type = scheme.startsWith("socks") ? Proxy.Type.SOCKS
+                : scheme.startsWith("http") ? Proxy.Type.HTTP
+                : null;
+        if (type == null) throw new IOException("unsupported proxy scheme: " + scheme);
+        return new Proxy(type, InetSocketAddress.createUnresolved(
+                rest.substring(0, colon), port));
     }
 
     private static JSONObject readAnswer(HttpURLConnection c) throws IOException {

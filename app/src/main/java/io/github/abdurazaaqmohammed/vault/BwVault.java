@@ -26,6 +26,8 @@ public final class BwVault {
         public String deviceId;
         public String accessToken;
         public String refreshToken;
+        /** Optional per-connection proxy, e.g. {@code socks5://127.0.0.1:10808}. */
+        public String proxy;
         /** User key encrypted with the stretched master key; the only way back in. */
         public String encryptedKey;
         /** Epoch millis at which {@link #accessToken} stops being accepted. */
@@ -39,6 +41,7 @@ public final class BwVault {
             putQuiet(o, "deviceId", deviceId);
             putQuiet(o, "accessToken", accessToken);
             putQuiet(o, "refreshToken", refreshToken);
+            putQuiet(o, "proxy", proxy);
             putQuiet(o, "encryptedKey", encryptedKey);
             putQuiet(o, "expiresAt", expiresAt);
             if (kdf != null) {
@@ -62,6 +65,7 @@ public final class BwVault {
                 s.deviceId = o.optString("deviceId", null);
                 s.accessToken = o.optString("accessToken", null);
                 s.refreshToken = o.optString("refreshToken", null);
+                s.proxy = o.optString("proxy", null);
                 s.encryptedKey = o.optString("encryptedKey", null);
                 s.expiresAt = o.optLong("expiresAt", 0);
                 JSONObject k = o.optJSONObject("kdf");
@@ -120,9 +124,9 @@ public final class BwVault {
 
     /** First login against a self-hosted server: prelogin, password grant, sync. */
     public static Result login(String server, String email, String password, String deviceId,
-                               String twoFactorToken) throws Exception {
-        BwCrypto.KdfConfig kdf = BwApi.prelogin(server, email);
-        return authenticate(server, email, password, kdf, deviceId, twoFactorToken);
+                               String twoFactorToken, String proxy) throws Exception {
+        BwCrypto.KdfConfig kdf = BwApi.prelogin(server, email, proxy);
+        return authenticate(server, email, password, kdf, deviceId, twoFactorToken, proxy);
     }
 
     /**
@@ -153,16 +157,17 @@ public final class BwVault {
 
     private static Result authenticate(String server, String email, String password,
                                        BwCrypto.KdfConfig kdf, String deviceId,
-                                       String twoFactorToken) throws Exception {
+                                       String twoFactorToken, String proxy) throws Exception {
         byte[] masterKey = BwCrypto.deriveMasterKey(password, email, kdf);
         String masterKeyHash = BwCrypto.deriveMasterKeyHash(masterKey, password);
         BwApi.TokenResult token = BwApi.loginPassword(server, email, masterKeyHash, deviceId,
-                "MP Manager", null, twoFactorToken);
+                "MP Manager", null, twoFactorToken, proxy);
 
         Session s = new Session();
         s.server = server;
         s.email = email;
         s.deviceId = deviceId;
+        s.proxy = proxy;
         s.kdf = kdf;
         apply(s, token);
         if (s.encryptedKey == null || s.encryptedKey.isEmpty()) {
@@ -184,7 +189,7 @@ public final class BwVault {
             throw new Exception("session has no tokens");
         }
         if (s.expiresAt > System.currentTimeMillis() + 60_000L) return;
-        apply(s, BwApi.refresh(s.server, s.refreshToken));
+        apply(s, BwApi.refresh(s.server, s.refreshToken, s.proxy));
     }
 
     private static void apply(Session s, BwApi.TokenResult t) {
@@ -195,7 +200,7 @@ public final class BwVault {
     }
 
     private static Result fetch(Session s, BwCrypto.SymKey userKey) throws Exception {
-        JSONObject sync = BwApi.sync(s.server, s.accessToken);
+        JSONObject sync = BwApi.sync(s.server, s.accessToken, s.proxy);
         return parse(s, userKey, sync);
     }
 

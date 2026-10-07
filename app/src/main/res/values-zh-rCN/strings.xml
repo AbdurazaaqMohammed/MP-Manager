@@ -1998,6 +1998,7 @@ Layout Inspector
     <string name="bw_logout">退出登录</string>
     <string name="bw_server">服务器地址</string>
     <string name="bw_email">邮箱</string>
+    <string name="bw_proxy">代理（可选，如 socks5://127.0.0.1:10808）</string>
     <string name="bw_password">主密码</string>
     <string name="bw_connecting">正在连接…</string>
     <string name="bw_syncing">正在同步…</string>

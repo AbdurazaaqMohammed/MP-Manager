@@ -2001,6 +2001,7 @@ Deleted %2$s · %3$s</string>
     <string name="bw_logout">Log out</string>
     <string name="bw_server">Server address</string>
     <string name="bw_email">Email</string>
+    <string name="bw_proxy">Proxy (optional, e.g. socks5://127.0.0.1:10808)</string>
     <string name="bw_password">Master password</string>
     <string name="bw_connecting">Connecting…</string>
     <string name="bw_syncing">Syncing…</string>

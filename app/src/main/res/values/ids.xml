@@ -10,4 +10,5 @@
     <item name="bw_field_server" type="id" />
     <item name="bw_field_email" type="id" />
     <item name="bw_field_password" type="id" />
+    <item name="bw_field_proxy" type="id" />
 </resources>

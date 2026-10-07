@@ -1529,6 +1529,7 @@
     <string name="bw_logout">Выйти</string>
     <string name="bw_server">Адрес сервера</string>
     <string name="bw_email">Эл. почта</string>
+    <string name="bw_proxy">Прокси (необязательно, напр. socks5://127.0.0.1:10808)</string>
     <string name="bw_password">Мастер-пароль</string>
     <string name="bw_connecting">Подключение…</string>
     <string name="bw_syncing">Синхронизация…</string>
