@@ -36,6 +36,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -390,6 +391,19 @@ public class APKExtractorActivity extends BaseActivity {
                 showLaunchActivities = isChecked;
                 reloadListView();
             });
+
+            try {
+                AutoCompleteTextView compressTv = settingsMenu.findViewById(R.id.compressLevelTv);
+                if (compressTv != null) {
+                    List<String> levels = new ArrayList<>();
+                    for (CompressionLevel cl : CompressionLevel.values()) levels.add(cl.name());
+                    SharedPreferences defSettings = PreferenceManager.getDefaultSharedPreferences(this);
+                    compressTv.setText(defSettings.getString("compressLevel", CompressionLevel.NORMAL.name()), false);
+                    compressTv.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, levels));
+                    compressTv.setOnItemClickListener((p, v2, pos, id) ->
+                            defSettings.edit().putString("compressLevel", levels.get(pos)).apply());
+                }
+            } catch (Exception ignored) { }
 
             TextView title = new TextView(this);
             title.setText(rss.getString(R.string.settings));
