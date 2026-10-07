@@ -8,7 +8,9 @@ import android.content.pm.PermissionInfo;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.preference.PreferenceManager;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,14 +44,19 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -58,6 +65,7 @@ import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -77,16 +85,103 @@ public class ApkManifestEditor {
         rss = context.rss;
     }
 
+    private static class ManifestData {
+        List<XMLEntry> entries;
+        List<ResEntry> res;
+    }
+
+    private static int resolveInstallLocIndex(String installLoc) {
+        if (installLoc == null || installLoc.isEmpty()) return 3;
+        try {
+            return Integer.parseInt(installLoc.trim());
+        } catch (Exception ignored) {
+            String l = installLoc.trim().toLowerCase();
+            if (l.startsWith("auto")) return 0;
+            if (l.startsWith("internal")) return 1;
+            if (l.startsWith("prefer")) return 2;
+            return 3;
+        }
+    }
+
+    private ManifestData decodeManifestWithRes(File apkFile) {
+        ManifestData data = new ManifestData();
+        try (ZipFile zf = new ZipFile(apkFile)) {
+            FileHeader manifestEntry = zf.getFileHeader("AndroidManifest.xml");
+            if (manifestEntry == null) return null;
+            List<ResEntry> res = null;
+            try {
+                APKParser apkParser = new APKParser();
+                apkParser.parse(apkFile.getPath(), context);
+                res = apkParser.getDecodedResources();
+            } catch (Exception ignored) { }
+            try (InputStream is = zf.getInputStream(manifestEntry)) {
+                data.entries = new aXMLDecoder(is, res).decode();
+                data.res = res;
+                return data;
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String resolveLabelRef(String ref, List<ResEntry> res) {
+        if (ref == null || res == null) return null;
+        String r = ref.trim();
+        if (r.isEmpty() || !r.startsWith("@")) return null;
+        // @string/name form
+        for (ResEntry e : res) {
+            if (r.equals(e.getName())) return e.getValue();
+        }
+        // @0x7F... / @7F... hex form
+        try {
+            String hex = r.substring(1);
+            if (hex.startsWith("0x") || hex.startsWith("0X")) hex = hex.substring(2);
+            long id = Long.parseLong(hex, 16);
+            for (ResEntry e : res) {
+                if ((e.getResourceId() & 0xFFFFFFFFL) == id) {
+                    if (e.getValue() != null) return e.getValue();
+                    return e.getName();
+                }
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    private void updateResolvedLabel(TextView resolvedView, String current, List<ResEntry> res) {
+        if (resolvedView == null) return;
+        if (current == null || current.trim().isEmpty() || !current.trim().startsWith("@")) {
+            resolvedView.setVisibility(View.GONE);
+            return;
+        }
+        String v = resolveLabelRef(current, res);
+        if (v == null || v.isEmpty()) {
+            resolvedView.setVisibility(View.GONE);
+        } else {
+            resolvedView.setVisibility(View.VISIBLE);
+            resolvedView.setText(rss.getString(R.string.resolved_value, v));
+        }
+    }
+
     public void showEditManifestDialog(File apkFile) {
         View quickEditDialog = LayoutInflater.from(context).inflate(R.layout.quick_edit_dialog, null, false);
         quickEditDialog.findViewById(R.id.app_lancer_icon).setOnClickListener(v -> editLauncherIcon(apkFile));
 
         quickEditDialog.findViewById(R.id.install_location_dropdown);
         AutoCompleteTextView installLocationTextView = quickEditDialog.findViewById(R.id.install_location);
-        List<XMLEntry> entries = decodeManifest(apkFile);
+        ManifestData manifestData = decodeManifestWithRes(apkFile);
+        List<XMLEntry> loadedEntries = manifestData != null ? manifestData.entries : null;
+        if (loadedEntries == null) loadedEntries = decodeManifest(apkFile);
+        if (loadedEntries == null) {
+            Extensions.showMessage(context, R.string.could_not_decode_am);
+            return;
+        }
+        final List<XMLEntry> entries = loadedEntries;
+        final List<ResEntry> resEntries = manifestData != null ? manifestData.res : null;
 
         String installLoc = "";
+        TextView pkgNameInput = quickEditDialog.findViewById(R.id.pkgNameInput);
         TextView appNameInput = quickEditDialog.findViewById(R.id.appNameInput);
+        TextView appNameResolved = quickEditDialog.findViewById(R.id.appNameResolved);
         TextView verCodeInput = quickEditDialog.findViewById(R.id.verCodeInput);
         TextView verNameInput = quickEditDialog.findViewById(R.id.verNameInput);
         AutoCompleteTextView targetSdk = quickEditDialog.findViewById(R.id.targetSdk);
@@ -106,23 +201,58 @@ public class ApkManifestEditor {
                 "14 (Upside Down Cake/SDK 34)", "15 (Vanilla Ice Cream/SDK 35)", "16 (Baklava/SDK 36)", "17 (Cinnamon Bun/SDK 37)"
         };
 
-        String minSdkVersion = "", targetSdkVersion = "", verCode = "", verName = "", appName = "";
+        String minSdkVersion = "", targetSdkVersion = "", verCode = "", verName = "", appName = "", pkgName = "";
         boolean foundMinSdk = false;
+        boolean foundLabel = false;
         for (XMLEntry e : entries) {
             String tag = e.getTag();
-            if (tag.contains("android:installLocation")) installLoc = e.getValue();
-            else if (tag.contains("android:label")) appNameInput.setText(appName = e.getValue());
+            String trimmed = tag.trim();
+            if ("package".equals(trimmed)) {
+                if (pkgNameInput != null) pkgNameInput.setText(pkgName = e.getValue());
+                else pkgName = e.getValue();
+            }
+            else if (tag.contains("android:installLocation")) installLoc = e.getValue();
+            else if (!foundLabel && tag.contains("android:label")) {
+                foundLabel = true;
+                appNameInput.setText(appName = e.getValue());
+            }
             else if (tag.contains("android:versionCode")) verCodeInput.setText(verCode = e.getValue());
             else if (tag.contains("android:versionName")) verNameInput.setText(verName = e.getValue());
             else if (!foundMinSdk && tag.contains("android:minSdkVersion")) {
                 foundMinSdk = true; // Avoid getting wrong minsdk from other property
-                int minSdkVer = Integer.parseInt(minSdkVersion = e.getValue());
-                minSdk.setText(rss.getString(R.string.android_ver_text, versions[minSdkVer-1], minSdkVer));
+                try {
+                    int minSdkVer = Integer.parseInt(minSdkVersion = e.getValue());
+                    if (minSdkVer >= 1 && minSdkVer <= versions.length)
+                        minSdk.setText(rss.getString(R.string.android_ver_text, versions[minSdkVer-1], minSdkVer));
+                    else minSdk.setText(minSdkVersion);
+                } catch (Exception ignored) { minSdk.setText(e.getValue()); }
             }
             else if (tag.contains("android:targetSdkVersion")) {
-                int targetSdkVer = Integer.parseInt(targetSdkVersion = e.getValue());
-                targetSdk.setText(rss.getString(R.string.android_ver_text, versions[targetSdkVer-1], targetSdkVer));
+                try {
+                    int targetSdkVer = Integer.parseInt(targetSdkVersion = e.getValue());
+                    if (targetSdkVer >= 1 && targetSdkVer <= versions.length)
+                        targetSdk.setText(rss.getString(R.string.android_ver_text, versions[targetSdkVer-1], targetSdkVer));
+                    else targetSdk.setText(targetSdkVersion);
+                } catch (Exception ignored) { targetSdk.setText(e.getValue()); }
             }
+        }
+        // Fallback: package name via PackageManager if manifest decode missed it.
+        if ((pkgName == null || pkgName.isEmpty()) && pkgNameInput != null) {
+            try {
+                PackageInfo pi = context.getPackageManager()
+                        .getPackageArchiveInfo(apkFile.getPath(), 0);
+                if (pi != null && pi.packageName != null) pkgNameInput.setText(pkgName = pi.packageName);
+            } catch (Exception ignored) { }
+        }
+        updateResolvedLabel(appNameResolved, appName, resEntries);
+        if (appNameInput instanceof EditText) {
+            ((EditText) appNameInput).addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                @Override public void afterTextChanged(Editable s) {
+                    updateResolvedLabel(appNameResolved, s.toString(), resEntries);
+                }
+            });
         }
         final String[] minSdkVersionSelected = new String[1];
         final String[] targetSdkVersionSelected = new String[1];
@@ -142,8 +272,20 @@ public class ApkManifestEditor {
         targetSdk.setAdapter(adapter);
         minSdk.setAdapter(adapter);
         String[] items = rss.getStringArray(R.array.install_locations);
-        if("".equals(installLoc)) installLocationTextView.setText(items[3]);
-        else installLocationTextView.setText(items[Integer.parseInt(installLoc)]);
+        if ("".equals(installLoc)) installLocationTextView.setText(items[3]);
+        else {
+            int locIdx = 3;
+            try {
+                locIdx = Integer.parseInt(installLoc.trim());
+            } catch (Exception ignored) {
+                String l = installLoc.trim().toLowerCase();
+                if (l.startsWith("auto")) locIdx = 0;
+                else if (l.startsWith("internal")) locIdx = 1;
+                else if (l.startsWith("prefer")) locIdx = 2;
+            }
+            if (locIdx < 0 || locIdx >= items.length) locIdx = 3;
+            installLocationTextView.setText(items[locIdx]);
+        }
 
         final String[] installLocationSelected = new String[1];
         installLocationTextView.setOnItemClickListener((parent, view, position, id) -> installLocationSelected[0] = position +"");
@@ -191,7 +333,8 @@ public class ApkManifestEditor {
                     boolean minSdkVersionChanged = minSdkVersionSelected[0] != null && (!finalMinSdkVersion.equals(minSdkVersionSelected[0]));
                     boolean targetSdkVersionChanged = targetSdkVersionSelected[0] != null && (!finalTargetSdkVersion.equals(targetSdkVersionSelected[0]));
 
-                    boolean installLocationChanged = installLocationSelected[0] != null && !installLocationSelected[0].equals(finalInstallLoc);
+                    boolean installLocationChanged = installLocationSelected[0] != null
+                            && !installLocationSelected[0].equals(String.valueOf(resolveInstallLocIndex(finalInstallLoc)));
                     StringBuilder sb = new StringBuilder();
                     String[] options = {
                             rss.getString(R.string.me_icon),
@@ -216,7 +359,7 @@ public class ApkManifestEditor {
                         ProgressManager pm = new ProgressManager(context, true).show();
                         pm.setText(rss.getString(R.string.saving));
 
-                        new RunUtil(context.handler, context, sb)
+                        new RunUtil(context.handler, context, sb, true)
                                 .runInBackground(() -> {
                                     try {
                                         boolean foundMinSdk2 = false;
@@ -238,14 +381,15 @@ public class ApkManifestEditor {
                                                 e.setValue(targetSdkVersionSelected[0]);
                                             else if (installLocationChanged && tag.contains("android:installLocation")) {
                                                 foundInstallLocation = true;
-                                                if (installLocationSelected[0].isEmpty()) entryToRemove = i;
+                                                // Dropdown index 3 = "Default" => remove the attribute.
+                                                if (installLocationSelected[0].isEmpty() || "3".equals(installLocationSelected[0])) entryToRemove = i;
                                                 else e.setValue(installLocationSelected[0]);
                                             }
                                         }
                                         if(installLocationChanged) {
                                             if(foundInstallLocation) {
                                                 if (entryToRemove != 0) entries.remove(entryToRemove);
-                                            } else entries.add(4, new XMLEntry("android:installLocation", "=\"", installLocationSelected[0], "\""));
+                                            } else if (!"3".equals(installLocationSelected[0])) entries.add(4, new XMLEntry("android:installLocation", "=\"", installLocationSelected[0], "\""));
                                         }
 
                                         if (UiPrefs.genBackup(context)) {
@@ -254,7 +398,7 @@ public class ApkManifestEditor {
                                             } catch (Exception ignored) {
                                             }
                                         }
-                                        writeManifestEntries(apkFile, entries);
+                                        writeManifestEntries(apkFile, entries, resEntries);
                                         if(sign[0]) wrapper[0].signApk(apkFile);
                                         pm.dismiss();
                                         return true;
@@ -564,33 +708,56 @@ public class ApkManifestEditor {
             Arrays.fill(keep, true);
             pm.dismiss();
             context.handler.post(() -> {
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                boolean[] sign = {settings.getBoolean("autosign", true)};
+
+                LinearLayout optsRoot = new LinearLayout(context);
+                optsRoot.setOrientation(LinearLayout.VERTICAL);
+                int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
+                optsRoot.setPadding(pad, pad / 2, pad, pad / 2);
+                optsRoot.addView(MergeUtil.createCompressionDropdownLayout(context));
+                CheckBox autosignBox = new CheckBox(context);
+                autosignBox.setText(rss.getString(R.string.auto_sign));
+                autosignBox.setChecked(sign[0]);
+                autosignBox.setOnCheckedChangeListener((b, c) ->
+                        settings.edit().putBoolean("autosign", sign[0] = c).apply());
+                optsRoot.addView(autosignBox);
+
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(rss.getString(R.string.me_perms_n, perms.length))
+                        .setView(optsRoot)
                         .setMultiChoiceItems(labels, keep, (d, which, isChecked) -> keep[which] = isChecked)
                         .setNegativeButton(android.R.string.cancel, null)
                         .setPositiveButton(rss.getString(R.string.me_remove_unchecked), (d, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
-                            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
-                            boolean[] sign = {settings.getBoolean("autosign", true)};
                             Runnable doEdit = () -> {
                                 ProgressManager pm2 = new ProgressManager(context, true).show();
                                 new Thread(() -> {
                                     try {
-                                        int removed = 0;
+                                        List<String> toRemove = new ArrayList<>();
                                         for (int i = 0; i < perms.length; i++) {
                                             if (keep[i]) continue;
+                                            toRemove.add(perms[i]);
+                                        }
+                                        int removed = 0;
+                                        if (!toRemove.isEmpty()) {
                                             try {
-                                                removeManifestPermission(apkFile, perms[i]);
-                                                removed++;
-                                            } catch (Exception ignored) {
+                                                removed = removeManifestPermissions(apkFile, toRemove);
+                                            } catch (Exception e) {
+                                                pm2.dismiss();
+                                                new ErrorUtil(context).showError(e);
+                                                return;
                                             }
                                         }
-                                        if (sign[0]) wrapper[0].signApk(apkFile);
+                                        if (removed > 0 && sign[0]) wrapper[0].signApk(apkFile);
                                         pm2.dismiss();
                                         int done = removed;
                                         context.handler.post(() -> {
                                             Extensions.showMessage(context, rss.getString(R.string.me_perms_removed, done));
-                                            context.loadFolderInPane(apkFile.getParentFile(), true);
+                                            try { context.refreshAllPanes(); }
+                                            catch (Exception ignored) {
+                                                context.loadFolderInPane(apkFile.getParentFile(), true);
+                                            }
                                         });
                                     } catch (Exception e) {
                                         pm2.dismiss();
@@ -664,20 +831,31 @@ public class ApkManifestEditor {
                                 new Thread(() -> {
                                     try {
                                         int changed = 0;
+                                        boolean backedUp = false;
                                         for (int i = 0; i < attrs.length; i++) {
                                             if (boxes[i].isChecked() == current[i]) continue;
                                             try {
+                                                if (!backedUp && UiPrefs.genBackup(context)) {
+                                                    try {
+                                                        FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
+                                                    } catch (Exception ignored) {
+                                                    }
+                                                    backedUp = true;
+                                                }
                                                 writeManifestAttrValue(apkFile, attrs[i], Boolean.toString(boxes[i].isChecked()));
                                                 changed++;
                                             } catch (Exception ignored) {
                                             }
                                         }
-                                        if (sign[0]) wrapper[0].signApk(apkFile);
+                                        if (changed > 0 && sign[0]) wrapper[0].signApk(apkFile);
                                         pm2.dismiss();
                                         int done = changed;
                                         context.handler.post(() -> {
                                             Extensions.showMessage(context, rss.getString(R.string.me_toggles_applied, done));
-                                            context.loadFolderInPane(apkFile.getParentFile(), true);
+                                            try { context.refreshAllPanes(); }
+                                            catch (Exception ignored) {
+                                                context.loadFolderInPane(apkFile.getParentFile(), true);
+                                            }
                                         });
                                     } catch (Exception e) {
                                         pm2.dismiss();
@@ -696,7 +874,13 @@ public class ApkManifestEditor {
     }
 
     private void writeManifestEntries(File apkFile, List<XMLEntry> entries) throws Exception {
-        replaceZipEntry(apkFile, "AndroidManifest.xml", new aXMLEncoder().encodeString(entries, context));
+        writeManifestEntries(apkFile, entries, null);
+    }
+
+    private void writeManifestEntries(File apkFile, List<XMLEntry> entries, List<ResEntry> resEntries) throws Exception {
+        // The same resource table used at decode time must be supplied at encode time:
+        // symbolic references (e.g. "@string/app_name") otherwise resolve to 0 and break the APK.
+        replaceZipEntry(apkFile, "AndroidManifest.xml", new aXMLEncoder().encodeString(entries, context, resEntries));
     }
 
     private String appendDisabled(String middleTag) {
