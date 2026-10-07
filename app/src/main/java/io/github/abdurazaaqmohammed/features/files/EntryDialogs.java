@@ -502,8 +502,15 @@ public class EntryDialogs {
                             "zip_entries_" + System.currentTimeMillis());
                     //noinspection ResultOfMethodCallIgnored
                     zipEntryStage.mkdirs();
-                    for (ZipEntryInfo entry : zipEntriesForCompress(multi, values, fileName)) {
-                        fileOps.extractZipEntry(entry, zipEntryStage);
+                    try {
+                        for (ZipEntryInfo entry : zipEntriesForCompress(multi, values, fileName)) {
+                            fileOps.extractZipEntry(entry, zipEntryStage);
+                        }
+                    } catch (Exception e) {
+                        Util.deleteDir(zipEntryStage);
+                        pm.dismiss();
+                        new ErrorUtil(context).showError(e);
+                        return;
                     }
                     File[] staged = zipEntryStage.listFiles();
                     if (staged != null) sources.addAll(java.util.Arrays.asList(staged));
