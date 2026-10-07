@@ -1673,7 +1673,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setOnRefreshListener(() -> refreshPane(false));
     }
 
-    private void refreshPane(boolean pane1) {
+    public void refreshPane(boolean pane1) {
         try {
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             RecyclerView.Adapter<?> adapter = pane.getAdapter();
@@ -1686,6 +1686,15 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             new ErrorUtil(this).showError(e);
         }
         ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
+    }
+
+    public void refreshAllPanes() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            handler.post(this::refreshAllPanes);
+            return;
+        }
+        try { refreshPane(true); } catch (Exception ignored) { }
+        try { refreshPane(false); } catch (Exception ignored) { }
     }
 
     public void setCurrentFolder(File curr, File[] files) {
@@ -1794,6 +1803,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         }
         try {
             refreshSidebar(getSidebarSectionOrder());
+        } catch (Exception ignored) {
+        }
+        // Returning from editors/viewers (started with startActivity, not for result)
+        // leaves listings stale — always re-list the visible panes.
+        try {
+            refreshAllPanes();
         } catch (Exception ignored) {
         }
     }
