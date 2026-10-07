@@ -109,9 +109,36 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
             cardView.setBackgroundColor(typedValue.data);
         }
 
+        APKExtractorActivity act = apkExtractorActivity;
         holder.appName.setText(appInfo.name);
-        holder.packageNameView.setText(appInfo.packageName);
-        holder.appIconView.setImageDrawable(appInfo.icon);
+        holder.appName.setVisibility(act.showAppName ? View.VISIBLE : GONE);
+        StringBuilder sub = new StringBuilder();
+        if (act.showPackageName) sub.append(appInfo.packageName);
+        if (act.showVersionName && appInfo.versionName != null && !appInfo.versionName.isEmpty()) {
+            if (sub.length() > 0) sub.append(" • ");
+            sub.append('v').append(appInfo.versionName);
+            if (act.showVersionCode) sub.append(" (").append(appInfo.getVersionCode()).append(')');
+        } else if (act.showVersionCode) {
+            if (sub.length() > 0) sub.append(" • ");
+            sub.append("vCode ").append(appInfo.getVersionCode());
+        }
+        if (act.showFirstInstalled && appInfo.firstInstalled != null && !appInfo.firstInstalled.isEmpty()) {
+            if (sub.length() > 0) sub.append('\n');
+            sub.append(act.getString(R.string.show_first_install)).append(": ").append(appInfo.firstInstalled);
+        }
+        if (act.showLastUpdate && appInfo.lastUpdated != null && !appInfo.lastUpdated.isEmpty()) {
+            if (sub.length() > 0) sub.append('\n');
+            sub.append(act.getString(R.string.show_last_updated)).append(": ").append(appInfo.lastUpdated);
+        }
+        if (sub.length() == 0) sub.append(appInfo.packageName);
+        holder.packageNameView.setText(sub.toString());
+        holder.packageNameView.setVisibility(View.VISIBLE);
+        if (act.showIcon) {
+            holder.appIconView.setVisibility(View.VISIBLE);
+            holder.appIconView.setImageDrawable(appInfo.icon);
+        } else {
+            holder.appIconView.setVisibility(GONE);
+        }
         holder.splitIconView.setVisibility(appInfo.isSplit ? View.VISIBLE : GONE);
 
         holder.itemView.setOnClickListener(v -> {
