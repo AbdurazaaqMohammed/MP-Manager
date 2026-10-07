@@ -26,6 +26,14 @@
             android:textStyle="bold"/>
 
         <ImageButton
+            android:id="@+id/file_picker_refresh"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/baseline_refresh_24"
+            android:contentDescription="@string/reload_file"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+        <ImageButton
             android:id="@+id/file_picker_sort"
             android:layout_width="36dp"
             android:layout_height="36dp"

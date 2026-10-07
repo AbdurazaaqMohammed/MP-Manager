@@ -13,6 +13,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -121,6 +122,10 @@ public class FilePickerDialog {
         currentDir = resolveStartDir();
 
         sortButton.setOnClickListener(v -> showSortDialog());
+        try {
+            ImageButton refreshButton = view.findViewById(R.id.file_picker_refresh);
+            if (refreshButton != null) refreshButton.setOnClickListener(v -> refresh());
+        } catch (Exception ignored) { }
         pathView.setOnClickListener(v -> {
             View textInputLayout = LayoutInflater.from(context).inflate(R.layout.material_edittext, null);
             EditText input = textInputLayout.findViewById(R.id.m_et_edittext);
@@ -163,7 +168,25 @@ public class FilePickerDialog {
         }
         dialog = builder.create();
         loadDirectory(currentDir);
+        // Refresh when the dialog window regains focus (files may have changed while open).
+        try {
+            dialog.setOnShowListener(d -> {
+                try {
+                    Window w = dialog.getWindow();
+                    if (w != null && w.getDecorView() != null) vFocusHelper(w.getDecorView());
+                } catch (Exception ignored) { }
+            });
+        } catch (Exception ignored) { }
+        sortButton.setOnLongClickListener(v -> { refresh(); return true; });
         dialog.show();
+    }
+
+    private void vFocusHelper(View decor) {
+        try {
+            decor.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) refresh();
+            });
+        } catch (Exception ignored) { }
     }
 
     private File resolveStartDir() {
@@ -289,6 +312,12 @@ public class FilePickerDialog {
 
     private void reloadCurrent() {
         loadDirectory(currentDir);
+    }
+
+    public void refresh() {
+        try {
+            if (currentDir != null) loadDirectory(currentDir);
+        } catch (Exception ignored) { }
     }
 
     private void handleClick(File f) {
