@@ -297,7 +297,7 @@ public class ArchiveUtil {
         try (Archive rar = password == null
                 ? new Archive(archive)
                 : new Archive(archive, new String(password))) {
-            int total = progress == NO_PROGRESS ? -1 : rar.getFileHeaders().length;
+            int total = progress == NO_PROGRESS ? -1 : rar.getFileHeaders().size();
             int position = 0;
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
