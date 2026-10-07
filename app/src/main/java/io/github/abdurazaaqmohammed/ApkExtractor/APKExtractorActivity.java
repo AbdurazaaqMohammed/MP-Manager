@@ -1393,6 +1393,16 @@ public class APKExtractorActivity extends BaseActivity {
         runOnUiThread(ad::show);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh in case apps were installed/uninstalled while away.
+        try {
+            if (!loadingApps) refreshApps();
+            else reloadListView();
+        } catch (Exception ignored) { }
+    }
+
 
     @Override
     protected void onPause() {
