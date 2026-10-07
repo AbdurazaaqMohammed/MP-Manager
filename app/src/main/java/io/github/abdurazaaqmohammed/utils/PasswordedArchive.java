@@ -137,6 +137,13 @@ public final class PasswordedArchive {
      * rar -hp default) fail without the password, while zip answers directly
      * from its central directory. A plain7z/rar no longer drags every stored
      * password through a full extraction attempt.
+     *
+     * <p>7z needs a second probe beyond the header: when 7-Zip encrypts with
+     * its default <code>-p</code> (no <code>-mhe</code>) the headers stay
+     * readable and only the entry content is locked, so the open above
+     * succeeds and the real answer comes from reading the first file entry.
+     * Damaged archives report false — a broken file is not a password
+     * problem, and prompting for one would just send the user in circles.
      */
     public static boolean isEncryptedCandidate(File archive) {
         String n = archive.getName().toLowerCase(java.util.Locale.ROOT);
@@ -147,12 +154,7 @@ public final class PasswordedArchive {
                 }
             }
             if (n.endsWith(".7z")) {
-                try (org.apache.commons.compress.archivers.sevenz.SevenZFile f =
-                             new org.apache.commons.compress.archivers.sevenz.SevenZFile(archive)) {
-                    return false;
-                } catch (Exception headerLocked) {
-                    return true;
-                }
+                return is7zLocked(archive);
             }
             if (n.endsWith(".rar")) {
                 try (com.github.junrar.Archive rar = new com.github.junrar.Archive(archive)) {
@@ -167,6 +169,37 @@ public final class PasswordedArchive {
             return false;
         }
         return false;
+    }
+
+    /**
+     * True when the 7z cannot be read without a password, be it through the
+     * header (encrypted headers fail on open) or through the content
+     * (plain headers, encrypted entry streams fail on the first read).
+     */
+    private static boolean is7zLocked(File archive) {
+        try {
+            try (org.apache.commons.compress.archivers.sevenz.SevenZFile f =
+                         new org.apache.commons.compress.archivers.sevenz.SevenZFile(archive)) {
+                org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry entry;
+                while ((entry = f.getNextEntry()) != null) {
+                    if (entry.isDirectory()) continue;
+                    try (java.io.InputStream in = f.getInputStream(entry)) {
+                        // One small read is enough: the AES stream verifies the
+                        // password while producing its first bytes. With a solid
+                        // block this only decompresses the first chunk, not the
+                        // whole entry.
+                        in.read(new byte[64]);
+                    }
+                    return false;
+                }
+                // Nothing readable in the archive, so nothing to decrypt either.
+                return false;
+            }
+        } catch (org.apache.commons.compress.PasswordRequiredException locked) {
+            return true;
+        } catch (Exception damaged) {
+            return false;
+        }
     }
 
     /**

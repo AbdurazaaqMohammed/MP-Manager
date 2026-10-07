@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.utils;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.compress.archivers.sevenz.SevenZMethod;
+import org.apache.commons.compress.archivers.sevenz.SevenZMethodConfiguration;
 import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -154,24 +155,36 @@ public class ArchiveUtil {
         create(output, sources, null);
     }
 
+    public static void create(File output, List<File> sources, char[] password) throws IOException {
+        create(output, sources, password, null);
+    }
+
     /**
      * Creates an archive, encrypting it when a password is given.
      *
-     * <p>Only zip can be encrypted here: it goes through zip4j, which supports AES
-     * encryption. The 7z writer in commons-compress has no password support, so a
-     * password with a 7z target is refused rather than quietly ignored.
+     * <p>zip goes through zip4j (AES), 7z through commons-compress 1.23+'s
+     * SevenZOutputFile(File, char[]) (AES-256 + SHA-256); other formats still
+     * refuse a password rather than quietly ignoring one.
+     *
+     * <p>{@code level} applies where the format has a knob: zip maps it onto
+     * the zip4j deflater level, 7z onto a LZMA2 dictionary size (or a plain
+     * COPY stream for NO_COMPRESSION); the stream formats and tar ignore it.
      */
-    public static void create(File output, List<File> sources, char[] password) throws IOException {
+    public static void create(File output, List<File> sources, char[] password,
+                              net.lingala.zip4j.model.enums.CompressionLevel level) throws IOException {
         String lower = output.getName().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".zip")) {
-            createZip(output, sources, password);
+            createZip(output, sources, password, level);
+            return;
+        }
+        if (lower.endsWith(".7z")) {
+            create7z(output, sources, password, level);
             return;
         }
         if (password != null && password.length > 0) {
-            throw new IOException("Encrypted archives can only be created as .zip");
+            throw new IOException("Encrypted archives can only be created as .zip or .7z");
         }
-        if (lower.endsWith(".7z")) create7z(output, sources);
-        else if (lower.endsWith(".tar")) createTar(new FileOutputStream(output), sources);
+        if (lower.endsWith(".tar")) createTar(new FileOutputStream(output), sources);
         else if (lower.endsWith(".tgz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
         else if (lower.endsWith(".tar.gz")) createTar(new GzipCompressorOutputStream(new FileOutputStream(output)), sources);
         else if (lower.endsWith(".tbz2")) createTar(new BZip2CompressorOutputStream(new FileOutputStream(output)), sources);
@@ -403,14 +416,46 @@ public class ArchiveUtil {
         }
     }
 
-    private static void create7z(File output, List<File> sources) throws IOException {
-        // No password: the SevenZOutputFile in commons-compress 1.21 has no
-        // password constructor, so this build cannot write an encrypted 7z. It
-        // can still read one.
-        try (SevenZOutputFile sevenZOutput = new SevenZOutputFile(output)) {
-            sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
+    private static void create7z(File output, List<File> sources, char[] password,
+                                 net.lingala.zip4j.model.enums.CompressionLevel level) throws IOException {
+        try (SevenZOutputFile sevenZOutput = password == null || password.length == 0
+                ? new SevenZOutputFile(output)
+                : new SevenZOutputFile(output, password)) {
+            if (level == net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION) {
+                sevenZOutput.setContentCompression(SevenZMethod.COPY);
+            } else {
+                sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
+                long dictSize = sevenZDictSize(level);
+                if (dictSize > 0) {
+                    sevenZOutput.setContentMethods(java.util.Collections.singletonList(
+                            new SevenZMethodConfiguration(SevenZMethod.LZMA2, dictSize)));
+                }
+            }
             for (File source : sources) addToSevenZ(sevenZOutput, source, source.isDirectory() ? source.getName() + "/" : source.getName());
         }
+    }
+
+    /**
+     * Maps the shared compression level onto a LZMA2 dictionary size, the one
+     * knob SevenZOutputFile exposes. -1 keeps the library default; smaller
+     * dictionaries trade ratio for speed and memory, exactly what the level
+     * promises. zip4j levels mirror java.util.zip.Deflater 0..9.
+     *
+     * <p>The xz match finder needs roughly 12 bytes of RAM per dictionary
+     * byte, so the desktop 7-Zip sizes (64 MiB for ULTRA) would need far more
+     * memory than even a largeHeap phone owns. The table is capped at 32 MiB
+     * and then halved until the encoder fits into ~35% of the app heap, which
+     * keeps "no memory left" from turning into an outright crash.
+     */
+    private static long sevenZDictSize(net.lingala.zip4j.model.enums.CompressionLevel level) {
+        if (level == null) return -1;
+        int lv = Math.max(0, Math.min(9, level.getLevel()));
+        if (lv == 0) return -1; // handled as COPY before this point
+        final long mib = new long[] {-1, 1, 2, 4, 6, 8, 12, 16, 24, 32}[lv];
+        long dict = mib << 20;
+        long budget = (long) (Runtime.getRuntime().maxMemory() * 0.35);
+        while (dict > (1L << 20) && dict * 12 > budget) dict >>= 1;
+        return dict;
     }
 
     /**
@@ -420,10 +465,20 @@ public class ArchiveUtil {
      * structure rather than landing flat.
      */
     static void createZip(File output, List<File> sources, char[] password) throws IOException {
+        createZip(output, sources, password, null);
+    }
+
+    static void createZip(File output, List<File> sources, char[] password,
+                          net.lingala.zip4j.model.enums.CompressionLevel level) throws IOException {
         net.lingala.zip4j.ZipFile zip = new net.lingala.zip4j.ZipFile(output);
         net.lingala.zip4j.model.ZipParameters params =
                 new net.lingala.zip4j.model.ZipParameters();
         params.setCompressionMethod(net.lingala.zip4j.model.enums.CompressionMethod.DEFLATE);
+        if (level != null) {
+            params.setCompressionLevel(level);
+            if (level == net.lingala.zip4j.model.enums.CompressionLevel.NO_COMPRESSION)
+                params.setCompressionMethod(net.lingala.zip4j.model.enums.CompressionMethod.STORE);
+        }
         if (password != null && password.length > 0) {
             // zip4j 2.11: the password lives on ZipFile, and encryption is
             // enabled by flag plus method rather than by one setter.

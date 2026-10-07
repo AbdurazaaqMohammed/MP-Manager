@@ -831,7 +831,15 @@ public class FileOperationsHelper {
                 // failing with a raw library error.
                 return askPasswordAndExtract(readable, destDir, keepTime, pm);
             }
-            return ArchiveUtil.extractWithProgress(readable, destDir, keepTime, null, progressFor(pm));
+            try {
+                return ArchiveUtil.extractWithProgress(readable, destDir, keepTime, null, progressFor(pm));
+            } catch (org.apache.commons.compress.PasswordRequiredException locked) {
+                // Content-encrypted 7z (7-Zip default -p, plain headers) can
+                // slip past isEncryptedCandidate's header probe only when the
+                // first entry is not where the lock shows; ask here rather
+                // than showing a raw library error.
+                return askPasswordAndExtract(readable, destDir, keepTime, pm);
+            }
         } catch (Exception e) {
             new ErrorUtil(context).showError(e);
             return false;

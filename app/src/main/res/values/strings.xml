@@ -1152,7 +1152,7 @@ Tap "Open settings", pick "Activity log" and turn it on. It only listens for the
     <string name="compress_password_hint">Password (zip only, leave empty for none)</string>
     <string name="compress_pick_password">Pick from saved passwords</string>
     <string name="compress_no_saved_passwords">No saved passwords yet</string>
-    <string name="archive_encrypt_zip_only">Encrypted archives must be .zip</string>
+    <string name="archive_encrypt_zip_only">Encrypted archives must be .zip or .7z</string>
     <string name="archive_op_unsupported">This operation is only supported for ZIP archives</string>
     <string name="enter_archive_password">Archive password</string>
     <string name="archive_password_needed">This archive is encrypted</string>
