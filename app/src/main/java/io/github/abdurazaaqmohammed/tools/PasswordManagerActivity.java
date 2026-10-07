@@ -5,6 +5,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -63,6 +64,7 @@ public class PasswordManagerActivity extends BaseActivity {
     private BwVault.Session bwSession;
     private BwVault.Result bwVault;
     private boolean bwBusy;
+    private boolean bwArchiveBusy;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,6 +126,7 @@ public class PasswordManagerActivity extends BaseActivity {
             recent.setText(getString(R.string.password_manager_recent_value, m.archiveName,
                     m.index + 1, Math.max(m.total, m.index + 1), rel.toString()));
         }
+        maybeSyncArchivePasswords();
     }
 
     private void promptAdd() {
@@ -356,6 +359,7 @@ public class PasswordManagerActivity extends BaseActivity {
                 }
             }
             updateBwUi();
+            maybeSyncArchivePasswords();
         });
     }
 
@@ -377,6 +381,55 @@ public class PasswordManagerActivity extends BaseActivity {
                     updateBwUi();
                 })
                 .show();
+    }
+
+    /**
+     * Keeps the local archive password list and its dedicated vault cipher in step:
+     * restores from the vault when the local list is empty, pushes otherwise whenever
+     * the content drifts. Everything compares decrypted content, so it stays idempotent.
+     */
+    private void maybeSyncArchivePasswords() {
+        if (bwVault == null || bwBusy || bwArchiveBusy) return;
+        BwVault.Entry marker = BwVault.findArchiveEntry(bwEntries);
+        String content = TextUtils.join("\n", items);
+        if (items.isEmpty()) {
+            if (marker != null && marker.password != null && !marker.password.isEmpty()) {
+                int restored = 0;
+                for (String line : marker.password.split("\n")) {
+                    if (!line.isEmpty() && ArchivePasswordStore.add(this, line)) restored++;
+                }
+                if (restored > 0) {
+                    refresh();
+                    Toast.makeText(this, getString(R.string.bw_restored_files, restored),
+                            Toast.LENGTH_LONG).show();
+                }
+            }
+            return;
+        }
+        if (marker != null && content.equals(marker.password)) return;
+        bwArchiveBusy = true;
+        new Thread(() -> {
+            try {
+                BwVault.Entry pushed = BwVault.pushArchivePasswords(
+                        bwVault.session, bwVault.userKey, bwEntries, content);
+                runOnUiThread(() -> {
+                    bwArchiveBusy = false;
+                    if (marker == null) {
+                        bwEntries.add(pushed);
+                    } else {
+                        int at = bwEntries.indexOf(marker);
+                        if (at >= 0) bwEntries.set(at, pushed);
+                    }
+                    bwAdapter.notifyDataSetChanged();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    bwArchiveBusy = false;
+                    Toast.makeText(this, getString(R.string.bw_failed, e.getMessage()),
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+        }, "bw-archive-push").start();
     }
 
     private void showBwEntry(BwVault.Entry entry) {

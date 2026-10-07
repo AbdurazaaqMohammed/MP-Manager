@@ -2014,5 +2014,6 @@ Deleted %2$s · %3$s</string>
     <string name="bw_copy_username">Copy username</string>
     <string name="bw_copy_code">Copy code</string>
     <string name="bw_empty">The vault is empty</string>
+    <string name="bw_restored_files">Restored %1$d archive passwords from the vault</string>
     <string name="bw_wrong_password">Wrong master password</string>
 </resources>

@@ -16,6 +16,9 @@ import java.util.List;
  */
 public final class BwVault {
 
+    /** Name of the dedicated cipher that backs up the app's archive password list. */
+    public static final String ARCHIVE_MARKER = "MP Manager 文件密码";
+
     private BwVault() {
     }
 
@@ -151,6 +154,78 @@ public final class BwVault {
     public static Result resync(Session s, BwCrypto.SymKey userKey) throws Exception {
         refreshIfExpired(s);
         return fetch(s, userKey);
+    }
+
+    /** First entry carrying the given (decrypted) name, or null. */
+    public static Entry findEntry(List<Entry> entries, String name) {
+        if (entries == null) return null;
+        for (Entry e : entries) if (name.equals(e.name)) return e;
+        return null;
+    }
+
+    /** The archive-password backup cipher, when the vault already has one. */
+    public static Entry findArchiveEntry(List<Entry> entries) {
+        return findEntry(entries, ARCHIVE_MARKER);
+    }
+
+    /**
+     * Writes the archive password list into its dedicated vault cipher: creates it on first
+     * use, updates it afterwards. {@code content} is the newline-joined list; an empty string
+     * still keeps the cipher (with an empty password) so the marker stays easy to find.
+     *
+     * @return the resulting entry (fresh id on create) so the caller can keep its list current
+     */
+    public static Entry pushArchivePasswords(Session s, BwCrypto.SymKey userKey,
+                                             List<Entry> known, String content) throws Exception {
+        return pushArchivePasswords(s, userKey, known, ARCHIVE_MARKER, content);
+    }
+
+    static Entry pushArchivePasswords(Session s, BwCrypto.SymKey userKey, List<Entry> known,
+                                      String marker, String content) throws Exception {
+        refreshIfExpired(s);
+        Entry existing = findEntry(known, marker);
+        JSONObject body = archiveBody(userKey, marker, content,
+                existing == null ? null : existing.id);
+        JSONObject answer = existing == null
+                ? BwApi.createCipher(s.server, s.accessToken, s.proxy, body)
+                : BwApi.updateCipher(s.server, s.accessToken, s.proxy, existing.id, body);
+        String id = existing != null ? existing.id
+                : answer == null ? null
+                : firstText(answer, "id", "Id");
+        if (!hasText(id)) id = existing != null ? existing.id : "";
+        return new Entry(id, marker, null, content, null);
+    }
+
+    /**
+     * Cipher body matching what current clients write: a fresh random per-cipher key wraps
+     * the name and the newline-joined password list, and the key itself is wrapped by the
+     * user key. Field casing follows NodeWarden (camelCase), which also accepts the values
+     * an official server would expect.
+     */
+    static JSONObject archiveBody(BwCrypto.SymKey userKey, String marker, String content,
+                                  String existingId) throws Exception {
+        byte[] raw = new byte[64];
+        new java.security.SecureRandom().nextBytes(raw);
+        BwCrypto.SymKey cipherKey = BwCrypto.SymKey.of64(raw);
+
+        JSONObject body = new JSONObject();
+        put(body, "type", 1);  // 1 = login in the sync API's numbering
+        put(body, "name", BwCrypto.encryptToString(cipherKey, marker));
+        put(body, "key", BwCrypto.encrypt(userKey, raw));
+        put(body, "favorite", false);
+        put(body, "reprompt", 0);
+        if (hasText(existingId)) put(body, "id", existingId);
+        JSONObject login = new JSONObject();
+        put(login, "password", BwCrypto.encryptToString(cipherKey, content));
+        put(body, "login", login);
+        return body;
+    }
+
+    private static void put(JSONObject o, String key, Object value) {
+        try {
+            o.put(key, value);
+        } catch (Exception ignored) {
+        }
     }
 
     // ------------------------------------------------------------------ internals

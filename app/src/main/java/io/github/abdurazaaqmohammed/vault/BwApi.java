@@ -130,6 +130,26 @@ public final class BwApi {
         return get(host, "/api/sync", accessToken, proxy);
     }
 
+    /** Create one cipher; body fields are already client-encrypted. */
+    public static JSONObject createCipher(String host, String accessToken, String proxy,
+                                          JSONObject body) throws IOException {
+        return send("POST", host, "/api/ciphers", "application/json",
+                body.toString().getBytes(StandardCharsets.UTF_8), accessToken, proxy);
+    }
+
+    /** Replace one cipher in place; the id also travels inside the body. */
+    public static JSONObject updateCipher(String host, String accessToken, String proxy,
+                                          String id, JSONObject body) throws IOException {
+        return send("PUT", host, "/api/ciphers/" + id, "application/json",
+                body.toString().getBytes(StandardCharsets.UTF_8), accessToken, proxy);
+    }
+
+    /** Delete one cipher (server decides whether that is a soft delete). */
+    public static JSONObject deleteCipher(String host, String accessToken, String proxy,
+                                          String id) throws IOException {
+        return send("DELETE", host, "/api/ciphers/" + id, null, null, accessToken, proxy);
+    }
+
     // ------------------------------------------------------------------ plumbing
 
     private static StringBuilder param(StringBuilder sb, String key, String value) {
@@ -198,14 +218,23 @@ public final class BwApi {
 
     private static JSONObject post(String host, String path, String contentType, byte[] body,
                                    String bearer, String proxy) throws IOException {
+        return send("POST", host, path, contentType, body, bearer, proxy);
+    }
+
+    private static JSONObject send(String method, String host, String path, String contentType,
+                                   byte[] body, String bearer, String proxy) throws IOException {
         HttpURLConnection c = open(host, path, proxy);
         try {
-            c.setRequestMethod("POST");
-            c.setDoOutput(true);
-            c.setRequestProperty("Content-Type", contentType);
+            c.setRequestMethod(method);
+            if (body != null) {
+                c.setDoOutput(true);
+                c.setRequestProperty("Content-Type", contentType);
+            }
             if (bearer != null) c.setRequestProperty("Authorization", "Bearer " + bearer);
-            try (OutputStream out = c.getOutputStream()) {
-                out.write(body);
+            if (body != null) {
+                try (OutputStream out = c.getOutputStream()) {
+                    out.write(body);
+                }
             }
             return readAnswer(c);
         } finally {
@@ -263,6 +292,7 @@ public final class BwApi {
         InputStream stream = status >= 400 ? c.getErrorStream() : c.getInputStream();
         String text = readAll(stream);
         if (status >= 400) throw new HttpError(status, text);
+        if (text.isEmpty()) return new JSONObject();  // 204 No Content, for example on DELETE
         try {
             return new JSONObject(text);
         } catch (Exception e) {
