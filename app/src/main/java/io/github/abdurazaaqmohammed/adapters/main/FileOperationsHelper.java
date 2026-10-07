@@ -239,6 +239,15 @@ public class FileOperationsHelper {
         context.handler.post(() -> {
             adapter.clearSelection();
             context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            // Source pane also changed after a move (files deleted) — reload it too.
+            try {
+                File sourceFolder = adapter.pane1 ? context.pane1Folder : context.pane2Folder;
+                if (sourceFolder != null && !sourceFolder.equals(destinationFolder)) {
+                    context.loadFolderInPane(sourceFolder, adapter.pane1);
+                } else {
+                    context.refreshAllPanes();
+                }
+            } catch (Exception ignored) { }
         });
         return true;
     }
@@ -347,7 +356,11 @@ public class FileOperationsHelper {
                 extractZipEntry((ZipEntryInfo) item, destinationFolder);
             }
         }
-        context.handler.post(() -> context.loadFolderInPane(destinationFolder, !adapter.pane1));
+        context.handler.post(() -> {
+            context.loadFolderInPane(destinationFolder, !adapter.pane1);
+            // Copy destination changed too — ensure the source pane reflects renames/copies.
+            try { context.refreshAllPanes(); } catch (Exception ignored) { }
+        });
         return true;
     }
 
