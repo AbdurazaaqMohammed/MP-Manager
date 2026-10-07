@@ -74,6 +74,16 @@
     <string name="sign_set">Sign Settings</string>
     <string name="target_android_version">Target Android Version</string>
     <string name="compression_level">Compression Level</string>
+    <string name="compress_level_no_compression">Store only (no compression)</string>
+    <string name="compress_level_fastest">Fastest</string>
+    <string name="compress_level_faster">Faster</string>
+    <string name="compress_level_fast">Fast</string>
+    <string name="compress_level_medium_fast">Medium-fast</string>
+    <string name="compress_level_normal">Normal</string>
+    <string name="compress_level_higher">Higher</string>
+    <string name="compress_level_maximum">Maximum</string>
+    <string name="compress_level_pre_ultra">Near ultra</string>
+    <string name="compress_level_ultra">Ultra</string>
     <string name="update_mode">Update mode</string>
     <string name="replace_all">Replace All</string>
     <string name="update_and_replace">Update and replace</string>
@@ -84,7 +94,6 @@
     <string name="create_new_file">Create new</string>
     <string name="confirm_add_to_zip_f">Are you sure you want to add %1$s to %2$s?</string>
     <string name="plus_n_more">and %1$d more</string>
-    <string name="pw_zip">Password (no encryption if empty)</string>
     <string name="extract">Extract</string>
     <string name="extracting_to_folder">Extracting to %1$s</string>
     <string name="archive_format">Archive format</string>

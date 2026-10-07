@@ -614,14 +614,13 @@ public class SettingsController {
                 FileMenuOrder.setTwoColumn(activity, checked));
 
         AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
-        List<String> levels = new ArrayList<>();
-        for (CompressionLevel cl : CompressionLevel.values()) {
-            levels.add(cl.name());
-        }
+        List<String> levels = io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.names();
         compressTv.setAdapter(new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, levels));
-        compressTv.setText(settings.getString("compressLevel",
-                CompressionLevel.NO_COMPRESSION.name()), false);
+                android.R.layout.simple_dropdown_item_1line,
+                io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.labels(activity)));
+        compressTv.setText(io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.label(activity,
+                settings.getString("compressLevel",
+                        CompressionLevel.NO_COMPRESSION.name())), false);
         compressTv.setOnItemClickListener((p, v, pos, id) ->
                 settings.edit().putString("compressLevel", levels.get(pos)).apply());
     }

@@ -387,10 +387,9 @@ public class EntryDialogs {
         archiveFormatInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, archiveFormats));
 
         AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);
-        compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
-        List<String> compressionLevels = new ArrayList<>();
-        for (CompressionLevel cl : CompressionLevel.values()) compressionLevels.add(cl.name());
-        compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, compressionLevels));
+        List<String> compressionLevels = io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.names();
+        compressLevelInput.setText(io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.label(context, settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name())));
+        compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.labels(context)));
         compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
         // Password, with the stored ones a tap away: typing the same password for
         // every archive is exactly what the password manager is for.
@@ -507,7 +506,7 @@ public class EntryDialogs {
                     zipParameters.setCompressionLevel(compressionLevel);
                     if (compressionLevel == CompressionLevel.NO_COMPRESSION)
                         zipParameters.setCompressionMethod(CompressionMethod.STORE);
-                    CharSequence pw = ((TextView) compressView.findViewById(R.id.pw_edittext)).getText();
+                    CharSequence pw = passwordField == null ? null : passwordField.getText();
 
                     try (ZipFile zf = new ZipFile(finalOutput)) {
                         if (!TextUtils.isEmpty(pw)) {

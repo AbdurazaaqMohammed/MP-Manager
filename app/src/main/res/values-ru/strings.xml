@@ -61,6 +61,10 @@
     <string name="signed">Подписано %1$s</string>
     <string name="deleting">Удаление %1$s</string>
     <string name="compressing">Сжатие</string>
+    <string name="compress_password_hint">Пароль (только для zip, если пусто — без шифрования)</string>
+    <string name="compress_pick_password">Выбрать из сохранённых паролей</string>
+    <string name="compress_no_saved_passwords">Сохранённых паролей пока нет</string>
+    <string name="archive_encrypt_zip_only">Шифрованный архив должен быть .zip</string>
     <string name="compress">Сжать</string>
     <string name="hist">История поиска</string>
     <string name="filename">Имя файла</string>
@@ -75,6 +79,16 @@
     <string name="sign_set">Настройки подписи</string>
     <string name="target_android_version">Целевая версия Android</string>
     <string name="compression_level">Уровень сжатия</string>
+    <string name="compress_level_no_compression">Только хранение (без сжатия)</string>
+    <string name="compress_level_fastest">Самый быстрый</string>
+    <string name="compress_level_faster">Быстрее</string>
+    <string name="compress_level_fast">Быстрый</string>
+    <string name="compress_level_medium_fast">Средне-быстрый</string>
+    <string name="compress_level_normal">Обычный</string>
+    <string name="compress_level_higher">Повышенный</string>
+    <string name="compress_level_maximum">Максимальный</string>
+    <string name="compress_level_pre_ultra">Почти экстремальный</string>
+    <string name="compress_level_ultra">Экстремальный</string>
     <string name="update_mode">Режим обновления</string>
     <string name="replace_all">Заменить всё</string>
     <string name="update_and_replace">Обновить и заменить</string>
@@ -85,7 +99,6 @@
     <string name="create_new_file">Создать новый</string>
     <string name="confirm_add_to_zip_f">Вы уверены, что хотите добавить %1$s в %2$s?</string>
     <string name="plus_n_more">и ещё %1$d</string>
-    <string name="pw_zip">Пароль (если пусто — без шифрования)</string>
     <string name="extract">Извлечь</string>
     <string name="extracting_to_folder">Извлечение в %1$s</string>
     <string name="archive_format">Формат архива</string>

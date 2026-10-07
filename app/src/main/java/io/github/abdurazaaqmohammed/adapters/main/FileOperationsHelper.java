@@ -448,10 +448,9 @@ public class FileOperationsHelper {
             ll.<TextView>findViewById(R.id.addToZipText).setText(context.rss.getString(R.string.confirm_add_to_zip_f, summarizeItems(items), zipFile.getName()));
 
             AutoCompleteTextView compressLevelInput = ll.findViewById(R.id.compress_level);
-            compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
-            List<String> compressionLevels = new ArrayList<>();
-            for (CompressionLevel cl : CompressionLevel.values()) compressionLevels.add(cl.name());
-            compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, compressionLevels));
+            List<String> compressionLevels = io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.names();
+            compressLevelInput.setText(io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.label(context, settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name())));
+            compressLevelInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.labels(context)));
             compressLevelInput.setOnItemClickListener((parent2, view1, position2, id1) -> settings.edit().putString("compressLevel", compressionLevels.get(position2)).apply());
 
             AutoCompleteTextView updateModeInput = ll.findViewById(R.id.update_mode);
@@ -476,8 +475,8 @@ public class FileOperationsHelper {
                     .setTitle(add)
                     .setView(ll)
                     .setPositiveButton(add, (d, w) -> {
-                        String level = compressLevelInput.getText().toString();
-                        if (level.isEmpty()) level = settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name());
+                        String level = io.github.abdurazaaqmohammed.utils.CompressionLevelUtil.nameOf(context, compressLevelInput.getText().toString());
+                        if (level == null) level = settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name());
                         compressionLevel[0] = CompressionLevel.valueOf(level);
                         proceed[0] = true;
                         latch.countDown();
