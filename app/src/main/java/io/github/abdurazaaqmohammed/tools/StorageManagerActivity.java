@@ -6,6 +6,7 @@ import android.app.usage.StorageStatsManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -29,6 +30,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.ImageView;
@@ -37,10 +39,12 @@ import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import androidx.core.content.FileProvider;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -219,19 +223,19 @@ public class StorageManagerActivity extends BaseActivity {
         modeLabel.setText(getString(R.string.storage_clear_mode));
         modeLabel.setTextSize(13);
         box.addView(modeLabel);
-        android.widget.Spinner modeSpinner = new android.widget.Spinner(this);
+        Spinner modeSpinner = new Spinner(this);
         ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{getString(R.string.storage_mode_root), getString(R.string.storage_mode_accessibility)});
         modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         modeSpinner.setAdapter(modeAdapter);
-        final android.content.SharedPreferences clearModePrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
+        final SharedPreferences clearModePrefs = PreferenceManager.getDefaultSharedPreferences(this);
         int modeIndex = clearModePrefs.getInt("cache_clear_mode", 0);
         modeSpinner.setSelection(modeIndex);
-        modeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        modeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 clearModePrefs.edit().putInt("cache_clear_mode", position).apply();
             }
 
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
         box.addView(modeSpinner);
@@ -271,12 +275,12 @@ public class StorageManagerActivity extends BaseActivity {
         });
         loadCache.setOnClickListener(v -> loadCaches());
         clearSel.setOnClickListener(v -> {
-            int mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
+            int mode = PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
             if (mode == 1) autoClearCaches(true);
             else clearCaches(true);
         });
         clearAll.setOnClickListener(v -> {
-            int mode = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
+            int mode = PreferenceManager.getDefaultSharedPreferences(this).getInt("cache_clear_mode", 0);
             if (mode == 1) autoClearCaches(false);
             else clearCaches(false);
         });

@@ -377,6 +377,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         currentFileUri = t.fileUri;
         axml = t.axml;
         resEntries = t.resEntries;
+        if (f != null) f.setAxml(t.axml);
 
         if (f != null && f.getEditor() != null && t.loaded) {
             boolean wasModified = t.modified; // setText fires a change event; preserve real state
@@ -691,6 +692,31 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             saveTabTextRoot(tab, text, onDone);
             return;
         }
+        // Plain .xml that looks like Android XML: offer to compile as AXML on save.
+        if (!tab.axml && isXmlFile(tab) && FileUtils.looksLikeAxmlText(text)) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(R.string.compile_axml_title))
+                    .setMessage(getString(R.string.compile_axml_msg))
+                    .setPositiveButton(getString(R.string.save_axml), (d, w) -> {
+                        tab.axml = true;
+                        if (getCurrentTab() == tab) {
+                            axml = true;
+                            UnifiedEditorFragment f = getFragment();
+                            if (f != null) f.setAxml(true);
+                        }
+                        saveTabText(tab, text, onDone);
+                    })
+                    .setNegativeButton(getString(R.string.save_plain), (d, w) -> writeTabText(tab, text, onDone))
+                    .setNeutralButton(android.R.string.cancel, (d, w) -> {
+                        if (onDone != null) { /* keep modified flag, don't close */ }
+                    })
+                    .show();
+            return;
+        }
+        writeTabText(tab, text, onDone);
+    }
+
+    private void writeTabText(EditorTab tab, String text, Runnable onDone) {
         backupForSave(tab.file, null);
         try (OutputStream os = (tab.file == null
                 ? getContentResolver().openOutputStream(tab.fileUri, "wt")
@@ -819,6 +845,34 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         btnRedo.setEnabled(canRedo);
     }
 
+    @Override
+    public boolean isAxmlMode() {
+        EditorTab t = getCurrentTab();
+        return t != null && t.axml;
+    }
+
+    @Override
+    public void onToggleAxmlMode() {
+        EditorTab t = getCurrentTab();
+        if (t == null) return;
+        t.axml = !t.axml;
+        UnifiedEditorFragment f = getFragment();
+        if (f != null) f.setAxml(t.axml);
+        axml = t.axml;
+        Extensions.showMessage(this, t.axml ? getString(R.string.save_as_axml) : getString(R.string.save_as_plain_xml));
+    }
+
+    private boolean isXmlFile(EditorTab tab) {
+        try {
+            String name = null;
+            if (tab.file != null) name = tab.file.getName();
+            else if (tab.title != null) name = tab.title;
+            if (name == null && currentFile != null) name = currentFile.getName();
+            return name != null && name.toLowerCase().endsWith(".xml");
+        } catch (Exception e) {
+            return false;
+        }
+    }
     @Override
     public void onSaveRequested() {
         // Mapped from the fragment's "Reload file" item: re-read the file from disk
