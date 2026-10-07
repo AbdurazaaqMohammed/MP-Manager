@@ -516,10 +516,13 @@ public class DexTools {
                         .putExtra("zipEntryPath", fullPath)
                         .putExtra("axml", true)
                         .putExtra("path", tempFile.getPath()), 757);
-                } else context.startActivityForResult(new Intent(context, TextEditorActivity.class)
+                } else try (InputStream plainIn = zf.getInputStream(zf.getFileHeader(fullPath))) {
+                    FileUtils.copyFile(plainIn, tempFile);
+                    context.startActivityForResult(new Intent(context, TextEditorActivity.class)
                         .putExtra("zf", zipFile.getPath())
                         .putExtra("zipEntryPath", fullPath)
                         .putExtra("path", tempFile.getPath()), 757);
+                }
             } else if (name.equals("resources.arsc")) {
                 FileUtils.copyFile(is, tempFile);
                 context.handler.post(() -> showArscOpenWith(tempFile, zipFile, fullPath));
