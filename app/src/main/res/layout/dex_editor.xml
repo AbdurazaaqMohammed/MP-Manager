@@ -127,12 +127,15 @@
         android:layout_width="280dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
+        android:background="?attr/colorSurface"
         android:orientation="vertical">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/drawer_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:theme="@style/AppTheme.AppBarOverlay"
             app:title="@string/opened_classes" />
 
         <modder.hub.dexeditor.views.FastScrollerRecyclerView
