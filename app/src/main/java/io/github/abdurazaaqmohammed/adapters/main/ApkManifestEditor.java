@@ -302,6 +302,21 @@ public class ApkManifestEditor {
 
         quickEditDialog.findViewById(R.id.editall).setOnClickListener(v -> editAllManifestEntries(apkFile));
 
+        try {
+            AutoCompleteTextView compressTv = quickEditDialog.findViewById(R.id.compressLevelTv);
+            if (compressTv != null) {
+                List<String> levels = new ArrayList<>();
+                for (CompressionLevel cl
+                        : CompressionLevel.values()) levels.add(cl.name());
+                SharedPreferences defSettings = PreferenceManager.getDefaultSharedPreferences(context);
+                compressTv.setText(defSettings.getString("compressLevel",
+                        CompressionLevel.NORMAL.name()), false);
+                compressTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, levels));
+                compressTv.setOnItemClickListener((parent, view, position, id) ->
+                        defSettings.edit().putString("compressLevel", levels.get(position)).apply());
+            }
+        } catch (Exception ignored) { }
+
         String finalAppName = appName;
         String finalVerCode = verCode;
         String finalVerName = verName;
@@ -893,8 +908,7 @@ public class ApkManifestEditor {
 
     private void replaceZipEntry(File apkFile, String entryPath, byte[] newBytes)
             throws IOException {
-        ZipParameters zp = new ZipParameters();
-        zp.setCompressionMethod(CompressionMethod.STORE);
+        ZipParameters zp = MergeUtil.newPreferredZipParameters(context);
         zp.setFileNameInZip(entryPath);
         try (ZipFile sourceZip = new ZipFile(apkFile); InputStream is = new ByteArrayInputStream(newBytes)) {
             sourceZip.addStream(is, zp);
@@ -903,8 +917,7 @@ public class ApkManifestEditor {
 
     private void replaceZipEntry(File apkFile, String entryPath, InputStream is)
             throws IOException {
-        ZipParameters zp = new ZipParameters();
-        zp.setCompressionMethod(CompressionMethod.STORE);
+        ZipParameters zp = MergeUtil.newPreferredZipParameters(context);
         zp.setFileNameInZip(entryPath);
         try (ZipFile sourceZip = new ZipFile(apkFile)) {
             sourceZip.addStream(is, zp);
