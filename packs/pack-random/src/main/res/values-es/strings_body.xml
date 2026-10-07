@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_0_9">0-9</string>
+    <string name="s_1">1</string>
+    <string name="s_100">100</string>
+    <string name="s_16">16</string>
+    <string name="s_a_z">A-Z</string>
+    <string name="s_a_z_2">a-z</string>
+    <string name="s_add_options_first">Añade primero opciones</string>
+    <string name="s_bytes_max_64">Bytes (máx. 64)</string>
+    <string name="s_check_the_number">Comprueba el número</string>
+    <string name="s_coin">Moneda</string>
+    <string name="s_comma_or_line_separated_options">Opciones separadas por comas o líneas</string>
+    <string name="s_copy">Copiar</string>
+    <string name="s_copy_result">Copiar resultado</string>
+    <string name="s_could_not_open_tool">No se pudo abrir la herramienta</string>
+    <string name="s_count_5">Recuento: 5</string>
+    <string name="s_dice">Dado</string>
+    <string name="s_error">Error</string>
+    <string name="s_generate">Generar</string>
+    <string name="s_length_16">Longitud: 16</string>
+    <string name="s_list_picker">Selector de lista</string>
+    <string name="s_max">Máx.</string>
+    <string name="s_min">Mín.</string>
+    <string name="s_new">Nuevo</string>
+    <string name="s_number">Número</string>
+    <string name="s_password">contraseña</string>
+    <string name="s_password_generator">Generador de contraseñas</string>
+    <string name="s_password_strength">Seguridad de contraseña</string>
+    <string name="s_password_to_test">Contraseña a probar</string>
+    <string name="s_pick">elegir</string>
+    <string name="s_pick_at_least_one_set">Elige al menos un conjunto</string>
+    <string name="s_pick_one">Elegir uno</string>
+    <string name="s_press_generate">Pulsa Generar</string>
+    <string name="s_randomizer">Aleatorizador</string>
+    <string name="s_symbols">Símbolos</string>
+    <string name="s_token">token</string>
+    <string name="s_token_generator">Generador de tokens</string>
+    <string name="s_type_a_password">Escribe una contraseña</string>
+    <string name="s_use_4_64_bytes">Usa 4-64 bytes</string>
+    <string name="s_uuid">uuid</string>
+    <string name="s_uuid_generator">Generador UUID</string>
+    <string name="s_x">—</string>
+    <string name="s_x_2">›</string>
+    <string name="s_x_3">-</string>
+    <string name="s_x_4">?</string>
+</resources>

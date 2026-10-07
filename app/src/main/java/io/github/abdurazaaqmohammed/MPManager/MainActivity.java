@@ -100,7 +100,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -516,7 +515,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         return findViewById(lastPaneSelected == 1 ? R.id.listViewPane1 : R.id.listViewPane2);
     }
 
-    private String lang;
     public Resources rss;
 
     @Override
@@ -703,16 +701,10 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         setupSystemBars();
         checkStoragePerm();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-        String deviceLang = Locale.getDefault().getLanguage();
-        boolean supportedLang = deviceLang.equals("ar") || deviceLang.equals("es") || deviceLang.equals("de")
-                || deviceLang.equals("fr") || deviceLang.equals("in") || deviceLang.equals("it")
-                || deviceLang.equals("pt-BR") || deviceLang.equals("ru") || deviceLang.equals("tr")
-                || deviceLang.equals("uk") || deviceLang.equals("vi") || deviceLang.equals("zh-TW")
-                || deviceLang.equals("pl") || deviceLang.equals("hu") || deviceLang.equals("ko");
-
-        lang = settings.getString("lang", supportedLang ? deviceLang : "en");
-        boolean useDeviceRss = lang.equals(deviceLang);
-        rss = getResources();// /*useDeviceRss ? getResources() :*/ LocaleHelper.setLocale(this, Locale.getDefault().getLanguage()).getResources();
+        // App language is applied by AppCompatDelegate per-app locales
+        // (see SettingsController.setupLanguageSettings + res/xml/locales_config.xml).
+        // System locale automatically picks values / values-es / values-ru / values-zh-rCN.
+        rss = getResources();
 
         new Thread(() -> {
             Security.addProvider(new BouncyCastleProvider());

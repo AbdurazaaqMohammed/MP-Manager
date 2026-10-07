@@ -71,8 +71,9 @@
         </intent>
     </queries>
 
-       <application
-           android:requestLegacyExternalStorage="true"
+        <application
+            android:localeConfig="@xml/locales_config"
+            android:requestLegacyExternalStorage="true"
            android:enableOnBackInvokedCallback="false"
            android:largeHeap="true"
            android:theme="@style/Theme.Material3.DayNight.NoActionBar"

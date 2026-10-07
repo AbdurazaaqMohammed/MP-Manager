@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_00_00">00:00</string>
+    <string name="s_00_00_00_00">00:00 / 00:00</string>
+    <string name="s_1x">1x</string>
+    <string name="s_audio_saved">Audio guardado</string>
+    <string name="s_engine_failed">Motor fallido</string>
+    <string name="s_engine_not_ready">Motor no listo</string>
+    <string name="s_engine_starting">Iniciando motor...</string>
+    <string name="s_enter_text_first">Introduce primero el texto</string>
+    <string name="s_frequency_440_hz">Frecuencia: 440 Hz</string>
+    <string name="s_hello_from_tools_kit">Hola de Tools Kit</string>
+    <string name="s_metronome">Metrónomo</string>
+    <string name="s_open_failed">Error al abrir</string>
+    <string name="s_open_file">Abrir archivo</string>
+    <string name="s_pitch_1_0">Tono: 1.0</string>
+    <string name="s_play">Reproducir</string>
+    <string name="s_ready">Listo</string>
+    <string name="s_save_audio">Guardar audio</string>
+    <string name="s_save_audio_first">Guarda primero el audio</string>
+    <string name="s_save_failed">Error al guardar</string>
+    <string name="s_save_first">Guarda primero</string>
+    <string name="s_save_length_3_s">Duración a guardar: 3 s</string>
+    <string name="s_save_timed_out">Guardado agotado</string>
+    <string name="s_save_wav">Guardar WAV</string>
+    <string name="s_share">Compartir</string>
+    <string name="s_share_audio">Compartir audio</string>
+    <string name="s_share_failed">Error al compartir</string>
+    <string name="s_speak">Hablar</string>
+    <string name="s_speak_failed">Error al hablar</string>
+    <string name="s_speak_text">Leer texto</string>
+    <string name="s_speed_1_0">Velocidad: 1.0</string>
+    <string name="s_start">Iniciar</string>
+    <string name="s_stop">Detener</string>
+    <string name="s_stopped">Detenido</string>
+    <string name="s_tempo_120_bpm">Tempo: 120 BPM</string>
+    <string name="s_text_to_speak">Texto a leer</string>
+    <string name="s_tone_failed">Tono fallido</string>
+    <string name="s_tone_generator">Generador de tonos</string>
+    <string name="s_waveform">Forma de onda</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_accent_colour">Color de acento</string>
+    <string name="s_add_item">+  Añadir elemento</string>
+    <string name="s_app_default">Predeterminado de la app</string>
+    <string name="s_cancel">Cancelar</string>
+    <string name="s_close">Cerrar</string>
+    <string name="s_continue">Continuar</string>
+    <string name="s_done">Hecho</string>
+    <string name="s_new_note">Nueva nota</string>
+    <string name="s_new_tag">Nueva etiqueta</string>
+    <string name="s_no_colour">Sin color</string>
+    <string name="s_ok">OK</string>
+    <string name="s_save">Guardar</string>
+    <string name="s_search_notes_tags_text">Buscar notas, etiquetas, texto</string>
+    <string name="s_start_writing_u2026">Empieza a escribir\u2026</string>
+    <string name="s_statistics">Estadísticas</string>
+    <string name="s_title">Título</string>
+    <string name="s_u2022_u2022_u2022_u2022">\u2022\u2022\u2022\u2022</string>
+</resources>
