@@ -689,6 +689,28 @@ public class FileOperationsHelper {
         }
     }
 
+    /**
+     * Entry-level extract, the way ZArchiver offers it inside an archive: the
+     * selected entries land next to the archive, or in the opposite pane when
+     * that pane shows a real folder. All of them share one progress dialog.
+     */
+    public void extractZipEntries(List<ZipEntryInfo> entries) {
+        if (entries == null || entries.isEmpty()) return;
+        File otherFolder = adapter.pane1 ? context.pane2Folder : context.pane1Folder;
+        RecyclerView.Adapter rvAdapter = ((RecyclerView) context.findViewById(
+                adapter.pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
+        boolean otherIsZip = rvAdapter instanceof MainFilesArrayAdapter other && other.isInZip;
+        boolean destIsOtherPane = !otherIsZip && otherFolder != null;
+        File destination = destIsOtherPane ? otherFolder : entries.get(0).getZipFile().getParentFile();
+        runWithProgress(context.rss.getString(R.string.extracting, summarizeItems(entries)), () -> {
+            for (ZipEntryInfo entry : entries) extractZipEntry(entry, destination);
+            context.handler.post(() -> {
+                if (destIsOtherPane) context.loadFolderInPane(destination, !adapter.pane1);
+                else context.reloadCurrentFolder();
+            });
+        });
+    }
+
     private void openZipFile(File zipFile, String path) {
         context.loadZipFolderInPane(zipFile, path != null ? path : "", !adapter.pane1, false);
     }

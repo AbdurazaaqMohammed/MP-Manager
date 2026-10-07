@@ -481,7 +481,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
+                if (isInZip) {
+                    // Entries extract one by one, whole archives in one go.
+                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
+                } else if (!multi && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
@@ -735,7 +738,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 commandHelper.showCommandHelperDialog(cmdFilePaths);
                                 return;
                             case FileMenuOrder.EXTRACT:
-                                if (isInZip) return;
+                                if (isInZip) {
+                                    fileOps.extractZipEntries(selectedZipEntries(livePosition, multi));
+                                    return;
+                                }
                                 if (multi) {
                                     List<File> archives = new ArrayList<>();
                                     for (int ep : selectedPositions) {
@@ -884,6 +890,26 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             updateFolderCountOnMainScreen(position);
         }
         notifyDataSetChanged();
+    }
+
+    /**
+     * The zip entries a menu action applies to, minus the ".." pseudo row (it has
+     * no path inside the archive).
+     */
+    private List<ZipEntryInfo> selectedZipEntries(int livePosition, boolean multi) {
+        List<ZipEntryInfo> entries = new ArrayList<>();
+        if (multi) {
+            for (int p : selectedPositions) {
+                if (p >= 0 && p < values.length && values[p] instanceof ZipEntryInfo z
+                        && z.getFullPath() != null) {
+                    entries.add(z);
+                }
+            }
+        } else if (livePosition >= 0 && livePosition < values.length
+                && values[livePosition] instanceof ZipEntryInfo z && z.getFullPath() != null) {
+            entries.add(z);
+        }
+        return entries;
     }
 
     public List<Object> getSelectedFiles() {
