@@ -220,7 +220,7 @@ public class StorageManagerActivity extends BaseActivity {
         modeLabel.setTextSize(13);
         box.addView(modeLabel);
         android.widget.Spinner modeSpinner = new android.widget.Spinner(this);
-        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"Root", "Accessibility"});
+        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{getString(R.string.storage_mode_root), getString(R.string.storage_mode_accessibility)});
         modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         modeSpinner.setAdapter(modeAdapter);
         final android.content.SharedPreferences clearModePrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
@@ -649,7 +649,7 @@ public class StorageManagerActivity extends BaseActivity {
             for (FileRow row : largeFiles) {
                 if (typeFilter.equals(row.bucket)) largeVisible.add(row);
             }
-            if (largeTitle != null) largeTitle.setText(getString(R.string.storage_largest_type_n, typeFilter, largeVisible.size()));
+            if (largeTitle != null) largeTitle.setText(getString(R.string.storage_largest_type_n, bucketLabel(typeFilter), largeVisible.size()));
         }
         if (largeAdapter != null) largeAdapter.notifyDataSetChanged();
         updateLargeVisibility();
@@ -681,6 +681,19 @@ public class StorageManagerActivity extends BaseActivity {
         deleteSelectedBtn.setEnabled(count > 0);
     }
 
+    private String bucketLabel(String bucket) {
+        if (bucket == null) return getString(R.string.storage_type_other);
+        switch (bucket) {
+            case "Images": return getString(R.string.storage_type_images);
+            case "Videos": return getString(R.string.storage_type_videos);
+            case "Audio": return getString(R.string.storage_type_audio);
+            case "Documents": return getString(R.string.storage_type_documents);
+            case "Archives": return getString(R.string.storage_type_archives);
+            case "APKs": return getString(R.string.storage_type_apks);
+            default: return getString(R.string.storage_type_other);
+        }
+    }
+
     private void addBucketRow(String name, long value, long grand) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
@@ -690,7 +703,7 @@ public class StorageManagerActivity extends BaseActivity {
         row.setFocusable(true);
         TextView label = new TextView(this);
         int pct = grand <= 0 ? 0 : (int) (value * 100 / grand);
-        label.setText(name + "  " + FileSize.getHumanReadableFileSize(value) + "  " + pct + "%");
+        label.setText(bucketLabel(name) + "  " + FileSize.getHumanReadableFileSize(value) + "  " + pct + "%");
         label.setTextSize(14);
         if (name.equals(typeFilter)) {
             label.setTypeface(null, Typeface.BOLD);

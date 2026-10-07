@@ -186,39 +186,39 @@ public class WifiManagerActivity extends BaseActivity {
                     try {
                         NetworkInfo active = cm.getActiveNetworkInfo();
                         if (active != null) {
-                            b.append("Active ").append(active.getTypeName()).append(" connected=").append(active.isConnected()).append("\n");
+                            b.append(getString(R.string.wifi_info_active)).append(" ").append(active.getTypeName()).append(" ").append(getString(R.string.wifi_info_connected)).append("=").append(active.isConnected()).append("\n");
                         } else {
-                            b.append("Active none\n");
+                            b.append(getString(R.string.wifi_info_active_none)).append("\n");
                         }
                     } catch (Exception e) {
-                        b.append("Active unknown\n");
+                        b.append(getString(R.string.wifi_info_active_unknown)).append("\n");
                     }
                 }
                 WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                 if (wm != null) {
-                    b.append("Wi-Fi enabled ").append(wm.isWifiEnabled()).append("\n");
+                    b.append(getString(R.string.wifi_info_enabled)).append(" ").append(wm.isWifiEnabled()).append("\n");
                     try {
                         WifiInfo info = wm.getConnectionInfo();
                         if (info != null) {
                             String ssid = info.getSSID() == null ? "-" : info.getSSID().replace("\"", "");
                             b.append("SSID ").append(ssid).append("\n");
                             b.append("BSSID ").append(info.getBSSID()).append("\n");
-                            b.append("Link ").append(info.getLinkSpeed()).append(" Mbps\n");
+                            b.append(getString(R.string.wifi_info_link)).append(" ").append(info.getLinkSpeed()).append(" Mbps\n");
                             b.append("RSSI ").append(info.getRssi()).append(" dBm\n");
                             b.append("IP ").append(ipStr(info.getIpAddress())).append("\n");
                         }
                         DhcpInfo dhcp = wm.getDhcpInfo();
                         if (dhcp != null) {
-                            b.append("Gateway ").append(ipStr(dhcp.gateway)).append("\n");
+                            b.append(getString(R.string.wifi_info_gateway)).append(" ").append(ipStr(dhcp.gateway)).append("\n");
                             b.append("DNS1 ").append(ipStr(dhcp.dns1)).append("\n");
                             b.append("DNS2 ").append(ipStr(dhcp.dns2)).append("\n");
                         }
                     } catch (Exception e) {
-                        b.append("Wi-Fi details unavailable\n");
+                        b.append(getString(R.string.wifi_info_unavailable_details)).append("\n");
                     }
                 }
             } catch (Exception e) {
-                b.append("Unavailable");
+                b.append(getString(R.string.wifi_info_unavailable));
             }
             String out = b.toString().trim();
             handler.post(() -> connText.setText(out));
@@ -260,9 +260,9 @@ public class WifiManagerActivity extends BaseActivity {
             List<DnsManager.DnsProfile> profiles = DnsManager.getProfiles(WifiManagerActivity.this);
             handler.post(() -> {
                 StringBuilder b = new StringBuilder();
-                b.append("Mode ").append(mode.isEmpty() ? "-" : mode).append("\n");
-                b.append("Host ").append(host.isEmpty() ? "-" : host).append("\n");
-                b.append("Profile ").append(match == null ? "-" : match.name);
+                b.append(getString(R.string.wifi_info_mode)).append(" ").append(mode.isEmpty() ? "-" : mode).append("\n");
+                b.append(getString(R.string.wifi_info_host)).append(" ").append(host.isEmpty() ? "-" : host).append("\n");
+                b.append(getString(R.string.wifi_info_profile)).append(" ").append(match == null ? "-" : match.name);
                 dnsCurrent.setText(b);
                 dnsList.removeAllViews();
                 RadioGroup group = new RadioGroup(this);
@@ -630,8 +630,8 @@ public class WifiManagerActivity extends BaseActivity {
                 StringBuilder all = new StringBuilder();
                 for (WifiPasswordUtil.WifiEntry e : entries) {
                     all.append("SSID: ").append(e.ssid).append('\n');
-                    all.append("Security: ").append(e.security).append('\n');
-                    all.append("Password: ").append(passOrOpen(e)).append("\n\n");
+                    all.append(getString(R.string.wifi_info_security)).append(" ").append(e.security).append('\n');
+                    all.append(getString(R.string.wifi_info_password)).append(" ").append(passOrOpen(e)).append("\n\n");
                 }
                 String fileName = "wifi_passwords.txt";
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -640,14 +640,14 @@ public class WifiManagerActivity extends BaseActivity {
                     values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
                     values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/MP Manager");
                     Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-                    if (uri == null) throw new Exception("Cannot create file");
+                    if (uri == null) throw new Exception(getString(R.string.wifi_cannot_create_file));
                     try (OutputStream os = getContentResolver().openOutputStream(uri)) {
-                        if (os == null) throw new Exception("Cannot open file");
+                        if (os == null) throw new Exception(getString(R.string.wifi_cannot_open_file));
                         os.write(all.toString().getBytes(StandardCharsets.UTF_8));
                     }
                 } else {
                     File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "MP Manager");
-                    if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new Exception("Cannot create folder");
+                    if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) throw new Exception(getString(R.string.wifi_cannot_create_folder));
                     File out = new File(dir, fileName);
                     try (FileOutputStream fos = new FileOutputStream(out)) {
                         fos.write(all.toString().getBytes(StandardCharsets.UTF_8));
@@ -707,15 +707,15 @@ public class WifiManagerActivity extends BaseActivity {
         new Thread(() -> {
             StringBuilder b = new StringBuilder();
             try {
-                b.append("Mobile down ").append(fmt(TrafficStats.getMobileRxBytes())).append("\n");
-                b.append("Mobile up ").append(fmt(TrafficStats.getMobileTxBytes())).append("\n");
-                b.append("Total down ").append(fmt(TrafficStats.getTotalRxBytes())).append("\n");
-                b.append("Total up ").append(fmt(TrafficStats.getTotalTxBytes())).append("\n");
+                b.append(getString(R.string.wifi_info_mobile_down)).append(" ").append(fmt(TrafficStats.getMobileRxBytes())).append("\n");
+                b.append(getString(R.string.wifi_info_mobile_up)).append(" ").append(fmt(TrafficStats.getMobileTxBytes())).append("\n");
+                b.append(getString(R.string.wifi_info_total_down)).append(" ").append(fmt(TrafficStats.getTotalRxBytes())).append("\n");
+                b.append(getString(R.string.wifi_info_total_up)).append(" ").append(fmt(TrafficStats.getTotalTxBytes())).append("\n");
                 int uid = Process.myUid();
-                b.append("This app down ").append(fmt(TrafficStats.getUidRxBytes(uid))).append("\n");
-                b.append("This app up ").append(fmt(TrafficStats.getUidTxBytes(uid)));
+                b.append(getString(R.string.wifi_info_app_down)).append(" ").append(fmt(TrafficStats.getUidRxBytes(uid))).append("\n");
+                b.append(getString(R.string.wifi_info_app_up)).append(" ").append(fmt(TrafficStats.getUidTxBytes(uid)));
             } catch (Exception e) {
-                b.append("Unavailable");
+                b.append(getString(R.string.wifi_info_unavailable));
             }
             String out = b.toString();
             handler.post(() -> usageText.setText(out));
