@@ -35,6 +35,10 @@
     <string name="system_theme">System theme</string>
     <string name="func">Functionality</string>
     <string name="pkg_name_save">Save files with package name instead of app name</string>
+    <string name="invalid_pkg_name">Invalid package name</string>
+    <string name="me_apply">Apply</string>
+    <string name="me_perms_updated">%1$d permissions updated</string>
+    <string name="me_disabled">disabled</string>
     <string name="split">Split</string>
     <string name="adding">Adding %1$s</string>
     <string name="adding_to">Adding %1$s to %2$s</string>
@@ -69,6 +73,7 @@
     <string name="minimum_android_version">Minimum Android Version</string>
     <string name="change_app_launcher_icon">Change App Launcher Icon</string>
     <string name="appname">App Name</string>
+    <string name="resolved_value">Resolved: %1$s</string>
     <string name="edit_all_ac">Edit All Activities / Properties From Manifest</string>
     <string name="auto_sign">Auto Sign</string>
     <string name="sign_set">Sign Settings</string>

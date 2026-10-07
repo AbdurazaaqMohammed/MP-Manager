@@ -147,8 +147,7 @@ public class ApkManifestEditor {
         return null;
     }
 
-    private void updateResolvedLabel(TextView resolvedView, String current, List<ResEntry> res) {
-        if (resolvedView == null) return;
+    private void updateResolvedLabel(TextView resolvedView, String current, List<ResEntry> res) {        if (resolvedView == null) return;
         if (current == null || current.trim().isEmpty() || !current.trim().startsWith("@")) {
             resolvedView.setVisibility(View.GONE);
             return;
@@ -160,6 +159,22 @@ public class ApkManifestEditor {
             resolvedView.setVisibility(View.VISIBLE);
             resolvedView.setText(rss.getString(R.string.resolved_value, v));
         }
+    }
+
+    private void wireCompressionDropdown(View root) {
+        try {
+            AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
+            if (compressTv == null) return;
+            java.util.List<String> levels = new java.util.ArrayList<>();
+            for (net.lingala.zip4j.model.enums.CompressionLevel cl
+                    : net.lingala.zip4j.model.enums.CompressionLevel.values()) levels.add(cl.name());
+            SharedPreferences defSettings = PreferenceManager.getDefaultSharedPreferences(context);
+            compressTv.setText(defSettings.getString("compressLevel",
+                    net.lingala.zip4j.model.enums.CompressionLevel.NORMAL.name()), false);
+            compressTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, levels));
+            compressTv.setOnItemClickListener((parent, view, position, id) ->
+                    defSettings.edit().putString("compressLevel", levels.get(position)).apply());
+        } catch (Exception ignored) { }
     }
 
     public void showEditManifestDialog(File apkFile) {
@@ -302,20 +317,7 @@ public class ApkManifestEditor {
 
         quickEditDialog.findViewById(R.id.editall).setOnClickListener(v -> editAllManifestEntries(apkFile));
 
-        try {
-            AutoCompleteTextView compressTv = quickEditDialog.findViewById(R.id.compressLevelTv);
-            if (compressTv != null) {
-                List<String> levels = new ArrayList<>();
-                for (CompressionLevel cl
-                        : CompressionLevel.values()) levels.add(cl.name());
-                SharedPreferences defSettings = PreferenceManager.getDefaultSharedPreferences(context);
-                compressTv.setText(defSettings.getString("compressLevel",
-                        CompressionLevel.NORMAL.name()), false);
-                compressTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, levels));
-                compressTv.setOnItemClickListener((parent, view, position, id) ->
-                        defSettings.edit().putString("compressLevel", levels.get(position)).apply());
-            }
-        } catch (Exception ignored) { }
+        wireCompressionDropdown(quickEditDialog);
 
         String finalAppName = appName;
         String finalPkgName = pkgName;
@@ -696,18 +698,73 @@ public class ApkManifestEditor {
         writeManifestEntries(apkFile, entries);
     }
 
-    public void removeManifestPermission(File apkFile, String perm) throws Exception {
-        List<XMLEntry> entries = decodeManifest(apkFile);
+    /** Prefix marking a permission ineffective while keeping it declared (and re-listable). */
+    public static final String DISABLED_PREFIX = "__DISABLED__";
+
+    /**
+     * Enables/disables permissions non-destructively in a single decode/encode pass.
+     * Disabling prefixes the permission name so the system ignores it, while it stays
+     * declared and therefore keeps showing up in this dialog for re-enabling.
+     * Returns the number of changed permissions.
+     */
+    public int setPermissionsDisabled(File apkFile, List<String> toDisable, List<String> toEnable) throws Exception {
+        ManifestData data = decodeManifestWithRes(apkFile);
+        List<XMLEntry> entries = data != null ? data.entries : null;
+        List<ResEntry> res = data != null ? data.res : null;
+        if (entries == null) entries = decodeManifest(apkFile);
         if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
-        Set<String> targets = new HashSet<>(perms);
-        int removed = 0;
+        Set<String> disableSet = new HashSet<>(toDisable);
+        Set<String> enableSet = new HashSet<>(toEnable);
+        int changed = 0;
         // Decoder emits "<uses-permission" open row followed by attribute rows
-        // ("    android:name=\"...\"" merged with "/>"). Remove the whole span.
+        // ("    android:name=\"...\"" merged with "/>"). Toggle the name value in place.
         for (int i = entries.size() - 1; i >= 0; i--) {
             XMLEntry item = entries.get(i);
-            if (item.getTag().contains("uses-permission") && perm.equals(item.getValue())) entries.remove(i);
+            String tag = item.getTag();
+            if (tag == null || !tag.contains("uses-permission")) continue;
+            String trimmed = tag.trim();
+            boolean isElementStart = trimmed.startsWith("<");
+            if (!isElementStart) continue;
+            int end = i;
+            // Span extends over following attribute rows until next element start/end row.
+            int j = i + 1;
+            while (j < entries.size()) {
+                String nt = entries.get(j).getTag();
+                if (nt == null) break;
+                String ntrim = nt.trim();
+                if (ntrim.startsWith("<") || ntrim.startsWith("</")) break;
+                end = j;
+                j++;
+            }
+            for (int k = i; k <= end; k++) {
+                XMLEntry attr = entries.get(k);
+                String at = attr.getTag();
+                if (at == null || !at.contains("android:name")) continue;
+                String v = attr.getValue();
+                if (v == null || v.isEmpty()) continue;
+                if (disableSet.contains(v)) {
+                    attr.setValue(DISABLED_PREFIX + v);
+                    changed++;
+                } else if (v.startsWith(DISABLED_PREFIX)
+                        && enableSet.contains(v.substring(DISABLED_PREFIX.length()))) {
+                    String restored = v.substring(DISABLED_PREFIX.length());
+                    if (!restored.isEmpty()) {
+                        attr.setValue(restored);
+                        changed++;
+                    }
+                }
+            }
         }
-        writeManifestEntries(apkFile, entries);
+        if (changed > 0) {
+            if (UiPrefs.genBackup(context)) {
+                try {
+                    FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
+                } catch (Exception ignored) {
+                }
+            }
+            writeManifestEntries(apkFile, entries, res);
+        }
+        return changed;
     }
 
     public void showPermissionsDialog(File apkFile) {
@@ -725,66 +782,79 @@ public class ApkManifestEditor {
                 return;
             }
             String[] labels = new String[perms.length];
+            String[] baseNames = new String[perms.length];
+            boolean[] keep = new boolean[perms.length];
             for (int i = 0; i < perms.length; i++) {
+                boolean disabled = perms[i] != null && perms[i].startsWith(DISABLED_PREFIX);
+                String base = disabled ? perms[i].substring(DISABLED_PREFIX.length()) : perms[i];
+                baseNames[i] = base;
+                keep[i] = !disabled;
                 boolean dangerous = false;
                 try {
-                    int level = context.getPackageManager().getPermissionInfo(perms[i], 0).protectionLevel
+                    int level = context.getPackageManager().getPermissionInfo(base, 0).protectionLevel
                             & PermissionInfo.PROTECTION_MASK_BASE;
                     dangerous = level == PermissionInfo.PROTECTION_DANGEROUS;
                 } catch (Exception ignored) {
                 }
-                labels[i] = perms[i] + (dangerous ? " (dangerous)" : "");
+                StringBuilder label = new StringBuilder(base);
+                if (disabled) label.append(" (").append(rss.getString(R.string.me_disabled)).append(')');
+                if (dangerous) label.append(" (dangerous)");
+                labels[i] = label.toString();
             }
-            boolean[] keep = new boolean[perms.length];
-            Arrays.fill(keep, true);
             pm.dismiss();
             context.handler.post(() -> {
                 SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                 boolean[] sign = {settings.getBoolean("autosign", true)};
 
-                LinearLayout optsRoot = new LinearLayout(context);
-                optsRoot.setOrientation(LinearLayout.VERTICAL);
-                int pad = (int) (16 * context.getResources().getDisplayMetrics().density + 0.5f);
-                optsRoot.setPadding(pad, pad / 2, pad, pad / 2);
-                optsRoot.addView(MergeUtil.createCompressionDropdownLayout(context));
-                CheckBox autosignBox = new CheckBox(context);
-                autosignBox.setText(rss.getString(R.string.auto_sign));
-                autosignBox.setChecked(sign[0]);
-                autosignBox.setOnCheckedChangeListener((b, c) ->
-                        settings.edit().putBoolean("autosign", sign[0] = c).apply());
-                optsRoot.addView(autosignBox);
+                View permDialog = LayoutInflater.from(context).inflate(R.layout.dialog_permissions, null, false);
+                wireCompressionDropdown(permDialog);
+                CheckBox autosign = permDialog.findViewById(R.id.autosign);
+                autosign.setChecked(sign[0]);
+                autosign.setOnCheckedChangeListener((buttonView, isChecked) ->
+                        settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                permDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                ListView permList = permDialog.findViewById(R.id.permList);
+                permList.setAdapter(new ArrayAdapter<>(context,
+                        android.R.layout.simple_list_item_multiple_choice, labels));
+                permList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+                for (int i = 0; i < keep.length; i++) permList.setItemChecked(i, keep[i]);
 
                 AlertDialog dialog = dialogUtil.getDialogBuilder()
                         .setTitle(rss.getString(R.string.me_perms_n, perms.length))
-                        .setView(optsRoot)
-                        .setMultiChoiceItems(labels, keep, (d, which, isChecked) -> keep[which] = isChecked)
+                        .setView(permDialog)
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(rss.getString(R.string.me_remove_unchecked), (d, which) -> {
+                        .setPositiveButton(rss.getString(R.string.me_apply), (d, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
                             Runnable doEdit = () -> {
                                 ProgressManager pm2 = new ProgressManager(context, true).show();
                                 new Thread(() -> {
                                     try {
-                                        List<String> toRemove = new ArrayList<>();
+                                        List<String> toDisable = new ArrayList<>();
+                                        List<String> toEnable = new ArrayList<>();
                                         for (int i = 0; i < perms.length; i++) {
-                                            if (keep[i]) continue;
-                                            toRemove.add(perms[i]);
+                                            boolean wantEnabled = permList.isItemChecked(i);
+                                            boolean isDisabled = perms[i] != null
+                                                    && perms[i].startsWith(DISABLED_PREFIX);
+                                            String base = baseNames[i];
+                                            if (base == null || base.isEmpty()) continue;
+                                            if (!wantEnabled && !isDisabled) toDisable.add(base);
+                                            else if (wantEnabled && isDisabled) toEnable.add(base);
                                         }
-                                        int removed = 0;
-                                        if (!toRemove.isEmpty()) {
+                                        int changed = 0;
+                                        if (!toDisable.isEmpty() || !toEnable.isEmpty()) {
                                             try {
-                                                removed = removeManifestPermissions(apkFile, toRemove);
+                                                changed = setPermissionsDisabled(apkFile, toDisable, toEnable);
                                             } catch (Exception e) {
                                                 pm2.dismiss();
                                                 new ErrorUtil(context).showError(e);
                                                 return;
                                             }
                                         }
-                                        if (removed > 0 && sign[0]) wrapper[0].signApk(apkFile);
+                                        if (changed > 0 && sign[0]) wrapper[0].signApk(apkFile);
                                         pm2.dismiss();
-                                        int done = removed;
+                                        int done = changed;
                                         context.handler.post(() -> {
-                                            Extensions.showMessage(context, rss.getString(R.string.me_perms_removed, done));
+                                            Extensions.showMessage(context, rss.getString(R.string.me_perms_updated, done));
                                             try { context.refreshAllPanes(); }
                                             catch (Exception ignored) {
                                                 context.loadFolderInPane(apkFile.getParentFile(), true);
