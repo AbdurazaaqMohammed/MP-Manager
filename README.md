@@ -2,6 +2,8 @@
 
 A free dual pane, Material Design file manager for Android with focus on APKs and the goal to be an open source alternative to MT Manager
 
+Interface languages: English, Simplified Chinese and Russian.
+
 <p align="center">
   <img src="./images/Ss1.png" width="200" alt="MP Manager screenshot"> <img src="./images/Ss2.png" width="200" alt="MP Manager screenshot">
 </p>
@@ -69,10 +71,61 @@ Extract, add files in ZIP, APK, auto sign option in APK
 
 Rename several files at once using templates with prefix, suffix, numbering and find/replace.
 
+Root and Shizuku mode: file operations, including anything inside archives, can run
+through either. In Shizuku mode a device policy that blocks reading the filesystem
+root still allows browsing it through Shizuku.
+
 <!-- TODO: Add screenshots/videos
 ![Multi rename dialog](./images/multi-rename.jpg)
 ![Compress dialog](./images/compress.jpg)
 -->
+</details>
+
+<details><summary>Archives</summary>
+
+Read and write zip, 7z, rar and tar formats (including the `.tar.gz`, `.tar.bz2` and
+`.tar.xz` variants, plus single-file gzip, bzip2 and xz streams). Encrypted archives
+are supported for reading.
+
+Archives open **in a pane**, not only through a dialog: 7z, rar and tar listings load
+in the background exactly like zip, and a password-protected archive asks for its
+password at that point.
+
+Extract reports **per-entry progress with a working cancel button** -- cancelling stops
+the current entry, deletes its half-written file and keeps everything already written.
+Selecting several archives and choosing extract runs them one after another under a
+single dialog.
+
+Inside an archive the long-press menu works on the entries: extract one entry or the
+whole selection (next to the archive, or into the other pane when it shows a folder),
+compress the selected entries into a new archive, rename, delete, share, open with
+another app and compute checksums. Editing an entry and saving writes it back into the
+archive; writing is limited to formats that support it, and the app refuses up front
+instead of quietly dropping the change.
+
+Creating archives supports a compression level, and zip additionally supports AES
+encryption with a password. Other formats are created unencrypted.
+
+<!-- TODO: Add screenshots/videos -->
+</details>
+
+<details><summary>Password manager and Bitwarden vault</summary>
+
+The password manager keeps an **ordered list of archive passwords**. Extracting an
+encrypted archive tries them in order and only asks when none of them work, and the
+compress dialog can pick one instead of typing it. The list can be reordered, edited
+and deleted from the sidebar.
+
+It can connect to a **Bitwarden-compatible server** -- NodeWarden first, official
+servers work too -- and log in, unlock and sync. Entries show name, user name, password,
+URIs, notes and the TOTP code (both `otpauth://` URIs and the bare Base32 secret
+NodeWarden stores). Deleted entries are skipped and field casing is accepted from
+either server. With a vault connected the archive password list is backed up into a
+dedicated cipher in it and restored when the local list is empty.
+
+All connections can go through an optional SOCKS5 or HTTP proxy.
+
+<!-- TODO: Add screenshots/videos -->
 </details>
 
 <details><summary>File properties and sharing</summary>
@@ -285,10 +338,31 @@ Choose between system, light, dark and black theme all with Material theme and D
 </p>
 </details>
 
+<details><summary>Plugins and tool packs</summary>
+
+The file menu can be extended from outside the app. A plugin is a normal installed app
+that answers explicit intents: it never inherits the host's root, Shizuku, all-files or
+network access, a crashing plugin cannot take the host down, and files cross the
+boundary as one-shot `content://` grants rather than raw paths. The first time a plugin
+is seen its label, package and certificate digest are shown and pinned.
+
+There is also a first-party pack format, loaded in process through `DexClassLoader`.
+It is restricted to APKs signed with the host's own certificate, so it cannot be used
+to run third-party code inside the app.
+
+See [docs/THIRD_PARTY_PLUGINS.md](./docs/THIRD_PARTY_PLUGINS.md) for the intent
+contracts and a step by step setup.
+
+<!-- TODO: Add screenshots/videos -->
+</details>
+
 # Todo
 
 This app still has lots of work to do and probably many bugs to fix but you can try it
 
 * Add patcher to support multiple patch formats like APK Editor and Lucky Patcher
-* Add root and Shizuku file management
 * Add improvements to APK optimization
+* Create encrypted archives in formats other than zip: the Java writers available here
+  have no write-side password support, so this needs a different engine
+* Move entries between folders inside the same archive
+* Split archives into volumes
