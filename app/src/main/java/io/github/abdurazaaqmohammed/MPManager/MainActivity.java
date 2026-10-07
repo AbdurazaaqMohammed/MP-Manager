@@ -204,6 +204,7 @@ import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ArchiveLister;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -1605,79 +1606,72 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         updateNavigationButtons();
     }
 
+    /** Latest listing request per pane, so a slow background listing cannot
+     *  overwrite a navigation that happened after it started. */
+    private final long[] zipLoadSeq = new long[2];
+
     public void loadZipFolderInPane(File zipFile, String path, boolean pane1, boolean addToHistory) {
-        try {
-            List<ZipEntryInfo> entries = new ArrayList<>();
-            ZipEntryInfo parent = null;
-            HashSet<String> seenDirs = new HashSet<>() {
-            };
-            try (ZipFile zf = new ZipFile(zipFile)) {
-                String parentPath = TextUtils.isEmpty(path) ? "" : path;
-                if (!TextUtils.isEmpty(parentPath) && !parentPath.endsWith("/")) parentPath += "/";
-                if (TextUtils.isEmpty(path)) {
-                    entries.add(new ZipEntryInfo("..", null, true, 0L, 0L, zipFile));
-                } else {
-                    String parentDir = new File(path).getParent();
-                    if (parentDir == null) parentDir = "";
-                    String parentFull = parentDir.isEmpty() ? "" : parentDir.replaceAll("/+$","") + "/";
-                    parent = new ZipEntryInfo("..", parentFull, true, 0L, 0L, zipFile);
-                    entries.add(parent);
+        final long seq = ++zipLoadSeq[pane1 ? 0 : 1];
+        if (ArchiveLister.isNonZipBrowsableName(zipFile.getName())) {
+            // tar has no central directory, so a first listing costs a full
+            // scan: list off the main thread, then apply exactly what the zip
+            // path applies.
+            new Thread(() -> {
+                try {
+                    List<ZipEntryInfo> flat = ArchiveLister.listResolved(this, zipFile);
+                    if (flat == null) return; // password prompt was cancelled
+                    ArchiveLister.Listing listing = ArchiveLister.buildPaneListing(
+                            flat, zipFile, path, this::isNotHidden);
+                    handler.post(() -> {
+                        if (seq != zipLoadSeq[pane1 ? 0 : 1]) return;
+                        applyZipPaneListing(zipFile, path, pane1, addToHistory, listing);
+                    });
+                } catch (Exception e) {
+                    handler.post(() -> new ErrorUtil(this).showError(e));
                 }
-
-                List<FileHeader> fhs = zf.getFileHeaders();
-                String prefix = parentPath; // already normalized with trailing slash if non-empty
-                for (FileHeader fh : fhs) {
-                    String entryPath = fh.getFileName().replace('\\','/');
-                    if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
-                    String rest = entryPath.substring(prefix.length()); // e.g., "subdir/file" or "file.txt" or "subdir/"
-                    // direct child if rest has no further '/'
-                    int nextSlash = rest.indexOf('/');
-                    if (nextSlash == -1) {
-                        // file directly inside current folder
-                        ZipEntryInfo info = new ZipEntryInfo(fh, zipFile, path);
-                        if (isNotHidden(info)) entries.add(info);
-                    } else {
-                        // it's inside a subdirectory; we should add a single synthetic directory entry for that subdir
-                        String childDirName = rest.substring(0, nextSlash + 1); // include trailing slash
-                        String childFullPath = prefix + childDirName; // full path of the child dir
-                        // add only once: track seen dirs with a Set<String>
-                        if (seenDirs.add(childFullPath)) {
-                            FileHeader syntheticDir = new FileHeader();
-                            syntheticDir.setFileName(childFullPath);
-                            ZipEntryInfo info = new ZipEntryInfo(syntheticDir, zipFile, path); // or use new ctor
-                            if (isNotHidden(info)) entries.add(info);
-                        }
-                    }
-                }
+            }).start();
+            return;
+        }
+        try (ZipFile zf = new ZipFile(zipFile)) {
+            List<ZipEntryInfo> flat = new ArrayList<>();
+            for (FileHeader fh : zf.getFileHeaders()) {
+                flat.add(new ZipEntryInfo(fh, zipFile, path));
             }
-            sortZipEntries(entries, zipFile.getPath() + "!" + path);
-            if (pane1) {
-                currentPane1ZipEntries = entries;
-                pane1Folder = zipFile;
-                if (addToHistory) {
-                    pushNavigationHistory(true, new NavigationHistoryEntry(zipFile, true, path));
-                }
-            } else {
-                currentPane2ZipEntries = entries;
-                pane2Folder = zipFile;
-                if (addToHistory) {
-                    pushNavigationHistory(false, new NavigationHistoryEntry(zipFile, true, path));
-                }
-            }
-
-            setCurrentFolder(zipFile.getPath() + "!" + path, entries);
-            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
-            ZipEntryInfo finalParent = parent;
-            boolean isCurrentPane = pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2;
-            handler.post(() -> {
-                pane.setAdapter(new MainFilesArrayAdapter(this, entries.toArray(new ZipEntryInfo[0]), finalParent, pane1, true, path));
-                // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
-                if (isCurrentPane) setMultiSelectModeUI(false);
-                updateNavigationButtons();
-            });
+            applyZipPaneListing(zipFile, path, pane1, addToHistory,
+                    ArchiveLister.buildPaneListing(flat, zipFile, path, this::isNotHidden));
         } catch (IOException e) {
             new ErrorUtil(this).showError(e);
         }
+    }
+
+    private void applyZipPaneListing(File zipFile, String path, boolean pane1, boolean addToHistory,
+                                     ArchiveLister.Listing listing) {
+        List<ZipEntryInfo> entries = listing.entries;
+        sortZipEntries(entries, zipFile.getPath() + "!" + path);
+        if (pane1) {
+            currentPane1ZipEntries = entries;
+            pane1Folder = zipFile;
+            if (addToHistory) {
+                pushNavigationHistory(true, new NavigationHistoryEntry(zipFile, true, path));
+            }
+        } else {
+            currentPane2ZipEntries = entries;
+            pane2Folder = zipFile;
+            if (addToHistory) {
+                pushNavigationHistory(false, new NavigationHistoryEntry(zipFile, true, path));
+            }
+        }
+
+        setCurrentFolder(zipFile.getPath() + "!" + path, entries);
+        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        ZipEntryInfo finalParent = listing.parent;
+        boolean isCurrentPane = pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2;
+        handler.post(() -> {
+            pane.setAdapter(new MainFilesArrayAdapter(this, entries.toArray(new ZipEntryInfo[0]), finalParent, pane1, true, path));
+            // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
+            if (isCurrentPane) setMultiSelectModeUI(false);
+            updateNavigationButtons();
+        });
     }
 
     public void loadFolderInPane(File folder, boolean pane1) {

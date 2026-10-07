@@ -94,6 +94,7 @@ import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
+import io.github.abdurazaaqmohammed.utils.ArchiveLister;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -657,7 +658,8 @@ public class FileOpener {
                     restoreBakRootAware(file, new File(origPath), fileName);
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
-            } else if (fileName.endsWith(".zip")) {
+            } else if (ArchiveLister.isBrowsableName(fileName)) {
+                // zip,7z, rar and tar* all browse through the same pane.
                 withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));

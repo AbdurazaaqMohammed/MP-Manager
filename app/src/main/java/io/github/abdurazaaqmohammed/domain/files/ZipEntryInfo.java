@@ -37,7 +37,11 @@ public class ZipEntryInfo {
         String cleaned = isDir ? entryName.replaceAll("/+$","") : entryName;
         this.name = cleaned.isEmpty() ? "/" : cleaned.substring(cleaned.lastIndexOf('/')+1);
         this.size = fileHeader.getUncompressedSize() < 0 ? 0 : fileHeader.getUncompressedSize();
-        this.lastModified = fileHeader.getLastModifiedTime() >= 0 ? fileHeader.getLastModifiedTime() : 0L;
+        // zip4j keeps the raw DOS time here; the epoch conversion lives in
+        // getLastModifiedTimeEpoch(). Without it the pane showed dates like
+        // 2019 for files written in 2026.
+        long epoch = fileHeader.getLastModifiedTimeEpoch();
+        this.lastModified = epoch >= 0 ? epoch : 0L;
         this.zipFile = zipFile;
     }
 
