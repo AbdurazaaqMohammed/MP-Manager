@@ -377,6 +377,20 @@ Root 与 Shizuku 模式：包括压缩包内部在内的所有文件操作都可
 <!-- TODO: 添加截图/视频 -->
 </details>
 
+## 开发与 CI
+
+- **构建**：推送到 `main`、打 `v*` 标签、向 `main` 提 PR 时自动运行 `Build APK`。判定为绿色的
+  标准是 job `success` **且** `Verify signing identity` 这一步也为 success（只看 job 结论会漏掉签名问题）。
+- **AI 代码评审**：`.github/workflows/pr-review.yml` 在 PR 打开、重新打开或有新推送时，用
+  GitHub Models（默认 `openai/gpt-4o`）读取 PR 差异，按 `.github/ai-review-rules.md` 里的仓库
+  规则产出一条中文评审意见（阻塞 / 建议 / 疑问三类），以单条评论的形式发布，新推送会覆盖旧评论。
+  默认用工作流自带令牌调用，无需配置密钥；想换成自己的模型时设置仓库变量 `AI_REVIEW_MODEL`、
+  `AI_REVIEW_BASE_URL` 与密钥 `AI_API_KEY`（任意 OpenAI 兼容接口）。也可以在 Actions 里手动
+  触发并填写 PR 编号。
+  为了让来自 fork 的 PR 也能评论，它使用 `pull_request_target`，因此**从不检出或执行 PR 代码**：
+  差异只通过 API 读取，评审规则从基线分支读取。
+- **本地无法编译**：开发环境没有 Android SDK，只能靠 CI 验证；提交前请自查被调用 API 的真实签名。
+
 ## 未实现的功能
 
 下面的功能**目前都还没有实现**。上面的功能介绍只描述已经可用的内容，这里单列尚未完成的部分，避免被当成已有功能：
