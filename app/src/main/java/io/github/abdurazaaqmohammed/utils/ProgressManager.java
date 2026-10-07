@@ -34,6 +34,8 @@ public class ProgressManager {
     private String currentText;
     private int progressVal, maxVal;
     private boolean hidden, dismissed;
+    private volatile boolean cancelled;
+    private Runnable onCancel;
     private NotificationManagerCompat nm;
 
     private static final String CHANNEL_ID = "progress_channel";
@@ -51,6 +53,7 @@ public class ProgressManager {
             if (dismissed || (dialog != null && dialog.isShowing())) return;
             View v = LayoutInflater.from(activity).inflate(R.layout.progress_dialog, null, false);
             v.findViewById(R.id.hideButton).setOnClickListener(v1 -> hide());
+            bindCancel(v.findViewById(R.id.cancelButton));
             ProgressBar pb = v.findViewById(R.id.progressBar);
             pb.setIndeterminate(indeterminate);
             if (currentText != null) ((TextView) v.findViewById(R.id.dialogTitle)).setText(currentText);
@@ -58,6 +61,38 @@ public class ProgressManager {
             dialog = new MaterialAlertDialogBuilder(activity).setView(v).show();
         });
         return this;
+    }
+
+    /**
+     * Shows the dialog's cancel button and wires it to {@code r}. The worker
+     * thread is expected to poll {@link #isCancelled()} and stop; the button
+     * only raises the flag (and runs {@code r} for any immediate cleanup).
+     */
+    public ProgressManager setOnCancel(Runnable r) {
+        this.onCancel = r;
+        handler.post(() -> {
+            if (dialog != null && dialog.isShowing()) {
+                bindCancel(dialog.findViewById(R.id.cancelButton));
+            }
+        });
+        return this;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    private void bindCancel(View button) {
+        if (button == null) return;
+        if (onCancel == null) {
+            button.setVisibility(View.GONE);
+            return;
+        }
+        button.setVisibility(View.VISIBLE);
+        button.setOnClickListener(v -> {
+            cancelled = true;
+            onCancel.run();
+        });
     }
 
     public void setText(int id, String append) {

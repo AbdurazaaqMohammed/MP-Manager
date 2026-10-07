@@ -48,15 +48,38 @@ public final class PasswordedArchive {
     public static Result extractWithStoredPasswords(Context context, File archive,
                                                      File destDir, boolean preserveTime,
                                                      char[] manualPassword) {
+        return extractWithStoredPasswords(context, archive, destDir, preserveTime,
+                manualPassword, null);
+    }
+
+    /**
+     * Same as above with live progress and cancellation: a cancel stops the
+     * attempt loop and reports {@code Result(false, -1, null)}; the caller
+     * tells that apart from a wrong password through its own cancel flag.
+     */
+    public static Result extractWithStoredPasswords(Context context, File archive,
+                                                     File destDir, boolean preserveTime,
+                                                     char[] manualPassword,
+                                                     ArchiveUtil.ExtractProgress progress) {
         List<String> passwords = ArchivePasswordStore.list(context);
         Exception lastError = null;
 
         for (int i = 0; i < passwords.size(); i++) {
+            if (progress != null && progress.isCancelled()) {
+                cleanupLeftovers(destDir);
+                return new Result(false, -1, null);
+            }
             File attemptDir = new File(destDir.getParentFile(),
                     destDir.getName() + ".try" + i);
             try {
-                ArchiveUtil.extract(archive, attemptDir, preserveTime,
-                        passwords.get(i).toCharArray());
+                boolean completed = ArchiveUtil.extractWithProgress(archive, attemptDir,
+                        preserveTime, passwords.get(i).toCharArray(), progress);
+                if (!completed) {
+                    // Cancelled mid-attempt: drop the partial folder.
+                    deleteDir(attemptDir);
+                    cleanupLeftovers(destDir);
+                    return new Result(false, -1, null);
+                }
                 if (attemptDir.isDirectory() && attemptDir.list() != null
                         && attemptDir.list().length > 0) {
                     // Move it into place only now that something came out. If the
@@ -87,8 +110,17 @@ public final class PasswordedArchive {
         }
 
         if (manualPassword != null) {
+            if (progress != null && progress.isCancelled()) {
+                cleanupLeftovers(destDir);
+                return new Result(false, -1, null);
+            }
             try {
-                ArchiveUtil.extract(archive, destDir, preserveTime, manualPassword);
+                boolean completed = ArchiveUtil.extractWithProgress(archive, destDir,
+                        preserveTime, manualPassword, progress);
+                if (!completed) {
+                    cleanupLeftovers(destDir);
+                    return new Result(false, -1, null);
+                }
                 return new Result(true, -1, null);
             } catch (Exception e) {
                 lastError = e;

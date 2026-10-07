@@ -98,6 +98,58 @@ public class ArchiveUtil {
         else throw new IOException("Passwords are only supported for zip, 7z and rar");
     }
 
+    /** Live events while extracting; always invoked from the extracting thread. */
+    public interface ExtractProgress {
+        /**
+         * About to extract an entry; {@code position} is 1-based, {@code total}
+         * is -1 when the format does not announce a count (tar streams).
+         */
+        void onEntry(String name, int position, int total);
+
+        boolean isCancelled();
+    }
+
+    private static final ExtractProgress NO_PROGRESS = new ExtractProgress() {
+        @Override public void onEntry(String name, int position, int total) { }
+        @Override public boolean isCancelled() { return false; }
+    };
+
+    /**
+     * Extracts with per-entry progress and cooperative cancellation.
+     *
+     * @return false when cancelled; the files written before that stay on disk
+     */
+    public static boolean extractWithProgress(File archive, File destDir, boolean preserveTime,
+                                              char[] password, ExtractProgress progress)
+            throws IOException {
+        if (progress == null) progress = NO_PROGRESS;
+        if (!destDir.exists()) destDir.mkdirs();
+        if (progress.isCancelled()) return false;
+        String lower = archive.getName().toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".zip")) return extractZip(archive, destDir, preserveTime, password, progress);
+        if (lower.endsWith(".7z")) return extract7z(archive, destDir, preserveTime, password, progress);
+        if (lower.endsWith(".rar")) return extractRar(archive, destDir, preserveTime, password, progress);
+        if (lower.endsWith(".tar")) return extractTar(new FileInputStream(archive), destDir, preserveTime, progress);
+        if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz"))
+            return extractTar(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime, progress);
+        if (lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2"))
+            return extractTar(new BZip2CompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime, progress);
+        if (lower.endsWith(".tar.xz") || lower.endsWith(".txz"))
+            return extractTar(new XZCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime, progress);
+        if (lower.endsWith(".gz") || lower.endsWith(".bz2") || lower.endsWith(".xz")) {
+            String ext = lower.endsWith(".gz") ? ".gz" : lower.endsWith(".bz2") ? ".bz2" : ".xz";
+            try (InputStream raw = new FileInputStream(archive);
+                 InputStream in = ext.equals(".gz") ? new GzipCompressorInputStream(raw, true)
+                         : ext.equals(".bz2") ? new BZip2CompressorInputStream(raw, true)
+                         : new XZCompressorInputStream(raw, true)) {
+                progress.onEntry(archive.getName(), 1, 1);
+                extractSingleCompressed(in, destDir, archive.getName(), ext);
+            }
+            return !progress.isCancelled();
+        }
+        throw new IOException("Unsupported archive format: " + archive.getName());
+    }
+
     public static void create(File output, List<File> sources) throws IOException {
         create(output, sources, null);
     }
@@ -142,18 +194,35 @@ public class ArchiveUtil {
      */
     static void extract7z(File archive, File destDir, boolean preserveTime, char[] password)
             throws IOException {
+        extract7z(archive, destDir, preserveTime, password, NO_PROGRESS);
+    }
+
+    static boolean extract7z(File archive, File destDir, boolean preserveTime, char[] password,
+                             ExtractProgress progress) throws IOException {
+        // A determinate bar needs the count first; plain extract() stays single-pass.
+        int total = progress == NO_PROGRESS ? -1 : count7zEntries(archive, password);
+        int position = 0;
         try (SevenZFile sevenZFile = password == null
                 ? new SevenZFile(archive) : new SevenZFile(archive, password)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
+                if (progress.isCancelled()) return false;
+                position++;
+                progress.onEntry(entry.getName(), position, total);
                 String name = sanitizeEntryName(entry.getName());
                 File out = new File(destDir, name);
                 if (entry.isDirectory()) out.mkdirs();
                 else {
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
+                    boolean ok;
                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                        copy(sevenZFile.getInputStream(entry), os);
+                        ok = copyCancellable(sevenZFile.getInputStream(entry), os, progress);
+                    }
+                    if (!ok) {
+                        //noinspection ResultOfMethodCallIgnored
+                        out.delete();
+                        return false;
                     }
                     if (preserveTime && entry.getLastModifiedDate() != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -162,6 +231,7 @@ public class ArchiveUtil {
                 }
             }
         }
+        return true;
     }
 
     /**
@@ -171,9 +241,20 @@ public class ArchiveUtil {
      */
     static void extractZip(File archive, File destDir, boolean preserveTime, char[] password)
             throws IOException {
+        extractZip(archive, destDir, preserveTime, password, NO_PROGRESS);
+    }
+
+    static boolean extractZip(File archive, File destDir, boolean preserveTime, char[] password,
+                              ExtractProgress progress) throws IOException {
         try (net.lingala.zip4j.ZipFile zf = new net.lingala.zip4j.ZipFile(archive)) {
             if (password != null && password.length > 0) zf.setPassword(password);
-            for (net.lingala.zip4j.model.FileHeader fh : zf.getFileHeaders()) {
+            java.util.List<net.lingala.zip4j.model.FileHeader> headers = zf.getFileHeaders();
+            int total = headers.size();
+            int position = 0;
+            for (net.lingala.zip4j.model.FileHeader fh : headers) {
+                if (progress.isCancelled()) return false;
+                position++;
+                progress.onEntry(fh.getFileName(), position, total);
                 String name = sanitizeEntryName(fh.getFileName());
                 if (name.isEmpty()) continue;
                 File out = new File(destDir, name);
@@ -181,9 +262,15 @@ public class ArchiveUtil {
                 else {
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
+                    boolean ok;
                     try (InputStream is = zf.getInputStream(fh);
                          OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                        copy(is, os);
+                        ok = copyCancellable(is, os, progress);
+                    }
+                    if (!ok) {
+                        //noinspection ResultOfMethodCallIgnored
+                        out.delete();
+                        return false;
                     }
                     if (preserveTime && fh.getLastModifiedTimeEpoch() > 0) {
                         //noinspection ResultOfMethodCallIgnored
@@ -192,6 +279,7 @@ public class ArchiveUtil {
                 }
             }
         }
+        return true;
     }
 
     private static void extractRar(File archive, File destDir, boolean preserveTime) throws IOException {
@@ -201,17 +289,28 @@ public class ArchiveUtil {
     /** @param password null for an unencrypted archive. */
     static void extractRar(File archive, File destDir, boolean preserveTime, char[] password)
             throws IOException {
+        extractRar(archive, destDir, preserveTime, password, NO_PROGRESS);
+    }
+
+    static boolean extractRar(File archive, File destDir, boolean preserveTime, char[] password,
+                              ExtractProgress progress) throws IOException {
         try (Archive rar = password == null
                 ? new Archive(archive)
                 : new Archive(archive, new String(password))) {
+            int total = progress == NO_PROGRESS ? -1 : rar.getFileHeaders().length;
+            int position = 0;
             FileHeader fh;
             while ((fh = rar.nextFileHeader()) != null) {
+                if (progress.isCancelled()) return false;
+                position++;
+                progress.onEntry(fh.getFileName(), position, total);
                 String name = sanitizeEntryName(fh.getFileName());
                 File out = new File(destDir, name);
                 if (fh.isDirectory()) out.mkdirs();
                 else {
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
+                    // junrar writes the entry itself, so cancel takes effect per entry.
                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
                         rar.extractFile(fh, os);
                     }
@@ -224,20 +323,36 @@ public class ArchiveUtil {
         } catch (RarException e) {
             throw new IOException("Failed to extract RAR archive", e);
         }
+        return true;
     }
 
     private static void extractTar(InputStream tarInput, File destDir, boolean preserveTime) throws IOException {
+        extractTar(tarInput, destDir, preserveTime, NO_PROGRESS);
+    }
+
+    private static boolean extractTar(InputStream tarInput, File destDir, boolean preserveTime,
+                                      ExtractProgress progress) throws IOException {
         try (TarArchiveInputStream tais = new TarArchiveInputStream(tarInput)) {
             TarArchiveEntry entry;
+            int position = 0;
             while ((entry = tais.getNextTarEntry()) != null) {
+                if (progress.isCancelled()) return false;
+                position++;
+                progress.onEntry(entry.getName(), position, -1);
                 String name = sanitizeEntryName(entry.getName());
                 File out = new File(destDir, name);
                 if (entry.isDirectory()) out.mkdirs();
                 else {
                     File parent = out.getParentFile();
                     if (parent != null) parent.mkdirs();
+                    boolean ok;
                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
-                        copy(tais, os);
+                        ok = copyCancellable(tais, os, progress);
+                    }
+                    if (!ok) {
+                        //noinspection ResultOfMethodCallIgnored
+                        out.delete();
+                        return false;
                     }
                     if (preserveTime && entry.getLastModifiedDate() != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -245,6 +360,28 @@ public class ArchiveUtil {
                     }
                 }
             }
+        }
+        return true;
+    }
+
+    /** Reads until the end unless the operation is cancelled. Does not close the streams. */
+    private static boolean copyCancellable(InputStream is, OutputStream os, ExtractProgress progress)
+            throws IOException {
+        byte[] buffer = new byte[BUFFER_SIZE];
+        int length;
+        while ((length = is.read(buffer)) > 0) {
+            if (progress.isCancelled()) return false;
+            os.write(buffer, 0, length);
+        }
+        return true;
+    }
+
+    private static int count7zEntries(File archive, char[] password) throws IOException {
+        try (SevenZFile sevenZFile = password == null
+                ? new SevenZFile(archive) : new SevenZFile(archive, password)) {
+            int n = 0;
+            while (sevenZFile.getNextEntry() != null) n++;
+            return n;
         }
     }
 

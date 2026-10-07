@@ -735,7 +735,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                                 commandHelper.showCommandHelperDialog(cmdFilePaths);
                                 return;
                             case FileMenuOrder.EXTRACT:
-                                if (isInZip || multi) return;
+                                if (isInZip) return;
+                                if (multi) {
+                                    List<File> archives = new ArrayList<>();
+                                    for (int ep : selectedPositions) {
+                                        Object o = values[ep];
+                                        if (o instanceof File f
+                                                && io.github.abdurazaaqmohammed.utils.ArchiveUtil.isSupportedArchive(f.getName())) {
+                                            archives.add(f);
+                                        }
+                                    }
+                                    if (!archives.isEmpty()) fileOps.extractArchives(archives);
+                                    return;
+                                }
                                 fileOps.extractArchive(file);
                                 return;
                             case FileMenuOrder.TOOLS:

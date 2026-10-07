@@ -722,31 +722,36 @@ public class FileOperationsHelper {
      *
      * <p>Runs on the extract worker thread -- {@link ZipPassword#prompt} posts
      * the dialog itself to the main looper and blocks until answered, so a wrong
-     * guess can loop straight back into asking. The pane refresh is left to the
-     * caller so it happens exactly once.
+     * guess can loop straight back into asking. Progress and cancellation ride
+     * on the caller's dialog: a cancelled prompt drops the folder the extract
+     * step created, a cancelled extract leaves its partial files in place.
+     *
+     * @return true when the archive was extracted completely
      */
-    private void askPasswordAndExtract(File archive, File destDir, boolean keepTime) {
+    private boolean askPasswordAndExtract(File archive, File destDir, boolean keepTime, ProgressManager pm) {
+        ArchiveUtil.ExtractProgress progress = progressFor(pm);
         while (true) {
             String pw = ZipPassword.prompt(context);
             if (pw == null || pw.isEmpty()) {
                 // Cancelled: drop the folder the extract step created.
                 deleteDirQuietly(destDir);
-                return;
+                return false;
             }
-            final ProgressManager pm = new ProgressManager(context, true);
-            pm.show();
             try {
-                ArchiveUtil.extract(archive, destDir, keepTime, pw.toCharArray());
-                ZipPassword.remember(archive, pw);
-                pm.dismiss();
-                return;
+                boolean completed = ArchiveUtil.extractWithProgress(
+                        archive, destDir, keepTime, pw.toCharArray(), progress);
+                if (completed) {
+                    ZipPassword.remember(archive, pw);
+                    return true;
+                }
+                return false; // cancelled mid-extract; partial files stay
             } catch (Exception e) {
                 // A wrong password can leave partial files behind: drop them so
                 // the next attempt starts from an empty folder.
                 deleteDirQuietly(destDir);
-                pm.dismiss();
                 context.handler.post(() ->
                         Extensions.showMessage(context, R.string.wrong_password_or_corrupt));
+                if (pm.isCancelled()) return false;
             }
         }
     }
@@ -759,62 +764,114 @@ public class FileOperationsHelper {
         f.delete();
     }
 
-    public void extractArchive(File archive) {
-        File parent = archive.getParentFile();
+    /** The folder an archive extracts into: its name minus the archive suffix. */
+    private static File destDirFor(File archive) {
         String baseName = archive.getName();
-        String folderName = baseName;
+        String folderName;
         if (baseName.endsWith(".tar.gz")) folderName = baseName.substring(0, baseName.length() - ".tar.gz".length());
         else if (baseName.endsWith(".tar.bz2")) folderName = baseName.substring(0, baseName.length() - ".tar.bz2".length());
         else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
         else folderName = baseName.substring(0, baseName.lastIndexOf('.'));
-        File destDir = FileUtils.getUnusedFile(new File(parent, folderName));
+        return new File(archive.getParentFile(), folderName);
+    }
+
+    /**
+     * One extraction attempt with live progress: root staging, the stored
+     * passwords and the prompt loop all sit behind this entry point.
+     *
+     * @return true when the archive was extracted completely; a cancel keeps
+     *         the files written so far
+     */
+    private boolean runExtract(File archive, File destDir, ProgressManager pm) {
+        File readable = archive;
+        File staged = null;
+        try {
+            // Root-only archives are unreadable to zip4j/tar readers:
+            // stage a copy into cache first (binary-safe).
+            if (RootStaging.needsStaging(context, archive)) {
+                staged = RootStaging.stageForRead(context, archive.getAbsolutePath());
+                readable = staged;
+            }
+            if (pm.isCancelled()) return false;
+            boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
+            boolean encrypted = PasswordedArchive.isEncryptedCandidate(readable);
+            if (encrypted && !io.github.abdurazaaqmohammed.utils.ArchivePasswordStore.isEmpty(context)) {
+                // Try the stored passwords in order first; only ask when
+                // none of them work.
+                PasswordedArchive.Result r = PasswordedArchive.extractWithStoredPasswords(
+                        context, readable, destDir, keepTime, null, progressFor(pm));
+                if (r.ok) return true;
+                if (pm.isCancelled()) return false;
+                return askPasswordAndExtract(readable, destDir, keepTime, pm);
+            }
+            if (encrypted) {
+                // Nothing stored yet: ask straight away instead of
+                // failing with a raw library error.
+                return askPasswordAndExtract(readable, destDir, keepTime, pm);
+            }
+            return ArchiveUtil.extractWithProgress(readable, destDir, keepTime, null, progressFor(pm));
+        } catch (Exception e) {
+            new ErrorUtil(context).showError(e);
+            return false;
+        } finally {
+            if (staged != null) {
+                //noinspection ResultOfMethodCallIgnored
+                staged.delete();
+            }
+        }
+    }
+
+    private ArchiveUtil.ExtractProgress progressFor(ProgressManager pm) {
+        return new ArchiveUtil.ExtractProgress() {
+            @Override
+            public void onEntry(String name, int position, int total) {
+                pm.setText(context.rss.getString(R.string.extracting, name));
+                if (total > 0) pm.setProgress(position, total);
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return pm.isCancelled();
+            }
+        };
+    }
+
+    public void extractArchive(File archive) {
+        File parent = archive.getParentFile();
+        File destDir = FileUtils.getUnusedFile(destDirFor(archive));
         destDir.mkdirs();
         ProgressManager pm = new ProgressManager(context, true);
+        pm.setOnCancel(() -> { });
         pm.setText(context.rss.getString(R.string.extracting_to_folder, destDir.getName()));
         pm.show();
         new Thread(() -> {
-            try {
-                // Root-only archives are unreadable to zip4j/tar readers:
-                // stage a copy into cache first (binary-safe).
-                File readable = archive;
-                File staged = null;
-                if (RootStaging.needsStaging(context, archive)) {
-                    staged = RootStaging.stageForRead(
-                            context, archive.getAbsolutePath());
-                    readable = staged;
-                }
-                try {
-                    boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
-                    boolean encrypted = PasswordedArchive.isEncryptedCandidate(readable);
-                    if (encrypted && !io.github.abdurazaaqmohammed.utils.ArchivePasswordStore.isEmpty(context)) {
-                        // Try the stored passwords in order first; only ask when
-                        // none of them work.
-                        PasswordedArchive.Result r = PasswordedArchive.extractWithStoredPasswords(
-                                context, readable, destDir, keepTime, null);
-                        if (!r.ok) {
-                            pm.dismiss();
-                            askPasswordAndExtract(readable, destDir, keepTime);
-                        }
-                    } else if (encrypted) {
-                        // Nothing stored yet: ask straight away instead of
-                        // failing with a raw library error.
-                        pm.dismiss();
-                        askPasswordAndExtract(readable, destDir, keepTime);
-                    } else {
-                        ArchiveUtil.extract(readable, destDir, keepTime);
-                    }
-                } finally {
-                    if (staged != null) {
-                        //noinspection ResultOfMethodCallIgnored
-                        staged.delete();
-                    }
-                }
-                pm.dismiss();
-                context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
-            } catch (Exception e) {
-                pm.dismiss();
-                new ErrorUtil(context).showError(e);
+            runExtract(archive, destDir, pm);
+            pm.dismiss();
+            context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
+        }).start();
+    }
+
+    /**
+     * Multi-select EXTRACT: one progress dialog, archives back to back, the
+     * cancel button stops the whole run.
+     */
+    public void extractArchives(List<File> archives) {
+        new Thread(() -> {
+            ProgressManager pm = new ProgressManager(context, true);
+            pm.setOnCancel(() -> { });
+            pm.show();
+            int position = 0;
+            for (File archive : archives) {
+                if (pm.isCancelled()) break;
+                position++;
+                File destDir = FileUtils.getUnusedFile(destDirFor(archive));
+                destDir.mkdirs();
+                pm.setText(context.rss.getString(R.string.extracting_to,
+                        archive.getName(), destDir.getName()));
+                runExtract(archive, destDir, pm);
             }
+            pm.dismiss();
+            context.handler.post(context::reloadCurrentFolder);
         }).start();
     }
 
