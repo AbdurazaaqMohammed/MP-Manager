@@ -35,12 +35,15 @@
 
     </LinearLayout>
 
-    <ImageView
+    <ImageButton
         android:id="@+id/bv_copy"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_marginStart="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/bw_copy_password"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/baseline_content_copy_24" />
 
 </LinearLayout>
