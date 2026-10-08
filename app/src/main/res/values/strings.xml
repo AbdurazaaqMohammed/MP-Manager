@@ -708,6 +708,9 @@ Layout Inspector
     <string name="appearance">Appearance</string>
     <string name="pane_highlight_style">Active pane highlight</string>
     <string name="pane_highlight_animate">Animate pane highlight</string>
+    <string name="app_font">Font</string>
+    <string name="font_pick">Pick font</string>
+    <string name="font_load_failed">Could not load the selected font</string>
     <string name="highlight_none">None</string>
     <string name="highlight_background">Background color</string>
     <string name="highlight_underline">Underline</string>

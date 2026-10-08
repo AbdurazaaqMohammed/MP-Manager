@@ -48,6 +48,7 @@ import io.github.abdurazaaqmohammed.adapters.main.FileMenuCustomizer;
 import io.github.abdurazaaqmohammed.adapters.main.FileMenuOrder;
 import io.github.abdurazaaqmohammed.core.ui.theme.BuiltInThemes;
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SettingAction;
 import io.github.abdurazaaqmohammed.plugins.ext.SettingToggle;
@@ -58,6 +59,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.ui.PaneHighlightView;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
@@ -66,11 +68,14 @@ import io.github.abdurazaaqmohammed.utils.UpdateUtil;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import net.lingala.zip4j.model.enums.CompressionLevel;
@@ -195,6 +200,7 @@ public class SettingsController {
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(v -> SignatureKeyDialog.show(activity));
         setupAppearanceSettings(settingsDialog, settings);
         setupPaneHighlightSettings(settingsDialog, settings);
+        setupFontSettings(settingsDialog, settings);
         setupLanguageSettings(settingsDialog);
         setupFolderSettings(settingsDialog, settings);
         setupFileOpsSettings(settingsDialog, settings);
@@ -562,6 +568,90 @@ public class SettingsController {
             settings.edit().putBoolean(PaneHighlightController.ANIMATE_PREF_KEY, checked).apply();
             if (host != null) host.reloadPaneHighlight();
         });
+    }
+
+    private final Map<String, Typeface> fontPreviewCache = new HashMap<>();
+
+    private void setupFontSettings(ScrollView root, SharedPreferences settings) {
+        AutoCompleteTextView fontTv = root.findViewById(R.id.fontTv);
+        List<File> systemFonts = AppFont.systemFonts();
+        List<String> values = new ArrayList<>();
+        List<String> labels = new ArrayList<>();
+        values.add("");
+        labels.add(activity.getString(R.string.font_default_label));
+        for (File font : systemFonts) {
+            values.add(font.getAbsolutePath());
+            labels.add(AppFont.displayName(font));
+        }
+
+        // Each entry previews in its own font.
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(activity,
+                android.R.layout.simple_dropdown_item_1line, labels) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View v = super.getView(position, convertView, parent);
+                ((TextView) v).setTypeface(previewTypeface(values.get(position)));
+                return v;
+            }
+        };
+        fontTv.setAdapter(adapter);
+
+        String current = settings.getString(AppFont.PREF_KEY, "");
+        int currentIdx = values.indexOf(current);
+        if (currentIdx >= 0) fontTv.setText(labels.get(currentIdx), false);
+        else if (!current.isEmpty()) fontTv.setText(new File(current).getName(), false);
+        else fontTv.setText(labels.get(0), false);
+
+        fontTv.setOnItemClickListener((p, v, pos, id) -> {
+            settings.edit().putString(AppFont.PREF_KEY, values.get(pos)).apply();
+            AppFont.invalidate();
+            activity.recreate();
+        });
+
+        root.findViewById(R.id.pickFontBtn).setOnClickListener(v -> pickCustomFont(settings));
+    }
+
+    private Typeface previewTypeface(String path) {
+        if (path == null || path.isEmpty()) return null;
+        Typeface tf = fontPreviewCache.get(path);
+        if (tf == null) {
+            try {
+                tf = Typeface.createFromFile(path);
+            } catch (Exception e) {
+                tf = null;
+            }
+            fontPreviewCache.put(path, tf);
+        }
+        return tf;
+    }
+
+    private void pickCustomFont(SharedPreferences settings) {
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.selection_type = FilePickerDialog.FILE_SELECT;
+        props.root = Environment.getExternalStorageDirectory();
+        props.extensions = new String[]{"ttf", "otf"};
+        FilePickerDialog picker = new FilePickerDialog(activity, props);
+        picker.setTitle(activity.getString(R.string.app_font));
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0 || files[0] == null) return;
+            try {
+                File src = new File(files[0]);
+                File dir = new File(activity.getFilesDir(), "fonts");
+                dir.mkdirs();
+                File dst = new File(dir, src.getName());
+                if (dst.exists()) dst.delete();
+                FileUtils.copyFile(new FileInputStream(src), dst);
+                // Fail fast on corrupt/unsupported files instead of breaking the app.
+                Typeface.createFromFile(dst);
+                settings.edit().putString(AppFont.PREF_KEY, dst.getAbsolutePath()).apply();
+                AppFont.invalidate();
+                activity.recreate();
+            } catch (Exception e) {
+                Extensions.showMessage(activity, R.string.font_load_failed);
+            }
+        });
+        picker.show();
     }
 
     private void saveDateFormat(ScrollView root) {

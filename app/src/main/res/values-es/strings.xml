@@ -698,6 +698,9 @@ Layout Inspector
     <string name="appearance">Apariencia</string>
     <string name="pane_highlight_style">Resaltar panel activo</string>
     <string name="pane_highlight_animate">Animar resaltado del panel</string>
+    <string name="app_font">Fuente</string>
+    <string name="font_pick">Elegir fuente</string>
+    <string name="font_load_failed">No se pudo cargar la fuente seleccionada</string>
     <string name="highlight_none">Ninguno</string>
     <string name="highlight_background">Color de fondo</string>
     <string name="highlight_underline">Subrayado</string>

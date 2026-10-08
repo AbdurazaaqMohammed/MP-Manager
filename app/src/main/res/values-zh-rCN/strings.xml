@@ -685,6 +685,9 @@ Layout Inspector
     <string name="appearance">外观</string>
     <string name="pane_highlight_style">高亮当前面板</string>
     <string name="pane_highlight_animate">面板高亮动画</string>
+    <string name="app_font">字体</string>
+    <string name="font_pick">选择字体</string>
+    <string name="font_load_failed">无法加载所选字体</string>
     <string name="highlight_none">无</string>
     <string name="highlight_background">背景色</string>
     <string name="highlight_underline">下划线</string>

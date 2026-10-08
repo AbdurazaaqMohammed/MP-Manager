@@ -664,6 +664,9 @@
     <string name="appearance">Внешний вид</string>
     <string name="pane_highlight_style">Подсветка активной панели</string>
     <string name="pane_highlight_animate">Анимировать подсветку панели</string>
+    <string name="app_font">Шрифт</string>
+    <string name="font_pick">Выбрать шрифт</string>
+    <string name="font_load_failed">Не удалось загрузить выбранный шрифт</string>
     <string name="highlight_none">Нет</string>
     <string name="highlight_background">Цвет фона</string>
     <string name="highlight_underline">Подчёркивание</string>

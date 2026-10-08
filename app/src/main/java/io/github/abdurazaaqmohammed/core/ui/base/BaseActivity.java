@@ -11,6 +11,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
+import io.github.abdurazaaqmohammed.core.ui.util.AppFont;
 
 /**
  * Single place for activity-wide UI behaviour.
@@ -19,10 +20,15 @@ import io.github.abdurazaaqmohammed.core.ui.theme.ThemeRegistry;
  */
 public abstract class BaseActivity extends AppCompatActivity {
 
+    private int appliedFontEpoch = -1;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         // Theme must be set before super.onCreate so inflation uses it.
         ThemeRegistry.applySaved(this);
+        // Font factory must also wrap AppCompat's, so install before super.onCreate.
+        AppFont.installFactory(this);
+        appliedFontEpoch = AppFont.currentEpoch();
         super.onCreate(savedInstanceState);
         View content = getWindow().getDecorView().findViewById(R.id.content);
         if (content != null){
@@ -33,6 +39,13 @@ public abstract class BaseActivity extends AppCompatActivity {
             });
             ViewCompat.requestApplyInsets(content);
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Pick up a font changed in Settings while this activity was in background.
+        if (appliedFontEpoch != AppFont.currentEpoch()) recreate();
     }
 
     /**
