@@ -763,6 +763,107 @@ public class ApkManifestEditor {
         return changed;
     }
 
+    /**
+     * Permanently deletes matching permission entries (both enabled and disabled forms).
+     * Returns the number of removed permissions.
+     */
+    public int removeManifestPermissions(File apkFile, List<String> perms) throws Exception {
+        ManifestData data = decodeManifestWithRes(apkFile);
+        List<XMLEntry> entries = data != null ? data.entries : null;
+        List<ResEntry> res = data != null ? data.res : null;
+        if (entries == null) entries = decodeManifest(apkFile);
+        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
+        Set<String> targets = new HashSet<>(perms);
+        int removed = 0;
+        // Decoder emits "<uses-permission" open row followed by attribute rows
+        // ("    android:name=\"...\"" merged with "/>"). Remove the whole span.
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            XMLEntry item = entries.get(i);
+            String tag = item.getTag();
+            if (tag == null || !tag.contains("uses-permission")) continue;
+            String trimmed = tag.trim();
+            boolean isElementStart = trimmed.startsWith("<");
+            if (!isElementStart) continue;
+            int end = i;
+            // Span extends over following attribute rows until next element start/end row.
+            int j = i + 1;
+            while (j < entries.size()) {
+                String nt = entries.get(j).getTag();
+                if (nt == null) break;
+                String ntrim = nt.trim();
+                if (ntrim.startsWith("<") || ntrim.startsWith("</")) break;
+                end = j;
+                j++;
+            }
+            boolean match = targets.contains(item.getValue());
+            if (!match) {
+                for (int k = i; k <= end; k++) {
+                    XMLEntry attr = entries.get(k);
+                    String at = attr.getTag();
+                    if (at != null && at.contains("android:name") && targets.contains(attr.getValue())) {
+                        match = true;
+                        break;
+                    }
+                }
+            }
+            if (match) {
+                for (int k = end; k >= i; k--) entries.remove(k);
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            if (UiPrefs.genBackup(context)) {
+                try {
+                    FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
+                } catch (Exception ignored) {
+                }
+            }
+            writeManifestEntries(apkFile, entries, res);
+        }
+        return removed;
+    }
+
+    private interface PermissionOp {
+        int apply() throws Exception;
+    }
+
+    private void runPermissionOp(File apkFile, PermissionOp op, int doneMsgRes,
+                                 boolean[] sign, SignWrapper[] wrapper) {
+        Runnable doEdit = () -> {
+            ProgressManager pm2 = new ProgressManager(context, true).show();
+            new Thread(() -> {
+                try {
+                    int changed;
+                    try {
+                        changed = op.apply();
+                    } catch (Exception e) {
+                        pm2.dismiss();
+                        new ErrorUtil(context).showError(e);
+                        return;
+                    }
+                    if (changed > 0 && sign[0]) wrapper[0].signApk(apkFile);
+                    pm2.dismiss();
+                    int done = changed;
+                    context.handler.post(() -> {
+                        Extensions.showMessage(context, rss.getString(doneMsgRes, done));
+                        try { context.refreshAllPanes(); }
+                        catch (Exception ignored) {
+                            context.loadFolderInPane(apkFile.getParentFile(), true);
+                        }
+                    });
+                } catch (Exception e) {
+                    pm2.dismiss();
+                    new ErrorUtil(context).showError(e);
+                }
+            }).start();
+        };
+        if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+            wrapper[0] = sw;
+            doEdit.run();
+        });
+        else doEdit.run();
+    }
+
     public void showPermissionsDialog(File apkFile) {
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
@@ -793,7 +894,7 @@ public class ApkManifestEditor {
                 } catch (Exception ignored) {
                 }
                 StringBuilder label = new StringBuilder(base);
-                if (disabled) label.append(" (").append(rss.getString(R.string.me_disabled)).append(')');
+                if (disabled) label.append(" (").append(rss.getString(R.string.disabled)).append(')');
                 if (dangerous) label.append(" (dangerous)");
                 labels[i] = label.toString();
             }
@@ -819,54 +920,46 @@ public class ApkManifestEditor {
                         .setTitle(rss.getString(R.string.me_perms_n, perms.length))
                         .setView(permDialog)
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(rss.getString(R.string.me_apply), (d, which) -> {
+                        .setPositiveButton(rss.getString(R.string.apply), (d, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
-                            Runnable doEdit = () -> {
-                                ProgressManager pm2 = new ProgressManager(context, true).show();
-                                new Thread(() -> {
-                                    try {
-                                        List<String> toDisable = new ArrayList<>();
-                                        List<String> toEnable = new ArrayList<>();
-                                        for (int i = 0; i < perms.length; i++) {
-                                            boolean wantEnabled = permList.isItemChecked(i);
-                                            boolean isDisabled = perms[i] != null
-                                                    && perms[i].startsWith(DISABLED_PREFIX);
-                                            String base = baseNames[i];
-                                            if (base == null || base.isEmpty()) continue;
-                                            if (!wantEnabled && !isDisabled) toDisable.add(base);
-                                            else if (wantEnabled && isDisabled) toEnable.add(base);
-                                        }
-                                        int changed = 0;
-                                        if (!toDisable.isEmpty() || !toEnable.isEmpty()) {
-                                            try {
-                                                changed = setPermissionsDisabled(apkFile, toDisable, toEnable);
-                                            } catch (Exception e) {
-                                                pm2.dismiss();
-                                                new ErrorUtil(context).showError(e);
-                                                return;
-                                            }
-                                        }
-                                        if (changed > 0 && sign[0]) wrapper[0].signApk(apkFile);
-                                        pm2.dismiss();
-                                        int done = changed;
-                                        context.handler.post(() -> {
-                                            Extensions.showMessage(context, rss.getString(R.string.me_perms_updated, done));
-                                            try { context.refreshAllPanes(); }
-                                            catch (Exception ignored) {
-                                                context.loadFolderInPane(apkFile.getParentFile(), true);
-                                            }
-                                        });
-                                    } catch (Exception e) {
-                                        pm2.dismiss();
-                                        new ErrorUtil(context).showError(e);
-                                    }
-                                }).start();
-                            };
-                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-                                wrapper[0] = sw;
-                                doEdit.run();
-                            });
-                            else doEdit.run();
+                            List<String> toDisable = new ArrayList<>();
+                            List<String> toEnable = new ArrayList<>();
+                            for (int i = 0; i < perms.length; i++) {
+                                boolean wantEnabled = permList.isItemChecked(i);
+                                boolean isDisabled = perms[i] != null
+                                        && perms[i].startsWith(DISABLED_PREFIX);
+                                String base = baseNames[i];
+                                if (base == null || base.isEmpty()) continue;
+                                if (!wantEnabled && !isDisabled) toDisable.add(base);
+                                else if (wantEnabled && isDisabled) toEnable.add(base);
+                            }
+                            if (toDisable.isEmpty() && toEnable.isEmpty()) return;
+                            runPermissionOp(apkFile,
+                                    () -> setPermissionsDisabled(apkFile, toDisable, toEnable),
+                                    R.string.me_perms_updated, sign, wrapper);
+                        })
+                        .setNeutralButton(rss.getString(R.string.remove), (d, which) -> {
+                            List<String> toRemove = new ArrayList<>();
+                            for (int i = 0; i < perms.length; i++) {
+                                if (permList.isItemChecked(i)) continue;
+                                String base = baseNames[i];
+                                if (base == null || base.isEmpty()) continue;
+                                toRemove.add(base);
+                                toRemove.add(DISABLED_PREFIX + base);
+                            }
+                            if (toRemove.isEmpty()) return;
+                            int count = toRemove.size() / 2;
+                            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
+                                    .setTitle(rss.getString(R.string.remove))
+                                    .setMessage(rss.getString(R.string.me_confirm_remove, count))
+                                    .setNegativeButton(android.R.string.cancel, null)
+                                    .setPositiveButton(android.R.string.ok, (dd, ww) -> {
+                                        SignWrapper[] wrapper = new SignWrapper[1];
+                                        runPermissionOp(apkFile,
+                                                () -> removeManifestPermissions(apkFile, toRemove),
+                                                R.string.me_perms_updated, sign, wrapper);
+                                    })
+                                    .create());
                         }).create();
                 dialogUtil.styleAlertDialog(dialog);
             });
