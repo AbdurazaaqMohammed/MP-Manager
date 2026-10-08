@@ -3,6 +3,8 @@ name: AI 代码评审
 # 用 pull_request_target 触发：来自 fork 的 PR 也能拿到写权限去留评论。
 # 这样做安全的前提是本任务**从不检出、也从不执行** PR 里的任何代码：
 # 差异只通过 API 读出来，当作文本交给模型。
+# 模型接口：GitHub Models 已于 2026-07-30 停用，默认端点不再可用；请配置仓库
+# 变量 AI_REVIEW_BASE_URL / AI_REVIEW_MODEL 与密钥 AI_API_KEY（任意 OpenAI 兼容接口）。
 on:
   pull_request_target:
     types: [opened, reopened, synchronize]
@@ -33,12 +35,12 @@ jobs:
       - name: 生成评审意见
         uses: actions/github-script@v7
         env:
-          # 默认配置只用工作流自带的令牌访问 GitHub Models，无需任何密钥。
-          # 若要换成任意 OpenAI 兼容接口（例如 DeepSeek 或自建模型），
-          # 额外设置 AI_API_KEY，并按需覆盖 AI_BASE_URL / AI_MODEL。
-          AI_BASE_URL: ${{ vars.AI_REVIEW_BASE_URL || 'https://models.github.ai/inference' }}
-          AI_MODEL: ${{ vars.AI_REVIEW_MODEL || 'openai/gpt-4o' }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY || secrets.GITHUB_TOKEN }}
+          # 默认配置原本用工作流自带的令牌访问 GitHub Models，无需任何密钥。
+          # GitHub Models 已于 2026-07-30 停用，因此现在必须配置一个 OpenAI 兼容接口：
+          # 仓库变量 AI_REVIEW_BASE_URL / AI_REVIEW_MODEL + 密钥 AI_API_KEY。
+          AI_BASE_URL: ${{ vars.AI_REVIEW_BASE_URL || '' }}
+          AI_MODEL: ${{ vars.AI_REVIEW_MODEL || '' }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY || '' }}
           MAX_DIFF_CHARS: '60000'
           MAX_FILES: '40'
         with:
@@ -144,18 +146,24 @@ jobs:
               '\n差异内容：\n' + diff,
             ].join('\n');
 
-            const baseUrl = (process.env.AI_BASE_URL
-              || 'https://models.github.ai/inference').replace(/\/+$/, '');
+            const baseUrl = (process.env.AI_BASE_URL || '').replace(/\/+$/, '');
+            const model = process.env.AI_MODEL || '';
             const apiKey = process.env.AI_API_KEY || '';
+            if (!baseUrl || !model || !apiKey) {
+              core.warning('没有配置模型接口（AI_REVIEW_BASE_URL / AI_REVIEW_MODEL / AI_API_KEY）');
+              await upsert(marker, prNumber,
+                marker + '\n## AI 代码评审\n\n没有配置模型接口。\n\n' + helpText());
+              return;
+            }
             const response = await fetch(baseUrl + '/chat/completions', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github+json',
+                'Accept': 'application/json',
                 'Authorization': 'Bearer ' + apiKey,
               },
               body: JSON.stringify({
-                model: process.env.AI_MODEL || 'openai/gpt-4o',
+                model: model,
                 messages: [
                   { role: 'system', content: system },
                   { role: 'user', content: user },
@@ -171,16 +179,42 @@ jobs:
               await upsert(marker, prNumber,
                 marker + '\n## AI 代码评审\n\n模型请求失败：HTTP ' + response.status
                 + '\n\n```\n' + detail.slice(0, 800) + '\n```\n'
-                + '\n如果是 401/403，请确认工作流启用了 `models: read` 权限，'
-                + '或改用仓库密钥 `AI_API_KEY` 指向自己的 OpenAI 兼容接口。');
+                + '\n' + helpText());
               return;
             }
 
-            const payload = await response.json();
+            // GitHub Models 已于 2026-07-30 停用，默认端点现在只回一个 "OK" 文本，
+            // 不再是 JSON。先按 Content-Type 校验，再安全解析，避免工作流在
+            // JSON.parse 上崩溃（SyntaxError）。
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.toLowerCase().includes('application/json')) {
+              const detail = (await response.text() || '').slice(0, 800);
+              core.warning('模型返回的不是 JSON：HTTP ' + response.status
+                + ' Content-Type=' + contentType + ' body=' + detail);
+              await upsert(marker, prNumber,
+                marker + '\n## AI 代码评审\n\n模型接口没有返回 JSON（HTTP '
+                + response.status + '，Content-Type: ' + contentType + '）\n'
+                + (detail ? '\n```\n' + detail + '\n```\n' : '')
+                + '\n' + helpText());
+              return;
+            }
+
+            let payload;
+            try {
+              payload = await response.json();
+            } catch (error) {
+              core.warning('模型返回体不是合法 JSON：' + error.message);
+              await upsert(marker, prNumber,
+                marker + '\n## AI 代码评审\n\n模型返回体解析失败：'
+                + error.message + '\n\n' + helpText());
+              return;
+            }
             const text = payload.choices && payload.choices[0]
               && payload.choices[0].message && payload.choices[0].message.content;
             if (!text) {
               core.warning('模型没有返回内容');
+              await upsert(marker, prNumber,
+                marker + '\n## AI 代码评审\n\n模型返回了空内容。\n\n' + helpText());
               return;
             }
 
@@ -188,7 +222,7 @@ jobs:
               marker,
               '## AI 代码评审',
               '',
-              '模型：`' + (process.env.AI_MODEL || 'openai/gpt-4o') + '`'
+              '模型：`' + (process.env.AI_MODEL || '未配置') + '`'
                 + (truncated ? '，差异已截断' : ''),
               '',
               text.trim(),
@@ -197,6 +231,17 @@ jobs:
             ].join('\n');
             await upsert(marker, prNumber, body);
             core.info('评审意见已发布');
+
+            function helpText() {
+              const lines = [
+                '配置方法：GitHub Models 已于 2026-07-30 停用，默认端点 `https://models.github.ai/inference` 不再可用。',
+                '请在仓库里配置一个 OpenAI 兼容的模型接口：',
+                '- 变量 `AI_REVIEW_BASE_URL`：接口地址（例如 `https://api.deepseek.com/v1`），不要带结尾斜杠',
+                '- 变量 `AI_REVIEW_MODEL`：模型名（例如 `deepseek-chat`）',
+                '- 密钥 `AI_API_KEY`：API Key',
+              ];
+              return lines.join('\n');
+            }
 
             async function upsert(marker, number, body) {
               const comments = (await github.rest.issues.listComments({
