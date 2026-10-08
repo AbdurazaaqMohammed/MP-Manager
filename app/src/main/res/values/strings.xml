@@ -2029,4 +2029,13 @@ Deleted %2$s · %3$s</string>
     <string name="split_volume_size">Split volume size</string>
     <string name="split_volume_none">Single file</string>
     <string name="split_volume_append_unsupported">Split volumes cannot be added to an existing archive</string>
+    <!-- DEX global rename -->
+    <string name="dex_global_rename">DEX global rename</string>
+    <string name="dex_global_rename_desc">One rule per line: "pkg &lt;search&gt; &lt;replace&gt;", "type Lcom/a/A; Lcom/b/A;", "field Lcom/a/A;-&gt;name:I newName" or "method Lcom/a/A;-&gt;name()V newName". Add "exact" as a fourth token to keep a package rename from touching its sub-packages. Lines starting with # are ignored.</string>
+    <string name="dex_global_rename_hint">pkg com.example com.acme\ntype Lcom/example/A; Lcom/acme/A;\nfield Lcom/example/A;-&gt;count:I total</string>
+    <string name="dex_global_rename_inner">Also rename inner classes</string>
+    <string name="dex_global_rename_access">Repair member visibility after renaming</string>
+    <string name="dex_global_rename_bad_script">No usable rename rule</string>
+    <string name="dex_global_rename_done">Renamed %1$d item(s)</string>
+    <string name="dex_global_rename_none">Nothing was renamed</string>
 </resources>

@@ -102,6 +102,7 @@ import io.github.abdurazaaqmohammed.features.apk.ApkBatchTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkOverlayTools;
 import io.github.abdurazaaqmohammed.features.apk.ApkSignatureTools;
 import io.github.abdurazaaqmohammed.features.apk.translate.XmlTranslationModeActivity;
+import io.github.abdurazaaqmohammed.features.dex.DexRenameDialog;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
@@ -1001,11 +1002,12 @@ public class ApkInfoDialogs {
     private static final int ACT_DEX_DECRYPT = -8;
     private static final int ACT_DEX_OBFUSCATE = -9;
     private static final int ACT_DEX_RESPLIT = -10;
+    private static final int ACT_DEX_RENAME = -11;
 
     private static final int[] MT_FUNCTION_ORDER = {
             0, 1, 5, ACT_RES_SHRINK, 7, ACT_DATA_REUSE, ACT_LOGGER, ACT_FILE_PROVIDER,
             ACT_XML_TRANSLATE, ACT_XML_BATCH, ACT_RES_OBFUSCATE, 3, ACT_DEX_DECRYPT,
-            ACT_DEX_OBFUSCATE, ACT_DEX_RESPLIT
+            ACT_DEX_OBFUSCATE, ACT_DEX_RESPLIT, ACT_DEX_RENAME
     };
     private static final int[] MP_EXTRA_ORDER = {2, 6, 8, 9, 10, 11, 12, 13};
 
@@ -1077,6 +1079,7 @@ public class ApkInfoDialogs {
             case ACT_DEX_DECRYPT: return context.rss.getString(R.string.dex_string_decrypt);
             case ACT_DEX_OBFUSCATE: return context.rss.getString(R.string.dex_obfuscate_defense);
             case ACT_DEX_RESPLIT: return context.rss.getString(R.string.dex_resplit);
+            case ACT_DEX_RENAME: return context.rss.getString(R.string.dex_global_rename);
             default: return String.valueOf(code);
         }
     }
@@ -1127,6 +1130,9 @@ public class ApkInfoDialogs {
                 break;
             case ACT_DEX_DECRYPT:
                 showDexDecryptDialog(file);
+                break;
+            case ACT_DEX_RENAME:
+                DexRenameDialog.show(context, dialogUtil, file);
                 break;
             default:
                 Extensions.showMessage(context, context.rss.getString(R.string.function_in_development));
