@@ -17,6 +17,7 @@ public final class SearchHistoryHelper {
     public static final String KEY_DEX = "dex_search_history";
     public static final String KEY_ARSC_PLUS = "arsc_plus_search_history";
     public static final String KEY_COMPARE_DEX = "compare_dex_search_history";
+    public static final String KEY_COMPARE_TEXT = "compare_text_search_history";
     public static final String KEY_LIMIT = "search_history_limit";
     public static final int DEFAULT_LIMIT = 50;
 
