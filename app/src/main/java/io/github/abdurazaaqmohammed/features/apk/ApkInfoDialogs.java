@@ -84,6 +84,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
@@ -838,7 +839,8 @@ public class ApkInfoDialogs {
         final boolean[] rootInfoLoaded = {false};
 
         RootManager rm = RootManager.getInstance(context);
-        if (rm.isRootAvailable() && rm.isRootFileOpsEnabled()) {
+        boolean elevatedFileOps = AccessManager.fileOpsOn(context);
+        if (elevatedFileOps) {
             rootInfoSection.setVisibility(View.VISIBLE);
             rootInfoHeader.setOnClickListener(v -> {
                 if (rootInfoContent.getVisibility() == View.VISIBLE) {
@@ -857,23 +859,86 @@ public class ApkInfoDialogs {
                 loading.setPadding(0, dp(4), 0, dp(4));
                 rootInfoContent.addView(loading);
                 new Thread(() -> {
-                    String[] pkg = {""};
-                    context.handler.post(() -> pkg[0] = pkgName.getText().toString());
-                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
-                    String pkgNameStr = pkg[0];
-                    if (TextUtils.isEmpty(pkgNameStr)) return;
-                    String uid = rm.getAppUid(pkgNameStr);
-                    String apkPath = null;
-                    try { apkPath = rm.getAppApkPath(pkgNameStr); } catch (Exception ignored) {}
-                    List<String> dataDirs = rm.getAppDataDirs(pkgNameStr);
-                    String finalApkPath = apkPath;
+                    // Capture the package name on the UI thread first — posting
+                    // then sleeping races the APK-info loader below that fills
+                    // pkgName, so the old code read "" and bailed out early.
+                    final String[] pkgHolder = new String[1];
+                    try {
+                        context.handler.post(() -> {
+                            CharSequence t = pkgName.getText();
+                            String s = t == null ? "" : t.toString().trim();
+                            // Wait until the APK-info loader fills pkgName
+                            // (it starts as R.string.loading) instead of
+                            // giving up with "No root info available".
+                            if (!s.isEmpty()
+                                    && !s.equals(context.getString(R.string.loading))) {
+                                synchronized (pkgHolder) {
+                                    pkgHolder[0] = s;
+                                    pkgHolder.notifyAll();
+                                }
+                            }
+                        });
+                    } catch (Exception ignored) {}
+                    String pkgNameStr = null;
+                    synchronized (pkgHolder) {
+                        for (int i = 0; i < 100 && pkgHolder[0] == null; i++) {
+                            try { pkgHolder.wait(100); } catch (InterruptedException ignored) {}
+                            try {
+                                final String[] retry = new String[1];
+                                context.handler.post(() -> {
+                                    CharSequence t = pkgName.getText();
+                                    String s = t == null ? "" : t.toString().trim();
+                                    if (!s.isEmpty()
+                                            && !s.equals(context.getString(R.string.loading))) {
+                                        retry[0] = s;
+                                    }
+                                });
+                                // Give the posted runnable a moment to run.
+                                try { Thread.sleep(60); } catch (InterruptedException ignored) {}
+                                if (retry[0] != null) {
+                                    pkgHolder[0] = retry[0];
+                                    break;
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        pkgNameStr = pkgHolder[0];
+                    }
+                    // Fall back to parsing the APK itself so root info still
+                    // loads even if the main APK-info thread hasn't finished.
+                    if (TextUtils.isEmpty(pkgNameStr)) {
+                        try {
+                            android.content.pm.PackageInfo pi = context.getPackageManager()
+                                    .getPackageArchiveInfo(filePath, 0);
+                            if (pi != null) pkgNameStr = pi.packageName;
+                        } catch (Exception ignored) {}
+                    }
+                    if (TextUtils.isEmpty(pkgNameStr)) {
+                        context.handler.post(() -> {
+                            rootInfoContent.removeAllViews();
+                            TextView empty = new TextView(context);
+                            empty.setText(R.string.no_root_info_available);
+                            empty.setTextSize(12);
+                            empty.setPadding(0, dp(4), 0, dp(4));
+                            rootInfoContent.addView(empty);
+                        });
+                        return;
+                    }
+                    final String resolvedPkg = pkgNameStr;
+                    String uid = rm.getAppUid(resolvedPkg);
+                    List<String> apkPaths = rm.getAppApkPaths(resolvedPkg);
+                    List<String> dataDirs = rm.getAppDataDirs(resolvedPkg);
+                    // pm path lists base APK first, then splits — show only
+                    // the base path to avoid duplicate-looking rows.
+                    final String baseApkPath = (apkPaths != null && !apkPaths.isEmpty())
+                            ? apkPaths.get(0) : null;
                     context.handler.post(() -> {
                         rootInfoContent.removeAllViews();
-                        if (uid != null) addRootInfoRow(rootInfoContent, "UID", uid, null, ad);
-                        if (finalApkPath != null) addRootInfoRow(rootInfoContent, "APK Path", finalApkPath, finalApkPath, ad);
+                        if (!TextUtils.isEmpty(uid)) addRootInfoRow(rootInfoContent, "UID", uid, null, ad);
+                        if (!TextUtils.isEmpty(baseApkPath)) addRootInfoRow(rootInfoContent, "APK Path", baseApkPath, baseApkPath, ad);
                         for (String dir : dataDirs) {
-                            @SuppressLint("SdCardPath")
-                            String label = dir.contains("/data/data/") || dir.contains("/data/user/") ? "Data Dir" : "External Data Dir";
+                            String label = dir.contains("/data/data/")
+                                    || dir.contains("/data/user")
+                                    || dir.contains("/data/user_de/") ? "Data Dir" : "External Data Dir";
                             addRootInfoRow(rootInfoContent, label, dir, dir, ad);
                         }
                         if (rootInfoContent.getChildCount() == 0) {
@@ -1033,12 +1098,35 @@ public class ApkInfoDialogs {
             row.setFocusable(true);
             row.setOnClickListener(v -> {
                 ad.dismiss();
-                File dir = new File(tapPath);
-                if (!dir.exists()) {
-                    Extensions.showMessage(context, "Path " + tapPath + "not accessible");
+                // Mirror root folder navigation from the main file manager:
+                // plain File.exists() is false for /data/data on Android even
+                // with root, so check via AccessManager (root/Shizuku) first.
+                boolean exists = false;
+                boolean isFile = false;
+                try {
+                    exists = AccessManager.exists(context, tapPath)
+                            || new File(tapPath).exists();
+                } catch (Exception ignored) {}
+                if (!exists) {
+                    Extensions.showMessage(context, "Path " + tapPath + " not accessible");
                     return;
                 }
-                File target = dir.isFile() ? dir.getParentFile() : dir;
+                try {
+                    if (AccessManager.active(context) == AccessManager.Backend.SHIZUKU) {
+                        isFile = io.github.abdurazaaqmohammed.utils.ShizukuManager.isFile(context, tapPath);
+                    } else if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
+                        RootManager rootMgr = RootManager.getInstance(context);
+                        isFile = rootMgr.isFile(tapPath);
+                        if (!isFile && !rootMgr.isDirectory(tapPath)) {
+                            isFile = new File(tapPath).isFile();
+                        }
+                    } else {
+                        isFile = new File(tapPath).isFile();
+                    }
+                } catch (Exception ignored) {
+                    isFile = new File(tapPath).isFile();
+                }
+                File target = isFile ? new File(tapPath).getParentFile() : new File(tapPath);
                 if (target != null) {
                     context.loadFolderInPane(target, pane1);
 
