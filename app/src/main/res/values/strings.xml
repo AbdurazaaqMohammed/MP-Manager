@@ -706,6 +706,13 @@ Layout Inspector
     <string name="shizuku_file_operations">Shizuku file operations (Android/data, obb, media)</string>
     <string name="su_command">Root (su) command · blank = auto (su)</string>
     <string name="appearance">Appearance</string>
+    <string name="pane_highlight_style">Active pane highlight</string>
+    <string name="pane_highlight_animate">Animate pane highlight</string>
+    <string name="highlight_none">None</string>
+    <string name="highlight_background">Background color</string>
+    <string name="highlight_underline">Underline</string>
+    <string name="highlight_border">Border</string>
+    <string name="highlight_background_underline">Background + underline</string>
     <string name="folders">Folders</string>
     <string name="file_operations">File operations</string>
     <string name="elevated_access">Elevated access</string>

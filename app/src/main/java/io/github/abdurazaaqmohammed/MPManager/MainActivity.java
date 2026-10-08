@@ -60,6 +60,7 @@ import io.github.abdurazaaqmohammed.features.files.FtpController;
 import io.github.abdurazaaqmohammed.features.files.MultiSelectController;
 import io.github.abdurazaaqmohammed.features.files.MainSettingsActivity;
 import io.github.abdurazaaqmohammed.features.files.NavigationHistoryEntry;
+import io.github.abdurazaaqmohammed.features.files.PaneHighlightController;
 import io.github.abdurazaaqmohammed.features.files.PaneNavigationController;
 import io.github.abdurazaaqmohammed.features.files.SidebarController;
 import io.github.abdurazaaqmohammed.features.files.SortFilterController;
@@ -181,6 +182,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private final FtpController ftp = new FtpController(this);
     private final ApkResultHandler apkResults = new ApkResultHandler(this);
     private final UpdateController updates = new UpdateController(this);
+    private final PaneHighlightController paneHighlight = new PaneHighlightController(this);
 
     public ActivityResultLauncher<String> permissionLauncher() {
         return requestPermissionLauncher;
@@ -699,6 +701,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         setContentView(R.layout.activity_main);
         setupSystemBars();
+        paneHighlight.attach();
         checkStoragePerm();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         // App language is applied by AppCompatDelegate per-app locales
@@ -1723,6 +1726,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void setCurrentPane(int pane) {
         lastPaneSelected = pane;
+        paneHighlight.onPaneSelected(pane, true);
         RecyclerView.Adapter a = getCurrentPane().getAdapter();
         boolean b = a instanceof MainFilesArrayAdapter;
         findViewById(R.id.syncPaneButton).setEnabled(b);
@@ -1743,6 +1747,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public void setSelectedPane(int pane) {
         if (lastPaneSelected == pane) return;
         lastPaneSelected = pane;
+        paneHighlight.onPaneSelected(pane, true);
         updateNavigationButtons();
     }
 
@@ -1784,6 +1789,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     protected void onResume() {
         super.onResume();
         CURRENT = new WeakReference<>(this);
+        // Pane highlight style may have changed in Settings.
+        try {
+            paneHighlight.attach();
+            paneHighlight.reload();
+        } catch (Exception ignored) {
+        }
         try {
             updates.register();
             String locate = getIntent() == null ? null : getIntent().getStringExtra("locatePath");
@@ -1859,6 +1870,14 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
     public void showSettingsDialog() {
         startActivity(new Intent(this, MainSettingsActivity.class));
+    }
+
+    /** Re-applies the active-pane highlight style after it changes in Settings. */
+    public void reloadPaneHighlight() {
+        try {
+            paneHighlight.reload();
+        } catch (Exception ignored) {
+        }
     }
 
 

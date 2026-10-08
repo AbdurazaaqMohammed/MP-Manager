@@ -55,6 +55,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
+import io.github.abdurazaaqmohammed.ui.PaneHighlightView;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.RootManager;
@@ -193,6 +194,7 @@ public class SettingsController {
         autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", isChecked).apply());
         settingsDialog.findViewById(R.id.sign_settings).setOnClickListener(v -> SignatureKeyDialog.show(activity));
         setupAppearanceSettings(settingsDialog, settings);
+        setupPaneHighlightSettings(settingsDialog, settings);
         setupLanguageSettings(settingsDialog);
         setupFolderSettings(settingsDialog, settings);
         setupFileOpsSettings(settingsDialog, settings);
@@ -529,6 +531,37 @@ public class SettingsController {
             }
         });
         updatePreview.run();
+    }
+
+    private void setupPaneHighlightSettings(ScrollView root, SharedPreferences settings) {
+        AutoCompleteTextView highlightTv = root.findViewById(R.id.paneHighlightTv);
+        String[] values = {"none", "background", "underline", "border", "background_underline"};
+        String[] labels = {
+                activity.getString(R.string.highlight_none),
+                activity.getString(R.string.highlight_background),
+                activity.getString(R.string.highlight_underline),
+                activity.getString(R.string.highlight_border),
+                activity.getString(R.string.highlight_background_underline)};
+        highlightTv.setAdapter(new ArrayAdapter<>(activity,
+                android.R.layout.simple_dropdown_item_1line, labels));
+        String current = settings.getString(PaneHighlightView.PREF_KEY, PaneHighlightView.DEFAULT_STYLE);
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].equals(current)) {
+                highlightTv.setText(labels[i], false);
+                break;
+            }
+        }
+        highlightTv.setOnItemClickListener((p, v, pos, id) -> {
+            settings.edit().putString(PaneHighlightView.PREF_KEY, values[pos]).apply();
+            if (host != null) host.reloadPaneHighlight();
+        });
+
+        MaterialSwitch animateSwitch = root.findViewById(R.id.paneHighlightAnimateSwitch);
+        animateSwitch.setChecked(settings.getBoolean(PaneHighlightController.ANIMATE_PREF_KEY, true));
+        animateSwitch.setOnCheckedChangeListener((v, checked) -> {
+            settings.edit().putBoolean(PaneHighlightController.ANIMATE_PREF_KEY, checked).apply();
+            if (host != null) host.reloadPaneHighlight();
+        });
     }
 
     private void saveDateFormat(ScrollView root) {
