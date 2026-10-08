@@ -1424,7 +1424,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 cbDexProfile.setChecked(bo.dexProfile);
 
                 if (bo.resDirName != null) etResDir.setText(bo.resDirName);
-                SharedPreferences settings = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
                 final boolean[] sign = new boolean[1];
                 CheckBox autosign = content.findViewById(R.id.autosign);
                 autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
