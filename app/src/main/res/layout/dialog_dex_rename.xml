@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="8dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="8dp">
+
+    <TextView
+        android:id="@+id/dexr_desc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:paddingBottom="6dp"
+        android:text="@string/dex_global_rename_desc"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="13sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOnSurfaceVariant" />
+
+    <EditText
+        android:id="@+id/dexr_script"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:gravity="top|start"
+        android:hint="@string/dex_global_rename_hint"
+        android:inputType="textMultiLine|textNoSuggestions"
+        android:minLines="4"
+        android:maxLines="10"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textColorHint="?attr/colorOnSurfaceVariant"
+        android:textSize="14sp"
+        android:typeface="monospace" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOnSurfaceVariant" />
+
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/dexr_inner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/dex_global_rename_inner"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="16sp" />
+
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/dexr_access"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:text="@string/dex_global_rename_access"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="16sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="6dp">
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/dexr_auto_sign"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/auto_sign"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="16sp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dexr_cancel"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@android:string/cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dexr_ok"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@android:string/ok" />
+    </LinearLayout>
+
+</LinearLayout>

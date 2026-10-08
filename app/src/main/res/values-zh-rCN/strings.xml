@@ -2026,4 +2026,13 @@ Layout Inspector
     <string name="split_volume_size">分卷大小</string>
     <string name="split_volume_none">不分卷（单文件）</string>
     <string name="split_volume_append_unsupported">分卷压缩无法添加到已存在的压缩包</string>
+    <!-- DEX 全局重命名 -->
+    <string name="dex_global_rename">DEX 全局重命名</string>
+    <string name="dex_global_rename_desc">每行一条规则：“pkg &lt;查找&gt; &lt;替换&gt;”“type Lcom/a/A; Lcom/b/A;”“field Lcom/a/A;-&gt;name:I 新名字”或“method Lcom/a/A;-&gt;name()V 新名字”。第四个词写 exact 可让包名替换不影响其子包。以 # 开头的行会被忽略。</string>
+    <string name="dex_global_rename_hint">pkg com.example com.acme\ntype Lcom/example/A; Lcom/acme/A;\nfield Lcom/example/A;-&gt;count:I total</string>
+    <string name="dex_global_rename_inner">同时重命名内部类</string>
+    <string name="dex_global_rename_access">重命名后修复成员可见性</string>
+    <string name="dex_global_rename_bad_script">没有可用的重命名规则</string>
+    <string name="dex_global_rename_done">已重命名 %1$d 项</string>
+    <string name="dex_global_rename_none">没有任何内容被重命名</string>
 </resources>
