@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_accent_colour">强调色</string>
+    <string name="s_add_item">+  添加条目</string>
+    <string name="s_app_default">跟随应用</string>
+    <string name="s_cancel">取消</string>
+    <string name="s_close">关闭</string>
+    <string name="s_continue">继续</string>
+    <string name="s_done">完成</string>
+    <string name="s_new_note">新建笔记</string>
+    <string name="s_new_tag">新建标签</string>
+    <string name="s_no_colour">无颜色</string>
+    <string name="s_ok">OK</string>
+    <string name="s_save">保存</string>
+    <string name="s_search_notes_tags_text">搜索笔记、标签、文本</string>
+    <string name="s_start_writing_u2026">开始写作\u2026</string>
+    <string name="s_statistics">统计</string>
+    <string name="s_title">标题</string>
+    <string name="s_u2022_u2022_u2022_u2022">\u2022\u2022\u2022\u2022</string>
+</resources>

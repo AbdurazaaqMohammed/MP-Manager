@@ -1,2 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <!-- title_<id>/subtitle_<id> are looked up at runtime via PackRes.getIdentifier (see BaseToolPlugin). Lint cannot see this: do NOT remove as unused. -->
+    <string name="subtitle_base64">Encode and decode Base64</string>
+    <string name="subtitle_binarytext">Convert text to binary</string>
+    <string name="subtitle_caesar">Shift ciphers, brute force</string>
+    <string name="subtitle_caseconv">Upper, lower, title, reverse</string>
+    <string name="subtitle_colorconv">HEX, RGB, HSL</string>
+    <string name="subtitle_hash">MD5, SHA-1, SHA-256</string>
+    <string name="subtitle_json">Format, minify, validate</string>
+    <string name="subtitle_lorem">Generate placeholder text</string>
+    <string name="subtitle_morse">Encode, decode, play Morse</string>
+    <string name="subtitle_regex">Test patterns live</string>
+    <string name="subtitle_text">Counter, hashes, codecs, case, Morse, JSON, colors</string>
+    <string name="subtitle_textcounter">Chars, words, lines</string>
+    <string name="subtitle_urlcodec">Encode and decode URLs</string>
+    <string name="title_base64">Base64 Tool</string>
+    <string name="title_binarytext">Binary Translator</string>
+    <string name="title_caesar">Caesar Cipher</string>
+    <string name="title_caseconv">Case Converter</string>
+    <string name="title_colorconv">Color Converter</string>
+    <string name="title_hash">Hash Generator</string>
+    <string name="title_json">JSON Formatter</string>
+    <string name="title_lorem">Lorem Generator</string>
+    <string name="title_morse">Morse Code</string>
+    <string name="title_regex">Regex Tester</string>
+    <string name="title_text">Text Tools</string>
+    <string name="title_textcounter">Text Counter</string>
+    <string name="title_urlcodec">URL Encoder</string>
+</resources>

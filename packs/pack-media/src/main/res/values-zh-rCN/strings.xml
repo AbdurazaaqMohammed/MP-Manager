@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_metronome">跟随节拍保持节奏</string>
+    <string name="subtitle_recorder">录制音频和视频</string>
+    <string name="subtitle_tone">播放自定义频率</string>
+    <string name="subtitle_tts">朗读输入的文本</string>
+    <string name="title_metronome">节拍器</string>
+    <string name="title_recorder">录音机</string>
+    <string name="title_tone">音调发生器</string>
+    <string name="title_tts">朗读文本</string>
+</resources>

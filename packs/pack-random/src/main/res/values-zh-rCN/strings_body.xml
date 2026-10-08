@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_0_9">0-9</string>
+    <string name="s_1">1</string>
+    <string name="s_100">100</string>
+    <string name="s_16">16</string>
+    <string name="s_a_z">A-Z</string>
+    <string name="s_a_z_2">a-z</string>
+    <string name="s_add_options_first">请先添加选项</string>
+    <string name="s_bytes_max_64">字节（最大 64）</string>
+    <string name="s_check_the_number">检查数字</string>
+    <string name="s_coin">硬币</string>
+    <string name="s_comma_or_line_separated_options">逗号或换行分隔的选项</string>
+    <string name="s_copy">复制</string>
+    <string name="s_copy_result">复制结果</string>
+    <string name="s_could_not_open_tool">无法打开工具</string>
+    <string name="s_count_5">计数：5</string>
+    <string name="s_dice">骰子</string>
+    <string name="s_error">错误</string>
+    <string name="s_generate">生成</string>
+    <string name="s_length_16">长度：16</string>
+    <string name="s_list_picker">列表抽取</string>
+    <string name="s_max">最大</string>
+    <string name="s_min">最小</string>
+    <string name="s_new">新建</string>
+    <string name="s_number">数字</string>
+    <string name="s_password">密码</string>
+    <string name="s_password_generator">密码生成器</string>
+    <string name="s_password_strength">密码强度</string>
+    <string name="s_password_to_test">要测试的密码</string>
+    <string name="s_pick">抽取</string>
+    <string name="s_pick_at_least_one_set">至少选择一个集合</string>
+    <string name="s_pick_one">抽取一个</string>
+    <string name="s_press_generate">点击生成</string>
+    <string name="s_randomizer">随机器</string>
+    <string name="s_symbols">符号</string>
+    <string name="s_token">令牌</string>
+    <string name="s_token_generator">令牌生成器</string>
+    <string name="s_type_a_password">输入密码</string>
+    <string name="s_use_4_64_bytes">使用 4-64 字节</string>
+    <string name="s_uuid">uuid</string>
+    <string name="s_uuid_generator">UUID 生成器</string>
+    <string name="s_x">—</string>
+    <string name="s_x_2">›</string>
+    <string name="s_x_3">-</string>
+    <string name="s_x_4">?</string>
+</resources>

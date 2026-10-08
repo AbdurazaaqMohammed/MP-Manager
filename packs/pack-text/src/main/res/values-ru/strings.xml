@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_base64">Кодирование и декодирование Base64</string>
+    <string name="subtitle_binarytext">Перевод текста в бинарный</string>
+    <string name="subtitle_caesar">Шифры Цезаря, перебор</string>
+    <string name="subtitle_caseconv">Верхний, нижний, заголовок, наоборот</string>
+    <string name="subtitle_colorconv">HEX, RGB, HSL</string>
+    <string name="subtitle_hash">MD5, SHA-1, SHA-256</string>
+    <string name="subtitle_json">Форматирование, минификация, проверка</string>
+    <string name="subtitle_lorem">Генерация текста-заглушки</string>
+    <string name="subtitle_morse">Кодирование, декодирование, проигрывание Морзе</string>
+    <string name="subtitle_regex">Проверка шаблонов вживую</string>
+    <string name="subtitle_text">Счётчик, хеши, кодеки, регистр, Морзе, JSON, цвета</string>
+    <string name="subtitle_textcounter">Символы, слова, строки</string>
+    <string name="subtitle_urlcodec">Кодирование и декодирование URL</string>
+    <string name="title_base64">Инструмент Base64</string>
+    <string name="title_binarytext">Бинарный переводчик</string>
+    <string name="title_caesar">Шифр Цезаря</string>
+    <string name="title_caseconv">Конвертер регистра</string>
+    <string name="title_colorconv">Конвертер цветов</string>
+    <string name="title_hash">Генератор хеша</string>
+    <string name="title_json">Форматировщик JSON</string>
+    <string name="title_lorem">Генератор Lorem</string>
+    <string name="title_morse">Азбука Морзе</string>
+    <string name="title_regex">Тестер Regex</string>
+    <string name="title_text">Текстовые инструменты</string>
+    <string name="title_textcounter">Счётчик текста</string>
+    <string name="title_urlcodec">Кодировщик URL</string>
+</resources>

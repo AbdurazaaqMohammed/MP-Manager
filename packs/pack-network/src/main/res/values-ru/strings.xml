@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_bluetooth">Просмотр связанных устройств</string>
+    <string name="subtitle_connectivity">Сеть, Bluetooth, NFC</string>
+    <string name="subtitle_network">Центр связи, радио, QR</string>
+    <string name="subtitle_nfc">Сканирование NFC-меток</string>
+    <string name="subtitle_qrgen">Текст, URL, Wi-Fi в QR</string>
+    <string name="subtitle_qrscan">Сканирование кодов камерой</string>
+    <string name="title_bluetooth">Bluetooth-устройства</string>
+    <string name="title_connectivity">Центр связи</string>
+    <string name="title_network">Сетевые инструменты</string>
+    <string name="title_nfc">NFC-ридер</string>
+    <string name="title_qrgen">Генератор QR</string>
+    <string name="title_qrscan">QR-сканер</string>
+</resources>

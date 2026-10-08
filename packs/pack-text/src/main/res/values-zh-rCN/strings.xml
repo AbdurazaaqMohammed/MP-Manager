@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_base64">Base64 编码解码</string>
+    <string name="subtitle_binarytext">文本转二进制</string>
+    <string name="subtitle_caesar">移位密码、暴力破解</string>
+    <string name="subtitle_caseconv">大写、小写、标题、反转</string>
+    <string name="subtitle_colorconv">HEX、RGB、HSL</string>
+    <string name="subtitle_hash">MD5、SHA-1、SHA-256</string>
+    <string name="subtitle_json">格式化、压缩、校验</string>
+    <string name="subtitle_lorem">生成占位文本</string>
+    <string name="subtitle_morse">摩尔斯编码、解码、播放</string>
+    <string name="subtitle_regex">实时测试正则</string>
+    <string name="subtitle_text">计数、哈希、编解码、大小写、摩尔斯、JSON、颜色</string>
+    <string name="subtitle_textcounter">字符、单词、行数</string>
+    <string name="subtitle_urlcodec">URL 编码解码</string>
+    <string name="title_base64">Base64 工具</string>
+    <string name="title_binarytext">二进制翻译器</string>
+    <string name="title_caesar">凯撒密码</string>
+    <string name="title_caseconv">大小写转换器</string>
+    <string name="title_colorconv">颜色转换器</string>
+    <string name="title_hash">哈希生成器</string>
+    <string name="title_json">JSON 格式化</string>
+    <string name="title_lorem">Lorem 生成器</string>
+    <string name="title_morse">摩尔斯电码</string>
+    <string name="title_regex">正则测试器</string>
+    <string name="title_text">文本工具</string>
+    <string name="title_textcounter">文本计数器</string>
+    <string name="title_urlcodec">URL 编码器</string>
+</resources>

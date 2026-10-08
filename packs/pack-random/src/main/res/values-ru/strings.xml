@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_password">Генерация надёжных паролей</string>
+    <string name="subtitle_pick">Случайный выбор из списка</string>
+    <string name="subtitle_random">Рандомайзер, пароли, UUID, токены</string>
+    <string name="subtitle_strength">Энтропия и оценка взлома</string>
+    <string name="subtitle_token">Безопасные hex-токены</string>
+    <string name="subtitle_uuid">Генерация случайных UUID</string>
+    <string name="title_password">Генератор паролей</string>
+    <string name="title_pick">Выбор из списка</string>
+    <string name="title_random">Случайные инструменты</string>
+    <string name="title_strength">Надёжность пароля</string>
+    <string name="title_token">Генератор токенов</string>
+    <string name="title_uuid">Генератор UUID</string>
+</resources>

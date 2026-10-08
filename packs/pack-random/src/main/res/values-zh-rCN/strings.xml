@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_password">生成安全密码</string>
+    <string name="subtitle_pick">从列表中随机抽取</string>
+    <string name="subtitle_random">随机工具、密码、UUID、令牌</string>
+    <string name="subtitle_strength">熵和破解估算</string>
+    <string name="subtitle_token">安全随机十六进制令牌</string>
+    <string name="subtitle_uuid">生成随机 UUID</string>
+    <string name="title_password">密码生成器</string>
+    <string name="title_pick">列表抽取</string>
+    <string name="title_random">随机工具</string>
+    <string name="title_strength">密码强度</string>
+    <string name="title_token">令牌生成器</string>
+    <string name="title_uuid">UUID 生成器</string>
+</resources>

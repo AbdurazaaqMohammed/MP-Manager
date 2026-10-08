@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_0_9">0-9</string>
+    <string name="s_1">1</string>
+    <string name="s_100">100</string>
+    <string name="s_16">16</string>
+    <string name="s_a_z">A-Z</string>
+    <string name="s_a_z_2">a-z</string>
+    <string name="s_add_options_first">Сначала добавьте варианты</string>
+    <string name="s_bytes_max_64">Байты (макс. 64)</string>
+    <string name="s_check_the_number">Проверьте число</string>
+    <string name="s_coin">Монета</string>
+    <string name="s_comma_or_line_separated_options">Варианты через запятую или строку</string>
+    <string name="s_copy">Копировать</string>
+    <string name="s_copy_result">Копировать результат</string>
+    <string name="s_could_not_open_tool">Не удалось открыть инструмент</string>
+    <string name="s_count_5">Счёт: 5</string>
+    <string name="s_dice">Кубик</string>
+    <string name="s_error">Ошибка</string>
+    <string name="s_generate">Сгенерировать</string>
+    <string name="s_length_16">Длина: 16</string>
+    <string name="s_list_picker">Выбор из списка</string>
+    <string name="s_max">Макс.</string>
+    <string name="s_min">Мин.</string>
+    <string name="s_new">Новый</string>
+    <string name="s_number">Число</string>
+    <string name="s_password">пароль</string>
+    <string name="s_password_generator">Генератор паролей</string>
+    <string name="s_password_strength">Надёжность пароля</string>
+    <string name="s_password_to_test">Пароль для проверки</string>
+    <string name="s_pick">выбрать</string>
+    <string name="s_pick_at_least_one_set">Выберите хотя бы один набор</string>
+    <string name="s_pick_one">Выбрать один</string>
+    <string name="s_press_generate">Нажмите Сгенерировать</string>
+    <string name="s_randomizer">Рандомайзер</string>
+    <string name="s_symbols">Символы</string>
+    <string name="s_token">токен</string>
+    <string name="s_token_generator">Генератор токенов</string>
+    <string name="s_type_a_password">Введите пароль</string>
+    <string name="s_use_4_64_bytes">Используйте 4-64 байта</string>
+    <string name="s_uuid">uuid</string>
+    <string name="s_uuid_generator">Генератор UUID</string>
+    <string name="s_x">—</string>
+    <string name="s_x_2">›</string>
+    <string name="s_x_3">-</string>
+    <string name="s_x_4">?</string>
+</resources>

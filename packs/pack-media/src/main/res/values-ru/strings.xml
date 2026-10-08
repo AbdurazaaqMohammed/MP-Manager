@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_metronome">Держите темп ударами</string>
+    <string name="subtitle_recorder">Запись аудио и видео</string>
+    <string name="subtitle_tone">Воспроизведение своих частот</string>
+    <string name="subtitle_tts">Озвучивание набранного текста</string>
+    <string name="title_metronome">Метроном</string>
+    <string name="title_recorder">Рекордер</string>
+    <string name="title_tone">Генератор тона</string>
+    <string name="title_tts">Озвучить текст</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_notes">Markdown-заметки, списки, теги и копии</string>
+    <string name="title_notes">Заметки</string>
+</resources>

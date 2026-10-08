@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_notes">Markdown 笔记、清单、标签和备份</string>
+    <string name="title_notes">笔记</string>
+</resources>

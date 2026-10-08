@@ -1,2 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <!-- title_<id>/subtitle_<id> are looked up at runtime via PackRes.getIdentifier (see BaseToolPlugin). Lint cannot see this: do NOT remove as unused. -->
+    <string name="subtitle_clock">Stopwatch, timer and customizable clock</string>
+    <string name="subtitle_compass">Find magnetic heading</string>
+    <string name="subtitle_devicehub">Battery, CPU, sensors, storage</string>
+    <string name="subtitle_flashlight">Torch, screen light and strobe</string>
+    <string name="subtitle_gps">Track live GPS speed</string>
+    <string name="subtitle_level">Check surface level</string>
+    <string name="subtitle_magnifier">Zoom into small text</string>
+    <string name="subtitle_measure">Ruler, compass and protractor</string>
+    <string name="subtitle_protractor">Measure angles with touch</string>
+    <string name="subtitle_ringtone">Browse and preview sounds</string>
+    <string name="subtitle_ruler">Measure in cm and inches</string>
+    <string name="subtitle_stopwatch">Stopwatch with laps</string>
+    <string name="subtitle_timer">Set alarms and run countdowns</string>
+    <string name="subtitle_vibration">Create custom vibrations</string>
+    <string name="subtitle_volume">Control all volume streams</string>
+    <string name="subtitle_wallpaper">Design gradient wallpapers</string>
+    <string name="title_clock">Clock</string>
+    <string name="title_compass">Compass</string>
+    <string name="title_devicehub">Device Info</string>
+    <string name="title_flashlight">Flashlight</string>
+    <string name="title_gps">GPS Speedometer</string>
+    <string name="title_level">Bubble Level</string>
+    <string name="title_magnifier">Magnifier</string>
+    <string name="title_measure">Measuring</string>
+    <string name="title_protractor">Protractor</string>
+    <string name="title_ringtone">Ringtone Preview</string>
+    <string name="title_ruler">Ruler</string>
+    <string name="title_stopwatch">Stopwatch</string>
+    <string name="title_timer">Countdown Timer</string>
+    <string name="title_vibration">Vibration Studio</string>
+    <string name="title_volume">Volume Panel</string>
+    <string name="title_wallpaper">Wallpaper Maker</string>
+</resources>

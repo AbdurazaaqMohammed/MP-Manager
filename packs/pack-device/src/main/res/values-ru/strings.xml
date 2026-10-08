@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_clock">Секундомер, таймер и настраиваемые часы</string>
+    <string name="subtitle_compass">Определение магнитного курса</string>
+    <string name="subtitle_devicehub">Батарея, ЦП, сенсоры, хранилище</string>
+    <string name="subtitle_flashlight">Фонарик, свет экрана и стробоскоп</string>
+    <string name="subtitle_gps">Скорость GPS в реальном времени</string>
+    <string name="subtitle_level">Проверка уровня поверхности</string>
+    <string name="subtitle_magnifier">Увеличение мелкого текста</string>
+    <string name="subtitle_measure">Линейка, компас и транспортир</string>
+    <string name="subtitle_protractor">Измерение углов касанием</string>
+    <string name="subtitle_ringtone">Просмотр и прослушивание звуков</string>
+    <string name="subtitle_ruler">Измерение в см и дюймах</string>
+    <string name="subtitle_stopwatch">Секундомер с кругами</string>
+    <string name="subtitle_timer">Будильники и обратные отсчёты</string>
+    <string name="subtitle_vibration">Создание своих вибраций</string>
+    <string name="subtitle_volume">Управление всеми громкостями</string>
+    <string name="subtitle_wallpaper">Дизайн градиентных обоев</string>
+    <string name="title_clock">Часы</string>
+    <string name="title_compass">Компас</string>
+    <string name="title_devicehub">Об устройстве</string>
+    <string name="title_flashlight">Фонарик</string>
+    <string name="title_gps">GPS-спидометр</string>
+    <string name="title_level">Пузырьковый уровень</string>
+    <string name="title_magnifier">Лупа</string>
+    <string name="title_measure">Измерения</string>
+    <string name="title_protractor">Транспортир</string>
+    <string name="title_ringtone">Просмотр рингтонов</string>
+    <string name="title_ruler">Линейка</string>
+    <string name="title_stopwatch">Секундомер</string>
+    <string name="title_timer">Таймер обратного отсчёта</string>
+    <string name="title_vibration">Студия вибрации</string>
+    <string name="title_volume">Панель громкости</string>
+    <string name="title_wallpaper">Создание обоев</string>
+</resources>

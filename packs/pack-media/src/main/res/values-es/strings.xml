@@ -1,2 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <string name="subtitle_metronome">Mantén el tempo con pulsos</string>
+    <string name="subtitle_recorder">Graba audio y vídeo</string>
+    <string name="subtitle_tone">Reproduce frecuencias personalizadas</string>
+    <string name="subtitle_tts">Lee en voz alta el texto escrito</string>
+    <string name="title_metronome">Metrónomo</string>
+    <string name="title_recorder">Grabadora</string>
+    <string name="title_tone">Generador de tonos</string>
+    <string name="title_tts">Leer texto</string>
+</resources>

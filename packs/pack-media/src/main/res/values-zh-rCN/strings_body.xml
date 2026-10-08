@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_00_00">00:00</string>
+    <string name="s_00_00_00_00">00:00 / 00:00</string>
+    <string name="s_1x">1x</string>
+    <string name="s_audio_saved">音频已保存</string>
+    <string name="s_engine_failed">引擎失败</string>
+    <string name="s_engine_not_ready">引擎未就绪</string>
+    <string name="s_engine_starting">引擎启动中...</string>
+    <string name="s_enter_text_first">请先输入文本</string>
+    <string name="s_frequency_440_hz">频率：440 Hz</string>
+    <string name="s_hello_from_tools_kit">来自 Tools Kit 的问候</string>
+    <string name="s_metronome">节拍器</string>
+    <string name="s_open_failed">打开失败</string>
+    <string name="s_open_file">打开文件</string>
+    <string name="s_pitch_1_0">音调：1.0</string>
+    <string name="s_play">播放</string>
+    <string name="s_ready">就绪</string>
+    <string name="s_save_audio">保存音频</string>
+    <string name="s_save_audio_first">请先保存音频</string>
+    <string name="s_save_failed">保存失败</string>
+    <string name="s_save_first">请先保存</string>
+    <string name="s_save_length_3_s">保存长度：3 秒</string>
+    <string name="s_save_timed_out">保存超时</string>
+    <string name="s_save_wav">保存 WAV</string>
+    <string name="s_share">分享</string>
+    <string name="s_share_audio">分享音频</string>
+    <string name="s_share_failed">分享失败</string>
+    <string name="s_speak">朗读</string>
+    <string name="s_speak_failed">朗读失败</string>
+    <string name="s_speak_text">朗读文本</string>
+    <string name="s_speed_1_0">速度：1.0</string>
+    <string name="s_start">开始</string>
+    <string name="s_stop">停止</string>
+    <string name="s_stopped">已停止</string>
+    <string name="s_tempo_120_bpm">速度：120 BPM</string>
+    <string name="s_text_to_speak">要朗读的文本</string>
+    <string name="s_tone_failed">音调失败</string>
+    <string name="s_tone_generator">音调发生器</string>
+    <string name="s_waveform">波形</string>
+</resources>

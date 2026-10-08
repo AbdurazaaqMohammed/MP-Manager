@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_00_00">00:00</string>
+    <string name="s_00_00_00_00">00:00 / 00:00</string>
+    <string name="s_1x">1x</string>
+    <string name="s_audio_saved">Аудио сохранено</string>
+    <string name="s_engine_failed">Движок не удался</string>
+    <string name="s_engine_not_ready">Движок не готов</string>
+    <string name="s_engine_starting">Запуск движка...</string>
+    <string name="s_enter_text_first">Сначала введите текст</string>
+    <string name="s_frequency_440_hz">Частота: 440 Гц</string>
+    <string name="s_hello_from_tools_kit">Привет от Tools Kit</string>
+    <string name="s_metronome">Метроном</string>
+    <string name="s_open_failed">Не удалось открыть</string>
+    <string name="s_open_file">Открыть файл</string>
+    <string name="s_pitch_1_0">Тон: 1.0</string>
+    <string name="s_play">Играть</string>
+    <string name="s_ready">Готово</string>
+    <string name="s_save_audio">Сохранить аудио</string>
+    <string name="s_save_audio_first">Сначала сохраните аудио</string>
+    <string name="s_save_failed">Не удалось сохранить</string>
+    <string name="s_save_first">Сначала сохраните</string>
+    <string name="s_save_length_3_s">Длина сохранения: 3 с</string>
+    <string name="s_save_timed_out">Время сохранения вышло</string>
+    <string name="s_save_wav">Сохранить WAV</string>
+    <string name="s_share">Поделиться</string>
+    <string name="s_share_audio">Поделиться аудио</string>
+    <string name="s_share_failed">Не удалось поделиться</string>
+    <string name="s_speak">Озвучить</string>
+    <string name="s_speak_failed">Не удалось озвучить</string>
+    <string name="s_speak_text">Озвучить текст</string>
+    <string name="s_speed_1_0">Скорость: 1.0</string>
+    <string name="s_start">Старт</string>
+    <string name="s_stop">Стоп</string>
+    <string name="s_stopped">Остановлено</string>
+    <string name="s_tempo_120_bpm">Темп: 120 BPM</string>
+    <string name="s_text_to_speak">Текст для озвучки</string>
+    <string name="s_tone_failed">Тон не удался</string>
+    <string name="s_tone_generator">Генератор тона</string>
+    <string name="s_waveform">Форма волны</string>
+</resources>

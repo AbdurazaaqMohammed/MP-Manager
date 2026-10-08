@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_accent_colour">Цвет акцента</string>
+    <string name="s_add_item">+  Добавить элемент</string>
+    <string name="s_app_default">По умолчанию</string>
+    <string name="s_cancel">Отмена</string>
+    <string name="s_close">Закрыть</string>
+    <string name="s_continue">Продолжить</string>
+    <string name="s_done">Готово</string>
+    <string name="s_new_note">Новая заметка</string>
+    <string name="s_new_tag">Новый тег</string>
+    <string name="s_no_colour">Без цвета</string>
+    <string name="s_ok">OK</string>
+    <string name="s_save">Сохранить</string>
+    <string name="s_search_notes_tags_text">Поиск заметок, тегов, текста</string>
+    <string name="s_start_writing_u2026">Начните писать\u2026</string>
+    <string name="s_statistics">Статистика</string>
+    <string name="s_title">Заголовок</string>
+    <string name="s_u2022_u2022_u2022_u2022">\u2022\u2022\u2022\u2022</string>
+</resources>

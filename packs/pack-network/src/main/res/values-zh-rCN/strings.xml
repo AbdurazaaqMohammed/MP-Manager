@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_bluetooth">查看已配对设备</string>
+    <string name="subtitle_connectivity">网络、蓝牙、NFC 信息</string>
+    <string name="subtitle_network">连接中心、电台、二维码工具</string>
+    <string name="subtitle_nfc">扫描 NFC 标签</string>
+    <string name="subtitle_qrgen">文本、网址、Wi-Fi 转二维码</string>
+    <string name="subtitle_qrscan">用相机扫描条码</string>
+    <string name="title_bluetooth">蓝牙配对</string>
+    <string name="title_connectivity">连接中心</string>
+    <string name="title_network">网络工具</string>
+    <string name="title_nfc">NFC 读取器</string>
+    <string name="title_qrgen">二维码生成器</string>
+    <string name="title_qrscan">二维码扫描器</string>
+</resources>

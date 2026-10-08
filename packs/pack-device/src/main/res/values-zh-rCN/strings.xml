@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_clock">秒表、计时器和可定制时钟</string>
+    <string name="subtitle_compass">查找磁航向</string>
+    <string name="subtitle_devicehub">电池、CPU、传感器、存储</string>
+    <string name="subtitle_flashlight">手电筒、屏幕光和频闪</string>
+    <string name="subtitle_gps">实时 GPS 速度</string>
+    <string name="subtitle_level">检查表面水平</string>
+    <string name="subtitle_magnifier">放大小文本</string>
+    <string name="subtitle_measure">尺子、指南针和量角器</string>
+    <string name="subtitle_protractor">触摸测量角度</string>
+    <string name="subtitle_ringtone">浏览和预览声音</string>
+    <string name="subtitle_ruler">以厘米和英寸测量</string>
+    <string name="subtitle_stopwatch">带计圈的秒表</string>
+    <string name="subtitle_timer">设置闹钟和倒计时</string>
+    <string name="subtitle_vibration">创建自定义振动</string>
+    <string name="subtitle_volume">控制所有音量</string>
+    <string name="subtitle_wallpaper">设计渐变壁纸</string>
+    <string name="title_clock">时钟</string>
+    <string name="title_compass">指南针</string>
+    <string name="title_devicehub">设备信息</string>
+    <string name="title_flashlight">手电筒</string>
+    <string name="title_gps">GPS 速度表</string>
+    <string name="title_level">气泡水平仪</string>
+    <string name="title_magnifier">放大镜</string>
+    <string name="title_measure">测量</string>
+    <string name="title_protractor">量角器</string>
+    <string name="title_ringtone">铃声预览</string>
+    <string name="title_ruler">尺子</string>
+    <string name="title_stopwatch">秒表</string>
+    <string name="title_timer">倒计时器</string>
+    <string name="title_vibration">振动工作室</string>
+    <string name="title_volume">音量面板</string>
+    <string name="title_wallpaper">壁纸制作</string>
+</resources>
