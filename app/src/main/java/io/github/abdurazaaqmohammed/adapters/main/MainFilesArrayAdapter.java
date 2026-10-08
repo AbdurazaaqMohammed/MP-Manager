@@ -46,6 +46,7 @@ import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
+import io.github.abdurazaaqmohammed.ui.dialogs.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
@@ -398,7 +399,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
+                List<File> dexCompareFiles1 = null;
+                List<File> dexCompareFiles2 = null;
                 if(a instanceof MainFilesArrayAdapter otherPaneAdapter) {
+                    // Compare DEX: 1 APK or 1+ DEX files selected in each pane.
+                    dexCompareFiles1 = collectDexCompareFiles();
+                    dexCompareFiles2 = otherPaneAdapter.collectDexCompareFiles();
+                    if (dexCompareFiles1 != null && dexCompareFiles2 != null) {
+                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
+                    }
                     if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
                         compareFile1 = values[selectedPositions.iterator().next()];
                         compareFile2 = otherPaneAdapter.values[otherPaneAdapter.selectedPositions.iterator().next()];
@@ -485,6 +494,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
+                final List<File> finalDexCompare1 = dexCompareFiles1;
+                final List<File> finalDexCompare2 = dexCompareFiles2;
 
                 final boolean twoColumnMenu = FileMenuOrder.isTwoColumn(context);
                 View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
@@ -523,6 +534,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             return;
                         }
                         switch (actionId) {
+                            case FileMenuOrder.CMP_DEX:
+                                if (finalDexCompare1 != null && finalDexCompare2 != null) {
+                                    new CompareDexOptionsDialog(context, finalDexCompare1, finalDexCompare2).show();
+                                }
+                                return;
                             case FileMenuOrder.CMP_TEXT:
                                 context.startActivity(new Intent(context, CompareTextActivity.class)
                                         .putExtra("file1", finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getFullPath())
@@ -699,6 +715,32 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
 
     private void updateFolderCountOnMainScreen(int position) {
+    }
+
+    /**
+     * Returns the selected files when the selection is exactly one APK or one or
+     * more DEX files. Returns null for anything else (kept files, folders, mixed
+     * types, archive entries) so the Compare DEX item only shows for valid input.
+     */
+    private List<File> collectDexCompareFiles() {
+        if (isInZip || selectedPositions.isEmpty()) return null;
+        List<File> files = new ArrayList<>();
+        boolean hasApk = false;
+        for (int position : selectedPositions) {
+            if (position < 0 || position >= values.length) return null;
+            Object selected = values[position];
+            if (!(selected instanceof File selectedFile) || selectedFile.isDirectory()) return null;
+            String name = selectedFile.getName().toLowerCase(Locale.ROOT);
+            if (name.endsWith(".apk")) {
+                hasApk = true;
+            } else if (!name.endsWith(".dex")) {
+                return null;
+            }
+            files.add(selectedFile);
+        }
+        // A single APK, or any number of DEX files (no mixing).
+        if (hasApk && files.size() != 1) return null;
+        return files;
     }
 
     public void handleSwipe(int position) {

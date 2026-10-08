@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_hide_added"
+        android:checkable="true"
+        android:title="@string/hide_added_classes" />
+    <item
+        android:id="@+id/action_hide_removed"
+        android:checkable="true"
+        android:title="@string/hide_removed_classes" />
+    <item
+        android:id="@+id/action_hide_changed"
+        android:checkable="true"
+        android:title="@string/hide_changed_classes" />
+    <item
+        android:id="@+id/action_compare_dex_exit"
+        android:icon="@drawable/ic_close_mt"
+        android:title="@string/exit" />
+</menu>

@@ -21,9 +21,8 @@
         android:paddingBottom="12dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
         android:gravity="center_vertical"
-        android:maxLines="1"
+        android:maxLines="2"
         android:textColor="?attr/colorOnSurface"
         android:textSize="14sp" />
 

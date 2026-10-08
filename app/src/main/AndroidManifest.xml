@@ -196,6 +196,12 @@
             android:exported="false"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar">
         </activity>
+        <activity
+            android:name="io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
            <activity
                android:name="modder.hub.dexeditor.activity.SettingsActivity"
                android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"

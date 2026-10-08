@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_view_mode"
+        android:icon="@drawable/baseline_swap_horiz_24"
+        android:title="@string/view_mode">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/action_view_auto"
+                    android:checkable="true"
+                    android:title="@string/view_mode_auto" />
+                <item
+                    android:id="@+id/action_view_side"
+                    android:checkable="true"
+                    android:title="@string/view_mode_side_by_side" />
+                <item
+                    android:id="@+id/action_view_unified"
+                    android:checkable="true"
+                    android:title="@string/view_mode_unified" />
+            </group>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/action_ignore"
+        android:icon="@drawable/baseline_text_snippet_24"
+        android:title="@string/ignore">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/action_ignore_none"
+                    android:checkable="true"
+                    android:title="@string/ignore_none" />
+                <item
+                    android:id="@+id/action_ignore_trim"
+                    android:checkable="true"
+                    android:title="@string/ignore_trim_whitespace" />
+                <item
+                    android:id="@+id/action_ignore_whitespace"
+                    android:checkable="true"
+                    android:title="@string/ignore_whitespace" />
+                <item
+                    android:id="@+id/action_ignore_whitespace_empty"
+                    android:checkable="true"
+                    android:title="@string/ignore_whitespace_and_empty_lines" />
+            </group>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/action_match_case"
+        android:checkable="true"
+        android:icon="@drawable/ic_eye_mt"
+        android:title="@string/match_case" />
+    <item
+        android:id="@+id/action_diff_search"
+        android:icon="@drawable/ic_search_mt"
+        android:title="@string/search" />
+    <item
+        android:id="@+id/action_diff_jump"
+        android:icon="@drawable/ic_jump_line_mt"
+        android:title="@string/jump_to_line" />
+    <item
+        android:id="@+id/action_compare_dex_exit"
+        android:icon="@drawable/ic_close_mt"
+        android:title="@string/exit" />
+    <item
+        android:id="@+id/action_prev_diff"
+        android:icon="@drawable/ic_arrow_up_mt"
+        android:title="@string/previous_difference"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_next_diff"
+        android:icon="@drawable/ic_arrow_down_mt"
+        android:title="@string/next_difference"
+        app:showAsAction="always" />
+</menu>
