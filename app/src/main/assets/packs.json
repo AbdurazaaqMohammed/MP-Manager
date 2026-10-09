@@ -8,7 +8,7 @@
                       "category":  "Media \u0026 Sound",
                       "version":  1,
                       "versionName":  "1.0",
-                      "apkUrl":  "https://files.catbox.moe/1mcrcm.apk",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-media.apk",
                       "sha256":  "a81545a75b67c0d51b0e3eb3cd2d0ea4d6450c5bd0bec1bfda532112b4911daa",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.media.MediaPack",
                       "tools":  [
@@ -41,7 +41,7 @@
                       "category":  "Device \u0026 Hardware",
                       "version":  1,
                       "versionName":  "1.0",
-                      "apkUrl":  "https://litter.catbox.moe/atcd4sbzr7r7u7o6.apk",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-device.apk",
                       "sha256":  "00a9a266aa0d40cc2bce67b378d0f9a291915147706ce104177ae8f293eb365b",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.device.DevicePack",
                       "tools":  [
@@ -130,9 +130,9 @@
                       "title":  "Math Pack",
                       "description":  "Calculator suite with finance, converters, algebra, general tools.",
                       "category":  "Math \u0026 Finance",
-                      "version":  1,
-                      "versionName":  "1.0",
-                      "apkUrl":  "https://litter.catbox.moe/hvxqo1.apk",
+                      "version":  5,
+                      "versionName":  "1.5",
+                      "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-math.apk",
                       "sha256":  "6ea88cda349e1c717e0fe397e4bc6a0c862a30e8e7e14b7fd1e8d05657fa1416",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.math.MathPack",
                       "tools":  [
