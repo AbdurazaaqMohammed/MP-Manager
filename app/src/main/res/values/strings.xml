@@ -110,6 +110,7 @@
     <string name="pkgName">Package name</string>
     <string name="opt">Optimize APK</string>
     <string name="delete_useless_files">Delete useless files</string>
+    <string name="ultra_compress">Ultra Compress</string>
     <string name="files_to_delete">Files To Delete</string>
     <string name="add">Add</string>
     <string name="about">About</string>

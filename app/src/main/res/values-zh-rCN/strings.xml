@@ -101,6 +101,7 @@
     <string name="pkgName">包名</string>
     <string name="opt">优化 APK</string>
     <string name="delete_useless_files">删除无用文件</string>
+    <string name="ultra_compress">超级压缩</string>
     <string name="files_to_delete">要删除的文件</string>
     <string name="add">添加</string>
     <string name="about">关于</string>

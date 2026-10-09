@@ -388,6 +388,9 @@ public class ApkInfoDialogs {
                             CheckBox deleteFiles = ll.findViewById(R.id.files_to_delete);
                             deleteFiles.setChecked(delFiles[0] = settings.getBoolean("delFiles", true));
                             deleteFiles.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("delFiles", delFiles[0] = isChecked).apply());
+                            CheckBox ultraCompress = ll.findViewById(R.id.ultra_compress);
+                            ultraCompress.setChecked(settings.getBoolean("ultra_compress", true));
+                            ultraCompress.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ultra_compress", isChecked).apply());
                             ll.findViewById(R.id.choose_files_delete).setOnClickListener(v8 -> {
                                 Set<String> filesToDelete = settings.getStringSet("filesToDelete", null);
                                 String[] filesFiDelete = (filesToDelete == null) ? new String[]{"assets/audience_network.dex", "androidsupportmultidexversion.txt", "DebugProbesKt.bin", "stamp-cert-sha256", "user-messaging-platform.properties", "transport-runtime.properties", "transport-backend-cct.properties", "transport-api.properties", "protolite-well-known-types.properties", "play-services-tasks.properties", "play-services-stats.properties", "play-services-measurement-sdk-api.properties", "play-services-measurement-sdk.properties", "play-services-measurement-impl.properties", "play-services-measurement-base.properties", "play-services-measurement-api.properties", "play-services-measurement.properties", "play-services-cloud-messaging.properties", "play-services-basement.properties", "play-services-base.properties", "play-services-appset.properties", "play-services-ads-lite.properties", "play-services-ads-identifier.properties", "play-services-ads-base.properties", "play-services-ads.properties", "firebase-abt.properties", "firebase-analytics-ktx.properties", "firebase-analytics.properties", "firebase-annotations.properties", "firebase-common-ktx.properties", "firebase-common.properties", "firebase-components.properties", "firebase-config-ktx.properties", "firebase-config.properties", "firebase-crashlytics-ktx.properties", "firebase-crashlytics.properties", "firebase-datatransport.properties", "firebase-encoders-json.properties", "firebase-encoders-proto.properties", "firebase-encoders.properties", "firebase-iid-interop.properties", "firebase-installations-interop.properties", "firebase-installations.properties", "firebase-measurement-connector.properties", "firebase-messaging-ktx.properties", "firebase-messaging.properties", "firebase-perf-ktx.properties", "firebase-perf.properties"}
@@ -436,7 +439,7 @@ public class ApkInfoDialogs {
                                                     APKLogger logger = pm.getLogger();
                                                     new Thread(() -> {
                                                         try {
-                                                            File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, logger);
+                                                            File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, settings.getBoolean("ultra_compress", true), logger);
                                                             if (deepOpt[0]) {
                                                                 logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
                                                                 opt = ApkDeepOptimizer.optimize(context, opt, settings.getStringSet("filesToDelete", null), settings, logger);

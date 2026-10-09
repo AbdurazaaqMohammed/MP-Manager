@@ -106,6 +106,7 @@
     <string name="pkgName">Имя пакета</string>
     <string name="opt">Оптимизировать APK</string>
     <string name="delete_useless_files">Удалить бесполезные файлы</string>
+    <string name="ultra_compress">Ультра-сжатие</string>
     <string name="files_to_delete">Файлы для удаления</string>
     <string name="add">Добавить</string>
     <string name="about">О приложении</string>

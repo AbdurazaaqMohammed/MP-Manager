@@ -93,7 +93,7 @@ public class ApkBatchTools {
                     String msg = context.rss.getString(R.string.optimizing, apk.getName());
                     pm.setText(msg);
                     logger.logMessage(msg);
-                    File opt = ApkOptimizer.optimize(context, apk, delFiles, settings, logger);
+                    File opt = ApkOptimizer.optimize(context, apk, delFiles, settings, settings.getBoolean("ultra_compress", true), logger);
                     if (deepOpt) {
                         logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
                         opt = ApkDeepOptimizer.optimize(context, opt, filesToDelete, settings, logger);

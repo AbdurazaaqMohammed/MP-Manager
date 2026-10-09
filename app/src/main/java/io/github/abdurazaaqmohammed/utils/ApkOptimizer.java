@@ -19,6 +19,10 @@ import java.util.Set;
 public class ApkOptimizer {
 
     public static File optimize(Context context, File apk, boolean deleteFiles, SharedPreferences settings, APKLogger logger) throws Exception {
+        return optimize(context, apk, deleteFiles, settings, false, logger);
+    }
+
+    public static File optimize(Context context, File apk, boolean deleteFiles, SharedPreferences settings, boolean ultraCompress, APKLogger logger) throws Exception {
         String fileName = apk.getName();
         String filePath = apk.getPath();
         File tempFolder = new File(context.getCacheDir(), System.currentTimeMillis() + '_' + fileName);
@@ -42,7 +46,8 @@ public class ApkOptimizer {
             }
             ZipParameters zipParameters = new ZipParameters();
             zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
-            zipParameters.setCompressionLevel(CompressionLevel.MAXIMUM);
+            zipParameters.setCompressionLevel(
+                    ultraCompress ? CompressionLevel.ULTRA : CompressionLevel.MAXIMUM);
             Set<String> filesToDelete;
             ZipParameters zpF = new ZipParameters();
             if (deleteFiles && (filesToDelete = settings.getStringSet("filesToDelete", null)) != null)
