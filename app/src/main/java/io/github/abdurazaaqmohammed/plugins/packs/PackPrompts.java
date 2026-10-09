@@ -66,12 +66,16 @@ public final class PackPrompts {
         TextView desc = new TextView(activity);
         desc.setText("Part of the downloadable \"" + pack.title + "\" pack (v" + pack.versionName + ")."
                 + (pack.hasChecksum() ? " Checksum verified on install."
-                : " No checksum published for this build — install only if you trust the source."));
+                : PackSignatures.isDebuggable(activity)
+                        ? " No checksum published for this build \u2014 local builds only, install only if you trust the source."
+                        : " No checksum published for this build \u2014 release builds refuse to install it."));
         desc.setPadding(0, pad / 2, 0, pad / 2);
         root.addView(desc);
 
         Button action = new Button(activity);
+        boolean installable = pack.hasChecksum() || PackSignatures.isDebuggable(activity);
         action.setText(PackManager.isInstalled(activity, pack.id) ? "Update pack" : "Download pack");
+        action.setEnabled(installable);
         root.addView(action);
         action.setOnClickListener(v -> {
             action.setEnabled(false);
@@ -79,7 +83,7 @@ public final class PackPrompts {
             if (!pack.hasChecksum()) {
                 new MaterialAlertDialogBuilder(activity)
                         .setTitle(pack.title)
-                        .setMessage("No checksum is published for this pack build. Install only if you trust the source. Continue?")
+                        .setMessage("No checksum is published for this pack build. Release builds refuse to install it, so only proceed on a debug build. Continue?")
                         .setNegativeButton(R.string.cancel, (d, w) -> action.setEnabled(true))
                         .setPositiveButton("Download", (d, w) -> doDownload.run())
                         .show();
@@ -102,7 +106,7 @@ public final class PackPrompts {
             if (action != null) action.setEnabled(true);
             return;
         }
-        Toast.makeText(activity, "Downloading " + pack.title + "…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(activity, "Downloading " + pack.title + "\u2026", Toast.LENGTH_SHORT).show();
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -147,12 +151,18 @@ public final class PackPrompts {
             }
         };
         try {
+            // ACTION_DOWNLOAD_COMPLETE is a protected broadcast sent by the
+            // DownloadProvider (another UID), so the receiver MUST be
+            // exported: RECEIVER_NOT_EXPORTED drops it silently and the pack
+            // is never installed. Only the system can send a protected
+            // broadcast, so exporting it exposes nothing.
+            Context appContext = activity.getApplicationContext();
             if (Build.VERSION.SDK_INT > 32) {
-                activity.registerReceiver(receiver,
+                appContext.registerReceiver(receiver,
                         new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                        Context.RECEIVER_NOT_EXPORTED);
+                        Context.RECEIVER_EXPORTED);
             } else {
-                activity.registerReceiver(receiver,
+                appContext.registerReceiver(receiver,
                         new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
             }
         } catch (Exception ignored) {
