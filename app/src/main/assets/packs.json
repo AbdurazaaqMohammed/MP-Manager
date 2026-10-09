@@ -9,7 +9,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://files.catbox.moe/1mcrcm.apk",
-                      "sha256":  "",
+                      "sha256":  "a81545a75b67c0d51b0e3eb3cd2d0ea4d6450c5bd0bec1bfda532112b4911daa",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.media.MediaPack",
                       "tools":  [
                                     {
@@ -42,7 +42,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://litter.catbox.moe/atcd4sbzr7r7u7o6.apk",
-                      "sha256":  "",
+                      "sha256":  "00a9a266aa0d40cc2bce67b378d0f9a291915147706ce104177ae8f293eb365b",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.device.DevicePack",
                       "tools":  [
                                     {
@@ -115,7 +115,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-network.apk",
-                      "sha256":  "",
+                      "sha256":  "8feb423650c7127adc5487915563c3e14877375b95abf9711060d359cdaaa7a9",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.network.NetworkPack",
                       "tools":  [
                                     {
@@ -133,7 +133,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://litter.catbox.moe/hvxqo1.apk",
-                      "sha256":  "",
+                      "sha256":  "6ea88cda349e1c717e0fe397e4bc6a0c862a30e8e7e14b7fd1e8d05657fa1416",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.math.MathPack",
                       "tools":  [
                                     {
@@ -156,7 +156,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-text.apk",
-                      "sha256":  "",
+                      "sha256":  "3e901f8d6776491dc145a3fb16d8839ef69a028957c0364d4516df6d919e19d6",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.text.TextPack",
                       "tools":  [
                                     {
@@ -174,7 +174,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-notes.apk",
-                      "sha256":  "",
+                      "sha256":  "456998cea35c66c852f0570b6f120f8e77e2112bad8889c45eebb3a006e7fb0d",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.notes.NotesPack",
                       "tools":  [
                                     {
@@ -192,7 +192,7 @@
                       "version":  1,
                       "versionName":  "1.0",
                       "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-random.apk",
-                      "sha256":  "",
+                      "sha256":  "7d4ef59cb5ab1f19584d2bcc4d4f2ed6c64fabf1b4cfd19d641fd6738225629a",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.random.RandomPack",
                       "tools":  [
                                     {

@@ -134,12 +134,18 @@ fingerprint alongside the download so users can compare it in the prompt.
 ## 7. Maintainer release checklist (first-party packs)
 
 1. Build each pack APK; record its SHA-256 in `app/src/main/assets/packs.json`
-   (`sha256` must be non-empty — installs without one are refused).
+   (`sha256` must be non-empty — installs without one are refused). Use
+   `--checksums`: after uploading the APKs it hashes each `apkUrl` and rewrites
+   the fields, or hash the local builds directly with `id=path` pairs:
+   `java tools/SignCatalog.java --checksums packs.json media=packs/pack-media/release/pack-media-release.apk ...`
+   Run it again once the APKs are uploaded if you hashed local files, so the
+   recorded values match the served bytes.
 2. Sign the catalog (private key in `%USERPROFILE%\.config\mp-manager\`,
    never in the repo):
    `java tools/SignCatalog.java --sign <keystore> <alias> <password> packs.json`
    then verify with `--verify`. Upload `packs.json` + `packs.json.sig` +
    the APKs to the release. Unsigned catalog refreshes are ignored by the app.
+   `--fill` does steps 1 and 2 in one command (add the same `id=path` pairs).
 3. Same-signer rule is automatic: release packs must be signed with the same
    key as the app or `PackManager` refuses to load them (debuggable builds
    skip the check for local development).
