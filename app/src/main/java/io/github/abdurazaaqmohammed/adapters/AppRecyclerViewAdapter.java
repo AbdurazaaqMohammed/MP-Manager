@@ -124,11 +124,11 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         }
         if (act.showFirstInstalled && appInfo.firstInstalled != null && !appInfo.firstInstalled.isEmpty()) {
             if (sub.length() > 0) sub.append('\n');
-            sub.append(act.getString(R.string.show_first_install)).append(": ").append(appInfo.firstInstalled);
+            sub.append(act.getString(R.string.first_install_date)).append(": ").append(appInfo.firstInstalled);
         }
         if (act.showLastUpdate && appInfo.lastUpdated != null && !appInfo.lastUpdated.isEmpty()) {
             if (sub.length() > 0) sub.append('\n');
-            sub.append(act.getString(R.string.show_last_updated)).append(": ").append(appInfo.lastUpdated);
+            sub.append(act.getString(R.string.last_updated_date)).append(": ").append(appInfo.lastUpdated);
         }
         if (sub.length() == 0) sub.append(appInfo.packageName);
         holder.packageNameView.setText(sub.toString());
