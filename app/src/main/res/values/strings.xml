@@ -365,6 +365,7 @@
     <string name="termux_perm"><![CDATA[Note: You need to grant permission for MP Manager to be able to send command to Termux\n(Permissions > Additional Permissions > Run commands in Termux environment)]]></string>
     <string name="editor_settings">Editor Settings</string>
     <string name="icon_changed">Icon changed</string>
+    <string name="icon_not_found">Could not find the launcher icon resource in this APK</string>
     <string name="could_not_decode_am">Could not decode AndroidManifest.xml</string>
     <string name="force_stop">Force Stop</string>
     <string name="force_stop_x">Are you sure you want to force stop %1$s?</string>
@@ -1322,6 +1323,11 @@ Layout Inspector
     <string name="batch_export">Batch export</string>
     <string name="batch_import">Batch import</string>
     <string name="export_strings">Export strings</string>
+    <string name="export_for_translation">Export for translation</string>
+    <string name="no_apk_for_translation">Translation export needs an APK; open the file from inside an APK</string>
+    <string name="cannot_create_directory">Cannot create output directory</string>
+    <string name="x_strings_found">%1$d strings found</string>
+    <string name="x_more_strings">… and %1$d more</string>
     <string name="import_strings">Import strings</string>
     <string name="imports">Import</string>
     <string name="batch_remove">Batch remove</string>

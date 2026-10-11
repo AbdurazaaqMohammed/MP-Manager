@@ -22,6 +22,10 @@
         android:title="@string/export_strings" />
 
     <item
+        android:id="@+id/action_export_translation"
+        android:title="@string/export_for_translation" />
+
+    <item
         android:id="@+id/action_import_strings"
         android:title="@string/import_strings" />
 
