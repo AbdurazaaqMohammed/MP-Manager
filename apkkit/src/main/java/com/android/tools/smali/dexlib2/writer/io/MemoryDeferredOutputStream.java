@@ -41,7 +41,9 @@ import java.util.List;
  * A deferred output stream that is stored in memory
  */
 public class MemoryDeferredOutputStream extends DeferredOutputStream {
-    private static final int DEFAULT_BUFFER_SIZE = 16 * 1024;
+    // Sized to match DexDataWriter's buffer so a large code section is held in a handful
+    // of chunks instead of hundreds of 16 KiB slices. Chunking never affects output bytes.
+    private static final int DEFAULT_BUFFER_SIZE = 256 * 1024;
 
     private final List<byte[]> buffers = Lists.newArrayList();
     private byte[] currentBuffer;

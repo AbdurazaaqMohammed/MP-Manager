@@ -144,7 +144,6 @@ public class ClassTree {
     public final List<String> paths;
     public int dexVersion;
     final Map<String, List<String>> dexClassMap = new LinkedHashMap<>();
-    byte[] data;
     byte[] input;
 
     private Map<String, HashSet<String>> deletedClassJson = new HashMap<>();
@@ -669,6 +668,10 @@ public class ClassTree {
     public void saveAllDexFiles(DexSaveProgress dexSaveProgress) throws Exception {
         if (dexClassMap == null || dexClassMap.isEmpty()) return;
 
+        final long saveStart = System.nanoTime();
+        long compileNanos = 0L;
+        long writeFileNanos = 0L;
+
         int total = dexClassMap.size();
 
         int targetDexVersion = this.dexVersion;
@@ -720,6 +723,7 @@ public class ClassTree {
             // worker busy and the per-class work identical.
             final int chunkSize = Math.max(64, (classCount + (numThreads * 8) - 1) / (numThreads * 8));
             List<Future<?>> futures = new ArrayList<>((classCount + chunkSize - 1) / chunkSize);
+            final long compileStart = System.nanoTime();
             for (int start = 0; start < classCount; start += chunkSize) {
                 final int from = start;
                 final int to = Math.min(start + chunkSize, classCount);
@@ -804,6 +808,9 @@ public class ClassTree {
                 throw threadException[0];
             }
 
+            // Assemble-to-intern phase of this dex file is done.
+            compileNanos += System.nanoTime() - compileStart;
+
             if (!assembledDefs.isEmpty()) {
                 classMap.putAll(assembledDefs);
                 for (Map.Entry<String, ClassDef> e : assembledDefs.entrySet()) {
@@ -821,6 +828,10 @@ public class ClassTree {
             }
 
             dexSaveProgress.onMessage("Writing file...");
+            final long writeStart = System.nanoTime();
+            boolean committed = false;
+            File backupOfThisDex = null;
+            File outFile = null;
             try {
                 // Size the scratch buffer from the original dex when we know it, and otherwise
                 // from a per-class estimate. MemoryDataStore grows by copying in fixed steps, so
@@ -832,32 +843,53 @@ public class ClassTree {
                         : classCount * 1024;
                 MemoryDataStore memoryDataStore = new MemoryDataStore(Math.max(1 << 16, estimate));
                 dexBuilder.writeTo(memoryDataStore);
-                byte[] result = Arrays.copyOf(memoryDataStore.getBuffer(), memoryDataStore.getSize());
+                // Write the live buffer slice directly. Anything that copies it first (a byte[]
+                // clone, a buffered stream, a channel transfer) only pays for a second full-dex
+                // memory pass before the bytes ever reach the disk.
+                byte[] buf = memoryDataStore.getBuffer();
+                int size = memoryDataStore.getSize();
 
-                String outputDir;
-                if (paths != null && !paths.isEmpty()) {
-                    outputDir = new File(paths.get(0)).getParent();
-                } else {
-                    outputDir = "/sdcard";
-                }
-                File outFile = new File(outputDir, fileName);
+                String outputDir = paths != null && !paths.isEmpty() && paths.get(0) != null
+                        ? new File(paths.get(0)).getParent()
+                        : "/sdcard";
+                outFile = new File(outputDir, fileName);
                 File bakFile = new File(outFile.getAbsolutePath() + ".bak");
+                backupOfThisDex = bakFile;
 
                 if (outFile.exists()) {
-                    FileUtil.copyFile(outFile.getAbsolutePath(), bakFile.getAbsolutePath());
-                    outFile.delete();
+                    // Instant backup: rename the inode instead of byte-copying the whole
+                    // file and then deleting the original. Same end state (previous bytes
+                    // at .bak, new bytes at outFile) for ~free in the same directory.
+                    // Falls back to the old copy+delete when rename is unsupported.
+                    if (bakFile.exists()) bakFile.delete();
+                    if (!outFile.renameTo(bakFile)) {
+                        FileUtil.copyFile(outFile.getAbsolutePath(), bakFile.getAbsolutePath());
+                        outFile.delete();
+                    }
                 }
 
-                FileOutputStream fos = new FileOutputStream(outFile);
-                try {
-                    fos.write(result);
-                    fos.flush();
-                } finally {
-                    fos.close();
+                try (FileOutputStream out = new FileOutputStream(outFile)) {
+                    out.write(buf, 0, size);
+                    out.flush();
                 }
-                data = result;
-            } catch (Exception e) {
+                // Nothing may throw after this point: the dex on disk is now the new one.
+                committed = true;
+            } catch (final Exception e) {
                 e.printStackTrace();
+                throw e;
+            } finally {
+                writeFileNanos += System.nanoTime() - writeStart;
+                if (!committed && backupOfThisDex != null && backupOfThisDex.exists() && outFile != null) {
+                    // The old bytes were renamed aside before writing, so a failure here would
+                    // otherwise leave a truncated or missing dex. Put the backup back.
+                    try {
+                        if (outFile.exists() && !outFile.delete()) outFile.deleteOnExit();
+                        if (!backupOfThisDex.renameTo(outFile)) {
+                            FileUtil.copyFile(backupOfThisDex.getAbsolutePath(), outFile.getAbsolutePath());
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
             }
 
             current++;
@@ -873,6 +905,9 @@ public class ClassTree {
 
         DexEditorActivity.isChanged = false;
         DexEditorActivity.isSaved = true;
+
+        dexSaveProgress.onFinished((System.nanoTime() - saveStart) / 1_000_000L,
+                compileNanos / 1_000_000L, writeFileNanos / 1_000_000L);
     }
 
     public List<TreeNode> buildFullTree() {
@@ -1152,6 +1187,16 @@ public class ClassTree {
         void onMessage(String name);
 
         void onTitle(String title);
+
+        /**
+         * Called once, on the saving thread, after every dex file has been written.
+         *
+         * @param totalMs     wall-clock time of the whole save/compile/write run
+         * @param compileMs   time spent assembling and interning classes
+         * @param writeFileMs time spent serializing dexes and writing them to disk
+         */
+        default void onFinished(long totalMs, long compileMs, long writeFileMs) {
+        }
     }
 
     public class Tree {

@@ -39,10 +39,27 @@ import java.io.OutputStream;
 
 public class DexDataWriter extends BufferedOutputStream {
     /**
+     * How many bytes are staged locally before being handed to the underlying stream. Small individual
+     * writes (every instruction, every pooled index, every uleb128) are by far the most common way data
+     * enters a dex, so batching them keeps the number of pass-through writes tiny.
+     */
+    private static final int STAGING_BUFFER_SIZE = 16 * 1024;
+
+    /**
      * The position within the file that we will write to next. This is only updated when the buffer is flushed to the
      * outputStream.
      */
     private int filePosition;
+
+    /**
+     * The local staging buffer, filled by write(byte[], int, int) and flushed with a single
+     * super.write(...) call once it is full. Writes are staged here so that byte-at-a-time logging
+     * of a dex never touches the parent's buffer or its monitor.
+     */
+    @Nonnull private final byte[] staging;
+
+    /** Number of staged bytes in {@link #staging}. */
+    private int staged = 0;
 
     /**
      * A temporary buffer that can be used for larger writes. Can be replaced with a larger buffer if needed.
@@ -60,19 +77,34 @@ public class DexDataWriter extends BufferedOutputStream {
      * @param filePosition The position within the file that OutputStream will write to.
      */
     public DexDataWriter(@Nonnull OutputStream output, int filePosition) {
-        this(output, filePosition, 256 * 1024);
+        this(output, filePosition, STAGING_BUFFER_SIZE);
     }
 
     public DexDataWriter(@Nonnull OutputStream output, int filePosition, int bufferSize) {
-        super(output, bufferSize);
+        // A full-size parent buffer would be a second, always-copied copy of the whole dex: each
+        // staged flush is copied into it, and it is copied out again when it fills up. One byte
+        // makes every super.write(byte[], ...) a direct pass-through to the underlying stream.
+        super(output, 1);
 
         this.filePosition = filePosition;
+        this.staging = new byte[Math.max(1, bufferSize)];
+    }
+
+    /** Hand everything staged so far to the underlying stream as one bulk write. */
+    private void flushStaging() throws IOException {
+        if (staged > 0) {
+            super.write(staging, 0, staged);
+            staged = 0;
+        }
     }
 
     @Override
     public void write(int b) throws IOException {
+        if (staged == staging.length) {
+            flushStaging();
+        }
+        staging[staged++] = (byte)b;
         filePosition++;
-        super.write(b);
     }
 
     @Override
@@ -82,8 +114,39 @@ public class DexDataWriter extends BufferedOutputStream {
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
+        if (b == null) {
+            throw new NullPointerException("buffer == null");
+        }
+        if ((off | len | (b.length - off - len)) < 0) {
+            throw new IndexOutOfBoundsException();
+        }
         filePosition += len;
-        super.write(b, off, len);
+        if (len >= staging.length - staged) {
+            // Does not fit in the staging buffer (or it is exactly full): stage what is pending
+            // first so that ordering with the incoming bulk write is preserved.
+            flushStaging();
+            if (len >= staging.length) {
+                super.write(b, off, len);
+                return;
+            }
+        }
+        System.arraycopy(b, off, staging, staged, len);
+        staged += len;
+    }
+
+    @Override
+    public void flush() throws IOException {
+        flushStaging();
+        super.flush();
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            flushStaging();
+        } finally {
+            super.close();
+        }
     }
 
     public void writeLong(long value) throws IOException {
@@ -99,30 +162,38 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeInt(int value) throws IOException {
-        writeInt(this, value);
+        byte[] buf = tempBuf;
+        buf[0] = (byte)value;
+        buf[1] = (byte)(value >> 8);
+        buf[2] = (byte)(value >> 16);
+        buf[3] = (byte)(value >> 24);
+        write(buf, 0, 4);
     }
 
     public void writeShort(int value) throws IOException {
         if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
             throw new ExceptionWithContext("Short value out of range: %d", value);
         }
-        write(value);
-        write(value >> 8);
+        tempBuf[0] = (byte)value;
+        tempBuf[1] = (byte)(value >> 8);
+        write(tempBuf, 0, 2);
     }
 
     public void writeUshort(int value) throws IOException {
         if (value < 0 || value > 0xFFFF) {
             throw new ExceptionWithContext("Unsigned short value out of range: %d", value);
         }
-        write(value);
-        write(value >> 8);
+        tempBuf[0] = (byte)value;
+        tempBuf[1] = (byte)(value >> 8);
+        write(tempBuf, 0, 2);
     }
 
     public void writeUbyte(int value) throws IOException {
         if (value < 0 || value > 0xFF) {
             throw new ExceptionWithContext("Unsigned byte value out of range: %d", value);
         }
-        write(value);
+        tempBuf[0] = (byte)value;
+        write(tempBuf, 0, 1);
     }
 
     public static void writeUleb128(OutputStream out, int value) throws IOException {
@@ -134,7 +205,14 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeUleb128(int value) throws IOException {
-        writeUleb128(this, value);
+        byte[] buf = tempBuf;
+        int pos = 0;
+        while ((value & 0xffffffffL) > 0x7f) {
+            buf[pos++] = (byte)((value & 0x7f) | 0x80);
+            value >>>= 7;
+        }
+        buf[pos++] = (byte)value;
+        write(buf, 0, pos);
     }
 
     public static void writeSleb128(OutputStream out, int value) throws IOException {
@@ -154,10 +232,27 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeSleb128(int value) throws IOException {
-        writeSleb128(this, value);
+        byte[] buf = tempBuf;
+        int pos = 0;
+        if (value >= 0) {
+            while (value > 0x3f) {
+                buf[pos++] = (byte)((value & 0x7f) | 0x80);
+                value >>>= 7;
+            }
+            buf[pos++] = (byte)(value & 0x7f);
+        } else {
+            while (value < -0x40) {
+                buf[pos++] = (byte)((value & 0x7f) | 0x80);
+                value >>= 7;
+            }
+            buf[pos++] = (byte)(value & 0x7f);
+        }
+        write(buf, 0, pos);
     }
 
     public void writeEncodedValueHeader(int valueType, int valueArg) throws IOException {
+        // Written straight to the stream on purpose: callers pre-fill tempBuf with the value
+        // bytes before calling this, so it must not touch tempBuf.
         write(valueType | (valueArg << 5));
     }
 

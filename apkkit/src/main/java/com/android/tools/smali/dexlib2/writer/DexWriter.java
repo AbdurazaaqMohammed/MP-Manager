@@ -114,15 +114,18 @@ import com.android.tools.smali.dexlib2.util.MethodUtil;
 import com.android.tools.smali.dexlib2.writer.io.DeferredOutputStream;
 import com.android.tools.smali.dexlib2.writer.io.DeferredOutputStreamFactory;
 import com.android.tools.smali.dexlib2.writer.io.DexDataStore;
+import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDeferredOutputStream;
 import com.android.tools.smali.dexlib2.writer.util.TryListBuilder;
 import com.android.tools.smali.util.ExceptionWithContext;
 
 import java.util.Collection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -131,6 +134,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -278,6 +282,58 @@ public abstract class DexWriter<
         return (o1, o2) -> o1.getValue().compareTo(o2.getValue());
     }
 
+    /**
+     * Below this many items, splitting a sort across threads costs more time than it saves.
+     */
+    private static final int PARALLEL_SORT_THRESHOLD = 1 << 13;
+
+    /**
+     * {@link Arrays#parallelSort} is only present on API 24+. It is resolved reflectively so this
+     * code degrades to a plain sort on older runtimes instead of failing to load.
+     */
+    @Nullable private static final Method PARALLEL_SORT_METHOD;
+
+    static {
+        Method method = null;
+        try {
+            method = Arrays.class.getMethod("parallelSort", Object[].class, Comparator.class);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        PARALLEL_SORT_METHOD = method;
+    }
+
+    /**
+     * Sorts a pool's items by key, the same way {@link Collections#sort} does but across all cores
+     * for large pools. Sorting is a large slice of the write phase for a multi-megabyte dex (six
+     * pools, hundreds of thousands of items in total), and it is the last part of that phase that
+     * is still single threaded.
+     *
+     * <p>The resulting order is identical: the keys interned in every pool are unique, so there are
+     * no ties for a differently-stable sort to order differently.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <T> void sortPoolItems(@Nonnull List<T> items, @Nonnull Comparator<? super T> comparator) {
+        if (items.size() < 2) {
+            return;
+        }
+        if (PARALLEL_SORT_METHOD == null || items.size() < PARALLEL_SORT_THRESHOLD) {
+            Collections.sort(items, comparator);
+            return;
+        }
+
+        final Object[] array = items.toArray();
+        try {
+            PARALLEL_SORT_METHOD.invoke(null, array, comparator);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            Arrays.sort(array, (Comparator) comparator);
+        }
+        final ListIterator<T> iterator = items.listIterator();
+        for (Object item: array) {
+            iterator.next();
+            iterator.set((T) item);
+        }
+    }
+
     protected class InternalEncodedValueWriter extends EncodedValueWriter<StringKey, TypeKey, FieldRefKey, MethodRefKey,
             AnnotationElement, ProtoRefKey, MethodHandleKey, EncodedValue> {
         private InternalEncodedValueWriter(@Nonnull DexDataWriter writer) {
@@ -399,14 +455,27 @@ public abstract class DexWriter<
                 writeMapItem(offsetWriter);
                 writeHeader(headerWriter, dataSectionOffset, offsetWriter.getPosition());
             }
-            updateSignature(dest);
-            updateChecksum(dest);
+            updateSignatureAndChecksum(dest);
         } finally {
             dest.close();
         }
     }
 
-    private void updateSignature(@Nonnull DexDataStore dataStore) throws IOException {
+    /**
+     * Computes the SHA-1 signature and Adler32 checksum and writes them into the header.
+     *
+     * <p>This is the fused form of the old {@code updateSignature()} + {@code updateChecksum()}
+     * pair. The old code pulled the whole file through two separate 4&nbsp;KiB
+     * {@link DexDataStore#readAt} passes; both digests are streaming, so the values produced
+     * here are bit-identical with far less I/O overhead. When the destination is a
+     * {@link MemoryDataStore} the backing array is hashed directly with zero copies.
+     *
+     * <p>Ordering is load-bearing and preserved exactly: the signature covers
+     * {@code [SIGNATURE_DATA_START_OFFSET, end)}, is written first, and the checksum then
+     * covers {@code [CHECKSUM_DATA_START_OFFSET, end)} <em>including</em> those signature
+     * bytes, just like the old sequential pair.
+     */
+    private void updateSignatureAndChecksum(@Nonnull DexDataStore dataStore) throws IOException {
         MessageDigest md;
         try {
             md = MessageDigest.getInstance("SHA-1");
@@ -414,13 +483,21 @@ public abstract class DexWriter<
             throw new RuntimeException(ex);
         }
 
-        byte[] buffer = new byte[4 * 1024];
+        if (dataStore instanceof MemoryDataStore) {
+            updateSignatureAndChecksumMemory((MemoryDataStore) dataStore, md);
+            return;
+        }
+
+        Adler32 a32 = new Adler32();
+        byte[] buffer = new byte[32 * 1024];
+
         InputStream input = dataStore.readAt(HeaderItem.SIGNATURE_DATA_START_OFFSET);
         int bytesRead = input.read(buffer);
         while (bytesRead >= 0) {
             md.update(buffer, 0, bytesRead);
             bytesRead = input.read(buffer);
         }
+        input.close();
 
         byte[] signature = md.digest();
         if (signature.length != HeaderItem.SIGNATURE_SIZE) {
@@ -431,21 +508,53 @@ public abstract class DexWriter<
         OutputStream output = dataStore.outputAt(HeaderItem.SIGNATURE_OFFSET);
         output.write(signature);
         output.close();
-    }
 
-    private void updateChecksum(@Nonnull DexDataStore dataStore) throws IOException {
-        Adler32 a32 = new Adler32();
-
-        byte[] buffer = new byte[4 * 1024];
-        InputStream input = dataStore.readAt(HeaderItem.CHECKSUM_DATA_START_OFFSET);
-        int bytesRead = input.read(buffer);
+        input = dataStore.readAt(HeaderItem.CHECKSUM_DATA_START_OFFSET);
+        bytesRead = input.read(buffer);
         while (bytesRead >= 0) {
             a32.update(buffer, 0, bytesRead);
             bytesRead = input.read(buffer);
         }
+        input.close();
 
         // write checksum, utilizing logic in DexWriter to write the integer value properly
-        OutputStream output = dataStore.outputAt(HeaderItem.CHECKSUM_OFFSET);
+        output = dataStore.outputAt(HeaderItem.CHECKSUM_OFFSET);
+        DexDataWriter.writeInt(output, (int)a32.getValue());
+        output.close();
+    }
+
+    /**
+     * Zero-copy variant of {@link #updateSignatureAndChecksum} for {@link MemoryDataStore}:
+     * hashes the backing array directly instead of round-tripping every 4&nbsp;KiB through an
+     * {@link InputStream}. Produces identical signature/checksum bytes.
+     */
+    private void updateSignatureAndChecksumMemory(@Nonnull MemoryDataStore dataStore,
+                                                  @Nonnull MessageDigest md) throws IOException {
+        byte[] buf = dataStore.getBuffer();
+        int size = dataStore.getSize();
+
+        // SHA-1 over [SIGNATURE_DATA_START_OFFSET, end). Guarded for a short buffer;
+        // a real dex header is always larger, this just avoids an AIOOBE on corrupt input.
+        int sigStart = Math.min(HeaderItem.SIGNATURE_DATA_START_OFFSET, size);
+        md.update(buf, sigStart, size - sigStart);
+
+        byte[] signature = md.digest();
+        if (signature.length != HeaderItem.SIGNATURE_SIZE) {
+            throw new RuntimeException("unexpected digest write: " + signature.length + " bytes");
+        }
+
+        // write signature first: the checksum below must cover these bytes.
+        OutputStream output = dataStore.outputAt(HeaderItem.SIGNATURE_OFFSET);
+        output.write(signature);
+        output.close();
+
+        // Adler32 over [CHECKSUM_DATA_START_OFFSET, end), now including the signature.
+        Adler32 a32 = new Adler32();
+        int cksumStart = Math.min(HeaderItem.CHECKSUM_DATA_START_OFFSET, size);
+        a32.update(buf, cksumStart, size - cksumStart);
+
+        // write checksum, utilizing logic in DexWriter to write the integer value properly
+        output = dataStore.outputAt(HeaderItem.CHECKSUM_OFFSET);
         DexDataWriter.writeInt(output, (int)a32.getValue());
         output.close();
     }
@@ -459,7 +568,7 @@ public abstract class DexWriter<
         stringDataSectionOffset = offsetWriter.getPosition();
         int index = 0;
         List<Entry<? extends StringKey, Integer>> stringEntries = Lists.newArrayList(stringSection.getItems());
-        Collections.sort(stringEntries, toStringKeyComparator);
+        sortPoolItems(stringEntries, toStringKeyComparator);
 
         for (Map.Entry<? extends StringKey, Integer>  entry: stringEntries) {
             entry.setValue(index++);
@@ -476,7 +585,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends TypeKey, Integer>> typeEntries = Lists.newArrayList(typeSection.getItems());
-        Collections.sort(typeEntries, toStringKeyComparator);
+        sortPoolItems(typeEntries, toStringKeyComparator);
 
         for (Map.Entry<? extends TypeKey, Integer> entry : typeEntries) {
             entry.setValue(index++);
@@ -489,7 +598,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends ProtoRefKey, Integer>> protoEntries = Lists.newArrayList(protoSection.getItems());
-        Collections.<Entry<? extends ProtoRefKey, Integer>>sort(protoEntries, DexWriter.comparableKeyComparator());
+        sortPoolItems(protoEntries, DexWriter.<ProtoRefKey>comparableKeyComparator());
 
         for (Map.Entry<? extends ProtoRefKey, Integer> entry: protoEntries) {
             entry.setValue(index++);
@@ -505,7 +614,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends FieldRefKey, Integer>> fieldEntries = Lists.newArrayList(fieldSection.getItems());
-        Collections.<Entry<? extends FieldRefKey, Integer>>sort(fieldEntries, DexWriter.comparableKeyComparator());
+        sortPoolItems(fieldEntries, DexWriter.<FieldRefKey>comparableKeyComparator());
         
         for (Map.Entry<? extends FieldRefKey, Integer> entry: fieldEntries) {
             entry.setValue(index++);
@@ -521,7 +630,7 @@ public abstract class DexWriter<
         int index = 0;
 
         List<Map.Entry<? extends MethodRefKey, Integer>> methodEntries = Lists.newArrayList(methodSection.getItems());
-        Collections.<Entry<? extends MethodRefKey, Integer>>sort(methodEntries, DexWriter.comparableKeyComparator());
+        sortPoolItems(methodEntries, DexWriter.<MethodRefKey>comparableKeyComparator());
         
         for (Map.Entry<? extends MethodRefKey, Integer> entry: methodEntries) {
             entry.setValue(index++);
@@ -538,7 +647,7 @@ public abstract class DexWriter<
         classDataSectionOffset = offsetWriter.getPosition();
 
         List<Map.Entry<? extends ClassKey, Integer>> classEntriesKeySorted = Lists.newArrayList(classSection.getItems());
-        Collections.<Entry<? extends ClassKey, Integer>>sort(classEntriesKeySorted, DexWriter.comparableKeyComparator());
+        sortPoolItems(classEntriesKeySorted, DexWriter.<ClassKey>comparableKeyComparator());
 
         int index = 0;
         for (Map.Entry<? extends ClassKey, Integer> key: classEntriesKeySorted) {
@@ -754,7 +863,7 @@ public abstract class DexWriter<
 
         List<Map.Entry<? extends CallSiteKey, Integer>> callSiteEntries =
                 Lists.newArrayList(callSiteSection.getItems());
-        Collections.sort(callSiteEntries, callSiteComparator);
+        sortPoolItems(callSiteEntries, callSiteComparator);
 
         int index = 0;
 
@@ -1034,6 +1143,14 @@ public abstract class DexWriter<
 
         DexDataWriter codeWriter = new DexDataWriter(temp, 0);
 
+        // One writer for every method: InstructionWriter is stateless apart from the
+        // DexDataWriter/sections it writes through (all identical for every call here),
+        // so allocating one per method only added GC pressure. Output bytes are unchanged.
+        InstructionWriter<StringRef, TypeRef, FieldRefKey, MethodRefKey, ProtoRefKey,
+                MethodHandleKey, CallSiteKey> instructionWriter =
+                InstructionWriter.makeInstructionWriter(opcodes, codeWriter, stringSection, typeSection,
+                        fieldSection, methodSection, protoSection, methodHandleSection, callSiteSection);
+
         List<CodeItemOffset<MethodKey>> codeOffsets = Lists.newArrayList();
 
         for (ClassKey classKey: classSection.getSortedClasses()) {
@@ -1076,7 +1193,7 @@ public abstract class DexWriter<
                 int codeItemOffset;
                 try {
                     codeItemOffset = writeCodeItem(
-                            codeWriter, ehBuf, methodKey, tryBlocks, instructions, debugItemOffset);
+                            codeWriter, instructionWriter, ehBuf, methodKey, tryBlocks, instructions, debugItemOffset);
                 } catch (RuntimeException ex) {
                     throw new ExceptionWithContext(ex, "Exception occurred while writing code_item for method %s",
                             methodSection.getMethodReference(methodKey));
@@ -1180,6 +1297,8 @@ public abstract class DexWriter<
     }
 
     private int writeCodeItem(@Nonnull DexDataWriter writer,
+                              @Nonnull InstructionWriter<StringRef, TypeRef, FieldRefKey, MethodRefKey,
+                                      ProtoRefKey, MethodHandleKey, CallSiteKey> instructionWriter,
                               @Nonnull ByteArrayOutputStream ehBuf,
                               @Nonnull MethodKey methodKey,
                               @Nonnull List<? extends TryBlock<? extends ExceptionHandler>> tryBlocks,
@@ -1229,10 +1348,6 @@ public abstract class DexWriter<
             writer.writeUshort(outParamCount);
             writer.writeUshort(tryBlocks.size());
             writer.writeInt(debugItemOffset);
-
-            InstructionWriter instructionWriter =
-                    InstructionWriter.makeInstructionWriter(opcodes, writer, stringSection, typeSection, fieldSection,
-                            methodSection, protoSection, methodHandleSection, callSiteSection);
 
             writer.writeInt(codeUnitCount);
             int codeOffset = 0;

@@ -58,6 +58,12 @@ public class TryListBuilder<EH extends ExceptionHandler>
 
     public static <EH extends ExceptionHandler> List<TryBlock<EH>> massageTryBlocks(
             List<? extends TryBlock<? extends EH>> tryBlocks) {
+        if (tryBlocks.isEmpty()) {
+            // Fast path: most methods have no exception handlers. The old code built a
+            // TryListBuilder plus an ArrayList per method just to return an empty list.
+            // Callers only iterate the result, so a fresh empty list is identical.
+            return Lists.newArrayList();
+        }
         TryListBuilder<EH> tlb = new TryListBuilder<>();
 
         for (TryBlock<? extends EH> tryBlock: tryBlocks) {
