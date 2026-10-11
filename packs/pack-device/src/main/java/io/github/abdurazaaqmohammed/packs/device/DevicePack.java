@@ -18,7 +18,7 @@ public class DevicePack implements ToolPack {
 
     @Override
     public int version() {
-        return 1;
+        return 2;
     }
 
     @Override
@@ -27,15 +27,12 @@ public class DevicePack implements ToolPack {
                 new DeviceHubTool(),
                 new ClockTool(),
                 new MeasureTool(),
-                new FlashlightTool(),
                 new MagnifierTool(),
                 new VolumeTool(),
                 new VibrationTool(),
                 new LevelTool(),
                 new CompassTool(),
-                new GpsTool(),
                 new RingtoneTool(),
-                new WallpaperTool(),
-                new DeviceHubTool());
+                new WallpaperTool());
     }
 }

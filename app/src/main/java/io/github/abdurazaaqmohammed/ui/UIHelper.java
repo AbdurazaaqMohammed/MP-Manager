@@ -97,7 +97,6 @@ public class UIHelper {
                 new AboutLibrary("Volley", "Google", "https://github.com/google/volley", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Shizuku", "RikkaApps", "https://github.com/RikkaApps/Shizuku", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("ZXing", "zxing", "https://github.com/zxing/zxing", "Apache-2.0", "Apache-2.0.txt"),
-                new AboutLibrary("zxing-android-embedded", "Journey Mobile", "https://github.com/journeyapps/zxing-android-embedded", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("JCommander", "Cedric Beust", "https://github.com/cbeust/jcommander", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Apache Commons Compress", "Apache Software Foundation", "https://commons.apache.org/proper/commons-compress", "Apache-2.0", "Apache-2.0.txt"),
                 new AboutLibrary("Apache Commons Net", "Apache Software Foundation", "https://commons.apache.org/proper/commons-net", "Apache-2.0", "Apache-2.0.txt"),

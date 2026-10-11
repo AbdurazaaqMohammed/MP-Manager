@@ -309,7 +309,7 @@ Connect to an FTP server with optional FTPS and browse remote folders in either 
 
 Plugins are installed as regular Android apps and listed in the Plugins hub, together with tool packs that can be downloaded inside the app. A plugin can add entries to the sidebar, settings, file menu, text editor or the APK dialog, and each plugin runs in its own process with its own permissions, so it cannot read files unless storage access is granted to it. On first use the certificate fingerprint is confirmed against the one published by the developer, and a warning is shown if it ever changes. Plugins can be trusted, disabled, updated, removed from the hub, or given a launcher shortcut.
 
-Tool packs ship collections of tools grouped into Media, Device, Network, Math, Text and Code, Notes and Random packs, covering among others a tone generator, metronome, recorder with screen recording, text to speech, device information, flashlight, sensors, compass, bubble level, GPS speedometer, wallpaper maker, a calculator suite with converters, text and code tools, and random generators. The pack catalog can be refreshed, packs can be updated or removed, and the server hosting packs can be changed.
+Tool packs ship collections of tools grouped into Media, Device, Network, Math, Text and Code, Notes and Random packs, covering among others a tone generator, metronome, recorder with screen recording, text to speech, device information, sensors, compass, bubble level, wallpaper maker, QR generator, a calculator suite with converters, text and code tools, and random generators. The pack catalog can be refreshed, packs can be updated or removed, and the server hosting packs can be changed.
 
 <!-- TODO: Add screenshots/videos -->
 </details>

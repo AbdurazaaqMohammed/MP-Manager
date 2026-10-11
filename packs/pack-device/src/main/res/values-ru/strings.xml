@@ -3,8 +3,6 @@
     <string name="subtitle_clock">Секундомер, таймер и настраиваемые часы</string>
     <string name="subtitle_compass">Определение магнитного курса</string>
     <string name="subtitle_devicehub">Батарея, ЦП, сенсоры, хранилище</string>
-    <string name="subtitle_flashlight">Фонарик, свет экрана и стробоскоп</string>
-    <string name="subtitle_gps">Скорость GPS в реальном времени</string>
     <string name="subtitle_level">Проверка уровня поверхности</string>
     <string name="subtitle_magnifier">Увеличение мелкого текста</string>
     <string name="subtitle_measure">Линейка, компас и транспортир</string>
@@ -19,8 +17,6 @@
     <string name="title_clock">Часы</string>
     <string name="title_compass">Компас</string>
     <string name="title_devicehub">Об устройстве</string>
-    <string name="title_flashlight">Фонарик</string>
-    <string name="title_gps">GPS-спидометр</string>
     <string name="title_level">Пузырьковый уровень</string>
     <string name="title_magnifier">Лупа</string>
     <string name="title_measure">Измерения</string>

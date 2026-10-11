@@ -2,9 +2,7 @@ package io.github.abdurazaaqmohammed.packs.network;
 
 import io.github.abdurazaaqmohammed.plugins.res.PackRes;
 
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -26,14 +24,11 @@ import java.text.DecimalFormat;
 
 /**
  * Extraction of ToolRunnerActivity.buildConnectivityHub().
- *
- * <p>The built-in buttons rebuilt the Bluetooth/NFC views in place; packs
- * cannot do that, so they open the matching tool screens instead.
  */
 public class ConnectivityTool extends BaseToolPlugin {
 
     public ConnectivityTool() {
-        super("connectivity", "Connectivity Hub", "Network, Bluetooth, NFC info", ToolCategories.NETWORK);
+        super("connectivity", "Connectivity Hub", "Network and Wi-Fi info", ToolCategories.NETWORK);
     }
 
     private static String ipToString(int ip) {
@@ -107,19 +102,6 @@ public class ConnectivityTool extends BaseToolPlugin {
         }
     }
 
-    private static void openTool(Context context, String toolId, String title) {
-        try {
-            Intent i = new Intent();
-            i.setComponent(new ComponentName("io.github.abdurazaaqmohammed.MPManager",
-                    "io.github.abdurazaaqmohammed.tools.ToolRunnerActivity"));
-            i.putExtra("tool_id", toolId);
-            i.putExtra("tool_title", title);
-            context.startActivity(i);
-        } catch (Exception e) {
-            ToolViewFactory.toast(context, "Cannot open " + title);
-        }
-    }
-
     @Override
     public View createView(Context context, ViewGroup container) {
         LinearLayout box = ToolViewFactory.container(context);
@@ -157,12 +139,6 @@ public class ConnectivityTool extends BaseToolPlugin {
         r.setOnClickListener(v -> refresh.run());
         c.setOnClickListener(v -> ToolViewFactory.copyText(context, PackRes.str("network", R.string.s_connectivity, "connectivity"),
                 netText.getText() + "\n\n" + dataText.getText()));
-        ToolViewFactory.addLabel(box, PackRes.str("network", R.string.s_short_range_radios, "Short-range radios"));
-        LinearLayout row2 = ToolViewFactory.makeRow(box);
-        MaterialButton btBtn = ToolViewFactory.makeRowButton(row2, PackRes.str("network", R.string.s_bluetooth_pairs, "Bluetooth pairs"), 1f);
-        MaterialButton nfcBtn = ToolViewFactory.makeRowButton(row2, PackRes.str("network", R.string.s_nfc_reader, "NFC reader"), 1f);
-        btBtn.setOnClickListener(v -> openTool(context, "bluetooth", "Bluetooth Pairs"));
-        nfcBtn.setOnClickListener(v -> openTool(context, "nfc", "NFC Reader"));
         return box;
     }
 }

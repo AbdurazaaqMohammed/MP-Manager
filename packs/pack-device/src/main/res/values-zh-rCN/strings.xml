@@ -3,8 +3,6 @@
     <string name="subtitle_clock">秒表、计时器和可定制时钟</string>
     <string name="subtitle_compass">查找磁航向</string>
     <string name="subtitle_devicehub">电池、CPU、传感器、存储</string>
-    <string name="subtitle_flashlight">手电筒、屏幕光和频闪</string>
-    <string name="subtitle_gps">实时 GPS 速度</string>
     <string name="subtitle_level">检查表面水平</string>
     <string name="subtitle_magnifier">放大小文本</string>
     <string name="subtitle_measure">尺子、指南针和量角器</string>
@@ -19,8 +17,6 @@
     <string name="title_clock">时钟</string>
     <string name="title_compass">指南针</string>
     <string name="title_devicehub">设备信息</string>
-    <string name="title_flashlight">手电筒</string>
-    <string name="title_gps">GPS 速度表</string>
     <string name="title_level">气泡水平仪</string>
     <string name="title_magnifier">放大镜</string>
     <string name="title_measure">测量</string>

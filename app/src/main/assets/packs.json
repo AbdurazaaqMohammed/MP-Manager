@@ -37,10 +37,10 @@
                   {
                       "id":  "device",
                       "title":  "Device Pack",
-                      "description":  "Timers, flashlight, sensors, GPS, hub, ringtones and wallpapers.",
+                      "description":  "Timers, sensors, hub, ringtones and wallpapers.",
                       "category":  "Device \u0026 Hardware",
-                      "version":  1,
-                      "versionName":  "1.0",
+                      "version":  2,
+                      "versionName":  "1.1",
                       "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-device.apk",
                       "sha256":  "00a9a266aa0d40cc2bce67b378d0f9a291915147706ce104177ae8f293eb365b",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.device.DevicePack",
@@ -54,11 +54,6 @@
                                         "id":  "clock",
                                         "title":  "Clock",
                                         "subtitle":  "Stopwatch and countdown timer"
-                                    },
-                                    {
-                                        "id":  "flashlight",
-                                        "title":  "Flashlight",
-                                        "subtitle":  "Torch, screen light and strobe"
                                     },
                                     {
                                         "id":  "magnifier",
@@ -91,11 +86,6 @@
                                         "subtitle":  "Find magnetic heading"
                                     },
                                     {
-                                        "id":  "gps",
-                                        "title":  "GPS Speedometer",
-                                        "subtitle":  "Track live GPS speed"
-                                    },
-                                    {
                                         "id":  "ringtone",
                                         "title":  "Ringtone Preview",
                                         "subtitle":  "Browse and preview sounds"
@@ -110,10 +100,10 @@
                   {
                       "id":  "network",
                       "title":  "Network Pack",
-                      "description":  "Connectivity hub, Bluetooth, NFC and QR tools in one suite.",
+                      "description":  "Connectivity hub and QR generator in one suite.",
                       "category":  "Wi-Fi \u0026 Network",
-                      "version":  1,
-                      "versionName":  "1.0",
+                      "version":  2,
+                      "versionName":  "1.1",
                       "apkUrl":  "https://github.com/AbdurazaaqMohammed/MP-Manager/releases/download/tool-packs-v1/pack-network.apk",
                       "sha256":  "8feb423650c7127adc5487915563c3e14877375b95abf9711060d359cdaaa7a9",
                       "entryClass":  "io.github.abdurazaaqmohammed.packs.network.NetworkPack",
@@ -121,7 +111,7 @@
                                     {
                                         "id":  "network",
                                         "title":  "Network Tools",
-                                        "subtitle":  "Connectivity hub, Bluetooth, NFC and QR tools"
+                                        "subtitle":  "Connectivity hub and QR generator"
                                     }
                                 ]
                   },

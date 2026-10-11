@@ -4,8 +4,6 @@
     <string name="subtitle_clock">Stopwatch, timer and customizable clock</string>
     <string name="subtitle_compass">Find magnetic heading</string>
     <string name="subtitle_devicehub">Battery, CPU, sensors, storage</string>
-    <string name="subtitle_flashlight">Torch, screen light and strobe</string>
-    <string name="subtitle_gps">Track live GPS speed</string>
     <string name="subtitle_level">Check surface level</string>
     <string name="subtitle_magnifier">Zoom into small text</string>
     <string name="subtitle_measure">Ruler, compass and protractor</string>
@@ -20,8 +18,6 @@
     <string name="title_clock">Clock</string>
     <string name="title_compass">Compass</string>
     <string name="title_devicehub">Device Info</string>
-    <string name="title_flashlight">Flashlight</string>
-    <string name="title_gps">GPS Speedometer</string>
     <string name="title_level">Bubble Level</string>
     <string name="title_magnifier">Magnifier</string>
     <string name="title_measure">Measuring</string>
