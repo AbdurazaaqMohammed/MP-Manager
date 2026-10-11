@@ -184,7 +184,7 @@ public class InternalFrameworks extends FrameworkManager {
     }
 
     //FIX THIS
-    private static final String ANDROID_RESOURCE_DIRECTORY = "/storage/emulated/0/MP Manager/frameworks/";
+    private static final String ANDROID_RESOURCE_DIRECTORY = "/sdcard/MP Manager/frameworks/";
     private static final String ANDROID_PACKAGE = "android";
     private static final String FRAMEWORK_EXTENSION = ".apk";
     private static final int LOWEST_AVAILABLE_VERSION = 23;

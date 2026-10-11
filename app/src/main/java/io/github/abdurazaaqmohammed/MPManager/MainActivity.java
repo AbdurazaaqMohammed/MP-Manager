@@ -754,38 +754,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         new Thread(() -> {
             File frameworks = new File("/sdcard/MP Manager/frameworks/");
-            if(!doesNotHaveStoragePerm(this) && !frameworks.exists()) try(
-                    InputStream is23 = rss.openRawResource(R.raw.android_23);
-                    InputStream is24 = rss.openRawResource(R.raw.android_24);
-                    InputStream is25 = rss.openRawResource(R.raw.android_25);
-                    InputStream is26 = rss.openRawResource(R.raw.android_26);
-                    InputStream is27 = rss.openRawResource(R.raw.android_27);
-                    InputStream is28 = rss.openRawResource(R.raw.android_28);
-                    InputStream is29 = rss.openRawResource(R.raw.android_29);
-                    InputStream is30 = rss.openRawResource(R.raw.android_30);
-                    InputStream is31 = rss.openRawResource(R.raw.android_31);
-                    InputStream is32 = rss.openRawResource(R.raw.android_32);
-                    InputStream is33 = rss.openRawResource(R.raw.android_33);
-                    InputStream is34 = rss.openRawResource(R.raw.android_34);
-                    InputStream is35 = rss.openRawResource(R.raw.android_35);
-                    InputStream is36 = rss.openRawResource(R.raw.android_36)
-            ) {
-                frameworks.mkdir();
-                FileUtils.copyFile(is23, new File(frameworks, "android_23.apk"));
-                FileUtils.copyFile(is24, new File(frameworks, "android_24.apk"));
-                FileUtils.copyFile(is25, new File(frameworks, "android_25.apk"));
-                FileUtils.copyFile(is26, new File(frameworks, "android_26.apk"));
-                FileUtils.copyFile(is27, new File(frameworks, "android_27.apk"));
-                FileUtils.copyFile(is28, new File(frameworks, "android_28.apk"));
-                FileUtils.copyFile(is29, new File(frameworks, "android_29.apk"));
-                FileUtils.copyFile(is30, new File(frameworks, "android_30.apk"));
-                FileUtils.copyFile(is31, new File(frameworks, "android_31.apk"));
-                FileUtils.copyFile(is32, new File(frameworks, "android_32.apk"));
-                FileUtils.copyFile(is33, new File(frameworks, "android_33.apk"));
-                FileUtils.copyFile(is34, new File(frameworks, "android_34.apk"));
-                FileUtils.copyFile(is35, new File(frameworks, "android_35.apk"));
-                FileUtils.copyFile(is36, new File(frameworks, "android_36.apk"));
-            } catch (Exception ignored) { }
+            if (frameworks.exists() || frameworks.mkdirs()) {
+                int[] resourceIds = {
+                        R.raw.android_23, R.raw.android_24, R.raw.android_25,
+                        R.raw.android_26, R.raw.android_27, R.raw.android_28,
+                        R.raw.android_29, R.raw.android_30, R.raw.android_31,
+                        R.raw.android_32, R.raw.android_33, R.raw.android_34,
+                        R.raw.android_35, R.raw.android_36
+                };
+
+                for (int i = 23; i < 37; i++) {
+                    File out = new File(frameworks, "android_" + i + ".apk");
+
+                    if(!out.exists()) try (InputStream in = rss.openRawResource(resourceIds[i-23])) {
+                        FileUtils.copyFile(in, out);
+                    } catch (Exception ignored) { }
+                }
+
+            }
             setupPullToRefresh();
         }).start();
 
