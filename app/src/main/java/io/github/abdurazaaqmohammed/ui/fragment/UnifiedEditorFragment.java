@@ -56,7 +56,10 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,6 +75,7 @@ import io.github.rosemoe.sora.langs.java.JavaLanguage;
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry;
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry;
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver;
 import io.github.rosemoe.sora.text.CharPosition;
@@ -150,6 +154,10 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
 
     private String className = "";
     private String title = "";
+    // Real file name backing this editor, used to auto-detect the syntax.
+    private String fileName = null;
+    // Currently applied TextMate scope (null = plain text / no highlighting).
+    private String currentSyntaxScope = null;
     private int type = TYPE_TEXT;
     private boolean isSmali = false;
     private String initialContentText;
@@ -178,6 +186,21 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     private static Language cachedSmaliLanguage;
     private static TextMateColorScheme cachedColorScheme;
     private static String[] cachedInstructions;
+
+    // TextMate syntax highlighting for regular text files. Grammars are bundled under
+    // assets/syntaxes and registered from assets/languages.json. They are loaded lazily on
+    // a worker thread the first time highlighting is requested and then cached per scope.
+    private static boolean syntaxGrammarsLoaded = false;
+    private static final Map<String, TextMateLanguage> syntaxLanguageCache = new HashMap<>();
+    private static final String[] SYNTAX_LABELS = {
+            "Plain Text", "XML", "AXML", "Java", "C", "C++", "Python", "JavaScript",
+            "HTML", "CSS", "Markdown", "JSON", "Rust", "Shell"
+    };
+    private static final String[] SYNTAX_SCOPES = {
+            null, "text.xml", "text.xml", "source.java", "source.c", "source.cpp", "source.python",
+            "source.js", "text.html.basic", "source.css", "text.html.markdown", "source.json",
+            "source.rust", "source.shell"
+    };
 
     public interface EditorCallback {
         void onContentModified(String className);
@@ -601,23 +624,31 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
         } else {
             //if (symbolInputContainer != null) symbolInputContainer.setVisibility(View.GONE);
             if (linearHeader != null) linearHeader.setVisibility(View.GONE);
+            applyAutoSyntax();
         }
         applyPreferences();
     }
 
+    /** Applies the non-TextMate color scheme chosen in editor settings. */
+    private void applySchemePreference() {
+        if (editor == null) return;
+        SharedPreferences prefs = requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
+        String colorScheme = prefs.getString("pref_theme", "drac");
+        EditorColorScheme ecs = switch (colorScheme) {
+            case "drac" -> new SchemeDarcula();
+            case "ecl" -> new SchemeEclipse();
+            case "vs" -> new SchemeVS2019();
+            case "gh" -> new SchemeGitHub();
+            case "np" -> new SchemeNotepadXX();
+            default -> null;
+        };
+        if (ecs != null) editor.setColorScheme(ecs);
+    }
+
     public void applyPreferences() {
         SharedPreferences editorPrefs = requireContext().getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
-        if (!isSmali) {
-            String colorScheme = editorPrefs.getString("pref_theme", "drac");
-            EditorColorScheme ecs = switch (colorScheme) {
-                case "drac" -> new SchemeDarcula();
-                case "ecl" -> new SchemeEclipse();
-                case "vs" -> new SchemeVS2019();
-                case "gh" -> new SchemeGitHub();
-                case "np" -> new SchemeNotepadXX();
-                default -> null;
-            };
-            if (ecs != null) editor.setColorScheme(ecs);
+        if (!isSmali && currentSyntaxScope == null) {
+            applySchemePreference();
         }
         String fontType = editorPrefs.getString("font_type", "normal");
         Typeface typeface = fontType.equals("normal") ? Typeface.DEFAULT : Typeface.MONOSPACE;
@@ -1146,11 +1177,142 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
     }
 
     public void showSyntaxDialog() {
-        final String[] syntaxes = requireContext().getResources().getStringArray(R.array.editor_syntaxes);
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.choose_syntax)
-                .setItems(syntaxes, (dialog, which) -> Extensions.showMessage(requireActivity(), getString(R.string.syntax_set_to, syntaxes[which])))
+                .setSingleChoiceItems(SYNTAX_LABELS, currentSyntaxIndex(), (dialog, which) -> {
+                    dialog.dismiss();
+                    applySyntax(SYNTAX_SCOPES[which]);
+                    Extensions.showMessage(requireActivity(),
+                            getString(R.string.syntax_set_to, SYNTAX_LABELS[which]));
+                })
                 .show();
+    }
+
+    private int currentSyntaxIndex() {
+        if (currentSyntaxScope != null) {
+            for (int i = 0; i < SYNTAX_SCOPES.length; i++) {
+                if (currentSyntaxScope.equals(SYNTAX_SCOPES[i])) return i;
+            }
+        }
+        return 0;
+    }
+
+    /** Sets the real file name used to auto-detect the syntax, then re-applies it. */
+    public void setFileName(String name) {
+        this.fileName = name;
+        if (editor != null) applyAutoSyntax();
+    }
+
+    /** Re-detects and applies highlighting from the current file name / axml flag. */
+    public void applyAutoSyntax() {
+        if (isSmali) return;
+        applySyntax(axml ? "text.xml" : detectScope(fileName != null ? fileName : title));
+    }
+
+    private static String detectScope(String name) {
+        if (name == null) return null;
+        String n = name.toLowerCase(Locale.ROOT);
+        int slash = Math.max(n.lastIndexOf('/'), n.lastIndexOf('\\'));
+        if (slash >= 0) n = n.substring(slash + 1);
+        int dot = n.lastIndexOf('.');
+        if (dot < 0 || dot == n.length() - 1) return null;
+        switch (n.substring(dot + 1)) {
+            case "xml":
+            case "axml": return "text.xml";
+            case "java": return "source.java";
+            case "c":
+            case "h": return "source.c";
+            case "cpp":
+            case "cc":
+            case "cxx":
+            case "hpp":
+            case "hxx":
+            case "hh": return "source.cpp";
+            case "py":
+            case "pyw": return "source.python";
+            case "js":
+            case "mjs":
+            case "cjs":
+            case "jsx": return "source.js";
+            case "html":
+            case "htm":
+            case "xhtml": return "text.html.basic";
+            case "css": return "source.css";
+            case "md":
+            case "markdown": return "text.html.markdown";
+            case "json": return "source.json";
+            case "rs": return "source.rust";
+            case "sh":
+            case "bash": return "source.shell";
+            default: return null;
+        }
+    }
+
+    /** Applies a TextMate scope (null = plain text), loading the grammar lazily off-thread. */
+    public void applySyntax(String scope) {
+        if (editor == null) return;
+        currentSyntaxScope = scope;
+        if (scope == null) {
+            editor.setEditorLanguage(new EmptyLanguage());
+            applySchemePreference();
+            return;
+        }
+        TextMateLanguage cached = syntaxLanguageCache.get(scope);
+        if (cached != null) {
+            setTextMateLanguage(cached);
+            return;
+        }
+        final Context appContext = requireContext().getApplicationContext();
+        final String finalScope = scope;
+        new Thread(() -> {
+            TextMateLanguage language = loadSyntaxLanguage(appContext, finalScope);
+            Activity activity = getActivity();
+            if (activity == null) return;
+            activity.runOnUiThread(() -> {
+                if (!isAdded() || editor == null) return;
+                if (finalScope.equals(currentSyntaxScope)) {
+                    if (language != null) {
+                        setTextMateLanguage(language);
+                    } else {
+                        // Syntax loading failed - fall back to plain text and log error
+                        Log.e("UnifiedEditor", "Failed to load syntax for scope: " + finalScope);
+                        editor.setEditorLanguage(new EmptyLanguage());
+                        applySchemePreference();
+                    }
+                }
+            });
+        }).start();
+    }
+
+    private static synchronized TextMateLanguage loadSyntaxLanguage(Context context, String scope) {
+        TextMateLanguage cached = syntaxLanguageCache.get(scope);
+        if (cached != null) return cached;
+        try {
+            ensureLanguageInitialized(context);
+            if (!syntaxGrammarsLoaded) {
+                GrammarRegistry.getInstance().loadGrammars("languages.json");
+                syntaxGrammarsLoaded = true;
+            }
+            TextMateLanguage language = TextMateLanguage.create(scope, GrammarRegistry.getInstance(), false);
+            if (language != null) syntaxLanguageCache.put(scope, language);
+            return language;
+        } catch (Exception e) {
+            Log.e("UnifiedEditor", "Syntax load error: " + scope, e);
+            return null;
+        }
+    }
+
+    private void setTextMateLanguage(TextMateLanguage language) {
+        if (editor == null || language == null) return;
+        editor.setEditorLanguage(language);
+        try {
+            if (cachedColorScheme == null) {
+                cachedColorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance());
+            }
+            editor.setColorScheme(cachedColorScheme);
+        } catch (Exception e) {
+            Log.e("UnifiedEditor", "Color scheme error", e);
+        }
     }
 
     public void showJumpToLineDialog() {
@@ -1460,10 +1622,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                 .show();
     }
 
-        public static void clearCache() {
+    public static void clearCache() {
         cachedSmaliLanguage = null;
         cachedColorScheme = null;
         cachedInstructions = null;
+        syntaxLanguageCache.clear();
     }
 
     public static synchronized void ensureLanguageInitialized(Context context) {

@@ -378,6 +378,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         axml = t.axml;
         resEntries = t.resEntries;
         if (f != null) f.setAxml(t.axml);
+        if (f != null) f.setFileName(t.title);
 
         if (f != null && f.getEditor() != null && t.loaded) {
             boolean wasModified = t.modified; // setText fires a change event; preserve real state

@@ -1,10 +1,68 @@
 {
   "languages": [
     {
-      "name": "Smali",
-      "scope": "source.smali",
-      "grammar": "smali/syntaxes/smali.tmLanguage.json",
-      "config": "smali/language-configuration.json"
+      "grammar": "syntaxes/grammars/xml.tmLanguage.json",
+      "name": "XML",
+      "scopeName": "text.xml"
+    },
+    {
+      "grammar": "syntaxes/grammars/rust.tmLanguage.json",
+      "name": "Rust",
+      "scopeName": "source.rust"
+    },
+    {
+      "grammar": "syntaxes/grammars/java.tmLanguage.json",
+      "name": "Java",
+      "scopeName": "source.java"
+    },
+    {
+      "grammar": "syntaxes/grammars/c.tmLanguage.json",
+      "name": "C",
+      "scopeName": "source.c"
+    },
+    {
+      "grammar": "syntaxes/grammars/cpp.tmLanguage.json",
+      "name": "C++",
+      "scopeName": "source.cpp"
+    },
+    {
+      "grammar": "syntaxes/grammars/python.tmLanguage.json",
+      "name": "Python",
+      "scopeName": "source.python"
+    },
+    {
+      "grammar": "syntaxes/grammars/javascript.tmLanguage.json",
+      "name": "JavaScript",
+      "scopeName": "source.js"
+    },
+    {
+      "grammar": "syntaxes/grammars/html.tmLanguage.json",
+      "name": "HTML",
+      "scopeName": "text.html.basic",
+      "embeddedLanguages": {
+        "source.css": "css",
+        "source.js": "javascript"
+      }
+    },
+    {
+      "grammar": "syntaxes/grammars/css.tmLanguage.json",
+      "name": "CSS",
+      "scopeName": "source.css"
+    },
+    {
+      "grammar": "syntaxes/grammars/markdown.tmLanguage.json",
+      "name": "Markdown",
+      "scopeName": "text.html.markdown"
+    },
+    {
+      "grammar": "syntaxes/grammars/json.tmLanguage.json",
+      "name": "JSON",
+      "scopeName": "source.json"
+    },
+    {
+      "grammar": "syntaxes/grammars/shellscript.tmLanguage.json",
+      "name": "Shell",
+      "scopeName": "source.shell"
     }
   ]
 }
