@@ -31,7 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
-import com.apk.axml.APKParser;
+import com.apk.axml.ResourceTableParser;
 import com.apk.axml.aXMLDecoder;
 import com.apk.axml.aXMLEncoder;
 import com.apk.axml.serializableItems.ResEntry;
@@ -50,8 +50,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -73,6 +75,8 @@ public class ApkManifestEditor {
     private final DialogUtil dialogUtil;
     private final UIHelper uiHelper;
     final Resources rss;
+    private String cachedResKey;
+    private List<ResEntry> cachedResTable;
 
     public ApkManifestEditor(MainActivity context, DialogUtil dialogUtil, UIHelper uiHelper) {
         this.context = context;
@@ -104,12 +108,7 @@ public class ApkManifestEditor {
         try (ZipFile zf = new ZipFile(apkFile)) {
             FileHeader manifestEntry = zf.getFileHeader("AndroidManifest.xml");
             if (manifestEntry == null) return null;
-            List<ResEntry> res = null;
-            try {
-                APKParser apkParser = new APKParser();
-                apkParser.parse(apkFile.getPath(), context);
-                res = apkParser.getDecodedResources();
-            } catch (Exception ignored) { }
+            List<ResEntry> res = cachedResourceTable(apkFile, zf);
             try (InputStream is = zf.getInputStream(manifestEntry)) {
                 data.entries = new aXMLDecoder(is, res).decode();
                 data.res = res;
@@ -118,6 +117,32 @@ public class ApkManifestEditor {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * {@code resources.arsc} parsed from an open zip, memoised per APK revision.
+     *
+     * <p>Parsing costs ~10 ms for a large table, and every open of the quick-edit dialog, the
+     * manifest tree and the icon flow parses it again; caching keeps the dialogs responsive.
+     */
+    private List<ResEntry> cachedResourceTable(File apkFile, ZipFile zf) {
+        String key = apkFile.getPath() + '\n' + apkFile.length() + '\n' + apkFile.lastModified();
+        if (key.equals(cachedResKey)) return cachedResTable;
+        FileHeader resHeader;
+        try {
+            resHeader = zf.getFileHeader("resources.arsc");
+        } catch (Exception e) {
+            return null;
+        }
+        if (resHeader == null) return null;
+        List<ResEntry> res = null;
+        try (InputStream ris = zf.getInputStream(resHeader)) {
+            res = new ResourceTableParser(ris).parse();
+        } catch (Exception ignored) {
+        }
+        cachedResKey = key;
+        cachedResTable = res;
+        return res;
     }
 
     private String resolveLabelRef(String ref, List<ResEntry> res) {
@@ -174,19 +199,32 @@ public class ApkManifestEditor {
     }
 
     public void showEditManifestDialog(File apkFile) {
+        // Decoding reads the whole manifest plus the resource table, so it runs in the
+        // background with a progress indicator instead of blocking the UI thread.
+        ProgressManager pm = new ProgressManager(context, true).show();
+        pm.setText(rss.getString(R.string.loading));
+
+        new Thread(() -> {
+            ManifestData manifestData = decodeManifestWithRes(apkFile);
+            List<XMLEntry> loadedEntries = manifestData != null ? manifestData.entries : null;
+            if (loadedEntries == null) loadedEntries = decodeManifest(apkFile);
+            final ManifestData data = manifestData;
+            final List<XMLEntry> finalEntries = loadedEntries;
+            pm.dismiss();
+            if (finalEntries == null) {
+                context.handler.post(() -> Extensions.showMessage(context, R.string.could_not_decode_am));
+                return;
+            }
+            context.handler.post(() -> showQuickEditDialog(apkFile, finalEntries, data));
+        }).start();
+    }
+
+    private void showQuickEditDialog(File apkFile, List<XMLEntry> entries, ManifestData manifestData) {
         View quickEditDialog = LayoutInflater.from(context).inflate(R.layout.quick_edit_dialog, null, false);
         quickEditDialog.findViewById(R.id.app_lancer_icon).setOnClickListener(v -> editLauncherIcon(apkFile));
 
         quickEditDialog.findViewById(R.id.install_location_dropdown);
         AutoCompleteTextView installLocationTextView = quickEditDialog.findViewById(R.id.install_location);
-        ManifestData manifestData = decodeManifestWithRes(apkFile);
-        List<XMLEntry> loadedEntries = manifestData != null ? manifestData.entries : null;
-        if (loadedEntries == null) loadedEntries = decodeManifest(apkFile);
-        if (loadedEntries == null) {
-            Extensions.showMessage(context, R.string.could_not_decode_am);
-            return;
-        }
-        final List<XMLEntry> entries = loadedEntries;
         final List<ResEntry> resEntries = manifestData != null ? manifestData.res : null;
 
         String installLoc = "";
@@ -417,12 +455,7 @@ public class ApkManifestEditor {
                                             } else if (!"3".equals(installLocationSelected[0])) entries.add(4, new XMLEntry("android:installLocation", "=\"", installLocationSelected[0], "\""));
                                         }
 
-                                        if (UiPrefs.genBackup(context)) {
-                                            try {
-                                                FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
-                                            } catch (Exception ignored) {
-                                            }
-                                        }
+                                        backupApk(apkFile);
                                         writeManifestEntries(apkFile, entries, resEntries);
                                         if(sign[0]) wrapper[0].signApk(apkFile);
                                         pm.dismiss();
@@ -459,15 +492,36 @@ public class ApkManifestEditor {
         ProgressManager pm = new ProgressManager(context, true);
 
         fpd.setDialogSelectionListener(files -> new Thread(() -> {
-            String iconPath = findIconPathInManifest(apkFile);
+            IconTargets targets = resolveIconTargets(apkFile);
 
+            byte[] iconBytes;
             try (InputStream is = FileUtils.getInputStream(files[0])) {
-                pm.show().setText(context.rss.getString(R.string.adding, files[0]));
-                replaceZipEntry(apkFile,
-                        iconPath != null ? iconPath : "res/mipmap-xxhdpi-v4/ic_launcher.png",
-                        is);
+                iconBytes = readAllBytes(is);
+            } catch (Exception e) {
                 pm.dismiss();
-                Extensions.showMessage(context, R.string.icon_changed);
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
+                return;
+            }
+
+            if (targets.isEmpty()) {
+                pm.dismiss();
+                context.handler.post(() -> Extensions.showMessage(context, R.string.icon_not_found));
+                return;
+            }
+
+            pm.show().setText(context.rss.getString(R.string.adding, files[0]));
+            try {
+                backupApk(apkFile);
+                writeLauncherIcon(apkFile, iconBytes, targets);
+                String failure = null;
+                int problem = verifyLauncherIcon(apkFile, iconBytes, targets);
+                if (problem != 0) failure = rss.getString(problem);
+                pm.dismiss();
+                if (failure != null) {
+                    Extensions.showMessage(context, failure);
+                } else {
+                    Extensions.showMessage(context, R.string.icon_changed);
+                }
             } catch (Exception e) {
                 pm.dismiss();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
@@ -476,26 +530,357 @@ public class ApkManifestEditor {
         fpd.show();
     }
 
-    private String findIconPathInManifest(File apkFile) {
+    /**
+     * Re-reads the APK after writing to confirm every icon entry now holds the new bytes and
+     * that each re-pointed resource-table entry really resolves to a bitmap.
+     *
+     * @return a string resource id describing the problem, or null when everything is in place
+     */
+    private int verifyLauncherIcon(File apkFile, byte[] iconBytes, IconTargets targets) {
+        Set<String> expect = new HashSet<>(targets.rasterPaths);
+        for (String xmlPath : targets.xmlPaths) expect.add(toBitmapPath(xmlPath));
+        if (expect.isEmpty()) return R.string.icon_not_found;
+
+        byte[] arsc = null;
+        try (ZipFile zf = new ZipFile(apkFile)) {
+            for (String path : expect) {
+                FileHeader h = zf.getFileHeader(path);
+                if (h == null) return R.string.icon_not_found;
+                byte[] actual;
+                try (InputStream is = zf.getInputStream(h)) {
+                    actual = readAllBytes(is);
+                }
+                if (!Arrays.equals(iconBytes, actual)) return R.string.icon_not_found;
+            }
+            if (!targets.xmlPaths.isEmpty()) arsc = readZipEntry(apkFile, "resources.arsc");
+        } catch (Exception e) {
+            return R.string.icon_not_found;
+        }
+        if (arsc != null) {
+            for (String xmlPath : targets.xmlPaths) {
+                if (containsBytes(arsc, (toBitmapPath(xmlPath) + "\0").getBytes(java.nio.charset.StandardCharsets.UTF_8))) continue;
+                if (containsBytes(arsc, toUtf16Le(toBitmapPath(xmlPath) + "\0"))) continue;
+                return R.string.icon_not_found;
+            }
+        }
+        return 0;
+    }
+
+    private static boolean containsBytes(byte[] haystack, byte[] needle) {
+        int end = haystack.length - needle.length;
+        outer:
+        for (int i = 0; i <= end; i++) {
+            for (int j = 0; j < needle.length; j++) if (haystack[i + j] != needle[j]) continue outer;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Writes the new icon: raster files are overwritten in place, and every icon stored as
+     * compiled drawable XML (typically {@code res/mipmap-anydpi-v26/ic_launcher.xml} for
+     * adaptive icons) has its resource-table entry re-pointed at a bitmap that is added
+     * alongside it.
+     */
+    private void writeLauncherIcon(File apkFile, byte[] iconBytes, IconTargets targets) throws IOException {
+        // Read the table before any rewrite so the bytes analysed are the ones patched.
+        Set<String> patched = new HashSet<>();
+        byte[] patchedArsc = targets.xmlPaths.isEmpty() ? null
+                : rePointIconEntriesToBitmap(readZipEntry(apkFile, "resources.arsc"), targets.xmlPaths, patched);
+
+        for (String path : targets.rasterPaths) {
+            replaceZipEntry(apkFile, path, new ByteArrayInputStream(iconBytes));
+        }
+        // Re-pointed entries now resolve to these paths, so the launcher decodes them as bitmaps.
+        for (String xmlPath : targets.xmlPaths) {
+            if (!patched.contains(xmlPath)) continue;
+            replaceZipEntry(apkFile, toBitmapPath(xmlPath), new ByteArrayInputStream(iconBytes));
+        }
+        if (patchedArsc != null) {
+            replaceZipEntry(apkFile, "resources.arsc", new ByteArrayInputStream(patchedArsc));
+        }
+    }
+
+    private static String toBitmapPath(String xmlPath) {
+        return xmlPath.substring(0, xmlPath.length() - 4) + ".png";
+    }
+
+    /**
+     * Rewrites each icon path string in the resource table from ".xml" to ".png" in place.
+     *
+     * <p>Only the extension changes, so every string keeps its exact length and the pool's
+     * lengths and offsets are untouched. The config the resource is filed under
+     * ({@code anydpi-v26} for adaptive icons) is untouched, so the platform still selects the
+     * same entry but now decodes it as a bitmap.
+     *
+     * @param patched receives the paths that were successfully rewritten
+     * @return the new table bytes, or null when nothing could be rewritten
+     */
+    private byte[] rePointIconEntriesToBitmap(byte[] arsc, List<String> xmlPaths, Set<String> patched) {
+        if (arsc == null || arsc.length == 0) return null;
+        byte[] out = arsc;
+        for (String path : xmlPaths) {
+            String bitmapPath = toBitmapPath(path);
+            if (bitmapPath.length() != path.length()) continue;
+            for (boolean utf16 : new boolean[]{false, true}) {
+                byte[] from = pathBytes(path + "\0", utf16);
+                byte[] to = pathBytes(bitmapPath + "\0", utf16);
+                byte[] res = replaceBytes(out, from, to);
+                if (res != null) {
+                    out = res;
+                    patched.add(path);
+                    break;
+                }
+            }
+        }
+        return out == arsc ? null : out;
+    }
+
+    private static byte[] pathBytes(String s, boolean utf16) {
+        return utf16 ? toUtf16Le(s) : s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static byte[] toUtf16Le(String s) {
+        byte[] out = new byte[s.length() * 2];
+        for (int i = 0; i < s.length(); i++) {
+            out[i * 2] = (byte) (s.charAt(i) & 0xFF);
+            out[i * 2 + 1] = (byte) (s.charAt(i) >> 8);
+        }
+        return out;
+    }
+
+    /** Replaces every occurrence of {@code from} with {@code to}; both must be the same length. */
+    private static byte[] replaceBytes(byte[] src, byte[] from, byte[] to) {
+        if (from.length != to.length || from.length == 0) return null;
+        List<Integer> positions = new ArrayList<>();
+        int end = src.length - from.length;
+        outer:
+        for (int i = 0; i <= end; i++) {
+            for (int j = 0; j < from.length; j++) {
+                if (src[i + j] != from[j]) continue outer;
+            }
+            positions.add(i);
+        }
+        if (positions.isEmpty()) return null;
+        byte[] out = src.clone();
+        for (int p : positions) System.arraycopy(to, 0, out, p, to.length);
+        return out;
+    }
+
+    private byte[] readZipEntry(File apkFile, String entry) {
+        try (ZipFile zf = new ZipFile(apkFile)) {
+            FileHeader h = zf.getFileHeader(entry);
+            if (h == null) return null;
+            try (InputStream is = zf.getInputStream(h)) {
+                return readAllBytes(is);
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolves the launcher icon files that the launcher actually reads, using the resource
+     * table rather than guessing from the manifest's {@code android:icon} value alone.
+     *
+     * <p>The resource table lists every density/API variant of the icon, which is what makes
+     * adaptive icons ({@code res/mipmap-anydpi-v26/ic_launcher.xml}) show up here; those are
+     * what modern launchers load on API 26+ and what a PNG-only edit misses.
+     */
+    private IconTargets resolveIconTargets(File apkFile) {
+        IconTargets targets = new IconTargets();
         try (ZipFile zf = new ZipFile(apkFile)) {
             FileHeader manifestEntry = zf.getFileHeader("AndroidManifest.xml");
-            if (manifestEntry == null) return null;
-            try (InputStream mis = zf.getInputStream(manifestEntry)) {
-                APKParser apkParser = new APKParser();
-                apkParser.parse(apkFile.getPath(), context);
-                List<ResEntry> decodedResources = apkParser.getDecodedResources();
+            if (manifestEntry == null) return targets;
 
-                List<XMLEntry> entries = new aXMLDecoder(mis, decodedResources).decode();
-                for (XMLEntry e : entries) {
-                    if (e.getTag().contains("android:icon")) {
-                        String val = e.getValue();
-                        // This is not changing it on all screens sizes fix this
-                        if (val.startsWith("res/")) return val;
+            // Same resource table the quick-edit dialog uses, read from this open zip rather
+            // than through APKParser.parse(), which holds a second descriptor on the APK.
+            List<ResEntry> decodedResources = cachedResourceTable(apkFile, zf);
+
+            List<XMLEntry> entries;
+            try (InputStream mis = zf.getInputStream(manifestEntry)) {
+                entries = new aXMLDecoder(mis, decodedResources).decode();
+            }
+
+            // Only the <application> element's own icons. Nested <service>/<activity>/
+            // <receiver> elements may declare their own android:icon, which must be left alone.
+            Set<String> refs = new HashSet<>();
+            boolean inApplication = false;
+            boolean pastAppAttributes = false;
+            for (XMLEntry e : entries) {
+                String raw = e.getTag();
+                if (raw == null) continue;
+                String t = raw.trim();
+                if ("=\"".equals(e.getMiddleTag())) {
+                    // attribute entry, emitted right after its element's start tag
+                    if (inApplication && !pastAppAttributes && e.getValue() != null
+                            && (t.equals("android:icon") || t.equals("android:roundIcon"))) {
+                        refs.add(e.getValue());
+                    }
+                    continue;
+                }
+                if (t.equals("<application")) {
+                    inApplication = true;
+                    pastAppAttributes = false;
+                } else if (t.equals("</application>")) {
+                    break;
+                } else if (inApplication) {
+                    // first nested element: the application's own attributes are done
+                    pastAppAttributes = true;
+                }
+            }
+            if (refs.isEmpty()) return targets;
+
+            List<ResEntry> iconEntries = new ArrayList<>();
+            if (decodedResources != null) {
+                Set<String> wanted = new HashSet<>();
+                for (String ref : refs) {
+                    if (ref.startsWith("@") && ref.indexOf('/') > 0) wanted.add(ref);
+                }
+                if (wanted.isEmpty()) {
+                    // Reference decoded to a raw id (no resource name available): match on id.
+                    Set<Integer> ids = new HashSet<>();
+                    for (String ref : refs) {
+                        if (ref.startsWith("@")) {
+                            try {
+                                ids.add((int) Long.parseLong(ref.substring(1).replaceAll("[^0-9a-fA-F]", ""), 16));
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    }
+                    for (ResEntry e : decodedResources) {
+                        if (ids.contains(e.getResourceId())) iconEntries.add(e);
+                    }
+                    if (iconEntries.isEmpty()) return targets;
+                } else {
+                    for (ResEntry e : decodedResources) {
+                        if (wanted.contains(e.getName())) iconEntries.add(e);
+                    }
+                    if (iconEntries.isEmpty()) return targets;
+                }
+            }
+
+            for (ResEntry e : iconEntries) addIconPath(zf, targets, e.getValue());
+
+            // An adaptive icon (res/mipmap-anydpi-v26/ic_launcher.xml) composes a background and
+            // a foreground drawable. Both layers must be replaced too, otherwise the launcher
+            // keeps drawing the old artwork through whichever layer was not touched.
+            for (String xmlPath : new ArrayList<>(targets.xmlPaths)) {
+                for (String layerRef : readDrawableRefs(zf, xmlPath)) {
+                    for (ResEntry e : decodedResources != null ? decodedResources : new ArrayList<ResEntry>()) {
+                        if (layerRef.equals(e.getName())) addIconPath(zf, targets, e.getValue());
+                    }
+                }
+            }
+
+            if (targets.isEmpty()) {
+                // Resource table carries no file paths: fall back to matching files by name.
+                Set<String> stems = new HashSet<>();
+                for (ResEntry e : iconEntries) {
+                    String n = e.getName();
+                    if (n != null && n.startsWith("@") && n.contains("/")) stems.add(n.substring(n.lastIndexOf('/') + 1));
+                }
+                if (!stems.isEmpty()) {
+                    for (FileHeader fh : zf.getFileHeaders()) {
+                        if (fh.isDirectory() || fh.getFileName() == null) continue;
+                        String path = fh.getFileName();
+                        int slash = path.lastIndexOf('/');
+                        if (slash < 0) continue;
+                        String base = path.substring(slash + 1);
+                        int dot = base.lastIndexOf('.');
+                        if (dot < 0) continue;
+                        String stem = base.substring(0, dot);
+                        String ext = base.substring(dot + 1).toLowerCase(Locale.ROOT);
+                        if (stems.contains(stem) && isIconImageExt(ext)) targets.rasterPaths.add(path);
                     }
                 }
             }
         } catch (Exception ignored) {}
-        return null;
+        return targets;
+    }
+
+    /**
+     * Reads the {@code android:drawable} references out of an adaptive-icon XML, i.e. its
+     * background and foreground layers. The file is compiled AXML, so it is decoded first.
+     */
+    private List<String> readDrawableRefs(ZipFile zf, String xmlPath) {
+        List<String> refs = new ArrayList<>();
+        try (InputStream is = zf.getInputStream(zf.getFileHeader(xmlPath))) {
+            for (XMLEntry e : new aXMLDecoder(is).decode()) {
+                if ("android:drawable".equals(e.getTag() == null ? null : e.getTag().trim())
+                        && e.getValue() != null) {
+                    refs.add(e.getValue());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return refs;
+    }
+
+    private static boolean isIconImageExt(String ext) {
+        return "png".equals(ext) || "webp".equals(ext) || "jpg".equals(ext) || "jpeg".equals(ext);
+    }
+
+    /** Buckets one icon path; a ".xml" entry must be re-pointed, not overwritten with image bytes. */
+    private void addIconPath(ZipFile zf, IconTargets targets, String path) {
+        if (path == null || !path.startsWith("res/")) return;
+        if (targets.rasterPaths.contains(path) || targets.xmlPaths.contains(path)) return;
+        boolean present;
+        try {
+            FileHeader h = zf.getFileHeader(path);
+            present = h != null && !h.isDirectory();
+        } catch (Exception e) {
+            return;
+        }
+        if (!present) return;
+        if (path.toLowerCase(Locale.ROOT).endsWith(".xml")) targets.xmlPaths.add(path);
+        else {
+            int dot = path.lastIndexOf('.');
+            if (dot >= 0 && isIconImageExt(path.substring(dot + 1).toLowerCase(Locale.ROOT))) {
+                targets.rasterPaths.add(path);
+            }
+        }
+    }
+
+    /**
+     * Everything needed to rewrite a launcher icon.
+     *
+     * <p>{@code rasterPaths} are files the platform already treats as bitmaps. {@code xmlPaths}
+     * are icon files stored as compiled drawable XML - typically
+     * {@code res/mipmap-anydpi-v26/ic_launcher.xml} - which the resource loader inflates as XML
+     * and so cannot simply be replaced with image bytes; they are re-pointed at a bitmap file
+     * through the resource table instead.
+     */
+    private static final class IconTargets {
+        private final List<String> rasterPaths = new ArrayList<>();
+        private final List<String> xmlPaths = new ArrayList<>();
+
+        private boolean isEmpty() {
+            return rasterPaths.isEmpty() && xmlPaths.isEmpty();
+        }
+    }
+
+    private static byte[] readAllBytes(InputStream is) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
+        return out.toByteArray();
+    }
+
+    /**
+     * Creates {@code apkFile + ".bak"} before the first edit of an APK so it holds the real
+     * original. Later edits (icon change, then a manifest save, ...) must not overwrite an
+     * existing backup with an already-modified APK, which is what made backups useless.
+     */
+    private void backupApk(File apkFile) {
+        if (!UiPrefs.genBackup(context)) return;
+        File bak = new File(apkFile.getPath() + ".bak");
+        if (bak.exists()) return;
+        try {
+            FileUtils.copyFile(apkFile, bak);
+        } catch (Exception ignored) {
+        }
     }
 
     public void editAllManifestEntries(File apkFile) {
@@ -681,6 +1066,7 @@ public class ApkManifestEditor {
         if (!found) {
             throw new IOException(rss.getString(R.string.me_attr_missing, attrName));
         }
+        backupApk(apkFile);
         writeManifestEntries(apkFile, entries);
     }
 
@@ -752,12 +1138,7 @@ public class ApkManifestEditor {
             }
         }
         if (changed > 0) {
-            if (UiPrefs.genBackup(context)) {
-                try {
-                    FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
-                } catch (Exception ignored) {
-                }
-            }
+            backupApk(apkFile);
             writeManifestEntries(apkFile, entries, res);
         }
         return changed;
@@ -812,12 +1193,7 @@ public class ApkManifestEditor {
             }
         }
         if (removed > 0) {
-            if (UiPrefs.genBackup(context)) {
-                try {
-                    FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
-                } catch (Exception ignored) {
-                }
-            }
+            backupApk(apkFile);
             writeManifestEntries(apkFile, entries, res);
         }
         return removed;
@@ -1021,17 +1397,9 @@ public class ApkManifestEditor {
                                 new Thread(() -> {
                                     try {
                                         int changed = 0;
-                                        boolean backedUp = false;
                                         for (int i = 0; i < attrs.length; i++) {
                                             if (boxes[i].isChecked() == current[i]) continue;
                                             try {
-                                                if (!backedUp && UiPrefs.genBackup(context)) {
-                                                    try {
-                                                        FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
-                                                    } catch (Exception ignored) {
-                                                    }
-                                                    backedUp = true;
-                                                }
                                                 writeManifestAttrValue(apkFile, attrs[i], Boolean.toString(boxes[i].isChecked()));
                                                 changed++;
                                             } catch (Exception ignored) {
