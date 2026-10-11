@@ -407,16 +407,17 @@ public class APKParser {
 
         mAPKSize = new File(apkPath).length();
 
-        try {
-            ZipFile mZipFile = getZipFile(apkPath);
+        // The zip must be closed before returning: the file descriptor is later rewritten by
+        // APK editing, and a leaked one makes the finalizer thread throw EIO and kill the process.
+        try (ZipFile mZipFile = getZipFile(apkPath)) {
             InputStream manifestStream = null, resStream = null;
             ZipEntry manifestEntry = mZipFile.getEntry("AndroidManifest.xml");
             ZipEntry resEntry = mZipFile.getEntry("resources.arsc");
             if (manifestEntry != null) {
-                manifestStream = mZipFile.getInputStream(mZipFile.getEntry("AndroidManifest.xml"));
+                manifestStream = mZipFile.getInputStream(manifestEntry);
             }
             if (resEntry != null) {
-                resStream = mZipFile.getInputStream(mZipFile.getEntry("resources.arsc"));
+                resStream = mZipFile.getInputStream(resEntry);
             }
             if (manifestStream != null) {
                 mResDecoded = new ResourceTableParser(resStream).parse();
