@@ -84,6 +84,7 @@
         <activity
             android:theme="@style/Theme.Material3.DayNight.NoActionBar"
             android:name="io.github.abdurazaaqmohammed.MPManager.MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
