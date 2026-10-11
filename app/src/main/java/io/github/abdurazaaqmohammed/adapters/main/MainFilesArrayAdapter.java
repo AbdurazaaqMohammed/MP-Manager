@@ -327,7 +327,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 originalClickListener = isMultiSelectMode ? v -> {
                     context.setSelectedPane(pane1 ? 1 : 2);
                     handleMultiSelect(finalPosition);
-                } : !isInZip && file.isFile() ?
+                } : !isInZip && file != null && !file.isDirectory() ?
                     v -> {
                         context.setSelectedPane(pane1 ? 1 : 2);
                         context.setCurrentFolder(file.getParentFile(), getOldValues());

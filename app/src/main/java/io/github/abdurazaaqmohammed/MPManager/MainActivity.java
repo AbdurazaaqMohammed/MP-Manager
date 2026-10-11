@@ -1336,7 +1336,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             loadFtpFolderInPane((FTPFileWrapper) folder, pane1);
             return;
         }
-        if (folder.getName().endsWith(".zip")) {
+        if (!folder.isDirectory() && folder.getName().endsWith(".zip")) {
             loadZipFolderInPane(folder, "", pane1, addToHistory);
             return;
         }
@@ -1668,7 +1668,25 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             return;
         }
         boolean isPane1 = lastPaneSelected == 1;
-        loadFolderInPane(isPane1 ? pane1Folder : pane2Folder, isPane1);
+        File folderToReload = isPane1 ? pane1Folder : pane2Folder;
+        loadFolderInPane(folderToReload, isPane1);
+        // If both panes show the same plain folder, reload the other pane too.
+        if (folderToReload != null && !folderToReload.isFile() && !folderToReload.getName().endsWith(".zip")) {
+            File otherFolder = isPane1 ? pane2Folder : pane1Folder;
+            if (otherFolder != null && folderToReload.equals(otherFolder)) {
+                // Check that the other pane is showing a plain folder (not a zip subpath)
+                RecyclerView otherPaneView = findViewById(isPane1 ? R.id.listViewPane2 : R.id.listViewPane1);
+                if (otherPaneView != null) {
+                    RecyclerView.Adapter<?> otherAdapter = otherPaneView.getAdapter();
+                    if (otherAdapter instanceof MainFilesArrayAdapter) {
+                        MainFilesArrayAdapter oa = (MainFilesArrayAdapter) otherAdapter;
+                        if (!oa.isInZip) {
+                            loadFolderInPane(otherFolder, !isPane1, false);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void setupPullToRefresh() {
@@ -1676,7 +1694,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshPane2)).setOnRefreshListener(() -> refreshPane(false));
     }
 
+    /**
+     * Refreshes the given pane. When both panes are pointing at the same folder (and the same
+     * location inside an archive) the other pane is refreshed too, so the dual view stays in sync.
+     */
     public void refreshPane(boolean pane1) {
+        reloadPane(pane1);
+        if (panesShowSameFolder()) {
+            reloadPane(!pane1);
+            try {
+                ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane2 : R.id.swipeRefreshPane1)).setRefreshing(false);
+            } catch (Exception ignored) { }
+        }
+        ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
+    }
+
+    private void reloadPane(boolean pane1) {
         try {
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             RecyclerView.Adapter<?> adapter = pane.getAdapter();
@@ -1688,7 +1721,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception e) {
             new ErrorUtil(this).showError(e);
         }
-        ((SwipeRefreshLayout) findViewById(pane1 ? R.id.swipeRefreshPane1 : R.id.swipeRefreshPane2)).setRefreshing(false);
+    }
+
+    private MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {
+        RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+        if (pane != null && pane.getAdapter() instanceof MainFilesArrayAdapter adapter) return adapter;
+        return null;
+    }
+
+    /** True when both panes list the same folder and the same location inside an archive. */
+    private boolean panesShowSameFolder() {
+        File first = pane1Folder;
+        File second = pane2Folder;
+        if (first == null || second == null || !first.equals(second)) return false;
+        MainFilesArrayAdapter a = paneFilesAdapter(true);
+        MainFilesArrayAdapter b = paneFilesAdapter(false);
+        if (a == null || b == null) return false;
+        if (a.isInZip != b.isInZip) return false;
+        return a.currentZipPath == null ? b.currentZipPath == null : a.currentZipPath.equals(b.currentZipPath);
     }
 
     public void refreshAllPanes() {
@@ -1696,8 +1746,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             handler.post(this::refreshAllPanes);
             return;
         }
-        try { refreshPane(true); } catch (Exception ignored) { }
-        try { refreshPane(false); } catch (Exception ignored) { }
+        try { reloadPane(true); } catch (Exception ignored) { }
+        try { reloadPane(false); } catch (Exception ignored) { }
     }
 
     public void setCurrentFolder(File curr, File[] files) {
@@ -1805,7 +1855,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
                 File target = new File(locate);
                 File folder = target.isFile() ? target.getParentFile() : target;
-                if (folder != null && folder.exists()) {
+                // exists() is false under /data for the app uid, so fall back to the elevated
+                // backend before giving up on a root/shizuku-resolved path.
+                boolean reachable = folder != null && (folder.exists()
+                        || AccessManager.exists(this, folder.getAbsolutePath()));
+                if (reachable) {
                     loadFolderInPane(folder, true);
                     Extensions.showMessage(this, rss.getString(R.string.loaded_X, target.getPath()));
                 }

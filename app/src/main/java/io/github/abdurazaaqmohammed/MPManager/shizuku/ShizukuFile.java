@@ -35,8 +35,21 @@ public class ShizukuFile extends File {
     }
 
     private static boolean guessIsDirectory(String path) {
-        // Root Android/data itself is always a directory; children get real values from listing.
-        return path.equals(ANDROID_DATA) || !path.substring(path.lastIndexOf('/') + 1).contains(".");
+        // Root Android/data itself is always a directory.
+        if (path.equals(ANDROID_DATA)) return true;
+        // Never guess from the name: "my.folder" is a directory and must not be
+        // treated as a file. Ask the filesystem; children listed by tryList carry
+        // their real type anyway, this only covers paths built by hand.
+        try {
+            File f = new File(path);
+            if (f.isDirectory()) return true;
+            if (f.isFile()) return false;
+        } catch (Exception ignored) {
+        }
+        if (ShizukuShell.isGranted()) {
+            return ShizukuShell.exec("[ -d " + RootManager.escapeShellArg(path) + " ]").success;
+        }
+        return false;
     }
 
     public static boolean isAndroidDataPath(String path) {
@@ -116,7 +129,10 @@ public class ShizukuFile extends File {
         } catch (NumberFormatException e) {
             size = 0;
         }
-        return new ShizukuFile(join(parent, name), type == 'd' || type == 'l' && name.indexOf('.') < 0, size);
+        // Type comes from the ls permission column. A symlink ('l') to a directory is
+        // reported as a directory so folders reached through links still open; never infer
+        // the type from the name ("my.folder" is a directory).
+        return new ShizukuFile(join(parent, name), type == 'd' || type == 'l', size);
     }
 
     private static String join(String parent, String name) {
