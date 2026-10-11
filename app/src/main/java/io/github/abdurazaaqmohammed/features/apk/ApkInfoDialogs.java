@@ -95,6 +95,7 @@ import io.github.abdurazaaqmohammed.utils.InstallUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.SmobApkPatcher;
 import io.github.abdurazaaqmohammed.utils.ApkDeepOptimizer;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.adapters.main.FileIconLoader;
@@ -263,6 +264,90 @@ public class ApkInfoDialogs {
         builder.show();
     }
 
+    /**
+     * Smob deobfuscator acting directly on the APK: each classes*.dex is
+     * round-tripped through baksmali {@code ->} smali cleanup {@code ->}
+     * assemble (no full decode), then swapped back into a copy of the APK.
+     */
+    public void showSmobDeobfuscateDialog(File apkFile, String apkFileName) {
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad / 2, pad, pad / 2);
+
+        TextView desc = new TextView(context);
+        desc.setText(context.rss.getString(R.string.smob_desc_apk, apkFileName));
+        layout.addView(desc);
+
+        final boolean[] sign = new boolean[1];
+        CheckBox autosign = new CheckBox(context);
+        autosign.setText(context.rss.getString(R.string.sign_apk));
+        autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
+        autosign.setOnCheckedChangeListener((buttonView, isChecked) ->
+                settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+        layout.addView(autosign);
+        LinearLayout signRow = new LinearLayout(context);
+        signRow.setOrientation(LinearLayout.HORIZONTAL);
+        MaterialButton signSettings = new MaterialButton(context);
+        signSettings.setText(context.rss.getString(R.string.sign_settings));
+        signSettings.setOnClickListener(uiHelper.showSignSettingsDialog());
+        signRow.addView(signSettings);
+        layout.addView(signRow);
+
+        dialogUtil.getDialogBuilder()
+                .setTitle(context.rss.getString(R.string.smob_deobfuscate_title))
+                .setView(layout)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(context.rss.getString(R.string.smob_run), (d, w) -> {
+                    String base = apkFileName.contains(".")
+                            ? apkFileName.substring(0, apkFileName.lastIndexOf('.')) : apkFileName;
+                    File out = new File(apkFile.getParentFile(), base + "_deobfuscated.apk");
+                    int n = 1;
+                    while (out.exists()) {
+                        out = new File(apkFile.getParentFile(), base + "_deobfuscated_" + (++n) + ".apk");
+                    }
+                    final File outApk = out;
+                    SignWrapper[] wrapper = new SignWrapper[1];
+                    Runnable doWork = () -> {
+                        ProgressManager pm = new ProgressManager(context, true).show();
+                        APKLogger logger = pm.getLogger();
+                        new Thread(() -> {
+                            try {
+                                SmobApkPatcher.Result r = SmobApkPatcher.deobfuscateApk(
+                                        context, apkFile, outApk,
+                                        (entry, done, total) -> pm.setText("Smob " + done + "/" + total + ": " + entry),
+                                        logger);
+                                if (sign[0]) wrapper[0].signApk(outApk);
+                                try {
+                                    logger.close();
+                                } catch (Exception ignored) {
+                                }
+                                pm.dismiss();
+                                context.handler.post(() -> {
+                                    Extensions.showMessage(context, context.rss.getString(
+                                            R.string.smob_done_apk, r.classesChanged,
+                                            r.classesProcessed, r.dexCount, outApk.getName()));
+                                    context.reloadCurrentFolder();
+                                });
+                            } catch (Exception e) {
+                                try {
+                                    logger.close();
+                                } catch (Exception ignored) {
+                                }
+                                pm.dismiss();
+                                new ErrorUtil(context).showError(e);
+                            }
+                        }).start();
+                    };
+                    if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                        wrapper[0] = sw;
+                        doWork.run();
+                    });
+                    else doWork.run();
+                }).show();
+    }
+
     @SuppressLint("RequestInstallPackagesPolicy")
     public void showApkInfoDialog(File file, String fileName) {
         String filePath = file.getPath();
@@ -325,7 +410,7 @@ public class ApkInfoDialogs {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton(R.string.more, (dialog, which) -> {
-                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)));
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions), context.rss.getString(R.string.smob_deobfuscate)));
                     // Third-party APK actions appended after the 14 built-ins.
                     final List<ApkMoreAction> pluginMore =
                             ExtensionRegistry.apkActions();
@@ -660,9 +745,10 @@ public class ApkInfoDialogs {
                     else if (which1 == 10) signatures.showSignatureHealthDialog(file);
                     else if (which1 == 11) manifestEditor.showManifestTogglesDialog(file);
                     else if (which1 == 12) manifestEditor.showPermissionsDialog(file);
+                    else if (which1 == 13) showSmobDeobfuscateDialog(file, fileName);
                     else {
-                        // Third-party APK action: indices 0-12 are built-ins above.
-                        int pluginIndex = which1 - 13;
+                        // Third-party APK action: indices 0-13 are built-ins above.
+                        int pluginIndex = which1 - 14;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
                             ApkMoreAction ext = pluginMore.get(pluginIndex);
                             if (ext != null) {
@@ -672,7 +758,7 @@ public class ApkInfoDialogs {
                                 }
                             }
                         } else {
-                            int extIndex = which1 - 13 - pluginMore.size();
+                            int extIndex = which1 - 14 - pluginMore.size();
                             if (extIndex >= 0 && extIndex < externalApk.size()) {
                                 ExternalActions.Entry found =
                                         externalApk.get(extIndex);

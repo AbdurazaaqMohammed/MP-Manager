@@ -27,9 +27,11 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
@@ -49,8 +51,11 @@ import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
@@ -79,6 +84,13 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final BatchImageTools batchImages;
     private final FileOpener fileOpener;
     private final EntryDialogs entryDialogs;
+
+    /** Row metrics snapshotted once: bind previously re-read prefs per row. */
+    private final float nameTextSize;
+    private final int nameMaxLines;
+    private final int rowIconPx;
+    /** Memoized isDir per listing (one adapter instance == one listing). */
+    private final Map<String, Boolean> dirMemo = new HashMap<>();
 
     public void setMultiSelectMode(boolean multiSelectMode) {
         context.setMultiSelectModeUI(isMultiSelectMode = multiSelectMode);
@@ -120,6 +132,34 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return (File[]) values;
     }
 
+    /**
+     * Directory test that also works for root-only paths. A plain
+     * {@link File} wrapping e.g. {@code /data/data/...} reports neither
+     * directory nor file (the app uid cannot stat it), which previously made
+     * the ".." entry fall into the open-as-file branch and fail in
+     * {@code RootManager.streamFromRoot}. Ask the elevated backend instead.
+     */
+    private boolean isDir(File f) {
+        try {
+            if (f == null) return false;
+            if (f.isDirectory()) return true;
+            if (f.isFile()) return false;
+            if (AccessManager.fileOpsOn(context)) {
+                String path = f.getAbsolutePath();
+                try {
+                    if (RootManager.getInstance(context).isDirectory(path)) return true;
+                } catch (Exception ignored) {
+                }
+                try {
+                    if (ShizukuManager.isDirectory(context, path)) return true;
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
             String currentZipPath) {
         this.values = isInZip ? values : getNewValues(values, (File) parent);
@@ -127,6 +167,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         this.pane1 = pane1;
         this.isInZip = isInZip;
         this.currentZipPath = currentZipPath;
+        int scale = UiPrefs.getScale(context);
+        this.nameTextSize = UiPrefs.nameSize(scale);
+        this.nameMaxLines = UiPrefs.getMaxLines(context);
+        this.rowIconPx = UiPrefs.iconDp(context, scale);
         dialogUtil = context.dialogUtil;
         uiHelper = context.uiHelper;
         iconLoader = new FileIconLoader(context, isInZip);
@@ -193,6 +237,25 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         MainFilesArrayAdapter.this.clearSelection();
                     }
                 });
+    }
+
+    /** isDir() can hit the elevated backend; memoize per listing. */
+    private boolean isDirCached(File f) {
+        if (f == null) return false;
+        String key;
+        try {
+            key = f.getAbsolutePath();
+        } catch (Exception ignored) {
+            return isDir(f);
+        }
+        Boolean cached = dirMemo.get(key);
+        if (cached != null) return cached;
+        boolean result = isDir(f);
+        try {
+            dirMemo.put(key, result);
+        } catch (Exception ignored) {
+        }
+        return result;
     }
 
     public void openWithForFile(File file, String fileName) {
@@ -283,8 +346,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         position = holder.getBindingAdapterPosition();
         if (position < 0 || position >= values.length) return;
         Object item = values[position];
-        final ViewHolder bindHolder = holder;
-        final Object boundItem = item;
         File file;
         ZipEntryInfo entry;
         String fileName;
@@ -293,15 +354,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         holder.fileDateView.setText("");
         holder.fileIconView.setImageDrawable(null);
 
-        int scale = UiPrefs.getScale(context);
-        holder.fileNameView.setTextSize(UiPrefs.nameSize(scale));
-        holder.fileNameView.setMaxLines(UiPrefs.getMaxLines(context));
+        holder.fileNameView.setTextSize(nameTextSize);
+        holder.fileNameView.setMaxLines(nameMaxLines);
         holder.fileNameView.setEllipsize(TextUtils.TruncateAt.END);
-        int iconPx = UiPrefs.iconDp(context, scale);
         ViewGroup.LayoutParams iconParams = holder.fileIconView.getLayoutParams();
-        if (iconParams != null) {
-            iconParams.width = iconPx;
-            iconParams.height = iconPx;
+        if (iconParams != null && (iconParams.width != rowIconPx || iconParams.height != rowIconPx)) {
+            // Unconditional setLayoutParams per bind forces a remeasure of
+            // every row on every bind; only touch it when the size changed.
+            iconParams.width = rowIconPx;
+            iconParams.height = rowIconPx;
             holder.fileIconView.setLayoutParams(iconParams);
         }
 
@@ -318,36 +379,60 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         }
 
         convertView.setBackgroundColor(selectedPositions.contains(position) ? Color.DKGRAY : Color.TRANSPARENT);
-        int finalPosition = position;
-        new Thread(() -> {
-            View.OnClickListener originalClickListener;
-            if(isInZip && finalPosition == 0 && entry.getFullPath() == null) {
-                originalClickListener = v -> context.loadFolderInPane(entry.getZipFile().getParentFile(), pane1);
-            } else {
-                originalClickListener = isMultiSelectMode ? v -> {
-                    context.setSelectedPane(pane1 ? 1 : 2);
-                    handleMultiSelect(finalPosition);
-                } : !isInZip && file != null && !file.isDirectory() ?
-                    v -> {
-                        context.setSelectedPane(pane1 ? 1 : 2);
-                        context.setCurrentFolder(file.getParentFile(), getOldValues());
-                        fileOpener.handleFileClick(file, fileName);
-                    } : (View.OnClickListener) v -> {
-                    context.setSelectedPane(pane1 ? 1 : 2);
-                    if (isInZip)
-                        fileOps.handleZipEntryClick(entry);
-                    else
-                        context.loadFolderInPane(file, pane1);
-                };
-            }
+        final int finalPosition = position;
+        final File finalFile = file;
+        final ZipEntryInfo finalEntry = entry;
+        final String finalFileName = fileName;
+        final Object finalItem = item;
 
-            View.OnLongClickListener originalLongClickListener = v -> {
+        final View.OnClickListener originalClickListener;
+        if (isInZip && finalPosition == 0 && finalEntry.getFullPath() == null) {
+            originalClickListener = v -> context.loadFolderInPane(finalEntry.getZipFile().getParentFile(), pane1);
+        } else {
+            originalClickListener = isMultiSelectMode ? v -> {
                 context.setSelectedPane(pane1 ? 1 : 2);
-                if (isInZip) {
-                    context.setCurrentFolder(currentZipPath, Arrays.asList(values));
-                } else
-                    context.setCurrentFolder(file.getParentFile(), getOldValues());
+                handleMultiSelect(finalPosition);
+            } : !isInZip && finalFile != null && finalPosition != 0 && !isDirCached(finalFile) ?
+                v -> {
+                    context.setSelectedPane(pane1 ? 1 : 2);
+                    context.setCurrentFolder(finalFile.getParentFile(), getOldValues());
+                    fileOpener.handleFileClick(finalFile, finalFileName);
+                } : (View.OnClickListener) v -> {
+                context.setSelectedPane(pane1 ? 1 : 2);
+                if (isInZip)
+                    fileOps.handleZipEntryClick(finalEntry);
+                else
+                    context.loadFolderInPaneAsync(finalFile, pane1);
+            };
+        }
 
+        convertView.setOnTouchListener(new SwipeTouchListener(
+                context,
+                originalClickListener,
+                v -> {
+                    showRowMenu(finalPosition, finalFile, finalEntry, finalFileName, finalItem);
+                    return true;
+                },
+                finalPosition,
+                MainFilesArrayAdapter.this,
+                pane1 ? 1 : 2));
+    }
+
+    /**
+     * Builds and shows a row's long-press menu on demand. Previously this ran
+     * on a fresh thread for every bound row (menu model, URI staging, dialog
+     * inflation) whether or not the user ever long-pressed it. Press-time
+     * state (selection etc.) is also fresher than bind-time snapshots.
+     */
+    private void showRowMenu(int finalPosition, File file, ZipEntryInfo entry, String fileName, Object item) {
+        context.setSelectedPane(pane1 ? 1 : 2);
+        if (isInZip) {
+            context.setCurrentFolder(currentZipPath, Arrays.asList(values));
+        } else if (file != null)
+            context.setCurrentFolder(file.getParentFile(), getOldValues());
+
+        new Thread(() -> {
+            try {
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
                 List<FileMenuOrder.MenuItem> visibleMenu = new ArrayList<>();
@@ -502,7 +587,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 ((TextView) menuView.findViewById(R.id.fileMenuTitle)).setText(fileName);
                 RecyclerView menuList = menuView.findViewById(R.id.fileMenuList);
                 final BottomSheetDialog menuSheet;
-                final AlertDialog menuDialog;
+                final MaterialAlertDialogBuilder menuDialogBuilder;
+                final AlertDialog[] menuDialog = {null};
                 if (twoColumnMenu) {
                     View handle = menuView.findViewById(R.id.fileMenuHandle);
                     if (handle != null) handle.setVisibility(View.GONE);
@@ -511,15 +597,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     int edge = (int) (12 * density + 0.5f);
                     menuList.setPadding(edge, menuList.getPaddingTop(), edge, menuList.getPaddingBottom());
                     menuSheet = null;
-                    menuDialog = new MaterialAlertDialogBuilder(context).setView(menuView).create();
+                    menuDialogBuilder = new MaterialAlertDialogBuilder(context).setView(menuView);
                 } else {
                     menuList.setLayoutManager(new LinearLayoutManager(context));
                     menuSheet = new BottomSheetDialog(context);
-                    menuDialog = null;
+                    menuDialogBuilder = null;
                 }
                 menuList.setAdapter(new DialogAdapter(context, menuItems, isInZip, twoColumnMenu, position1 -> {
                     if (menuSheet != null) menuSheet.dismiss();
-                    if (menuDialog != null) menuDialog.dismiss();
+                    if(menuDialog[0] != null) menuDialog[0].dismiss();
                     try {
                         String actionId = itemIds[position1];
                         FileMenuAction pluginAction = ExtensionRegistry.findFileMenu(actionId);
@@ -687,24 +773,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     menuSheet.setContentView(menuView);
                     context.runOnUiThread(menuSheet::show);
                 } else {
-                    context.runOnUiThread(menuDialog::show);
+                    context.runOnUiThread(() -> menuDialog[0] = menuDialogBuilder.show());
                 }
-                return true;
-            };
-            context.handler.post(() -> {
-                int currentPos = bindHolder.getBindingAdapterPosition();
-                if (currentPos < 0 || currentPos >= values.length) return;
-                if (values[currentPos] != boundItem) return;
-                convertView.setOnTouchListener(new SwipeTouchListener(
-                        context,
-                        originalClickListener,
-                        originalLongClickListener,
-                        finalPosition,
-                        MainFilesArrayAdapter.this,
-                        pane1 ? 1 : 2));
-            });
+            } catch (Exception e) {
+                try {
+                    new ErrorUtil(context).showError(e);
+                } catch (Exception ignored) {
+                }
+            }
         }).start();
-
     }
 
 

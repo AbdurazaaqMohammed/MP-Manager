@@ -67,12 +67,18 @@ public class App extends MultiDexApplication {
         super.onCreate();
         instance = this;
         ServiceLocator.init(this);
-        try {
-            // Tools (except a few built-ins like Storage Manager) ship as
-            // downloadable packs now; load whatever the user installed.
-            PackManager.loadInstalledPacks(this);
-        } catch (Exception ignored) {
-        }
+        // Cold-start optimization: each pack costs an asset read, a signature
+        // check (PackageManager IPC), a resources.arsc parse and a
+        // DexClassLoader dexopt. None of it is needed before first paint;
+        // ToolsHub rebuilds its list in onResume, so late arrival is picked up.
+        new Thread(() -> {
+            try {
+                // Tools (except a few built-ins like Storage Manager) ship as
+                // downloadable packs now; load whatever the user installed.
+                PackManager.loadInstalledPacks(this);
+            } catch (Exception ignored) {
+            }
+        }, "packs-load").start();
         clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

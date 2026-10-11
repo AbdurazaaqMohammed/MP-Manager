@@ -23,6 +23,12 @@ public class PluginPackageReceiver extends BroadcastReceiver {
                     && !intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                 PluginHost.removeTrust(context.getApplicationContext(), pkg);
             }
+            // Sidebar/file-menu entry caches (60s TTL) would otherwise show a
+            // stale plugin list after installs/uninstalls/replacements.
+            try {
+                ExternalActions.clearSidebarCache();
+            } catch (Exception ignored) {
+            }
         } catch (Exception ignored) {
         }
     }

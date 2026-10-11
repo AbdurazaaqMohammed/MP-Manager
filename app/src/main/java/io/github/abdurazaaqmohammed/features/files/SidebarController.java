@@ -71,6 +71,13 @@ public class SidebarController {
         startSidebarDrag(organizeDragView, organizeDragEntry);
     };
     private BroadcastReceiver storageRefreshReceiver;
+    /**
+     * False until the first drawer open: gathering sidebar data costs
+     * StorageManager/StatFs I/O, per-bookmark stats and PackageManager
+     * queries, so it never runs on the cold-start path. See
+     * {@link #ensureSidebarData()}.
+     */
+    private boolean sidebarDataReady;
 
     public SidebarController(MainActivity activity) {
         this.activity = activity;
@@ -171,7 +178,9 @@ public class SidebarController {
         for (String section : new String[]{"storage", "bookmarks", "tools"}) {
             sidebarAdapter.setCollapsedState(section, collapsed.contains(section));
         }
-        refreshSidebar(sectionOrder);
+        // Data intentionally NOT loaded here: ensureSidebarData() fills the
+        // adapter on first drawer open (async), keeping cold start free of
+        // storage stats and PackageManager queries.
         sidebarList.setAdapter(sidebarAdapter);
         sidebarList.setOnItemClickListener((parent, view, position, id) -> {
             SidebarAdapter.SidebarEntry entry = sidebarAdapter.getEntry(position);
@@ -301,31 +310,147 @@ public class SidebarController {
     }
 
     public void refreshSidebar(List<String> sectionOrder) {
-        if (sidebarAdapter == null) return;
+        if (sidebarAdapter == null || !sidebarDataReady) return;
         try {
-            Map<String, List<File>> groups = new LinkedHashMap<>();
-            for (String group : activity.bookmarkGroups()) groups.put(group, activity.groupBookmarks(group));
-            List<StorageUtil.StorageInfo> storage = new ArrayList<>();
-            try {
-                storage = StorageUtil.getStorageInfos(activity);
-            } catch (Exception ignored) {
-            }
-            sidebarAdapter.setData(sectionOrder,
-                    PreferenceManager.getDefaultSharedPreferences(activity).getBoolean("sidebar_show_bookmarks", true),
-                    PreferenceManager.getDefaultSharedPreferences(activity).getBoolean("sidebar_show_bookmark_groups", false),
-                    storage, activity.getBookmarks(), groups, activity.bookmarkLabels());
+            SidebarData data = loadSidebarData(sectionOrder);
+            if (data == null) return;
+            sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
+                    data.storage, data.bookmarks, data.groups, data.labels);
         } catch (Exception ignored) {
         }
+    }
+
+    /**
+     * Surprise-arrival refresh (resume, media broadcast, root probe): same as
+     * {@link #refreshSidebar} but the I/O runs off the main thread. Explicit
+     * user actions (pull-to-refresh, organize) keep the synchronous variant.
+     */
+    public void refreshSidebarAsync(List<String> sectionOrder) {
+        if (sidebarAdapter == null || !sidebarDataReady) return;
+        new Thread(() -> {
+            final SidebarData data;
+            try {
+                data = loadSidebarData(sectionOrder);
+            } catch (Exception ignored) {
+                return;
+            }
+            if (data == null) return;
+            try {
+                activity.handler.post(() -> {
+                    try {
+                        if (sidebarAdapter == null || activity.isFinishing() || activity.isDestroyed()) return;
+                        sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
+                                data.storage, data.bookmarks, data.groups, data.labels);
+                    } catch (Exception ignored) {
+                    }
+                });
+            } catch (Exception ignored) {
+            }
+        }, "sidebar-refresh").start();
+    }
+
+    /**
+     * First-open path: marks data ready immediately (coalescing concurrent
+     * triggers), gathers everything off the main thread, then binds on it.
+     * The drawer opens right away; rows populate moments later.
+     */
+    public void ensureSidebarData() {
+        if (sidebarAdapter == null || sidebarDataReady) return;
+        sidebarDataReady = true;
+        new Thread(() -> {
+            try {
+                // Warm the plugin caches off-main so the bind below rarely
+                // hits PackageManager on the UI thread.
+                try {
+                    ExternalActions.sidebarEntries(activity);
+                } catch (Exception ignored) {
+                }
+                try {
+                    ExtensionRegistry.sidebarActions();
+                } catch (Exception ignored) {
+                }
+            } catch (Exception ignored) {
+            }
+            final SidebarData data;
+            try {
+                data = loadSidebarData(getSidebarSectionOrder());
+            } catch (Exception ignored) {
+                return;
+            }
+            if (data == null) return;
+            try {
+                activity.handler.post(() -> {
+                    try {
+                        if (sidebarAdapter == null || activity.isFinishing() || activity.isDestroyed()) return;
+                        sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
+                                data.storage, data.bookmarks, data.groups, data.labels);
+                    } catch (Exception ignored) {
+                    }
+                });
+            } catch (Exception ignored) {
+            }
+        }, "sidebar-load").start();
+    }
+
+    /** Raw sidebar inputs; safe on any thread, never touches views. */
+    private SidebarData loadSidebarData(List<String> sectionOrder) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        SidebarData data = new SidebarData();
+        data.order = sectionOrder;
+        try {
+            data.showBookmarks = prefs.getBoolean("sidebar_show_bookmarks", true);
+        } catch (Exception ignored) {
+            data.showBookmarks = true;
+        }
+        try {
+            data.showGroups = prefs.getBoolean("sidebar_show_bookmark_groups", false);
+        } catch (Exception ignored) {
+            data.showGroups = false;
+        }
+        data.groups = new LinkedHashMap<>();
+        try {
+            for (String group : activity.bookmarkGroups()) data.groups.put(group, activity.groupBookmarks(group));
+        } catch (Exception ignored) {
+        }
+        data.storage = new ArrayList<>();
+        try {
+            List<StorageUtil.StorageInfo> infos = StorageUtil.getStorageInfos(activity);
+            if (infos != null) data.storage = infos;
+        } catch (Exception ignored) {
+        }
+        data.bookmarks = new ArrayList<>();
+        try {
+            ArrayList<File> marks = activity.getBookmarks();
+            if (marks != null) data.bookmarks = marks;
+        } catch (Exception ignored) {
+        }
+        data.labels = new LinkedHashMap<>();
+        try {
+            Map<String, String> labels = activity.bookmarkLabels();
+            if (labels != null) data.labels.putAll(labels);
+        } catch (Exception ignored) {
+        }
+        return data;
+    }
+
+    private static final class SidebarData {
+        List<String> order;
+        boolean showBookmarks;
+        boolean showGroups;
+        List<StorageUtil.StorageInfo> storage;
+        List<File> bookmarks;
+        Map<String, List<File>> groups;
+        Map<String, String> labels;
     }
 
     private void openSidebarEntry(SidebarAdapter.SidebarEntry entry) {
         if (sidebarOrganizeMode) return;
         if (entry == null || entry.type() == SidebarAdapter.EntryType.HEADER) return;
         if (entry.type() == SidebarAdapter.EntryType.STORAGE) {
-            activity.loadFolderInPane(new File(entry.storage().path), activity.lastPaneSelected == 1);
+            activity.loadFolderInPaneAsync(new File(entry.storage().path), activity.lastPaneSelected == 1, true);
         } else if (entry.type() == SidebarAdapter.EntryType.BOOKMARK) {
             File file = entry.file();
-            activity.loadFolderInPane(file.isFile() ? file.getParentFile() : file, activity.lastPaneSelected == 1);
+            activity.loadFolderInPaneAsync(file.isFile() ? file.getParentFile() : file, activity.lastPaneSelected == 1, true);
         } else {
             openSidebarTool(entry.id());
         }
@@ -472,12 +597,10 @@ public class SidebarController {
             storageRefreshReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    activity.handler.post(() -> {
-                        try {
-                            refreshSidebar(getSidebarSectionOrder());
-                        } catch (Exception ignored) {
-                        }
-                    });
+                    try {
+                        refreshSidebarAsync(getSidebarSectionOrder());
+                    } catch (Exception ignored) {
+                    }
                 }
             };
             IntentFilter filter = new IntentFilter();

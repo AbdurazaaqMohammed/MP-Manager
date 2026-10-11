@@ -69,6 +69,8 @@ public class BookmarksController {
     private TabLayoutMediator bookmarksMediator;
     private ListView bookmarksList;
     private ListView historyList;
+    /** True once group/label metadata is loaded (views not required). */
+    private boolean metaLoaded;
 
     public BookmarksController(MainActivity activity) {
         this.activity = activity;
@@ -139,8 +141,7 @@ public class BookmarksController {
             return true;
         });
 
-        loadBookmarkGroups();
-        loadBookmarkLabels();
+        ensureBookmarkMeta();
         bookmarksTabs = activity.findViewById(R.id.bookmarksTabs);
         bookmarksPager = activity.findViewById(R.id.bookmarksPager);
         rebuildBookmarksPager();
@@ -734,6 +735,24 @@ public class BookmarksController {
     private void loadBookmarkLabels() {
         bookmarkLabels.clear();
         bookmarkLabels.putAll(store.loadLabels());
+    }
+
+    /**
+     * Loads group/label metadata without building drawer views. Idempotent
+     * and cheap (two tiny Gson reads): used by the post-paint sidebar preload
+     * so labels/groups are correct even if no drawer was ever opened.
+     */
+    public void ensureBookmarkMeta() {
+        if (metaLoaded) return;
+        metaLoaded = true;
+        try {
+            loadBookmarkGroups();
+        } catch (Exception ignored) {
+        }
+        try {
+            loadBookmarkLabels();
+        } catch (Exception ignored) {
+        }
     }
 
     private void applyBookmarksBarHeight(int percent) {

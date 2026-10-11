@@ -37,6 +37,8 @@ public final class ExternalActions {
     private static final long CACHE_TTL_MS = 60_000;
     private static long sFileCacheAt;
     private static List<Entry> sFileCache = new ArrayList<>();
+    private static long sSidebarCacheAt;
+    private static List<Entry> sSidebarCache = new ArrayList<>();
 
     private ExternalActions() {
     }
@@ -64,7 +66,20 @@ public final class ExternalActions {
         return def;
     }
 
-    public static List<Entry> sidebarEntries(Context context) {
+    /**
+     * Sidebar entries, cached briefly like the file entries: every sidebar
+     * rebuild calls this 2-3x and each miss is a PackageManager IPC. Call
+     * {@link #clearSidebarCache()} after installs/removals for a fresh query.
+     */
+    public static synchronized List<Entry> sidebarEntries(Context context) {
+        long now = 0;
+        try {
+            now = System.currentTimeMillis();
+        } catch (Exception ignored) {
+        }
+        if (sSidebarCache != null && now - sSidebarCacheAt < CACHE_TTL_MS) {
+            return new ArrayList<>(sSidebarCache);
+        }
         List<Entry> out = new ArrayList<>();
         try {
             for (ExternalPlugin p : PluginHost.query(context, PluginContracts.ACTION_SIDEBAR_OPEN)) {
@@ -76,7 +91,14 @@ public final class ExternalActions {
             }
         } catch (Exception ignored) {
         }
-        return out;
+        sSidebarCache = out;
+        sSidebarCacheAt = now;
+        return new ArrayList<>(out);
+    }
+
+    /** Drops the cached sidebar entries so the next query hits PackageManager. */
+    public static synchronized void clearSidebarCache() {
+        sSidebarCacheAt = 0;
     }
 
     public static List<Entry> settingEntries(Context context) {
