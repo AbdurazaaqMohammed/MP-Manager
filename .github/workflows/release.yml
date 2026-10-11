@@ -1,10 +1,7 @@
-# Workflow ini bikin Release di GitHub sekaligus upload APK-nya,
-# jadi orang bisa download langsung tanpa harus build sendiri.
-#
-# Trigger-nya ada dua:
-#   1. Push tag yang diawali 'v' (contoh: v1.1.1)
-#   2. Manual dari tab Actions, tinggal isi versinya
+cd ~/MP-Manager
+git checkout Update
 
+cat > .github/workflows/release.yml << 'EOF'
 name: Release APK
 
 on:
@@ -14,12 +11,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag (contoh: v1.1.1)'
+        description: 'Version tag (e.g. v1.1.1)'
         required: true
         default: 'v1.1.1'
 
-# Butuh izin nulis buat bikin Release. GITHUB_TOKEN udah otomatis
-# disediain GitHub, nggak perlu setup secret manual.
 permissions:
   contents: write
 
@@ -28,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout kode. fetch-depth 0 biar info tag-nya kebawa.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -40,25 +34,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Gradlew sering ilang permission pas baru di-checkout.
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Build APK release. Kali ini nggak pakai continue-on-error,
-      # soalnya kalau gagal ya nggak ada gunanya bikin Release kosong.
       - name: Build Release APK
         run: ./gradlew assembleRelease --stacktrace
 
-      # Pindahin APK hasil build ke folder release/ dan rename
-      # biar namanya rapi: MP-Manager-v1.1.1.apk
       - name: Rename APK
         run: |
           mkdir -p release
           find app/build/outputs/apk/release -name "*.apk" -exec cp {} release/MP-Manager-${{ github.ref_name }}.apk \;
           ls -la release/
 
-      # Tentukan tag yang mau dipakai. Kalau trigger-nya manual,
-      # ambil dari input user. Kalau dari push tag, ambil dari ref.
       - name: Get version
         id: version
         run: |
@@ -68,23 +55,11 @@ jobs:
             echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
 
-      # Bikin Release-nya dan upload APK. Release langsung public,
-      # nggak draft, dan catatan rilisnya di-generate otomatis.
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: MP Manager ${{ steps.version.outputs.tag }}
-          body: |
-            ## MP Manager ${{ steps.version.outputs.tag }}
-
-            ### Fitur
-            - Anti-korup APK saat edit manifest
-            - Hapus permission permanen (INTERNET, WiFi, dan lainnya)
-            - Auto-backup sebelum edit APK
-            - Clone APK lebih stabil
-            - Support SD Card
-            - Root dan Shizuku support
           files: |
             release/*.apk
           draft: false
@@ -92,3 +67,4 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+EOF
