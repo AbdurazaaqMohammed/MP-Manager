@@ -67,6 +67,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.features.translation.TranslationExportDialog;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -118,6 +119,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
     private View stringsPage;
     private LinearLayout batchBar;
     private TextView batchLabel;
+    /** Registered once in buildShell(); building it on a click would hit the STARTED-state rule. */
+    private TranslationExportDialog translationExportDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -198,6 +201,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
         main.addView(batchBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(main, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        // registerForActivityResult only works before STARTED, so build it here, never on click.
+        translationExportDialog = new TranslationExportDialog(this);
         if (MODE_TRANSLATE.equals(mode)) pager.setCurrentItem(3, false);
     }
 
@@ -751,6 +756,11 @@ public class ArscEditorPlusActivity extends BaseActivity {
             if (resourceQuerier != null) resourceQuerier.setVisible(false);
         }
 
+        if (!MODE_TRANSLATE.equals(mode)) {
+            MenuItem translateExport = menu.getMenu().findItem(R.id.action_export_translation);
+            if (translateExport != null) translateExport.setVisible(false);
+        }
+
         menu.setOnMenuItemClickListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.action_resource_querier) {
@@ -767,6 +777,9 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 return true;
             } else if (itemId == R.id.action_export_strings) {
                 exportStrings();
+                return true;
+            } else if (itemId == R.id.action_export_translation) {
+                exportForTranslation();
                 return true;
             } else if (itemId == R.id.action_import_strings) {
                 importStrings();
@@ -1215,6 +1228,20 @@ public class ArscEditorPlusActivity extends BaseActivity {
             }).start();
         });
         picker.show();
+    }
+
+    /**
+     * Exports the APK's strings for translators. A bare {@code resources.arsc} has no APK to
+     * read from, so the in-place string export above is the right tool there.
+     */
+    private void exportForTranslation() {
+        if (data == null) return;
+        if (data.apkFile == null) {
+            Extensions.showMessage(this, R.string.no_apk_for_translation);
+            return;
+        }
+        if (translationExportDialog == null) translationExportDialog = new TranslationExportDialog(this);
+        translationExportDialog.showPreviewDialog(data.apkFile);
     }
 
     private void importStrings() {
