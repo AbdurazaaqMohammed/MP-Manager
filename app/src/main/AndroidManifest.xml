@@ -134,19 +134,8 @@
            android:name="io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity"
            android:windowSoftInputMode="adjustResize|stateHidden"
            android:launchMode="singleTop"
-           android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <action android:name="android.intent.action.EDIT" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/*" />
-            </intent-filter>
-        </activity>
+           android:exported="false">
+       </activity>
         <activity
             android:name="io.github.abdurazaaqmohammed.features.files.MainSettingsActivity"
             android:exported="false"
@@ -267,54 +256,27 @@
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
              <activity
                  android:name="io.github.abdurazaaqmohammed.player.ImageEditActivity"
-                 android:exported="true"
+                 android:exported="false"
                  android:label="@string/image_editor"
                  android:configChanges="orientation|screenSize|keyboardHidden"
                  android:windowSoftInputMode="adjustResize|stateHidden"
                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
-                 <intent-filter>
-                     <action android:name="android.intent.action.VIEW" />
-                     <action android:name="android.intent.action.EDIT" />
-                     <category android:name="android.intent.category.DEFAULT" />
-                     <data android:mimeType="image/*" />
-                 </intent-filter>
-                 <intent-filter>
-                     <action android:name="android.intent.action.SEND" />
-                     <category android:name="android.intent.category.DEFAULT" />
-                     <data android:mimeType="image/*" />
-                 </intent-filter>
              </activity>
               <activity
-                  android:name="io.github.abdurazaaqmohammed.player.LocateActivity"
+                  android:name="io.github.abdurazaaqmohammed.player.SharedEntryActivity"
                   android:exported="true"
-                  android:label="Locate"
+                  android:label="@string/shared_entry_title"
                   android:configChanges="orientation|screenSize|keyboardHidden"
-                  android:theme="@android:style/Theme.Translucent.NoTitleBar">
+                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
                   <intent-filter>
                       <action android:name="android.intent.action.SEND" />
+                      <action android:name="android.intent.action.SEND_MULTIPLE" />
                       <action android:name="android.intent.action.VIEW" />
+                      <action android:name="android.intent.action.EDIT" />
                       <category android:name="android.intent.category.DEFAULT" />
                       <data android:mimeType="*/*" />
                   </intent-filter>
               </activity>
-              <activity
-                  android:name="io.github.abdurazaaqmohammed.player.SaveSharedActivity"
-                  android:exported="true"
-                  android:label="@string/save"
-                 android:configChanges="orientation|screenSize|keyboardHidden"
-                 android:theme="@style/Theme.Material3.DayNight.NoActionBar">
-                 <intent-filter>
-                     <action android:name="android.intent.action.SEND" />
-                     <action android:name="android.intent.action.VIEW" />
-                     <category android:name="android.intent.category.DEFAULT" />
-                     <data android:mimeType="*/*" />
-                 </intent-filter>
-                 <intent-filter>
-                     <action android:name="android.intent.action.SEND_MULTIPLE" />
-                     <category android:name="android.intent.category.DEFAULT" />
-                     <data android:mimeType="*/*" />
-                 </intent-filter>
-             </activity>
             <activity
                 android:name="io.github.abdurazaaqmohammed.player.MediaPlayerActivity"
                 android:configChanges="orientation|screenSize|keyboardHidden"
