@@ -249,6 +249,16 @@ public class MusicService extends Service implements PlayerManager.PlaybackCallb
             updateNotification();
         } else if (newState == PlayerManager.PlayState.ENDED && playerManager.getQueue().isEmpty()) {
             stopSelf();
+        } else if (newState == PlayerManager.PlayState.STOPPED
+                || newState == PlayerManager.PlayState.ERROR
+                || newState == PlayerManager.PlayState.IDLE) {
+            // Nothing to show and nothing playing: don't linger in background.
+            try {
+                stopForeground(true);
+            } catch (Exception ignored) {
+            }
+            isForeground = false;
+            stopSelf();
         }
     }
 
