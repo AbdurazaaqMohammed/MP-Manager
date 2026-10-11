@@ -22,6 +22,7 @@ import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.Filter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -420,8 +421,7 @@ public class SettingsController {
         AutoCompleteTextView languageTv = root.findViewById(R.id.languageTv);
         String[] langTags = {"", "en", "es", "ru", "zh-CN"};
         String[] langLabels = {activity.getString(R.string.language_system), "English", "Español", "Русский", "中文 (简体)"};
-        languageTv.setAdapter(new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, langLabels));
+        languageTv.setAdapter(dropdownAdapter(langLabels));
         String current = AppCompatDelegate.getApplicationLocales().toLanguageTags();
         int selected = 0;
         for (int i = 0; i < langTags.length; i++) {
@@ -435,6 +435,46 @@ public class SettingsController {
                 AppCompatDelegate.setApplicationLocales(langTags[pos].isEmpty()
                         ? LocaleListCompat.getEmptyLocaleList()
                         : LocaleListCompat.forLanguageTags(langTags[pos])));
+    }
+
+    /**
+     * Exposed-dropdown adapter that never filters. A plain
+     * {@link ArrayAdapter} filters its list by the current text, so once e.g.
+     * "System default" is selected, tapping the field only offers that one
+     * matching entry and the other languages vanish. These dropdowns are
+     * pick-one lists, not search fields, so all items must always show.
+     */
+    private ArrayAdapter<String> dropdownAdapter(String[] items) {
+        return dropdownAdapter(new ArrayList<>(java.util.Arrays.asList(items)));
+    }
+
+    private ArrayAdapter<String> dropdownAdapter(List<String> items) {
+        List<String> all = new ArrayList<>(items);
+        return new ArrayAdapter<String>(activity,
+                android.R.layout.simple_dropdown_item_1line, new ArrayList<>(all)) {
+            @Override
+            public Filter getFilter() {
+                return new Filter() {
+                    @Override
+                    protected FilterResults performFiltering(CharSequence constraint) {
+                        FilterResults r = new FilterResults();
+                        r.values = new ArrayList<>(all);
+                        r.count = all.size();
+                        return r;
+                    }
+
+                    @Override
+                    @SuppressWarnings("unchecked")
+                    protected void publishResults(CharSequence constraint, FilterResults results) {
+                        clear();
+                        if (results != null && results.values instanceof List) {
+                            for (Object o : (List<?>) results.values) add((String) o);
+                        }
+                        notifyDataSetChanged();
+                    }
+                };
+            }
+        };
     }
 
     private void setupAppearanceSettings(ScrollView root, SharedPreferences settings) {
@@ -518,8 +558,7 @@ public class SettingsController {
             }
         });
 
-        ArrayAdapter<String> dateAdapter = new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, UiPrefs.DATE_PRESETS);
+        ArrayAdapter<String> dateAdapter = dropdownAdapter(UiPrefs.DATE_PRESETS);
         dateTv.setAdapter(dateAdapter);
         dateTv.setText(UiPrefs.getDatePattern(activity), false);
         dateTv.addTextChangedListener(new TextWatcher() {
@@ -548,8 +587,7 @@ public class SettingsController {
                 activity.getString(R.string.highlight_underline),
                 activity.getString(R.string.highlight_border),
                 activity.getString(R.string.highlight_background_underline)};
-        highlightTv.setAdapter(new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, labels));
+        highlightTv.setAdapter(dropdownAdapter(labels));
         String current = settings.getString(PaneHighlightView.PREF_KEY, PaneHighlightView.DEFAULT_STYLE);
         for (int i = 0; i < values.length; i++) {
             if (values[i].equals(current)) {
@@ -584,7 +622,9 @@ public class SettingsController {
             labels.add(AppFont.displayName(font));
         }
 
-        // Each entry previews in its own font.
+        // Each entry previews in its own font. Like every dropdown here, the
+        // adapter must not filter: see dropdownAdapter().
+        final List<String> fontLabels = new ArrayList<>(labels);
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(activity,
                 android.R.layout.simple_dropdown_item_1line, labels) {
             @Override
@@ -592,6 +632,28 @@ public class SettingsController {
                 View v = super.getView(position, convertView, parent);
                 ((TextView) v).setTypeface(previewTypeface(values.get(position)));
                 return v;
+            }
+
+            @Override
+            public Filter getFilter() {
+                return new Filter() {
+                    @Override
+                    protected FilterResults performFiltering(CharSequence constraint) {
+                        FilterResults r = new FilterResults();
+                        r.values = new ArrayList<>(fontLabels);
+                        r.count = fontLabels.size();
+                        return r;
+                    }
+
+                    @Override
+                    protected void publishResults(CharSequence constraint, FilterResults results) {
+                        clear();
+                        if (results != null && results.values instanceof List) {
+                            for (Object o : (List<?>) results.values) add((String) o);
+                        }
+                        notifyDataSetChanged();
+                    }
+                };
             }
         };
         fontTv.setAdapter(adapter);
@@ -684,11 +746,9 @@ public class SettingsController {
         AutoCompleteTextView startup1 = root.findViewById(R.id.startupTv1);
         AutoCompleteTextView startup2 = root.findViewById(R.id.startupTv2);
         String[] labels = {activity.getString(R.string.opt_home_folder), activity.getString(R.string.opt_last_opened)};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, labels);
+        ArrayAdapter<String> adapter = dropdownAdapter(labels);
         startup1.setAdapter(adapter);
-        startup2.setAdapter(new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, labels));
+        startup2.setAdapter(dropdownAdapter(labels));
         startup1.setText("last".equals(UiPrefs.startupMode(activity, true)) ? labels[1] : labels[0], false);
         startup2.setText("last".equals(UiPrefs.startupMode(activity, false)) ? labels[1] : labels[0], false);
         startup1.setOnItemClickListener((p, v, pos, id) ->
@@ -763,8 +823,7 @@ public class SettingsController {
         for (CompressionLevel cl : CompressionLevel.values()) {
             levels.add(cl.name());
         }
-        compressTv.setAdapter(new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, levels));
+        compressTv.setAdapter(dropdownAdapter(levels));
         compressTv.setText(settings.getString("compressLevel",
                 CompressionLevel.NO_COMPRESSION.name()), false);
         compressTv.setOnItemClickListener((p, v, pos, id) ->
@@ -793,8 +852,7 @@ public class SettingsController {
         modeLabels.add(labelNonRoot);
         modeLabels.add(labelRoot);
         if (shizukuSupported) modeLabels.add(labelShizuku);
-        workingModeTv.setAdapter(new ArrayAdapter<>(activity,
-                android.R.layout.simple_dropdown_item_1line, modeLabels));
+        workingModeTv.setAdapter(dropdownAdapter(modeLabels));
 
         RootManager.WorkingMode current = rootManager.getWorkingMode();
         if (current == RootManager.WorkingMode.ROOT) workingModeTv.setText(labelRoot, false);
