@@ -7,6 +7,8 @@ import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -36,7 +38,7 @@ public class ArchiveUtil {
     public static boolean isSupportedArchive(String fileName) {
         if (fileName == null) return false;
         String lower = fileName.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".7z") || lower.endsWith(".rar") || lower.endsWith(".tar")
+        return lower.endsWith(".zip") || lower.endsWith(".7z") || lower.endsWith(".rar") || lower.endsWith(".tar")
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
                 || lower.endsWith(".tar.xz") || lower.endsWith(".txz")
@@ -55,6 +57,7 @@ public class ArchiveUtil {
         if (!destDir.exists()) destDir.mkdirs();
         String lower = archive.getName().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime);
+        else if (lower.endsWith(".zip")) extractZip(archive, destDir, preserveTime);
         else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime);
         else if (lower.endsWith(".tar")) extractTar(new FileInputStream(archive), destDir, preserveTime);
         else if (lower.endsWith(".tgz")) extractTar(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
@@ -83,6 +86,28 @@ public class ArchiveUtil {
         else if (lower.endsWith(".bz2") && sources.size() == 1) compressSingle(new BZip2CompressorOutputStream(new FileOutputStream(output)), sources.get(0));
         else if (lower.endsWith(".xz") && sources.size() == 1) compressSingle(new XZCompressorOutputStream(new FileOutputStream(output)), sources.get(0));
         else throw new IOException("Unsupported archive format: " + output.getName());
+    }
+
+    private static void extractZip(File archive, File destDir, boolean preserveTime) throws IOException {
+        try (ZipArchiveInputStream zis = new ZipArchiveInputStream(new FileInputStream(archive))) {
+            ZipArchiveEntry entry;
+            while ((entry = zis.getNextZipEntry()) != null) {
+                String name = sanitizeEntryName(entry.getName());
+                File out = new File(destDir, name);
+                if (entry.isDirectory()) out.mkdirs();
+                else {
+                    File parent = out.getParentFile();
+                    if (parent != null) parent.mkdirs();
+                    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(out))) {
+                        copy(zis, os);
+                    }
+                    if (preserveTime && entry.getLastModifiedDate() != null) {
+                        //noinspection ResultOfMethodCallIgnored
+                        out.setLastModified(entry.getLastModifiedDate().getTime());
+                    }
+                }
+            }
+        }
     }
 
     private static void extract7z(File archive, File destDir, boolean preserveTime) throws IOException {

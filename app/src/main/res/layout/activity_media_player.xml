@@ -26,7 +26,23 @@
                 android:layout_height="match_parent"
                 android:layout_gravity="center" />
 
+            <!-- ExoPlayer PlayerView — buat VTT/SRT embedded di MKV -->
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/exoPlayerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                app:use_controller="false"
+                app:surface_type="surface_view" />
+
         </FrameLayout>
+
+        <io.github.abdurazaaqmohammed.player.SubtitleView
+            android:id="@+id/subtitleView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
 
         <TextView
             android:id="@+id/bufferingIndicator"
@@ -97,7 +113,6 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
         android:minHeight="?attr/actionBarSize"
         app:titleTextColor="?attr/colorOnSurface"
         app:subtitleTextColor="@android:color/darker_gray">
@@ -127,11 +142,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingBottom="8dp">
 
+        <!-- Progress bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -162,6 +177,7 @@
 
         </LinearLayout>
 
+        <!-- Controls utama -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -227,6 +243,7 @@
 
         </LinearLayout>
 
+        <!-- Speed control -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -259,6 +276,7 @@
 
         </LinearLayout>
 
+        <!-- Tombol bawah: A-B repeat, Queue, Aspect (volume slider DIHAPUS) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -266,22 +284,43 @@
             android:gravity="center"
             android:orientation="horizontal">
 
+            <Button
+                android:id="@+id/btnSetA"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="60dp"
+                android:text="Set A"
+                android:textColor="?attr/colorOnSurface"
+                android:contentDescription="@string/set_point_a"
+                tools:ignore="HardcodedText" />
+
+            <Button
+                android:id="@+id/btnSetB"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="60dp"
+                android:layout_marginStart="8dp"
+                android:text="Set B"
+                android:textColor="?attr/colorOnSurface"
+                android:contentDescription="@string/set_point_b"
+                tools:ignore="HardcodedText" />
+
             <ImageButton
-                android:id="@+id/btnMute"
+                android:id="@+id/btnClearAB"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:layout_marginStart="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/volume_off_24px"
-                android:contentDescription="@string/mute" />
+                android:src="@drawable/ic_cancel"
+                android:contentDescription="@string/clear_ab_repeat"
+                android:visibility="gone" />
 
-            <SeekBar
-                android:id="@+id/volumeSeekBar"
+            <View
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="8dp"
-                android:max="100"
-                android:progress="100" />
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <ImageButton
                 android:id="@+id/btnQueue"
@@ -295,12 +334,14 @@
                 android:id="@+id/btnAspect"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:layout_marginStart="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/aspect_ratio_24px"
                 android:contentDescription="@string/aspect_ratio" />
 
         </LinearLayout>
 
+        <!-- A-B seekbar (cuma muncul kalau A-B aktif) -->
         <LinearLayout
             android:id="@+id/abRepeatBar"
             android:layout_width="match_parent"
@@ -310,41 +351,12 @@
             android:orientation="horizontal"
             android:visibility="gone">
 
-            <Button
-                android:id="@+id/btnSetA"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:text="A"
-                android:textColor="?attr/colorOnSurface"
-                android:contentDescription="@string/set_point_a"
-                tools:ignore="HardcodedText" />
-
             <SeekBar
                 android:id="@+id/abSeekBar"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginHorizontal="8dp"
                 android:max="1000" />
-
-            <Button
-                android:id="@+id/btnSetB"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:text="B"
-                android:textColor="?attr/colorOnSurface"
-                android:contentDescription="@string/set_point_b"
-                tools:ignore="HardcodedText" />
-
-            <ImageButton
-                android:id="@+id/btnClearAB"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_cancel"
-                android:contentDescription="@string/clear_ab_repeat" />
 
         </LinearLayout>
 
@@ -355,8 +367,7 @@
         android:layout_width="match_parent"
         android:layout_height="200dp"
         android:layout_gravity="bottom"
-        android:visibility="gone"
-         />
+        android:visibility="gone" />
 
     <ImageButton
         android:id="@+id/btnUnlock"

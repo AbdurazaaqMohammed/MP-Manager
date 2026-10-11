@@ -36,6 +36,7 @@ import io.github.abdurazaaqmohammed.adapters.main.FileOperationsHelper;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.CopyMarkStore;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -150,6 +151,7 @@ public class EntryDialogs {
                                 if (!map.isEmpty()) zf.renameFiles(map);
                             } else zf.renameFile((entryName), s);
                             context.loadZipFolderInPane(zipFile, state.currentZipPath(), pane1, false);
+                            CopyMarkStore.markResult(context, zipFile);
                         } catch (Exception e) {
                             new ErrorUtil(context).showError(e);
                         }
@@ -159,13 +161,18 @@ public class EntryDialogs {
                             try {
                                 AccessManager.rename(context, file.getAbsolutePath(), new File(ogFolder, s).getAbsolutePath(), true);
                                 context.loadFolderInPane(ogFolder, pane1);
+                                CopyMarkStore.markResult(context, new File(ogFolder, s));
                             } catch (Exception e) {
-                                if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                                else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
+                                if (file.renameTo(new File(ogFolder, s))) {
+                                    context.loadFolderInPane(ogFolder, pane1);
+                                    CopyMarkStore.markResult(context, new File(ogFolder, s));
+                                } else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
                             }
                         } else {
-                            if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                            else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
+                            if (file.renameTo(new File(ogFolder, s))) {
+                                context.loadFolderInPane(ogFolder, pane1);
+                                CopyMarkStore.markResult(context, new File(ogFolder, s));
+                            } else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
                         }
                     }
                 });
@@ -321,13 +328,26 @@ public class EntryDialogs {
         View compressView = LayoutInflater.from(context).inflate(R.layout.compress_dialog, null);
 
         TextInputEditText filenameEditText = compressView.findViewById(R.id.filename_compress_edittext);
-        filenameEditText.setText((multi ? parentFileName : FilenameUtils.removeExtension(fileName)) + ".zip");
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
 
         String[] archiveFormats = ArchiveUtil.getSupportedCreateExts();
+        filenameEditText.setText((multi ? parentFileName : FilenameUtils.removeExtension(fileName)) + archiveFormats[0]);
         AutoCompleteTextView archiveFormatInput = compressView.findViewById(R.id.compress_format);
         archiveFormatInput.setText(archiveFormats[0]);
         archiveFormatInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, archiveFormats));
+        archiveFormatInput.setOnItemClickListener((parent, view, position, id) -> {
+            String newFormat = archiveFormats[position];
+            if (!newFormat.startsWith(".")) newFormat = "." + newFormat;
+            String currentName = filenameEditText.getText().toString().trim();
+            for (String ext : ArchiveUtil.getSupportedCreateExts()) {
+                if (currentName.toLowerCase(Locale.ROOT).endsWith(ext)) {
+                    currentName = currentName.substring(0, currentName.length() - ext.length());
+                    break;
+                }
+            }
+            if (currentName.isEmpty()) currentName = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
+            filenameEditText.setText(currentName + newFormat);
+        });
 
         AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);
         compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
@@ -343,7 +363,13 @@ public class EntryDialogs {
             if (name.isEmpty()) name = multi ? parentFileName : FilenameUtils.removeExtension(fileName);
             String format = ((AutoCompleteTextView) compressView.findViewById(R.id.compress_format)).getText().toString().trim();
             if (!format.startsWith(".")) format = "." + format;
-            if (!name.toLowerCase(Locale.ENGLISH).endsWith(format)) name += format;
+            for (String ext : ArchiveUtil.getSupportedCreateExts()) {
+                if (name.toLowerCase(Locale.ROOT).endsWith(ext)) {
+                    name = name.substring(0, name.length() - ext.length());
+                    break;
+                }
+            }
+            name = name + format;
             File outputZip = new File(parentFile2, name);
             if (outputZip.exists()) {
                 File existing = outputZip;
@@ -443,6 +469,7 @@ public class EntryDialogs {
                         }
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
+                        CopyMarkStore.markResult(context, outputZip);
                     } catch (Exception e) {
                         pm.dismiss();
                         new ErrorUtil(context).showError(e);
@@ -464,6 +491,7 @@ public class EntryDialogs {
                         ArchiveUtil.create(finalOutput, finalSources);
                         if (finalToRoot) AccessManager.uploadFile(context, finalOutput, outputZip.getAbsolutePath());
                         pm.dismiss();
+                        CopyMarkStore.markResult(context, outputZip);
                         context.handler.post(context::reloadCurrentFolder);
                     } catch (Exception e) {
                         pm.dismiss();

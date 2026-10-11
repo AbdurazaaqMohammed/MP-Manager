@@ -3,21 +3,42 @@ plugins {
 }
 
 android {
+    ndkVersion "26.1.10909125"
     compileSdk 36
+    
+    signingConfigs {
+        debug {
+            storeFile file("${rootDir}/app/src/main/assets/debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
     lint {
         baseline = file("lint.xml")
     }
     defaultConfig {
         applicationId "io.github.abdurazaaqmohammed.MPManager"
-        minSdk 19
+        minSdk 21
         targetSdk 37
         multiDexEnabled true
-        versionCode 11
-        versionName "1.1.0"
+        versionCode 12
+        versionName "1.1.1"
+
+        // Native build (C/C++ via JNI)
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17 -fexceptions -frtti"
+            }
+        }
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a"
+        }
     }
 
     buildTypes {
         release {
+            signingConfig signingConfigs.debug
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -46,6 +67,13 @@ android {
         resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
         resources.excludes.add("META-INF/versions/9/OSGI-INF/LICENSES/**")
     }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            // version dihapus — biar auto-detect
+        }
+    }
 }
 
 dependencies {
@@ -67,7 +95,11 @@ dependencies {
     implementation files('libs/arsc-parser.jar')
     implementation files('libs/commons-compress-1.21.jar')
     implementation files('libs/xz-1.9.jar')
-    implementation files('libs/junrar-7.5.5.jar')
+    implementation 'com.github.junrar:junrar:8.1.2'  // ← update dari 7.5.5, support RAR v5
+    // ExoPlayer (player Android official — support MP4, MKV, embedded subtitle)
+    implementation 'androidx.media3:media3-exoplayer:1.4.1'
+    implementation 'androidx.media3:media3-ui:1.4.1'
+    implementation 'androidx.media3:media3-extractor:1.4.1'  // ← MKV support
     implementation("com.google.android.material:material:1.12.0")
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation("com.google.guava:guava:33.6.0-android")

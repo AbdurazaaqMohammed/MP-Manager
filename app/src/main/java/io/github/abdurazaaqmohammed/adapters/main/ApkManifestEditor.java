@@ -7,7 +7,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.PermissionInfo;
 import android.content.res.Resources;
 import android.graphics.Color;
-import androidx.preference.PreferenceManager;
+import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -19,6 +19,8 @@ import android.widget.AutoCompleteTextView;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -43,9 +45,7 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
-import net.lingala.zip4j.model.ZipParameters;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,7 +61,6 @@ import io.github.abdurazaaqmohammed.utils.ColorUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
-import io.github.abdurazaaqmohammed.utils.MergeUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RunUtil;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
@@ -124,11 +123,9 @@ public class ApkManifestEditor {
         if (ref == null || res == null) return null;
         String r = ref.trim();
         if (r.isEmpty() || !r.startsWith("@")) return null;
-        // @string/name form
         for (ResEntry e : res) {
             if (r.equals(e.getName())) return e.getValue();
         }
-        // @0x7F... / @7F... hex form
         try {
             String hex = r.substring(1);
             if (hex.startsWith("0x") || hex.startsWith("0X")) hex = hex.substring(2);
@@ -143,7 +140,8 @@ public class ApkManifestEditor {
         return null;
     }
 
-    private void updateResolvedLabel(TextView resolvedView, String current, List<ResEntry> res) {        if (resolvedView == null) return;
+    private void updateResolvedLabel(TextView resolvedView, String current, List<ResEntry> res) {
+        if (resolvedView == null) return;
         if (current == null || current.trim().isEmpty() || !current.trim().startsWith("@")) {
             resolvedView.setVisibility(View.GONE);
             return;
@@ -230,7 +228,7 @@ public class ApkManifestEditor {
             else if (tag.contains("android:versionCode")) verCodeInput.setText(verCode = e.getValue());
             else if (tag.contains("android:versionName")) verNameInput.setText(verName = e.getValue());
             else if (!foundMinSdk && tag.contains("android:minSdkVersion")) {
-                foundMinSdk = true; // Avoid getting wrong minsdk from other property
+                foundMinSdk = true;
                 try {
                     int minSdkVer = Integer.parseInt(minSdkVersion = e.getValue());
                     if (minSdkVer >= 1 && minSdkVer <= versions.length)
@@ -247,7 +245,6 @@ public class ApkManifestEditor {
                 } catch (Exception ignored) { targetSdk.setText(e.getValue()); }
             }
         }
-        // Fallback: package name via PackageManager if manifest decode missed it.
         if ((pkgName == null || pkgName.isEmpty()) && pkgNameInput != null) {
             try {
                 PackageInfo pi = context.getPackageManager()
@@ -406,7 +403,6 @@ public class ApkManifestEditor {
                                                 e.setValue(targetSdkVersionSelected[0]);
                                             else if (installLocationChanged && tag.contains("android:installLocation")) {
                                                 foundInstallLocation = true;
-                                                // Dropdown index 3 = "Default" => remove the attribute.
                                                 if (installLocationSelected[0].isEmpty() || "3".equals(installLocationSelected[0])) entryToRemove = i;
                                                 else e.setValue(installLocationSelected[0]);
                                             }
@@ -459,15 +455,106 @@ public class ApkManifestEditor {
         ProgressManager pm = new ProgressManager(context, true);
 
         fpd.setDialogSelectionListener(files -> new Thread(() -> {
-            String iconPath = findIconPathInManifest(apkFile);
-
             try (InputStream is = FileUtils.getInputStream(files[0])) {
                 pm.show().setText(context.rss.getString(R.string.adding, files[0]));
-                replaceZipEntry(apkFile,
-                        iconPath != null ? iconPath : "res/mipmap-xxhdpi-v4/ic_launcher.png",
-                        is);
+                // Baca bytes baru SEKALI (InputStream cuma bisa dibaca sekali)
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+                byte[] originalBytes = baos.toByteArray();
+
+                // AUTO-RESIZE: resize ke 192x192, center-crop, convert PNG
+                byte[] newIconBytes = autoResizeIcon(originalBytes, 192);
+                if (newIconBytes == null) {
+                    // Fallback ke original kalau gagal resize
+                    newIconBytes = originalBytes;
+                }
+
+                // Cari icon path utama
+                String mainIconPath = findIconPathInManifest(apkFile);
+                List<String> pathsToReplace = new java.util.ArrayList<>();
+                if (mainIconPath != null) pathsToReplace.add(mainIconPath);
+
+                // Cari SEMUA file icon dengan nama yang sama (semua density)
+                if (mainIconPath != null) {
+                    String fileName = mainIconPath.substring(mainIconPath.lastIndexOf('/') + 1);
+                    try (ZipFile zf = new ZipFile(apkFile)) {
+                        for (FileHeader fh : zf.getFileHeaders()) {
+                            String fhName = fh.getFileName().replace('\\', '/');
+                            if (fhName.startsWith("res/") && fhName.endsWith("/" + fileName)) {
+                                if (!pathsToReplace.contains(fhName)) pathsToReplace.add(fhName);
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                // FIX PINTAR: Cari SEMUA layer icon (adaptive + legacy + themed)
+                // Handle: ic_launcher, ic_launcher_foreground, ic_launcher_round,
+                //         ic_launcher_monochrome, launcher_icon, app_icon
+                // Skip: .xml (adaptive icon), ic_launcher_background (biar design tetap)
+                // Selalu jalan (bukan cuma kalau kosong) — supaya adaptive icon ikut ke-ganti
+                try (ZipFile zf = new ZipFile(apkFile)) {
+                    for (FileHeader fh : zf.getFileHeaders()) {
+                        String fhName = fh.getFileName().replace('\\', '/');
+                        if (!fhName.startsWith("res/")) continue;
+                        // Skip XML (adaptive icon xml — gak bisa di-replace PNG)
+                        if (fhName.endsWith(".xml")) continue;
+                        // Skip background (biar design asli tetap)
+                        if (fhName.contains("ic_launcher_background")) continue;
+                        // Hanya file gambar
+                        boolean isImage = fhName.endsWith(".png") || fhName.endsWith(".webp")
+                                || fhName.endsWith(".jpg") || fhName.endsWith(".jpeg");
+                        if (!isImage) continue;
+                        // Match semua icon launcher
+                        boolean isLauncherIcon =
+                                fhName.contains("/ic_launcher.png")
+                                || fhName.contains("/ic_launcher_foreground")
+                                || fhName.contains("/ic_launcher_round")
+                                || fhName.contains("/ic_launcher_monochrome")
+                                || fhName.contains("/launcher_icon")
+                                || fhName.contains("/app_icon");
+                        if (isLauncherIcon) {
+                            if (!pathsToReplace.contains(fhName)) pathsToReplace.add(fhName);
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                // Fallback terakhir: cari apapun yang namanya mengandung "icon"
+                if (pathsToReplace.isEmpty()) {
+                    try (ZipFile zf = new ZipFile(apkFile)) {
+                        for (FileHeader fh : zf.getFileHeaders()) {
+                            String fhName = fh.getFileName().replace('\\', '/');
+                            if (!fhName.startsWith("res/")) continue;
+                            if (fhName.endsWith(".xml")) continue;
+                            if (fhName.contains("ic_launcher_background")) continue;
+                            boolean isImage = fhName.endsWith(".png") || fhName.endsWith(".webp")
+                                    || fhName.endsWith(".jpg") || fhName.endsWith(".jpeg");
+                            if (fhName.toLowerCase().contains("icon") && isImage) {
+                                if (!pathsToReplace.contains(fhName)) pathsToReplace.add(fhName);
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                // Kalau tetap kosong, gagal
+                if (pathsToReplace.isEmpty()) {
+                    pm.dismiss();
+                    Extensions.showMessage(context, "Tidak ada icon di APK ini");
+                    return;
+                }
+
+                // Replace SEMUA path
+                int successCount = 0;
+                for (String path : pathsToReplace) {
+                    try {
+                        replaceZipEntry(apkFile, path, newIconBytes);
+                        successCount++;
+                    } catch (Exception ignored) {}
+                }
                 pm.dismiss();
-                Extensions.showMessage(context, R.string.icon_changed);
+                if (successCount > 0) Extensions.showMessage(context, R.string.icon_changed);
+                else Extensions.showMessage(context, "Gagal ganti icon");
             } catch (Exception e) {
                 pm.dismiss();
                 context.handler.post(() -> new ErrorUtil(context).showError(e));
@@ -476,26 +563,99 @@ public class ApkManifestEditor {
         fpd.show();
     }
 
+    /** Auto-resize gambar: center-crop square + resize ke targetSize + convert PNG. */
+    private byte[] autoResizeIcon(byte[] originalBytes, int targetSize) {
+        try {
+            // 1. Decode bitmap dari bytes
+            Bitmap original = BitmapFactory.decodeByteArray(originalBytes, 0, originalBytes.length);
+            if (original == null) return null;
+
+            // 2. Center-crop jadi square
+            int width = original.getWidth();
+            int height = original.getHeight();
+            int squareSize = Math.min(width, height);
+            int x = (width - squareSize) / 2;
+            int y = (height - squareSize) / 2;
+            Bitmap square = Bitmap.createBitmap(original, x, y, squareSize, squareSize);
+
+            // 3. Resize ke targetSize x targetSize
+            Bitmap resized = Bitmap.createScaledBitmap(square, targetSize, targetSize, true);
+
+            // 4. Convert ke PNG (lossless + transparan)
+            java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+            resized.compress(Bitmap.CompressFormat.PNG, 100, output);
+
+            byte[] result = output.toByteArray();
+
+            // 5. Cleanup
+            if (square != original) square.recycle();
+            if (resized != square) resized.recycle();
+            original.recycle();
+
+            return result;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private String findIconPathInManifest(File apkFile) {
-        try (ZipFile zf = new ZipFile(apkFile)) {
+        ZipFile zf = null;
+        InputStream mis = null;
+        try {
+            zf = new ZipFile(apkFile);
             FileHeader manifestEntry = zf.getFileHeader("AndroidManifest.xml");
             if (manifestEntry == null) return null;
-            try (InputStream mis = zf.getInputStream(manifestEntry)) {
-                APKParser apkParser = new APKParser();
-                apkParser.parse(apkFile.getPath(), context);
-                List<ResEntry> decodedResources = apkParser.getDecodedResources();
+            mis = zf.getInputStream(manifestEntry);
+            // Skip APKParser.parse() karena crash di APK unsign.
+            // Ganti dengan list kosong (fallback ke nama resource).
+            List<ResEntry> decodedResources = java.util.Collections.emptyList();
 
-                List<XMLEntry> entries = new aXMLDecoder(mis, decodedResources).decode();
-                for (XMLEntry e : entries) {
-                    if (e.getTag().contains("android:icon")) {
-                        String val = e.getValue();
-                        // This is not changing it on all screens sizes fix this
-                        if (val.startsWith("res/")) return val;
-                    }
+            List<XMLEntry> entries = new aXMLDecoder(mis, decodedResources).decode();
+            for (XMLEntry e : entries) {
+                String attr = e.getMiddleTag();
+                if (attr != null && attr.contains("android:icon")) {
+                    String val = e.getValue();
+                    if (val == null) continue;
+                    if (val.startsWith("res/")) return val;
+                    // Resolve @mipmap/ic_launcher / @drawable/icon ke path fisik
+                    String resolved = resolveIconResource(zf, val);
+                    if (resolved != null) return resolved;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        } finally {
+            if (mis != null) try { mis.close(); } catch (Exception ignored) {}
+            if (zf != null) try { zf.close(); } catch (Exception ignored) {}
+        }
         return null;
+    }
+
+    /** Resolve @mipmap/ic_launcher / @drawable/icon ke path fisik di APK. */
+    private String resolveIconResource(ZipFile zf, String resourceRef) {
+        try {
+            // Strip prefix @, ?, dll
+            String name = resourceRef.replaceFirst("^[?@]+", "");  // "mipmap/ic_launcher" atau "drawable/icon"
+            String[] parts = name.split("/", 2);
+            if (parts.length < 2) return null;
+            String folder = parts[0];  // "mipmap" / "drawable"
+            String baseName = parts[1];  // "ic_launcher"
+
+            // Cari di semua file yang match res/<folder>-*/<baseName>.*
+            String prefix = "res/" + folder;
+            String bestMatch = null;
+            for (FileHeader fh : zf.getFileHeaders()) {
+                String fhName = fh.getFileName().replace('\\', '/');
+                if (!fhName.startsWith(prefix)) continue;
+                if (!fhName.contains("/" + baseName + ".")) continue;
+                // Prioritas: xxhdpi > xhdpi > hdpi > mdpi
+                if (fhName.contains("xxhdpi")) return fhName;
+                if (fhName.contains("xhdpi") && bestMatch == null) bestMatch = fhName;
+                else if (bestMatch == null) bestMatch = fhName;
+            }
+            return bestMatch;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public void editAllManifestEntries(File apkFile) {
@@ -694,15 +854,83 @@ public class ApkManifestEditor {
         writeManifestEntries(apkFile, entries);
     }
 
+    /**
+     * Hapus permission dari manifest secara permanen (destruktif).
+     * Berguna untuk hapus INTERNET, ACCESS_WIFI_STATE, dll.
+     */
+    public void removeManifestPermission(File apkFile, String perm) throws Exception {
+        List<XMLEntry> entries = decodeManifest(apkFile);
+        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            XMLEntry item = entries.get(i);
+            if (item.getTag().contains("uses-permission") && perm.equals(item.getValue())) entries.remove(i);
+        }
+        writeManifestEntries(apkFile, entries);
+    }
+
+    /**
+     * Hapus banyak permission sekaligus dalam satu pass decode/encode.
+     * Return jumlah permission yang berhasil dihapus.
+     */
+    public int removeManifestPermissions(File apkFile, List<String> permsToRemove) throws Exception {
+        if (permsToRemove == null || permsToRemove.isEmpty()) return 0;
+        ManifestData data = decodeManifestWithRes(apkFile);
+        List<XMLEntry> entries = data != null ? data.entries : null;
+        List<ResEntry> res = data != null ? data.res : null;
+        if (entries == null) entries = decodeManifest(apkFile);
+        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
+        Set<String> removeSet = new HashSet<>(permsToRemove);
+        int removed = 0;
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            XMLEntry item = entries.get(i);
+            String tag = item.getTag();
+            if (tag == null || !tag.contains("uses-permission")) continue;
+            String trimmed = tag.trim();
+            boolean isElementStart = trimmed.startsWith("<");
+            if (!isElementStart) continue;
+            int end = i;
+            int j = i + 1;
+            while (j < entries.size()) {
+                String nt = entries.get(j).getTag();
+                if (nt == null) break;
+                String ntrim = nt.trim();
+                if (ntrim.startsWith("<") || ntrim.startsWith("</")) break;
+                end = j;
+                j++;
+            }
+            String nameValue = null;
+            for (int k = i; k <= end; k++) {
+                XMLEntry attr = entries.get(k);
+                String at = attr.getTag();
+                if (at == null || !at.contains("android:name")) continue;
+                String v = attr.getValue();
+                if (v != null && !v.isEmpty()) {
+                    nameValue = v.startsWith(DISABLED_PREFIX)
+                            ? v.substring(DISABLED_PREFIX.length()) : v;
+                    break;
+                }
+            }
+            if (nameValue != null && removeSet.contains(nameValue)) {
+                for (int k = end; k > i; k--) entries.remove(k);
+                entries.remove(i);
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            if (UiPrefs.genBackup(context)) {
+                try {
+                    FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
+                } catch (Exception ignored) {
+                }
+            }
+            writeManifestEntries(apkFile, entries, res);
+        }
+        return removed;
+    }
+
     /** Prefix marking a permission ineffective while keeping it declared (and re-listable). */
     public static final String DISABLED_PREFIX = "__DISABLED__";
 
-    /**
-     * Enables/disables permissions non-destructively in a single decode/encode pass.
-     * Disabling prefixes the permission name so the system ignores it, while it stays
-     * declared and therefore keeps showing up in this dialog for re-enabling.
-     * Returns the number of changed permissions.
-     */
     public int setPermissionsDisabled(File apkFile, List<String> toDisable, List<String> toEnable) throws Exception {
         ManifestData data = decodeManifestWithRes(apkFile);
         List<XMLEntry> entries = data != null ? data.entries : null;
@@ -712,8 +940,6 @@ public class ApkManifestEditor {
         Set<String> disableSet = new HashSet<>(toDisable);
         Set<String> enableSet = new HashSet<>(toEnable);
         int changed = 0;
-        // Decoder emits "<uses-permission" open row followed by attribute rows
-        // ("    android:name=\"...\"" merged with "/>"). Toggle the name value in place.
         for (int i = entries.size() - 1; i >= 0; i--) {
             XMLEntry item = entries.get(i);
             String tag = item.getTag();
@@ -722,7 +948,6 @@ public class ApkManifestEditor {
             boolean isElementStart = trimmed.startsWith("<");
             if (!isElementStart) continue;
             int end = i;
-            // Span extends over following attribute rows until next element start/end row.
             int j = i + 1;
             while (j < entries.size()) {
                 String nt = entries.get(j).getTag();
@@ -763,107 +988,6 @@ public class ApkManifestEditor {
         return changed;
     }
 
-    /**
-     * Permanently deletes matching permission entries (both enabled and disabled forms).
-     * Returns the number of removed permissions.
-     */
-    public int removeManifestPermissions(File apkFile, List<String> perms) throws Exception {
-        ManifestData data = decodeManifestWithRes(apkFile);
-        List<XMLEntry> entries = data != null ? data.entries : null;
-        List<ResEntry> res = data != null ? data.res : null;
-        if (entries == null) entries = decodeManifest(apkFile);
-        if (entries == null) throw new IOException(rss.getString(R.string.me_decode_fail));
-        Set<String> targets = new HashSet<>(perms);
-        int removed = 0;
-        // Decoder emits "<uses-permission" open row followed by attribute rows
-        // ("    android:name=\"...\"" merged with "/>"). Remove the whole span.
-        for (int i = entries.size() - 1; i >= 0; i--) {
-            XMLEntry item = entries.get(i);
-            String tag = item.getTag();
-            if (tag == null || !tag.contains("uses-permission")) continue;
-            String trimmed = tag.trim();
-            boolean isElementStart = trimmed.startsWith("<");
-            if (!isElementStart) continue;
-            int end = i;
-            // Span extends over following attribute rows until next element start/end row.
-            int j = i + 1;
-            while (j < entries.size()) {
-                String nt = entries.get(j).getTag();
-                if (nt == null) break;
-                String ntrim = nt.trim();
-                if (ntrim.startsWith("<") || ntrim.startsWith("</")) break;
-                end = j;
-                j++;
-            }
-            boolean match = targets.contains(item.getValue());
-            if (!match) {
-                for (int k = i; k <= end; k++) {
-                    XMLEntry attr = entries.get(k);
-                    String at = attr.getTag();
-                    if (at != null && at.contains("android:name") && targets.contains(attr.getValue())) {
-                        match = true;
-                        break;
-                    }
-                }
-            }
-            if (match) {
-                for (int k = end; k >= i; k--) entries.remove(k);
-                removed++;
-            }
-        }
-        if (removed > 0) {
-            if (UiPrefs.genBackup(context)) {
-                try {
-                    FileUtils.copyFile(apkFile, new File(apkFile.getPath() + ".bak"));
-                } catch (Exception ignored) {
-                }
-            }
-            writeManifestEntries(apkFile, entries, res);
-        }
-        return removed;
-    }
-
-    private interface PermissionOp {
-        int apply() throws Exception;
-    }
-
-    private void runPermissionOp(File apkFile, PermissionOp op, int doneMsgRes,
-                                 boolean[] sign, SignWrapper[] wrapper) {
-        Runnable doEdit = () -> {
-            ProgressManager pm2 = new ProgressManager(context, true).show();
-            new Thread(() -> {
-                try {
-                    int changed;
-                    try {
-                        changed = op.apply();
-                    } catch (Exception e) {
-                        pm2.dismiss();
-                        new ErrorUtil(context).showError(e);
-                        return;
-                    }
-                    if (changed > 0 && sign[0]) wrapper[0].signApk(apkFile);
-                    pm2.dismiss();
-                    int done = changed;
-                    context.handler.post(() -> {
-                        Extensions.showMessage(context, rss.getString(doneMsgRes, done));
-                        try { context.refreshAllPanes(); }
-                        catch (Exception ignored) {
-                            context.loadFolderInPane(apkFile.getParentFile(), true);
-                        }
-                    });
-                } catch (Exception e) {
-                    pm2.dismiss();
-                    new ErrorUtil(context).showError(e);
-                }
-            }).start();
-        };
-        if (sign[0]) SignWrapper.requireAuth(context, sw -> {
-            wrapper[0] = sw;
-            doEdit.run();
-        });
-        else doEdit.run();
-    }
-
     public void showPermissionsDialog(File apkFile) {
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
@@ -894,7 +1018,7 @@ public class ApkManifestEditor {
                 } catch (Exception ignored) {
                 }
                 StringBuilder label = new StringBuilder(base);
-                if (disabled) label.append(" (").append(rss.getString(R.string.disabled)).append(')');
+                if (disabled) label.append(" (").append(rss.getString(R.string.me_disabled)).append(')');
                 if (dangerous) label.append(" (dangerous)");
                 labels[i] = label.toString();
             }
@@ -920,46 +1044,91 @@ public class ApkManifestEditor {
                         .setTitle(rss.getString(R.string.me_perms_n, perms.length))
                         .setView(permDialog)
                         .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(rss.getString(R.string.apply), (d, which) -> {
+                        // Tombol netral: HAPUS PERMANEN
+                        .setNeutralButton(rss.getString(R.string.me_remove_permanently), (d, which) -> {
                             SignWrapper[] wrapper = new SignWrapper[1];
-                            List<String> toDisable = new ArrayList<>();
-                            List<String> toEnable = new ArrayList<>();
-                            for (int i = 0; i < perms.length; i++) {
-                                boolean wantEnabled = permList.isItemChecked(i);
-                                boolean isDisabled = perms[i] != null
-                                        && perms[i].startsWith(DISABLED_PREFIX);
-                                String base = baseNames[i];
-                                if (base == null || base.isEmpty()) continue;
-                                if (!wantEnabled && !isDisabled) toDisable.add(base);
-                                else if (wantEnabled && isDisabled) toEnable.add(base);
-                            }
-                            if (toDisable.isEmpty() && toEnable.isEmpty()) return;
-                            runPermissionOp(apkFile,
-                                    () -> setPermissionsDisabled(apkFile, toDisable, toEnable),
-                                    R.string.me_perms_updated, sign, wrapper);
+                            Runnable doRemove = () -> {
+                                ProgressManager pm2 = new ProgressManager(context, true).show();
+                                new Thread(() -> {
+                                    try {
+                                        List<String> toRemove = new ArrayList<>();
+                                        for (int i = 0; i < perms.length; i++) {
+                                            if (permList.isItemChecked(i)) continue;
+                                            String base = baseNames[i];
+                                            if (base == null || base.isEmpty()) continue;
+                                            toRemove.add(base);
+                                        }
+                                        int removed = removeManifestPermissions(apkFile, toRemove);
+                                        if (removed > 0 && sign[0]) wrapper[0].signApk(apkFile);
+                                        pm2.dismiss();
+                                        int done = removed;
+                                        context.handler.post(() -> {
+                                            Extensions.showMessage(context, rss.getString(R.string.me_perms_removed, done));
+                                            try { context.refreshAllPanes(); }
+                                            catch (Exception ignored) {
+                                                context.loadFolderInPane(apkFile.getParentFile(), true);
+                                            }
+                                        });
+                                    } catch (Exception e) {
+                                        pm2.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                    }
+                                }).start();
+                            };
+                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                wrapper[0] = sw;
+                                doRemove.run();
+                            });
+                            else doRemove.run();
                         })
-                        .setNeutralButton(rss.getString(R.string.remove), (d, which) -> {
-                            List<String> toRemove = new ArrayList<>();
-                            for (int i = 0; i < perms.length; i++) {
-                                if (permList.isItemChecked(i)) continue;
-                                String base = baseNames[i];
-                                if (base == null || base.isEmpty()) continue;
-                                toRemove.add(base);
-                                toRemove.add(DISABLED_PREFIX + base);
-                            }
-                            if (toRemove.isEmpty()) return;
-                            int count = toRemove.size() / 2;
-                            dialogUtil.styleAlertDialog(dialogUtil.getDialogBuilder()
-                                    .setTitle(rss.getString(R.string.remove))
-                                    .setMessage(rss.getString(R.string.me_confirm_remove, count))
-                                    .setNegativeButton(android.R.string.cancel, null)
-                                    .setPositiveButton(android.R.string.ok, (dd, ww) -> {
-                                        SignWrapper[] wrapper = new SignWrapper[1];
-                                        runPermissionOp(apkFile,
-                                                () -> removeManifestPermissions(apkFile, toRemove),
-                                                R.string.me_perms_updated, sign, wrapper);
-                                    })
-                                    .create());
+                        .setPositiveButton(rss.getString(R.string.me_apply), (d, which) -> {
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            Runnable doEdit = () -> {
+                                ProgressManager pm2 = new ProgressManager(context, true).show();
+                                new Thread(() -> {
+                                    try {
+                                        List<String> toDisable = new ArrayList<>();
+                                        List<String> toEnable = new ArrayList<>();
+                                        for (int i = 0; i < perms.length; i++) {
+                                            boolean wantEnabled = permList.isItemChecked(i);
+                                            boolean isDisabled = perms[i] != null
+                                                    && perms[i].startsWith(DISABLED_PREFIX);
+                                            String base = baseNames[i];
+                                            if (base == null || base.isEmpty()) continue;
+                                            if (!wantEnabled && !isDisabled) toDisable.add(base);
+                                            else if (wantEnabled && isDisabled) toEnable.add(base);
+                                        }
+                                        int changed = 0;
+                                        if (!toDisable.isEmpty() || !toEnable.isEmpty()) {
+                                            try {
+                                                changed = setPermissionsDisabled(apkFile, toDisable, toEnable);
+                                            } catch (Exception e) {
+                                                pm2.dismiss();
+                                                new ErrorUtil(context).showError(e);
+                                                return;
+                                            }
+                                        }
+                                        if (changed > 0 && sign[0]) wrapper[0].signApk(apkFile);
+                                        pm2.dismiss();
+                                        int done = changed;
+                                        context.handler.post(() -> {
+                                            Extensions.showMessage(context, rss.getString(R.string.me_perms_updated, done));
+                                            try { context.refreshAllPanes(); }
+                                            catch (Exception ignored) {
+                                                context.loadFolderInPane(apkFile.getParentFile(), true);
+                                            }
+                                        });
+                                    } catch (Exception e) {
+                                        pm2.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                    }
+                                }).start();
+                            };
+                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                wrapper[0] = sw;
+                                doEdit.run();
+                            });
+                            else doEdit.run();
                         }).create();
                 dialogUtil.styleAlertDialog(dialog);
             });
@@ -1068,8 +1237,6 @@ public class ApkManifestEditor {
     }
 
     private void writeManifestEntries(File apkFile, List<XMLEntry> entries, List<ResEntry> resEntries) throws Exception {
-        // The same resource table used at decode time must be supplied at encode time:
-        // symbolic references (e.g. "@string/app_name") otherwise resolve to 0 and break the APK.
         replaceZipEntry(apkFile, "AndroidManifest.xml", new aXMLEncoder().encodeString(entries, context, resEntries));
     }
 
@@ -1083,19 +1250,11 @@ public class ApkManifestEditor {
 
     private void replaceZipEntry(File apkFile, String entryPath, byte[] newBytes)
             throws IOException {
-        ZipParameters zp = MergeUtil.newPreferredZipParameters(context);
-        zp.setFileNameInZip(entryPath);
-        try (ZipFile sourceZip = new ZipFile(apkFile); InputStream is = new ByteArrayInputStream(newBytes)) {
-            sourceZip.addStream(is, zp);
-        }
+        FileUtils.safeReplaceZipEntry(apkFile, entryPath, newBytes);
     }
 
     private void replaceZipEntry(File apkFile, String entryPath, InputStream is)
             throws IOException {
-        ZipParameters zp = MergeUtil.newPreferredZipParameters(context);
-        zp.setFileNameInZip(entryPath);
-        try (ZipFile sourceZip = new ZipFile(apkFile)) {
-            sourceZip.addStream(is, zp);
-        }
+        FileUtils.safeReplaceZipEntry(apkFile, entryPath, is);
     }
 }

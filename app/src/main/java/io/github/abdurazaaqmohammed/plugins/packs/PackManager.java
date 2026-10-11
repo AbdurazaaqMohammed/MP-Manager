@@ -48,9 +48,6 @@ public final class PackManager {
     /** packId -> loaded extensions, for unregister on remove/update. */
     private static final Map<String, List<AppExtension>> LOADED_EXT = new HashMap<>();
 
-    /** Set when loadPack throws; consumed by installDownloadedPack. */
-    private static String sLoadError;
-
     private PackManager() {
     }
 
@@ -164,17 +161,9 @@ public final class PackManager {
                 LOADED.put(packId, loaded);
                 LOADED_EXT.put(packId, extensions);
             }
-        } catch (Throwable t) {
-            sLoadError = t.getMessage() != null ? t.getMessage() : t.toString();
+        } catch (Exception ignored) {
         }
         return loaded;
-    }
-
-    /** Why the last loadPack failed; consumed by the installer for its error. */
-    static synchronized String takeLoadError() {
-        String r = sLoadError;
-        sLoadError = null;
-        return r;
     }
 
     // ---------- download / install / remove ----------
@@ -209,7 +198,7 @@ public final class PackManager {
      * Returns null on success, otherwise an error message.
      */
     public static synchronized String installDownloadedPack(Context context, PackDescriptor pack, File downloaded) {
-        return installDownloadedPack(context, pack, downloaded, true);
+        return installDownloadedPack(context, pack, downloaded, false/*true*/);
     }
 
     /**
@@ -246,15 +235,7 @@ public final class PackManager {
                 backup.delete();
                 copy(dest, backup);
             }
-            // The runtime refuses to load a dex from a file the app can still
-            // write to ("Writable dex file ... is not allowed"), so the
-            // installed APK has to end up read-only. Grant write back first:
-            // the previous APK is already read-only and would not be
-            // overwriteable.
-            if (hadPrevious && !dest.setWritable(true)) dest.delete();
             copy(downloaded, dest);
-            dest.setWritable(false);
-            dest.setReadable(true, false);
             prefs(context).edit()
                     .putInt(KEY_PREFIX + pack.id + "_version", pack.version)
                     .putString(KEY_PREFIX + pack.id + "_entry", pack.entryClass)
@@ -267,11 +248,8 @@ public final class PackManager {
             }
             Integer loadedVersion = PACK_VERSIONS.get(pack.id);
             if (loadedVersion == null) {
-                String why = takeLoadError();
-                throw new IllegalStateException(why != null
-                        ? "The pack APK failed to load: " + why
-                        : "The pack APK failed to load (entry class "
-                                + pack.entryClass + " not found).");
+                throw new IllegalStateException("The pack APK failed to load"
+                        + " (entry class " + pack.entryClass + " not found).");
             }
             if (loadedVersion != pack.version) {
                 throw new IllegalStateException("The pack APK is version "
@@ -300,7 +278,6 @@ public final class PackManager {
             if (hadPrevious && backup.exists()) {
                 try {
                     copy(backup, dest);
-                    dest.setWritable(false);
                     prefs(context).edit()
                             .putInt(KEY_PREFIX + pack.id + "_version", previousVersion)
                             .putString(KEY_PREFIX + pack.id + "_entry", previousEntry)

@@ -48,7 +48,10 @@ import io.github.abdurazaaqmohammed.features.dex.DexTools;
 import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFileOps;
 import io.github.abdurazaaqmohammed.adapters.FtpFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.domain.files.ArchiveEntryInfo;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.StreamingArchiveReader;
+import io.github.abdurazaaqmohammed.utils.CopyMarkStore;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -96,7 +99,146 @@ public class FileOperationsHelper {
     }
 
     public void handleZipEntryClick(ZipEntryInfo zipEntry) {
+        // CEK: apakah ini arsip? Kalau ya, tampilkan dialog nested archive
+        String name = zipEntry.getName() == null ? "" : zipEntry.getName().toLowerCase(java.util.Locale.ROOT);
+        boolean isArchive = !zipEntry.isDirectory() && (
+                name.endsWith(".zip") || name.endsWith(".rar") || name.endsWith(".7z") ||
+                name.endsWith(".tar") || name.endsWith(".tar.gz") || name.endsWith(".tgz") ||
+                name.endsWith(".tar.bz2") || name.endsWith(".tbz2") ||
+                name.endsWith(".tar.xz") || name.endsWith(".txz") ||
+                name.endsWith(".gz") || name.endsWith(".bz2") || name.endsWith(".xz"));
+        if (isArchive) {
+            showNestedArchiveDialog(zipEntry);
+            return;
+        }
         dex.handleZipEntryClick(zipEntry);
+    }
+
+    private void showNestedArchiveDialog(ZipEntryInfo zipEntry) {
+        boolean pane1IsCurrent = adapter.pane1;
+        String entryName = zipEntry.getName();
+        String[] options = new String[]{
+                "Open as folder (temporary)",
+                "Extract here (this folder)",
+                "Extract to left pane",
+                "Extract to right pane"
+        };
+        context.handler.post(() -> new MaterialAlertDialogBuilder(context)
+                .setTitle("Archive: " + entryName)
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: openNestedAsTemp(zipEntry); break;
+                        case 1: extractNestedToPane(zipEntry, pane1IsCurrent, true); break;
+                        case 2: extractNestedToPane(zipEntry, true, false); break;
+                        case 3: extractNestedToPane(zipEntry, false, false); break;
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show());
+    }
+
+    private void openNestedAsTemp(ZipEntryInfo zipEntry) {
+        String entryName = zipEntry.getName();
+        showActiveProgress("Extracting " + entryName + "...");
+        new Thread(() -> {
+            File tempRoot = null;
+            try {
+                // Batas max 1 nested temp
+                File cacheDir = context.getCacheDir();
+                File[] existing = cacheDir.listFiles(f -> f.getName().startsWith("nested_"));
+                if (existing != null) {
+                    for (File f : existing) Util.deleteDir(f);
+                }
+                tempRoot = new File(cacheDir, "nested_" + System.currentTimeMillis());
+                if (!tempRoot.mkdirs()) throw new IOException("Cannot create temp dir");
+
+                // Extract outer entry ke tempRoot
+                File outerZip = zipEntry.getZipFile();
+                try (ZipFile zf = new ZipFile(outerZip)) {
+                    FileHeader fh = zf.getFileHeader(zipEntry.getFullPath());
+                    if (fh == null) throw new IOException("Entry not found in zip");
+                    zf.extractFile(fh, tempRoot.getAbsolutePath(), entryName);
+                }
+
+                File innerArchive = new File(tempRoot, entryName);
+                File innerExtractDir = new File(tempRoot, "content");
+                if (!innerExtractDir.mkdirs()) throw new IOException("Cannot create content dir");
+
+                boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context)
+                        .getBoolean("preserve_mtime", true);
+                ArchiveUtil.extract(innerArchive, innerExtractDir, keepTime);
+
+                dismissActiveProgress();
+                File finalTempRoot = tempRoot;
+                context.handler.post(() -> context.loadFolderInPane(innerExtractDir, adapter.pane1));
+            } catch (Exception e) {
+                dismissActiveProgress();
+                if (tempRoot != null) Util.deleteDir(tempRoot);
+                new ErrorUtil(context).showError(e);
+            }
+        }).start();
+    }
+
+    private void extractNestedToPane(ZipEntryInfo zipEntry, boolean pane1, boolean useCurrentFolder) {
+        File destFolder;
+        if (useCurrentFolder) {
+            destFolder = pane1 ? context.pane1Folder : context.pane2Folder;
+        } else {
+            destFolder = pane1 ? context.pane1Folder : context.pane2Folder;
+        }
+        String entryName = zipEntry.getName();
+        // Strip extension untuk nama folder output
+        String lower = entryName.toLowerCase(java.util.Locale.ROOT);
+        String baseName = entryName;
+        String[] knownExts = {".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2", ".txz",
+                              ".zip", ".tar", ".7z", ".rar", ".gz", ".bz2", ".xz"};
+        for (String ext : knownExts) {
+            if (lower.endsWith(ext)) {
+                baseName = entryName.substring(0, entryName.length() - ext.length());
+                break;
+            }
+        }
+        File finalDestFolder = destFolder;
+        String finalBaseName = baseName;
+        showActiveProgress("Extracting " + entryName + "...");
+        new Thread(() -> {
+            File tempRoot = null;
+            try {
+                tempRoot = new File(context.getCacheDir(), "nested_" + System.currentTimeMillis());
+                tempRoot.mkdirs();
+
+                File outerZip = zipEntry.getZipFile();
+                try (ZipFile zf = new ZipFile(outerZip)) {
+                    FileHeader fh = zf.getFileHeader(zipEntry.getFullPath());
+                    if (fh == null) throw new IOException("Entry not found in zip");
+                    zf.extractFile(fh, tempRoot.getAbsolutePath(), entryName);
+                }
+
+                File innerArchive = new File(tempRoot, entryName);
+                File outputDir = FileUtils.getUnusedFile(new File(finalDestFolder, finalBaseName));
+                if (!outputDir.mkdirs()) throw new IOException("Cannot create output dir");
+
+                boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context)
+                        .getBoolean("preserve_mtime", true);
+                ArchiveUtil.extract(innerArchive, outputDir, keepTime);
+
+                // Mark hijau
+                java.util.List<String> resultPaths = new java.util.ArrayList<>();
+                resultPaths.add(outputDir.getAbsolutePath());
+                CopyMarkStore.markSession(context, resultPaths);
+
+                dismissActiveProgress();
+                context.handler.post(() -> {
+                    context.loadFolderInPane(finalDestFolder, pane1);
+                    context.refreshAllPanes();
+                });
+            } catch (Exception e) {
+                dismissActiveProgress();
+                new ErrorUtil(context).showError(e);
+            } finally {
+                if (tempRoot != null) Util.deleteDir(tempRoot);
+            }
+        }).start();
     }
 
     private void showActiveProgress(String text) {
@@ -120,7 +262,6 @@ public class FileOperationsHelper {
             } catch (Exception e) {
                 new ErrorUtil(context).showError(e);
             } finally {
-                //activeProgress = null;
                 dismissActiveProgress();
             }
         }).start();
@@ -148,6 +289,7 @@ public class FileOperationsHelper {
     }
 
     public void copyMultiple(List<Object> items) throws IOException {
+        // ===== TIDAK MARK DI SINI — mark di HASIL (copyToRegularFolder / copyToZip) =====
         if (adapter.isInZip) {
             copyFromZip(items);
         } else {
@@ -156,18 +298,21 @@ public class FileOperationsHelper {
     }
 
     public void move(Object item) throws IOException {
+        // ===== TIDAK MARK DI SINI — mark di HASIL (moveToDestination) =====
         if (adapter.isMultiSelectMode() && !adapter.getSelectedFiles().isEmpty()) {
             List<Object> itemsToMove = adapter.getSelectedFiles();
             if (adapter.isInZip) {
                 if (!copyFromZip(itemsToMove)) return;
-                for (Object o : itemsToMove) deleteZipEntry((ZipEntryInfo) o);
+                for (Object o : itemsToMove) {
+                    if (o instanceof ZipEntryInfo) deleteZipEntry((ZipEntryInfo) o);
+                }
                 context.handler.post(adapter::clearSelection);
             } else {
                 moveToDestination(itemsToMove);
             }
         } else if (adapter.isInZip) {
             if (!copyToDestination(Collections.singletonList(item))) return;
-            deleteZipEntry((ZipEntryInfo) item);
+            if (item instanceof ZipEntryInfo) deleteZipEntry((ZipEntryInfo) item);
             context.handler.post(adapter::clearSelection);
         } else {
             moveToDestination(Collections.singletonList(item));
@@ -194,52 +339,72 @@ public class FileOperationsHelper {
 
         boolean useElevated = AccessManager.fileOpsOn(context);
 
+        // ===== KUMPULKAN PATH HASIL UNTUK MARK =====
+        List<String> resultPaths = new ArrayList<>();
+
         for (Object item : items) {
             if (item instanceof File f) {
                 File dest = getUnusedDest(destinationFolder, f.getName(), useElevated);
+                boolean success = false;
                 if (useElevated) {
                     try {
                         if (f.isDirectory()) AccessManager.copyDir(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
                         else AccessManager.copyFile(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
                         AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                         AccessManager.delete(context, f.getAbsolutePath(), true);
-                        continue;
+                        success = true;
                     } catch (Exception e) {
                     }
                 }
-                if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellMove(f, destinationFolder, dest.getName()))
-                    continue;
-                if (f.renameTo(dest)) continue;
-                if (f.isDirectory()) {
-                    if (useElevated) {
-                        try {
-                            AccessManager.mkdir(context, dest.getAbsolutePath(), true);
-                        } catch (Exception ignored) {
-                            //noinspection ResultOfMethodCallIgnored
+                if (!success && ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellMove(f, destinationFolder, dest.getName()))
+                    success = true;
+                if (!success && f.renameTo(dest)) success = true;
+                if (!success) {
+                    if (f.isDirectory()) {
+                        if (useElevated) {
+                            try {
+                                AccessManager.mkdir(context, dest.getAbsolutePath(), true);
+                            } catch (Exception ignored) {
+                                dest.mkdir();
+                            }
+                        } else {
                             dest.mkdir();
                         }
+                        FileUtils.copyFolder(f, dest);
+                        syncDirTimes(f, dest);
                     } else {
-                        //noinspection ResultOfMethodCallIgnored
-                        dest.mkdir();
+                        FileUtils.copyFile(f, dest);
+                        AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                     }
-                    FileUtils.copyFolder(f, dest);
-                    syncDirTimes(f, dest);
-                } else {
-                    FileUtils.copyFile(f, dest);
-                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                    if (copySize(f) != copySize(dest)) {
+                        throw new IOException("Move failed, copy mismatch: " + f.getName());
+                    }
+                    deleteRecursive(f);
+                    success = true;
                 }
-                if (copySize(f) != copySize(dest)) {
-                    throw new IOException("Move failed, copy mismatch: " + f.getName());
-                }
-                deleteRecursive(f);
+                if (success) resultPaths.add(dest.getAbsolutePath());
             } else if (item instanceof ZipEntryInfo) {
-                extractZipEntry((ZipEntryInfo) item, destinationFolder);
+                File extracted = extractZipEntry((ZipEntryInfo) item, destinationFolder);
+                if (extracted != null) resultPaths.add(extracted.getAbsolutePath());
+            } else if (item instanceof ArchiveEntryInfo) {
+                try {
+                    File extracted = StreamingArchiveReader.extractEntry(
+                        (ArchiveEntryInfo) item, destinationFolder);
+                    if (extracted != null) resultPaths.add(extracted.getAbsolutePath());
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
             }
         }
+
+        // ===== MARK HASIL (HIJAU) =====
+        if (!resultPaths.isEmpty()) {
+            CopyMarkStore.markSession(context, resultPaths);
+        }
+
         context.handler.post(() -> {
             adapter.clearSelection();
             context.loadFolderInPane(destinationFolder, !adapter.pane1);
-            // Source pane also changed after a move (files deleted) — reload it too.
             try {
                 File sourceFolder = adapter.pane1 ? context.pane1Folder : context.pane2Folder;
                 if (sourceFolder != null && !sourceFolder.equals(destinationFolder)) {
@@ -319,46 +484,66 @@ public class FileOperationsHelper {
     private boolean copyToRegularFolder(List<Object> items, File destinationFolder) throws IOException {
         boolean useElevated = AccessManager.fileOpsOn(context);
 
+        // ===== KUMPULKAN PATH HASIL UNTUK MARK =====
+        List<String> resultPaths = new ArrayList<>();
+
         for (Object item : items) {
             if (item instanceof File f) {
                 File dest = isSameDirectory(f, destinationFolder) ? promptForDuplicateName(f, destinationFolder) : getUnusedDest(destinationFolder, f.getName(), useElevated);
                 if (dest == null || dest.equals(f)) continue;
+                boolean success = false;
                 if (useElevated) {
                     try {
                         if (f.isDirectory()) AccessManager.copyDir(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
                         else AccessManager.copyFile(context, f.getAbsolutePath(), dest.getAbsolutePath(), true);
                         AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
-                        continue;
+                        success = true;
                     } catch (Exception e) {
                     }
                 }
-                if (ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellCopy(f, destinationFolder, dest.getName()) != null)
-                    continue;
-                if (f.isDirectory()) {
-                    if (useElevated) {
-                        try {
-                            AccessManager.mkdir(context, dest.getAbsolutePath(), true);
-                        } catch (Exception ignored) {
-                            //noinspection ResultOfMethodCallIgnored
+                if (!success && ShizukuFileOps.involvesShizukuPath(f, destinationFolder) && ShizukuFileOps.shellCopy(f, destinationFolder, dest.getName()) != null)
+                    success = true;
+                if (!success) {
+                    if (f.isDirectory()) {
+                        if (useElevated) {
+                            try {
+                                AccessManager.mkdir(context, dest.getAbsolutePath(), true);
+                            } catch (Exception ignored) {
+                                dest.mkdir();
+                            }
+                        } else {
                             dest.mkdir();
                         }
+                        FileUtils.copyFolder(f, dest);
+                        syncDirTimes(f, dest);
                     } else {
-                        //noinspection ResultOfMethodCallIgnored
-                        dest.mkdir();
+                        FileUtils.copyFile(f, dest);
+                        AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
                     }
-                    FileUtils.copyFolder(f, dest);
-                    syncDirTimes(f, dest);
-                } else {
-                    FileUtils.copyFile(f, dest);
-                    AccessManager.preserveTime(context, f.getAbsolutePath(), dest.getAbsolutePath());
+                    success = true;
                 }
+                if (success) resultPaths.add(dest.getAbsolutePath());
             } else if (item instanceof ZipEntryInfo) {
-                extractZipEntry((ZipEntryInfo) item, destinationFolder);
+                File extracted = extractZipEntry((ZipEntryInfo) item, destinationFolder);
+                if (extracted != null) resultPaths.add(extracted.getAbsolutePath());
+            } else if (item instanceof ArchiveEntryInfo) {
+                try {
+                    File extracted = StreamingArchiveReader.extractEntry(
+                        (ArchiveEntryInfo) item, destinationFolder);
+                    if (extracted != null) resultPaths.add(extracted.getAbsolutePath());
+                } catch (Exception e) {
+                    new ErrorUtil(context).showError(e);
+                }
             }
         }
+
+        // ===== MARK HASIL (HIJAU) =====
+        if (!resultPaths.isEmpty()) {
+            CopyMarkStore.markSession(context, resultPaths);
+        }
+
         context.handler.post(() -> {
             context.loadFolderInPane(destinationFolder, !adapter.pane1);
-            // Copy destination changed too — ensure the source pane reflects renames/copies.
             try { context.refreshAllPanes(); } catch (Exception ignored) { }
         });
         return true;
@@ -496,6 +681,11 @@ public class FileOperationsHelper {
 
         performAddToZip(items, zipFile, currentPath, compressionLevel[0], updateMode[0]);
 
+        // ===== MARK ZIP SEBAGAI HASIL (HIJAU) =====
+        List<String> resultPaths = new ArrayList<>();
+        resultPaths.add(zipFile.getAbsolutePath());
+        CopyMarkStore.markSession(context, resultPaths);
+
         if (isApk && autosign[0]) context.handler.post(() ->
                 SignWrapper.requireAuth(context, sw -> {
                     activeProgress.setText(context.rss.getString(R.string.signing, zipFile.getName()));
@@ -530,7 +720,6 @@ public class FileOperationsHelper {
             for (FileHeader fh : sourceZip.getFileHeaders()) existingEntries.put(fh.getFileName(), fh.getLastModifiedTime());
 
             Set<String> toRemove = new LinkedHashSet<>();
-            // {file, entryName}; a null entryName marks a directory added under targetDir keeping its own name
             List<Object[]> namedAdds = new ArrayList<>();
             List<File> plainFilesToAdd = new ArrayList<>();
 
@@ -614,7 +803,12 @@ public class FileOperationsHelper {
         int limit = Math.min(items.size(), 3);
         for (int i = 0; i < limit; i++) {
             Object o = items.get(i);
-            sb.append(o instanceof File ? ((File) o).getName() : ((ZipEntryInfo) o).getName());
+            String name;
+            if (o instanceof File) name = ((File) o).getName();
+            else if (o instanceof ZipEntryInfo) name = ((ZipEntryInfo) o).getName();
+            else if (o instanceof ArchiveEntryInfo) name = ((ArchiveEntryInfo) o).getName();
+            else name = String.valueOf(o);
+            sb.append(name);
             if (i < limit - 1) sb.append(", ");
         }
         if (items.size() > limit) sb.append(" ").append(context.rss.getString(R.string.plus_n_more, items.size() - limit));
@@ -633,13 +827,12 @@ public class FileOperationsHelper {
         }
     }
 
-    public void extractZipEntry(ZipEntryInfo zipEntry, File destinationFolder) throws IOException {
+    /** Extract zip entry. Return File hasil (atau null kalau gagal). */
+    public File extractZipEntry(ZipEntryInfo zipEntry, File destinationFolder) throws IOException {
         String destinationPath = destinationFolder.getPath();
         String zipEntryPath = zipEntry.getFullPath();
-        if (zipEntryPath == null) return;
+        if (zipEntryPath == null) return null;
         try (ZipFile zf = new ZipFile(zipEntry.getZipFile())) {
-            // zip4j preserves the entry's internal path when extracting, so a file inside
-            // "docs/" would land in destination/docs/. Pass an explicit name to avoid that.
             if(zipEntry.isDirectory()) {
                 String prefix = zipEntryPath.endsWith("/") ? zipEntryPath : zipEntryPath + "/";
                 for(FileHeader fh : zf.getFileHeaders()) {
@@ -647,7 +840,11 @@ public class FileOperationsHelper {
                     if(!name.startsWith(prefix) || fh.isDirectory()) continue;
                     zf.extractFile(fh, destinationPath, zipEntry.getName() + "/" + name.substring(prefix.length()));
                 }
-            } else zf.extractFile(zf.getFileHeader(zipEntryPath), destinationPath, zipEntry.getName());
+                return new File(destinationFolder, zipEntry.getName());
+            } else {
+                zf.extractFile(zf.getFileHeader(zipEntryPath), destinationPath, zipEntry.getName());
+                return new File(destinationFolder, zipEntry.getName());
+            }
         }
     }
 
@@ -691,8 +888,6 @@ public class FileOperationsHelper {
         pm.show();
         new Thread(() -> {
             try {
-                // Root-only archives are unreadable to zip4j/tar readers:
-                // stage a copy into cache first (binary-safe).
                 File readable = archive;
                 File staged = null;
                 if (RootStaging.needsStaging(context, archive)) {
@@ -705,10 +900,14 @@ public class FileOperationsHelper {
                     ArchiveUtil.extract(readable, destDir, keepTime);
                 } finally {
                     if (staged != null) {
-                        //noinspection ResultOfMethodCallIgnored
                         staged.delete();
                     }
                 }
+                // ===== MARK HASIL EXTRACT (HIJAU) =====
+                List<String> resultPaths = new ArrayList<>();
+                resultPaths.add(destDir.getAbsolutePath());
+                CopyMarkStore.markSession(context, resultPaths);
+
                 pm.dismiss();
                 context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
             } catch (Exception e) {
@@ -717,5 +916,4 @@ public class FileOperationsHelper {
             }
         }).start();
     }
-
 }

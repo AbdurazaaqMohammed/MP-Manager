@@ -407,21 +407,25 @@ public class APKParser {
 
         mAPKSize = new File(apkPath).length();
 
-        try {
-            ZipFile mZipFile = getZipFile(apkPath);
+        try (ZipFile mZipFile = getZipFile(apkPath)) {
             InputStream manifestStream = null, resStream = null;
             ZipEntry manifestEntry = mZipFile.getEntry("AndroidManifest.xml");
             ZipEntry resEntry = mZipFile.getEntry("resources.arsc");
             if (manifestEntry != null) {
-                manifestStream = mZipFile.getInputStream(mZipFile.getEntry("AndroidManifest.xml"));
+                manifestStream = mZipFile.getInputStream(manifestEntry);
             }
             if (resEntry != null) {
-                resStream = mZipFile.getInputStream(mZipFile.getEntry("resources.arsc"));
+                resStream = mZipFile.getInputStream(resEntry);
             }
-            if (manifestStream != null) {
-                mResDecoded = new ResourceTableParser(resStream).parse();
-                mManifest = new aXMLDecoder(manifestStream, mResDecoded != null ? mResDecoded : null).decode();
-                mManifestAsString = Utils.decodeAsString(mManifest);
+            try {
+                if (manifestStream != null) {
+                    mResDecoded = new ResourceTableParser(resStream).parse();
+                    mManifest = new aXMLDecoder(manifestStream, mResDecoded != null ? mResDecoded : null).decode();
+                    mManifestAsString = Utils.decodeAsString(mManifest);
+                }
+            } finally {
+                if (manifestStream != null) try { manifestStream.close(); } catch (Exception ignored) {}
+                if (resStream != null) try { resStream.close(); } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
 

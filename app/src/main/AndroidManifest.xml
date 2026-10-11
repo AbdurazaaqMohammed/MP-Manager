@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -194,15 +195,8 @@
         <activity
             android:name="io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity"
             android:exported="false"
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:windowSoftInputMode="adjustResize|stateHidden"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
-        <activity
-            android:name="io.github.abdurazaaqmohammed.ui.activities.CompareDexActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:windowSoftInputMode="adjustResize|stateHidden"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        </activity>
            <activity
                android:name="modder.hub.dexeditor.activity.SettingsActivity"
                android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"

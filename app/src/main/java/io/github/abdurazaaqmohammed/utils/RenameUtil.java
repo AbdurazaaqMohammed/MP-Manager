@@ -238,6 +238,13 @@ public class RenameUtil {
                     }
                 }
                 pm.dismiss();
+                List<File> renamedFiles = new ArrayList<>();
+                for (RenamePlan p : plans) {
+                    if (!p.noop && p.error == null) {
+                        renamedFiles.add(new File(parent, p.newName));
+                    }
+                }
+                CopyMarkStore.markResultFiles(context, renamedFiles);
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
                     context.loadFolderInPane(parent, pane1, false);
@@ -291,6 +298,7 @@ public class RenameUtil {
                     zf.renameFiles(tempToFinal);
                 }
                 pm.dismiss();
+                CopyMarkStore.markResult(context, zipFile);
                 handler.post(() -> {
                     context.clearPaneSelection(pane1);
                     context.loadZipFolderInPane(zipFile, currentZipPath, pane1, false);

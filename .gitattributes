@@ -1,2 +1,12 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Force detect C++ in linguist
+*.cpp linguist-language=C++
+*.h linguist-language=C++
+*.hpp linguist-language=C++
+*.c linguist-language=C
+
+# Mark native folder as primary
+app/src/main/cpp/* linguist-detectable=true
+app/src/main/cpp/* linguist-vendored=false
+
+# Generated files not counted
+*.g.dart linguist-generated=true

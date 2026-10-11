@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -70,6 +71,7 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -84,10 +86,10 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
-import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkInfoUtil;
 import io.github.abdurazaaqmohammed.utils.ApkOptimizer;
 import io.github.abdurazaaqmohammed.utils.CertUtil;
+import io.github.abdurazaaqmohammed.utils.CopyMarkStore;
 import io.github.abdurazaaqmohammed.utils.CopyUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
@@ -125,6 +127,30 @@ public class ApkInfoDialogs {
         this.manifestEditor = manifestEditor;
         this.signatures = signatures;
         this.overlay = overlay;
+    }
+
+    /**
+     * Mark file sebagai hasil terbaru (HIJAU).
+     * FIX: Hanya mark — refresh ditangani caller biar gak race condition.
+     */
+    private void markAsResult(File file) {
+        try {
+            if (file == null || !file.exists()) return;
+            CopyMarkStore.markResult(context, file);
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * FIX: Refresh aman — cuma 1 refresh, prioritas loadFolderInPane.
+     */
+    private void safeRefresh(File parentFolder) {
+        context.handler.post(() -> {
+            try {
+                context.loadFolderInPane(parentFolder, pane1, false);
+            } catch (Exception ignored) {
+                try { context.refreshAllPanes(); } catch (Exception ignored2) {}
+            }
+        });
     }
 
     public void showDecompileOptionsDialog(File file, String fileName) {
@@ -248,6 +274,7 @@ public class ApkInfoDialogs {
                             decompiler.runCommand();
                             logger.close();
                             pm.dismiss();
+                            markAsResult(outputFile);
                             context.handler.post(() -> {
                                 Extensions.showMessage(context, context.getString(R.string.decompiled_to, outputFile.getName()));
                                 context.reloadCurrentFolder();
@@ -325,17 +352,27 @@ public class ApkInfoDialogs {
         AlertDialog ad = dialogUtil.getDialogBuilder()
                 .setView(display)
                 .setNeutralButton(R.string.more, (dialog, which) -> {
-                    List<String> moreTitles = new ArrayList<>(Arrays.asList(context.rss.getString(R.string.sign_apk), context.rss.getString(R.string.optimize_apk), context.rss.getString(R.string.decompile_reandroid_apkeditor), context.rss.getString(R.string.refactor_obfuscated_resource_names), context.rss.getString(R.string.protect_reandroid_apkeditor), context.rss.getString(R.string.clone_apk), context.rss.getString(R.string.view_certificate), context.rss.getString(R.string.add_toast_dialog), context.rss.getString(R.string.remove_all_toasts), context.rss.getString(R.string.remove_signature), context.rss.getString(R.string.signature_health), context.rss.getString(R.string.manifest_toggles), context.rss.getString(R.string.permissions)));
-                    // Third-party APK actions appended after the 14 built-ins.
-                    final List<ApkMoreAction> pluginMore =
-                            ExtensionRegistry.apkActions();
+                    List<String> moreTitles = new ArrayList<>(Arrays.asList(
+                            context.rss.getString(R.string.sign_apk),
+                            context.rss.getString(R.string.optimize_apk),
+                            context.rss.getString(R.string.decompile_reandroid_apkeditor),
+                            context.rss.getString(R.string.refactor_obfuscated_resource_names),
+                            context.rss.getString(R.string.protect_reandroid_apkeditor),
+                            context.rss.getString(R.string.clone_apk),
+                            context.rss.getString(R.string.view_certificate),
+                            context.rss.getString(R.string.add_toast_dialog),
+                            context.rss.getString(R.string.remove_all_toasts),
+                            context.rss.getString(R.string.remove_signature),
+                            context.rss.getString(R.string.signature_health),
+                            context.rss.getString(R.string.manifest_toggles),
+                            context.rss.getString(R.string.permissions),
+                            context.rss.getString(R.string.me_remove_permanently)));
+                    final List<ApkMoreAction> pluginMore = ExtensionRegistry.apkActions();
                     for (ApkMoreAction ext : pluginMore) {
                         if (ext == null) continue;
                         moreTitles.add(ext.title() == null || ext.title().isEmpty() ? ext.id() : ext.title());
                     }
-                    // External (out-of-process) APK actions, fire-and-forget.
-                    final List<ExternalActions.Entry> externalApk =
-                            ExternalActions.apkEntries(context);
+                    final List<ExternalActions.Entry> externalApk = ExternalActions.apkEntries(context);
                     for (ExternalActions.Entry e : externalApk) {
                         if (e == null) continue;
                         moreTitles.add(e.title == null || e.title.isEmpty() ? e.id : e.title);
@@ -388,9 +425,6 @@ public class ApkInfoDialogs {
                             CheckBox deleteFiles = ll.findViewById(R.id.files_to_delete);
                             deleteFiles.setChecked(delFiles[0] = settings.getBoolean("delFiles", true));
                             deleteFiles.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("delFiles", delFiles[0] = isChecked).apply());
-                            CheckBox ultraCompress = ll.findViewById(R.id.ultra_compress);
-                            ultraCompress.setChecked(settings.getBoolean("ultra_compress", true));
-                            ultraCompress.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("ultra_compress", isChecked).apply());
                             ll.findViewById(R.id.choose_files_delete).setOnClickListener(v8 -> {
                                 Set<String> filesToDelete = settings.getStringSet("filesToDelete", null);
                                 String[] filesFiDelete = (filesToDelete == null) ? new String[]{"assets/audience_network.dex", "androidsupportmultidexversion.txt", "DebugProbesKt.bin", "stamp-cert-sha256", "user-messaging-platform.properties", "transport-runtime.properties", "transport-backend-cct.properties", "transport-api.properties", "protolite-well-known-types.properties", "play-services-tasks.properties", "play-services-stats.properties", "play-services-measurement-sdk-api.properties", "play-services-measurement-sdk.properties", "play-services-measurement-impl.properties", "play-services-measurement-base.properties", "play-services-measurement-api.properties", "play-services-measurement.properties", "play-services-cloud-messaging.properties", "play-services-basement.properties", "play-services-base.properties", "play-services-appset.properties", "play-services-ads-lite.properties", "play-services-ads-identifier.properties", "play-services-ads-base.properties", "play-services-ads.properties", "firebase-abt.properties", "firebase-analytics-ktx.properties", "firebase-analytics.properties", "firebase-annotations.properties", "firebase-common-ktx.properties", "firebase-common.properties", "firebase-components.properties", "firebase-config-ktx.properties", "firebase-config.properties", "firebase-crashlytics-ktx.properties", "firebase-crashlytics.properties", "firebase-datatransport.properties", "firebase-encoders-json.properties", "firebase-encoders-proto.properties", "firebase-encoders.properties", "firebase-iid-interop.properties", "firebase-installations-interop.properties", "firebase-installations.properties", "firebase-measurement-connector.properties", "firebase-messaging-ktx.properties", "firebase-messaging.properties", "firebase-perf-ktx.properties", "firebase-perf.properties"}
@@ -439,14 +473,15 @@ public class ApkInfoDialogs {
                                                     APKLogger logger = pm.getLogger();
                                                     new Thread(() -> {
                                                         try {
-                                                            File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, settings.getBoolean("ultra_compress", true), logger);
+                                                            File opt = ApkOptimizer.optimize(context, file, delFiles[0], settings, logger);
                                                             if (deepOpt[0]) {
                                                                 logger.logMessage(context.rss.getString(R.string.deep_optimize_running));
                                                                 opt = ApkDeepOptimizer.optimize(context, opt, settings.getStringSet("filesToDelete", null), settings, logger);
                                                             }
                                                             if (sign[0]) wrapper[0].signApk(opt);
+                                                            markAsResult(opt);
                                                             pm.dismiss();
-                                                            context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                                            safeRefresh(file.getParentFile());
                                                         } catch (Exception e) {
                                                             pm.dismiss();
                                                             new ErrorUtil(context).showError(e);
@@ -528,6 +563,8 @@ public class ApkInfoDialogs {
                                             options.newCommandExecutor(logger).runCommand();
                                             logger.close();
                                             pm.dismiss();
+                                            markAsResult(options.outputFile);
+                                            safeRefresh(file.getParentFile());
                                             Extensions.showMessage(context, context.getString(R.string.refactored, fileName));
                                         } catch (Exception e) {
                                             pm.dismiss();
@@ -602,6 +639,8 @@ public class ApkInfoDialogs {
                                             options.newCommandExecutor(logger).runCommand();
                                             logger.close();
                                             pm.dismiss();
+                                            markAsResult(options.outputFile);
+                                            safeRefresh(file.getParentFile());
                                             context.handler.post(() -> { dialog2.dismiss(); Extensions.showMessage(context, context.rss.getString(R.string.protectd)); });
                                         } catch (Exception e) {
                                             pm.dismiss();
@@ -643,8 +682,9 @@ public class ApkInfoDialogs {
                                                 if (sign[0]) {
                                                     wrapper[0].signApk(cloned);
                                                 }
+                                                markAsResult(cloned);
                                                 pm.dismiss();
-                                                context.handler.post(() -> context.loadFolderInPane(file.getParentFile(), pane1, false));
+                                                safeRefresh(file.getParentFile());
                                             } catch (Exception e) { pm.dismiss(); new ErrorUtil(context).showError(e); }
                                         }).start();
                                     };
@@ -660,9 +700,9 @@ public class ApkInfoDialogs {
                     else if (which1 == 10) signatures.showSignatureHealthDialog(file);
                     else if (which1 == 11) manifestEditor.showManifestTogglesDialog(file);
                     else if (which1 == 12) manifestEditor.showPermissionsDialog(file);
+                    else if (which1 == 13) showRemovePermissionsDialog(file);
                     else {
-                        // Third-party APK action: indices 0-12 are built-ins above.
-                        int pluginIndex = which1 - 13;
+                        int pluginIndex = which1 - 14;
                         if (pluginIndex >= 0 && pluginIndex < pluginMore.size()) {
                             ApkMoreAction ext = pluginMore.get(pluginIndex);
                             if (ext != null) {
@@ -672,7 +712,7 @@ public class ApkInfoDialogs {
                                 }
                             }
                         } else {
-                            int extIndex = which1 - 13 - pluginMore.size();
+                            int extIndex = which1 - 14 - pluginMore.size();
                             if (extIndex >= 0 && extIndex < externalApk.size()) {
                                 ExternalActions.Entry found =
                                         externalApk.get(extIndex);
@@ -763,16 +803,18 @@ public class ApkInfoDialogs {
                                                                         SignWrapper.requireAuth(context, sw -> {
                                                                             try {
                                                                                 sw.signApk(finalOutFile);
+                                                                                markAsResult(finalOutFile);
                                                                                 Extensions.showMessage(context, m);
                                                                             } catch (Exception e) {
                                                                                 new ErrorUtil(context).showError(e);
                                                                             } finally {
-                                                                                context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                                                                safeRefresh(file.getParentFile());
                                                                             }
                                                                         });
                                                                     } else {
+                                                                        markAsResult(outFile);
                                                                         Extensions.showMessage(context, msg);
-                                                                        context.loadFolderInPane(file.getParentFile(), pane1, false);
+                                                                        safeRefresh(file.getParentFile());
                                                                     }
                                                                 }
                                                             } catch (Exception ignored) {
@@ -842,8 +884,7 @@ public class ApkInfoDialogs {
         final boolean[] rootInfoLoaded = {false};
 
         RootManager rm = RootManager.getInstance(context);
-        boolean elevatedFileOps = AccessManager.fileOpsOn(context);
-        if (elevatedFileOps) {
+        if (rm.isRootAvailable() && rm.isRootFileOpsEnabled()) {
             rootInfoSection.setVisibility(View.VISIBLE);
             rootInfoHeader.setOnClickListener(v -> {
                 if (rootInfoContent.getVisibility() == View.VISIBLE) {
@@ -862,86 +903,23 @@ public class ApkInfoDialogs {
                 loading.setPadding(0, dp(4), 0, dp(4));
                 rootInfoContent.addView(loading);
                 new Thread(() -> {
-                    // Capture the package name on the UI thread first — posting
-                    // then sleeping races the APK-info loader below that fills
-                    // pkgName, so the old code read "" and bailed out early.
-                    final String[] pkgHolder = new String[1];
-                    try {
-                        context.handler.post(() -> {
-                            CharSequence t = pkgName.getText();
-                            String s = t == null ? "" : t.toString().trim();
-                            // Wait until the APK-info loader fills pkgName
-                            // (it starts as R.string.loading) instead of
-                            // giving up with "No root info available".
-                            if (!s.isEmpty()
-                                    && !s.equals(context.getString(R.string.loading))) {
-                                synchronized (pkgHolder) {
-                                    pkgHolder[0] = s;
-                                    pkgHolder.notifyAll();
-                                }
-                            }
-                        });
-                    } catch (Exception ignored) {}
-                    String pkgNameStr = null;
-                    synchronized (pkgHolder) {
-                        for (int i = 0; i < 100 && pkgHolder[0] == null; i++) {
-                            try { pkgHolder.wait(100); } catch (InterruptedException ignored) {}
-                            try {
-                                final String[] retry = new String[1];
-                                context.handler.post(() -> {
-                                    CharSequence t = pkgName.getText();
-                                    String s = t == null ? "" : t.toString().trim();
-                                    if (!s.isEmpty()
-                                            && !s.equals(context.getString(R.string.loading))) {
-                                        retry[0] = s;
-                                    }
-                                });
-                                // Give the posted runnable a moment to run.
-                                try { Thread.sleep(60); } catch (InterruptedException ignored) {}
-                                if (retry[0] != null) {
-                                    pkgHolder[0] = retry[0];
-                                    break;
-                                }
-                            } catch (Exception ignored) {}
-                        }
-                        pkgNameStr = pkgHolder[0];
-                    }
-                    // Fall back to parsing the APK itself so root info still
-                    // loads even if the main APK-info thread hasn't finished.
-                    if (TextUtils.isEmpty(pkgNameStr)) {
-                        try {
-                            android.content.pm.PackageInfo pi = context.getPackageManager()
-                                    .getPackageArchiveInfo(filePath, 0);
-                            if (pi != null) pkgNameStr = pi.packageName;
-                        } catch (Exception ignored) {}
-                    }
-                    if (TextUtils.isEmpty(pkgNameStr)) {
-                        context.handler.post(() -> {
-                            rootInfoContent.removeAllViews();
-                            TextView empty = new TextView(context);
-                            empty.setText(R.string.no_root_info_available);
-                            empty.setTextSize(12);
-                            empty.setPadding(0, dp(4), 0, dp(4));
-                            rootInfoContent.addView(empty);
-                        });
-                        return;
-                    }
-                    final String resolvedPkg = pkgNameStr;
-                    String uid = rm.getAppUid(resolvedPkg);
-                    List<String> apkPaths = rm.getAppApkPaths(resolvedPkg);
-                    List<String> dataDirs = rm.getAppDataDirs(resolvedPkg);
-                    // pm path lists base APK first, then splits — show only
-                    // the base path to avoid duplicate-looking rows.
-                    final String baseApkPath = (apkPaths != null && !apkPaths.isEmpty())
-                            ? apkPaths.get(0) : null;
+                    String[] pkg = {""};
+                    context.handler.post(() -> pkg[0] = pkgName.getText().toString());
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    String pkgNameStr = pkg[0];
+                    if (TextUtils.isEmpty(pkgNameStr)) return;
+                    String uid = rm.getAppUid(pkgNameStr);
+                    String apkPath = null;
+                    try { apkPath = rm.getAppApkPath(pkgNameStr); } catch (Exception ignored) {}
+                    List<String> dataDirs = rm.getAppDataDirs(pkgNameStr);
+                    String finalApkPath = apkPath;
                     context.handler.post(() -> {
                         rootInfoContent.removeAllViews();
-                        if (!TextUtils.isEmpty(uid)) addRootInfoRow(rootInfoContent, "UID", uid, null, ad);
-                        if (!TextUtils.isEmpty(baseApkPath)) addRootInfoRow(rootInfoContent, "APK Path", baseApkPath, baseApkPath, ad);
+                        if (uid != null) addRootInfoRow(rootInfoContent, "UID", uid, null, ad);
+                        if (finalApkPath != null) addRootInfoRow(rootInfoContent, "APK Path", finalApkPath, finalApkPath, ad);
                         for (String dir : dataDirs) {
-                            String label = dir.contains("/data/data/")
-                                    || dir.contains("/data/user")
-                                    || dir.contains("/data/user_de/") ? "Data Dir" : "External Data Dir";
+                            @SuppressLint("SdCardPath")
+                            String label = dir.contains("/data/data/") || dir.contains("/data/user/") ? "Data Dir" : "External Data Dir";
                             addRootInfoRow(rootInfoContent, label, dir, dir, ad);
                         }
                         if (rootInfoContent.getChildCount() == 0) {
@@ -1005,7 +983,7 @@ public class ApkInfoDialogs {
                     if (v2) { if (v1) sigs.append(" + "); sigs.append("V2"); }
                     if (v3 || v31) { if (v1 || v2) sigs.append(" + "); sigs.append("V3"); }
                     if (v4) { if (v1 || v2 || v3 || v31) sigs.append(" + "); sigs.append("V4"); }
-                    if (verified && !TextUtils.isEmpty(sigs)) { /* use sigs */ }
+                    if (verified && !TextUtils.isEmpty(sigs)) { }
                     else {
                         sigs.setLength(0);
                         try (ArchiveFile af = new ArchiveFile(file)) {
@@ -1072,6 +1050,103 @@ public class ApkInfoDialogs {
         }).start();
     }
 
+    /**
+     * Dialog untuk hapus permission permanen.
+     * FIX: safeRefresh biar gak race condition.
+     */
+    public void showRemovePermissionsDialog(File apkFile) {
+        ProgressManager pm = new ProgressManager(context, true).show();
+        new Thread(() -> {
+            String[] perms;
+            try {
+                PackageInfo pi = context.getPackageManager().getPackageArchiveInfo(
+                        apkFile.getPath(), PackageManager.GET_PERMISSIONS);
+                perms = pi == null ? null : pi.requestedPermissions;
+                if (perms == null || perms.length == 0) throw new IOException("No permissions found");
+            } catch (Exception e) {
+                pm.dismiss();
+                new ErrorUtil(context).showError(e);
+                return;
+            }
+            String[] labels = new String[perms.length];
+            String[] baseNames = new String[perms.length];
+            for (int i = 0; i < perms.length; i++) {
+                boolean disabled = perms[i] != null && perms[i].startsWith(ApkManifestEditor.DISABLED_PREFIX);
+                String base = disabled ? perms[i].substring(ApkManifestEditor.DISABLED_PREFIX.length()) : perms[i];
+                baseNames[i] = base;
+                boolean dangerous = false;
+                try {
+                    int level = context.getPackageManager().getPermissionInfo(base, 0).protectionLevel
+                            & PermissionInfo.PROTECTION_MASK_BASE;
+                    dangerous = level == PermissionInfo.PROTECTION_DANGEROUS;
+                } catch (Exception ignored) {
+                }
+                StringBuilder label = new StringBuilder(base);
+                if (disabled) label.append(" (").append(context.rss.getString(R.string.me_disabled)).append(')');
+                if (dangerous) label.append(" (dangerous)");
+                labels[i] = label.toString();
+            }
+            pm.dismiss();
+            context.handler.post(() -> {
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+                boolean[] sign = {settings.getBoolean("autosign", true)};
+
+                View permDialog = LayoutInflater.from(context).inflate(R.layout.dialog_permissions, null, false);
+                CheckBox autosign = permDialog.findViewById(R.id.autosign);
+                autosign.setChecked(sign[0]);
+                autosign.setOnCheckedChangeListener((buttonView, isChecked) ->
+                        settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
+                permDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
+                ListView permList = permDialog.findViewById(R.id.permList);
+                permList.setAdapter(new ArrayAdapter<>(context,
+                        android.R.layout.simple_list_item_multiple_choice, labels));
+                permList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+                for (int i = 0; i < perms.length; i++) permList.setItemChecked(i, false);
+
+                AlertDialog dialog = dialogUtil.getDialogBuilder()
+                        .setTitle(context.rss.getString(R.string.me_perms_n, perms.length))
+                        .setView(permDialog)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(context.rss.getString(R.string.me_remove_permanently), (d, which) -> {
+                            SignWrapper[] wrapper = new SignWrapper[1];
+                            Runnable doRemove = () -> {
+                                ProgressManager pm2 = new ProgressManager(context, true).show();
+                                new Thread(() -> {
+                                    try {
+                                        List<String> toRemove = new ArrayList<>();
+                                        for (int i = 0; i < perms.length; i++) {
+                                            if (permList.isItemChecked(i)) continue;
+                                            String base = baseNames[i];
+                                            if (base == null || base.isEmpty()) continue;
+                                            toRemove.add(base);
+                                        }
+                                        int removed = manifestEditor.removeManifestPermissions(apkFile, toRemove);
+                                        if (removed > 0 && sign[0]) wrapper[0].signApk(apkFile);
+                                        pm2.dismiss();
+                                        int done = removed;
+                                        markAsResult(apkFile);
+                                        context.handler.post(() -> {
+                                            Extensions.showMessage(context, context.rss.getString(R.string.me_perms_removed, done));
+                                            // FIX: safeRefresh — 1 refresh aja
+                                            safeRefresh(apkFile.getParentFile());
+                                        });
+                                    } catch (Exception e) {
+                                        pm2.dismiss();
+                                        new ErrorUtil(context).showError(e);
+                                    }
+                                }).start();
+                            };
+                            if (sign[0]) SignWrapper.requireAuth(context, sw -> {
+                                wrapper[0] = sw;
+                                doRemove.run();
+                            });
+                            else doRemove.run();
+                        }).create();
+                dialogUtil.styleAlertDialog(dialog);
+            });
+        }).start();
+    }
+
     private void openZipFile(File file) {
         context.loadZipFolderInPane(file, "", pane1, true);
     }
@@ -1101,35 +1176,12 @@ public class ApkInfoDialogs {
             row.setFocusable(true);
             row.setOnClickListener(v -> {
                 ad.dismiss();
-                // Mirror root folder navigation from the main file manager:
-                // plain File.exists() is false for /data/data on Android even
-                // with root, so check via AccessManager (root/Shizuku) first.
-                boolean exists = false;
-                boolean isFile = false;
-                try {
-                    exists = AccessManager.exists(context, tapPath)
-                            || new File(tapPath).exists();
-                } catch (Exception ignored) {}
-                if (!exists) {
-                    Extensions.showMessage(context, "Path " + tapPath + " not accessible");
+                File dir = new File(tapPath);
+                if (!dir.exists()) {
+                    Extensions.showMessage(context, "Path " + tapPath + "not accessible");
                     return;
                 }
-                try {
-                    if (AccessManager.active(context) == AccessManager.Backend.SHIZUKU) {
-                        isFile = io.github.abdurazaaqmohammed.utils.ShizukuManager.isFile(context, tapPath);
-                    } else if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
-                        RootManager rootMgr = RootManager.getInstance(context);
-                        isFile = rootMgr.isFile(tapPath);
-                        if (!isFile && !rootMgr.isDirectory(tapPath)) {
-                            isFile = new File(tapPath).isFile();
-                        }
-                    } else {
-                        isFile = new File(tapPath).isFile();
-                    }
-                } catch (Exception ignored) {
-                    isFile = new File(tapPath).isFile();
-                }
-                File target = isFile ? new File(tapPath).getParentFile() : new File(tapPath);
+                File target = dir.isFile() ? dir.getParentFile() : dir;
                 if (target != null) {
                     context.loadFolderInPane(target, pane1);
 

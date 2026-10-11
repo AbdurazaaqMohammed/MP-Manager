@@ -11,3 +11,12 @@
 -keep class android.content.** { *; }
 -keep class **.model.** { *; }
 -keep class **.models.** { *; }
+# === Fix D8/R8 crash: skip Sora Kotlin metadata ===
+-dontwarn io.github.rosemoe.sora.**
+-dontwarn io.github.Rosemoe.**
+-keep class io.github.rosemoe.sora.** { *; }
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
+-dontwarn kotlin.**

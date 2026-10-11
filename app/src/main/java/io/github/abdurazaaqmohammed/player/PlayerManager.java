@@ -85,14 +85,9 @@ public class PlayerManager {
         loadSettings();
     }
 
-    public MediaPlayer getMediaPlayer() {
-        return mediaPlayer;
-    }
-
+    public MediaPlayer getMediaPlayer() { return mediaPlayer; }
     public PlayState getState() { return state; }
-
     public List<MediaItem> getQueue() { return queue; }
-
     public int getCurrentIndex() { return currentIndex; }
 
     public MediaItem getCurrentItem() {
@@ -115,9 +110,41 @@ public class PlayerManager {
     public int getSkipDuration() { return skipDuration; }
     public void setSkipDuration(int ms) { this.skipDuration = ms; saveSettings(); }
 
+    // ===== A-B REPEAT (FIX LOGIKA) =====
     public boolean hasABRepeat() { return abRepeatA >= 0 && abRepeatB >= 0; }
+    public boolean hasA() { return abRepeatA >= 0; }
+    public boolean hasB() { return abRepeatB >= 0; }
     public int getABRepeatA() { return abRepeatA; }
     public int getABRepeatB() { return abRepeatB; }
+
+    /** Set A saja. Kalau A udah ada, hapus A. Return true kalau A di-set, false kalau di-hapus. */
+    public boolean toggleA(int pos) {
+        if (abRepeatA >= 0) {
+            // A udah ada → HAPUS semua
+            abRepeatA = -1;
+            abRepeatB = -1;
+            return false;
+        }
+        abRepeatA = pos;
+        abRepeatB = -1; // B harus di-set ulang
+        return true;
+    }
+
+    /** Set B saja (harus > A). Kalau B udah ada, hapus B. Return true kalau B di-set, false kalau di-hapus. */
+    public boolean toggleB(int pos) {
+        if (abRepeatB >= 0) {
+            // B udah ada → HAPUS B aja
+            abRepeatB = -1;
+            return false;
+        }
+        if (abRepeatA < 0) return false; // gak bisa set B tanpa A
+        if (pos <= abRepeatA) return false; // B harus > A
+        abRepeatB = pos;
+        return true;
+    }
+
+    public void clearA() { abRepeatA = -1; abRepeatB = -1; }
+    public void clearABRepeat() { abRepeatA = -1; abRepeatB = -1; }
 
     public boolean isVideoBackgroundPlay() { return videoBackgroundPlay; }
     public void setVideoBackgroundPlay(boolean enable) { this.videoBackgroundPlay = enable; saveSettings(); }
@@ -167,6 +194,8 @@ public class PlayerManager {
     public void addAndPlay(int index) {
         if (index >= 0 && index < queue.size()) {
             currentIndex = index;
+            resumePosition = 0;
+            clearABRepeat(); // Reset A-B saat ganti video
             playCurrent();
         }
     }
@@ -201,9 +230,10 @@ public class PlayerManager {
 
     public void next() {
         if (queue.isEmpty()) return;
-        if (repeatMode == RepeatMode.ONE) { seekTo(0); return; }
+        clearABRepeat(); // Reset A-B saat ganti video
+        if (repeatMode == RepeatMode.ONE) { resumePosition = 0; playCurrent(); return; }
         int next = getNextIndex();
-        if (next >= 0) { currentIndex = next; playCurrent(); }
+        if (next >= 0) { currentIndex = next; resumePosition = 0; playCurrent(); }
         else { stop(); notifyState(PlayState.ENDED); }
     }
 
@@ -211,8 +241,9 @@ public class PlayerManager {
         if (queue.isEmpty()) return;
         int pos = getCurrentPosition();
         if (pos > 3000) { seekTo(0); return; }
+        clearABRepeat(); // Reset A-B saat ganti video
         int prev = getPrevIndex();
-        if (prev >= 0) { currentIndex = prev; playCurrent(); }
+        if (prev >= 0) { currentIndex = prev; resumePosition = 0; playCurrent(); }
     }
 
     public void setShuffle(boolean s) {
@@ -236,33 +267,7 @@ public class PlayerManager {
             return -1;
         }
         if (currentIndex + 1 < queue.size()) return currentIndex + 1;
-        if (repeatMode == RepeatMode.ALL) return 0;
-        if (queue.size() == 1 && currentIndex >= 0 && currentIndex < queue.size()) {
-            MediaItem current = queue.get(currentIndex);
-            if (current != null && current.path != null) {
-                File currentFile = new File(current.path);
-                File dir = currentFile.getParentFile();
-                if (dir != null && dir.isDirectory()) {
-                    File[] files = dir.listFiles();
-                    if (files != null) {
-                        boolean found = false;
-                        for (File file : files) {
-                            if (file.equals(currentFile)) {
-                                found = true;
-                                continue;
-                            }
-                            if (found && file.isFile()) {
-                                String name = file.getName().toLowerCase(Locale.ROOT);
-                                if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") || name.endsWith(".ogg") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".wma") || name.endsWith(".opus") || name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mov") || name.endsWith(".webm") || name.endsWith(".3gp") || name.endsWith(".ts") || name.endsWith(".flv") || name.endsWith(".wmv")) {
-                                    queue.add(buildMediaItem(appContext, file.getAbsolutePath()));
-                                    return currentIndex + 1;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        if (repeatMode == RepeatMode.ALL && !queue.isEmpty()) return 0;
         return -1;
     }
 
@@ -368,13 +373,6 @@ public class PlayerManager {
 
     public boolean isPlayingVideo() { return isVideo; }
 
-    public void setABRepeat(int a, int b) {
-        abRepeatA = Math.min(a, b);
-        abRepeatB = Math.max(a, b);
-    }
-
-    public void clearABRepeat() { abRepeatA = -1; abRepeatB = -1; }
-
     private void playCurrent() {
         if (currentIndex < 0 || currentIndex >= queue.size()) return;
         MediaItem item = queue.get(currentIndex);
@@ -383,7 +381,6 @@ public class PlayerManager {
         stopProgressUpdater();
         abandonAudioFocus();
 
-        // Create new player BEFORE releasing the old one
         MediaPlayer newPlayer = new MediaPlayer();
         MediaPlayer oldPlayer = mediaPlayer;
         mediaPlayer = newPlayer;
@@ -414,33 +411,59 @@ public class PlayerManager {
             startProgressUpdater();
             try { appContext.startService(new Intent(appContext, MusicService.class)); } catch (Exception ignored) {}
         });
+
         newPlayer.setOnCompletionListener(mp -> {
             if (mp != mediaPlayer) return;
             stopProgressUpdater();
-            if (abRepeatA >= 0 && abRepeatB >= 0) {
-                seekTo(abRepeatA);
+
+            // A-B repeat: kalau B di tengah video, balik ke A
+            if (hasABRepeat() && abRepeatB > abRepeatA + 1000) {
+                int dur = 0;
+                try { dur = getDuration(); } catch (Exception ignored) {}
+                if (dur > 0 && abRepeatB < dur - 1000) {
+                    resumePosition = 0;
+                    seekTo(abRepeatA);
+                    return;
+                }
+                // Kalau B di akhir, A-B gak aktif — lanjut normal
+                clearABRepeat();
+            }
+
+            // Kalau repeat ONE, restart dari 0
+            if (repeatMode == RepeatMode.ONE) {
+                resumePosition = 0;
+                playCurrent();
                 return;
             }
-            if (repeatMode == RepeatMode.ONE) { seekTo(0); return; }
+
             int next = getNextIndex();
-            if (next >= 0) { currentIndex = next; playCurrent(); }
-            else {
+            if (next >= 0) {
+                currentIndex = next;
+                resumePosition = 0;
+                playCurrent();
+            } else if (repeatMode == RepeatMode.ALL && !queue.isEmpty()) {
+                currentIndex = 0;
+                resumePosition = 0;
+                playCurrent();
+            } else {
                 saveResumePosition();
                 notifyState(PlayState.ENDED);
             }
         });
+
         newPlayer.setOnErrorListener((mp, what, extra) -> {
             if (mp != mediaPlayer) return true;
-            //notifyError("Media error: " + what + " / " + extra);
             notifyState(PlayState.ERROR);
             return true;
         });
+
         newPlayer.setOnInfoListener((mp, what, extra) -> {
             if (mp != mediaPlayer) return false;
             if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) notifyBuffer(0);
             else if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) notifyBuffer(100);
             return false;
         });
+
         newPlayer.setOnVideoSizeChangedListener((mp, w, h) -> {
             if (mp != mediaPlayer) return;
             lastVideoWidth = w;
@@ -451,6 +474,18 @@ public class PlayerManager {
         try {
             notifyState(PlayState.PREPARING);
             notifyMediaItem(item);
+
+            // Resume: skip kalau di akhir video
+            int savedPos = PreferenceManager.getDefaultSharedPreferences(appContext)
+                    .getInt("resume_pos_" + item.path, 0);
+            int dur = 0;
+            try { dur = newPlayer.getDuration(); } catch (Exception ignored) {}
+            if (savedPos > 5000 && dur > 0 && savedPos < dur - 5000) {
+                resumePosition = savedPos;
+            } else {
+                resumePosition = 0;
+            }
+
             newPlayer.setDataSource(appContext, item.uri);
             newPlayer.prepareAsync();
         } catch (IOException | IllegalStateException e) {
@@ -508,8 +543,11 @@ public class PlayerManager {
                     int pos = mediaPlayer.getCurrentPosition();
                     int dur = mediaPlayer.getDuration();
                     notifyProgress(pos, dur);
-                    if (abRepeatA >= 0 && abRepeatB >= 0 && pos >= abRepeatB) {
-                        seekTo(abRepeatA);
+                    // A-B repeat: trigger cuma kalau B valid & bukan di akhir video
+                    if (hasABRepeat() && abRepeatB > abRepeatA + 1000) {
+                        if (dur > 0 && abRepeatB < dur - 1000 && pos >= abRepeatB) {
+                            seekTo(abRepeatA);
+                        }
                     }
                 } catch (Exception ignored) {}
                 handler.postDelayed(this, 250);

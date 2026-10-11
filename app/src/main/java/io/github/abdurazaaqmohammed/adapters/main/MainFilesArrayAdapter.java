@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.apache.commons.io.FilenameUtils;
@@ -42,15 +43,17 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.domain.files.ArchiveEntryInfo;
 import io.github.abdurazaaqmohammed.listeners.SwipeTouchListener;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.activities.CompareTextActivity;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareArscDialog;
-import io.github.abdurazaaqmohammed.ui.dialogs.CompareDexOptionsDialog;
 import io.github.abdurazaaqmohammed.ui.dialogs.CompareZipDialog;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
+import io.github.abdurazaaqmohammed.utils.CopyMarkStore;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.StreamingArchiveReader;
 import io.github.abdurazaaqmohammed.features.files.EntryDialogs;
 import io.github.abdurazaaqmohammed.features.files.FileOpener;
 import io.github.abdurazaaqmohammed.features.media.BatchImageTools;
@@ -66,7 +69,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     public final Object[] values;
     public final boolean isInZip;
     public final String currentZipPath;
-    public final boolean pane1; //THIS IS WHETHER THE ADAPTER IS FOR PANE 1 OR 2 NOT THE LAST CLICKED PANE
+    public final boolean pane1;
     private final DialogUtil dialogUtil;
     private final UIHelper uiHelper;
     private final FileIconLoader iconLoader;
@@ -94,7 +97,8 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private Integer rangeStartPosition = null;
 
     private static Object[] getNewValues(Object[] values, File parentFile) {
-        Object[] letUpDir = new File[values.length + 1];
+        // FIX: pakai Object[] biar bisa tampung File ATAU ArchiveEntryInfo
+        Object[] letUpDir = new Object[values.length + 1];
         letUpDir[0] = parentFile;
         System.arraycopy(values, 0, letUpDir, 1, values.length);
         return letUpDir;
@@ -107,17 +111,28 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return letUpDir;
     }
 
-    private File[] getOldValues() {
+    private File[] toFileArray(Object[] objects) {
+        java.util.List<File> files = new java.util.ArrayList<>();
+        for (Object o : objects) {
+            if (o instanceof File) files.add((File) o);
+        }
+        return files.toArray(new File[0]);
+    }
+
+    private Object[] getOldValues() {
         int newLength = values.length - 1;
-        File[] oldValues = new File[newLength];
+        Object[] oldValues = new Object[newLength];
         System.arraycopy(values, 1, oldValues, 0, newLength);
         return oldValues;
     }
 
-    /** Entries currently shown (including the up-dir at index 0), for callers that must not re-list. */
     public File[] getShownFiles() {
-        if (!(values instanceof File[])) return null;
-        return (File[]) values;
+        // FIX: values sekarang Object[] (bukan File[]), jadi cek manual
+        List<File> files = new ArrayList<>();
+        for (Object o : values) {
+            if (o instanceof File) files.add((File) o);
+        }
+        return files.isEmpty() ? null : files.toArray(new File[0]);
     }
 
     public MainFilesArrayAdapter(MainActivity context, Object[] values, Object parent, boolean pane1, boolean isInZip,
@@ -169,7 +184,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 new EntryDialogs.State() {
                     @Override
                     public Object[] values() {
-                        // Use the adapter field, not the constructor parameter
                         return MainFilesArrayAdapter.this.values;
                     }
 
@@ -199,7 +213,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         fileOpener.openWithForFile(file, fileName);
     }
 
-    /** Zip-aware variant so editors launched from an archive know the entry's source. */
     public void openWithForFile(File file, String fileName, File zipFile, String zipEntryPath) {
         fileOpener.openWithForFile(file, fileName, zipFile, zipEntryPath);
     }
@@ -226,11 +239,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         return new ViewHolder(LayoutInflater.from(context).inflate(R.layout.list_file, parent, false));
     }
 
-    /**
-     * Runs an external (out-of-process) file action after consent: stages the
-     * selection as content URIs with grants and forwards the plugin result
-     * message to the user.
-     */
     private void runExternalFileAction(ExternalActions.Entry entry,
                                        List<File> files, List<Uri> uris) {
         try {
@@ -310,6 +318,16 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             iconLoader.setupZipEntryView(entry, holder.fileIconView, holder.fileDateView);
             file = null;
             holder.fileNameView.setText(fileName = entry.getName());
+        } else if (item instanceof ArchiveEntryInfo) {
+            ArchiveEntryInfo ae = (ArchiveEntryInfo) item;
+            entry = null;
+            file = null;
+            fileName = ae.getName();
+            holder.fileNameView.setText(fileName);
+            holder.fileDateView.setText(ae.isDirectory() ? "" : android.text.format.Formatter.formatShortFileSize(context, ae.getSize()));
+            holder.fileIconView.setImageResource(ae.isDirectory()
+                    ? R.drawable.folder_24px
+                    : R.drawable.baseline_insert_drive_file_24);
         } else {
             entry = null;
             file = (File) item;
@@ -317,20 +335,81 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             holder.fileNameView.setText(fileName = (position == 0 ? ".." : file.getName()));
         }
 
+        // ===== WARNA HIJAU UNTUK SESI COPY TERAKHIR =====
+        try {
+            String fullPath = null;
+            if (isInZip) {
+                if (entry != null && entry.getZipFile() != null) {
+                    fullPath = entry.getZipFile().getAbsolutePath() + "!" + entry.getFullPath();
+                }
+            } else if (file != null && position != 0) {
+                fullPath = file.getAbsolutePath();
+            }
+            if (fullPath != null && CopyMarkStore.isCopied(context, fullPath)) {
+                holder.fileNameView.setTextColor(0xFF4CAF50); // HIJAU
+            } else {
+                holder.fileNameView.setTextColor(
+                    MaterialColors.getColor(holder.fileNameView,
+                        com.google.android.material.R.attr.colorOnSurface,
+                        Color.WHITE));
+            }
+        } catch (Exception e) {
+            // Biarkan warna default kalau error
+        }
+        // ===== END WARNA HIJAU =====
+
         convertView.setBackgroundColor(selectedPositions.contains(position) ? Color.DKGRAY : Color.TRANSPARENT);
         int finalPosition = position;
         new Thread(() -> {
             View.OnClickListener originalClickListener;
             if(isInZip && finalPosition == 0 && entry.getFullPath() == null) {
                 originalClickListener = v -> context.loadFolderInPane(entry.getZipFile().getParentFile(), pane1);
+            } else if (boundItem instanceof ArchiveEntryInfo) {
+                // Streaming archive entry
+                final ArchiveEntryInfo ae = (ArchiveEntryInfo) boundItem;
+                originalClickListener = v -> {
+                    context.setSelectedPane(pane1 ? 1 : 2);
+                    if (ae.isDirectory()) {
+                        // Navigate dalam arsip
+                        context.loadStreamingArchive(ae.getArchiveFile(), ae.getFullPath(), pane1, true);
+                    } else {
+                        // Extract on-demand + buka
+                        new Thread(() -> {
+                            try {
+                                java.io.File cacheDir = context.getCacheDir();
+                                java.io.File singleDir = new java.io.File(cacheDir, "single_" + System.currentTimeMillis());
+                                // === FIX: cek mkdirs, recreate kalau gagal ===
+                                if (!singleDir.mkdirs() && !singleDir.exists()) {
+                                    singleDir.mkdirs();
+                                    if (!singleDir.exists()) {
+                                        throw new Exception("Cannot create cache dir: " + singleDir);
+                                    }
+                                }
+                                // === SET FLAG: lagi preview, jangan cleanup single_* ===
+                                context.setPreviewingFromArchive(true);
+
+                                java.io.File extracted = StreamingArchiveReader.extractEntry(ae, singleDir);
+                                if (extracted == null || !extracted.exists()) {
+                                    throw new Exception("Extract failed: " + extracted);
+                                }
+                                context.handler.post(() -> {
+                                    fileOpener.handleFileClick(extracted, extracted.getName());
+                                });
+                            } catch (Exception e) {
+                                context.handler.post(() -> new ErrorUtil(context).showError(e));
+                            }
+                        }).start();
+                    }
+                };
             } else {
                 originalClickListener = isMultiSelectMode ? v -> {
                     context.setSelectedPane(pane1 ? 1 : 2);
                     handleMultiSelect(finalPosition);
-                } : !isInZip && file.isFile() ?
+                } : (file != null && !isInZip && file.isFile()) ?
                     v -> {
                         context.setSelectedPane(pane1 ? 1 : 2);
-                        context.setCurrentFolder(file.getParentFile(), getOldValues());
+                        File parent = file.getParentFile();
+                        if (parent != null) context.setCurrentFolder(parent, toFileArray(getOldValues()));
                         fileOpener.handleFileClick(file, fileName);
                     } : (View.OnClickListener) v -> {
                     context.setSelectedPane(pane1 ? 1 : 2);
@@ -345,8 +424,10 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 context.setSelectedPane(pane1 ? 1 : 2);
                 if (isInZip) {
                     context.setCurrentFolder(currentZipPath, Arrays.asList(values));
-                } else
-                    context.setCurrentFolder(file.getParentFile(), getOldValues());
+                } else if (file != null) {
+                    File parent = file.getParentFile();
+                    if (parent != null) context.setCurrentFolder(parent, toFileArray(getOldValues()));
+                }
 
                 boolean multi = !selectedPositions.isEmpty();
                 String direction = pane1 ? "->" : "<-";
@@ -392,22 +473,15 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                 }
 
-                if (!multi && !isInZip && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
+                // === FIX: cek file != null (ArchiveEntryInfo file=null) ===
+                if (!multi && !isInZip && file != null && !file.isDirectory() && ArchiveUtil.isSupportedArchive(fileName)) {
                     visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.EXTRACT, FileMenuOrder.labelFor(context, FileMenuOrder.EXTRACT, direction)));
                 }
 
                 RecyclerView.Adapter a = ((RecyclerView) context.findViewById(pane1 ? R.id.listViewPane2 : R.id.listViewPane1)).getAdapter();
                 Object compareFile1 = null;
                 Object compareFile2 = null;
-                List<File> dexCompareFiles1 = null;
-                List<File> dexCompareFiles2 = null;
                 if(a instanceof MainFilesArrayAdapter otherPaneAdapter) {
-                    // Compare DEX: 1 APK or 1+ DEX files selected in each pane.
-                    dexCompareFiles1 = collectDexCompareFiles();
-                    dexCompareFiles2 = otherPaneAdapter.collectDexCompareFiles();
-                    if (dexCompareFiles1 != null && dexCompareFiles2 != null) {
-                        visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
-                    }
                     if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
                         compareFile1 = values[selectedPositions.iterator().next()];
                         compareFile2 = otherPaneAdapter.values[otherPaneAdapter.selectedPositions.iterator().next()];
@@ -436,7 +510,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                 }
 
-                // Third-party file actions: real files only, visibility decided per selection.
                 final List<File> pluginFiles = new ArrayList<>();
                 if (!isInZip) {
                     if (multi) {
@@ -464,9 +537,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                     }
                 }
 
-                // External (out-of-process) file actions, filtered by manifest
-                // mime/pattern. Listed only when every selected file can be
-                // staged as a content URI (falls outside provider roots otherwise).
                 final List<ExternalActions.Entry> externalFileEntries = new ArrayList<>();
                 final List<Uri> externalFileUris;
                 if (!isInZip && !pluginFiles.isEmpty()) {
@@ -494,8 +564,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
                 final Object finalCompareFile1 = compareFile1;
                 final Object finalCompareFile2 = compareFile2;
-                final List<File> finalDexCompare1 = dexCompareFiles1;
-                final List<File> finalDexCompare2 = dexCompareFiles2;
 
                 final boolean twoColumnMenu = FileMenuOrder.isTwoColumn(context);
                 View menuView = LayoutInflater.from(context).inflate(R.layout.dialog_file_menu, null);
@@ -534,11 +602,6 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             return;
                         }
                         switch (actionId) {
-                            case FileMenuOrder.CMP_DEX:
-                                if (finalDexCompare1 != null && finalDexCompare2 != null) {
-                                    new CompareDexOptionsDialog(context, finalDexCompare1, finalDexCompare2).show();
-                                }
-                                return;
                             case FileMenuOrder.CMP_TEXT:
                                 context.startActivity(new Intent(context, CompareTextActivity.class)
                                         .putExtra("file1", finalCompareFile1 instanceof File ? ((File) finalCompareFile1).getAbsolutePath() : ((ZipEntryInfo) finalCompareFile1).getFullPath())
@@ -704,43 +767,9 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                         pane1 ? 1 : 2));
             });
         }).start();
-
     }
-
-
-
-
-
-
-
 
     private void updateFolderCountOnMainScreen(int position) {
-    }
-
-    /**
-     * Returns the selected files when the selection is exactly one APK or one or
-     * more DEX files. Returns null for anything else (kept files, folders, mixed
-     * types, archive entries) so the Compare DEX item only shows for valid input.
-     */
-    private List<File> collectDexCompareFiles() {
-        if (isInZip || selectedPositions.isEmpty()) return null;
-        List<File> files = new ArrayList<>();
-        boolean hasApk = false;
-        for (int position : selectedPositions) {
-            if (position < 0 || position >= values.length) return null;
-            Object selected = values[position];
-            if (!(selected instanceof File selectedFile) || selectedFile.isDirectory()) return null;
-            String name = selectedFile.getName().toLowerCase(Locale.ROOT);
-            if (name.endsWith(".apk")) {
-                hasApk = true;
-            } else if (!name.endsWith(".dex")) {
-                return null;
-            }
-            files.add(selectedFile);
-        }
-        // A single APK, or any number of DEX files (no mixing).
-        if (hasApk && files.size() != 1) return null;
-        return files;
     }
 
     public void handleSwipe(int position) {

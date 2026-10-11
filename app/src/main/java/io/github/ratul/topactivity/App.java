@@ -24,6 +24,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 import android.widget.Toast;
 
 import io.github.abdurazaaqmohammed.plugins.packs.PackManager;
@@ -66,6 +67,10 @@ public class App extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        
+        // Cegah crash dari ZipFile finalizer error (EIO) — Android FinalizerDaemon
+        installFinalizerGuard();
+        
         ServiceLocator.init(this);
         try {
             // Tools (except a few built-ins like Storage Manager) ship as
@@ -84,6 +89,28 @@ public class App extends MultiDexApplication {
             channel.setDescription(getString(R.string.notification_channel_description));
             NotificationManagerCompat.from(this).createNotificationChannel(channel);
         }
+    }
+
+    private void installFinalizerGuard() {
+        final Thread.UncaughtExceptionHandler defaultHandler = 
+            Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            if (isFinalizerError(throwable)) {
+                Log.w("App", "Ignored finalizer error: " + throwable.getMessage());
+                return;
+            }
+            if (defaultHandler != null) {
+                defaultHandler.uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private boolean isFinalizerError(Throwable t) {
+        if (t == null) return false;
+        String msg = t.getMessage();
+        if (msg != null && (msg.contains("close failed") || msg.contains("EIO"))) return true;
+        Throwable cause = t.getCause();
+        return cause != null && cause != t && isFinalizerError(cause);
     }
 
     public static void copyString(Context context, String str, String msg) {

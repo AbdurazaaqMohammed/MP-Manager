@@ -5,15 +5,20 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
+import android.text.TextUtils;
 
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -230,4 +235,124 @@ public class FileUtils {
     public static File getUnusedFile(File appFolder, String name) {
         return getUnusedFile(new File(appFolder, name));
     }
+
+    // ==================== SAFE ZIP OPERATIONS (ANTI-KORUP) ====================
+    // Ditambahkan untuk mencegah APK korup / 0 KB saat modifikasi AndroidManifest.xml
+    // atau entry lain di dalam APK. Semua operasi tulis pakai file temporary + validasi.
+
+    /**
+     * Baca semua byte dari InputStream.
+     */
+    public static byte[] readAllBytes(InputStream is) throws IOException {
+        if (is == null) return new byte[0];
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        byte[] buf = new byte[65536];
+        int n;
+        while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);
+        return bos.toByteArray();
+    }
+
+    /**
+     * Backup file ke .bak kalau belum ada.
+     * Return true kalau backup berhasil atau sudah ada.
+     */
+    public static boolean backupFile(File file) {
+        if (file == null || !file.exists()) return false;
+        File backup = new File(file.getPath() + ".bak");
+        if (backup.exists()) return true;
+        try {
+            copyFile(file, backup);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Ganti satu entry di dalam zip/APK dengan aman:
+     * 1. Backup ke .bak (kalau belum ada)
+     * 2. Copy file asli ke .tmp
+     * 3. Modifikasi .tmp
+     * 4. Validasi .tmp (tidak 0 KB, masih zip valid)
+     * 5. Rename .tmp ke file asli hanya kalau sukses
+     * 6. Kalau gagal, file asli TIDAK tersentuh
+     *
+     * @param targetFile File zip/APK yang mau dimodifikasi
+     * @param entryPath  Path entry di dalam zip (mis. "AndroidManifest.xml")
+     * @param newBytes   Byte baru untuk entry tersebut
+     * @throws IOException kalau gagal di tahap manapun
+     */
+    public static void safeReplaceZipEntry(File targetFile, String entryPath, byte[] newBytes)
+            throws IOException {
+        if (targetFile == null || !targetFile.exists()) {
+            throw new IOException("Target file does not exist");
+        }
+        if (newBytes == null || newBytes.length == 0) {
+            throw new IOException("New bytes is empty");
+        }
+
+        File backupFile = new File(targetFile.getPath() + ".bak");
+        File tempFile = new File(targetFile.getPath() + ".tmp");
+
+        // 1. Backup dulu (sebelum apapun)
+        if (!backupFile.exists()) {
+            copyFile(targetFile, backupFile);
+        }
+
+        // 2. Copy file asli ke temporary
+        copyFile(targetFile, tempFile);
+
+        // 3. Modifikasi file temporary
+        try (net.lingala.zip4j.ZipFile tempZip = new net.lingala.zip4j.ZipFile(tempFile);
+             InputStream is = new ByteArrayInputStream(newBytes)) {
+            net.lingala.zip4j.model.ZipParameters zp = new net.lingala.zip4j.model.ZipParameters();
+            zp.setFileNameInZip(entryPath);
+            tempZip.addStream(is, zp);
+        } catch (Exception e) {
+            tempFile.delete();
+            throw new IOException("Failed to modify temp file: " + e.getMessage(), e);
+        }
+
+        // 4. Validasi file temporary
+        if (!tempFile.exists() || tempFile.length() == 0) {
+            tempFile.delete();
+            throw new IOException("Modified file is empty (0 KB) — aborting");
+        }
+        try (net.lingala.zip4j.ZipFile validate = new net.lingala.zip4j.ZipFile(tempFile)) {
+            if (validate.getFileHeaders() == null || validate.getFileHeaders().isEmpty()) {
+                tempFile.delete();
+                throw new IOException("Modified file is not a valid zip — aborting");
+            }
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            tempFile.delete();
+            throw new IOException("Modified file validation failed: " + e.getMessage(), e);
+        }
+
+        // 5. Ganti file asli dengan file temporary
+        if (!targetFile.delete()) {
+            tempFile.delete();
+            throw new IOException("Cannot delete original file");
+        }
+        if (!tempFile.renameTo(targetFile)) {
+            // Fallback: copy manual kalau rename gagal (beda filesystem)
+            try {
+                copyFile(tempFile, targetFile);
+            } finally {
+                tempFile.delete();
+            }
+        }
+    }
+
+    /**
+     * Versi InputStream dari safeReplaceZipEntry.
+     */
+    public static void safeReplaceZipEntry(File targetFile, String entryPath, InputStream is)
+            throws IOException {
+        byte[] bytes = readAllBytes(is);
+        safeReplaceZipEntry(targetFile, entryPath, bytes);
+    }
+
+    // ==================== END SAFE ZIP OPERATIONS ====================
 }

@@ -70,7 +70,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
-import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
@@ -143,7 +143,7 @@ import com.android.tools.smali.dexlib2.iface.ClassDef;
  * Re-sequenced and refactored for better clarity and utility.
  * Author: @developer-krushna
  */
-public class DexEditorActivity extends BaseActivity {
+public class DexEditorActivity extends AppCompatActivity {
 
     // --- Constants and Static State ---
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
@@ -2245,7 +2245,7 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     private static class ExplorerTabAdapter extends FragmentStateAdapter {
-        public ExplorerTabAdapter(@NonNull BaseActivity activity) {
+        public ExplorerTabAdapter(@NonNull AppCompatActivity activity) {
             super(activity);
         }
 
@@ -2631,7 +2631,7 @@ public class DexEditorActivity extends BaseActivity {
     }
 
     private static class TabAdapter extends FragmentStateAdapter {
-        public TabAdapter(@NonNull BaseActivity activity) {
+        public TabAdapter(@NonNull AppCompatActivity activity) {
             super(activity);
         }
 

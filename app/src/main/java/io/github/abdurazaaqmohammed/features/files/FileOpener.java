@@ -790,10 +790,20 @@ public class FileOpener {
             } else if (fileName.endsWith(".arsc")) {
                 withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
             } else if (ArchiveUtil.isSupportedArchive(fileName)) {
+                // Tiga opsi: Extract / View / Open with
+                final CharSequence[] archiveOptions = new CharSequence[] {
+                    context.rss.getString(R.string.extract),
+                    "View",
+                    context.rss.getString(R.string.open_with)
+                };
                 dialogUtil.styleAlertDialog(
-                        dialogUtil.getDialogBuilder().setSingleChoiceItems(new CharSequence[] { context.rss.getString(R.string.extract), context.rss.getString(R.string.open_with) }, -1, (dialog, which) -> {
+                        dialogUtil.getDialogBuilder().setSingleChoiceItems(archiveOptions, -1, (dialog, which) -> {
                             dialog.dismiss();
                             if (which == 0) withReadableCopy(file, fileOps::extractArchive);
+                            else if (which == 1) {
+                                // Streaming view (baca header doang, gak extract full)
+                                context.loadStreamingArchive(file, "", pane1, true);
+                            }
                             else showOpenWithDialog(file, fileName);
                         }).create());
             } else if (fileName.endsWith(".apks") || fileName.endsWith(".xapk") || fileName.endsWith(".aspk") || fileName.endsWith(".apkm")) {
