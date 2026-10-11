@@ -1,7 +1,3 @@
-cd ~/MP-Manager
-git checkout Update
-
-cat > .github/workflows/release.yml << 'EOF'
 name: Release APK
 
 on:
@@ -67,4 +63,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-EOF
