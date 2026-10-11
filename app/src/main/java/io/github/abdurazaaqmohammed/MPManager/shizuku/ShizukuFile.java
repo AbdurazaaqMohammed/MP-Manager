@@ -21,13 +21,20 @@ public class ShizukuFile extends File {
     public static final String ANDROID_DATA = "/storage/emulated/0/Android/data";
     private static final String ANDROID_DATA_SDCARD = "/sdcard/Android/data";
 
-    private final boolean directory;
+    private boolean directory;
     private final long size;
+    /** True for symlinks; {@link #directory} is corrected by target resolution. */
+    private boolean isLink;
 
     public ShizukuFile(String pathname, boolean directory, long size) {
         super(pathname);
         this.directory = directory;
         this.size = size;
+    }
+
+    /** Updates the type after symlink target resolution (see tryList). */
+    void setDirectory(boolean directory) {
+        this.directory = directory;
     }
 
     public ShizukuFile(String pathname) {
@@ -88,13 +95,56 @@ public class ShizukuFile extends File {
             }
             return out.toArray(new ShizukuFile[0]);
         }
-        ShizukuShell.Result r = ShizukuShell.exec("ls -lA " + RootManager.escapeShellArg(path));
+        // Guard against listing a file as a folder: `ls -lA <file>` prints the
+        // file itself, which used to become a phantom child "<file>/<file>"
+        // (tapping it then failed with "cat: .../build.prop/build.prop:
+        // Not a directory"). Bail out so callers show an error instead.
+        ShizukuShell.Result r = ShizukuShell.exec("test -d " + RootManager.escapeShellArg(path)
+                + " || exit 4; ls -lA " + RootManager.escapeShellArg(path));
         if (!r.success) return null;
+        List<ShizukuFile> links = new ArrayList<>();
         for (String line : r.stdout.split("\n")) {
             ShizukuFile f = parseLsLine(path, line);
-            if (f != null) out.add(f);
+            if (f == null) continue;
+            // Symlinks need target resolution: a link to a file must open as a
+            // file, a link to a dir must navigate. Resolved in one batch below.
+            if (f.isLink) links.add(f);
+            out.add(f);
         }
+        resolveSymlinks(links);
         return out.toArray(new ShizukuFile[0]);
+    }
+
+    /**
+     * Resolves symlink targets in one shell call. Replaces the old blanket
+     * "link == directory" rule (which sent links-to-files into folder listings
+     * and from there to the phantom-child crash) without guessing from names.
+     */
+    private static void resolveSymlinks(List<ShizukuFile> links) {
+        if (links.isEmpty() || !ShizukuShell.isGranted()) return;
+        try {
+            StringBuilder cmd = new StringBuilder();
+            for (int i = 0; i < links.size(); i++) {
+                if (i > 0) cmd.append(' ');
+                String p = RootManager.escapeShellArg(links.get(i).getAbsolutePath());
+                cmd.append("{ [ -d ").append(p).append(" ] && echo LINK_DIR_").append(i)
+                        .append("; } || { [ -e ").append(p).append(" ] && echo LINK_FILE_").append(i).append("; };");
+            }
+            ShizukuShell.Result r = ShizukuShell.exec(cmd.toString());
+            if (!r.success || r.stdout == null) return;
+            for (String line : r.stdout.split("\n")) {
+                String t = line.trim();
+                try {
+                    if (t.startsWith("LINK_DIR_")) {
+                        links.get(Integer.parseInt(t.substring("LINK_DIR_".length()))).setDirectory(true);
+                    } else if (t.startsWith("LINK_FILE_")) {
+                        links.get(Integer.parseInt(t.substring("LINK_FILE_".length()))).setDirectory(false);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     /** Minimal ls -l parser: "-rw-rw---- 1 u0_a123 media_rw  1234 2026-01-01 10:00 name". */
@@ -129,10 +179,13 @@ public class ShizukuFile extends File {
         } catch (NumberFormatException e) {
             size = 0;
         }
-        // Type comes from the ls permission column. A symlink ('l') to a directory is
-        // reported as a directory so folders reached through links still open; never infer
-        // the type from the name ("my.folder" is a directory).
-        return new ShizukuFile(join(parent, name), type == 'd' || type == 'l', size);
+        // Type comes from the ls permission column. Symlinks keep directory=true
+        // initially (previous behavior) and are corrected to the target type by
+        // resolveSymlinks(); never infer the type from the name
+        // ("my.folder" is a directory).
+        ShizukuFile out = new ShizukuFile(join(parent, name), type == 'd' || type == 'l', size);
+        out.isLink = type == 'l';
+        return out;
     }
 
     private static String join(String parent, String name) {

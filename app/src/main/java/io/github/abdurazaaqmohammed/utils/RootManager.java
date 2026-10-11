@@ -1223,7 +1223,12 @@ public class RootManager {
 
     private File[] listRootFilesLsLong(String dirPath) {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
-        ShellResult result = executeFs("LC_ALL=C ls -la -- " + escapeShellArg(dirPath) + " 2>/dev/null", 15);
+        // Never list a file as if it were a folder: `ls -la <file>` prints the
+        // file itself, which used to become a phantom child "<file>/<file>"
+        // (e.g. tapping /vendor/build.prop produced "cat: .../build.prop/build.prop:
+        // Not a directory" when opened). Bail out so callers show an error instead.
+        ShellResult result = executeFs("test -d " + escapeShellArg(dirPath) + " || exit 4; "
+                + "LC_ALL=C ls -la -- " + escapeShellArg(dirPath) + " 2>/dev/null", 15);
         if (!result.isSuccess() || result.output == null) return null;
         List<File> files = new ArrayList<>();
         List<Integer> linkIdx = new ArrayList<>();
@@ -1421,7 +1426,11 @@ public class RootManager {
 
     public File[] listRootFilesPortable(String dirPath) {
         if (dirPath == null || dirPath.isEmpty() || !isRootMode()) return null;
-        ShellResult result = executeFs("ls -1ALp -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
+        // Same file-as-folder guard as listRootFilesLsLong: without it,
+        // `ls <file>` yields the file itself and callers fabricate a phantom
+        // child "<file>/<file>".
+        ShellResult result = executeFs("test -d " + escapeShellArg(dirPath) + " || exit 4; "
+                + "ls -1ALp -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
         if (result == null || !result.isSuccess() || result.output == null || result.output.trim().isEmpty()) {
             result = executeFs("ls -1Ap -- " + escapeShellArg(dirPath) + " 2>/dev/null", 30);
         }
@@ -1442,7 +1451,11 @@ public class RootManager {
     public File[] listRootFilesDetailed(String dirPath) {
         if (dirPath == null || dirPath.isEmpty()) return null;
 
+        // Guard against listing a file as a folder (see listRootFilesLsLong):
+        // `for f in "$d"/*` on a file path would stat the file itself and hand
+        // back a phantom child "<file>/<file>".
         String script = "d=" + escapeShellArg(dirPath) + "; "
+                + "[ -d \"$d\" ] || exit 4; "
                 + "for f in \"$d\"/* \"$d\"/.*; do "
                 + "[ -e \"$f\" ] || [ -L \"$f\" ] || continue; "
                 + "case \"$f\" in \"$d/..\"|\"$d/.\") continue;; esac; "
@@ -1495,6 +1508,13 @@ public class RootManager {
                 while ((line = stderr.readLine()) != null) {
                     if (err.length() > 0) err.append("\n");
                     err.append(line);
+                }
+                String detail = err.toString();
+                // A path that turned out to be a directory (or a listing gone
+                // wrong) yields "Is a directory"/"Not a directory" from cat;
+                // surface that plainly instead of the raw shell error.
+                if (detail.contains("Is a directory") || detail.contains("Not a directory")) {
+                    throw new IOException("Cannot open as a file: " + srcPath);
                 }
                 throw new IOException("Root read failed: " + err);
             }
