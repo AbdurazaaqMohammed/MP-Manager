@@ -301,7 +301,7 @@
                   android:exported="true"
                   android:label="Locate"
                   android:configChanges="orientation|screenSize|keyboardHidden"
-                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+                  android:theme="@android:style/Theme.Translucent.NoTitleBar">
                   <intent-filter>
                       <action android:name="android.intent.action.SEND" />
                       <action android:name="android.intent.action.VIEW" />
