@@ -72,6 +72,376 @@ public class PlayerManager {
         void onBufferUpdate(int percent);
     }
 
+    /** One selectable subtitle track (embedded or external sidecar). */
+    public static class SubtitleTrack {
+        /** Index for {@link PlayerManager#selectSubtitleTrack(int)}. */
+        public final int playerTrackIndex;
+        public final String label;
+        public final boolean external;
+
+        public SubtitleTrack(int playerTrackIndex, String label, boolean external) {
+            this.playerTrackIndex = playerTrackIndex;
+            this.label = label;
+            this.external = external;
+        }
+    }
+
+    /** Receives subtitle cues (null/empty clears) and track-list changes. */
+    public interface SubtitleListener {
+        void onSubtitleCue(String text);
+        void onSubtitleTracksChanged();
+    }
+
+    /** Sentinel track index used for in-app rendered external cues. */
+    public static final int EXTERNAL_TRACK_INDEX = -100;
+
+    private final List<SubtitleListener> subtitleListeners = new ArrayList<>();
+    private final List<SubtitleTrack> subtitleTracks = new ArrayList<>();
+    private boolean subtitlesEnabled = true;
+    private boolean subtitleAutoLoad = true;
+    private int subtitleDelayMs;
+    private int selectedSubtitleTrack = -1;
+    private String manualExternalSubtitle;
+    private String manualExternalForPath;
+    private String activeExternalLabel;
+    private List<SubtitleUtil.Cue> externalCues = new ArrayList<>();
+    private String externalCuesForPath;
+    private String lastExternalCue;
+    private int externalParseGen;
+
+    public void registerSubtitleListener(SubtitleListener l) {
+        if (l != null && !subtitleListeners.contains(l)) subtitleListeners.add(l);
+    }
+
+    public void unregisterSubtitleListener(SubtitleListener l) {
+        subtitleListeners.remove(l);
+    }
+
+    private void notifySubtitleCue(String text) {
+        for (SubtitleListener l : new ArrayList<>(subtitleListeners)) {
+            try {
+                l.onSubtitleCue(text);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifySubtitleTracksChanged() {
+        for (SubtitleListener l : new ArrayList<>(subtitleListeners)) {
+            try {
+                l.onSubtitleTracksChanged();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    public List<SubtitleTrack> getSubtitleTracks() {
+        return new ArrayList<>(subtitleTracks);
+    }
+
+    public boolean isSubtitlesEnabled() {
+        return subtitlesEnabled;
+    }
+
+    public void setSubtitlesEnabled(boolean enabled) {
+        subtitlesEnabled = enabled;
+        saveSettings();
+        if (!enabled) {
+            lastExternalCue = null;
+            notifySubtitleCue(null);
+        } else {
+            updateExternalCue(true);
+        }
+    }
+
+    public boolean isSubtitleAutoLoad() {
+        return subtitleAutoLoad;
+    }
+
+    public void setSubtitleAutoLoad(boolean autoLoad) {
+        subtitleAutoLoad = autoLoad;
+        saveSettings();
+        if (autoLoad) {
+            MediaItem item = getCurrentItem();
+            MediaPlayer mp = mediaPlayer;
+            if (item != null && item.isVideo && mp != null
+                    && (state == PlayState.PLAYING || state == PlayState.PAUSED
+                        || state == PlayState.PREPARING)) {
+                maybeAutoLoadExternal(item);
+            }
+        }
+    }
+
+    public int getSubtitleDelayMs() {
+        return subtitleDelayMs;
+    }
+
+    public void setSubtitleDelayMs(int delayMs) {
+        subtitleDelayMs = Math.max(-5000, Math.min(5000, delayMs));
+        saveSettings();
+        updateExternalCue(true);
+    }
+
+    public String getActiveSubtitleLabel() {
+        for (SubtitleTrack t : subtitleTracks) {
+            if (t.playerTrackIndex == selectedSubtitleTrack) return t.label;
+        }
+        return null;
+    }
+
+    /** Selects an embedded track, or {@link #EXTERNAL_TRACK_INDEX} for sidecar. */
+    public void selectSubtitleTrack(int playerTrackIndex) {
+        if (playerTrackIndex == EXTERNAL_TRACK_INDEX) {
+            if (hasExternalCues()) {
+                selectedSubtitleTrack = EXTERNAL_TRACK_INDEX;
+                subtitlesEnabled = true;
+                saveSettings();
+                deselectEmbeddedTracks();
+                updateExternalCue(true);
+                notifySubtitleTracksChanged();
+            }
+            return;
+        }
+        selectedSubtitleTrack = playerTrackIndex;
+        subtitlesEnabled = true;
+        saveSettings();
+        MediaPlayer mp = mediaPlayer;
+        if (mp != null && playerTrackIndex >= 0) {
+            try {
+                mp.selectTrack(playerTrackIndex);
+            } catch (Exception ignored) {
+            }
+        }
+        if (playerTrackIndex >= 0) {
+            lastExternalCue = null;
+        }
+        updateExternalCue(true);
+    }
+
+    /** Deselects framework subtitle tracks so external cues render alone. */
+    private void deselectEmbeddedTracks() {
+        MediaPlayer mp = mediaPlayer;
+        if (mp == null) return;
+        try {
+            MediaPlayer.TrackInfo[] infos = mp.getTrackInfo();
+            if (infos == null) return;
+            for (int i = 0; i < infos.length; i++) {
+                int type = infos[i].getTrackType();
+                if (type == MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_TIMEDTEXT
+                        || type == MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE) {
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            mp.deselectTrack(i);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Uses an external subtitle file for the current video. Cues are parsed
+     * in-app and rendered against the playback clock (SRT/VTT/ASS/SSA/SUB).
+     * Returns false when the file can't be used. The parsed cue count is
+     * reported via {@link #getExternalCueCount()}.
+     */
+    public boolean setExternalSubtitle(String absPath) {
+        MediaItem item = getCurrentItem();
+        if (item == null || !item.isVideo || absPath == null) return false;
+        File f = new File(absPath);
+        if (!f.isFile() || !f.canRead() || !SubtitleUtil.isSupportedExternal(f.getName())) return false;
+        manualExternalSubtitle = absPath;
+        manualExternalForPath = item.path;
+        activeExternalLabel = f.getName();
+        subtitlesEnabled = true;
+        saveSettings();
+        loadExternalCuesAsync(absPath, true);
+        return true;
+    }
+
+    /** Number of parsed external cues for the current file (0 when none). */
+    public int getExternalCueCount() {
+        synchronized (this) {
+            return externalCues == null ? 0 : externalCues.size();
+        }
+    }
+
+    public boolean hasExternalCues() {
+        return getExternalCueCount() > 0;
+    }
+
+    /** Parses external cues off the calling thread, then activates them. */
+    private void loadExternalCuesAsync(final String absPath, final boolean select) {
+        final int gen = ++externalParseGen;
+        new Thread(() -> {
+            List<SubtitleUtil.Cue> cues = new ArrayList<>();
+            try {
+                cues = SubtitleUtil.parse(new File(absPath));
+            } catch (Exception e) {
+                cues = new ArrayList<>();
+            }
+            final List<SubtitleUtil.Cue> parsed = cues;
+            handler.post(() -> {
+                if (gen != externalParseGen) return;
+                synchronized (PlayerManager.this) {
+                    externalCues = new ArrayList<>(parsed);
+                    externalCuesForPath = absPath;
+                }
+                lastExternalCue = null;
+                if (select && !parsed.isEmpty()) {
+                    selectedSubtitleTrack = EXTERNAL_TRACK_INDEX;
+                    subtitlesEnabled = true;
+                    saveSettings();
+                    deselectEmbeddedTracks();
+                }
+                MediaPlayer mp = mediaPlayer;
+                if (mp != null) refreshSubtitleTracks(mp, -1, null);
+                else notifySubtitleTracksChanged();
+                updateExternalCue(true);
+            });
+        }).start();
+    }
+
+    /** Rebuilds the track list; external sidecar is always listed first. */
+    private void refreshSubtitleTracks(MediaPlayer mp, int externalIndex, String externalLabel) {
+        List<SubtitleTrack> tracks = new ArrayList<>();
+        String extLabel = externalLabel != null ? externalLabel : activeExternalLabel;
+        if (hasExternalCues() && extLabel != null) {
+            tracks.add(new SubtitleTrack(EXTERNAL_TRACK_INDEX, extLabel, true));
+        }
+        try {
+            MediaPlayer.TrackInfo[] infos = mp.getTrackInfo();
+            if (infos != null) {
+                for (int i = 0; i < infos.length; i++) {
+                    int type = infos[i].getTrackType();
+                    if (type != MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_TIMEDTEXT
+                            && type != MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE) {
+                        continue;
+                    }
+                    boolean isExt = i == externalIndex;
+                    String label = null;
+                    if (label == null) {
+                        String lang = null;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            try {
+                                lang = infos[i].getLanguage();
+                            } catch (Exception ignored) {
+                            }
+                        }
+                        label = (lang == null || lang.isEmpty() || "und".equals(lang))
+                                ? "Track " + (tracks.size() + 1) : lang;
+                    }
+                    tracks.add(new SubtitleTrack(i, label, isExt));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        subtitleTracks.clear();
+        subtitleTracks.addAll(tracks);
+        boolean selectionValid = selectedSubtitleTrack == EXTERNAL_TRACK_INDEX
+                ? hasExternalCues() : selectedSubtitleTrack < 0;
+        for (SubtitleTrack t : tracks) {
+            if (t.playerTrackIndex == selectedSubtitleTrack) {
+                selectionValid = true;
+                break;
+            }
+        }
+        if (!selectionValid) selectedSubtitleTrack = -1;
+        notifySubtitleTracksChanged();
+    }
+
+    private void resetSubtitlesForNewItem() {
+        subtitleTracks.clear();
+        selectedSubtitleTrack = -1;
+        activeExternalLabel = null;
+        lastExternalCue = null;
+        externalParseGen++;
+        synchronized (this) {
+            externalCues = new ArrayList<>();
+            externalCuesForPath = null;
+        }
+        handler.post(() -> notifySubtitleCue(null));
+        notifySubtitleTracksChanged();
+    }
+
+    /** Renders the external cue for the current clock (no-op when inactive). */
+    private void updateExternalCue(boolean force) {
+        if (!subtitlesEnabled || selectedSubtitleTrack != EXTERNAL_TRACK_INDEX
+                || !hasExternalCues()) {
+            if (force && lastExternalCue != null) {
+                lastExternalCue = null;
+                handler.post(() -> notifySubtitleCue(null));
+            } else if (force && selectedSubtitleTrack != EXTERNAL_TRACK_INDEX
+                    && subtitlesEnabled) {
+                // Embedded path drives cues via the timed-text listener.
+            }
+            return;
+        }
+        List<SubtitleUtil.Cue> cues;
+        synchronized (this) {
+            cues = new ArrayList<>(externalCues);
+        }
+        int pos = getCurrentPosition();
+        String cue = SubtitleUtil.cueAt(cues, pos, subtitleDelayMs);
+        if (cue == null ? lastExternalCue != null
+                : !cue.equals(lastExternalCue)) {
+            lastExternalCue = cue;
+            final String out = cue;
+            handler.post(() -> notifySubtitleCue(out));
+        }
+    }
+
+    /**
+     * Loads the manual pick (for this video) or the best same-name sidecar.
+     * Called once the player is prepared so the track list is complete.
+     */
+    private void maybeAutoLoadExternal(MediaItem item) {
+        if (item == null || !item.isVideo || item.path == null) return;
+        String manual = null;
+        if (manualExternalSubtitle != null && item.path.equals(manualExternalForPath)) {
+            File mf = new File(manualExternalSubtitle);
+            if (mf.isFile() && mf.canRead()
+                    && SubtitleUtil.isSupportedExternal(mf.getName())) {
+                manual = manualExternalSubtitle;
+            }
+        }
+        if (manual != null) {
+            synchronized (this) {
+                if (!manual.equals(externalCuesForPath) || !hasExternalCues()) {
+                    activeExternalLabel = new File(manual).getName();
+                    loadExternalCuesAsync(manual, true);
+                }
+            }
+            return;
+        }
+        if (!subtitleAutoLoad) return;
+        synchronized (this) {
+            if (hasExternalCues() && externalCuesForPath != null) return;
+        }
+        // Scan the video directory off the main thread.
+        final String videoPath = item.path;
+        final int gen = externalParseGen;
+        new Thread(() -> {
+            List<File> sidecars = SubtitleUtil.findSidecars(videoPath);
+            handler.post(() -> {
+                if (gen != externalParseGen) return;
+                MediaItem cur = getCurrentItem();
+                if (cur == null || !videoPath.equals(cur.path)) return;
+                if (!subtitleAutoLoad || hasExternalCues()) return;
+                if (manualExternalSubtitle != null
+                        && videoPath.equals(manualExternalForPath)) return;
+                if (sidecars.isEmpty()) return;
+                File best = sidecars.get(0);
+                manualExternalSubtitle = null;
+                manualExternalForPath = null;
+                activeExternalLabel = best.getName();
+                loadExternalCuesAsync(best.getAbsolutePath(), true);
+            });
+        }).start();
+    }
+
     public static synchronized PlayerManager getInstance(Context context) {
         if (instance == null) {
             instance = new PlayerManager(context.getApplicationContext());
@@ -400,10 +770,27 @@ public class PlayerManager {
 
         if (videoSurface != null && isVideo) newPlayer.setSurface(videoSurface);
 
+        resetSubtitlesForNewItem();
+        newPlayer.setOnTimedTextListener((mp, text) -> {
+            if (mp != mediaPlayer) return;
+            // External cues are rendered in-app; ignore framework text then.
+            if (selectedSubtitleTrack == EXTERNAL_TRACK_INDEX && hasExternalCues()) return;
+            final String cue = (text == null || text.getText() == null) ? null
+                    : SubtitleUtil.cleanCue(text.getText());
+            handler.post(() -> {
+                if (selectedSubtitleTrack == EXTERNAL_TRACK_INDEX && hasExternalCues()) return;
+                if (subtitlesEnabled) notifySubtitleCue(cue == null || cue.isEmpty() ? null : cue);
+            });
+        });
+
         newPlayer.setOnPreparedListener(mp -> {
             if (mp != mediaPlayer) return;
             if (resumePosition > 0 && resumePosition < mp.getDuration()) mp.seekTo(resumePosition);
             resumePosition = 0;
+            if (isVideo) {
+                refreshSubtitleTracks(mp, -1, null);
+                maybeAutoLoadExternal(item);
+            }
             requestAudioFocus();
             mp.setVolume(isMuted ? 0 : volumeLeft, isMuted ? 0 : volumeRight);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && playbackSpeed != 1f) {
@@ -461,6 +848,12 @@ public class PlayerManager {
         }
     }
 
+    /** Lists embedded tracks; external sidecars load via maybeAutoLoadExternal. */
+    private void setupSubtitles(MediaPlayer mp, MediaItem item) {
+        refreshSubtitleTracks(mp, -1, null);
+        maybeAutoLoadExternal(item);
+    }
+
     private void requestAudioFocus() {
         if (hasAudioFocus) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -508,6 +901,7 @@ public class PlayerManager {
                     int pos = mediaPlayer.getCurrentPosition();
                     int dur = mediaPlayer.getDuration();
                     notifyProgress(pos, dur);
+                    updateExternalCue(false);
                     if (abRepeatA >= 0 && abRepeatB >= 0 && pos >= abRepeatB) {
                         seekTo(abRepeatA);
                     }
@@ -537,6 +931,9 @@ public class PlayerManager {
         skipDuration = prefs.getInt("player_skip_duration", 10000);
         playbackSpeed = prefs.getFloat("player_speed", 1f);
         videoBackgroundPlay = prefs.getBoolean("player_video_background", false);
+        subtitlesEnabled = prefs.getBoolean("player_sub_enabled", true);
+        subtitleAutoLoad = prefs.getBoolean("player_sub_autoload", true);
+        subtitleDelayMs = prefs.getInt("player_sub_delay", 0);
     }
 
     private void saveSettings() {
@@ -548,6 +945,9 @@ public class PlayerManager {
                 .putInt("player_skip_duration", skipDuration)
                 .putFloat("player_speed", playbackSpeed)
                 .putBoolean("player_video_background", videoBackgroundPlay)
+                .putBoolean("player_sub_enabled", subtitlesEnabled)
+                .putBoolean("player_sub_autoload", subtitleAutoLoad)
+                .putInt("player_sub_delay", subtitleDelayMs)
                 .apply();
     }
 

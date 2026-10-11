@@ -4,10 +4,14 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -33,10 +37,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MediaPlayerActivity extends BaseActivity implements
         PlayerManager.PlaybackCallback,
         PlayerManager.VideoSizeChangedListener,
+        PlayerManager.SubtitleListener,
         SurfaceHolder.Callback {
 
     private PlayerManager playerManager;
@@ -45,7 +55,7 @@ public class MediaPlayerActivity extends BaseActivity implements
     private LinearLayout artworkContainer, abRepeatBar, controlsContainer;
     private View toolbar;
     private ImageView artworkView;
-    private TextView trackTitle, trackArtist, trackAlbum, currentTime, totalTime, speedLabel, errorMessage, bufferingIndicator;
+    private TextView trackTitle, trackArtist, trackAlbum, currentTime, totalTime, speedLabel, errorMessage, bufferingIndicator, subtitleView;
     private ImageButton btnPlayPause, btnNext, btnPrevious, btnRewind, btnFastForward, btnRepeat, btnShuffle, btnMute, btnQueue, btnLock, btnSettings, btnAspect, btnUnlock;
     private Button btnSetA, btnSetB;
     private ImageButton btnClearAB;
@@ -88,6 +98,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         playerManager.registerCallback(this);
         playerManager.setVideoSizeChangedListener(this);
+        playerManager.registerSubtitleListener(this);
 
         initViews();
         setupControls();
@@ -123,6 +134,8 @@ public class MediaPlayerActivity extends BaseActivity implements
         speedLabel = findViewById(R.id.speedLabel);
         errorMessage = findViewById(R.id.errorMessage);
         bufferingIndicator = findViewById(R.id.bufferingIndicator);
+        subtitleView = findViewById(R.id.subtitleView);
+        applySubtitleStyle();
         toolbar = findViewById(R.id.toolbar);
 
         btnPlayPause = findViewById(R.id.btnPlayPause);
@@ -611,9 +624,255 @@ public class MediaPlayerActivity extends BaseActivity implements
         });
     }
 
+    @Override
+    public void onSubtitleCue(String text) {
+        runOnUiThread(() -> {
+            if (subtitleView == null) return;
+            if (text == null || text.isEmpty()) {
+                subtitleView.setVisibility(View.GONE);
+            } else {
+                // Multi-line cues: TextView handles \n natively.
+                subtitleView.setText(text);
+                subtitleView.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    /** Applies persisted subtitle style (size/color/bold/background). */
+    private void applySubtitleStyle() {
+        if (subtitleView == null) return;
+        int sizeSp = prefs.getInt("subtitle_text_size", 18);
+        int color = prefs.getInt("subtitle_text_color", Color.WHITE);
+        boolean bold = prefs.getBoolean("subtitle_bold", true);
+        int bgMode = prefs.getInt("subtitle_bg", 0);
+        subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(10, Math.min(40, sizeSp)));
+        subtitleView.setTextColor(color);
+        subtitleView.setTypeface(null, bold ? Typeface.BOLD : Typeface.NORMAL);
+        subtitleView.setShadowLayer(3f, 1f, 1f, Color.BLACK);
+        switch (bgMode) {
+            case 1:
+                subtitleView.setBackgroundColor(0x99000000);
+                break;
+            case 2:
+                subtitleView.setBackgroundColor(0xFF000000);
+                break;
+            default:
+                subtitleView.setBackgroundColor(Color.TRANSPARENT);
+                break;
+        }
+        subtitleView.setPadding(16, 4, 16, 4);
+    }
+
+    @Override
+    public void onSubtitleTracksChanged() {
+        // Track list is read when the dialog opens; nothing to refresh here.
+    }
+
+    private void showSubtitlesDialog() {
+        MediaItem item = playerManager.getCurrentItem();
+        if (item == null || !item.isVideo) return;
+        List<PlayerManager.SubtitleTrack> tracks = playerManager.getSubtitleTracks();
+        List<String> labels = new ArrayList<>();
+        List<Integer> indices = new ArrayList<>();
+        String active = playerManager.getActiveSubtitleLabel();
+        labels.add(getString(R.string.subtitles_off)
+                + (!playerManager.isSubtitlesEnabled() || active == null ? " ●" : ""));
+        indices.add(-1);
+        for (PlayerManager.SubtitleTrack t : tracks) {
+            String mark = playerManager.isSubtitlesEnabled() && t.label != null
+                    && t.label.equals(active) ? " ●" : "";
+            String detail = t.external && t.playerTrackIndex == PlayerManager.EXTERNAL_TRACK_INDEX
+                    ? " (" + playerManager.getExternalCueCount() + ")" : "";
+            labels.add((t.external ? getString(R.string.subtitle_external_prefix) + " " : "")
+                    + t.label + detail + mark);
+            indices.add(t.playerTrackIndex);
+        }
+        labels.add(getString(R.string.load_external_subtitles));
+        indices.add(-2);
+        labels.add(getString(R.string.subtitle_settings));
+        indices.add(-3);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.subtitles)
+                .setItems(labels.toArray(new String[0]), (d, which) -> {
+                    int idx = indices.get(which);
+                    if (idx == -1) {
+                        playerManager.setSubtitlesEnabled(false);
+                    } else if (idx == -2) {
+                        pickExternalSubtitle(item);
+                    } else if (idx == -3) {
+                        showSubtitleSettings();
+                    } else {
+                        playerManager.setSubtitlesEnabled(true);
+                        playerManager.selectSubtitleTrack(idx);
+                    }
+                }).show();
+    }
+
+    private void showSubtitleSettings() {
+        final String[] delayLabel = {getString(
+                R.string.subtitle_delay_value, playerManager.getSubtitleDelayMs())};
+        final String[] sizeLabel = {getString(
+                R.string.subtitle_size_value, prefs.getInt("subtitle_text_size", 18))};
+        final String[] colorLabel = {colorName(prefs.getInt("subtitle_text_color", Color.WHITE))};
+        final String[] bgLabel = {bgName(prefs.getInt("subtitle_bg", 0))};
+        final List<String> labels = new ArrayList<>();
+        final List<Integer> actions = new ArrayList<>();
+        rebuildSubtitleSettings(labels, actions, delayLabel, sizeLabel, colorLabel, bgLabel);
+        final androidx.appcompat.app.AlertDialog dlg = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.subtitle_settings)
+                .setItems(labels.toArray(new String[0]), null).create();
+        dlg.show();
+        dlg.getListView().setOnItemClickListener((parent, view, position, id) -> {
+            onSubtitleSettingClicked(actions.get(position), dlg,
+                    delayLabel, sizeLabel, colorLabel, bgLabel, labels, actions);
+        });
+    }
+
+    private void rebuildSubtitleSettings(List<String> labels, List<Integer> actions,
+            String[] delayLabel, String[] sizeLabel, String[] colorLabel, String[] bgLabel) {
+        labels.clear();
+        actions.clear();
+        labels.add((playerManager.isSubtitlesEnabled() ? "✓ " : "")
+                + getString(R.string.subtitle_enable));
+        actions.add(0);
+        labels.add((playerManager.isSubtitleAutoLoad() ? "✓ " : "")
+                + getString(R.string.subtitle_autoload)
+                + " — " + getString(R.string.subtitle_autoload_summary));
+        actions.add(1);
+        labels.add(getString(R.string.subtitle_delay) + ": " + delayLabel[0]);
+        actions.add(2);
+        labels.add(getString(R.string.subtitle_size) + ": " + sizeLabel[0]);
+        actions.add(5);
+        labels.add(getString(R.string.subtitle_color) + ": " + colorLabel[0]);
+        actions.add(6);
+        labels.add((prefs.getBoolean("subtitle_bold", true) ? "✓ " : "")
+                + getString(R.string.subtitle_bold));
+        actions.add(7);
+        labels.add(getString(R.string.subtitle_background) + ": " + bgLabel[0]);
+        actions.add(8);
+    }
+
+    private void onSubtitleSettingClicked(int action,
+            androidx.appcompat.app.AlertDialog dlg, String[] delayLabel,
+            String[] sizeLabel, String[] colorLabel, String[] bgLabel,
+            List<String> labels, List<Integer> actions) {
+        if (action == 0) {
+            playerManager.setSubtitlesEnabled(!playerManager.isSubtitlesEnabled());
+        } else if (action == 1) {
+            playerManager.setSubtitleAutoLoad(!playerManager.isSubtitleAutoLoad());
+        } else if (action == 2) {
+            showDelayPicker(() -> {
+                delayLabel[0] = getString(R.string.subtitle_delay_value,
+                        playerManager.getSubtitleDelayMs());
+                try {
+                    if (dlg.isShowing()) dlg.dismiss();
+                } catch (Exception ignored) {
+                }
+                showSubtitleSettings();
+            });
+            return;
+        } else if (action == 5) {
+            int[] sizes = {14, 16, 18, 22, 26, 32};
+            int cur = prefs.getInt("subtitle_text_size", 18);
+            int next = sizes[0];
+            for (int i = 0; i < sizes.length; i++) {
+                if (sizes[i] == cur) {
+                    next = sizes[(i + 1) % sizes.length];
+                    break;
+                }
+            }
+            prefs.edit().putInt("subtitle_text_size", next).apply();
+            sizeLabel[0] = getString(R.string.subtitle_size_value, next);
+            applySubtitleStyle();
+        } else if (action == 6) {
+            int cur = prefs.getInt("subtitle_text_color", Color.WHITE);
+            int next = cur == Color.WHITE ? Color.YELLOW
+                    : cur == Color.YELLOW ? Color.CYAN : Color.WHITE;
+            prefs.edit().putInt("subtitle_text_color", next).apply();
+            colorLabel[0] = colorName(next);
+            applySubtitleStyle();
+        } else if (action == 7) {
+            boolean b = !prefs.getBoolean("subtitle_bold", true);
+            prefs.edit().putBoolean("subtitle_bold", b).apply();
+            applySubtitleStyle();
+        } else if (action == 8) {
+            int next = (prefs.getInt("subtitle_bg", 0) + 1) % 3;
+            prefs.edit().putInt("subtitle_bg", next).apply();
+            bgLabel[0] = bgName(next);
+            applySubtitleStyle();
+        }
+        rebuildSubtitleSettings(labels, actions, delayLabel, sizeLabel, colorLabel, bgLabel);
+        delayLabel[0] = getString(R.string.subtitle_delay_value,
+                playerManager.getSubtitleDelayMs());
+        dlg.getListView().setAdapter(new android.widget.ArrayAdapter<>(this,
+                android.R.layout.select_dialog_item, labels.toArray(new String[0])));
+    }
+
+    private String colorName(int color) {
+        if (color == Color.YELLOW) return getString(R.string.subtitle_color_yellow);
+        if (color == Color.CYAN) return getString(R.string.subtitle_color_cyan);
+        return getString(R.string.subtitle_color_white);
+    }
+
+    private String bgName(int mode) {
+        if (mode == 1) return getString(R.string.subtitle_bg_semi);
+        if (mode == 2) return getString(R.string.subtitle_bg_black);
+        return getString(R.string.subtitle_bg_none);
+    }
+
+    /** Delay stepper dialog (-/+100ms, reset). */
+    private void showDelayPicker(Runnable onChanged) {
+        String[] items = {getString(R.string.subtitle_delay_minus),
+                getString(R.string.subtitle_delay_plus),
+                getString(R.string.subtitle_delay_reset)};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.subtitle_delay) + ": "
+                        + getString(R.string.subtitle_delay_value,
+                                playerManager.getSubtitleDelayMs()))
+                .setItems(items, (d, which) -> {
+                    int cur = playerManager.getSubtitleDelayMs();
+                    if (which == 0) playerManager.setSubtitleDelayMs(cur - 100);
+                    else if (which == 1) playerManager.setSubtitleDelayMs(cur + 100);
+                    else playerManager.setSubtitleDelayMs(0);
+                    onChanged.run();
+                }).show();
+    }
+
+    private void pickExternalSubtitle(MediaItem item) {
+        try {
+            FilePickerDialog.Properties props2 = new FilePickerDialog.Properties();
+            props2.selection_mode = FilePickerDialog.SINGLE_MODE;
+            props2.selection_type = FilePickerDialog.FILE_SELECT;
+            File videoDir = item.path != null ? new File(item.path).getParentFile() : null;
+            File root = Environment.getExternalStorageDirectory();
+            props2.root = root;
+            props2.offset = videoDir != null && videoDir.isDirectory() ? videoDir : root;
+            props2.extensions = SubtitleUtil.getSupportedExtensions();
+            FilePickerDialog picker = new FilePickerDialog(this, props2);
+            picker.setTitle(getString(R.string.load_external_subtitles));
+            picker.setDialogSelectionListener(files -> {
+                if (files == null || files.length == 0 || files[0] == null) return;
+                if (playerManager.setExternalSubtitle(files[0])) {
+                    Toast.makeText(this, getString(R.string.subtitle_loaded,
+                            new File(files[0]).getName()), Toast.LENGTH_SHORT).show();
+                    showControlsTemporarily();
+                } else {
+                    Toast.makeText(this, R.string.subtitle_unsupported, Toast.LENGTH_SHORT).show();
+                }
+            });
+            picker.show();
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.subtitle_unsupported, Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void showPlayerSettings() {
+        String subState = playerManager.isSubtitlesEnabled()
+                && playerManager.getActiveSubtitleLabel() != null
+                ? playerManager.getActiveSubtitleLabel() : getString(R.string.subtitles_off_short);
         String[] items = {getString(R.string.keep_screen_on, (playerManager.isKeepScreenOn() ? "ON" : "OFF")),
                 getString(R.string.skip_duration_X, (playerManager.getSkipDuration() / 1000)),
+                getString(R.string.subtitles_X, subState),
                 getString(R.string.close_player)};
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.player_settings)
@@ -635,7 +894,8 @@ public class MediaPlayerActivity extends BaseActivity implements
                                         }
                                     }).show();
                             break;
-                        case 2: finish(); break;
+                        case 2: showSubtitlesDialog(); break;
+                        case 3: finish(); break;
                     }
                 }).show();
     }
@@ -675,15 +935,31 @@ public class MediaPlayerActivity extends BaseActivity implements
             playerManager.pause();
             pausedForBackground = true;
         }
-        startService(new Intent(this, MusicService.class));
+        // Don't (re)start the service here: it is already running whenever
+        // something plays, and starting it on every pause kept the app alive
+        // in the background after the user left the player.
     }
 
     @Override
     protected void onDestroy() {
         playerManager.unregisterCallback(this);
+        playerManager.unregisterSubtitleListener(this);
         playerManager.setVideoSizeChangedListener(null);
         autoHideHandler.removeCallbacks(autoHideRunnable);
         playerManager.setSurface(null);
+        if (isFinishing() && playerManager.getState() != PlayerManager.PlayState.PLAYING) {
+            // Backed out while paused/idle: release the engine and don't leave
+            // the foreground service lingering with nothing happening. Actively
+            // playing audio is left alone so background playback keeps working.
+            try {
+                playerManager.stop();
+            } catch (Exception ignored) {
+            }
+            try {
+                stopService(new Intent(this, MusicService.class));
+            } catch (Exception ignored) {
+            }
+        }
         super.onDestroy();
     }
 
