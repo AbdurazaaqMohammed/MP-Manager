@@ -132,7 +132,6 @@ import io.github.abdurazaaqmohammed.utils.RootPermissionHelper;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.UpdateUtil;
-import modder.hub.dexeditor.activity.DexEditorActivity;
 import io.github.codehasan.colorpicker.PreferencesDialogFragment;
 import io.github.codehasan.colorpicker.ServiceState;
 import io.github.codehasan.colorpicker.extensions.Extensions;
@@ -399,17 +398,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
             } else if(requestCode == 757) {
                 if (data == null || data.getData() == null) return;
-                final long saveMs = data.getLongExtra("save_time_ms", -1L);
-                final long compileMs = data.getLongExtra("save_compile_ms", -1L);
-                final long writeFileMs = data.getLongExtra("save_write_file_ms", -1L);
-                if (saveMs >= 0L) {
-                    final String message = writeFileMs >= 0L
-                            ? "Saved in " + DexEditorActivity.formatDuration(saveMs)
-                                    + " (compile " + DexEditorActivity.formatDuration(compileMs)
-                                    + ", writing file " + DexEditorActivity.formatDuration(writeFileMs) + ")"
-                            : "Saved in " + DexEditorActivity.formatDuration(saveMs);
-                    Extensions.showMessage(this, message);
-                }
                 handleModifiedFileResult(data.getData(), data.getStringExtra("zipEntryPath"), data.getStringExtra("zipFilePath"));
             }
         }
