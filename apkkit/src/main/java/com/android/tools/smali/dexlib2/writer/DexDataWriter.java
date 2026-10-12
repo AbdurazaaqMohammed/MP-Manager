@@ -98,6 +98,18 @@ public class DexDataWriter extends BufferedOutputStream {
         }
     }
 
+    /**
+     * Ensures {@code count} bytes can be staged without flushing. Writes of a fixed size (an int, a
+     * ushort, a uleb128) are by far the most common thing a dex is built from, and staging them
+     * straight into this buffer skips the copy through {@link #tempBuf} plus the bounds-checked
+     * {@link #write(byte[], int, int)} call that each of them used to go through.
+     */
+    private void stageRoomFor(int count) throws IOException {
+        if (staging.length - staged < count) {
+            flushStaging();
+        }
+    }
+
     @Override
     public void write(int b) throws IOException {
         if (staged == staging.length) {
@@ -150,8 +162,14 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeLong(long value) throws IOException {
-        writeInt((int)value);
-        writeInt((int)(value >> 32));
+        stageRoomFor(8);
+        byte[] buf = staging;
+        int pos = staged;
+        for (int shift = 0; shift < 64; shift += 8) {
+            buf[pos++] = (byte)(value >> shift);
+        }
+        staged = pos;
+        filePosition += 8;
     }
 
     public static void writeInt(OutputStream out, int value) throws IOException {
@@ -162,38 +180,44 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeInt(int value) throws IOException {
-        byte[] buf = tempBuf;
-        buf[0] = (byte)value;
-        buf[1] = (byte)(value >> 8);
-        buf[2] = (byte)(value >> 16);
-        buf[3] = (byte)(value >> 24);
-        write(buf, 0, 4);
+        stageRoomFor(4);
+        byte[] buf = staging;
+        int pos = staged;
+        buf[pos] = (byte)value;
+        buf[pos + 1] = (byte)(value >> 8);
+        buf[pos + 2] = (byte)(value >> 16);
+        buf[pos + 3] = (byte)(value >> 24);
+        staged = pos + 4;
+        filePosition += 4;
     }
 
     public void writeShort(int value) throws IOException {
         if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
             throw new ExceptionWithContext("Short value out of range: %d", value);
         }
-        tempBuf[0] = (byte)value;
-        tempBuf[1] = (byte)(value >> 8);
-        write(tempBuf, 0, 2);
+        stageRoomFor(2);
+        staging[staged++] = (byte)value;
+        staging[staged++] = (byte)(value >> 8);
+        filePosition += 2;
     }
 
     public void writeUshort(int value) throws IOException {
         if (value < 0 || value > 0xFFFF) {
             throw new ExceptionWithContext("Unsigned short value out of range: %d", value);
         }
-        tempBuf[0] = (byte)value;
-        tempBuf[1] = (byte)(value >> 8);
-        write(tempBuf, 0, 2);
+        stageRoomFor(2);
+        staging[staged++] = (byte)value;
+        staging[staged++] = (byte)(value >> 8);
+        filePosition += 2;
     }
 
     public void writeUbyte(int value) throws IOException {
         if (value < 0 || value > 0xFF) {
             throw new ExceptionWithContext("Unsigned byte value out of range: %d", value);
         }
-        tempBuf[0] = (byte)value;
-        write(tempBuf, 0, 1);
+        stageRoomFor(1);
+        staging[staged++] = (byte)value;
+        filePosition += 1;
     }
 
     public static void writeUleb128(OutputStream out, int value) throws IOException {
@@ -205,14 +229,16 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeUleb128(int value) throws IOException {
-        byte[] buf = tempBuf;
-        int pos = 0;
+        stageRoomFor(5);
+        byte[] buf = staging;
+        int pos = staged;
         while ((value & 0xffffffffL) > 0x7f) {
             buf[pos++] = (byte)((value & 0x7f) | 0x80);
             value >>>= 7;
         }
         buf[pos++] = (byte)value;
-        write(buf, 0, pos);
+        filePosition += pos - staged;
+        staged = pos;
     }
 
     public static void writeSleb128(OutputStream out, int value) throws IOException {
@@ -232,8 +258,9 @@ public class DexDataWriter extends BufferedOutputStream {
     }
 
     public void writeSleb128(int value) throws IOException {
-        byte[] buf = tempBuf;
-        int pos = 0;
+        stageRoomFor(5);
+        byte[] buf = staging;
+        int pos = staged;
         if (value >= 0) {
             while (value > 0x3f) {
                 buf[pos++] = (byte)((value & 0x7f) | 0x80);
@@ -247,7 +274,8 @@ public class DexDataWriter extends BufferedOutputStream {
             }
             buf[pos++] = (byte)(value & 0x7f);
         }
-        write(buf, 0, pos);
+        filePosition += pos - staged;
+        staged = pos;
     }
 
     public void writeEncodedValueHeader(int valueType, int valueArg) throws IOException {

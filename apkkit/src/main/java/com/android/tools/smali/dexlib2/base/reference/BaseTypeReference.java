@@ -32,6 +32,7 @@ package com.android.tools.smali.dexlib2.base.reference;
 
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
 import com.android.tools.smali.dexlib2.formatter.DexFormatter;
+import com.android.tools.smali.util.CharSequenceUtils;
 
 import javax.annotation.Nonnull;
 
@@ -56,7 +57,16 @@ public abstract class BaseTypeReference extends BaseReference implements TypeRef
 
     @Override
     public int compareTo(@Nonnull CharSequence o) {
-        return getType().compareTo(o.toString());
+        // Equivalent to getType().compareTo(o.toString()) - the descriptor of a type reference is
+        // its character content - but without calling toString() on the other operand, which for a
+        // type reference builds the whole descriptor through DexFormatter. This is the comparison
+        // every class/type pool sort is built on.
+        if (o instanceof TypeReference) {
+            // Both sides are plain Strings here, which makes this a String.compareTo - i.e. no
+            // virtual charAt per character, and no descriptor ever gets materialised.
+            return getType().compareTo(((TypeReference) o).getType());
+        }
+        return CharSequenceUtils.compare(getType(), o);
     }
 
     @Override public int length() { return getType().length(); }

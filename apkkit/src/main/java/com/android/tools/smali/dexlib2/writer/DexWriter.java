@@ -117,8 +117,10 @@ import com.android.tools.smali.dexlib2.writer.io.DexDataStore;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDeferredOutputStream;
 import com.android.tools.smali.dexlib2.writer.util.TryListBuilder;
+import com.android.tools.smali.util.CharSequenceUtils;
 import com.android.tools.smali.util.ExceptionWithContext;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Arrays;
 import java.util.Collections;
@@ -141,6 +143,8 @@ import java.nio.ByteOrder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Adler32;
 
 public abstract class DexWriter<
@@ -271,6 +275,15 @@ public abstract class DexWriter<
                 }
             };
 
+    /**
+     * Orders pool entries by the string form of their key, which is the order the dex format
+     * requires for the string and type id sections.
+     *
+     * <p>The keys are the pool's own reference objects, and their {@code toString()} is the plain
+     * string the entry is keyed by - see {@code BuilderTypeReference}/{@code BuilderClassDef},
+     * which return the descriptor they already hold instead of rebuilding it through
+     * {@code DexFormatter} on every single comparison.
+     */
     private static final Comparator<Map.Entry> toStringKeyComparator =
             (o1, o2) -> o1.getKey().toString().compareTo(o2.getKey().toString());
 
@@ -310,28 +323,144 @@ public abstract class DexWriter<
      *
      * <p>The resulting order is identical: the keys interned in every pool are unique, so there are
      * no ties for a differently-stable sort to order differently.
+     *
+     * @return a new list holding the pool's entries in write order
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static <T> void sortPoolItems(@Nonnull List<T> items, @Nonnull Comparator<? super T> comparator) {
-        if (items.size() < 2) {
-            return;
+    @Nonnull
+    private static <T> List<T> sortPoolItems(@Nonnull Collection<? extends T> items,
+                                             @Nonnull Comparator<? super T> comparator) {
+        List<T> sorted = new ArrayList<>(items);
+        if (sorted.size() < 2) {
+            return sorted;
         }
-        if (PARALLEL_SORT_METHOD == null || items.size() < PARALLEL_SORT_THRESHOLD) {
-            Collections.sort(items, comparator);
-            return;
+        if (PARALLEL_SORT_METHOD == null || sorted.size() < PARALLEL_SORT_THRESHOLD) {
+            Collections.sort(sorted, comparator);
+            return sorted;
         }
 
-        final Object[] array = items.toArray();
+        final Object[] array = sorted.toArray();
         try {
             PARALLEL_SORT_METHOD.invoke(null, array, comparator);
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             Arrays.sort(array, (Comparator) comparator);
         }
-        final ListIterator<T> iterator = items.listIterator();
+        final ListIterator<T> iterator = sorted.listIterator();
         for (Object item: array) {
             iterator.next();
             iterator.set((T) item);
         }
+        return sorted;
+    }
+
+    /** Index of the string pool's sorted entries in the array returned by {@link #sortPoolEntries()}. */
+    private static final int POOL_STRINGS = 0;
+    /** Index of the type pool's sorted entries in the array returned by {@link #sortPoolEntries()}. */
+    private static final int POOL_TYPES = 1;
+    /** Index of the prototype pool's sorted entries in the array returned by {@link #sortPoolEntries()}. */
+    private static final int POOL_PROTOS = 2;
+    /** Index of the field pool's sorted entries in the array returned by {@link #sortPoolEntries()}. */
+    private static final int POOL_FIELDS = 3;
+    /** Index of the method pool's sorted entries in the array returned by {@link #sortPoolEntries()}. */
+    private static final int POOL_METHODS = 4;
+    /** Index of the class pool's sorted entries in the array returned by {@link #sortPoolEntries()}. */
+    private static final int POOL_CLASSES = 5;
+    /** The number of constant pools that are written in sorted order. */
+    private static final int POOL_COUNT = 6;
+
+    /**
+     * Sorts every constant pool whose entries are written in sorted order, at once.
+     *
+     * <p>Sorting is about a third of the write phase, and the six sorts are independent of each
+     * other: each one only reads its own pool's keys. Run one after another, they are a chain of
+     * partly idle sorts - {@link Arrays#parallelSort} only splits a pool into as many pieces as its
+     * size allows, and the smaller pools do not parallelise at all - so most cores sit idle for
+     * most of the phase. Run concurrently, the same comparisons keep every core busy, and the phase
+     * costs about as long as its single largest sort instead of the sum of all six.
+     *
+     * <p>The result is unchanged by construction: every pool is still ordered by exactly the same
+     * comparator, and the indices are still assigned afterwards, in the write loops, in the same
+     * order as before.
+     *
+     * @return the sorted entry lists, indexed by the {@code POOL_*} constants
+     */
+    @Nonnull
+    private Object[] sortPoolEntries() throws IOException {
+        final Object[] sortedPools = new Object[POOL_COUNT];
+        runChunked(POOL_COUNT, pool -> {
+            switch (pool) {
+                case POOL_STRINGS:
+                    sortedPools[POOL_STRINGS] = sortPoolItems(stringSection.getItems(), toStringKeyComparator);
+                    break;
+                case POOL_TYPES:
+                    sortedPools[POOL_TYPES] = sortPoolItems(typeSection.getItems(), toStringKeyComparator);
+                    break;
+                case POOL_PROTOS:
+                    sortedPools[POOL_PROTOS] = sortPoolItems(
+                            protoSection.getItems(), DexWriter.<ProtoRefKey>comparableKeyComparator());
+                    break;
+                case POOL_FIELDS:
+                    sortedPools[POOL_FIELDS] = sortPoolItems(
+                            fieldSection.getItems(), DexWriter.<FieldRefKey>comparableKeyComparator());
+                    break;
+                case POOL_METHODS:
+                    sortedPools[POOL_METHODS] = sortPoolItems(
+                            methodSection.getItems(), DexWriter.<MethodRefKey>comparableKeyComparator());
+                    break;
+                case POOL_CLASSES:
+                    sortedPools[POOL_CLASSES] = sortPoolItems(
+                            classSection.getItems(), DexWriter.<ClassKey>comparableKeyComparator());
+                    break;
+                default:
+                    break;
+            }
+        });
+        return sortedPools;
+    }
+
+    /** Reads a sorted entry list out of the array built by {@link #sortPoolEntries()}. */
+    @SuppressWarnings("unchecked")
+    @Nonnull
+    private static <T> List<T> sortedPool(@Nonnull Object[] sortedPools, int pool) {
+        return (List<T>) sortedPools[pool];
+    }
+
+    /** Smallest index range handed to one worker thread. */
+    private static final int MIN_INDEX_CHUNK = 1024;
+
+    /**
+     * Below this many items a lookup pass stays on the calling thread: handing work to worker
+     * threads costs on the order of a millisecond, which a small pool's lookups do not earn back.
+     */
+    private static final int MIN_PARALLEL_ITEMS = 16 * 1024;
+
+    /** Work over a contiguous range of indices, {@code [from, to)}. */
+    private interface IndexedTask {
+        void run(int from, int to);
+    }
+
+    /**
+     * Runs {@code task} over {@code [0, size)}, in parallel when that is worth doing.
+     *
+     * <p>Looking up what a pool entry writes - the section indices of its defining class, name,
+     * prototype and so on - is a walk over a scattered object graph, so it is bound by memory
+     * latency rather than by the handful of instructions it takes. The values do not depend on each
+     * other and are read-only, so they can be resolved on several cores at once; the caller then
+     * writes them out in order, which is all that has to stay sequential.
+     */
+    private static void forEachIndex(int size, @Nonnull IndexedTask task) throws IOException {
+        if (size <= 0) {
+            return;
+        }
+        if (size < MIN_PARALLEL_ITEMS) {
+            task.run(0, size);
+            return;
+        }
+        int maxChunks = Math.max(1, Runtime.getRuntime().availableProcessors()) * 2;
+        int numChunks = Math.max(1, Math.min((size + MIN_INDEX_CHUNK - 1) / MIN_INDEX_CHUNK, maxChunks));
+        int chunkSize = (size + numChunks - 1) / numChunks;
+        runChunked(numChunks, chunk ->
+                task.run(chunk * chunkSize, Math.min(chunk * chunkSize + chunkSize, size)));
     }
 
     protected class InternalEncodedValueWriter extends EncodedValueWriter<StringKey, TypeKey, FieldRefKey, MethodRefKey,
@@ -419,15 +548,21 @@ public abstract class DexWriter<
         try {
             int dataSectionOffset = getDataSectionOffset();
 
+            // The index sections below are written in sorted order. Sorting the pools is the single
+            // largest part of this method and the sorts do not depend on each other, so they are all
+            // prepared up front, concurrently - see sortPoolEntries(). Nothing else is reordered:
+            // each pool's indices are still assigned in its write loop below, in the same order.
+            Object[] sortedPools = sortPoolEntries();
+
             try (DexDataWriter headerWriter = outputAt(dest, 0);
                  DexDataWriter indexWriter = outputAt(dest, HeaderItem.ITEM_SIZE);
                  DexDataWriter offsetWriter = outputAt(dest, dataSectionOffset)) {
-                writeStrings(indexWriter, offsetWriter);
-                writeTypes(indexWriter);
+                writeStrings(indexWriter, offsetWriter, sortedPool(sortedPools, POOL_STRINGS));
+                writeTypes(indexWriter, sortedPool(sortedPools, POOL_TYPES));
                 writeTypeLists(offsetWriter);
-                writeProtos(indexWriter);
-                writeFields(indexWriter);
-                writeMethods(indexWriter);
+                writeProtos(indexWriter, sortedPool(sortedPools, POOL_PROTOS));
+                writeFields(indexWriter, sortedPool(sortedPools, POOL_FIELDS));
+                writeMethods(indexWriter, sortedPool(sortedPools, POOL_METHODS));
 
                 // encoded arrays depend on method handles..
                 try (DexDataWriter methodHandleWriter = outputAt(dest, indexWriter.getPosition() +
@@ -449,8 +584,8 @@ public abstract class DexWriter<
                 writeAnnotationSets(offsetWriter);
                 writeAnnotationSetRefs(offsetWriter);
                 writeAnnotationDirectories(offsetWriter);
-                writeDebugAndCodeItems(offsetWriter, tempFactory.makeDeferredOutputStream());
-                writeClasses(dest, indexWriter, offsetWriter);
+                writeDebugAndCodeItems(offsetWriter, tempFactory);
+                writeClasses(dest, indexWriter, offsetWriter, sortedPool(sortedPools, POOL_CLASSES));
 
                 writeMapItem(offsetWriter);
                 writeHeader(headerWriter, dataSectionOffset, offsetWriter.getPosition());
@@ -563,91 +698,141 @@ public abstract class DexWriter<
         return new DexDataWriter(dataStore.outputAt(filePosition), filePosition);
     }
 
-    private void writeStrings(@Nonnull DexDataWriter indexWriter, @Nonnull DexDataWriter offsetWriter) throws IOException {
+    /**
+     * Writes the string index section and the string data it points at.
+     *
+     * <p>The strings are materialised up front, in parallel - turning a pool key back into its
+     * string walks a couple of objects, which is the expensive half of this loop - and then written
+     * in order, because each string's offset is simply where the previous one ended. The bytes
+     * written are the same either way.
+     */
+    private void writeStrings(@Nonnull DexDataWriter indexWriter, @Nonnull DexDataWriter offsetWriter,
+                              @Nonnull List<Entry<? extends StringKey, Integer>> stringEntries) throws IOException {
         stringIndexSectionOffset = indexWriter.getPosition();
         stringDataSectionOffset = offsetWriter.getPosition();
-        int index = 0;
-        List<Entry<? extends StringKey, Integer>> stringEntries = Lists.newArrayList(stringSection.getItems());
-        sortPoolItems(stringEntries, toStringKeyComparator);
+        final int itemCount = stringEntries.size();
 
-        for (Map.Entry<? extends StringKey, Integer>  entry: stringEntries) {
-            entry.setValue(index++);
+        final String[] strings = new String[itemCount];
+        forEachIndex(itemCount, (from, to) -> {
+            for (int i = from; i < to; i++) {
+                strings[i] = stringEntries.get(i).getKey().toString();
+            }
+        });
+
+        for (int i = 0; i < itemCount; i++) {
+            stringEntries.get(i).setValue(i);
             indexWriter.writeInt(offsetWriter.getPosition());
-            String stringValue = entry.getKey().toString();
+            String stringValue = strings[i];
             offsetWriter.writeUleb128(stringValue.length());
             offsetWriter.writeString(stringValue);
             offsetWriter.write(0);
         }
     }
 
-    private void writeTypes(@Nonnull DexDataWriter writer) throws IOException {
+    /**
+     * Writes the type index section. The string index each type refers to is resolved in parallel,
+     * then written in order - see {@link #forEachIndex}.
+     */
+    private void writeTypes(@Nonnull DexDataWriter writer,
+                            @Nonnull List<Map.Entry<? extends TypeKey, Integer>> typeEntries) throws IOException {
         typeSectionOffset = writer.getPosition();
-        int index = 0;
+        final int itemCount = typeEntries.size();
 
-        List<Map.Entry<? extends TypeKey, Integer>> typeEntries = Lists.newArrayList(typeSection.getItems());
-        sortPoolItems(typeEntries, toStringKeyComparator);
+        final int[] stringIndices = new int[itemCount];
+        forEachIndex(itemCount, (from, to) -> {
+            for (int i = from; i < to; i++) {
+                TypeKey key = typeEntries.get(i).getKey();
+                stringIndices[i] = stringSection.getItemIndex(typeSection.getString(key));
+            }
+        });
 
-        for (Map.Entry<? extends TypeKey, Integer> entry : typeEntries) {
-            entry.setValue(index++);
-            writer.writeInt(stringSection.getItemIndex(typeSection.getString(entry.getKey())));
+        for (int i = 0; i < itemCount; i++) {
+            typeEntries.get(i).setValue(i);
+            writer.writeInt(stringIndices[i]);
         }
     }
 
-    private void writeProtos(@Nonnull DexDataWriter writer) throws IOException {
+    private void writeProtos(@Nonnull DexDataWriter writer,
+                             @Nonnull List<Map.Entry<? extends ProtoRefKey, Integer>> protoEntries) throws IOException {
         protoSectionOffset = writer.getPosition();
-        int index = 0;
+        final int itemCount = protoEntries.size();
 
-        List<Map.Entry<? extends ProtoRefKey, Integer>> protoEntries = Lists.newArrayList(protoSection.getItems());
-        sortPoolItems(protoEntries, DexWriter.<ProtoRefKey>comparableKeyComparator());
+        final int[] values = new int[itemCount * 3];
+        forEachIndex(itemCount, (from, to) -> {
+            for (int i = from; i < to; i++) {
+                ProtoRefKey key = protoEntries.get(i).getKey();
+                int base = i * 3;
+                values[base] = stringSection.getItemIndex(protoSection.getShorty(key));
+                values[base + 1] = typeSection.getItemIndex(protoSection.getReturnType(key));
+                values[base + 2] = typeListSection.getNullableItemOffset(protoSection.getParameters(key));
+            }
+        });
 
-        for (Map.Entry<? extends ProtoRefKey, Integer> entry: protoEntries) {
-            entry.setValue(index++);
-            ProtoRefKey key = entry.getKey();
-            writer.writeInt(stringSection.getItemIndex(protoSection.getShorty(key)));
-            writer.writeInt(typeSection.getItemIndex(protoSection.getReturnType(key)));
-            writer.writeInt(typeListSection.getNullableItemOffset(protoSection.getParameters(key)));
+        for (int i = 0; i < itemCount; i++) {
+            protoEntries.get(i).setValue(i);
+            int base = i * 3;
+            writer.writeInt(values[base]);
+            writer.writeInt(values[base + 1]);
+            writer.writeInt(values[base + 2]);
         }
     }
 
-    private void writeFields(@Nonnull DexDataWriter writer) throws IOException {
+    private void writeFields(@Nonnull DexDataWriter writer,
+                             @Nonnull List<Map.Entry<? extends FieldRefKey, Integer>> fieldEntries) throws IOException {
         fieldSectionOffset = writer.getPosition();
-        int index = 0;
+        final int itemCount = fieldEntries.size();
 
-        List<Map.Entry<? extends FieldRefKey, Integer>> fieldEntries = Lists.newArrayList(fieldSection.getItems());
-        sortPoolItems(fieldEntries, DexWriter.<FieldRefKey>comparableKeyComparator());
-        
-        for (Map.Entry<? extends FieldRefKey, Integer> entry: fieldEntries) {
-            entry.setValue(index++);
-            FieldRefKey key = entry.getKey();
-            writer.writeUshort(typeSection.getItemIndex(fieldSection.getDefiningClass(key)));
-            writer.writeUshort(typeSection.getItemIndex(fieldSection.getFieldType(key)));
-            writer.writeInt(stringSection.getItemIndex(fieldSection.getName(key)));
+        final int[] values = new int[itemCount * 3];
+        forEachIndex(itemCount, (from, to) -> {
+            for (int i = from; i < to; i++) {
+                FieldRefKey key = fieldEntries.get(i).getKey();
+                int base = i * 3;
+                values[base] = typeSection.getItemIndex(fieldSection.getDefiningClass(key));
+                values[base + 1] = typeSection.getItemIndex(fieldSection.getFieldType(key));
+                values[base + 2] = stringSection.getItemIndex(fieldSection.getName(key));
+            }
+        });
+
+        for (int i = 0; i < itemCount; i++) {
+            fieldEntries.get(i).setValue(i);
+            int base = i * 3;
+            writer.writeUshort(values[base]);
+            writer.writeUshort(values[base + 1]);
+            writer.writeInt(values[base + 2]);
         }
     }
 
-    private void writeMethods(@Nonnull DexDataWriter writer) throws IOException {
+    private void writeMethods(@Nonnull DexDataWriter writer,
+                              @Nonnull List<Map.Entry<? extends MethodRefKey, Integer>> methodEntries) throws IOException {
         methodSectionOffset = writer.getPosition();
-        int index = 0;
+        final int itemCount = methodEntries.size();
 
-        List<Map.Entry<? extends MethodRefKey, Integer>> methodEntries = Lists.newArrayList(methodSection.getItems());
-        sortPoolItems(methodEntries, DexWriter.<MethodRefKey>comparableKeyComparator());
-        
-        for (Map.Entry<? extends MethodRefKey, Integer> entry: methodEntries) {
-            entry.setValue(index++);
-            MethodRefKey key = entry.getKey();
-            writer.writeUshort(typeSection.getItemIndex(methodSection.getDefiningClass(key)));
-            writer.writeUshort(protoSection.getItemIndex(methodSection.getPrototype(key)));
-            writer.writeInt(stringSection.getItemIndex(methodSection.getName(key)));
+        final int[] values = new int[itemCount * 3];
+        forEachIndex(itemCount, (from, to) -> {
+            for (int i = from; i < to; i++) {
+                MethodRefKey key = methodEntries.get(i).getKey();
+                int base = i * 3;
+                values[base] = typeSection.getItemIndex(methodSection.getDefiningClass(key));
+                values[base + 1] = protoSection.getItemIndex(methodSection.getPrototype(key));
+                values[base + 2] = stringSection.getItemIndex(methodSection.getName(key));
+            }
+        });
+
+        for (int i = 0; i < itemCount; i++) {
+            methodEntries.get(i).setValue(i);
+            int base = i * 3;
+            writer.writeUshort(values[base]);
+            writer.writeUshort(values[base + 1]);
+            writer.writeInt(values[base + 2]);
         }
     }
 
     private void writeClasses(@Nonnull DexDataStore dataStore, @Nonnull DexDataWriter indexWriter,
-                              @Nonnull DexDataWriter offsetWriter) throws IOException {
+                              @Nonnull DexDataWriter offsetWriter,
+                              @Nonnull List<Map.Entry<? extends ClassKey, Integer>> classEntriesKeySorted)
+            throws IOException {
         classIndexSectionOffset = indexWriter.getPosition();
         classDataSectionOffset = offsetWriter.getPosition();
-
-        List<Map.Entry<? extends ClassKey, Integer>> classEntriesKeySorted = Lists.newArrayList(classSection.getItems());
-        sortPoolItems(classEntriesKeySorted, DexWriter.<ClassKey>comparableKeyComparator());
 
         int index = 0;
         for (Map.Entry<? extends ClassKey, Integer> key: classEntriesKeySorted) {
@@ -1123,47 +1308,104 @@ public abstract class DexWriter<
         }
     }
 
-    private static class CodeItemOffset<MethodKey> {
-        @Nonnull
-        final MethodKey method;
-        final int codeOffset;
-
-        private CodeItemOffset(@Nonnull MethodKey method, int codeOffset) {
-            this.codeOffset = codeOffset;
-            this.method = method;
-        }
-    }
-
+    /**
+     * Writes the debug and code sections.
+     *
+     * <p>The debug items are written first, in order, on the calling thread. They are small next to
+     * the code items, and their offsets have to be known before any code item can be encoded (a code
+     * item embeds the offset of its own debug item).
+     *
+     * <p>The code items are the bulk of the file, and every one of them is self contained: it only
+     * reads pool indices that were assigned by the earlier phases, and its position relative to the
+     * start of the code section depends solely on the code items before it. That makes the code
+     * items encodable in parallel - see {@link #writeCodeItems}.
+     */
     private void writeDebugAndCodeItems(@Nonnull DexDataWriter offsetWriter,
-                                        @Nonnull DeferredOutputStream temp) throws IOException {
-        ByteArrayOutputStream ehBuf = new ByteArrayOutputStream();
+                                        @Nonnull DeferredOutputStreamFactory tempFactory) throws IOException {
         debugSectionOffset = offsetWriter.getPosition();
         DebugWriter<StringKey, TypeKey> debugWriter =
                 new DebugWriter<>(stringSection, typeSection, offsetWriter);
 
-        DexDataWriter codeWriter = new DexDataWriter(temp, 0);
-
-        // One writer for every method: InstructionWriter is stateless apart from the
-        // DexDataWriter/sections it writes through (all identical for every call here),
-        // so allocating one per method only added GC pressure. Output bytes are unchanged.
-        InstructionWriter<StringRef, TypeRef, FieldRefKey, MethodRefKey, ProtoRefKey,
-                MethodHandleKey, CallSiteKey> instructionWriter =
-                InstructionWriter.makeInstructionWriter(opcodes, codeWriter, stringSection, typeSection,
-                        fieldSection, methodSection, protoSection, methodHandleSection, callSiteSection);
-
-        List<CodeItemOffset<MethodKey>> codeOffsets = Lists.newArrayList();
-
+        // Flatten the (class -> direct methods -> virtual methods) traversal once, on this thread, in
+        // exactly the order the dex requires. Every pass below then only has to read from the pools.
+        List<MethodKey> methods = new ArrayList<>();
         for (ClassKey classKey: classSection.getSortedClasses()) {
-            Collection<? extends MethodKey> directMethods = classSection.getSortedDirectMethods(classKey);
-            Collection<? extends MethodKey> virtualMethods = classSection.getSortedVirtualMethods(classKey);
+            methods.addAll(classSection.getSortedDirectMethods(classKey));
+            methods.addAll(classSection.getSortedVirtualMethods(classKey));
+        }
+        final int methodCount = methods.size();
 
-            Iterable<MethodKey> methods = Iterables.concat(directMethods, virtualMethods);
+        // The debug items can change the debug items of a method (the jumbo-string path below
+        // rewrites the implementation), but that copy always holds the same debug items, so this
+        // pass can read them straight from the class section.
+        int[] debugItemOffsets = new int[methodCount];
+        for (int i = 0; i < methodCount; i++) {
+            MethodKey methodKey = methods.get(i);
+            debugItemOffsets[i] = writeDebugItem(offsetWriter, debugWriter,
+                    classSection.getParameterNames(methodKey), classSection.getDebugItems(methodKey));
+        }
 
-            for (MethodKey methodKey: methods) {
+        offsetWriter.align();
+        codeSectionOffset = offsetWriter.getPosition();
+
+        writeCodeItems(offsetWriter, tempFactory, methods, debugItemOffsets);
+    }
+
+    /** Smallest useful size of a parallel code-item batch. */
+    private static final int MIN_CODE_ITEM_CHUNK = 256;
+
+    /** Below this many methods the thread hand-off costs more than the encoding it saves. */
+    private static final int PARALLEL_CODE_ITEM_THRESHOLD = 1024;
+
+    /**
+     * Encodes the code items of every method in {@code methods}, in order, into the code section.
+     *
+     * <p>Each batch of methods is encoded into its own buffer, batches are encoded in parallel, and
+     * the buffers are then appended in order. This is byte-for-byte the same as encoding them one
+     * after another: a code item starts on a 4 byte boundary, so a batch whose buffer is padded to a
+     * multiple of 4 always leaves the next batch starting on the boundary the next code item would
+     * have aligned itself to. Only the final batch is left unpadded, because nothing follows it.
+     */
+    private void writeCodeItems(@Nonnull DexDataWriter offsetWriter,
+                                @Nonnull DeferredOutputStreamFactory tempFactory,
+                                @Nonnull List<MethodKey> methods,
+                                @Nonnull int[] debugItemOffsets) throws IOException {
+        final int methodCount = methods.size();
+        if (methodCount == 0) {
+            return;
+        }
+
+        final int maxParallelChunks = Math.max(1, Runtime.getRuntime().availableProcessors()) * 4;
+        final int numChunks = Math.min(
+                Math.max(1, methodCount / MIN_CODE_ITEM_CHUNK),
+                methodCount < PARALLEL_CODE_ITEM_THRESHOLD ? 1 : maxParallelChunks);
+        final int chunkSize = (methodCount + numChunks - 1) / numChunks;
+
+        final DeferredOutputStream[] chunkStreams = new DeferredOutputStream[numChunks];
+        final int[] chunkLengths = new int[numChunks];
+        final int[] chunkItemCounts = new int[numChunks];
+        // Offset of each method's code item within its own chunk, or -1 when the method has no code item.
+        final int[] localOffsets = new int[methodCount];
+        Arrays.fill(localOffsets, -1);
+
+        runChunked(numChunks, chunk -> {
+            int from = chunk * chunkSize;
+            int to = Math.min(from + chunkSize, methodCount);
+
+            DeferredOutputStream chunkStream = tempFactory.makeDeferredOutputStream();
+            DexDataWriter codeWriter = new DexDataWriter(chunkStream, 0);
+            ByteArrayOutputStream ehBuf = new ByteArrayOutputStream();
+            InstructionWriter<StringRef, TypeRef, FieldRefKey, MethodRefKey, ProtoRefKey,
+                    MethodHandleKey, CallSiteKey> instructionWriter =
+                    InstructionWriter.makeInstructionWriter(opcodes, codeWriter, stringSection, typeSection,
+                            fieldSection, methodSection, protoSection, methodHandleSection, callSiteSection);
+
+            int itemCount = 0;
+            for (int i = from; i < to; i++) {
+                MethodKey methodKey = methods.get(i);
                 List<? extends TryBlock<? extends ExceptionHandler>> tryBlocks =
                         classSection.getTryBlocks(methodKey);
                 Iterable<? extends Instruction> instructions = classSection.getInstructions(methodKey);
-                Iterable<? extends DebugItem> debugItems = classSection.getDebugItems(methodKey);
 
                 if (instructions != null && stringSection.hasJumboIndexes()) {
                     boolean needsFix = false;
@@ -1184,36 +1426,143 @@ public abstract class DexWriter<
 
                         instructions = mutableMethodImplementation.getInstructions();
                         tryBlocks = mutableMethodImplementation.getTryBlocks();
-                        debugItems = mutableMethodImplementation.getDebugItems();
                     }
                 }
 
-                int debugItemOffset = writeDebugItem(offsetWriter, debugWriter,
-                        classSection.getParameterNames(methodKey), debugItems);
                 int codeItemOffset;
                 try {
                     codeItemOffset = writeCodeItem(
-                            codeWriter, instructionWriter, ehBuf, methodKey, tryBlocks, instructions, debugItemOffset);
+                            codeWriter, instructionWriter, ehBuf, methodKey, tryBlocks, instructions,
+                            debugItemOffsets[i]);
                 } catch (RuntimeException ex) {
                     throw new ExceptionWithContext(ex, "Exception occurred while writing code_item for method %s",
                             methodSection.getMethodReference(methodKey));
                 }
 
                 if (codeItemOffset != -1) {
-                    codeOffsets.add(new CodeItemOffset<>(methodKey, codeItemOffset));
+                    localOffsets[i] = codeItemOffset;
+                    itemCount++;
+                }
+            }
+
+            // Push everything staged in the writer out to the chunk buffer, so that the position
+            // below is the size of the whole chunk.
+            codeWriter.flush();
+
+            chunkStreams[chunk] = chunkStream;
+            chunkLengths[chunk] = codeWriter.getPosition();
+            chunkItemCounts[chunk] = itemCount;
+        });
+
+        // Append the batches in order.
+        int lastNonEmptyChunk = -1;
+        for (int chunk = 0; chunk < numChunks; chunk++) {
+            if (chunkLengths[chunk] > 0) {
+                lastNonEmptyChunk = chunk;
+            }
+        }
+
+        int[] chunkBases = new int[numChunks];
+        for (int chunk = 0; chunk < numChunks; chunk++) {
+            if (chunkStreams[chunk] == null) {
+                continue;
+            }
+            chunkBases[chunk] = offsetWriter.getPosition();
+            chunkStreams[chunk].writeTo(offsetWriter);
+            chunkStreams[chunk].close();
+            chunkStreams[chunk] = null;
+
+            numCodeItemItems += chunkItemCounts[chunk];
+
+            if (chunk < lastNonEmptyChunk) {
+                int padding = (-chunkLengths[chunk]) & 3;
+                for (int i = 0; i < padding; i++) {
+                    offsetWriter.write(0);
                 }
             }
         }
 
-        offsetWriter.align();
-        codeSectionOffset = offsetWriter.getPosition();
+        for (int i = 0; i < methodCount; i++) {
+            int localOffset = localOffsets[i];
+            if (localOffset >= 0) {
+                classSection.setCodeItemOffset(methods.get(i), chunkBases[i / chunkSize] + localOffset);
+            }
+        }
+    }
 
-        codeWriter.close();
-        temp.writeTo(offsetWriter);
-        temp.close();
+    /** A batch of work identified by its index. */
+    private interface ChunkTask {
+        void run(int chunk) throws IOException;
+    }
 
-        for (CodeItemOffset<MethodKey> codeOffset: codeOffsets) {
-            classSection.setCodeItemOffset(codeOffset.method, codeSectionOffset + codeOffset.codeOffset);
+    /**
+     * Runs {@code task} for every index in {@code [0, numChunks)}, using the calling thread plus up
+     * to {@code numChunks - 1} short-lived daemon threads. Indices are handed out dynamically, so an
+     * uneven chunk is picked up by whichever thread is free first.
+     */
+    private static void runChunked(int numChunks, @Nonnull ChunkTask task) throws IOException {
+        if (numChunks <= 1) {
+            for (int i = 0; i < numChunks; i++) {
+                task.run(i);
+            }
+            return;
+        }
+
+        final int numWorkers = Math.min(numChunks, Math.max(1, Runtime.getRuntime().availableProcessors()));
+        final AtomicInteger nextChunk = new AtomicInteger(0);
+        final AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        Runnable worker = () -> {
+            while (failure.get() == null) {
+                int chunk = nextChunk.getAndIncrement();
+                if (chunk >= numChunks) {
+                    return;
+                }
+                try {
+                    task.run(chunk);
+                } catch (Throwable t) {
+                    failure.compareAndSet(null, t);
+                    return;
+                }
+            }
+        };
+
+        Thread[] threads = new Thread[numWorkers - 1];
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(worker, "dex-writer-code-items");
+            threads[i].setDaemon(true);
+            threads[i].start();
+        }
+
+        worker.run();
+
+        for (Thread thread : threads) {
+            boolean interrupted = false;
+            while (true) {
+                try {
+                    thread.join();
+                    break;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        Throwable t = failure.get();
+        if (t != null) {
+            if (t instanceof IOException) {
+                throw (IOException) t;
+            }
+            if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            }
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new ExceptionWithContext(t, "Exception occurred while writing the code section");
         }
     }
 
@@ -1308,7 +1657,8 @@ public abstract class DexWriter<
             return -1;
         }
 
-        numCodeItemItems++;
+        // numCodeItemItems is counted by the caller: this method can run on any number of threads,
+        // and the caller knows which methods actually produced a code item.
 
         writer.align();
 

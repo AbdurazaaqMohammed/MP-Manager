@@ -103,6 +103,12 @@ public class BuilderClassDef extends BaseTypeReference implements ClassDef {
     }
 
     @Nonnull @Override public String getType() { return type.getType(); }
+
+    /**
+     * Same descriptor, without the {@code DexFormatter} round trip that the inherited
+     * implementation performs. Class pool sorts compare these strings, so this is on their hot path.
+     */
+    @Nonnull @Override public String toString() { return type.getType(); }
     @Override public int getAccessFlags() { return accessFlags; }
     @Nullable @Override public String getSuperclass() { return superclass==null?null:superclass.getType(); }
     @Nullable @Override public String getSourceFile() { return sourceFile==null?null:sourceFile.getString(); }
@@ -117,37 +123,35 @@ public class BuilderClassDef extends BaseTypeReference implements ClassDef {
         return Lists.transform(this.interfaces, Functions.toStringFunction());
     }
 
-    @Nonnull @Override public Collection<BuilderField> getFields() {
-        return new AbstractCollection<>() {
-            @Nonnull
-            @Override
-            public Iterator<BuilderField> iterator() {
-                return Iterators.mergeSorted(
-                        ImmutableList.of(staticFields.iterator(), instanceFields.iterator()),
-                        Ordering.natural());
-            }
+    /*
+     * The two lists below are views over the class's (immutable) field/method sets. They are built
+     * lazily and then kept: the merge iterator they are derived from is not cheap to construct, and
+     * the dex writer asks every class for its fields and methods several times while writing the
+     * annotation and class sections. The contents of the underlying sets never change after
+     * construction, so the memoised list is always the right answer.
+     */
+    @Nullable private volatile List<BuilderField> fieldsView;
+    @Nullable private volatile List<BuilderMethod> methodsView;
 
-            @Override
-            public int size() {
-                return staticFields.size() + instanceFields.size();
-            }
-        };
+    @Nonnull @Override public Collection<BuilderField> getFields() {
+        List<BuilderField> view = fieldsView;
+        if (view == null) {
+            view = ImmutableList.copyOf(Iterators.mergeSorted(
+                    ImmutableList.of(staticFields.iterator(), instanceFields.iterator()),
+                    Ordering.natural()));
+            fieldsView = view;
+        }
+        return view;
     }
 
     @Nonnull @Override public Collection<BuilderMethod> getMethods() {
-        return new AbstractCollection<>() {
-            @Nonnull
-            @Override
-            public Iterator<BuilderMethod> iterator() {
-                return Iterators.mergeSorted(
-                        ImmutableList.of(directMethods.iterator(), virtualMethods.iterator()),
-                        Ordering.natural());
-            }
-
-            @Override
-            public int size() {
-                return directMethods.size() + virtualMethods.size();
-            }
-        };
+        List<BuilderMethod> view = methodsView;
+        if (view == null) {
+            view = ImmutableList.copyOf(Iterators.mergeSorted(
+                    ImmutableList.of(directMethods.iterator(), virtualMethods.iterator()),
+                    Ordering.natural()));
+            methodsView = view;
+        }
+        return view;
     }
 }

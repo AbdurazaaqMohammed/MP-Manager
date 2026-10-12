@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.SortedSet;
 
 import javax.annotation.Nonnull;
@@ -77,6 +78,22 @@ public class CollectionUtils {
     public static <T> int compareAsIterable(@Nonnull Comparator<? super T> comparator,
                                             @Nonnull Iterable<? extends T> it1,
                                             @Nonnull Iterable<? extends T> it2) {
+        // Ordered sequence comparison is order-of-elements first, length only as a tie break, so an
+        // indexed walk over two lists returns exactly what the iterator walk below returns - without
+        // allocating two iterators for every comparison. This is how method/prototype references are
+        // compared (and sorted) by the dex writer, once per comparison of every pool entry.
+        if (it1 instanceof List && it2 instanceof List) {
+            List<? extends T> list1 = (List<? extends T>) it1;
+            List<? extends T> list2 = (List<? extends T>) it2;
+            int size1 = list1.size();
+            int size2 = list2.size();
+            int limit = Math.min(size1, size2);
+            for (int i = 0; i < limit; i++) {
+                int res = comparator.compare(list1.get(i), list2.get(i));
+                if (res != 0) return res;
+            }
+            return Integer.compare(size1, size2);
+        }
         Iterator<? extends T> elements2 = it2.iterator();
         for (T element1: it1) {
             T element2;
@@ -224,6 +241,12 @@ public class CollectionUtils {
 
         @Override
         public int compare(Object left, Object right) {
+            // A CharSequence's toString() is its character content, so comparing the two sequences
+            // directly orders them exactly like comparing their Strings - without allocating one
+            // (or, for a dexlib2 type reference, running it through DexFormatter) per comparison.
+            if (left instanceof CharSequence && right instanceof CharSequence) {
+                return CharSequenceUtils.compare((CharSequence) left, (CharSequence) right);
+            }
             return left.toString().compareTo(right.toString());
         }
 

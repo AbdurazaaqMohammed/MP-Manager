@@ -47,6 +47,16 @@ public class BuilderTypeReference extends BaseTypeReference implements BuilderRe
         return stringReference.getString();
     }
 
+    /**
+     * A type reference's string form is its type descriptor, and the descriptor is already the
+     * string this reference holds. The inherited implementation rebuilds it character by character
+     * through {@code DexFormatter}, which turns every pool sort comparison into a round trip
+     * through a {@link java.io.StringWriter}. The value returned here is the same string.
+     */
+    @Nonnull @Override public String toString() {
+        return stringReference.getString();
+    }
+
     @Override public int getIndex() {
         return index;
     }
