@@ -203,13 +203,18 @@
                 android:name="androidx.startup.InitializationProvider"
                android:authorities="io.github.abdurazaaqmohammed.MPManager.androidx-startup"
                android:exported="false"
-               tools:ignore="MissingClass">
+               tools:ignore="MissingClass"
+               tools:node="merge">
                <meta-data
                    android:name="androidx.lifecycle.ProcessLifecycleInitializer"
                    android:value="androidx.startup" />
+               <!-- Cold-start: emoji2's initializer wires up EmojiCompat and pulls the
+                    system emoji font on every process start. Text renders with the
+                    platform's emoji instead, so the initializer is dropped from the
+                    merged manifest (its node also comes from the emoji2 library). -->
                <meta-data
                    android:name="androidx.emoji2.text.EmojiCompatInitializer"
-                   android:value="androidx.startup" />
+                   tools:node="remove" />
            </provider>
             <activity
                 android:name="modder.hub.dexeditor.activity.DexEditorActivity"

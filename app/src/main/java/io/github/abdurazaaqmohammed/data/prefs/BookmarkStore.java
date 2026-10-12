@@ -9,6 +9,8 @@ import androidx.preference.PreferenceManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import io.github.abdurazaaqmohammed.utils.AppGson;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +25,9 @@ import java.util.Map;
 public final class BookmarkStore {
 
     private final Context context;
-    private final Gson gson = new Gson();
+    // Shared instance: this object is built during MainActivity field initialisation,
+    // i.e. on the cold-start main thread, so it must not build its own Gson.
+    private final Gson gson = AppGson.get();
 
     public BookmarkStore(Context context) {
         // Keep the context only: resolving prefs here would run before the

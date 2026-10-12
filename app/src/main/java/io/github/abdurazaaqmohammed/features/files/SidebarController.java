@@ -22,6 +22,8 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import io.github.abdurazaaqmohammed.utils.AppGson;
+
 import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
@@ -151,7 +153,7 @@ public class SidebarController {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         List<String> sectionOrder = new ArrayList<>();
         try {
-            List<String> saved = new Gson().fromJson(prefs.getString("sidebar_section_order", "[]"),
+            List<String> saved = AppGson.get().fromJson(prefs.getString("sidebar_section_order", "[]"),
                     new TypeToken<List<String>>() {}.getType());
             if (saved != null) sectionOrder.addAll(saved);
         } catch (Exception ignored) {
@@ -167,7 +169,7 @@ public class SidebarController {
         }
         List<String> toolOrder = new ArrayList<>();
         try {
-            List<String> saved = new Gson().fromJson(prefs.getString("sidebar_tool_order", "[]"),
+            List<String> saved = AppGson.get().fromJson(prefs.getString("sidebar_tool_order", "[]"),
                     new TypeToken<List<String>>() {}.getType());
             if (saved != null) toolOrder.addAll(saved);
         } catch (Exception ignored) {
@@ -291,7 +293,7 @@ public class SidebarController {
     public List<String> getSidebarSectionOrder() {
         List<String> order = new ArrayList<>();
         try {
-            List<String> saved = new Gson().fromJson(PreferenceManager.getDefaultSharedPreferences(activity)
+            List<String> saved = AppGson.get().fromJson(PreferenceManager.getDefaultSharedPreferences(activity)
                     .getString("sidebar_section_order", "[]"), new TypeToken<List<String>>() {}.getType());
             if (saved != null) order.addAll(saved);
         } catch (Exception ignored) {
@@ -549,7 +551,7 @@ public class SidebarController {
                         if (entry.type() == SidebarAdapter.EntryType.HEADER && !order.contains(entry.section())) order.add(entry.section());
                     }
                     PreferenceManager.getDefaultSharedPreferences(activity).edit()
-                            .putString("sidebar_section_order", new Gson().toJson(order)).apply();
+                            .putString("sidebar_section_order", AppGson.get().toJson(order)).apply();
                 }
                 return true;
             }
@@ -559,7 +561,7 @@ public class SidebarController {
             }
             if (sidebarAdapter.moveEntry(source, target) && source.type() == SidebarAdapter.EntryType.TOOL) {
                 PreferenceManager.getDefaultSharedPreferences(activity).edit()
-                        .putString("sidebar_tool_order", new Gson().toJson(sidebarAdapter.getToolOrder())).apply();
+                        .putString("sidebar_tool_order", AppGson.get().toJson(sidebarAdapter.getToolOrder())).apply();
             }
             return true;
         }

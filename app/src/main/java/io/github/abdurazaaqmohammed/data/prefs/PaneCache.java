@@ -5,6 +5,8 @@ import android.content.Context;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
+import io.github.abdurazaaqmohammed.utils.AppGson;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -29,7 +31,9 @@ public final class PaneCache {
     /** Upper bound so a huge folder never bloats the cache file. */
     private static final int MAX_ENTRIES = 300;
 
-    private static final Gson GSON = new Gson();
+    // Shared instance: the first load/save happens while the startup listing is
+    // being painted, so building a Gson there is wasted main-thread work.
+    private static final Gson GSON = AppGson.get();
 
     private PaneCache() {
     }

@@ -22,6 +22,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.Process;
 import android.provider.Settings;
 import android.sun.security.provider.JavaKeyStoreProvider;
 import android.text.TextUtils;
@@ -825,7 +826,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
 
         requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> { });
 
-        new Thread(() -> {
+        // Frameworks are only needed by the APK tools, and the first copy is tens of
+        // megabytes of raw-resource I/O. It starts after the first frame is up, on a
+        // background-priority thread, so it never competes with the startup listing.
+        runWhenIdle(() -> new Thread(() -> {
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
             File frameworks = new File("/sdcard/MP Manager/frameworks/");
             if (frameworks.exists() || frameworks.mkdirs()) {
                 int[] resourceIds = {
@@ -847,7 +852,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
             // NOTE: setupPullToRefresh() must run on the main thread; it is
             // called from onCreate below (moved: was a WrongThread call here).
-        }).start();
+        }, "framework-copy").start());
 
         handler = new Handler(Looper.getMainLooper());
         drawerLayout = findViewById(R.id.drawer_layout);
