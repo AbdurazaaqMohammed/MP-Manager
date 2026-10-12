@@ -167,11 +167,10 @@ public class FileOpener {
                     openTextEditor(file, zipFile, zipEntryPath);
                 },
                 () -> {
-                    String lowerName = fileName.toLowerCase(Locale.ROOT);
-                    boolean zipBased = lowerName.endsWith(".zip") || lowerName.endsWith(".apk")
-                            || lowerName.endsWith(".jar") || lowerName.endsWith(".apks") || lowerName.endsWith(".xapk");
-                    if (!file.isFile() || !zipBased) {
-                        Extensions.showMessage(context, R.string.not_supported_archive);
+                    //String lowerName = fileName.toLowerCase(Locale.ROOT);
+                    //boolean zipBased = lowerName.endsWith(".zip") || lowerName.endsWith(".apk") || lowerName.endsWith(".jar") || lowerName.endsWith(".apks") || lowerName.endsWith(".xapk");
+                    if (!file.isFile()) {
+                        //Extensions.showMessage(context, R.string.not_supported_archive);
                         return;
                     }
                     withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
