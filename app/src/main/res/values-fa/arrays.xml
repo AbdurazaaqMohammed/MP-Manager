@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<resources>
+    <string-array name="editor_syntaxes">
+        <item>متن ساده</item>
+    </string-array>
+    <string-array name="font_style_values">
+        <item>عادی</item>
+        <item>تک‌فضایی</item>
+    </string-array>
+    <string-array name="font_styles">
+        <item>عادی</item>
+        <item>تک‌فضایی</item>
+    </string-array>
+    <string-array name="install_locations">
+        <item>خودکار</item>
+        <item>فقط داخلی</item>
+        <item>ترجیحاً خارجی</item>
+        <item>پیش‌فرض</item>
+    </string-array>
+    <string-array name="pref_capture_range_entries">
+        <item>بزرگ</item>
+        <item>متوسط</item>
+        <item>کوچک</item>
+    </string-array>
+    <string-array name="pref_capture_range_values">
+        <item>بزرگ</item>
+        <item>متوسط</item>
+        <item>کوچک</item>
+    </string-array>
+    <string-array name="pref_capture_speed_entries">
+        <item>سریع</item>
+        <item>عادی</item>
+        <item>آهسته</item>
+    </string-array>
+    <string-array name="pref_capture_speed_values">
+        <item>سریع</item>
+        <item>عادی</item>
+        <item>آهسته</item>
+    </string-array>
+    <string-array name="pref_magnifier_size_entries">
+        <item>بزرگ</item>
+        <item>متوسط</item>
+        <item>کوچک</item>
+    </string-array>
+    <string-array name="pref_magnifier_size_values">
+        <item>بزرگ</item>
+        <item>متوسط</item>
+        <item>کوچک</item>
+    </string-array>
+</resources>
