@@ -205,7 +205,6 @@
     <string name="hex_editor">Editor hexadecimal</string>
     <string name="media_player">Reproductor multimedia</string>
     <string name="apk_info">Información del APK</string>
-    <string name="not_supported_archive">No es un archivo basado en zip, el visor integrado solo admite ZIP/APK/JAR</string>
     <string name="not_an_apk">No es un archivo APK</string>
     <string name="cannot_open_item">Este elemento no se puede abrir con la función seleccionada</string>
     <string name="fix_mime_type">Corregir tipo MIME antes de compartir/abrir con (detectar desde bytes)</string>
@@ -1252,7 +1251,6 @@ Layout Inspector
     <string name="saved_i_of_i_to_x">Guardados %1$d de %2$d en %3$s</string>
     <string name="downloading_x">Descargando %1$s</string>
     <string name="read_write_exec">"        Leer    Escribir   Ejec"</string>
-    <string name="i_ftsave">%1$d archivo(s) para guardar. Elige una carpeta.</string>
     <string name="save_to_folder">Guardar en carpeta</string>
     <string name="shizuku_needed">Esta carpeta requiere Shizuku. Instala Shizuku y concede acceso para continuar.</string>
     <string name="shizuku_install">Instalar Shizuku</string>
@@ -1497,7 +1495,6 @@ Layout Inspector
     <string name="sh_select_action">Selecciona una acción a realizar</string>
     <string name="sh_warning">Advertencia: los scripts de shell se ejecutan con plenos privilegios y pueden modificar o dañar tu dispositivo, borrar datos o comprometer la seguridad. Ejecuta solo scripts obtenidos de fuentes de confianza y revisa el contenido del script antes de ejecutarlo. Asumes toda la responsabilidad por cualquier consecuencia derivada de la ejecución.</string>
     <string name="compare_dex">Comparar DEX</string>
-    <string name="dex_changed">Cambiadas</string>
     <string name="dex_compare_progress">Comparando… %1$d%%</string>
     <string name="dex_compare_summary">%1$d añadidas · %2$d eliminadas · %3$d cambiadas</string>
     <string name="dex_comparing">Comparando…</string>
@@ -1525,15 +1522,4 @@ Layout Inspector
     <string name="view_mode_auto">Cambio automático</string>
     <string name="view_mode_side_by_side">Lado a lado</string>
     <string name="view_mode_unified">Unificado</string>
-    <string-array name="editor_syntaxes">
-        <item>Texto sin formato</item>
-        <item>Java</item>
-        <item>C</item>
-        <item>C++</item>
-        <item>Python</item>
-        <item>JavaScript</item>
-        <item>HTML</item>
-        <item>CSS</item>
-        <item>Markdown</item>
-    </string-array>
 </resources>

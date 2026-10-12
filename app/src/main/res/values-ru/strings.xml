@@ -204,7 +204,6 @@
     <string name="hex_editor">Hex-редактор</string>
     <string name="media_player">Медиаплеер</string>
     <string name="apk_info">Информация об APK</string>
-    <string name="not_supported_archive">Не Zip-архив, встроенный просмотрщик поддерживает только ZIP/APK/JAR</string>
     <string name="not_an_apk">Не файл APK</string>
     <string name="cannot_open_item">Этот элемент нельзя открыть выбранной функцией</string>
     <string name="fix_mime_type">Исправлять MIME-тип перед отправкой/открытием (определять по содержимому)</string>
@@ -1134,7 +1133,6 @@
     <string name="saved_i_of_i_to_x">Сохранено %1$d из %2$d в %3$s</string>
     <string name="downloading_x">Загрузка %1$s</string>
     <string name="read_write_exec">"        Чтение  Запись  Исполн."</string>
-    <string name="i_ftsave">%1$d файлов для сохранения. Выберите папку.</string>
     <string name="save_to_folder">Сохранить в папку</string>
     <string name="search_history_limit">Лимит истории поиска</string>
     <string name="find_usages">Найти использования</string>
@@ -1478,7 +1476,6 @@
     <string name="wifi_info_unavailable">Недоступно</string>
     <string name="wifi_info_unavailable_details">Данные Wi-Fi недоступны</string>
     <string name="compare_dex">Сравнить DEX</string>
-    <string name="dex_changed">Изменено</string>
     <string name="dex_compare_progress">Сравнение… %1$d%%</string>
     <string name="dex_compare_summary">%1$d добавлено · %2$d удалено · %3$d изменено</string>
     <string name="dex_comparing">Сравнение…</string>
@@ -1506,15 +1503,4 @@
     <string name="view_mode_auto">Автопереключение</string>
     <string name="view_mode_side_by_side">Рядом</string>
     <string name="view_mode_unified">Единый</string>
-    <string-array name="editor_syntaxes">
-        <item>Обычный текст</item>
-        <item>Java</item>
-        <item>C</item>
-        <item>C++</item>
-        <item>Python</item>
-        <item>JavaScript</item>
-        <item>HTML</item>
-        <item>CSS</item>
-        <item>Markdown</item>
-    </string-array>
 </resources>

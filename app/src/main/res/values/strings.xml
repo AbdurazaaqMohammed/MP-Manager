@@ -211,7 +211,6 @@
     <string name="hex_editor">Hex editor</string>
     <string name="media_player">Media player</string>
     <string name="apk_info">APK info</string>
-    <string name="not_supported_archive">Not a zip-based archive, built-in archive viewer only supports ZIP/APK/JAR</string>
     <string name="not_an_apk">Not an APK file</string>
     <string name="cannot_open_item">This item cannot be opened with the selected function</string>
     <string name="fix_mime_type">Fix MIME type before share/open with (detect from bytes)</string>
@@ -429,8 +428,6 @@
     <string name="subtitle_color_white">White</string>
     <string name="subtitle_color_yellow">Yellow</string>
     <string name="subtitle_color_cyan">Cyan</string>
-    <string name="subtitle_cues_loaded">Subtitles loaded: %1$s (%2$d cues)</string>
-    <string name="subtitle_no_cues">No subtitle cues found in %1$s</string>
     <string name="skip_duration">Skip Duration</string>
     <string name="select_icon">Select Icon</string>
     <string name="processing">Processing…</string>
@@ -1311,7 +1308,6 @@ Layout Inspector
     <string name="saved_i_of_i_to_x">Saved %1$d of %2$d to %3$s</string>
     <string name="downloading_x">Downloading %1$s</string>
     <string name="read_write_exec">"        Read    Write   Exec"</string>
-    <string name="i_ftsave">%1$d file(s) to save. Pick a folder.</string>
     <string name="save_to_folder">Save to folder</string>
     <string name="shizuku_needed">This folder requires Shizuku. Install Shizuku and grant access to continue.</string>
     <string name="shizuku_install">Install Shizuku</string>
@@ -1574,7 +1570,6 @@ Layout Inspector
     <string name="ignore_whitespace">Ignore whitespace</string>
     <string name="ignore_whitespace_and_empty_lines">Ignore whitespace and empty lines</string>
     <string name="dex_compare_summary">%1$d added · %2$d removed · %3$d changed</string>
-    <string name="dex_changed">Changed</string>
     <string name="crop_images">Crop images</string>
     <string name="update">Update</string>
     <string name="no_update_found">No update found</string>
@@ -1584,15 +1579,4 @@ Layout Inspector
     <string name="failed_to_check_for_update">Failed to check for update</string>
     <string name="plugin_info">Plugin Info</string>
     <string name="plugin_infos">Plugins are developed as Android apps. Install one and it will show up in this list. On first use you will be prompted to confirm its certificate fingerprint against the one its developer published. If it ever changes, you will be warned.\n\nA plugin can add entries to the sidebar, settings, file menu, text editor or APK dialog. Each plugin runs in its own app process with its own permissions, so a plugin cannot read your files unless you explicitly grant it storage access.\n\nTo make one, copy the samples/plugin-sample module, declare the hooks you use in the manifest, and follow the contract strings in PluginContracts. Then build an APK, host it anywhere, and share the fingerprint with your users.</string>
-    <string-array name="editor_syntaxes">
-        <item>Plain Text</item>
-        <item>Java</item>
-        <item>C</item>
-        <item>C++</item>
-        <item>Python</item>
-        <item>JavaScript</item>
-        <item>HTML</item>
-        <item>CSS</item>
-        <item>Markdown</item>
-    </string-array>
 </resources>

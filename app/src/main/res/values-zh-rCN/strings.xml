@@ -201,7 +201,6 @@
     <string name="hex_editor">十六进制编辑器</string>
     <string name="media_player">媒体播放器</string>
     <string name="apk_info">APK 信息</string>
-    <string name="not_supported_archive">不是基于 zip 的归档，内置归档查看器仅支持 ZIP/APK/JAR</string>
     <string name="not_an_apk">不是 APK 文件</string>
     <string name="cannot_open_item">无法使用所选功能打开此项目</string>
     <string name="fix_mime_type">分享/打开方式前修正 MIME 类型（从字节检测）</string>
@@ -1155,7 +1154,6 @@ Layout Inspector
     <string name="saved_i_of_i_to_x">已将 %1$d / %2$d 保存到 %3$s</string>
     <string name="downloading_x">正在下载 %1$s</string>
     <string name="read_write_exec">"        读    写    执行"</string>
-    <string name="i_ftsave">%1$d 个文件待保存。选择文件夹。</string>
     <string name="save_to_folder">保存到文件夹</string>
     <string name="shizuku_needed">此文件夹需要 Shizuku。安装 Shizuku 并授予访问权限以继续。</string>
     <string name="shizuku_install">安装 Shizuku</string>
@@ -1501,19 +1499,7 @@ Layout Inspector
     <string name="wifi_info_total_up">总上行</string>
     <string name="wifi_info_unavailable">不可用</string>
     <string name="wifi_info_unavailable_details">Wi-Fi 详情不可用</string>
-    <string-array name="editor_syntaxes">
-        <item>纯文本</item>
-        <item>Java</item>
-        <item>C</item>
-        <item>C++</item>
-        <item>Python</item>
-        <item>JavaScript</item>
-        <item>HTML</item>
-        <item>CSS</item>
-        <item>Markdown</item>
-    </string-array>
     <string name="compare_dex">比较 DEX</string>
-    <string name="dex_changed">已更改</string>
     <string name="dex_compare_progress">比较中… %1$d%%</string>
     <string name="dex_compare_summary">新增 %1$d · 删除 %2$d · 更改 %3$d</string>
     <string name="dex_comparing">比较中…</string>
