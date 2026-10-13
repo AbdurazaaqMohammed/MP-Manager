@@ -598,41 +598,95 @@ public class PlayerManager {
         Collections.shuffle(shuffleOrder, random);
     }
 
+    private static boolean isMediaName(String name) {
+        if (name == null) return false;
+        String n = name.toLowerCase(Locale.ROOT);
+        return n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
+                || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
+                || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
+                || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
+                || n.endsWith(".wmv") || n.endsWith(".m4v");
+    }
+
+    private List<File> sortedMediaSiblings(File currentFile) {
+        if (currentFile == null) return null;
+        File dir = currentFile.getParentFile();
+        if (dir == null || !dir.isDirectory()) return null;
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+        List<File> out = new ArrayList<>();
+        for (File f : files) {
+            try {
+                if (f != null && f.isFile() && isMediaName(f.getName())) out.add(f);
+            } catch (Exception ignored) {}
+        }
+        try {
+            Collections.sort(out, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        } catch (Exception ignored) {}
+        return out;
+    }
+
+    private boolean expandQueueFromFolder() {
+        if (currentIndex < 0 || currentIndex >= queue.size()) return false;
+        MediaItem current = queue.get(currentIndex);
+        if (current == null || current.path == null) return false;
+        File currentFile;
+        try { currentFile = new File(current.path); } catch (Exception ignored) { return false; }
+        List<File> siblings = sortedMediaSiblings(currentFile);
+        if (siblings == null || siblings.isEmpty()) return false;
+        String curName = currentFile.getName();
+        String curAbs = currentFile.getAbsolutePath();
+        int posInSiblings = -1;
+        for (int i = 0; i < siblings.size(); i++) {
+            File s = siblings.get(i);
+            try {
+                if (s.getAbsolutePath().equals(curAbs) || s.getName().equalsIgnoreCase(curName)) { posInSiblings = i; break; }
+            } catch (Exception ignored) {}
+        }
+        if (posInSiblings < 0) return false;
+        boolean changed = false;
+        if (queue.size() == 1) {
+            List<MediaItem> full = new ArrayList<>();
+            for (File s : siblings) full.add(buildMediaItem(appContext, s.getAbsolutePath()));
+            queue = full;
+            currentIndex = posInSiblings;
+            if (shuffle) buildShuffleOrder();
+            changed = true;
+        } else if (currentIndex + 1 >= queue.size() && posInSiblings + 1 < siblings.size()) {
+            for (int i = posInSiblings + 1; i < siblings.size(); i++) {
+                boolean already = false;
+                String ap = siblings.get(i).getAbsolutePath();
+                for (MediaItem m : queue) {
+                    if (m != null && ap.equals(m.path)) { already = true; break; }
+                }
+                if (!already) { queue.add(buildMediaItem(appContext, ap)); changed = true; }
+            }
+        }
+        return changed;
+    }
+
     private int getNextIndex() {
         if (shuffle && shuffleOrder != null) {
             int idx = shuffleOrder.indexOf(currentIndex);
             if (idx >= 0 && idx + 1 < shuffleOrder.size()) return shuffleOrder.get(idx + 1);
-            if (repeatMode == RepeatMode.ALL) { buildShuffleOrder(); return shuffleOrder.get(0); }
+            if (repeatMode == RepeatMode.ALL) {
+                expandQueueFromFolder();
+                buildShuffleOrder();
+                if (!shuffleOrder.isEmpty()) return shuffleOrder.get(0);
+                return 0;
+            }
+            expandQueueFromFolder();
+            int idx2 = shuffleOrder.indexOf(currentIndex);
+            if (idx2 >= 0 && idx2 + 1 < shuffleOrder.size()) return shuffleOrder.get(idx2 + 1);
             return -1;
         }
         if (currentIndex + 1 < queue.size()) return currentIndex + 1;
-        if (repeatMode == RepeatMode.ALL) return 0;
-        if (queue.size() == 1 && currentIndex >= 0 && currentIndex < queue.size()) {
-            MediaItem current = queue.get(currentIndex);
-            if (current != null && current.path != null) {
-                File currentFile = new File(current.path);
-                File dir = currentFile.getParentFile();
-                if (dir != null && dir.isDirectory()) {
-                    File[] files = dir.listFiles();
-                    if (files != null) {
-                        boolean found = false;
-                        for (File file : files) {
-                            if (file.equals(currentFile)) {
-                                found = true;
-                                continue;
-                            }
-                            if (found && file.isFile()) {
-                                String name = file.getName().toLowerCase(Locale.ROOT);
-                                if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") || name.endsWith(".ogg") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".wma") || name.endsWith(".opus") || name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mov") || name.endsWith(".webm") || name.endsWith(".3gp") || name.endsWith(".ts") || name.endsWith(".flv") || name.endsWith(".wmv")) {
-                                    queue.add(buildMediaItem(appContext, file.getAbsolutePath()));
-                                    return currentIndex + 1;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        if (repeatMode == RepeatMode.ALL && !queue.isEmpty()) {
+            expandQueueFromFolder();
+            return 0;
         }
+        expandQueueFromFolder();
+        if (currentIndex + 1 < queue.size()) return currentIndex + 1;
         return -1;
     }
 
@@ -643,6 +697,27 @@ public class PlayerManager {
             return currentIndex;
         }
         if (currentIndex > 0) return currentIndex - 1;
+        if (currentIndex == 0 && currentIndex < queue.size()) {
+            MediaItem current = queue.get(currentIndex);
+            if (current != null && current.path != null) {
+                try {
+                    File currentFile = new File(current.path);
+                    List<File> siblings = sortedMediaSiblings(currentFile);
+                    if (siblings != null && !siblings.isEmpty()) {
+                        String curAbs = currentFile.getAbsolutePath();
+                        int pos = -1;
+                        for (int i = 0; i < siblings.size(); i++) {
+                            if (siblings.get(i).getAbsolutePath().equals(curAbs)) { pos = i; break; }
+                        }
+                        if (pos > 0) {
+                            File prev = siblings.get(pos - 1);
+                            queue.add(0, buildMediaItem(appContext, prev.getAbsolutePath()));
+                            return 0;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
         return currentIndex;
     }
 

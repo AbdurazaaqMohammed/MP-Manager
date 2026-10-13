@@ -108,8 +108,7 @@ public class MediaPlayerActivity extends BaseActivity implements
 
         String playPath = getIntent().getStringExtra("play_path");
         if (playPath != null) {
-            MediaItem item = PlayerManager.buildMediaItem(this, playPath);
-            playerManager.play(item);
+            playPathWithSiblings(playPath);
         } else if (playerManager.getState() == PlayerManager.PlayState.IDLE && playerManager.getQueue().isEmpty()) {
             finish();
         }
@@ -905,9 +904,42 @@ public class MediaPlayerActivity extends BaseActivity implements
         super.onNewIntent(intent);
         String playPath = intent.getStringExtra("play_path");
         if (playPath != null) {
-            MediaItem item = PlayerManager.buildMediaItem(this, playPath);
-            playerManager.play(item);
+            playPathWithSiblings(playPath);
         }
+    }
+
+    private void playPathWithSiblings(String playPath) {
+        try {
+            java.io.File cur = new java.io.File(playPath);
+            java.io.File dir = cur.getParentFile();
+            if (dir != null && dir.isDirectory()) {
+                java.io.File[] all = dir.listFiles();
+                if (all != null) {
+                    java.util.List<java.io.File> media = new java.util.ArrayList<>();
+                    for (java.io.File f : all) {
+                        if (f == null || !f.isFile()) continue;
+                        String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+                        if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
+                                || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
+                                || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
+                                || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
+                                || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
+                    }
+                    media.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+                    if (!media.isEmpty()) {
+                        java.util.List<MediaItem> q = new java.util.ArrayList<>();
+                        int start = 0;
+                        for (int i = 0; i < media.size(); i++) {
+                            q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));
+                            if (media.get(i).getAbsolutePath().equals(cur.getAbsolutePath())) start = i;
+                        }
+                        playerManager.play(q, start);
+                        return;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        playerManager.play(PlayerManager.buildMediaItem(this, playPath));
     }
 
     @Override

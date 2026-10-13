@@ -285,13 +285,46 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void playMediaFile(String filePath) {
-        boolean isVideo = filePath.endsWith(".mp4") || filePath.endsWith(".mkv") || filePath.endsWith(".avi")
-                || filePath.endsWith(".mov") || filePath.endsWith(".webm") || filePath.endsWith(".3gp")
-                || filePath.endsWith(".ts") || filePath.endsWith(".flv") || filePath.endsWith(".wmv");
+        String lower = filePath == null ? "" : filePath.toLowerCase(java.util.Locale.ROOT);
+        boolean isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi")
+                || lower.endsWith(".mov") || lower.endsWith(".webm") || lower.endsWith(".3gp")
+                || lower.endsWith(".ts") || lower.endsWith(".flv") || lower.endsWith(".wmv")
+                || lower.endsWith(".m4v");
         boolean useActivity = isVideo || PreferenceManager.getDefaultSharedPreferences(this).getBoolean("player_open_activity", false);
         if (useActivity) MediaPlayerActivity.openAndPlay(this, filePath);
         else {
             PlayerManager pm = PlayerManager.getInstance(this);
+            try {
+                java.io.File cur = new java.io.File(filePath);
+                java.io.File dir = cur.getParentFile();
+                if (dir != null && dir.isDirectory()) {
+                    java.io.File[] all = dir.listFiles();
+                    if (all != null) {
+                        java.util.List<java.io.File> media = new java.util.ArrayList<>();
+                        for (java.io.File f : all) {
+                            if (f == null || !f.isFile()) continue;
+                            String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+                            if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
+                                    || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
+                                    || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
+                                    || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
+                                    || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
+                        }
+                        media.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+                        if (!media.isEmpty()) {
+                            java.util.List<io.github.abdurazaaqmohammed.player.MediaItem> q = new java.util.ArrayList<>();
+                            int start = 0;
+                            for (int i = 0; i < media.size(); i++) {
+                                q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));
+                                if (media.get(i).getAbsolutePath().equals(cur.getAbsolutePath())) start = i;
+                            }
+                            pm.play(q, start);
+                            if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
+                            return;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
             pm.play(PlayerManager.buildMediaItem(this, filePath));
             if (miniPlayerDialog == null || !miniPlayerDialog.isShowing()) (miniPlayerDialog = new MiniPlayerDialog(this)).show();
         }
