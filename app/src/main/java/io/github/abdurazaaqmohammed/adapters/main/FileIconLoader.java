@@ -99,7 +99,7 @@ public class FileIconLoader {
         if (ext != null) ext = "." + ext.toLowerCase(Locale.ROOT);
         else ext = "";
 
-        if (".apk".equals(ext)) {
+        if (io.github.abdurazaaqmohammed.utils.ApkIconHelper.isApkLikeExt(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
             if (!isInZip) loadApkIconAsync(path, fileIconView);
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
@@ -130,23 +130,12 @@ public class FileIconLoader {
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             try {
-                PackageManager pm = context.getPackageManager();
-                PackageInfo packageInfo = pm.getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
-                if (packageInfo != null) {
-                    ApplicationInfo appInfo = packageInfo.applicationInfo;
-                    if (appInfo != null) {
-                        if (TextUtils.isEmpty(appInfo.sourceDir) || TextUtils.isEmpty(appInfo.publicSourceDir)) {
-                            appInfo.sourceDir = path;
-                            appInfo.publicSourceDir = path;
-                        }
-                        Drawable icon = appInfo.loadIcon(pm);
-                        if (icon != null) {
-                            iconCache.put(path, icon);
-                            context.runOnUiThread(() -> {
-                                if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
-                            });
-                        }
-                    }
+                Drawable icon = io.github.abdurazaaqmohammed.utils.ApkIconHelper.getApkIcon(context, path);
+                if (icon != null) {
+                    iconCache.put(path, icon);
+                    context.runOnUiThread(() -> {
+                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
+                    });
                 }
             } catch (Exception ignored) {}
         });
