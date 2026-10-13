@@ -64,6 +64,7 @@ public class UIHelper {
 
         aboutView.findViewById(R.id.aboutGithub).setOnClickListener(v -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/AbdurazaaqMohammed/MP-Manager"))));
         aboutView.findViewById(R.id.aboutTg).setOnClickListener(v -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/MP_Manager_Discussion"))));
+        aboutView.findViewById(R.id.donate).setOnClickListener(v -> context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://paypal.me/AbdurazaaqMohammed"))));
 
         List<AboutLibrary> libraries = Arrays.asList(
                 new AboutLibrary("DEX Editor", "Krushna Chandra", "https://github.com/developer-krushna/Dex-Editor-Android", "Apache-2.0", "Apache-2.0.txt"),

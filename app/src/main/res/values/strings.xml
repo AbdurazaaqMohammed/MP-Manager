@@ -1662,4 +1662,5 @@ Layout Inspector
     <string name="edpref_custom_prompt_summary">Edit prompt before generating AI response</string>
     <string name="edpref_get_api_key">Get API Key</string>
     <string name="edpref_get_api_key_summary">Visit Gemini website to get your API key</string>
+    <string name="donate">Donate</string>
 </resources>

@@ -76,6 +76,15 @@
             app:iconGravity="textStart"
             android:text="@string/tg" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/donate"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/paypal"
+            app:iconGravity="textStart"
+            android:text="@string/donate" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
