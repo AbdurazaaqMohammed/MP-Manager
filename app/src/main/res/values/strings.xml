@@ -2038,4 +2038,17 @@ Deleted %2$s · %3$s</string>
     <string name="dex_global_rename_bad_script">No usable rename rule</string>
     <string name="dex_global_rename_done">Renamed %1$d item(s)</string>
     <string name="dex_global_rename_none">Nothing was renamed</string>
+    <string name="mt_asset_title">MT Asset Container</string>
+    <string name="mt_asset_about">Reads and writes the fb 61 62 b8 asset container that protected APKs use to hide extra dex, arsc and native payloads in assets/. Pick a file: one carrying the container magic is decrypted, anything else is wrapped.</string>
+    <string name="mt_asset_pick_title">Choose a file</string>
+    <string name="mt_asset_pick_decrypt">Pick a file to decrypt</string>
+    <string name="mt_asset_pick_encrypt">Pick a file to wrap</string>
+    <string name="mt_asset_idle">Nothing done yet</string>
+    <string name="mt_asset_working">Working…</string>
+    <string name="mt_asset_empty">File is empty</string>
+    <string name="mt_asset_not_container">%1$s does not start with the container magic</string>
+    <string name="mt_asset_already">%1$s is already a container</string>
+    <string name="mt_asset_decrypted">Wrote %1$s: %2$s payload, key 0x%3$02X</string>
+    <string name="mt_asset_encrypted">Wrote %1$s: %2$s payload, wrapped</string>
+    <string name="mt_asset_failed">%1$s</string>
 </resources>

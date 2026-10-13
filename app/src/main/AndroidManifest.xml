@@ -143,6 +143,11 @@
             android:name="io.github.abdurazaaqmohammed.tools.StorageManagerActivity"
             android:exported="false">
         </activity>
+        <activity
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:name="io.github.abdurazaaqmohammed.tools.MtAssetToolActivity"
+            android:exported="false">
+        </activity>
         <service
             android:name="io.github.abdurazaaqmohammed.tools.PrivateDnsTileService"
             android:icon="@drawable/wifi_24px"
