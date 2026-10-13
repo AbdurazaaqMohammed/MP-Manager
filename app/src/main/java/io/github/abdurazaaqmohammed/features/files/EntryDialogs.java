@@ -44,6 +44,7 @@ import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
@@ -224,7 +225,9 @@ public class EntryDialogs {
                 pm.show();
                 new Thread(() -> {
                     try {
-                        if (isInZip) FileUtils.copyFile(zipFile, new File(zipFile.getParent(), zipFile.getName() + ".bak"));
+                        if (isInZip) {
+                            if (UiPrefs.genBackup(context)) FileUtils.backupOnce(zipFile);
+                        }
                         boolean useElevatedForDelete = AccessManager.fileOpsOn(context);
                         if (multi) {
                             if (!isInZip) {

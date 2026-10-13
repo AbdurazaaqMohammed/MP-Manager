@@ -854,9 +854,9 @@ public class ClassTree {
                         : "/sdcard";
                 outFile = new File(outputDir, fileName);
                 File bakFile = new File(outFile.getAbsolutePath() + ".bak");
-                backupOfThisDex = bakFile;
+                backupOfThisDex = bakFile.exists() ? null : bakFile;
 
-                if (outFile.exists()) {
+                if (outFile.exists() && !bakFile.exists()) {
                     // Instant backup: rename the inode instead of byte-copying the whole
                     // file and then deleting the original. Same end state (previous bytes
                     // at .bak, new bytes at outFile) for ~free in the same directory.

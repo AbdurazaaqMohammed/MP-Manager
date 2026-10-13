@@ -194,6 +194,18 @@ public class FileUtils {
         }
     }
 
+    public static boolean backupOnce(File original) {
+        try {
+            if (original == null || !original.isFile()) return false;
+            File bak = new File(original.getPath() + ".bak");
+            if (bak.exists()) return true;
+            copyFile(original, bak);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public static void copyFile(File in, OutputStream os) throws IOException {
         try(InputStream is = getInputStream(in)) {
             copyFile(is, os);

@@ -22,6 +22,7 @@ import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
@@ -95,8 +96,7 @@ public class ApkResultHandler {
                                 pm.setText(activity.rss.getString(R.string.adding, modifiedFileName));
                                 new Thread(() -> {
                                     try (ZipFile zf = new ZipFile(zipFile)) {
-                                        File backup = new File(zipFile.getParent(), zipFileName + ".bak");
-                                        FileUtils.copyFile(zipFile, backup);
+                                        if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
                                         if (modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
                                             File modifiedFile = new File(path);
                                             File folder = modifiedFile.getParentFile();

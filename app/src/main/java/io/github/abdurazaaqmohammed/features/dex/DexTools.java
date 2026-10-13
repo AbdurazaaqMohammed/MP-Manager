@@ -54,6 +54,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import modder.hub.dexeditor.activity.DexEditorActivity;
 
@@ -373,8 +374,7 @@ public class DexTools {
         new Thread(() -> {
             try {
                 if (zipFile == null) {
-                    File bak = new File(dexFile.getParent(), dexFile.getName() + ".bak");
-                    FileUtils.copyFile(dexFile, bak);
+                    if (UiPrefs.genBackup(context)) FileUtils.backupOnce(dexFile);
                 }
                 DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, null);
                 DexFileFactory.writeDexFile(dexFile.getAbsolutePath(), dex);
@@ -601,8 +601,7 @@ public class DexTools {
                     pm.dismiss();
                     context.handler.post(() -> context.handleModifiedFileResult(Uri.fromFile(dexFile)));
                 } else {
-                    File bak = new File(dexFile.getParent(), dexFile.getName() + ".bak");
-                    FileUtils.copyFile(dexFile, bak);
+                    if (UiPrefs.genBackup(context)) FileUtils.backupOnce(dexFile);
                     FileUtils.copyFile(tmpOut, dexFile);
                     tmpOut.delete();
                     pm.dismiss();
