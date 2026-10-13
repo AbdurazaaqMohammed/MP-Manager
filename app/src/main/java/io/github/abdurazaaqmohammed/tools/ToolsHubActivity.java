@@ -572,7 +572,7 @@ public class ToolsHubActivity extends BaseActivity {
             } else if (holder instanceof ToolViewHolder h) {
                 ToolRegistry.ToolItem item = (ToolRegistry.ToolItem) row;
                 h.icon.setImageResource(item.iconRes());
-                ImageViewCompat.setImageTintList(h.icon, ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), com.google.android.material.R.attr.colorPrimary, 0xFF000000)));
+                ImageViewCompat.setImageTintList(h.icon, ColorStateList.valueOf(MaterialColors.getColor(h.card.getContext(), android.R.attr.colorPrimary, 0xFF000000)));
                 h.title.setText(item.title());
                 h.subtitle.setText(item.subtitle());
                 h.card.setOnClickListener(v -> openTool(item));

@@ -44,7 +44,7 @@ public class WaterTool extends BaseToolPlugin {
         todayText.setTextSize(40);
         todayText.setGravity(Gravity.CENTER);
         todayText.setTextColor(MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorPrimary, Color.BLACK));
+                android.R.attr.colorPrimary, Color.BLACK));
         box.addView(todayText);
         final String todayKey = DateTime.todayIso();
         final int[] drunk = new int[]{0};

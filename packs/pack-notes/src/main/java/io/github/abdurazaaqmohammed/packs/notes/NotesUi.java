@@ -73,7 +73,7 @@ public final class NotesUi {
     }
 
     public static int primary(Context context) {
-        return color(context, com.google.android.material.R.attr.colorPrimary, 0xFF6750A4);
+        return color(context, android.R.attr.colorPrimary, 0xFF6750A4);
     }
 
     public static int onPrimary(Context context) {
@@ -81,7 +81,7 @@ public final class NotesUi {
     }
 
     public static int primaryContainer(Context context) {
-        return color(context, com.google.android.material.R.attr.colorPrimaryContainer, 0xFFEADDFF);
+        return color(context, android.R.attr.colorPrimaryContainer, 0xFFEADDFF);
     }
 
     public static int onPrimaryContainer(Context context) {

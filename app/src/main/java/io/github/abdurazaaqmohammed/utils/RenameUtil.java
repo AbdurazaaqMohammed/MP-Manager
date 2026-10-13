@@ -398,7 +398,7 @@ public class RenameUtil {
             super(context, R.layout.item_rename_preview, plans);
             this.ctx = context;
             this.plans = plans;
-            this.defaultColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE);
+            this.defaultColor = MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE);
         }
 
         @NonNull

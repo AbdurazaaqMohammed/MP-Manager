@@ -130,7 +130,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	private void openChatGptWebsite() {
 		try {
 			startActivity(new Intent(Intent.ACTION_VIEW, 
-			Uri.parse("https://aistudio.google.com/app/u/1/apikey")));
+			Uri.parse("https://aistudio.google.com/app/u/0/apikey")));
 		} catch (Exception e) {
 			Toast.makeText(getActivity(), "No browser found", Toast.LENGTH_SHORT).show();
 		}

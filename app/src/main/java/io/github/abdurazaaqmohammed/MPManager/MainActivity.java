@@ -794,7 +794,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             getWindow().setNavigationBarColor(surfaceColor);
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && lightBars) {
                 // Old devices can't render dark status bar icons; use a dark bar so icons stay visible
-                int darkBar = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, surfaceColor);
+                int darkBar = MaterialColors.getColor(this, android.R.attr.colorPrimary, surfaceColor);
                 getWindow().setStatusBarColor(darkBar);
                 getWindow().setNavigationBarColor(darkBar);
             }

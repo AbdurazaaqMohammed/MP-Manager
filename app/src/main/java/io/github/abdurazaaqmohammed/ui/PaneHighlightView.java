@@ -66,7 +66,7 @@ public class PaneHighlightView extends View {
         fillColor = MaterialColors.getColor(context,
                 com.google.android.material.R.attr.colorSurfaceContainerHigh, 0x33808080);
         accentColor = MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorPrimary, 0xFF607D8B);
+                android.R.attr.colorPrimary, 0xFF607D8B);
     }
 
     public static int modeFromString(String value) {

@@ -410,10 +410,10 @@ public class WifiManagerActivity extends BaseActivity {
         hide.setChecked(!showPass);
         hide.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         opts.addView(hide);
-        MaterialButton copyAllBtn = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+        MaterialButton copyAllBtn = new MaterialButton(this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
         copyAllBtn.setText(getString(R.string.wifi_copy_all));
         opts.addView(copyAllBtn);
-        MaterialButton exportBtn = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+        MaterialButton exportBtn = new MaterialButton(this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
         exportBtn.setText(getString(R.string.export));
         opts.addView(exportBtn);
         box.addView(opts);
@@ -475,10 +475,10 @@ public class WifiManagerActivity extends BaseActivity {
                     LinearLayout actionRow = new LinearLayout(WifiManagerActivity.this);
                     actionRow.setOrientation(LinearLayout.HORIZONTAL);
                     actionRow.setGravity(Gravity.END);
-                    MaterialButton copyBtn = new MaterialButton(WifiManagerActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+                    MaterialButton copyBtn = new MaterialButton(WifiManagerActivity.this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
                     copyBtn.setText(android.R.string.copy);
                     actionRow.addView(copyBtn);
-                    MaterialButton shareBtn = new MaterialButton(WifiManagerActivity.this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+                    MaterialButton shareBtn = new MaterialButton(WifiManagerActivity.this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
                     shareBtn.setText(getString(R.string.share));
                     actionRow.addView(shareBtn);
                     inner.addView(actionRow);

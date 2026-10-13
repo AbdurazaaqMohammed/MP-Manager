@@ -40,6 +40,7 @@ package modder.hub.dexeditor.activity;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.widget.EditText;
@@ -47,6 +48,7 @@ import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -56,21 +58,35 @@ import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 import modder.hub.dexeditor.fragment.SettingsFragment;
 import modder.hub.dexeditor.views.AlertCircularProgress;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /*
 Author @developer-krushna
 Code fixed comments by ChatGPT
 */
 
-public class AIOverViewActivity extends AppCompatActivity {
+public class AIOverViewActivity extends BaseActivity {
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
     private AppBarLayout appBarLayout;
     private CoordinatorLayout coordinatorLayout;
@@ -162,80 +178,80 @@ public class AIOverViewActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void startAnalysis(String prompt) {
-//        progressDialogShow(true);
-//        if(Build.VERSION.SDK_INT < 20) return;
-//        OkHttpClient client = new OkHttpClient.Builder()
-//                .connectTimeout(30, TimeUnit.SECONDS)
-//                .readTimeout(30, TimeUnit.SECONDS)
-//                .writeTimeout(30, TimeUnit.SECONDS)
-//                .build();
-//
-//        try {
-//            // Build the request JSON
-//            JSONObject requestBody = new JSONObject();
-//            JSONArray contents = new JSONArray();
-//            JSONObject content = new JSONObject();
-//            JSONArray parts = new JSONArray();
-//            JSONObject part = new JSONObject();
-//
-//            part.put("text", prompt);
-//            parts.put(part);
-//            content.put("parts", parts);
-//            contents.put(content);
-//            requestBody.put("contents", contents);
-//
-//            Request request = new Request.Builder()
-//                    .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY)
-//                    .post(RequestBody.create(MediaType.parse("application/json"), requestBody.toString()))
-//                    .addHeader("Content-Type", "application/json")
-//                    .build();
-//
-//            client.newCall(request).enqueue(new Callback() {
-//                @Override
-//                public void onFailure(@NonNull Call call, IOException e) {
-//                    runOnUiThread(new Runnable() {
-//                        @SuppressLint("SetTextI18n")
-//                        @Override
-//                        public void run() {
-//                            progressDialogShow(false);
-//                            markdownText.setText("Network error: " + e.getMessage());
-//                        }
-//                    });
-//                }
-//
-//                @Override
-//                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-//                    String responseBody = response.body().string();
-//                    runOnUiThread(new Runnable() {
-//                        @SuppressLint("SetTextI18n")
-//                        @Override
-//                        public void run() {
-//                            try {
-//                                JSONObject jsonResponse = new JSONObject(responseBody);
-//                                if (jsonResponse.has("candidates")) {
-//                                    String generatedText = jsonResponse.getJSONArray("candidates")
-//                                            .getJSONObject(0)
-//                                            .getJSONObject("content")
-//                                            .getJSONArray("parts")
-//                                            .getJSONObject(0)
-//                                            .getString("text");
-//
-//                                    renderMarkdown(generatedText);
-//                                } else {
-//                                    markdownText.setText("Error: No candidates in response");
-//                                }
-//                            } catch (Exception e) {
-//                                markdownText.setText("Error parsing response");
-//                            }
-//                            progressDialogShow(false);
-//                        }
-//                    });
-//                }
-//            });
-//        } catch (JSONException e) {
-//            progressDialogShow(false);
-//            markdownText.setText("Error creating request");
-//        }
+        progressDialogShow(true);
+        if(Build.VERSION.SDK_INT < 20) return;
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build();
+
+        try {
+            // Build the request JSON
+            JSONObject requestBody = new JSONObject();
+            JSONArray contents = new JSONArray();
+            JSONObject content = new JSONObject();
+            JSONArray parts = new JSONArray();
+            JSONObject part = new JSONObject();
+
+            part.put("text", prompt);
+            parts.put(part);
+            content.put("parts", parts);
+            contents.put(content);
+            requestBody.put("contents", contents);
+
+            Request request = new Request.Builder()
+                    .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" + GEMINI_API_KEY)
+                    .post(RequestBody.create(MediaType.parse("application/json"), requestBody.toString()))
+                    .addHeader("Content-Type", "application/json")
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(@NonNull Call call, IOException e) {
+                    runOnUiThread(new Runnable() {
+                        @SuppressLint("SetTextI18n")
+                        @Override
+                        public void run() {
+                            progressDialogShow(false);
+                            markdownText.setText("Network error: " + e.getMessage());
+                        }
+                    });
+                }
+
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    runOnUiThread(new Runnable() {
+                        @SuppressLint("SetTextI18n")
+                        @Override
+                        public void run() {
+                            try {
+                                JSONObject jsonResponse = new JSONObject(responseBody);
+                                if (jsonResponse.has("candidates")) {
+                                    String generatedText = jsonResponse.getJSONArray("candidates")
+                                            .getJSONObject(0)
+                                            .getJSONObject("content")
+                                            .getJSONArray("parts")
+                                            .getJSONObject(0)
+                                            .getString("text");
+
+                                    renderMarkdown(generatedText);
+                                } else {
+                                    markdownText.setText("Error: No candidates in response");
+                                }
+                            } catch (Exception e) {
+                                markdownText.setText("Error parsing response");
+                            }
+                            progressDialogShow(false);
+                        }
+                    });
+                }
+            });
+        } catch (JSONException e) {
+            progressDialogShow(false);
+            markdownText.setText("Error creating request");
+        }
     }
 
     private void renderMarkdown(String content) {

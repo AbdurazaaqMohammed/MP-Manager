@@ -120,7 +120,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         MaterialCardView cardView = holder.cardView;
         if (isSelected(position)) {
             TypedValue primaryColor = new TypedValue();
-            cardView.getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, primaryColor, true);
+            cardView.getContext().getTheme().resolveAttribute(android.R.attr.colorPrimary, primaryColor, true);
             cardView.setStrokeColor(primaryColor.data);
             cardView.setStrokeWidth(6);
 

@@ -434,7 +434,7 @@ public class CalculatorTool extends BaseToolPlugin {
         resultView.setGravity(Gravity.END);
         resultView.setTypeface(Typeface.MONOSPACE);
         resultView.setTextColor(MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorPrimary, 0xFF000000));
+                android.R.attr.colorPrimary, 0xFF000000));
         page.addView(resultView);
         LinearLayout topRow = ToolViewFactory.makeRow(page);
         MaterialButton sciBtn = ToolViewFactory.makeRowButton(topRow, PackRes.str("math", R.string.s_fx, "fx"), 1f);

@@ -87,7 +87,7 @@ public class FilePropertiesDialog {
         }
         if (!hasIcon) {
             propIcon.setImageResource(isFolder ? R.drawable.folder_24px : R.drawable.baseline_insert_drive_file_24);
-            propIcon.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+            propIcon.setColorFilter(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         }
         GradientDrawable iconBg = new GradientDrawable();
         iconBg.setShape(GradientDrawable.OVAL);
@@ -320,7 +320,7 @@ public class FilePropertiesDialog {
         TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
-        labelView.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        labelView.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.3f));
 
         TextView valueView = new TextView(context);

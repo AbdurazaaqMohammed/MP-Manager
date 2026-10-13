@@ -63,7 +63,7 @@ public class MetronomeTool extends BaseToolPlugin {
         bpmBar.setProgress(90);
         box.addView(bpmBar);
         metronomeFlash = new View(context);
-        metronomeFlash.setBackgroundColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.parseColor("#1B73E8")));
+        metronomeFlash.setBackgroundColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.parseColor("#1B73E8")));
         box.addView(metronomeFlash, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, ToolViewFactory.dp(context, 80)));
         TextView beatText = ToolViewFactory.makeOutput(box);
         beatText.setGravity(Gravity.CENTER);
@@ -107,7 +107,7 @@ public class MetronomeTool extends BaseToolPlugin {
                             } catch (Exception ignored) {
                             }
                             try {
-                                int idle = MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.parseColor("#1B73E8"));
+                                int idle = MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.parseColor("#1B73E8"));
                                 metronomeFlash.setBackgroundColor(beat == 1 ? Color.parseColor("#D93025") : idle);
                             } catch (Exception ignored) {
                             }

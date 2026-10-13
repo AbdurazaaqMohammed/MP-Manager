@@ -327,7 +327,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             EditorTab tab = tabs.get(position);
             holder.title.setText(getTabLabel(tab));
             holder.title.setTextColor(position == currentIndex
-                    ? MaterialColors.getColor(holder.title, com.google.android.material.R.attr.colorPrimary, Color.BLUE)
+                    ? MaterialColors.getColor(holder.title, android.R.attr.colorPrimary, Color.BLUE)
                     : MaterialColors.getColor(holder.title, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
             holder.close.setOnClickListener(v -> {
                 int pos = holder.getBindingAdapterPosition();

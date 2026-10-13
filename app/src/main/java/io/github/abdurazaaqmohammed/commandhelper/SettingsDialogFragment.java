@@ -70,7 +70,7 @@ public class SettingsDialogFragment extends DialogFragment {
         root.addView(profilesTitle);
 
         loadProfiles();
-        listAdapter = new ArrayAdapter<>(getActivity(), com.google.android.material.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
+        listAdapter = new ArrayAdapter<>(getActivity(), androidx.appcompat.R.layout.support_simple_spinner_dropdown_item, getProfileNames()) {
             @Override
             public View getView(int pos, View convertView, ViewGroup parent) {
                 View view = super.getView(pos, convertView, parent);

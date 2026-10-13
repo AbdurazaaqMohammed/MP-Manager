@@ -711,7 +711,7 @@ public class StorageManagerActivity extends BaseActivity {
         label.setTextSize(14);
         if (name.equals(typeFilter)) {
             label.setTypeface(null, Typeface.BOLD);
-            label.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLUE));
+            label.setTextColor(MaterialColors.getColor(this, android.R.attr.colorPrimary, Color.BLUE));
         }
         row.addView(label);
         ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);

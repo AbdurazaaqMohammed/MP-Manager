@@ -73,7 +73,7 @@ public class ChecksumDialogs {
         ImageButton copyButton = new ImageButton(context);
         copyButton.setImageResource(R.drawable.baseline_content_copy_24);
         copyButton.setBackgroundColor(Color.TRANSPARENT);
-        copyButton.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        copyButton.setColorFilter(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         int pad = dp(8);
         copyButton.setPadding(pad, pad, pad, pad);
         copyButton.setContentDescription(context.getString(android.R.string.copy));
@@ -92,7 +92,7 @@ public class ChecksumDialogs {
         header.setText(fileName);
         header.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
         header.setTypeface(null, Typeface.BOLD);
-        header.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        header.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         header.setPadding(0, dp(10), 0, dp(4));
         container.addView(header);
     }
@@ -105,7 +105,7 @@ public class ChecksumDialogs {
         TextView title = new TextView(context);
         title.setText(R.string.verify);
         title.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
-        title.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        title.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         title.setPadding(0, dp(10), 0, dp(4));
         container.addView(title);
         EditText input = new EditText(context);

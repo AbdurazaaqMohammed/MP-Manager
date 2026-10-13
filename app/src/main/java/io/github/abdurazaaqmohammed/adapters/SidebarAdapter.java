@@ -483,7 +483,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         });
         TypedValue value = new TypedValue();
         Resources.Theme theme = context.getTheme();
-        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, value, true);
+        theme.resolveAttribute(android.R.attr.colorPrimary, value, true);
         Drawable drawable = icon.getDrawable();
         if (drawable != null) {
             drawable = drawable.mutate();

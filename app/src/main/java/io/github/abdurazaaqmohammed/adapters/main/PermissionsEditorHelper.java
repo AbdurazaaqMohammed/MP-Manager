@@ -103,7 +103,7 @@ public class PermissionsEditorHelper {
         symbolicPreview.setText(getSymbolicString());
         symbolicPreview.setTypeface(Typeface.MONOSPACE);
         symbolicPreview.setTextSize(14);
-        symbolicPreview.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, Color.WHITE));
+        symbolicPreview.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, Color.WHITE));
         symbolicPreview.setPadding(0, dp(8), 0, dp(4));
         root.addView(symbolicPreview);
 

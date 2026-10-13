@@ -58,7 +58,7 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
         if (drawable != null) {
             int i = Extensions.dp2px(context, 24);
             drawable.setBounds(0, 0, i, i);
-            DrawableCompat.setTint(drawable, MaterialColors.getColor(holder.label, com.google.android.material.R.attr.colorPrimary));
+            DrawableCompat.setTint(drawable, MaterialColors.getColor(holder.label, android.R.attr.colorPrimary));
         }
         holder.label.setCompoundDrawablesRelative(drawable, null, null, null);
         holder.label.setCompoundDrawablePadding(Extensions.dp2px(context, 8));

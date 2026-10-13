@@ -123,7 +123,7 @@ public class LevelTool extends BaseToolPlugin {
             super(context);
             int primary = Color.parseColor("#1B73E8");
             try {
-                primary = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, primary);
+                primary = MaterialColors.getColor(this, android.R.attr.colorPrimary, primary);
                 bgColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.WHITE);
             } catch (Exception ignored) {
             }

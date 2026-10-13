@@ -158,7 +158,7 @@ public class RulerTool extends BaseToolPlugin {
             int primary = Color.parseColor("#1B73E8");
             int ink = Color.parseColor("#202124");
             try {
-                primary = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, primary);
+                primary = MaterialColors.getColor(this, android.R.attr.colorPrimary, primary);
                 ink = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, ink);
                 bgColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.WHITE);
             } catch (Exception ignored) {

@@ -837,7 +837,7 @@ public class HexEditorActivity extends BaseActivity {
     }
 
     private int getPrimaryColor() {
-        return MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLUE);
+        return MaterialColors.getColor(this, android.R.attr.colorPrimary, Color.BLUE);
     }
 
     private int getOnPrimaryColor() {

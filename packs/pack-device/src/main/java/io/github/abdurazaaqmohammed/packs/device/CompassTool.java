@@ -154,7 +154,7 @@ public class CompassTool extends BaseToolPlugin {
             int tick = Color.parseColor("#5F6368");
             int ink = Color.parseColor("#202124");
             try {
-                primary = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, primary);
+                primary = MaterialColors.getColor(this, android.R.attr.colorPrimary, primary);
                 tick = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, tick);
                 ink = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, ink);
                 bgColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.WHITE);

@@ -357,7 +357,7 @@ public class ClockTool extends BaseToolPlugin {
             chip.setText(name);
             boolean sel = name.equals(selectedProfile);
             chip.setChipBackgroundColor(ColorStateList.valueOf(sel
-                    ? MaterialColors.getColor(host, com.google.android.material.R.attr.colorPrimary, 0xFF1B73E8)
+                    ? MaterialColors.getColor(host, android.R.attr.colorPrimary, 0xFF1B73E8)
                     : MaterialColors.getColor(host, com.google.android.material.R.attr.colorSurfaceContainerHigh, 0xFFEEEEEE)));
             chip.setTextColor(sel ? Color.WHITE : MaterialColors.getColor(host,
                     com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
@@ -897,7 +897,7 @@ public class ClockTool extends BaseToolPlugin {
 
         void select(int i) {
             int primary = MaterialColors.getColor(host,
-                    com.google.android.material.R.attr.colorPrimary, 0xFF1B73E8);
+                    android.R.attr.colorPrimary, 0xFF1B73E8);
             int surface = MaterialColors.getColor(host,
                     com.google.android.material.R.attr.colorSurfaceContainerHigh, 0xFFEEEEEE);
             int onSurface = MaterialColors.getColor(host,

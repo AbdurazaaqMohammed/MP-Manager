@@ -80,7 +80,7 @@ public class DeviceHubTool extends BaseToolPlugin {
         t.setTextSize(16);
         t.setTypeface(null, Typeface.BOLD);
         t.setTextColor(MaterialColors.getColor(context,
-                com.google.android.material.R.attr.colorPrimary, Color.BLACK));
+                android.R.attr.colorPrimary, Color.BLACK));
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         int m14 = ToolViewFactory.dp(context, 14);

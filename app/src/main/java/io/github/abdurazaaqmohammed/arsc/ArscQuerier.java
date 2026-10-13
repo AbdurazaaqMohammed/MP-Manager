@@ -69,7 +69,7 @@ public final class ArscQuerier {
         ImageButton button = new ImageButton(activity);
         button.setImageResource(R.drawable.baseline_search_24);
         button.setBackgroundResource(R.drawable.dialog_rounded_bg);
-        button.setColorFilter(MaterialColors.getColor(activity, com.google.android.material.R.attr.colorPrimary, 0xFF000000));
+        button.setColorFilter(MaterialColors.getColor(activity, android.R.attr.colorPrimary, 0xFF000000));
         int size = (int) (56 * density);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(size, size);
         params.gravity = Gravity.END | Gravity.CENTER_VERTICAL;
