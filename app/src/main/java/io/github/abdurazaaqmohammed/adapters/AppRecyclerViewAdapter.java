@@ -58,12 +58,31 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         return new ViewHolder(v);
     }
 
-    public final HashSet<Integer> selectedItems = new HashSet<>();
+    public final HashSet<String> selectedItems = new HashSet<>();
 
     public void toggleSelection(int position) {
-        if (selectedItems.contains(position)) selectedItems.remove(position);
-        else selectedItems.add(position);
+        if (position < 0 || position >= filteredAppInfoList.size()) return;
+        String pkg = filteredAppInfoList.get(position).packageName;
+        if (pkg == null) return;
+        if (selectedItems.contains(pkg)) selectedItems.remove(pkg);
+        else selectedItems.add(pkg);
         notifyItemChanged(position);
+    }
+
+    public boolean isSelected(int position) {
+        if (position < 0 || position >= filteredAppInfoList.size()) return false;
+        String pkg = filteredAppInfoList.get(position).packageName;
+        return pkg != null && selectedItems.contains(pkg);
+    }
+
+    public List<Integer> selectedPositions() {
+        List<Integer> out = new ArrayList<>();
+        if (selectedItems.isEmpty()) return out;
+        for (int i = 0; i < filteredAppInfoList.size(); i++) {
+            String pkg = filteredAppInfoList.get(i).packageName;
+            if (pkg != null && selectedItems.contains(pkg)) out.add(i);
+        }
+        return out;
     }
 
     public void clearSelection() {
@@ -84,12 +103,22 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         notifyDataSetChanged();
     }
 
+    public void setItems(List<AppInfo> items) {
+        selectedItems.clear();
+        List<AppInfo> copy = items == null ? new ArrayList<>() : new ArrayList<>(items);
+        appInfoList.clear();
+        appInfoList.addAll(copy);
+        filteredAppInfoList.clear();
+        filteredAppInfoList.addAll(appInfoList);
+        notifyDataSetChanged();
+    }
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AppInfo appInfo = filteredAppInfoList.get(position);
 
         MaterialCardView cardView = holder.cardView;
-        if (selectedItems.contains(position)) {
+        if (isSelected(position)) {
             TypedValue primaryColor = new TypedValue();
             cardView.getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, primaryColor, true);
             cardView.setStrokeColor(primaryColor.data);
@@ -111,62 +140,42 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
 
         APKExtractorActivity act = apkExtractorActivity;
         holder.appName.setText(appInfo.name);
-        holder.appName.setVisibility(act.showAppName ? View.VISIBLE : GONE);
-        StringBuilder sub = new StringBuilder();
-        if (act.showPackageName) sub.append(appInfo.packageName);
-        if (act.showVersionName && appInfo.versionName != null && !appInfo.versionName.isEmpty()) {
-            if (sub.length() > 0) sub.append(" • ");
-            sub.append('v').append(appInfo.versionName);
-            if (act.showVersionCode) sub.append(" (").append(appInfo.getVersionCode()).append(')');
-        } else if (act.showVersionCode) {
-            if (sub.length() > 0) sub.append(" • ");
-            sub.append("vCode ").append(appInfo.getVersionCode());
+        holder.appName.setVisibility(View.VISIBLE);
+        StringBuilder sub = new StringBuilder(appInfo.packageName);
+        if (appInfo.versionName != null && !appInfo.versionName.isEmpty()) {
+            sub.append(" • v").append(appInfo.versionName);
         }
-        if (act.showFirstInstalled && appInfo.firstInstalled != null && !appInfo.firstInstalled.isEmpty()) {
-            if (sub.length() > 0) sub.append('\n');
-            sub.append(act.getString(R.string.first_install_date)).append(": ").append(appInfo.firstInstalled);
+        if (appInfo.totalSize > 0) {
+            sub.append(" • ").append(android.text.format.Formatter.formatFileSize(
+                    holder.packageNameView.getContext(),
+                    appInfo.totalSize));
         }
-        if (act.showLastUpdate && appInfo.lastUpdated != null && !appInfo.lastUpdated.isEmpty()) {
-            if (sub.length() > 0) sub.append('\n');
-            sub.append(act.getString(R.string.last_updated_date)).append(": ").append(appInfo.lastUpdated);
-        }
-        if (sub.length() == 0) sub.append(appInfo.packageName);
         holder.packageNameView.setText(sub.toString());
+        holder.packageNameView.setMovementMethod(null);
         holder.packageNameView.setVisibility(View.VISIBLE);
-        if (act.showIcon) {
-            holder.appIconView.setVisibility(View.VISIBLE);
-            holder.appIconView.setImageDrawable(appInfo.icon);
-        } else {
-            holder.appIconView.setVisibility(GONE);
-        }
+        holder.appIconView.setVisibility(View.VISIBLE);
+        holder.appIconView.setImageDrawable(appInfo.icon);
         holder.splitIconView.setVisibility(appInfo.isSplit ? View.VISIBLE : GONE);
 
         holder.itemView.setOnClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return;
             if (!selectedItems.isEmpty()) {
-                toggleSelection(position);
+                toggleSelection(pos);
                 if (selectedItems.isEmpty()) {
                     apkExtractorActivity.findViewById(R.id.confirmButton).setVisibility(View.INVISIBLE);
                 }
             } else {
-                apkExtractorActivity.showListViewDropdown(holder.extractIconView, position, this);
+                apkExtractorActivity.showAppDetails(filteredAppInfoList.get(pos), this);
             }
         });
 
         holder.itemView.setOnLongClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return true;
             apkExtractorActivity.findViewById(R.id.confirmButton).setVisibility(View.VISIBLE);
-            toggleSelection(position);
+            toggleSelection(pos);
             return true;
-        });
-
-        holder.extractIconView.setOnClickListener(v -> {
-            if (!selectedItems.isEmpty()) {
-                toggleSelection(position);
-                if (selectedItems.isEmpty()) {
-                    apkExtractorActivity.findViewById(R.id.confirmButton).setVisibility(View.INVISIBLE);
-                }
-            } else {
-                apkExtractorActivity.showListViewDropdown(holder.extractIconView, position, this);
-            }
         });
     }
 
@@ -216,7 +225,6 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
         final TextView packageNameView;
         final ImageView appIconView;
         final View splitIconView;
-        final ImageView extractIconView;
 
         ViewHolder(View v) {
             super(v);
@@ -225,7 +233,6 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
             packageNameView = v.findViewById(R.id.package_name_view);
             appIconView = v.findViewById(R.id.icon_view);
             splitIconView = v.findViewById(R.id.badge_view);
-            extractIconView = v.findViewById(R.id.extract);
         }
     }
 }

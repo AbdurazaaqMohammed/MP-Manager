@@ -102,14 +102,8 @@ public class APKExtractorActivity extends BaseActivity {
     public boolean ask = false;
     public boolean errorOccurred;
     public String lang;
-    public boolean showIcon;
     public boolean antisplit;
-    public boolean showLastUpdate;
-    public boolean showFirstInstalled;
-    public boolean showVersionCode;
-    public boolean showVersionName;
-    public boolean showPackageName;
-    public boolean showAppName;
+    public String dateFormat;
     public boolean showExtractIcon;
     public boolean showExtractRes;
     public boolean saveWithPkgName;
@@ -146,6 +140,66 @@ public class APKExtractorActivity extends BaseActivity {
         } catch (Exception ignored) {
         }
         return getAppFolder();
+    }
+
+    public static String formatDate(long millis, String pattern) {
+        if (pattern == null || pattern.isEmpty() || pattern.equals("default")) return new Date(millis).toString();
+        if (pattern.equals("locale")) return java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(new Date(millis));
+        try {
+            return new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault()).format(new Date(millis));
+        } catch (Exception e) {
+            return new Date(millis).toString();
+        }
+    }
+
+    public static String resolveSigType(File apk) {
+        try {
+            com.android.apksig.ApkVerifier.Result result = new com.android.apksig.ApkVerifier.Builder(apk).build().verify();
+            StringBuilder sigs = new StringBuilder();
+            boolean v1 = false;
+            try { v1 = result.isVerifiedUsingV1Scheme(); } catch (Exception ignored) {}
+            boolean v2 = false;
+            try { v2 = result.isVerifiedUsingV2Scheme(); } catch (Exception ignored) {}
+            boolean v3 = false;
+            try { v3 = result.isVerifiedUsingV3Scheme() || result.isVerifiedUsingV31Scheme(); } catch (Exception ignored) {}
+            boolean v4 = false;
+            try { v4 = result.isVerifiedUsingV4Scheme(); } catch (Exception ignored) {}
+            if (v1) sigs.append("V1");
+            if (v2) {
+                if (sigs.length() > 0) sigs.append(" + ");
+                sigs.append("V2");
+            }
+            if (v3) {
+                if (sigs.length() > 0) sigs.append(" + ");
+                sigs.append("V3");
+            }
+            if (v4) {
+                if (sigs.length() > 0) sigs.append(" + ");
+                sigs.append("V4");
+            }
+            if (sigs.length() > 0 && result.isVerified()) return sigs.toString();
+            try (ArchiveFile af = new ArchiveFile(apk)) {
+                return af.getEntrySource("META-INF/MANIFEST.MF") == null ? "Not signed" : "Invalid";
+            }
+        } catch (Exception e) {
+            return "Unknown";
+        }
+    }
+
+    public void refreshDateStrings() {
+        for (int i = 0; i < 2; i++) {
+            if (appAdapter[i] == null) continue;
+            for (AppInfo ai : appAdapter[i].appInfoList) {
+                ai.firstInstalled = formatDate(ai.firstInstall, dateFormat);
+                ai.lastUpdated = formatDate(ai.lastUpdate, dateFormat);
+            }
+        }
+    }
+
+    public void openInFileManager(String path) {
+        if (path == null || path.isEmpty()) return;
+        setResult(RESULT_OK, new Intent().putExtra("dirToLoad", path));
+        finish();
     }
 
     /** Shared by the toolbar up-arrow and the system back gesture. */
@@ -213,13 +267,7 @@ public class APKExtractorActivity extends BaseActivity {
         signApk = settings.getBoolean("signApk", true);
         ask = false;
         saveWithPkgName = settings.getBoolean("saveWithPkgName", false);
-        showIcon = settings.getBoolean("showIcon", true);
-        showFirstInstalled = settings.getBoolean("showFirstInstalled", true);
-        showAppName = settings.getBoolean("showAppName", true);
-        showLastUpdate = settings.getBoolean("showLastUpdate", true);
-        showPackageName = settings.getBoolean("showPackageName", true);
-        showVersionCode = settings.getBoolean("showVersionCode", true);
-        showVersionName = settings.getBoolean("showVersionName", true);
+        dateFormat = settings.getString("dateFormat", "default");
         showExtractIcon = settings.getBoolean("showExtractIcon", false);
         showExtractBase = settings.getBoolean("showExtractBase", false);
         showExtractDex = settings.getBoolean("showExtractDex", false);
@@ -287,54 +335,42 @@ public class APKExtractorActivity extends BaseActivity {
             pkgNameToggle.setChecked(saveWithPkgName);
             pkgNameToggle.setOnCheckedChangeListener((buttonView, isChecked) -> saveWithPkgName = isChecked);
 
-            CompoundButton showIconToggle = settingsMenu.findViewById(R.id.showIconToggle);
-            showIconToggle.setChecked(showIcon);
-            showIconToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showIcon = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showLastUpdateToggle = settingsMenu.findViewById(R.id.showLastUpdateToggle);
-            showLastUpdateToggle.setChecked(showLastUpdate);
-            showLastUpdateToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showLastUpdate = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showFirstInstallToggle = settingsMenu.findViewById(R.id.showFirstInstallToggle);
-            showFirstInstallToggle.setChecked(showFirstInstalled);
-            showFirstInstallToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showFirstInstalled = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showVersionCodeToggle = settingsMenu.findViewById(R.id.showVersionCodeToggle);
-            showVersionCodeToggle.setChecked(showVersionCode);
-            showVersionCodeToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showVersionCode = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showVersionNameToggle = settingsMenu.findViewById(R.id.showVersionNameToggle);
-            showVersionNameToggle.setChecked(showVersionName);
-            showVersionNameToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showVersionName = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showAppNameToggle = settingsMenu.findViewById(R.id.showAppNameToggle);
-            showAppNameToggle.setChecked(showAppName);
-            showAppNameToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showAppName = isChecked;
-                reloadListView();
-            });
-
-            CompoundButton showPkgNameToggle = settingsMenu.findViewById(R.id.showPkgNameToggle);
-            showPkgNameToggle.setChecked(showPackageName);
-            showPkgNameToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                showPackageName = isChecked;
-                reloadListView();
-            });
+            try {
+                AutoCompleteTextView dateFormatTv = settingsMenu.findViewById(R.id.dateFormatTv);
+                TextView dateFormatPreview = settingsMenu.findViewById(R.id.dateFormatPreview);
+                if (dateFormatTv != null) {
+                    List<String> presets = new ArrayList<>(Arrays.asList("default", "locale", "yyyy-MM-dd HH:mm:ss", "dd/MM/yyyy HH:mm", "MM/dd/yyyy hh:mm a", "yyyy-MM-dd", "dd MMM yyyy HH:mm", "HH:mm dd-MM-yyyy"));
+                    if (dateFormat != null && !presets.contains(dateFormat)) presets.add(dateFormat);
+                    dateFormatTv.setText(dateFormat == null ? "default" : dateFormat, false);
+                    dateFormatTv.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, presets));
+                    Runnable updatePreview = () -> {
+                        if (dateFormatPreview != null) {
+                            String cur = dateFormatTv.getText() == null ? "default" : dateFormatTv.getText().toString().trim();
+                            if (cur.isEmpty()) cur = "default";
+                            dateFormatPreview.setText(formatDate(System.currentTimeMillis(), cur));
+                        }
+                    };
+                    updatePreview.run();
+                    dateFormatTv.setOnItemClickListener((p, v2, pos, id) -> {
+                        dateFormat = presets.get(pos);
+                        updatePreview.run();
+                        refreshDateStrings();
+                        reloadListView();
+                    });
+                    dateFormatTv.addTextChangedListener(new TextWatcher() {
+                        @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                        @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                        @Override public void afterTextChanged(Editable s) {
+                            String cur = s.toString().trim();
+                            if (cur.isEmpty()) cur = "default";
+                            dateFormat = cur;
+                            if (dateFormatPreview != null) dateFormatPreview.setText(formatDate(System.currentTimeMillis(), cur));
+                            refreshDateStrings();
+                            reloadListView();
+                        }
+                    });
+                }
+            } catch (Exception ignored) { }
 
             CompoundButton showExtractIconToggle = settingsMenu.findViewById(R.id.showExtractIconToggle);
             showExtractIconToggle.setChecked(showExtractIcon);
@@ -422,21 +458,63 @@ public class APKExtractorActivity extends BaseActivity {
         getCurrentAdapter().notifyDataSetChanged();
     }
 
+    private Comparator<AppInfo> buildComparator() {
+        if (sortMode == 0) return CompareUtils::compareAppInfoByName;
+        return (p1, p2) -> {
+            long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
+            long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
+            return Long.compare(field2, field1);
+        };
+    }
+
+    private void paintCachedApps() {
+        try {
+            io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.Snapshot user =
+                    io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.load(this, false, dateFormat);
+            io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.Snapshot sys =
+                    io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.load(this, true, dateFormat);
+            boolean painted = false;
+            if (user != null && user.sortMode == sortMode && !user.apps.isEmpty()) {
+                userAppInfoList.clear();
+                userAppInfoList.addAll(user.apps);
+                appAdapter[0].setItems(userAppInfoList);
+                painted = true;
+            }
+            if (sys != null && sys.sortMode == sortMode && !sys.apps.isEmpty()) {
+                systemAppInfoList.clear();
+                systemAppInfoList.addAll(sys.apps);
+                appAdapter[1].setItems(systemAppInfoList);
+                painted = true;
+            }
+            if (painted) {
+                try {
+                    EditText searchBar = findViewById(R.id.search_bar);
+                    appAdapter[0].getFilter().filter(searchBar.getText());
+                    appAdapter[1].getFilter().filter(searchBar.getText());
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
+    }
+
     private void loadApps() {
         if (loadingApps) return;
         loadingApps = true;
         findViewById(R.id.progressBar).setVisibility(View.VISIBLE);
+        if (userAppInfoList.isEmpty() && systemAppInfoList.isEmpty()) paintCachedApps();
         new Thread(() -> {
             try {
             PackageManager pm = getPackageManager();
             List<PackageInfo> apps = pm.getInstalledPackages(0);
 
+            List<AppInfo> freshUser = Collections.synchronizedList(new ArrayList<>());
+            List<AppInfo> freshSystem = Collections.synchronizedList(new ArrayList<>());
             ExecutorService executor = Executors
                     .newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             for (PackageInfo app : apps) {
                 if (app.applicationInfo == null) continue;
                 executor.execute(() -> {
                     try {
+                        String fmt = dateFormat;
                         AppInfo appInfo = new AppInfo(
                                 app.applicationInfo.sourceDir,
                                 app.applicationInfo.loadLabel(pm).toString(),
@@ -444,25 +522,57 @@ public class APKExtractorActivity extends BaseActivity {
                                 app.packageName,
                                 app.applicationInfo.enabled,
                                 LegacyUtils.aboveSdk20 && app.applicationInfo.splitSourceDirs != null,
-                                new Date(app.firstInstallTime).toString(),
-                                new Date(app.lastUpdateTime).toString(),
+                                formatDate(app.firstInstallTime, fmt),
+                                formatDate(app.lastUpdateTime, fmt),
                                 app.versionCode,
                                 app.versionName != null ? app.versionName : "");
                         appInfo.firstInstall = app.firstInstallTime;
                         appInfo.lastUpdate = app.lastUpdateTime;
                         appInfo.appInfo = app.applicationInfo;
+                        appInfo.targetSdk = app.applicationInfo.targetSdkVersion;
+                        try {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N)
+                                appInfo.minSdk = app.applicationInfo.minSdkVersion;
+                            else appInfo.minSdk = -1;
+                        } catch (Exception ignored2) { appInfo.minSdk = -1; }
+                        try {
+                            File base = new File(app.applicationInfo.sourceDir);
+                            appInfo.baseSize = base.length();
+                            appInfo.apkDir = base.getParent();
+                            long total = appInfo.baseSize;
+                            int splits = 0;
+                            String[] splitDirs = app.applicationInfo.splitSourceDirs;
+                            if (splitDirs != null) {
+                                for (String s : splitDirs) {
+                                    try {
+                                        total += new File(s).length();
+                                        splits++;
+                                    } catch (Exception ignored2) {}
+                                }
+                            }
+                            appInfo.totalSize = total;
+                            appInfo.splitCount = splits;
+                        } catch (Exception ignored2) {}
+                        try { appInfo.dataDir = app.applicationInfo.dataDir; } catch (Exception ignored2) {}
+                        try {
+                            appInfo.extDataDir = new File(Environment.getExternalStorageDirectory(), "Android/data/" + app.packageName).getAbsolutePath();
+                        } catch (Exception ignored2) {}
+                        try {
+                            String inst = null;
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                                try {
+                                    android.content.pm.InstallSourceInfo si = pm.getInstallSourceInfo(app.packageName);
+                                    if (si != null) inst = si.getInstallingPackageName();
+                                } catch (Exception ignored2) {}
+                            }
+                            if (inst == null) inst = pm.getInstallerPackageName(app.packageName);
+                            appInfo.installer = inst;
+                        } catch (Exception ignored2) {}
                         boolean isSystem = (app.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
                         if (isSystem)
-                            systemAppInfoList.add(appInfo);
+                            freshSystem.add(appInfo);
                         else
-                            userAppInfoList.add(appInfo);
-
-                        handler.post(() -> {
-                            if (isSystem)
-                                appAdapter[1].addItem(appInfo);
-                            else
-                                appAdapter[0].addItem(appInfo);
-                        });
+                            freshUser.add(appInfo);
                     } catch (Exception ignored) {
                     }
                 });
@@ -474,21 +584,21 @@ public class APKExtractorActivity extends BaseActivity {
                 e.printStackTrace();
             }
 
+            Comparator<AppInfo> comparator = buildComparator();
+            Collections.sort(freshUser, comparator);
+            Collections.sort(freshSystem, comparator);
+            int mode = sortMode;
+
             handler.post(() -> {
                 findViewById(R.id.progressBar).setVisibility(View.GONE);
 
-                Comparator<AppInfo> comparator;
-                if (sortMode == 0)
-                    comparator = CompareUtils::compareAppInfoByName;
-                else
-                    comparator = (p1, p2) -> {
-                        long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
-                        long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
-                        return Long.compare(field2, field1);
-                    };
+                userAppInfoList.clear();
+                userAppInfoList.addAll(freshUser);
+                systemAppInfoList.clear();
+                systemAppInfoList.addAll(freshSystem);
 
-                Collections.sort(appAdapter[0].appInfoList, comparator);
-                Collections.sort(appAdapter[1].appInfoList, comparator);
+                appAdapter[0].setItems(userAppInfoList);
+                appAdapter[1].setItems(systemAppInfoList);
 
                 appAdapter[0].setComparator(comparator);
                 appAdapter[1].setComparator(comparator);
@@ -502,6 +612,10 @@ public class APKExtractorActivity extends BaseActivity {
                 ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshSystem)).setRefreshing(false);
 
                 new Thread(() -> {
+                    try {
+                        io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.save(APKExtractorActivity.this, false, mode, freshUser);
+                        io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.save(APKExtractorActivity.this, true, mode, freshSystem);
+                    } catch (Exception ignored) {}
                     try {
                         loadAdditionalDetails(userAppInfoList, appAdapter[0]);
                         loadAdditionalDetails(systemAppInfoList, appAdapter[1]);
@@ -523,11 +637,8 @@ public class APKExtractorActivity extends BaseActivity {
     }
 
     private void refreshApps() {
-        userAppInfoList.clear();
-        systemAppInfoList.clear();
-        appAdapter[0].reset();
-        appAdapter[1].reset();
-        findViewById(R.id.confirmButton).setVisibility(View.INVISIBLE);
+        appAdapter[0].clearSelection();
+        appAdapter[1].clearSelection();
         loadApps();
     }
 
@@ -545,33 +656,51 @@ public class APKExtractorActivity extends BaseActivity {
         ((SwipeRefreshLayout) findViewById(R.id.swipeRefreshSystem)).setOnRefreshListener(this::refreshApps);
 
         findViewById(R.id.confirmButton).setOnClickListener(v -> {
-            v.setVisibility(View.INVISIBLE);
-            String[] display = {
+            AppRecyclerViewAdapter cur = getCurrentAdapter();
+            List<String> displayList = new ArrayList<>(Arrays.asList(
                     rss.getString(R.string.extract_apks), rss.getString(R.string.share_apks),
                     getString(R.string.extract_rss), getString(R.string.extract_classes_dex),
                     getString(R.string.extract_am), getString(R.string.extract_base),
-                    getString(R.string.extract_libs), getString(R.string.extract_ic)
-            };
-            int[] icons = {
+                    getString(R.string.extract_libs), getString(R.string.extract_ic)));
+            List<Integer> iconList = new ArrayList<>(Arrays.asList(
                     R.drawable.save_24px, R.drawable.baseline_share_24,
                     R.drawable.inventory_2_24px, R.drawable.baseline_folder_zip_24,
                     R.drawable.baseline_text_snippet_24, R.drawable.apk_document_24px,
-                    R.drawable.baseline_folder_zip_24, R.drawable.image_24px
-            };
+                    R.drawable.baseline_folder_zip_24, R.drawable.image_24px));
+            List<Integer> idList = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7));
+            displayList.add(rss.getString(R.string.uninstall));
+            iconList.add(R.drawable.baseline_delete_24);
+            idList.add(8);
+            if (hasElevatedShell()) {
+                displayList.add(rss.getString(R.string.clear_app_data));
+                iconList.add(R.drawable.baseline_delete_24);
+                idList.add(9);
+                displayList.add(rss.getString(R.string.force_stop));
+                iconList.add(R.drawable.stop_circle_24px);
+                idList.add(10);
+                displayList.add(rss.getString(R.string.enable_app));
+                iconList.add(R.drawable.baseline_check_circle_24);
+                idList.add(11);
+                displayList.add(rss.getString(R.string.disable_app));
+                iconList.add(R.drawable.visibility_off_24px);
+                idList.add(12);
+            }
 
             View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_extract_options, null);
             ListView gridView = dialogView.findViewById(R.id.extractOptionsGrid);
-            gridView.setAdapter(new ExtractOptionAdapter(this, display, icons));
+            gridView.setAdapter(new ExtractOptionAdapter(this,
+                    displayList.toArray(new String[0]),
+                    iconList.stream().mapToInt(Integer::intValue).toArray()));
 
             AlertDialog alertDialog = new MaterialAlertDialogBuilder(this)
                     .setView(dialogView)
-                    .setNegativeButton(rss.getString(android.R.string.cancel), (d, w) -> getCurrentAdapter().clearSelection())
+                    .setNegativeButton(rss.getString(android.R.string.cancel), (d, w) -> cur.clearSelection())
                     .create();
             styleAlertDialog(alertDialog);
 
             gridView.setOnItemClickListener((parent2, view2, which, id2) -> {
                 alertDialog.dismiss();
-                performAction(which, getCurrentAdapter());
+                performAction(idList.get(which), cur);
             });
         });
 
@@ -616,11 +745,7 @@ public class APKExtractorActivity extends BaseActivity {
             AlertDialog ad = new MaterialAlertDialogBuilder(this)
                     .setSingleChoiceItems(display, sortMode, (dialog, which) -> {
                         sortMode = which;
-                        Comparator<AppInfo> comparator = sortMode == 0 ? CompareUtils::compareAppInfoByName : ((p1, p2) -> {
-                            long field1 = (sortMode == 1) ? p1.lastUpdate : p1.firstInstall;
-                            long field2 = (sortMode == 1) ? p2.lastUpdate : p2.firstInstall;
-                            return Long.compare(field2, field1);
-                        });
+                        Comparator<AppInfo> comparator = buildComparator();
 
                         Collections.sort(appAdapter[0].appInfoList, comparator);
                         Collections.sort(appAdapter[1].appInfoList, comparator);
@@ -639,12 +764,21 @@ public class APKExtractorActivity extends BaseActivity {
 
     }
 
-    public void showListViewDropdown(View anchor, int groupPosition, AppRecyclerViewAdapter adapter) {
-        AppInfo ai = adapter.filteredAppInfoList.get(groupPosition);
+    public static final class AppActions {
+        public final List<String> displayList = new ArrayList<>();
+        public final List<Integer> iconList = new ArrayList<>();
+        public final List<Integer> actionIds = new ArrayList<>();
+    }
 
-        List<String> displayList = new ArrayList<>();
-        List<Integer> iconList = new ArrayList<>();
-        List<Integer> actionIds = new ArrayList<>();
+    public void showAppDetails(AppInfo ai, AppRecyclerViewAdapter adapter) {
+        AppDetailsDialog.show(this, ai, adapter);
+    }
+
+    public AppActions buildAppActions(AppInfo ai) {
+        AppActions out = new AppActions();
+        List<String> displayList = out.displayList;
+        List<Integer> iconList = out.iconList;
+        List<Integer> actionIds = out.actionIds;
 
         displayList.add(getString(R.string.extract_apk));
         iconList.add(ai.isSplit && !antisplit ? R.drawable.archive_24px : R.drawable.save_24px);
@@ -723,6 +857,22 @@ public class APKExtractorActivity extends BaseActivity {
             actionIds.add(105);
         }
 
+        if (ai.apkDir != null && !ai.apkDir.isEmpty()) {
+            displayList.add(getString(R.string.open_apk_dir));
+            iconList.add(R.drawable.folder_24px);
+            actionIds.add(108);
+        }
+        if (ai.dataDir != null && !ai.dataDir.isEmpty()) {
+            displayList.add(getString(R.string.open_data_dir));
+            iconList.add(R.drawable.folder_24px);
+            actionIds.add(109);
+        }
+        if (ai.extDataDir != null && !ai.extDataDir.isEmpty()) {
+            displayList.add(getString(R.string.open_ext_data_dir));
+            iconList.add(R.drawable.folder_24px);
+            actionIds.add(110);
+        }
+
         RootManager rootManager = RootManager.getInstance(this);
         if (rootManager.isRootExtractorEnabled() && rootManager.isRootAvailable()) {
             displayList.add(getString(R.string.clear_app_data));
@@ -746,45 +896,27 @@ public class APKExtractorActivity extends BaseActivity {
             actionIds.add(204);
         }
 
-        View popupView = LayoutInflater.from(this).inflate(R.layout.popup_dropdown_menu, null);
-        ListView listView = popupView.findViewById(R.id.dropdown_list);
+        return out;
+    }
 
-        DropdownAdapter dropdownAdapter = new DropdownAdapter(this, displayList, iconList);
-        listView.setAdapter(dropdownAdapter);
-
-        PopupWindow popupWindow = new PopupWindow(popupView, ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        if(LegacyUtils.aboveSdk20) popupWindow.setElevation(24f);
-
-        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        int measuredWidth = popupView.getMeasuredWidth();
-        int popupWidth = Math.max(measuredWidth, (int) (220 * getResources().getDisplayMetrics().density));
-        popupWindow.setWidth(popupWidth);
-
-        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        int[] location = new int[2];
-        anchor.getLocationOnScreen(location);
-        int anchorY = location[1];
-        int screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
-
-        if (anchorY + anchor.getHeight() + popupView.getMeasuredHeight() > screenHeight) {
-            popupWindow.showAsDropDown(anchor, 0, -anchor.getHeight() - popupView.getMeasuredHeight());
-        } else {
-            popupWindow.showAsDropDown(anchor, 0, 0);
+    public void handleAppAction(int actionId, AppInfo ai, AppRecyclerViewAdapter adapter) {
+        int groupPosition = adapter == null ? -1 : adapter.filteredAppInfoList.indexOf(ai);
+        if (actionId == 0 || actionId == 1 || (actionId >= 104 && actionId <= 106)) {
+            if (groupPosition < 0) return;
         }
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            popupWindow.dismiss();
-            int actionId = actionIds.get(position);
 
-            if(actionId==0) extract(groupPosition, antisplit, true);
-            else if(actionId == 1) share(groupPosition, antisplit);
-            else if (actionId < 100) {
-                adapter.selectedItems.clear();
-                adapter.toggleSelection(groupPosition);
-                performAction(actionId, adapter);
-            } else {
-                String packageName = ai.packageName;
-                switch (actionId) {
+        if (actionId == 0) extract(groupPosition, antisplit, true);
+        else if (actionId == 1) share(groupPosition, antisplit);
+        else if (actionId < 100) {
+            if (groupPosition < 0) return;
+            adapter.selectedItems.clear();
+            adapter.selectedItems.add(ai.packageName);
+            performAction(actionId, adapter);
+            adapter.clearSelection();
+        } else {
+            String packageName = ai.packageName;
+            RootManager rootManager = RootManager.getInstance(this);
+            switch (actionId) {
                     case 100: // Launch
                         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                         if (launchIntent == null)
@@ -833,6 +965,15 @@ public class APKExtractorActivity extends BaseActivity {
                         break;
                     case 106: // Antisplit =true save split apk as apks
                         extract(groupPosition, false, true);
+                        break;
+                    case 108:
+                        openInFileManager(ai.apkDir);
+                        break;
+                    case 109:
+                        openInFileManager(ai.dataDir);
+                        break;
+                    case 110:
+                        openInFileManager(ai.extDataDir);
                         break;
                     case 107: // Launch activity
                         PackageManager pm = getPackageManager();
@@ -930,10 +1071,8 @@ public class APKExtractorActivity extends BaseActivity {
                                 .setNegativeButton(android.R.string.cancel, null)
                                 .show();
                         break;
-                }
             }
-        });
-
+        }
     }
 
     private void executeRootAction(String actionName, RootRunnable action, String packageName) {
@@ -957,11 +1096,133 @@ public class APKExtractorActivity extends BaseActivity {
         void run() throws Exception;
     }
 
+    interface ElevatedOp {
+        void run(String packageName) throws Exception;
+    }
+
+    private boolean hasElevatedShell() {
+        try {
+            RootManager rm = RootManager.getInstance(this);
+            if (rm.isRootMode() && rm.isRootAvailable()) return true;
+            return rm.isShizukuMode() && io.github.abdurazaaqmohammed.utils.ShizukuManager.ready();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void elevatedExec(String baseCmd, String packageName, boolean guardCritical) throws Exception {
+        if (!RootManager.isPackageNameValid(packageName)) throw new java.io.IOException("Invalid package name: " + packageName);
+        if (guardCritical && RootManager.isCriticalPackage(packageName)) throw new java.io.IOException("Blocked: refusing to modify critical system app: " + packageName);
+        String cmd = baseCmd + " " + RootManager.escapeShellArg(packageName);
+        RootManager rm = RootManager.getInstance(this);
+        if (rm.isRootMode() && rm.isRootAvailable()) {
+            RootManager.ShellResult r = rm.execute(cmd, 30);
+            if (!r.isSuccess()) throw new java.io.IOException(r.error() != null && !r.error().isEmpty() ? r.error() : r.output());
+        } else {
+            io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result r =
+                    io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 30);
+            if (!r.success) throw new java.io.IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : "failed");
+        }
+    }
+
+    private void elevatedUninstall(String packageName) throws Exception {
+        if (!RootManager.isPackageNameValid(packageName)) throw new java.io.IOException("Invalid package name: " + packageName);
+        if (RootManager.isCriticalPackage(packageName)) throw new java.io.IOException("Blocked: refusing to uninstall critical system app: " + packageName);
+        RootManager rm = RootManager.getInstance(this);
+        if (rm.isRootMode() && rm.isRootAvailable()) {
+            rm.uninstallSilent(packageName);
+            return;
+        }
+        io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result r =
+                io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
+        if (!r.success || r.stdout == null || !r.stdout.contains("Success")) throw new java.io.IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : r.stdout);
+    }
+
+    private String batchNames(List<AppInfo> targets) {
+        StringBuilder sb = new StringBuilder();
+        int n = Math.min(targets.size(), 10);
+        for (int i = 0; i < n; i++) {
+            if (i > 0) sb.append('\n');
+            sb.append("• ").append(targets.get(i).name).append(" (").append(targets.get(i).packageName).append(')');
+        }
+        if (targets.size() > n) sb.append('\n').append(getString(R.string.and_n_more, targets.size() - n));
+        return sb.toString();
+    }
+
+    private List<AppInfo> batchTargets(AppRecyclerViewAdapter adapter, List<Integer> positions) {
+        List<AppInfo> out = new ArrayList<>(positions.size());
+        for (int pos : positions) {
+            try {
+                out.add(adapter.filteredAppInfoList.get(pos));
+            } catch (Exception ignored) {}
+        }
+        return out;
+    }
+
+    private void confirmBatchUninstall(List<AppInfo> targets) {
+        if (targets.isEmpty()) return;
+        boolean elevated = hasElevatedShell();
+        String msg = (elevated ? getString(R.string.uninstall_batch_elevated, targets.size())
+                : getString(R.string.uninstall_batch_normal, targets.size())) + "\n\n" + batchNames(targets);
+        styleAlertDialog(new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.uninstall)
+                .setMessage(msg)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.uninstall, (d, w) -> {
+                    if (elevated) runElevatedBatch(getString(R.string.uninstall), targets, this::elevatedUninstall);
+                    else {
+                        for (AppInfo ai : targets) {
+                            try {
+                                Intent u = new Intent(Intent.ACTION_UNINSTALL_PACKAGE).setData(Uri.parse("package:" + ai.packageName));
+                                try {
+                                    startActivity(u);
+                                } catch (Exception e) {
+                                    startActivity(u.setAction(Intent.ACTION_DELETE));
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                })
+                .create());
+    }
+
+    private void confirmElevatedBatch(int titleId, int msgId, List<AppInfo> targets, ElevatedOp op) {
+        if (targets.isEmpty()) return;
+        styleAlertDialog(new MaterialAlertDialogBuilder(this)
+                .setTitle(titleId)
+                .setMessage(getString(msgId, targets.size()) + "\n\n" + batchNames(targets))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(titleId, (d, w) -> runElevatedBatch(getString(titleId), targets, op))
+                .create());
+    }
+
+    private void runElevatedBatch(String progressTitle, List<AppInfo> targets, ElevatedOp op) {
+        ProgressManager bpm = new ProgressManager(this, true);
+        bpm.setText(progressTitle);
+        bpm.show();
+        new Thread(() -> {
+            List<String> failed = new ArrayList<>();
+            for (AppInfo ai : targets) {
+                try {
+                    bpm.setText(progressTitle + ": " + ai.name);
+                    op.run(ai.packageName);
+                } catch (Exception e) {
+                    failed.add(ai.name);
+                }
+            }
+            bpm.dismiss();
+            int total = targets.size();
+            handler.post(() -> {
+                if (failed.isEmpty()) Extensions.showMessage(this, getString(R.string.batch_done_x, total));
+                else Extensions.showMessage(this, getString(R.string.batch_failed_x, failed.size(), android.text.TextUtils.join(", ", failed)));
+                refreshApps();
+            });
+        }).start();
+    }
+
     private void performAction(int whichAction, AppRecyclerViewAdapter adapter) {
         File appFolder = getAppFolder(this);
-        final List<Integer> itemsToProcess = new ArrayList<>(adapter.selectedItems);
-        adapter.clearSelection();
-        //findViewById(R.id.confirmButton).setVisibility(View.INVISIBLE);
+        final List<Integer> itemsToProcess = adapter.selectedPositions();
 
         String path = appFolder.getPath();
         boolean singleItem = itemsToProcess.size() == 1;
@@ -1121,6 +1382,34 @@ public class APKExtractorActivity extends BaseActivity {
                     handler.post(showFinishedDialog(path, pm));
                 }).start();
                 break;
+            case 8:
+                pm.dismiss();
+                confirmBatchUninstall(batchTargets(adapter, itemsToProcess));
+                break;
+            case 9:
+                pm.dismiss();
+                confirmElevatedBatch(R.string.clear_app_data, R.string.batch_clear_data,
+                        batchTargets(adapter, itemsToProcess),
+                        pkg -> elevatedExec("pm clear", pkg, true));
+                break;
+            case 10:
+                pm.dismiss();
+                confirmElevatedBatch(R.string.force_stop, R.string.batch_force_stop,
+                        batchTargets(adapter, itemsToProcess),
+                        pkg -> elevatedExec("am force-stop", pkg, true));
+                break;
+            case 11:
+                pm.dismiss();
+                confirmElevatedBatch(R.string.enable_app, R.string.batch_enable,
+                        batchTargets(adapter, itemsToProcess),
+                        pkg -> elevatedExec("pm enable", pkg, false));
+                break;
+            case 12:
+                pm.dismiss();
+                confirmElevatedBatch(R.string.disable_app, R.string.batch_disable,
+                        batchTargets(adapter, itemsToProcess),
+                        pkg -> elevatedExec("pm disable-user --user 0", pkg, true));
+                break;
         }
     }
 
@@ -1135,16 +1424,36 @@ public class APKExtractorActivity extends BaseActivity {
         return bitmap;
     }
 
+    final ExtractorIconCache iconCache = new ExtractorIconCache();
+
     private void loadAdditionalDetails(List<AppInfo> apps, AppRecyclerViewAdapter adapter) {
         PackageManager pm = getPackageManager();
         for (int i = 0; i < apps.size(); i++) {
             AppInfo app = apps.get(i);
-            if (showIcon && app.appInfo != null) {
-                app.icon = app.appInfo.loadIcon(pm);
-            }
-            if (i < 10 || i % 10 == 0 || i == apps.size() - 1) {
-                handler.post(adapter::notifyDataSetChanged);
-            }
+            try {
+                if (app.icon == null && app.packageName != null) {
+                    android.graphics.drawable.Drawable cached = iconCache.getMemory(app.packageName, app.getVersionCode());
+                    if (cached == null) cached = iconCache.getDisk(this, app.packageName, app.getVersionCode());
+                    if (cached != null) {
+                        app.icon = cached;
+                    } else {
+                        android.content.pm.ApplicationInfo info = app.appInfo;
+                        if (info == null) {
+                            try {
+                                info = pm.getApplicationInfo(app.packageName, 0);
+                                app.appInfo = info;
+                            } catch (Exception ignored) {}
+                        }
+                        if (info != null) {
+                            android.graphics.drawable.Drawable loaded = info.loadIcon(pm);
+                            app.icon = loaded;
+                            iconCache.put(this, app.packageName, app.getVersionCode(), loaded);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+            final int pos = adapter.filteredAppInfoList.indexOf(app);
+            if (pos >= 0) handler.post(() -> adapter.notifyItemChanged(pos));
         }
     }
 
@@ -1410,12 +1719,6 @@ public class APKExtractorActivity extends BaseActivity {
                 .putBoolean("ask", ask)
                 .putBoolean("signApk", signApk)
                 .putBoolean("saveWithPkgName", saveWithPkgName)
-                .putBoolean("showIcon", showIcon)
-                .putBoolean("showAppName", showAppName)
-                .putBoolean("showVersionName", showVersionName)
-                .putBoolean("showLastUpdate", showLastUpdate)
-                .putBoolean("showVersionCode", showVersionCode)
-                .putBoolean("showPackageName", showPackageName)
                 .putBoolean("showExtractIcon", showExtractIcon)
                 .putBoolean("showExtractRes", showExtractRes)
                 .putBoolean("showExtractBase", showExtractBase)
@@ -1423,8 +1726,8 @@ public class APKExtractorActivity extends BaseActivity {
                 .putBoolean("showExtractDex", showExtractDex)
                 .putBoolean("showExtractSplit", showExtractSplit)
                 .putBoolean("showExtractLibs", showExtractLibs)
-                .putBoolean("showFirstInstalled", showFirstInstalled)
                 .putBoolean("showLaunchActivities", showLaunchActivities)
+                .putString("dateFormat", dateFormat == null ? "default" : dateFormat)
                 .putBoolean("antisplit", antisplit)
                 .putInt("sortMode", sortMode)
                 .putString("lang", lang);

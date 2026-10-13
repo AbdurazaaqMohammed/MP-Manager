@@ -8,15 +8,25 @@ public class AppInfo {
     public final String name;
     public final String packageName;
     public Drawable icon;
-    final boolean enabled;
+    public final boolean enabled;
     public final boolean isSplit;
-    public final String firstInstalled;
-    public final String lastUpdated;
+    public String firstInstalled;
+    public String lastUpdated;
     public long firstInstall;
     public long lastUpdate;
     public final String versionName;
     final int versionCode;
     public ApplicationInfo appInfo;
+    public long baseSize;
+    public long totalSize;
+    public int splitCount;
+    public volatile String sigType;
+    public int targetSdk;
+    public int minSdk;
+    public String installer;
+    public String dataDir;
+    public String extDataDir;
+    public String apkDir;
     public AppInfo(String f, String name, Drawable icon, String packageName, boolean enabled, boolean isSplit, String firstInstalled, String lastUpdated, int versionCode, String versionName) {
         this.filePath = f;
         this.name = name;

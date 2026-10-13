@@ -40,87 +40,28 @@
 
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
 
-            </LinearLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/date_format">
 
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                    <AutoCompleteTextView
+                        android:id="@+id/dateFormatTv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/display_nfo"
-                    android:textColor="?attr/colorPrimary"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showIconToggle"
+                    android:id="@+id/dateFormatPreview"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/show_icons" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showLastUpdateToggle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/show_last_updated" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showFirstInstallToggle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/show_first_install" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showVersionNameToggle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/show_v_name" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showVersionCodeToggle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/show_v_code" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showAppNameToggle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/show_app" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?android:attr/listDivider" android:layout_marginVertical="8dp"/>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/showPkgNameToggle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/show_pkg" />
+                    android:layout_marginTop="4dp"
+                    android:textSize="12sp" />
 
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView

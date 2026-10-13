@@ -71,17 +71,5 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginTop="4dp" />
 
-        <ImageView
-            android:id="@+id/extract"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/more_options"
-            android:src="@drawable/baseline_more_vert_24"
-            app:tint="?attr/colorOnSurfaceVariant" />
-
     </RelativeLayout>
 </com.google.android.material.card.MaterialCardView>
