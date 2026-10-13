@@ -39,10 +39,10 @@ package modder.hub.dexeditor.activity;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
@@ -50,11 +50,11 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 
 import com.google.android.material.appbar.AppBarLayout;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -69,6 +69,7 @@ import java.util.concurrent.TimeUnit;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 import io.github.abdurazaaqmohammed.ui.UiFields;
+import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 import io.noties.markwon.Markwon;
 import modder.hub.dexeditor.fragment.SettingsFragment;
@@ -95,6 +96,7 @@ public class AIOverViewActivity extends BaseActivity {
     private ScrollView scrollView;
     private String smaliCode = "";
     private String GEMINI_API_KEY = "";
+    private String GEMINI_MODEL = "gemini-3.5-flash-lite";
     private AlertCircularProgress progressDialog;
     private final String DefaultMsg = "Analyze this Smali method and explain the register usage:\n\nMethod:\n";
     private long lastBackPressTime = 0;
@@ -124,21 +126,45 @@ public class AIOverViewActivity extends BaseActivity {
     }
 
     private void initializeLogic() {
-        setTitle("AI Explanation");
+        setTitle(R.string.ai_explanation);
         markdownText.setTextIsSelectable(true);
         smaliCode = getIntent().getStringExtra("smali");
-        SharedPreferences pref = getSharedPreferences("editor_prefs", MODE_PRIVATE);
-        if (pref.contains("gemini_api_key")) {
-            GEMINI_API_KEY = pref.getString("gemini_api_key", "Key");
-        } else {
-            startActivity(new Intent(AIOverViewActivity.this, SettingsActivity.class));
+        GEMINI_API_KEY = SettingsFragment.getChatGptApiKey(this);
+        GEMINI_MODEL = SettingsFragment.getGeminiModel(this);
+        markdownText.setTextColor(MaterialColors.getColor(markdownText, android.R.attr.textColorPrimary));
+        if (TextUtils.isEmpty(GEMINI_API_KEY)) {
+            Intent settingsIntent = new Intent(AIOverViewActivity.this, EditorSettingsActivity.class);
+            settingsIntent.putExtra("from_dex", true);
+            startActivity(settingsIntent);
+            return;
         }
+        if (getSharedPreferences("editor_prefs", MODE_PRIVATE).getBoolean("ai_disclaimer_accepted", false)) {
+            runAiRequest();
+        } else {
+            showAiDisclaimerDialog();
+        }
+    }
+
+    private void runAiRequest() {
         boolean allowEditPrompt = SettingsFragment.shouldEditAiPrompt(this);
         if (allowEditPrompt) {
             showPromptEditorDialog();
         } else {
             startAnalysis(DefaultMsg + smaliCode);
         }
+    }
+
+    private void showAiDisclaimerDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.ai_usage_disclaimer)
+                .setMessage(R.string.ai_warning)
+                .setCancelable(false)
+                .setNegativeButton(android.R.string.cancel, (dialog, which) -> finish())
+                .setPositiveButton(R.string.agree, (dialog, which) -> {
+                    getSharedPreferences("editor_prefs", MODE_PRIVATE).edit().putBoolean("ai_disclaimer_accepted", true).apply();
+                    runAiRequest();
+                })
+                .show();
     }
 
     private void showPromptEditorDialog() {
@@ -201,7 +227,7 @@ public class AIOverViewActivity extends BaseActivity {
             requestBody.put("contents", contents);
 
             Request request = new Request.Builder()
-                    .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" + GEMINI_API_KEY)
+                    .url("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY)
                     .post(RequestBody.create(MediaType.parse("application/json"), requestBody.toString()))
                     .addHeader("Content-Type", "application/json")
                     .build();

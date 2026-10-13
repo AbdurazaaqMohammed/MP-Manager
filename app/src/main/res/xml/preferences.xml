@@ -46,6 +46,25 @@
             app:dialogTitle="Enter API Key"
             app:defaultValue="" />
 
+        <ListPreference
+            app:key="gemini_model"
+            app:title="Gemini model"
+            app:summary="%s"
+            app:entries="@array/gemini_model_entries"
+            app:entryValues="@array/gemini_model_values"
+            app:defaultValue="gemini-3.5-flash-lite" />
+
+        <Preference
+            app:key="gemini_refresh_models"
+            app:title="Refresh model list"
+            app:summary="Fetch currently available Gemini models using your API key" />
+
+        <Preference
+            app:key="gemini_disclaimer"
+            app:title="AI usage notice"
+            app:summary="AI responses may be inaccurate or unsafe. You are solely responsible for reviewing and using AI output. This app is not responsible for any consequences of AI usage."
+            app:selectable="false" />
+
         <SwitchPreferenceCompat
             app:key="edit_ai_prompt"
             app:title="Custom prompt"

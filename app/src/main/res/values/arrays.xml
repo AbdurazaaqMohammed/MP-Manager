@@ -80,6 +80,22 @@
         <item>30</item>
     </string-array>
 
+    <string-array name="gemini_model_entries">
+        <item>Gemini 4 Argon</item>
+        <item>Gemini 3.8 Flash</item>
+        <item>Gemini 3.6 Flash</item>
+        <item>Gemini 3.5 Flash-Lite</item>
+        <item>Gemini Flash (latest)</item>
+    </string-array>
+
+    <string-array name="gemini_model_values">
+        <item>gemini-4-argon</item>
+        <item>gemini-3.8-flash</item>
+        <item>gemini-3.6-flash</item>
+        <item>gemini-3.5-flash-lite</item>
+        <item>gemini-flash-latest</item>
+    </string-array>
+
     <string-array name="pref_magnifier_size_entries">
         <item>Large</item>
         <item>Medium</item>

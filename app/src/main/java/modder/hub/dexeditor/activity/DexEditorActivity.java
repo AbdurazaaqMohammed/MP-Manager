@@ -646,7 +646,9 @@ public class DexEditorActivity extends BaseActivity {
                 closeTabWithPrompt(currentTabIndex);
                 return true;
             } else if (id == R.id.preference) {
-                startActivity(new Intent(DexEditorActivity.this, EditorSettingsActivity.class));
+                Intent editorSettingsIntent = new Intent(DexEditorActivity.this, EditorSettingsActivity.class);
+                editorSettingsIntent.putExtra("from_dex", true);
+                startActivity(editorSettingsIntent);
                 return true;
             }
 
@@ -741,7 +743,9 @@ public class DexEditorActivity extends BaseActivity {
                 closeTabWithPrompt(currentTabIndex);
                 return true;
             } else if (id == R.id.preference) {
-                startActivity(new Intent(DexEditorActivity.this, EditorSettingsActivity.class));
+                Intent editorSettingsIntent = new Intent(DexEditorActivity.this, EditorSettingsActivity.class);
+                editorSettingsIntent.putExtra("from_dex", true);
+                startActivity(editorSettingsIntent);
                 return true;
             }
         }
