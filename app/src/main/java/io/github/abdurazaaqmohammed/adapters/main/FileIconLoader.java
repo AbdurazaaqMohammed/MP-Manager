@@ -64,6 +64,11 @@ public class FileIconLoader {
 
     public void setupZipEntryView(ZipEntryInfo zipEntry, ImageView fileIconView, TextView fileDateView) {
         if (zipEntry == null) return;
+        if (zipEntry.isDirectory() && "..".equals(zipEntry.getName())) {
+            fileIconView.setImageDrawable(cachedFolderIcon);
+            fileDateView.setVisibility(View.INVISIBLE);
+            return;
+        }
         if (zipEntry.isDirectory() && zipEntry.getFullPath() != null) {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.VISIBLE);
