@@ -105,6 +105,36 @@ public class FileUtils {
         }
     }
 
+    public static boolean isAbx(InputStream inputStream) throws IOException {
+        if (inputStream == null) return false;
+        boolean markSupported = inputStream.markSupported();
+        InputStream is = markSupported ? inputStream
+                : new BufferedInputStream(inputStream);
+        is.mark(8);
+        byte[] magic = new byte[4];
+        int read = 0;
+        try {
+            while (read < 4) {
+                int n = is.read(magic, read, 4 - read);
+                if (n == -1) break;
+                read += n;
+            }
+        } finally {
+            try { is.reset(); } catch (IOException ignored) { }
+        }
+        return read == 4 && (magic[0] & 0xFF) == 0x41 && (magic[1] & 0xFF) == 0x42
+                && (magic[2] & 0xFF) == 0x58 && (magic[3] & 0xFF) == 0x00;
+    }
+
+    public static boolean isAbx(File file) {
+        if (file == null || !file.isFile()) return false;
+        try (InputStream is = getInputStream(file)) {
+            return isAbx(is);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static boolean looksLikeAxmlText(String text) {
         if (text == null) return false;
         String t = text.trim();

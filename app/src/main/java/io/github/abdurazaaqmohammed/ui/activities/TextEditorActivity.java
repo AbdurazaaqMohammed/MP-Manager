@@ -40,6 +40,7 @@ import java.util.List;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.fragment.UnifiedEditorFragment;
+import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
@@ -61,6 +62,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         String zipFilePath;
         String zipEntryPath;
         boolean axml;
+        boolean abx;
         List<ResEntry> resEntries;
         String pendingDecoded;
         String content;
@@ -78,6 +80,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     private Uri currentFileUri;
     private File currentFile;
     private boolean axml;
+    private boolean abx;
     private boolean manualFinish;
     private List<ResEntry> resEntries;
 
@@ -137,7 +140,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             int savedCurrent = 0;
             for (int i = 0; i < tabs.size(); i++) {
                 EditorTab t = tabs.get(i);
-                if (t.axml) continue;
+                if (t.axml || t.abx) continue;
                 JSONObject o = new JSONObject();
                 o.put("title", t.title);
                 if (t.file != null) o.put("file", t.file.getPath());
@@ -376,6 +379,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         currentFile = t.file;
         currentFileUri = t.fileUri;
         axml = t.axml;
+        abx = t.abx;
         resEntries = t.resEntries;
         if (f != null) f.setAxml(t.axml);
         if (f != null) f.setFileName(t.title);
@@ -407,10 +411,18 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         Uri uri = null;
         File file = null;
         boolean isAxml = false;
+        boolean isAbx = false;
         List<ResEntry> entries = null;
         String extraText = null;
 
-        if (intent.hasExtra("axml")) {
+        if (intent.hasExtra("abx")) {
+            isAbx = true;
+            if (intent.hasExtra(Intent.EXTRA_TEXT)) {
+                extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
+            }
+            file = new File(intent.getStringExtra("path"));
+            uri = Uri.fromFile(file);
+        } else if (intent.hasExtra("axml")) {
             isAxml = true;
             if (intent.hasExtra(Intent.EXTRA_TEXT)) {
                 extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
@@ -501,6 +513,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         tab.file = file;
         tab.fileUri = uri;
         tab.axml = isAxml;
+        tab.abx = isAbx;
         tab.resEntries = entries;
         String zipFileExtra = intent.getStringExtra("zf");
         String zipEntryExtra = intent.getStringExtra("zipEntryPath");
@@ -523,7 +536,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         // like regular files — setting editor text synchronously during onCreate gets wiped
         // by the fragment's deferred initialization. If no text arrived with the intent
         // (e.g. zip flow without rssPath decode), readTabText decodes the binary on disk.
-        if (extraText != null && !extraText.isEmpty() && (isAxml || (file == null && uri == null))) {
+        if (extraText != null && !extraText.isEmpty() && (isAxml || isAbx || (file == null && uri == null))) {
             tab.pendingDecoded = extraText;
         }
         addTabAndOpen(tab);
@@ -610,17 +623,38 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
         }
         boolean isFromFile = tab.file != null;
-        try (InputStream is = isFromFile ? FileUtils.getInputStream(tab.file) : getContentResolver().openInputStream(tab.fileUri);
-             InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
-             BufferedReader reader = new BufferedReader(isr)) {
-
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append('\n');
+        try (InputStream raw = isFromFile ? FileUtils.getInputStream(tab.file) : getContentResolver().openInputStream(tab.fileUri);
+             java.io.BufferedInputStream bis = raw instanceof java.io.BufferedInputStream
+                     ? (java.io.BufferedInputStream) raw : new java.io.BufferedInputStream(raw)) {
+            if (!tab.abx && AbxUtil.isAbxStream(bis)) {
+                tab.abx = true;
+                if (getCurrentTab() == tab) abx = true;
             }
-            tab.loadFailed = false;
-            return sb.toString();
+            if (tab.abx) {
+                try {
+                    tab.loadFailed = false;
+                    return AbxUtil.decodeToString(bis);
+                } catch (Exception e) {
+                    tab.loadFailed = true;
+                    runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                    return "";
+                }
+            }
+            try (InputStreamReader isr = new InputStreamReader(bis, StandardCharsets.UTF_8);
+                 BufferedReader reader = new BufferedReader(isr)) {
+
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append('\n');
+                }
+                tab.loadFailed = false;
+                return sb.toString();
+            } catch (Exception e) {
+                tab.loadFailed = true;
+                runOnUiThread(() -> new ErrorUtil(this).showError(e));
+                return "";
+            }
         } catch (Exception e) {
             tab.loadFailed = true;
             runOnUiThread(() -> new ErrorUtil(this).showError(e));
@@ -694,7 +728,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             return;
         }
         // Plain .xml that looks like Android XML: offer to compile as AXML on save.
-        if (!tab.axml && isXmlFile(tab) && FileUtils.looksLikeAxmlText(text)) {
+        if (!tab.axml && !tab.abx && isXmlFile(tab) && FileUtils.looksLikeAxmlText(text)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle(getString(R.string.compile_axml_title))
                     .setMessage(getString(R.string.compile_axml_msg))
@@ -722,7 +756,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         try (OutputStream os = (tab.file == null
                 ? getContentResolver().openOutputStream(tab.fileUri, "wt")
                 : FileUtils.getOutputStream(tab.file))) {
-            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(StandardCharsets.UTF_8));
+            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries)
+                    : tab.abx ? AbxUtil.encodeString(text) : text.getBytes(StandardCharsets.UTF_8));
             tab.content = text;
             tab.modified = false;
             if (onDone != null) onDone.run();
@@ -739,7 +774,8 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
     private void saveTabTextRoot(EditorTab tab, String text, Runnable onDone) {
         backupForSave(tab.file, tab.rootOriginalPath);
         try (OutputStream os = FileUtils.getOutputStream(tab.file)) {
-            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries) : text.getBytes(StandardCharsets.UTF_8));
+            os.write(tab.axml ? new aXMLEncoder().encodeString(text, this, tab.resEntries)
+                    : tab.abx ? AbxUtil.encodeString(text) : text.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             tab.modified = true;
             new ErrorUtil(this).showError(e);
