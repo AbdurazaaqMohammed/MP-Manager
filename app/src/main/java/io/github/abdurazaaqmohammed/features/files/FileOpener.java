@@ -75,6 +75,7 @@ import io.github.abdurazaaqmohammed.arsc.ArscEditorPlusActivity;
 import io.github.abdurazaaqmohammed.arsc.ArscEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.HexEditorActivity;
 import io.github.abdurazaaqmohammed.ui.activities.TextEditorActivity;
+import io.github.abdurazaaqmohammed.utils.AbxUtil;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.ColorUtil;
@@ -144,6 +145,9 @@ public class FileOpener {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
         }
+        List<String> actionIds = new ArrayList<>(Arrays.asList(
+                BUILTIN_TEXT, BUILTIN_ARCHIVE, BUILTIN_IMAGE,
+                BUILTIN_HEX, BUILTIN_MEDIA, BUILTIN_APK));
         List<String> actionNames = new ArrayList<>(Arrays.asList(
                 context.getString(R.string.text_editor),
                 context.getString(R.string.archive_viewer),
@@ -159,61 +163,38 @@ public class FileOpener {
                 R.drawable.video_24px,
                 R.drawable.apk_document_24px));
         List<Runnable> actionHandlers = new ArrayList<>(Arrays.asList(
-                () -> {
-                    if (!file.isFile()) {
-                        Extensions.showMessage(context, R.string.cannot_open_item);
-                        return;
-                    }
-                    openTextEditor(file, zipFile, zipEntryPath);
-                },
-                () -> {
-                    //String lowerName = fileName.toLowerCase(Locale.ROOT);
-                    //boolean zipBased = lowerName.endsWith(".zip") || lowerName.endsWith(".apk") || lowerName.endsWith(".jar") || lowerName.endsWith(".apks") || lowerName.endsWith(".xapk");
-                    if (!file.isFile()) {
-                        //Extensions.showMessage(context, R.string.not_supported_archive);
-                        return;
-                    }
-                    withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
-                },
-                () -> withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath())),
-                () -> {
-                    if (!file.isFile()) {
-                        Extensions.showMessage(context, R.string.cannot_open_item);
-                        return;
-                    }
-                    openHexEditorRootAware(file);
-                },
-                () -> withReadableCopy(file, readable -> context.playMediaFile(readable.getAbsolutePath())),
-                () -> {
-                    String lowerExt = fileName.toLowerCase(Locale.ROOT);
-                    if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
-                        Extensions.showMessage(context, R.string.not_an_apk);
-                        return;
-                    }
-                    withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
-                }));
+                () -> runBuiltinTool(BUILTIN_TEXT, file, fileName, zipFile, zipEntryPath),
+                () -> runBuiltinTool(BUILTIN_ARCHIVE, file, fileName, zipFile, zipEntryPath),
+                () -> runBuiltinTool(BUILTIN_IMAGE, file, fileName, zipFile, zipEntryPath),
+                () -> runBuiltinTool(BUILTIN_HEX, file, fileName, zipFile, zipEntryPath),
+                () -> runBuiltinTool(BUILTIN_MEDIA, file, fileName, zipFile, zipEntryPath),
+                () -> runBuiltinTool(BUILTIN_APK, file, fileName, zipFile, zipEntryPath)));
         String lower = fileName.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".ttf") || lower.endsWith(".otf") || lower.endsWith(".woff") || lower.endsWith(".woff2")) {
+            actionIds.add(BUILTIN_FONT);
             actionNames.add(context.getString(R.string.font_preview));
             actionIcons.add(R.drawable.uppercase_24px);
-            actionHandlers.add(() -> showFontPreview(file, fileName));
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_FONT, file, fileName, zipFile, zipEntryPath));
         }
         if (lower.endsWith(".arsc")) {
+            actionIds.add(BUILTIN_ARSC);
             actionNames.add(context.getString(R.string.arsc_functions));
             actionIcons.add(R.drawable.apk_document_24px);
-            actionHandlers.add(() -> withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc")));
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_ARSC, file, fileName, zipFile, zipEntryPath));
         }
         if (lower.endsWith(".xml")) {
+            actionIds.add(BUILTIN_XML);
             actionNames.add(context.getString(R.string.xml_functions));
             actionIcons.add(R.drawable.code_24px);
-            actionHandlers.add(() -> showXmlFunctions(file, fileName));
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_XML, file, fileName, zipFile, zipEntryPath));
         }
         String keyExt = FilenameUtils.getExtension(fileName).toLowerCase(Locale.ROOT);
         if (keyExt.equals("jks") || keyExt.equals("keystore") || keyExt.equals("p12")
                 || keyExt.equals("pfx") || keyExt.equals("pk8") || keyExt.equals("pem")) {
+            actionIds.add(BUILTIN_SIG);
             actionNames.add(context.getString(R.string.import_signature));
             actionIcons.add(R.drawable.lock_24px);
-            actionHandlers.add(() -> importSignature(file, fileName));
+            actionHandlers.add(() -> runBuiltinTool(BUILTIN_SIG, file, fileName, zipFile, zipEntryPath));
         }
 
         GridView gridView = new GridView(context);
@@ -238,7 +219,11 @@ public class FileOpener {
                 ColorUtil.changeImageColor(iconView.getDrawable(), typedValue.data);
 
                 TextView labelView = new TextView(context);
-                labelView.setText(actionNames.get(position));
+                String defId = PreferenceManager.getDefaultSharedPreferences(context)
+                        .getString(builtinDefaultKey(fileName), null);
+                String label = actionNames.get(position);
+                if (defId != null && defId.equals(actionIds.get(position))) label += " ✓";
+                labelView.setText(label);
                 labelView.setTextSize(12);
                 labelView.setGravity(Gravity.CENTER);
 
@@ -294,11 +279,130 @@ public class FileOpener {
                 new ErrorUtil(context).showError(e);
             }
         });
+        gridView.setOnItemLongClickListener((parent1, view1, position1, id1) -> {
+            PopupMenu popup = new PopupMenu(context, view1);
+            String key = builtinDefaultKey(fileName);
+            SharedPreferences longPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+            String current = longPrefs.getString(key, null);
+            String id = actionIds.get(position1);
+            boolean isDef = id.equals(current);
+            popup.getMenu().add(context.getString(isDef ? R.string.clear_default : R.string.set_as_default));
+            popup.setOnMenuItemClickListener(item -> {
+                if (isDef) longPrefs.edit().remove(key).apply();
+                else longPrefs.edit().putString(key, id).apply();
+                ((ArrayAdapter<?>) gridView.getAdapter()).notifyDataSetChanged();
+                return true;
+            });
+            popup.show();
+            return true;
+        });
         dialogUtil.styleAlertDialog(dialog);
     }
 
     private static String defaultAppKey(String mime) {
         return "openwith_default_" + mime.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "_");
+    }
+
+    private static final String BUILTIN_TEXT = "text";
+    private static final String BUILTIN_ARCHIVE = "archive";
+    private static final String BUILTIN_IMAGE = "image";
+    private static final String BUILTIN_HEX = "hex";
+    private static final String BUILTIN_MEDIA = "media";
+    private static final String BUILTIN_APK = "apk";
+    private static final String BUILTIN_FONT = "font";
+    private static final String BUILTIN_ARSC = "arsc";
+    private static final String BUILTIN_XML = "xml";
+    private static final String BUILTIN_SIG = "sig";
+
+    private static String builtinDefaultKey(String fileName) {
+        String ext = FilenameUtils.getExtension(fileName);
+        if (ext == null) ext = "";
+        ext = ext.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        if (ext.isEmpty()) ext = "noext";
+        return "openwith_builtin_" + ext;
+    }
+
+    private void runBuiltinTool(String id, File file, String fileName, File zipFile, String zipEntryPath) {
+        switch (id) {
+            case BUILTIN_TEXT:
+                if (file == null || !file.isFile()) {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+                openTextEditor(file, zipFile, zipEntryPath);
+                return;
+            case BUILTIN_ARCHIVE:
+                if (file == null || !file.isFile()) return;
+                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                return;
+            case BUILTIN_IMAGE:
+                if (file == null) return;
+                withReadableCopy(file, readable -> context.openImageViewer(readable.getAbsolutePath()));
+                return;
+            case BUILTIN_HEX:
+                if (file == null || !file.isFile()) {
+                    Extensions.showMessage(context, R.string.cannot_open_item);
+                    return;
+                }
+                openHexEditorRootAware(file);
+                return;
+            case BUILTIN_MEDIA:
+                if (file == null) return;
+                withReadableCopy(file, readable -> context.playMediaFile(readable.getAbsolutePath()));
+                return;
+            case BUILTIN_APK: {
+                if (fileName == null) return;
+                String lowerExt = fileName.toLowerCase(Locale.ROOT);
+                if (!lowerExt.endsWith(".apk") && !lowerExt.endsWith(".apks") && !lowerExt.endsWith(".xapk")) {
+                    Extensions.showMessage(context, R.string.not_an_apk);
+                    return;
+                }
+                withReadableCopy(file, readable -> apkTools.showApkInfoDialog(readable, fileName));
+                return;
+            }
+            case BUILTIN_FONT:
+                if (file == null) return;
+                showFontPreview(file, fileName);
+                return;
+            case BUILTIN_ARSC:
+                if (file == null) return;
+                withReadableCopy(file, readable -> showArscOpenWith(readable, null, "resources.arsc"));
+                return;
+            case BUILTIN_XML:
+                if (file == null) return;
+                showXmlFunctions(file, fileName);
+                return;
+            case BUILTIN_SIG:
+                if (file == null) return;
+                importSignature(file, fileName);
+                return;
+            default:
+                return;
+        }
+    }
+
+    private boolean tryRunBuiltinDefault(File file, String fileName) {
+        if (file == null || fileName == null) return false;
+        String key = builtinDefaultKey(fileName);
+        String def = PreferenceManager.getDefaultSharedPreferences(context).getString(key, null);
+        if (def == null) return false;
+        switch (def) {
+            case BUILTIN_TEXT:
+            case BUILTIN_ARCHIVE:
+            case BUILTIN_IMAGE:
+            case BUILTIN_HEX:
+            case BUILTIN_MEDIA:
+            case BUILTIN_APK:
+            case BUILTIN_FONT:
+            case BUILTIN_ARSC:
+            case BUILTIN_XML:
+            case BUILTIN_SIG:
+                runBuiltinTool(def, file, fileName, null, null);
+                return true;
+            default:
+                PreferenceManager.getDefaultSharedPreferences(context).edit().remove(key).apply();
+                return false;
+        }
     }
 
     private void launchAppForMime(ResolveInfo info, Uri uri, String mime) {
@@ -334,6 +438,7 @@ public class FileOpener {
     }
 
     private void openWithDefaultOrDialog(File file, String fileName) {
+        if (tryRunBuiltinDefault(file, fileName)) return;
         withReadableCopy(file, readable -> {
             Uri uri;
             try {
@@ -733,6 +838,7 @@ public class FileOpener {
     }
 
     public void handleFileClick(File file, String fileName) {
+        if (tryRunBuiltinDefault(file, fileName)) return;
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
         if (fileName.endsWith(".txt") || fileName.endsWith(".json")
             || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
@@ -743,7 +849,13 @@ public class FileOpener {
         } else if(fileName.endsWith(".xml")) {
             withReadableCopy(file, readable -> {
                 try (InputStream is = FileUtils.getInputStream(readable)) {
-                    if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                    if (FileUtils.isAbx(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
+                        context.startActivity(rootAwareEditorIntent(readable, file)
+                                .putExtra(Intent.EXTRA_TEXT, AbxUtil.decodeToString(is2).trim())
+                                .putExtra("abx", true)
+                                .putExtra("path", readable.getPath()));
+                    }
+                    else if (FileUtils.isAxml(is)) try (InputStream is2 = FileUtils.getInputStream(readable)) {
                         context.startActivity(rootAwareEditorIntent(readable, file)
                                 .putExtra(Intent.EXTRA_TEXT, new aXMLDecoder(is2).decodeAsString().trim())
                                 .putExtra("axml", true)
@@ -771,7 +883,18 @@ public class FileOpener {
                 tv.setText(newName);
                 tv.requestFocus();
                 tv.post(() -> {
-                    tv.setSelection(0, newName.indexOf(FilenameUtils.getExtension(newName)) - 1);
+                    try {
+                        int len = tv.length();
+                        int dot = newName.lastIndexOf('.');
+                        int end = (dot > 0 && dot < len) ? dot : len;
+                        if (end < 0) end = 0;
+                        if (end > len) end = len;
+                        tv.setSelection(0, end);
+                    } catch (Exception ignored) {
+                        try {
+                            tv.setSelection(tv.length());
+                        } catch (Exception ignored2) {}
+                    }
                     InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm != null) imm.showSoftInput(tv, InputMethodManager.SHOW_IMPLICIT);
                 });
