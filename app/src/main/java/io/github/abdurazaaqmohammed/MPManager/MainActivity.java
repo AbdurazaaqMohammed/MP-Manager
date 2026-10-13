@@ -1639,12 +1639,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             if (viaShizuku != null && (viaShizuku.length > 0 || files == null)) files = viaShizuku;
         }
         if (files == null || (files.length == 0 && appListingIncomplete)) {
-            if (shizukuDir && files == null) runOnUiThread(() -> {
-                try {
-                    showShizukuGuideOnce(folder, pane1);
-                } catch (Exception ignored) {
-                }
-            });
             boolean elevated = AccessManager.fileOpsOn(this);
             if (!elevated) {
                 try {
@@ -1660,6 +1654,27 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             .toArray(File[]::new);
                     if (viaRoot.length > 0 || files == null) files = viaRoot;
                 }
+                if ((files == null || files.length == 0) && shizukuDir) {
+                    try {
+                        if (RootManager.getInstance(this).isRootAvailable()) {
+                            File[] directRoot = RootManager.getInstance(this).listRootFilesWithStat(folderPath);
+                            if (directRoot != null) {
+                                directRoot = Arrays.stream(directRoot).filter(this::isNotHidden).toArray(File[]::new);
+                                if (directRoot.length > 0 || files == null) files = directRoot;
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+            if (files == null && shizukuDir && AccessManager.active(this) != AccessManager.Backend.ROOT) {
+                boolean rootAvailable = false;
+                try { rootAvailable = RootManager.getInstance(this).isRootAvailable(); } catch (Exception ignored) {}
+                if (!rootAvailable) runOnUiThread(() -> {
+                    try {
+                        showShizukuGuideOnce(folder, pane1);
+                    } catch (Exception ignored) {
+                    }
+                });
             }
             if (files == null) {
                 runOnUiThread(() -> {
