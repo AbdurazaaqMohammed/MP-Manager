@@ -484,6 +484,8 @@ public class ToolsHubActivity extends BaseActivity {
             startActivity(new Intent(this, WifiManagerActivity.class));
         } else if ("storagemanager".equals(item.id())) {
             startActivity(new Intent(this, StorageManagerActivity.class));
+        } else if ("adb".equals(item.id())) {
+            startActivity(new Intent(this, AdbBrowserActivity.class));
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());

@@ -991,6 +991,8 @@ Layout Inspector
     <string name="color_stop">Stop</string>
     <string name="color_start">Start</string>
     <string name="storage_manager">Storage Manager</string>
+    <string name="adb_browser">ADB File Browser</string>
+    <string name="adb_browser_subtitle">Browse system paths as shell (uid 2000) over wireless debugging</string>
     <string name="storage_free_up">Free up space</string>
     <string name="storage_volumes">Volumes</string>
     <string name="storage_space_by_type">Space By Type</string>
