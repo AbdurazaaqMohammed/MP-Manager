@@ -104,6 +104,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -163,7 +164,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     public UIHelper uiHelper;
     private final PaneNavigationController navigation = new PaneNavigationController(this);
     private HistoryAdapter historyAdapter;
-    public String signatureKeyPath;
     private DrawerLayout drawerLayout;
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
     public boolean isSidebarDrawerOpen;
@@ -226,9 +226,8 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         return checkForUpdates;
     }
 
-    public boolean setCheckForUpdates(boolean checkForUpdates) {
+    public void setCheckForUpdates(boolean checkForUpdates) {
         this.checkForUpdates = checkForUpdates;
-        return checkForUpdates;
     }
 
     public File getHomeDir1() {
@@ -1297,9 +1296,13 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 }
                 if (!restored) {
                     boolean locateMode = !TextUtils.isEmpty(locate);
-                    // Instant paint: cached rows, no stat/sort on the main thread.
-                    if (!locateMode) paintCachedPane(true);
-                    paintCachedPane(false);
+                    // Instant paint: only when the cache matches the folder this
+                    // start will actually open (home or last-opened per pane),
+                    // otherwise the paint would flash the wrong folder.
+                    String expect1 = expectedStartupPath(true, startHome1);
+                    String expect2 = expectedStartupPath(false, startHome2);
+                    if (!locateMode) paintCachedPane(true, expect1);
+                    paintCachedPane(false, expect2);
                     // Real listing off the main thread. Startup-folder
                     // resolution can hit the elevated backend (shell), so it
                     // runs on the worker too, then binds back on the main thread.
@@ -1406,6 +1409,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } catch (Exception ignored) {
         }
         return home;
+    }
+
+    private String expectedStartupPath(boolean pane1, File home) {
+        try {
+            if ("last".equals(UiPrefs.startupMode(this, pane1))) {
+                String saved = PreferenceManager.getDefaultSharedPreferences(this)
+                        .getString(pane1 ? "last_path_1" : "last_path_2", null);
+                if (!TextUtils.isEmpty(saved)) return new File(saved).getAbsolutePath();
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            return home == null ? null : home.getAbsolutePath();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     /**
@@ -1792,14 +1811,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             final ZipRead read;
             try {
                 read = readZipFolder(zipFile, path);
-            } catch (IOException e) {
-                handler.post(() -> {
-                    try {
-                        if (!isFinishing() && !isDestroyed()) new ErrorUtil(this).showError(e);
-                    } catch (Exception ignored) {
-                    }
-                });
-                return;
             } catch (Exception e) {
                 handler.post(() -> {
                     try {
@@ -1879,14 +1890,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         return new ZipRead(entries, parent);
     }
 
-    private static final class ZipRead {
-        final List<ZipEntryInfo> entries;
-        final ZipEntryInfo parent;
-
-        ZipRead(List<ZipEntryInfo> entries, ZipEntryInfo parent) {
-            this.entries = entries;
-            this.parent = parent;
-        }
+    private record ZipRead(List<ZipEntryInfo> entries, ZipEntryInfo parent) {
     }
 
     /** Main-thread half of a zip listing: state, header, adapter bind. */
@@ -1988,8 +1992,19 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     } catch (Exception ignored) {
                     }
                 }
-                // Persist the instant-paint cache off the main thread.
-                listingExecutor.execute(() -> PaneCache.save(MainActivity.this, pane1, folderPath, files));
+                // Persist the instant-paint cache off the main thread, but only
+                // for folders a future cold start will actually open (the home
+                // folder, or anything when "last opened" mode is on). Caching
+                // every browsed folder would paint the wrong folder on next
+                // start when home mode is on.
+                listingExecutor.execute(() -> {
+                    try {
+                        String expect = expectedStartupPath(pane1, pane1 ? homeDir1 : homeDir2);
+                        if (expect == null || !expect.equals(folderPath)) return;
+                        PaneCache.save(MainActivity.this, pane1, folderPath, files);
+                    } catch (Exception ignored) {
+                    }
+                });
             });
         });
     }
@@ -1999,10 +2014,11 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
      * tiny JSON read. Returns true when something was painted. The real
      * listing (loadFolderInPaneAsync) replaces it right after.
      */
-    private boolean paintCachedPane(boolean pane1) {
+    private boolean paintCachedPane(boolean pane1, String expectedPath) {
         try {
             PaneCache.Snapshot snap = PaneCache.load(this, pane1);
             if (snap == null || snap.dirPath == null || snap.dirPath.isEmpty()) return false;
+            if (expectedPath == null || !expectedPath.equals(snap.dirPath)) return false;
             File dir = new File(snap.dirPath);
             int n = snap.names.size();
             File[] files = new File[n];
@@ -2141,7 +2157,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         } else {
             message = rss.getString(R.string.shizuku_needed);
             positiveLabel = R.string.shizuku_grant;
-            onPositive = () -> ShizukuShell.requestPermission();
+            onPositive = ShizukuShell::requestPermission;
         }
         // Once the binder arrives (user started Shizuku / granted), reload this folder automatically.
         ShizukuShell.onBinderReceived(() -> runOnUiThread(() -> {
@@ -2160,8 +2176,6 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if(!TextUtils.isEmpty(contentDescription)) Extensions.showMessage(this, contentDescription);
         return false;
     }
-
-
 
     public void reloadCurrentFolder() {
         if (Looper.myLooper() != Looper.getMainLooper()) {
@@ -2279,12 +2293,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     private boolean panesShowSameFolder() {
         File first = pane1Folder;
         File second = pane2Folder;
-        if (first == null || second == null || !first.equals(second)) return false;
+        if (first == null || !first.equals(second)) return false;
         MainFilesArrayAdapter a = paneFilesAdapter(true);
         MainFilesArrayAdapter b = paneFilesAdapter(false);
         if (a == null || b == null) return false;
         if (a.isInZip != b.isInZip) return false;
-        return a.currentZipPath == null ? b.currentZipPath == null : a.currentZipPath.equals(b.currentZipPath);
+        return Objects.equals(a.currentZipPath, b.currentZipPath);
     }
 
     public void refreshAllPanes() {
@@ -2413,8 +2427,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             for(Object item : files) {
                 // Skip the ".." up-entry (fullPath == null): it is not inside
                 // this folder and must not inflate the folder count.
-                if(item instanceof ZipEntryInfo) {
-                    ZipEntryInfo z = (ZipEntryInfo) item;
+                if(item instanceof ZipEntryInfo z) {
                     if (z.getFullPath() == null) continue;
                     if (z.isDirectory()) foldersCount++;
                 }
