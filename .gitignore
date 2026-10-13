@@ -33,3 +33,5 @@ google-services.json
 /app/release
 
 toolpacks/
+/app/release/baselineProfiles
+app/release/output-metadata.json
