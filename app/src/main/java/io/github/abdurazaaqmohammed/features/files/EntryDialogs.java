@@ -115,7 +115,22 @@ public class EntryDialogs {
         renameInput.setText(fileName);
         renameInput.requestFocus();
         renameInput.post(() -> {
-            renameInput.setSelection(0, (isInZip ? !entry.isDirectory() : file.isFile()) && fileName.contains(".") ? fileName.indexOf(FilenameUtils.getExtension(fileName)) - 1 : fileName.length());
+            try {
+                boolean isFile = isInZip ? (entry != null && !entry.isDirectory()) : (file != null && file.isFile());
+                int len = renameInput.length();
+                int end = len;
+                if (isFile && fileName != null) {
+                    int dot = fileName.lastIndexOf('.');
+                    if (dot > 0 && dot < len) end = dot;
+                }
+                if (end < 0) end = 0;
+                if (end > len) end = len;
+                renameInput.setSelection(0, end);
+            } catch (Exception ignored) {
+                try {
+                    renameInput.setSelection(renameInput.length());
+                } catch (Exception ignored2) {}
+            }
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null) imm.showSoftInput(renameInput, InputMethodManager.SHOW_IMPLICIT);
         });
