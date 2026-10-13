@@ -2,18 +2,18 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
                   xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory android:title="Display Settings">
+    <PreferenceCategory android:title="@string/edpref_display">
         <DropDownPreference
             android:key="pref_theme"
-            android:title="Theme"
+            android:title="@string/edpref_theme"
             android:entries="@array/theme_entries"
             android:entryValues="@array/theme_values"
-            android:summary="Set the theme for the editor"
+            android:summary="@string/edpref_theme_summary"
             app:useSimpleSummaryProvider="true" />
 
         <ListPreference
             android:key="font_type"
-            android:title="Font Type"
+            android:title="@string/edpref_font_type"
             android:entries="@array/font_styles"
             android:entryValues="@array/font_style_values"
             android:defaultValue="normal"
@@ -21,7 +21,7 @@
 
         <ListPreference
             android:key="pref_font_size"
-            android:title="Font Size"
+            android:title="@string/edpref_font_size"
             android:entries="@array/font_sizes"
             android:entryValues="@array/font_size_values"
             android:defaultValue="14"
@@ -29,72 +29,72 @@
 
         <SwitchPreferenceCompat
             android:key="pref_show_line_numbers"
-            android:title="Show Line Numbers"
-            android:summary="Display line numbers on the left side"
+            android:title="@string/edpref_show_line_numbers"
+            android:summary="@string/edpref_show_line_numbers_summary"
             android:defaultValue="true"/>
 
         <SwitchPreferenceCompat
             android:key="pref_word_wrap"
-            android:title="Word Wrap"
-            android:summary="Wrap long lines to fit the screen"
+            android:title="@string/edpref_word_wrap"
+            android:summary="@string/edpref_word_wrap_summary"
             android:defaultValue="false"/>
-            
+
         <SwitchPreferenceCompat
             android:key="pref_syntax_highlight"
-            android:title="Syntax Highlighting"
-            android:summary="Enable syntax highlighting for code files"
+            android:title="@string/edpref_syntax_highlight"
+            android:summary="@string/edpref_syntax_highlight_summary"
             android:defaultValue="true"/>
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Editing Settings">
+    <PreferenceCategory android:title="@string/edpref_editing">
         <EditTextPreference
             android:key="pref_tab_size"
-            android:title="Tab Size"
-            android:summary="Number of spaces for a tab"
+            android:title="@string/edpref_tab_size"
+            android:summary="@string/edpref_tab_size_summary"
             android:defaultValue="4"/>
-            
+
         <SwitchPreferenceCompat
             android:key="pref_use_spaces"
-            android:title="Use Spaces for Indentation"
-            android:summary="Insert spaces instead of tab characters"
+            android:title="@string/edpref_use_spaces"
+            android:summary="@string/edpref_use_spaces_summary"
             android:defaultValue="true"/>
 
         <SwitchPreferenceCompat
             android:key="pref_auto_indent"
-            android:title="Auto Indent"
-            android:summary="Automatically indent new lines"
+            android:title="@string/edpref_auto_indent"
+            android:summary="@string/edpref_auto_indent_summary"
             android:defaultValue="true"/>
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Advanced Configuration">
+    <PreferenceCategory android:title="@string/edpref_advanced">
        <Preference
             android:key="pref_import_syntax"
-            android:title="Import Syntax"
-            android:summary="Import custom syntax highlighting definitions"/>
-            
+            android:title="@string/edpref_import_syntax"
+            android:summary="@string/edpref_import_syntax_summary"/>
+
       <Preference
             android:key="pref_bottom_bar_buttons"
-            android:title="Manage Bottom Bar Buttons"
-            android:summary="Configure actions shown on the editor's bottom bar"/>
+            android:title="@string/edpref_bottom_bar"
+            android:summary="@string/edpref_bottom_bar_summary"/>
 
       <Preference
             android:key="edit_floating_menus"
-            android:title="Edit Floating Menus"
-            android:summary="Customize the floating text action menu items"/>
+            android:title="@string/edpref_floating_menus"
+            android:summary="@string/edpref_floating_menus_summary"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:key="gemini_ai_category"
-                        android:title="AI Preference (Gemini AI)">
+                        android:title="@string/edpref_ai_category">
         <EditTextPreference
             android:key="gemini_api_key"
-            android:title="API Key"
-            android:summary="Set your Gemini AI API key"
-            android:dialogTitle="Enter API Key"
+            android:title="@string/edpref_api_key"
+            android:summary="@string/edpref_api_key_summary"
+            android:dialogTitle="@string/edpref_api_key_dialog"
             android:defaultValue="" />
 
         <ListPreference
             android:key="gemini_model"
-            android:title="Gemini model"
+            android:title="@string/edpref_gemini_model"
             android:entries="@array/gemini_model_entries"
             android:entryValues="@array/gemini_model_values"
             android:defaultValue="gemini-3.5-flash-lite"
@@ -102,25 +102,25 @@
 
         <Preference
             android:key="gemini_refresh_models"
-            android:title="Refresh model list"
-            android:summary="Fetch currently available Gemini models using your API key" />
+            android:title="@string/edpref_refresh_models"
+            android:summary="@string/edpref_refresh_models_summary" />
 
         <Preference
             android:key="gemini_disclaimer"
-            android:title="AI usage notice"
+            android:title="@string/edpref_ai_notice"
             android:selectable="false"
-            android:summary="AI responses may be inaccurate or unsafe. You are solely responsible for reviewing and using AI output. This app is not responsible for any consequences of AI usage." />
+            android:summary="@string/edpref_ai_notice_summary" />
 
         <SwitchPreferenceCompat
             android:key="edit_ai_prompt"
-            android:title="Custom prompt"
-            android:summary="Edit prompt before generating AI response"
+            android:title="@string/edpref_custom_prompt"
+            android:summary="@string/edpref_custom_prompt_summary"
             android:defaultValue="false" />
 
         <Preference
             android:key="gemini_website"
-            android:title="Get API Key"
-            android:summary="Visit Gemini website to get your API key" />
+            android:title="@string/edpref_get_api_key"
+            android:summary="@string/edpref_get_api_key_summary" />
     </PreferenceCategory>
 
 </PreferenceScreen>
