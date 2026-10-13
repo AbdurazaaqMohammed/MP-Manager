@@ -76,7 +76,7 @@ public class PickerIconLoader {
         String ext = FilenameUtils.getExtension(path);
         ext = ext == null ? "" : "." + ext.toLowerCase(Locale.ROOT);
 
-        if (".apk".equals(ext)) {
+        if (io.github.abdurazaaqmohammed.utils.ApkIconHelper.isApkLikeExt(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
             loadApkIconAsync(path, fileIconView);
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
@@ -103,21 +103,12 @@ public class PickerIconLoader {
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             try {
-                PackageManager pm = context.getPackageManager();
-                PackageInfo packageInfo = pm.getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
-                if (packageInfo != null && packageInfo.applicationInfo != null) {
-                    ApplicationInfo appInfo = packageInfo.applicationInfo;
-                    if (TextUtils.isEmpty(appInfo.sourceDir) || TextUtils.isEmpty(appInfo.publicSourceDir)) {
-                        appInfo.sourceDir = path;
-                        appInfo.publicSourceDir = path;
-                    }
-                    Drawable icon = appInfo.loadIcon(pm);
-                    if (icon != null) {
-                        iconCache.put(path, icon);
-                        handler.post(() -> {
-                            if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
-                        });
-                    }
+                Drawable icon = io.github.abdurazaaqmohammed.utils.ApkIconHelper.getApkIcon(context, path);
+                if (icon != null) {
+                    iconCache.put(path, icon);
+                    handler.post(() -> {
+                        if (path.equals(fileIconView.getTag())) fileIconView.setImageDrawable(icon);
+                    });
                 }
             } catch (Exception ignored) {
             }
