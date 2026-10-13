@@ -2051,4 +2051,13 @@ Deleted %2$s · %3$s</string>
     <string name="mt_asset_decrypted">Wrote %1$s: %2$s payload, key 0x%3$02X</string>
     <string name="mt_asset_encrypted">Wrote %1$s: %2$s payload, wrapped</string>
     <string name="mt_asset_failed">%1$s</string>
+    <string name="terminal_title">Terminal</string>
+    <string name="terminal_root_off">Shell (user)</string>
+    <string name="terminal_root_on">Shell (root)</string>
+    <string name="terminal_send">Send</string>
+    <string name="terminal_ctrl_c">Ctrl-C</string>
+    <string name="terminal_starting">Starting shell…</string>
+    <string name="terminal_user_banner">Shell started as the app user</string>
+    <string name="terminal_root_banner">Shell started with su</string>
+    <string name="terminal_exited">Shell exited</string>
 </resources>

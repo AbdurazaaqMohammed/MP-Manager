@@ -34,6 +34,7 @@ public class ToolRegistry {
         tools.add(new ToolItem("wifimanager", "Wi-Fi Manager", "DNS profiles, passwords, usage", resId(context, "wifi_24px", pkg), CAT_NETWORK));
         tools.add(new ToolItem("storagemanager", "Storage Manager", "Largest files, clear cache", resId(context, "archive_24px", pkg), CAT_STORAGE));
         tools.add(new ToolItem("mtasset", "MT Asset Container", "Read or build the fb6162b8 asset wrapper", resId(context, "code_24px", pkg), CAT_TEXT));
+        tools.add(new ToolItem("terminal", "Terminal", "Interactive shell, user or root", resId(context, "code_24px", pkg), CAT_DEVICE));
         return tools;
     }
     public static String[] categoriesInOrder() {

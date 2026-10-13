@@ -452,6 +452,8 @@ public class ToolsHubActivity extends BaseActivity {
             startActivity(new Intent(this, StorageManagerActivity.class));
         } else if ("mtasset".equals(item.id())) {
             startActivity(new Intent(this, MtAssetToolActivity.class));
+        } else if ("terminal".equals(item.id())) {
+            startActivity(new Intent(this, io.github.abdurazaaqmohammed.terminal.TerminalActivity.class));
         } else {
             Intent intent = new Intent(this, ToolRunnerActivity.class);
             intent.putExtra("tool_id", item.id());
