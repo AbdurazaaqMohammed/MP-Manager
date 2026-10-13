@@ -9,11 +9,18 @@ A free dual pane, Material Design file manager for Android with focus on APKs an
 [![GitHub Release](https://img.shields.io/github/v/release/AbdurazaaqMohammed/MP-Manager?style=for-the-badge&logo=github&label=Download&color=purple)](https://github.com/AbdurazaaqMohammed/MP-Manager/releases)
 
 [![Telegram Discussion](https://img.shields.io/badge/Telegram%20Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/MP_Manager_Discussion)
+
+[![Donate](https://img.shields.io/badge/Donate-0079C1?style=for-the-badge&logo=paypal)](https://paypal.me/AbdurazaaqMohammed)
+
 ## Features
 
 ### File Manager
 
 <details><summary>Dual pane navigation</summary>
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/13e3b904-43d1-4f46-8d66-7ba8d80c0ad5" />
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/f710883c-68c5-4bb4-ab6f-6966d93668e6" />
+</p>
 
 Browse two folders side by side. This makes it easy to move or copy files from one pane to the other.
 
@@ -35,7 +42,7 @@ Bookmarks can be organized into groups, edited, and deleted by long pressing on 
 <p align="center">
   <img src="./images/bookmarks.png" width="200" alt="Bookmarks and history drawer">
   <br>
-  <em>The bookmarks and history drawer</em>
+  <em>Bookmarks and history drawer</em>
 </p>
 </details>
 
@@ -76,8 +83,18 @@ When a destination file already exists, each conflict can be resolved with repla
 The MIME type detected from the file contents is shown before sharing or opening a file, and a default app can be set or cleared for a file type.
 
 Files received from other apps can be saved from the share menu. Unknown files can be opened with a custom app from the Open with dialog.
+<p align="center">
+  <img width="200" alt="shared" src="https://github.com/user-attachments/assets/abdc4653-5af8-4030-8a53-bdcb70357de6" />
+  <br>
+  <em>File shared with app</em>
+</p>
 
 Shell scripts can be viewed, edited or executed with the output and exit code shown, optionally with root.
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/0b2b1c20-dab3-49a7-b6ea-57ea3035368b" />
+  <br>
+  <em>Shell script output</em>
+</p>
 
 <!-- TODO: Add screenshots/videos
 ![Multi rename dialog](./images/multi-rename.jpg)
@@ -92,8 +109,11 @@ View type, size and last modified date, and copy any value to the clipboard with
 With root, file permissions can be edited, including owner, group, the read, write and execute bits for each, and the setuid, setgid and sticky flags.
 
 Checksums can be computed for any file, pasted hashes can be verified, and hashes of two files can be compared. ZIP entries have CRC32 and checksum support.
-
-<!-- TODO: Add screenshots/videos -->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/d8094e02-0c77-4c4e-ae82-d32468af1674" />
+  <br>
+  <em>Properties</em>
+</p>
 </details>
 
 <details><summary>Root and Shizuku file management</summary>
@@ -102,14 +122,22 @@ Browse and manage files with root or Shizuku, including Android/data, obb and me
 
 In root or Shizuku mode the root directory is added to the sidebar.
 
-<!-- TODO: Add screenshots/videos -->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/87aa9d8d-d2ae-4430-a407-7bf69771e0a7" />
+  <br>
+  <em>Viewing /Android/data and /data/data with root</em>
+</p>
 </details>
 
 <details><summary>Customizable file menu</summary>
 
 Reorder the long press file menu by dragging items anywhere. The menu can be shown as a bottom sheet or in two columns, with Material colors.
 
-<!-- TODO: Add screenshots/videos -->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/ffbd2e8a-5f29-4229-a6ec-d73a5511ffe6" />
+  <br>
+  <em>File menu order</em>
+</p>
 </details>
 
 ### Media
@@ -132,9 +160,12 @@ Open images with swipe between pictures in directory. EXIF metadata is shown for
 
 The built-in image editor can crop single or multiple images with standard or lossless JPEG quality, and view or edit EXIF tags in single or batch mode. The editor also rotates and flips images, crops to a custom aspect ratio, and strips EXIF and other metadata from JPEG files.
 
-<!-- TODO: Add screenshots/videos
-![Image viewer](./images/image-viewer.jpg)
--->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/a73ca257-e65a-4c7a-89ca-d66325763193" />
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/30691f69-0bf1-435d-85dd-fba32d2b4198" />
+  <br>
+  <em>Image viewer and editor</em>
+</p>
 </details>
 
 ### APK Tools
@@ -160,16 +191,18 @@ Sign APKs and split APKs with your own or default (Debug) key. Signing supports 
 
 Automatic signing after modifying an APK can be toggled and configured. For safety with keys that have passwords, it is required to authenticate each time before signing but biometrics can be used as alternative to entering password every time.
 
-<!-- TODO: Add screenshots/videos
-![Sign settings](./images/sign-settings.jpg)
--->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/15e71c8c-af20-4fb9-a650-92be8dffd7e3" />
+  <br>
+  <em>Signature settings</em>
+</p>
 </details>
 
 <details><summary>Toast/Dialog Maker</summary>
 
 Add a Toast or dialog message to activities in an APK, or remove all Toast calls from an APK at once by patching smali code.
 
-<!-- TODO: Add screenshots/videos -->
+<!-- TODO: Add video -->
 </details>
 
 <details><summary>Decompile, build and protect</summary>
@@ -226,7 +259,11 @@ Edit resources.arsc with the built-in ARSC Editor or ARSC Editor Plus. Search by
 
 ARSC Editor Plus also provides a translation mode for editing values side by side, adding and deleting entries, and batch import and export of entries and whole string pools from files or another archive. A floating resource querier looks up a resource by name or ID, checks a color written as #RGB, #ARGB, #RRGGBB or #AARRGGBB, and converts numbers between binary, octal, decimal and hex.
 
-<!-- TODO: Add screenshots/videos -->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/fcd7bf38-03d4-4fe9-abdb-3503180037ae" /> <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/2ce11f22-b8e9-45b7-9185-0d5cbc821fb9" />
+  <br>
+  <em>ARSC Editor</em> &nbsp;·&nbsp; <em>ARSC Editor Plus</em>
+</p>
 </details>
 
 ### Editing and Comparing
@@ -252,7 +289,11 @@ View and edit any file in hex with goto offset, search, and selectable encodings
 
 Data can be pasted from hex, decimal, binary, ASCII or base64 text, values can be searched and replaced as string, integer or other data types in either endianness, and unsaved changes can be reverted.
 
-<!-- TODO: Add screenshots/videos -->
+<p align="center">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/62f82e7d-121f-4172-aaa7-bec697e70f39" />
+  <br>
+  <em>Hex editor</em>
+</p>
 </details>
 
 <details><summary>Compare tools</summary>
@@ -262,9 +303,9 @@ Compare two text files, two ZIP/APK files, two resources.arsc files, or two dex 
 Dex comparison summarizes added, removed and changed classes, can ignore debug information, compilation optimizations, register counts and nop instructions, hides classes by category, and shows differences side by side or unified with navigation between them.
 
 <p align="center">
-  <img src="./images/compared.png" width="200" alt="Compare ARSC"> <img src="./images/diff.png" width="200" alt="Diff view">
+  <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/906e835a-6102-430f-aec0-9e2240350f64" /> <img width="200" alt="Screenshot" src="https://github.com/user-attachments/assets/4ed78047-3be1-40c1-8c78-91130860c78d" />
   <br>
-  <em>Comparing resources.arsc files</em> &nbsp;·&nbsp; <em>The diff view</em>
+  <em>Comparing DEX</em> &nbsp;·&nbsp; <em>Diff view of file</em>
 </p>
 </details>
 
@@ -276,7 +317,11 @@ Extract APKs in batch and pull out specific parts: the app icon, resources.arsc,
 
 Installed apps can also be launched through an activity picker, force stopped, disabled or enabled, have their data cleared or be uninstalled with root.
 
-<!-- TODO: Add screenshots/videos -->
+<p align="center">
+  <img width="200" alt="Screenshot" src="./images/extract1.png" /> <img width="200" alt="Screenshot" src="./images/extract2.png" />
+  <br>
+  <em>App info</em> &nbsp;·&nbsp; <em>Extration options</em>
+</p>
 </details>
 
 ### FTP
