@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
+import io.github.abdurazaaqmohammed.domain.files.FileSorting;
+
 public class PlayerManager {
 
     public enum RepeatMode { OFF, ONE, ALL }
@@ -621,7 +623,7 @@ public class PlayerManager {
             } catch (Exception ignored) {}
         }
         try {
-            Collections.sort(out, (a, b) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+            Collections.sort(out, (a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
         } catch (Exception ignored) {}
         return out;
     }

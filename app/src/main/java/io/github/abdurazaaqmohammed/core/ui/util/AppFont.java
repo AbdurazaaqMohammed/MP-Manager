@@ -1,5 +1,6 @@
 package io.github.abdurazaaqmohammed.core.ui.util;
 
+import android.R;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Typeface;
@@ -136,7 +137,7 @@ public final class AppFont {
 
         private static boolean hasExplicitFontFamily(Context context, AttributeSet attrs) {
             if (attrs == null) return false;
-            TypedArray ta = context.obtainStyledAttributes(attrs, new int[]{android.R.attr.fontFamily});
+            TypedArray ta = context.obtainStyledAttributes(attrs, new int[]{R.attr.fontFamily});
             try {
                 return ta.hasValue(0);
             } finally {

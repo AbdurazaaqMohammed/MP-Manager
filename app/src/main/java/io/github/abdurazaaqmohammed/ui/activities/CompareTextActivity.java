@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.ui.activities;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -416,7 +417,7 @@ public class CompareTextActivity extends BaseActivity {
     private void showJumpDialog() {
         EditText input = new EditText(this);
         input.setSingleLine(true);
-        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setHint("1…" + diffLines.size());
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.jump_to_line)

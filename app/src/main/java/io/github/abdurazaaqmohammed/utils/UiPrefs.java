@@ -2,6 +2,9 @@ package io.github.abdurazaaqmohammed.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.view.View;
+import android.view.animation.DecelerateInterpolator;
+
 import androidx.preference.PreferenceManager;
 
 import java.text.SimpleDateFormat;
@@ -124,7 +127,7 @@ public final class UiPrefs {
         }
     }
 
-    public static void playFolderTransition(android.view.View pane) {
+    public static void playFolderTransition(View pane) {
         if (pane == null) return;
         String mode = folderAnim(pane.getContext());
         if (FOLDER_ANIM_OFF.equals(mode)) return;
@@ -132,8 +135,8 @@ public final class UiPrefs {
             pane.animate().cancel();
             float density = pane.getResources().getDisplayMetrics().density;
             long dur = 170;
-            android.view.animation.DecelerateInterpolator interp =
-                    new android.view.animation.DecelerateInterpolator();
+            DecelerateInterpolator interp =
+                    new DecelerateInterpolator();
             if (FOLDER_ANIM_FADE.equals(mode)) {
                 pane.setAlpha(0.35f);
                 pane.setTranslationX(0f);

@@ -52,6 +52,7 @@ import io.github.abdurazaaqmohammed.utils.ArchiveUtil;
 import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
@@ -523,12 +524,11 @@ public class FileOperationsHelper {
                 : currentPath.replace('\\', '/').replaceAll("/+$", "") + "/";
 
         File bak = new File(zipFile.getParent(), zipFile.getName() + ".bak");
-        FileUtils.copyFile(zipFile, bak);
+        if (UiPrefs.genBackup(context) && !bak.exists()) FileUtils.copyFile(zipFile, bak);
         File tempFileDir = null;
         try (ZipFile sourceZip = new ZipFile(zipFile)) {
             Map<String, Long> existingEntries = new LinkedHashMap<>();
             for (FileHeader fh : sourceZip.getFileHeaders()) existingEntries.put(fh.getFileName(), fh.getLastModifiedTime());
-
             Set<String> toRemove = new LinkedHashSet<>();
             // {file, entryName}; a null entryName marks a directory added under targetDir keeping its own name
             List<Object[]> namedAdds = new ArrayList<>();

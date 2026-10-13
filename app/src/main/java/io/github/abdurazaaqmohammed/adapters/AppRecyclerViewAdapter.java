@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.adapters;
 import static android.view.View.GONE;
 
 import android.text.TextUtils;
+import android.text.format.Formatter;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -146,7 +147,7 @@ public class AppRecyclerViewAdapter extends RecyclerView.Adapter<AppRecyclerView
             sub.append(" • v").append(appInfo.versionName);
         }
         if (appInfo.totalSize > 0) {
-            sub.append(" • ").append(android.text.format.Formatter.formatFileSize(
+            sub.append(" • ").append(Formatter.formatFileSize(
                     holder.packageNameView.getContext(),
                     appInfo.totalSize));
         }

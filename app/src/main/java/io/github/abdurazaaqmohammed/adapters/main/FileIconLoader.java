@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -104,7 +105,7 @@ public class FileIconLoader {
         if (ext != null) ext = "." + ext.toLowerCase(Locale.ROOT);
         else ext = "";
 
-        if (io.github.abdurazaaqmohammed.utils.ApkIconHelper.isApkLikeExt(ext)) {
+        if (ApkIconHelper.isApkLikeExt(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
             if (!isInZip) loadApkIconAsync(path, fileIconView);
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
@@ -135,7 +136,7 @@ public class FileIconLoader {
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             try {
-                Drawable icon = io.github.abdurazaaqmohammed.utils.ApkIconHelper.getApkIcon(context, path);
+                Drawable icon = ApkIconHelper.getApkIcon(context, path);
                 if (icon != null) {
                     iconCache.put(path, icon);
                     context.runOnUiThread(() -> {

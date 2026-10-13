@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -506,7 +507,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             }
                         }
                     } else if (selectedPositions.size() == 2 && otherPaneAdapter.selectedPositions.isEmpty()) {
-                        java.util.Iterator<Integer> it = selectedPositions.iterator();
+                        Iterator<Integer> it = selectedPositions.iterator();
                         int i1 = it.next();
                         int i2 = it.next();
                         if (i1 >= 0 && i1 < values.length && i2 >= 0 && i2 < values.length) {
@@ -550,7 +551,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                             visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_APK, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_APK, direction)));
                     }
                 } else if (selectedPositions.size() == 2) {
-                    java.util.Iterator<Integer> it = selectedPositions.iterator();
+                    Iterator<Integer> it = selectedPositions.iterator();
                     int i1 = it.next();
                     int i2 = it.next();
                     if (i1 >= 0 && i1 < values.length && i2 >= 0 && i2 < values.length) {

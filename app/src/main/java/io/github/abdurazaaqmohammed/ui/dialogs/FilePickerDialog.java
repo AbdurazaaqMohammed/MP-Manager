@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.ui.views.SortDirectionToggle;
 
 import org.apache.commons.io.FilenameUtils;
@@ -256,10 +257,10 @@ public class FilePickerDialog {
                     break;
                 case 3:
                     result = extOf(f1).compareToIgnoreCase(extOf(f2));
-                    if (result == 0) result = io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(f1.getName(), f2.getName());
+                    if (result == 0) result = FileSorting.compareNaturalIgnoreCase(f1.getName(), f2.getName());
                     break;
                 default:
-                    result = io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(f1.getName(), f2.getName());
+                    result = FileSorting.compareNaturalIgnoreCase(f1.getName(), f2.getName());
                     break;
             }
             if (f1.isDirectory() && !f2.isDirectory()) return -1;

@@ -162,6 +162,7 @@ public class ArscTextActivity extends BaseActivity {
         fragment = UnifiedEditorFragment.newInstance(null, "ArscText", null, UnifiedEditorFragment.TYPE_TEXT);
         getSupportFragmentManager().beginTransaction().replace(R.id.arsc_text_editor_container, fragment).commit();
         getSupportFragmentManager().executePendingTransactions();
+        fragment.setFileName("resources.json");
         fragment.setCallback(new UnifiedEditorFragment.EditorCallback() {
             public void onContentModified(String className) {
                 if (!loadingText) bufferDirty = true;

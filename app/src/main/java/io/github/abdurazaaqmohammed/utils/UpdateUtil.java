@@ -28,6 +28,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,8 +45,8 @@ public class UpdateUtil {
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
 
     /** Tag that names an app version: "1.0.9" or "v1.0.9". */
-    private static final java.util.regex.Pattern VERSION_TAG =
-            java.util.regex.Pattern.compile("^v?(\\d+(?:\\.\\d+)*)$");
+    private static final Pattern VERSION_TAG =
+            Pattern.compile("^v?(\\d+(?:\\.\\d+)*)$");
 
     /** The app's own APK asset, e.g. MP-Manager.1.0.9.apk. */
     private static final String APP_APK_PREFIX = "mp-manager.";
@@ -155,7 +157,7 @@ public class UpdateUtil {
             JSONObject release = releases.optJSONObject(i);
             if (release == null) continue;
             String tag = release.optString("tag_name", "").trim();
-            java.util.regex.Matcher tagMatcher = VERSION_TAG.matcher(tag);
+            Matcher tagMatcher = VERSION_TAG.matcher(tag);
             if (!tagMatcher.find()) continue;
             JSONArray assets = release.optJSONArray("assets");
             if (assets == null) continue;

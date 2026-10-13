@@ -72,6 +72,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -445,7 +446,7 @@ public class SettingsController {
      * pick-one lists, not search fields, so all items must always show.
      */
     private ArrayAdapter<String> dropdownAdapter(String[] items) {
-        return dropdownAdapter(new ArrayList<>(java.util.Arrays.asList(items)));
+        return dropdownAdapter(new ArrayList<>(Arrays.asList(items)));
     }
 
     private ArrayAdapter<String> dropdownAdapter(List<String> items) {

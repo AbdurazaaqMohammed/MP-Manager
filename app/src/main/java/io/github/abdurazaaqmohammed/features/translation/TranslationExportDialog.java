@@ -3,6 +3,7 @@ package io.github.abdurazaaqmohammed.features.translation;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -72,8 +73,8 @@ public class TranslationExportDialog {
         outputPathTarget = outputPathInput;
 
         // Set default output path to Downloads/MP Manager
-        File downloadsDir = new File(android.os.Environment.getExternalStoragePublicDirectory(
-                android.os.Environment.DIRECTORY_DOWNLOADS), "MP Manager");
+        File downloadsDir = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "MP Manager");
         if (!downloadsDir.exists()) downloadsDir.mkdirs();
         outputPathInput.setText(downloadsDir.getAbsolutePath());
 
@@ -216,7 +217,7 @@ public class TranslationExportDialog {
         int marker = path.indexOf(':');
         if (marker >= 0 && marker < path.length() - 1) {
             String relative = path.substring(marker + 1);
-            File primary = android.os.Environment.getExternalStorageDirectory();
+            File primary = Environment.getExternalStorageDirectory();
             return primary == null ? null : new File(primary, relative).getAbsolutePath();
         }
         File doc = new File(path);

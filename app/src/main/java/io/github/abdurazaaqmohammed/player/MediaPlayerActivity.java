@@ -18,6 +18,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -30,6 +31,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -37,11 +40,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MediaPlayerActivity extends BaseActivity implements
         PlayerManager.PlaybackCallback,
@@ -717,7 +722,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         final List<String> labels = new ArrayList<>();
         final List<Integer> actions = new ArrayList<>();
         rebuildSubtitleSettings(labels, actions, delayLabel, sizeLabel, colorLabel, bgLabel);
-        final androidx.appcompat.app.AlertDialog dlg = new MaterialAlertDialogBuilder(this)
+        final AlertDialog dlg = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.subtitle_settings)
                 .setItems(labels.toArray(new String[0]), null).create();
         dlg.show();
@@ -752,7 +757,7 @@ public class MediaPlayerActivity extends BaseActivity implements
     }
 
     private void onSubtitleSettingClicked(int action,
-            androidx.appcompat.app.AlertDialog dlg, String[] delayLabel,
+            AlertDialog dlg, String[] delayLabel,
             String[] sizeLabel, String[] colorLabel, String[] bgLabel,
             List<String> labels, List<Integer> actions) {
         if (action == 0) {
@@ -803,7 +808,7 @@ public class MediaPlayerActivity extends BaseActivity implements
         rebuildSubtitleSettings(labels, actions, delayLabel, sizeLabel, colorLabel, bgLabel);
         delayLabel[0] = getString(R.string.subtitle_delay_value,
                 playerManager.getSubtitleDelayMs());
-        dlg.getListView().setAdapter(new android.widget.ArrayAdapter<>(this,
+        dlg.getListView().setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.select_dialog_item, labels.toArray(new String[0])));
     }
 
@@ -910,24 +915,24 @@ public class MediaPlayerActivity extends BaseActivity implements
 
     private void playPathWithSiblings(String playPath) {
         try {
-            java.io.File cur = new java.io.File(playPath);
-            java.io.File dir = cur.getParentFile();
+            File cur = new File(playPath);
+            File dir = cur.getParentFile();
             if (dir != null && dir.isDirectory()) {
-                java.io.File[] all = dir.listFiles();
+                File[] all = dir.listFiles();
                 if (all != null) {
-                    java.util.List<java.io.File> media = new java.util.ArrayList<>();
-                    for (java.io.File f : all) {
+                    List<File> media = new ArrayList<>();
+                    for (File f : all) {
                         if (f == null || !f.isFile()) continue;
-                        String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+                        String n = f.getName().toLowerCase(Locale.ROOT);
                         if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
                                 || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
                                 || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
                                 || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                 || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                     }
-                    media.sort((a, b) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+                    media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
                     if (!media.isEmpty()) {
-                        java.util.List<MediaItem> q = new java.util.ArrayList<>();
+                        List<MediaItem> q = new ArrayList<>();
                         int start = 0;
                         for (int i = 0; i < media.size(); i++) {
                             q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));

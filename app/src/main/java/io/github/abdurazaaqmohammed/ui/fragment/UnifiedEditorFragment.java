@@ -1133,7 +1133,11 @@ public class UnifiedEditorFragment extends Fragment implements SmaliMethodFieldL
                     callback.onPreferencesRequested();
                 } else {
                     Activity act = getActivity();
-                    if (act != null) act.startActivity(new Intent(act, EditorSettingsActivity.class));
+                    if (act != null) {
+                        Intent settingsIntent = new Intent(act, EditorSettingsActivity.class);
+                        if (isSmali) settingsIntent.putExtra("from_dex", true);
+                        act.startActivity(settingsIntent);
+                    }
                 }
             } else if (id == closeIndex) {
                 if (callback != null) callback.onCloseRequested();

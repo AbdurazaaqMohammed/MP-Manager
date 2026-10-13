@@ -5,8 +5,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -103,7 +105,7 @@ public final class SubtitleUtil {
                 tagged.add(f);
             }
         }
-        java.util.Comparator<File> byExt = (a, b) ->
+        Comparator<File> byExt = (a, b) ->
                 Integer.compare(extPriority(a.getName()), extPriority(b.getName()));
         exact.sort(byExt);
         tagged.sort(byExt);
@@ -366,7 +368,7 @@ public final class SubtitleUtil {
         for (String raw : lines) {
             String line = raw.trim();
             if (line.isEmpty()) continue;
-            java.util.regex.Matcher m = MICRODVD.matcher(line);
+            Matcher m = MICRODVD.matcher(line);
             if (!m.matches()) continue;
             try {
                 long f1 = Long.parseLong(m.group(1));

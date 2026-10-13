@@ -103,10 +103,12 @@ public class ApkSignatureTools {
         ProgressManager pm = new ProgressManager(context, true).show();
         new Thread(() -> {
             boolean ok = SignatureStripUtil.strip(apk);
+            boolean stillSigned = ok && SignatureStripUtil.hasSignature(apk);
+            boolean done = ok && !stillSigned;
             pm.dismiss();
             context.handler.post(() -> {
-                Extensions.showMessage(context, context.rss.getString(ok ? R.string.signature_removed : R.string.failed_to_remove_signature));
-                if (ok) context.loadFolderInPane(apk.getParentFile(), pane1, false);
+                Extensions.showMessage(context, context.rss.getString(done ? R.string.signature_removed : R.string.failed_to_remove_signature));
+                if (done) context.loadFolderInPane(apk.getParentFile(), pane1, false);
             });
         }).start();
     }

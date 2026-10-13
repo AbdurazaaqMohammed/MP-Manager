@@ -76,8 +76,12 @@ import com.android.tools.smali.dexlib2.iface.value.ShortEncodedValue;
 import com.android.tools.smali.dexlib2.iface.value.StringEncodedValue;
 import com.android.tools.smali.dexlib2.iface.value.TypeEncodedValue;
 
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.FileHeader;
+
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
@@ -85,6 +89,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -218,7 +223,7 @@ public final class DexCompareEngine {
             return canonicalizeLabels(line);
         }
 
-        private static final Set<String> OPCODE_BASES = new java.util.HashSet<>(Arrays.asList(
+        private static final Set<String> OPCODE_BASES = new HashSet<>(Arrays.asList(
                 "move", "move-wide", "move-object", "const", "const-wide", "const-string", "goto",
                 "invoke-virtual", "invoke-super", "invoke-direct", "invoke-static", "invoke-interface",
                 "invoke-custom", "invoke-polymorphic"));
@@ -351,21 +356,21 @@ public final class DexCompareEngine {
     /** Extracts classes*.dex entries from an APK into the cache dir and returns them. */
     private List<File> extractDexFiles(File apk, File cacheDir) throws Exception {
         List<File> out = new ArrayList<>();
-        try (net.lingala.zip4j.ZipFile zip = new net.lingala.zip4j.ZipFile(apk)) {
-            List<net.lingala.zip4j.model.FileHeader> dexHeaders = new ArrayList<>();
-            for (net.lingala.zip4j.model.FileHeader header : zip.getFileHeaders()) {
+        try (ZipFile zip = new ZipFile(apk)) {
+            List<FileHeader> dexHeaders = new ArrayList<>();
+            for (FileHeader header : zip.getFileHeaders()) {
                 String name = header.getFileName();
                 if (name != null && name.matches("classes(\\d*)\\.dex")) dexHeaders.add(header);
             }
             dexHeaders.sort((a, b) -> Integer.compare(dexNumber(a.getFileName()), dexNumber(b.getFileName())));
-            for (net.lingala.zip4j.model.FileHeader header : dexHeaders) {
+            for (FileHeader header : dexHeaders) {
                 String name = header.getFileName();
                 // content-addressed cache name: the entry's CRC and size, so a
                 // previously extracted identical dex is reused without I/O
                 File target = new File(cacheDir, cacheName(apk.getName(), name, header.getCrc()));
                 if (!isCached(target, header.getUncompressedSize())) {
                     try (InputStream in = zip.getInputStream(header);
-                         OutputStream os = new java.io.FileOutputStream(target)) {
+                         OutputStream os = new FileOutputStream(target)) {
                         byte[] buffer = new byte[65536];
                         int read;
                         while ((read = in.read(buffer)) != -1) os.write(buffer, 0, read);

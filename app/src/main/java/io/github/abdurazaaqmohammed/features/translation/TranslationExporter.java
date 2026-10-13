@@ -10,10 +10,12 @@ import net.lingala.zip4j.model.FileHeader;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -156,11 +158,11 @@ public class TranslationExporter {
     private static void writeExportFile(File file, List<StringEntry> entries, String format) throws IOException {
         if ("mtd".equalsIgnoreCase(format)) {
             try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                    new java.io.FileOutputStream(file), StandardCharsets.UTF_8))) {
+                    new FileOutputStream(file), StandardCharsets.UTF_8))) {
                 writeMtdFormat(writer, entries);
             }
         } else {
-            java.nio.file.Files.write(file.toPath(),
+            Files.write(file.toPath(),
                     writeJsonFormat(entries).getBytes(StandardCharsets.UTF_8));
         }
     }

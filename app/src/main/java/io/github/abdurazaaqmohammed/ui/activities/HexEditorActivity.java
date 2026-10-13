@@ -52,6 +52,7 @@ import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
+import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
@@ -716,16 +717,10 @@ public class HexEditorActivity extends BaseActivity {
             if (!UiPrefs.genBackup(this)) return;
             if (rootOriginalPath != null) {
                 if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginalPath)) {
-                    AccessManager.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
+                    if (!AccessManager.exists(this, rootOriginalPath + ".bak")) AccessManager.copyFile(this, rootOriginalPath, rootOriginalPath + ".bak", true);
                 }
             } else if (file != null && file.isFile()) {
-                File bak = new File(file.getPath() + ".bak");
-                try (RandomAccessFile in = new RandomAccessFile(file, "r");
-                     RandomAccessFile out = new RandomAccessFile(bak, "rw")) {
-                    byte[] buf = new byte[65536];
-                    int n;
-                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                }
+                FileUtils.backupOnce(file);
             }
         } catch (Exception ignored) {
         }

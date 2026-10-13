@@ -2,6 +2,8 @@ package io.github.abdurazaaqmohammed.ApkExtractor;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
+
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.core.ui.base.BaseActivity;
 
 import android.content.ComponentName;
@@ -10,6 +12,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.InstallSourceInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -20,6 +23,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -31,6 +35,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.provider.Settings;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -41,9 +46,11 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 
+import io.github.abdurazaaqmohammed.data.prefs.ExtractorCache;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.SignWrapper;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -53,6 +60,7 @@ import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.android.apksig.ApkVerifier;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
@@ -67,12 +75,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -144,9 +155,9 @@ public class APKExtractorActivity extends BaseActivity {
 
     public static String formatDate(long millis, String pattern) {
         if (pattern == null || pattern.isEmpty() || pattern.equals("default")) return new Date(millis).toString();
-        if (pattern.equals("locale")) return java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(new Date(millis));
+        if (pattern.equals("locale")) return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(millis));
         try {
-            return new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault()).format(new Date(millis));
+            return new SimpleDateFormat(pattern, Locale.getDefault()).format(new Date(millis));
         } catch (Exception e) {
             return new Date(millis).toString();
         }
@@ -154,7 +165,7 @@ public class APKExtractorActivity extends BaseActivity {
 
     public static String resolveSigType(File apk) {
         try {
-            com.android.apksig.ApkVerifier.Result result = new com.android.apksig.ApkVerifier.Builder(apk).build().verify();
+            ApkVerifier.Result result = new ApkVerifier.Builder(apk).build().verify();
             StringBuilder sigs = new StringBuilder();
             boolean v1 = false;
             try { v1 = result.isVerifiedUsingV1Scheme(); } catch (Exception ignored) {}
@@ -469,10 +480,10 @@ public class APKExtractorActivity extends BaseActivity {
 
     private void paintCachedApps() {
         try {
-            io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.Snapshot user =
-                    io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.load(this, false, dateFormat);
-            io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.Snapshot sys =
-                    io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.load(this, true, dateFormat);
+            ExtractorCache.Snapshot user =
+                    ExtractorCache.load(this, false, dateFormat);
+            ExtractorCache.Snapshot sys =
+                    ExtractorCache.load(this, true, dateFormat);
             boolean painted = false;
             if (user != null && user.sortMode == sortMode && !user.apps.isEmpty()) {
                 userAppInfoList.clear();
@@ -531,7 +542,7 @@ public class APKExtractorActivity extends BaseActivity {
                         appInfo.appInfo = app.applicationInfo;
                         appInfo.targetSdk = app.applicationInfo.targetSdkVersion;
                         try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
                                 appInfo.minSdk = app.applicationInfo.minSdkVersion;
                             else appInfo.minSdk = -1;
                         } catch (Exception ignored2) { appInfo.minSdk = -1; }
@@ -559,9 +570,9 @@ public class APKExtractorActivity extends BaseActivity {
                         } catch (Exception ignored2) {}
                         try {
                             String inst = null;
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 try {
-                                    android.content.pm.InstallSourceInfo si = pm.getInstallSourceInfo(app.packageName);
+                                    InstallSourceInfo si = pm.getInstallSourceInfo(app.packageName);
                                     if (si != null) inst = si.getInstallingPackageName();
                                 } catch (Exception ignored2) {}
                             }
@@ -613,8 +624,8 @@ public class APKExtractorActivity extends BaseActivity {
 
                 new Thread(() -> {
                     try {
-                        io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.save(APKExtractorActivity.this, false, mode, freshUser);
-                        io.github.abdurazaaqmohammed.data.prefs.ExtractorCache.save(APKExtractorActivity.this, true, mode, freshSystem);
+                        ExtractorCache.save(APKExtractorActivity.this, false, mode, freshUser);
+                        ExtractorCache.save(APKExtractorActivity.this, true, mode, freshSystem);
                     } catch (Exception ignored) {}
                     try {
                         loadAdditionalDetails(userAppInfoList, appAdapter[0]);
@@ -1104,38 +1115,38 @@ public class APKExtractorActivity extends BaseActivity {
         try {
             RootManager rm = RootManager.getInstance(this);
             if (rm.isRootMode() && rm.isRootAvailable()) return true;
-            return rm.isShizukuMode() && io.github.abdurazaaqmohammed.utils.ShizukuManager.ready();
+            return rm.isShizukuMode() && ShizukuManager.ready();
         } catch (Exception e) {
             return false;
         }
     }
 
     private void elevatedExec(String baseCmd, String packageName, boolean guardCritical) throws Exception {
-        if (!RootManager.isPackageNameValid(packageName)) throw new java.io.IOException("Invalid package name: " + packageName);
-        if (guardCritical && RootManager.isCriticalPackage(packageName)) throw new java.io.IOException("Blocked: refusing to modify critical system app: " + packageName);
+        if (!RootManager.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
+        if (guardCritical && RootManager.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to modify critical system app: " + packageName);
         String cmd = baseCmd + " " + RootManager.escapeShellArg(packageName);
         RootManager rm = RootManager.getInstance(this);
         if (rm.isRootMode() && rm.isRootAvailable()) {
             RootManager.ShellResult r = rm.execute(cmd, 30);
-            if (!r.isSuccess()) throw new java.io.IOException(r.error() != null && !r.error().isEmpty() ? r.error() : r.output());
+            if (!r.isSuccess()) throw new IOException(r.error() != null && !r.error().isEmpty() ? r.error() : r.output());
         } else {
-            io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result r =
-                    io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 30);
-            if (!r.success) throw new java.io.IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : "failed");
+            ShizukuShell.Result r =
+                    ShizukuShell.exec(cmd, 30);
+            if (!r.success) throw new IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : "failed");
         }
     }
 
     private void elevatedUninstall(String packageName) throws Exception {
-        if (!RootManager.isPackageNameValid(packageName)) throw new java.io.IOException("Invalid package name: " + packageName);
-        if (RootManager.isCriticalPackage(packageName)) throw new java.io.IOException("Blocked: refusing to uninstall critical system app: " + packageName);
+        if (!RootManager.isPackageNameValid(packageName)) throw new IOException("Invalid package name: " + packageName);
+        if (RootManager.isCriticalPackage(packageName)) throw new IOException("Blocked: refusing to uninstall critical system app: " + packageName);
         RootManager rm = RootManager.getInstance(this);
         if (rm.isRootMode() && rm.isRootAvailable()) {
             rm.uninstallSilent(packageName);
             return;
         }
-        io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result r =
-                io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
-        if (!r.success || r.stdout == null || !r.stdout.contains("Success")) throw new java.io.IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : r.stdout);
+        ShizukuShell.Result r =
+                ShizukuShell.exec("pm uninstall " + RootManager.escapeShellArg(packageName), 30);
+        if (!r.success || r.stdout == null || !r.stdout.contains("Success")) throw new IOException(r.stderr != null && !r.stderr.isEmpty() ? r.stderr : r.stdout);
     }
 
     private String batchNames(List<AppInfo> targets) {
@@ -1214,7 +1225,7 @@ public class APKExtractorActivity extends BaseActivity {
             int total = targets.size();
             handler.post(() -> {
                 if (failed.isEmpty()) Extensions.showMessage(this, getString(R.string.batch_done_x, total));
-                else Extensions.showMessage(this, getString(R.string.batch_failed_x, failed.size(), android.text.TextUtils.join(", ", failed)));
+                else Extensions.showMessage(this, getString(R.string.batch_failed_x, failed.size(), TextUtils.join(", ", failed)));
                 refreshApps();
             });
         }).start();
@@ -1432,12 +1443,12 @@ public class APKExtractorActivity extends BaseActivity {
             AppInfo app = apps.get(i);
             try {
                 if (app.icon == null && app.packageName != null) {
-                    android.graphics.drawable.Drawable cached = iconCache.getMemory(app.packageName, app.getVersionCode());
+                    Drawable cached = iconCache.getMemory(app.packageName, app.getVersionCode());
                     if (cached == null) cached = iconCache.getDisk(this, app.packageName, app.getVersionCode());
                     if (cached != null) {
                         app.icon = cached;
                     } else {
-                        android.content.pm.ApplicationInfo info = app.appInfo;
+                        ApplicationInfo info = app.appInfo;
                         if (info == null) {
                             try {
                                 info = pm.getApplicationInfo(app.packageName, 0);
@@ -1445,7 +1456,7 @@ public class APKExtractorActivity extends BaseActivity {
                             } catch (Exception ignored) {}
                         }
                         if (info != null) {
-                            android.graphics.drawable.Drawable loaded = info.loadIcon(pm);
+                            Drawable loaded = info.loadIcon(pm);
                             app.icon = loaded;
                             iconCache.put(this, app.packageName, app.getVersionCode(), loaded);
                         }

@@ -968,11 +968,11 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             if (!UiPrefs.genBackup(this)) return;
             if (rootOriginal != null) {
                 if (AccessManager.fileOpsOn(this) && AccessManager.exists(this, rootOriginal)) {
-                    AccessManager.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
+                    File bak = new File(rootOriginal + ".bak");
+                    if (!bak.exists() && !AccessManager.exists(this, rootOriginal + ".bak")) AccessManager.copyFile(this, rootOriginal, rootOriginal + ".bak", true);
                 }
             } else if (directFile != null && directFile.isFile()) {
-                File bak = new File(directFile.getPath() + ".bak");
-                FileUtils.copyFile(directFile, bak);
+                FileUtils.backupOnce(directFile);
             }
         } catch (Exception ignored) {
         }

@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.text.format.Formatter;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -21,6 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -639,7 +641,7 @@ public class SharedEntryActivity extends BaseActivity {
                 try {
                     File dest = uniqueDest(dir, "shared_text.txt");
                     try (OutputStream os = new FileOutputStream(dest)) {
-                        os.write(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        os.write(text.getBytes(StandardCharsets.UTF_8));
                     }
                     done++;
                 } catch (Exception ignored) {
@@ -750,7 +752,7 @@ public class SharedEntryActivity extends BaseActivity {
         try {
             String ext = extensionOf(name);
             if (ext != null) {
-                String mime = android.webkit.MimeTypeMap.getSingleton()
+                String mime = MimeTypeMap.getSingleton()
                         .getMimeTypeFromExtension(ext);
                 if (mime != null) return mime;
             }

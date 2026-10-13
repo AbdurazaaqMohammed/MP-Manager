@@ -1,7 +1,14 @@
 package io.github.abdurazaaqmohammed.ApkExtractor;
 
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
+import android.text.format.Formatter;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -34,7 +41,7 @@ public final class AppDetailsDialog {
 
         LinearLayout header = new LinearLayout(act);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
         ImageView icon = new ImageView(act);
         int iconSize = dp(act, 52);
         icon.setLayoutParams(new LinearLayout.LayoutParams(iconSize, iconSize));
@@ -62,11 +69,11 @@ public final class AppDetailsDialog {
         if (ai.icon == null && ai.packageName != null) {
             new Thread(() -> {
                 try {
-                    android.content.pm.PackageManager pm = act.getPackageManager();
-                    android.graphics.drawable.Drawable d = act.iconCache.getDisk(act, ai.packageName, ai.getVersionCode());
+                    PackageManager pm = act.getPackageManager();
+                    Drawable d = act.iconCache.getDisk(act, ai.packageName, ai.getVersionCode());
                     if (d == null) {
                         try {
-                            android.content.pm.ApplicationInfo info = ai.appInfo != null ? ai.appInfo : pm.getApplicationInfo(ai.packageName, 0);
+                            ApplicationInfo info = ai.appInfo != null ? ai.appInfo : pm.getApplicationInfo(ai.packageName, 0);
                             if (info != null) {
                                 d = info.loadIcon(pm);
                                 act.iconCache.put(act, ai.packageName, ai.getVersionCode(), d);
@@ -75,7 +82,7 @@ public final class AppDetailsDialog {
                     }
                     if (d != null) {
                         ai.icon = d;
-                        android.graphics.drawable.Drawable finalD = d;
+                        Drawable finalD = d;
                         act.handler.post(() -> {
                             try {
                                 icon.setImageDrawable(finalD);
@@ -95,15 +102,15 @@ public final class AppDetailsDialog {
         if (ai.totalSize > 0) {
             String size;
             if (ai.isSplit && ai.splitCount > 0) {
-                android.content.Context c = act;
+                Context c = act;
                 size = act.getString(R.string.base_label) + " "
-                        + android.text.format.Formatter.formatFileSize(c, ai.baseSize) + " • "
+                        + Formatter.formatFileSize(c, ai.baseSize) + " • "
                         + act.getString(R.string.splits_label) + " (" + ai.splitCount + ") "
-                        + android.text.format.Formatter.formatFileSize(c, ai.totalSize - ai.baseSize) + " • "
+                        + Formatter.formatFileSize(c, ai.totalSize - ai.baseSize) + " • "
                         + act.getString(R.string.total_label) + " "
-                        + android.text.format.Formatter.formatFileSize(c, ai.totalSize);
+                        + Formatter.formatFileSize(c, ai.totalSize);
             } else {
-                size = android.text.format.Formatter.formatFileSize(act, ai.baseSize > 0 ? ai.baseSize : ai.totalSize);
+                size = Formatter.formatFileSize(act, ai.baseSize > 0 ? ai.baseSize : ai.totalSize);
             }
             addRow(act, root, act.getString(R.string.apk_size), size, null);
         }
@@ -214,7 +221,7 @@ public final class AppDetailsDialog {
         if (tapPath != null) {
             row.setClickable(true);
             row.setFocusable(true);
-            android.util.TypedValue tv = new android.util.TypedValue();
+            TypedValue tv = new TypedValue();
             try {
                 act.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
                 row.setBackgroundResource(tv.resourceId);

@@ -11,6 +11,7 @@ import android.util.LruCache;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 public final class ExtractorIconCache {
 
@@ -84,7 +85,7 @@ public final class ExtractorIconCache {
         try {
             File[] files = d.listFiles();
             if (files == null || files.length <= MAX_FILES) return;
-            java.util.Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+            Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
             for (int i = 0; i < files.length - MAX_FILES; i++) {
                 try { files[i].delete(); } catch (Exception ignored) {}
             }

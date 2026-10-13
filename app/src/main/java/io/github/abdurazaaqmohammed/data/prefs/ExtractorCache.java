@@ -5,6 +5,7 @@ import android.content.Context;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
+import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.ApkExtractor.AppInfo;
 import io.github.abdurazaaqmohammed.utils.AppGson;
 
@@ -99,8 +100,8 @@ public final class ExtractorCache {
                 Row r = dto.rows.get(i);
                 if (r == null || r.pkg == null || r.pkg.isEmpty() || r.name == null) continue;
                 AppInfo ai = new AppInfo(r.filePath, r.name, null, r.pkg, r.enabled, r.split,
-                        io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity.formatDate(r.firstInstall, dateFormat),
-                        io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity.formatDate(r.lastUpdate, dateFormat),
+                        APKExtractorActivity.formatDate(r.firstInstall, dateFormat),
+                        APKExtractorActivity.formatDate(r.lastUpdate, dateFormat),
                         r.versionCode, r.versionName == null ? "" : r.versionName);
                 ai.firstInstall = r.firstInstall;
                 ai.lastUpdate = r.lastUpdate;

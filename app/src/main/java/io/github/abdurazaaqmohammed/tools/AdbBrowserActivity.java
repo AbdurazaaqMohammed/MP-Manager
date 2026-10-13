@@ -10,9 +10,12 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.appcompat.R;
+
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -71,7 +74,7 @@ public class AdbBrowserActivity extends BaseActivity {
 
         toolbar = new MaterialToolbar(this);
         toolbar.setTitle("ADB Browser");
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -145,7 +148,7 @@ public class AdbBrowserActivity extends BaseActivity {
         io.execute(() -> {
             try {
                 if (service == null) {
-                    throw new java.io.IOException("not connected to the ADB server");
+                    throw new IOException("not connected to the ADB server");
                 }
                 List<AdbSync.Entry> entries = service.listFiles(target);
                 publish(target, entries, null, seq);

@@ -39,6 +39,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
+import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import androidx.activity.result.ActivityResult;
@@ -909,7 +910,7 @@ public class ApkInfoDialogs {
                     // loads even if the main APK-info thread hasn't finished.
                     if (TextUtils.isEmpty(pkgNameStr)) {
                         try {
-                            android.content.pm.PackageInfo pi = context.getPackageManager()
+                            PackageInfo pi = context.getPackageManager()
                                     .getPackageArchiveInfo(filePath, 0);
                             if (pi != null) pkgNameStr = pi.packageName;
                         } catch (Exception ignored) {}
@@ -1115,7 +1116,7 @@ public class ApkInfoDialogs {
                 }
                 try {
                     if (AccessManager.active(context) == AccessManager.Backend.SHIZUKU) {
-                        isFile = io.github.abdurazaaqmohammed.utils.ShizukuManager.isFile(context, tapPath);
+                        isFile = ShizukuManager.isFile(context, tapPath);
                     } else if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
                         RootManager rootMgr = RootManager.getInstance(context);
                         isFile = rootMgr.isFile(tapPath);

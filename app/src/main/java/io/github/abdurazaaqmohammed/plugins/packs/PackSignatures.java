@@ -1,6 +1,7 @@
 package io.github.abdurazaaqmohammed.plugins.packs;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
@@ -31,7 +32,7 @@ public final class PackSignatures {
     public static boolean isDebuggable(Context context) {
         try {
             return (context.getApplicationInfo().flags
-                    & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+                    & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         } catch (Exception ignored) {
             return false;
         }

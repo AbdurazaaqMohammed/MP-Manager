@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 
@@ -76,7 +77,7 @@ public class PickerIconLoader {
         String ext = FilenameUtils.getExtension(path);
         ext = ext == null ? "" : "." + ext.toLowerCase(Locale.ROOT);
 
-        if (io.github.abdurazaaqmohammed.utils.ApkIconHelper.isApkLikeExt(ext)) {
+        if (ApkIconHelper.isApkLikeExt(ext)) {
             fileIconView.setImageDrawable(cachedApkIcon);
             loadApkIconAsync(path, fileIconView);
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
@@ -103,7 +104,7 @@ public class PickerIconLoader {
         iconLoaderService.execute(() -> {
             if (!path.equals(fileIconView.getTag())) return;
             try {
-                Drawable icon = io.github.abdurazaaqmohammed.utils.ApkIconHelper.getApkIcon(context, path);
+                Drawable icon = ApkIconHelper.getApkIcon(context, path);
                 if (icon != null) {
                     iconCache.put(path, icon);
                     handler.post(() -> {

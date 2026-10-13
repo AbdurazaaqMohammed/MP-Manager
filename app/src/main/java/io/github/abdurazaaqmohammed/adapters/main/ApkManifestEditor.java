@@ -44,11 +44,14 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -186,12 +189,12 @@ public class ApkManifestEditor {
         try {
             AutoCompleteTextView compressTv = root.findViewById(R.id.compressLevelTv);
             if (compressTv == null) return;
-            java.util.List<String> levels = new java.util.ArrayList<>();
-            for (net.lingala.zip4j.model.enums.CompressionLevel cl
-                    : net.lingala.zip4j.model.enums.CompressionLevel.values()) levels.add(cl.name());
+            List<String> levels = new ArrayList<>();
+            for (CompressionLevel cl
+                    : CompressionLevel.values()) levels.add(cl.name());
             SharedPreferences defSettings = PreferenceManager.getDefaultSharedPreferences(context);
             compressTv.setText(defSettings.getString("compressLevel",
-                    net.lingala.zip4j.model.enums.CompressionLevel.NORMAL.name()), false);
+                    CompressionLevel.NORMAL.name()), false);
             compressTv.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_dropdown_item_1line, levels));
             compressTv.setOnItemClickListener((parent, view, position, id) ->
                     defSettings.edit().putString("compressLevel", levels.get(position)).apply());
@@ -558,7 +561,7 @@ public class ApkManifestEditor {
         }
         if (arsc != null) {
             for (String xmlPath : targets.xmlPaths) {
-                if (containsBytes(arsc, (toBitmapPath(xmlPath) + "\0").getBytes(java.nio.charset.StandardCharsets.UTF_8))) continue;
+                if (containsBytes(arsc, (toBitmapPath(xmlPath) + "\0").getBytes(StandardCharsets.UTF_8))) continue;
                 if (containsBytes(arsc, toUtf16Le(toBitmapPath(xmlPath) + "\0"))) continue;
                 return R.string.icon_not_found;
             }
@@ -637,7 +640,7 @@ public class ApkManifestEditor {
     }
 
     private static byte[] pathBytes(String s, boolean utf16) {
-        return utf16 ? toUtf16Le(s) : s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return utf16 ? toUtf16Le(s) : s.getBytes(StandardCharsets.UTF_8);
     }
 
     private static byte[] toUtf16Le(String s) {
@@ -861,7 +864,7 @@ public class ApkManifestEditor {
     }
 
     private static byte[] readAllBytes(InputStream is) throws IOException {
-        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         int n;
         while ((n = is.read(buf)) != -1) out.write(buf, 0, n);

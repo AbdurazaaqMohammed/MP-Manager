@@ -55,6 +55,7 @@ import io.github.abdurazaaqmohammed.core.ui.util.PopupMenus;
 import io.github.abdurazaaqmohammed.data.prefs.BookmarkStore;
 import io.github.abdurazaaqmohammed.data.prefs.PaneCache;
 import io.github.abdurazaaqmohammed.app.UpdateController;
+import io.github.abdurazaaqmohammed.domain.files.FileSorting;
 import io.github.abdurazaaqmohammed.features.apk.ApkResultHandler;
 import io.github.abdurazaaqmohammed.features.files.BookmarksController;
 import io.github.abdurazaaqmohammed.features.files.FileSearchController;
@@ -101,8 +102,10 @@ import java.lang.ref.WeakReference;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -119,6 +122,7 @@ import io.github.abdurazaaqmohammed.adapters.HistoryAdapter;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
 import io.github.abdurazaaqmohammed.adapters.main.MainFilesArrayAdapter;
 import io.github.abdurazaaqmohammed.player.ImageViewerActivity;
+import io.github.abdurazaaqmohammed.player.MediaItem;
 import io.github.abdurazaaqmohammed.player.MediaPlayerActivity;
 import io.github.abdurazaaqmohammed.player.MiniPlayerDialog;
 import io.github.abdurazaaqmohammed.player.PlayerManager;
@@ -285,7 +289,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     }
 
     public void playMediaFile(String filePath) {
-        String lower = filePath == null ? "" : filePath.toLowerCase(java.util.Locale.ROOT);
+        String lower = filePath == null ? "" : filePath.toLowerCase(Locale.ROOT);
         boolean isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi")
                 || lower.endsWith(".mov") || lower.endsWith(".webm") || lower.endsWith(".3gp")
                 || lower.endsWith(".ts") || lower.endsWith(".flv") || lower.endsWith(".wmv")
@@ -295,24 +299,24 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         else {
             PlayerManager pm = PlayerManager.getInstance(this);
             try {
-                java.io.File cur = new java.io.File(filePath);
-                java.io.File dir = cur.getParentFile();
+                File cur = new File(filePath);
+                File dir = cur.getParentFile();
                 if (dir != null && dir.isDirectory()) {
-                    java.io.File[] all = dir.listFiles();
+                    File[] all = dir.listFiles();
                     if (all != null) {
-                        java.util.List<java.io.File> media = new java.util.ArrayList<>();
-                        for (java.io.File f : all) {
+                        List<File> media = new ArrayList<>();
+                        for (File f : all) {
                             if (f == null || !f.isFile()) continue;
-                            String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+                            String n = f.getName().toLowerCase(Locale.ROOT);
                             if (n.endsWith(".mp3") || n.endsWith(".wav") || n.endsWith(".flac") || n.endsWith(".ogg")
                                     || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wma") || n.endsWith(".opus")
                                     || n.endsWith(".mp4") || n.endsWith(".mkv") || n.endsWith(".avi") || n.endsWith(".mov")
                                     || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                     || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                         }
-                        media.sort((a, b) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
+                        media.sort((a, b) -> FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
                         if (!media.isEmpty()) {
-                            java.util.List<io.github.abdurazaaqmohammed.player.MediaItem> q = new java.util.ArrayList<>();
+                            List<MediaItem> q = new ArrayList<>();
                             int start = 0;
                             for (int i = 0; i < media.size(); i++) {
                                 q.add(PlayerManager.buildMediaItem(this, media.get(i).getAbsolutePath()));
@@ -1911,26 +1915,49 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             }
 
             List<FileHeader> fhs = zf.getFileHeaders();
-            String prefix = parentPath; // already normalized with trailing slash if non-empty
+            String prefix = parentPath;
+            Map<String, long[]> dirStats = new HashMap<>();
             for (FileHeader fh : fhs) {
                 String entryPath = fh.getFileName().replace('\\', '/');
                 if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
-                String rest = entryPath.substring(prefix.length()); // e.g., "subdir/file" or "file.txt" or "subdir/"
-                // direct child if rest has no further '/'
+                String rest = entryPath.substring(prefix.length());
+                int nextSlash = rest.indexOf('/');
+                if (nextSlash != -1) {
+                    String childFullPath = prefix + rest.substring(0, nextSlash + 1);
+                    long[] st = dirStats.get(childFullPath);
+                    if (st == null) {
+                        st = new long[2];
+                        dirStats.put(childFullPath, st);
+                    }
+                    try {
+                        long s = fh.getUncompressedSize();
+                        if (s > 0) st[0] += s;
+                    } catch (Exception ignored) {
+                    }
+                    try {
+                        long t = fh.getLastModifiedTime();
+                        if (t > st[1]) st[1] = t;
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            for (FileHeader fh : fhs) {
+                String entryPath = fh.getFileName().replace('\\', '/');
+                if (!entryPath.startsWith(prefix) || entryPath.equals(prefix)) continue;
+                String rest = entryPath.substring(prefix.length());
                 int nextSlash = rest.indexOf('/');
                 if (nextSlash == -1) {
-                    // file directly inside current folder
                     ZipEntryInfo info = new ZipEntryInfo(fh, zipFile, path);
                     if (isNotHidden(info)) entries.add(info);
                 } else {
-                    // it's inside a subdirectory; we should add a single synthetic directory entry for that subdir
-                    String childDirName = rest.substring(0, nextSlash + 1); // include trailing slash
-                    String childFullPath = prefix + childDirName; // full path of the child dir
-                    // add only once: track seen dirs with a Set<String>
+                    String childDirName = rest.substring(0, nextSlash + 1);
+                    String childFullPath = prefix + childDirName;
                     if (seenDirs.add(childFullPath)) {
                         FileHeader syntheticDir = new FileHeader();
                         syntheticDir.setFileName(childFullPath);
-                        ZipEntryInfo info = new ZipEntryInfo(syntheticDir, zipFile, path); // or use new ctor
+                        ZipEntryInfo info = new ZipEntryInfo(syntheticDir, zipFile, path);
+                        long[] st = dirStats.get(childFullPath);
+                        if (st != null) info.setAggregated(st[0], st[1]);
                         if (isNotHidden(info)) entries.add(info);
                     }
                 }
