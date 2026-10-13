@@ -63,7 +63,12 @@ public class FileIconLoader {
 
     public void setupZipEntryView(ZipEntryInfo zipEntry, ImageView fileIconView, TextView fileDateView) {
         if (zipEntry == null) return;
-        if (zipEntry.isDirectory()) {
+        if (zipEntry.isDirectory() && zipEntry.getFullPath() != null) {
+            fileIconView.setImageDrawable(cachedFolderIcon);
+            fileDateView.setVisibility(View.VISIBLE);
+            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, zipEntry.getLastModified())).append(' ').append(FileSize.getHumanReadableFileSize(zipEntry.getSize())));
+        } else if (zipEntry.isDirectory()) {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
         } else {

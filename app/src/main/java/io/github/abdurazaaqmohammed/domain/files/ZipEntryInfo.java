@@ -16,8 +16,8 @@ public class ZipEntryInfo {
     private final String name;
     private final String fullPath;
     private final boolean isDirectory;
-    private final long size;
-    private final long lastModified;
+    private long size;
+    private long lastModified;
     private final File zipFile;
 
     public ZipEntryInfo(String name, String fullPath, boolean isDirectory, long size, long lastModified, File zipFile) {
@@ -27,6 +27,11 @@ public class ZipEntryInfo {
         this.size = size;
         this.lastModified = lastModified;
         this.zipFile = zipFile;
+    }
+
+    public void setAggregated(long size, long lastModified) {
+        this.size = size;
+        this.lastModified = lastModified;
     }
 
     public ZipEntryInfo(FileHeader fileHeader, File zipFile, String parentPath) {
