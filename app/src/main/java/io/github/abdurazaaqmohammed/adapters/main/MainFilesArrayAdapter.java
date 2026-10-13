@@ -487,37 +487,105 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
                 List<File> dexCompareFiles1 = null;
                 List<File> dexCompareFiles2 = null;
                 if(a instanceof MainFilesArrayAdapter otherPaneAdapter) {
-                    // Compare DEX: 1 APK or 1+ DEX files selected in each pane.
                     dexCompareFiles1 = collectDexCompareFiles();
                     dexCompareFiles2 = otherPaneAdapter.collectDexCompareFiles();
                     if (dexCompareFiles1 != null && dexCompareFiles2 != null) {
                         visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
                     }
+                    Object[] pair = null;
                     if (selectedPositions.size() == 1 && otherPaneAdapter.selectedPositions.size() == 1) {
-                        compareFile1 = values[selectedPositions.iterator().next()];
-                        compareFile2 = otherPaneAdapter.values[otherPaneAdapter.selectedPositions.iterator().next()];
-                        String name1 = compareFile1 instanceof File ? ((File)compareFile1).getName() : ((ZipEntryInfo)compareFile1).getName();
-                        String name2 = compareFile2 instanceof File ? ((File)compareFile2).getName() : ((ZipEntryInfo)compareFile2).getName();
-
+                        int i1 = selectedPositions.iterator().next();
+                        int i2 = otherPaneAdapter.selectedPositions.iterator().next();
+                        if (i1 >= 0 && i1 < values.length && i2 >= 0 && i2 < otherPaneAdapter.values.length) {
+                            Object o1 = values[i1];
+                            Object o2 = otherPaneAdapter.values[i2];
+                            if (isComparableEntry(o1) && isComparableEntry(o2)) {
+                                compareFile1 = o1;
+                                compareFile2 = o2;
+                                pair = new Object[]{o1, o2};
+                            }
+                        }
+                    } else if (selectedPositions.size() == 2 && otherPaneAdapter.selectedPositions.isEmpty()) {
+                        java.util.Iterator<Integer> it = selectedPositions.iterator();
+                        int i1 = it.next();
+                        int i2 = it.next();
+                        if (i1 >= 0 && i1 < values.length && i2 >= 0 && i2 < values.length) {
+                            Object o1 = values[i1];
+                            Object o2 = values[i2];
+                            if (isComparableEntry(o1) && isComparableEntry(o2)) {
+                                compareFile1 = o1;
+                                compareFile2 = o2;
+                                pair = new Object[]{o1, o2};
+                                List<File> sameDex1 = singleDexList(o1);
+                                List<File> sameDex2 = singleDexList(o2);
+                                if (sameDex1 != null && sameDex2 != null && dexCompareFiles1 == null) {
+                                    dexCompareFiles1 = sameDex1;
+                                    dexCompareFiles2 = sameDex2;
+                                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
+                                }
+                            }
+                        }
+                    }
+                    if (pair != null) {
+                        Object o1 = pair[0];
+                        Object o2 = pair[1];
+                        String name1 = o1 instanceof File ? ((File) o1).getName() : ((ZipEntryInfo) o1).getName();
+                        String name2 = o2 instanceof File ? ((File) o2).getName() : ((ZipEntryInfo) o2).getName();
                         String ext1 = FilenameUtils.getExtension(name1).toLowerCase();
                         String ext2 = FilenameUtils.getExtension(name2).toLowerCase();
-
                         boolean isZip1 = ext1.equals("zip") || ext1.equals("apk") || ext1.equals("jar");
                         boolean isZip2 = ext2.equals("zip") || ext2.equals("apk") || ext2.equals("jar");
                         boolean isArsc1 = ext1.equals("arsc") || ext1.equals("apk");
                         boolean isArsc2 = ext2.equals("arsc") || ext2.equals("apk");
-
                         if (isZip1 && isZip2) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_ZIP, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_ZIP, direction)));
                         if (isArsc1 && isArsc2) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_ARSC, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_ARSC, direction)));
                         if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) {
                             visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_TEXT, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_TEXT, direction)));
-                            if (compareFile1 instanceof File && compareFile2 instanceof File
-                                    && !((File) compareFile1).isDirectory() && !((File) compareFile2).isDirectory())
+                            if (o1 instanceof File && o2 instanceof File
+                                    && !((File) o1).isDirectory() && !((File) o2).isDirectory())
                                 visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_HASH, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_HASH, direction)));
                         }
                         if (ext1.equals("apk") && ext2.equals("apk")
-                                && compareFile1 instanceof File && compareFile2 instanceof File)
+                                && o1 instanceof File && o2 instanceof File)
                             visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_APK, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_APK, direction)));
+                    }
+                } else if (selectedPositions.size() == 2) {
+                    java.util.Iterator<Integer> it = selectedPositions.iterator();
+                    int i1 = it.next();
+                    int i2 = it.next();
+                    if (i1 >= 0 && i1 < values.length && i2 >= 0 && i2 < values.length) {
+                        Object o1 = values[i1];
+                        Object o2 = values[i2];
+                        if (isComparableEntry(o1) && isComparableEntry(o2)) {
+                            compareFile1 = o1;
+                            compareFile2 = o2;
+                            String name1 = o1 instanceof File ? ((File) o1).getName() : ((ZipEntryInfo) o1).getName();
+                            String name2 = o2 instanceof File ? ((File) o2).getName() : ((ZipEntryInfo) o2).getName();
+                            String ext1 = FilenameUtils.getExtension(name1).toLowerCase();
+                            String ext2 = FilenameUtils.getExtension(name2).toLowerCase();
+                            boolean isZip1 = ext1.equals("zip") || ext1.equals("apk") || ext1.equals("jar");
+                            boolean isZip2 = ext2.equals("zip") || ext2.equals("apk") || ext2.equals("jar");
+                            boolean isArsc1 = ext1.equals("arsc") || ext1.equals("apk");
+                            boolean isArsc2 = ext2.equals("arsc") || ext2.equals("apk");
+                            if (isZip1 && isZip2) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_ZIP, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_ZIP, direction)));
+                            if (isArsc1 && isArsc2) visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_ARSC, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_ARSC, direction)));
+                            if (!isZip1 && !isZip2 && !ext1.equals("arsc") && !ext2.equals("arsc")) {
+                                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_TEXT, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_TEXT, direction)));
+                                if (o1 instanceof File && o2 instanceof File
+                                        && !((File) o1).isDirectory() && !((File) o2).isDirectory())
+                                    visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_HASH, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_HASH, direction)));
+                            }
+                            if (ext1.equals("apk") && ext2.equals("apk")
+                                    && o1 instanceof File && o2 instanceof File)
+                                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_APK, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_APK, direction)));
+                            List<File> sameDex1 = singleDexList(o1);
+                            List<File> sameDex2 = singleDexList(o2);
+                            if (sameDex1 != null && sameDex2 != null) {
+                                dexCompareFiles1 = sameDex1;
+                                dexCompareFiles2 = sameDex2;
+                                visibleMenu.add(new FileMenuOrder.MenuItem(FileMenuOrder.CMP_DEX, FileMenuOrder.labelFor(context, FileMenuOrder.CMP_DEX, direction)));
+                            }
+                        }
                     }
                 }
 
@@ -815,9 +883,43 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             }
             files.add(selectedFile);
         }
-        // A single APK, or any number of DEX files (no mixing).
         if (hasApk && files.size() != 1) return null;
         return files;
+    }
+
+    private boolean isComparableEntry(Object o) {
+        if (o == null) return false;
+        if (o instanceof File f) {
+            try {
+                String n = f.getName();
+                if (n == null || n.equals("..")) return false;
+                if (f.getAbsolutePath() == null) return false;
+            } catch (Exception ignored) { return false; }
+            return true;
+        }
+        if (o instanceof ZipEntryInfo z) {
+            try {
+                String n = z.getName();
+                if (n == null || n.equals("..")) return false;
+            } catch (Exception ignored) { return false; }
+            return true;
+        }
+        return false;
+    }
+
+    private List<File> singleDexList(Object o) {
+        if (isInZip) return null;
+        if (!(o instanceof File f)) return null;
+        try {
+            if (f.isDirectory()) return null;
+            String n = f.getName().toLowerCase(Locale.ROOT);
+            if (n.endsWith(".apk") || n.endsWith(".dex")) {
+                List<File> l = new ArrayList<>();
+                l.add(f);
+                return l;
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     public void handleSwipe(int position) {
