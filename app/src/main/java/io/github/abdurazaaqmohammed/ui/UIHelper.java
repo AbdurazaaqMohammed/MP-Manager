@@ -3,7 +3,6 @@ package io.github.abdurazaaqmohammed.ui;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.text.TextUtils;
@@ -184,17 +183,6 @@ public class UIHelper {
         textView.setMarqueeRepeatLimit(-1);
         textView.setHorizontallyScrolling(true);
         textView.setSelected(true); // Start without focus
-    }
-
-    public TextView getTitle(String text) {
-        TextView title = new TextView(context);
-        title.setText(text);
-        title.setBackgroundColor(Color.TRANSPARENT);
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(20);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setPadding(16,16,16,16);
-        return title;
     }
 
     public LinearLayout getProperties() {

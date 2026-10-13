@@ -151,7 +151,7 @@ public class ApkManifestEditor {
     private String resolveLabelRef(String ref, List<ResEntry> res) {
         if (ref == null || res == null) return null;
         String r = ref.trim();
-        if (r.isEmpty() || !r.startsWith("@")) return null;
+        if (!r.startsWith("@")) return null;
         // @string/name form
         for (ResEntry e : res) {
             if (r.equals(e.getName())) return e.getValue();
@@ -371,7 +371,7 @@ public class ApkManifestEditor {
         quickEditDialog.findViewById(R.id.sign_settings).setOnClickListener(uiHelper.showSignSettingsDialog());
 
         AlertDialog menuDialog = dialogUtil.getDialogBuilder()
-                .setCustomTitle(uiHelper.getTitle(rss.getString(R.string.me_fast_attrs)))
+                .setTitle((rss.getString(R.string.me_fast_attrs)))
                 .setPositiveButton(rss.getString(R.string.done), (dialog, which) -> {
                     CharSequence pkgNameInputText = pkgNameInput != null ? pkgNameInput.getText() : null;
                     String pkgNameSelected = TextUtils.isEmpty(pkgNameInputText) ? "" : pkgNameInputText.toString().trim();
@@ -973,7 +973,7 @@ public class ApkManifestEditor {
         listView.setAdapter(adapter);
 
         AlertDialog d = dialogUtil.getDialogBuilder()
-                .setCustomTitle(uiHelper.getTitle(rss.getString(R.string.me_edit_entries)))
+                .setTitle(rss.getString(R.string.me_edit_entries))
                 .setView(listView)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(rss.getString(R.string.me_save_all), (dlg, w) ->
@@ -1021,8 +1021,7 @@ public class ApkManifestEditor {
         uiHelper.styleEditText(input);
 
         AlertDialog d = dialogUtil.getDialogBuilder()
-                .setCustomTitle(uiHelper.getTitle(
-                        rss.getString(R.string.me_edit_prefix, entry.getMiddleTag().trim())))
+                .setTitle(rss.getString(R.string.me_edit_prefix, entry.getMiddleTag().trim()))
                 .setView(UiFields.wrap(context, input, null, 16))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dlg, w) -> {
