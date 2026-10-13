@@ -621,7 +621,7 @@ public class PlayerManager {
             } catch (Exception ignored) {}
         }
         try {
-            Collections.sort(out, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+            Collections.sort(out, (a, b) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
         } catch (Exception ignored) {}
         return out;
     }

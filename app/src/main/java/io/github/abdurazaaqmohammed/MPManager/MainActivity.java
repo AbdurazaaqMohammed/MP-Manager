@@ -310,7 +310,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                     || n.endsWith(".webm") || n.endsWith(".3gp") || n.endsWith(".ts") || n.endsWith(".flv")
                                     || n.endsWith(".wmv") || n.endsWith(".m4v")) media.add(f);
                         }
-                        media.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+                        media.sort((a, b) -> io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(a.getName(), b.getName()));
                         if (!media.isEmpty()) {
                             java.util.List<io.github.abdurazaaqmohammed.player.MediaItem> q = new java.util.ArrayList<>();
                             int start = 0;

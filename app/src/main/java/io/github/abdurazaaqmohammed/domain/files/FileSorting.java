@@ -31,6 +31,54 @@ public final class FileSorting {
         return dot == -1 ? "" : name.substring(dot + 1);
     }
 
+    public static int compareNaturalIgnoreCase(String a, String b) {
+        if (a == b) return 0;
+        if (a == null) return -1;
+        if (b == null) return 1;
+        int i = 0, j = 0;
+        int na = a.length(), nb = b.length();
+        while (i < na && j < nb) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+            boolean da = ca >= '0' && ca <= '9';
+            boolean db = cb >= '0' && cb <= '9';
+            if (da && db) {
+                int s1 = i, s2 = j;
+                while (s1 < na && a.charAt(s1) == '0') s1++;
+                while (s2 < nb && b.charAt(s2) == '0') s2++;
+                int e1 = s1;
+                while (e1 < na && a.charAt(e1) >= '0' && a.charAt(e1) <= '9') e1++;
+                int e2 = s2;
+                while (e2 < nb && b.charAt(e2) >= '0' && b.charAt(e2) <= '9') e2++;
+                int len1 = e1 - s1;
+                int len2 = e2 - s2;
+                if (len1 != len2) return len1 < len2 ? -1 : 1;
+                for (int k = 0; k < len1; k++) {
+                    char d1 = a.charAt(s1 + k);
+                    char d2 = b.charAt(s2 + k);
+                    if (d1 != d2) return d1 < d2 ? -1 : 1;
+                }
+                int zeros1 = s1 - i;
+                int zeros2 = s2 - j;
+                if (zeros1 != zeros2) return zeros1 < zeros2 ? -1 : 1;
+                i = e1;
+                j = e2;
+                continue;
+            }
+            char la = Character.toLowerCase(Character.toUpperCase(ca));
+            char lb = Character.toLowerCase(Character.toUpperCase(cb));
+            if (la != lb) return la < lb ? -1 : 1;
+            if (ca != cb) {
+                int up = Character.toUpperCase(ca) - Character.toUpperCase(cb);
+                if (up != 0) return up < 0 ? -1 : 1;
+            }
+            i++;
+            j++;
+        }
+        if (na == nb) return 0;
+        return (na - i) <= 0 ? -1 : 1;
+    }
+
     public static void sortFiles(File[] files, int sortBy, boolean reverse) {
         if (files == null) return;
         Arrays.sort(files, (f1, f2) -> {
@@ -46,10 +94,10 @@ public final class FileSorting {
                     String ext1 = getExt(f1.getName());
                     String ext2 = getExt(f2.getName());
                     result = ext1.compareToIgnoreCase(ext2);
-                    if (result == 0) result = f1.getName().compareToIgnoreCase(f2.getName());
+                    if (result == 0) result = compareNaturalIgnoreCase(f1.getName(), f2.getName());
                     break;
                 default:
-                    result = f1.getName().compareToIgnoreCase(f2.getName());
+                    result = compareNaturalIgnoreCase(f1.getName(), f2.getName());
                     break;
             }
             if (f1.isDirectory() && !f2.isDirectory()) return -1;
@@ -113,10 +161,10 @@ public final class FileSorting {
                 return Long.compare(e1.getLastModified(), e2.getLastModified());
             case SORT_TYPE: {
                 int ext = getExt(e1.getName()).compareToIgnoreCase(getExt(e2.getName()));
-                return ext == 0 ? e1.getName().compareToIgnoreCase(e2.getName()) : ext;
+                return ext == 0 ? compareNaturalIgnoreCase(e1.getName(), e2.getName()) : ext;
             }
             default:
-                return e1.getName().compareToIgnoreCase(e2.getName());
+                return compareNaturalIgnoreCase(e1.getName(), e2.getName());
         }
     }
 }

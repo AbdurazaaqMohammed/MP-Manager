@@ -256,10 +256,10 @@ public class FilePickerDialog {
                     break;
                 case 3:
                     result = extOf(f1).compareToIgnoreCase(extOf(f2));
-                    if (result == 0) result = f1.getName().compareToIgnoreCase(f2.getName());
+                    if (result == 0) result = io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(f1.getName(), f2.getName());
                     break;
                 default:
-                    result = f1.getName().compareToIgnoreCase(f2.getName());
+                    result = io.github.abdurazaaqmohammed.domain.files.FileSorting.compareNaturalIgnoreCase(f1.getName(), f2.getName());
                     break;
             }
             if (f1.isDirectory() && !f2.isDirectory()) return -1;
