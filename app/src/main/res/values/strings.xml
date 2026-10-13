@@ -778,6 +778,12 @@ Layout Inspector
     <string name="highlight_underline">Underline</string>
     <string name="highlight_border">Border</string>
     <string name="highlight_background_underline">Background + underline</string>
+    <string name="folder_transition">Folder animation</string>
+    <string name="folder_anim_off">Off</string>
+    <string name="folder_anim_slide">Slide</string>
+    <string name="folder_anim_slide_up">Slide up</string>
+    <string name="folder_anim_fade">Fade</string>
+    <string name="folder_anim_slide_fade">Slide + fade</string>
     <string name="folders">Folders</string>
     <string name="file_operations">File operations</string>
     <string name="elevated_access">Elevated access</string>

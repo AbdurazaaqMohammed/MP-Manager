@@ -18,6 +18,14 @@ public final class UiPrefs {
             "EEE, dd MMM yyyy HH:mm"
     };
 
+    public static final String FOLDER_ANIM_KEY = "folder_transition";
+    public static final String FOLDER_ANIM_OFF = "off";
+    public static final String FOLDER_ANIM_SLIDE = "slide";
+    public static final String FOLDER_ANIM_SLIDE_UP = "slide_up";
+    public static final String FOLDER_ANIM_FADE = "fade";
+    public static final String FOLDER_ANIM_SLIDE_FADE = "slide_fade";
+    public static final String FOLDER_ANIM_DEFAULT = FOLDER_ANIM_FADE;
+
     private UiPrefs() {
     }
 
@@ -94,6 +102,61 @@ public final class UiPrefs {
             return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("gen_backup", true);
         } catch (Exception e) {
             return true;
+        }
+    }
+
+    public static String folderAnim(Context context) {
+        try {
+            String v = PreferenceManager.getDefaultSharedPreferences(context).getString(FOLDER_ANIM_KEY, FOLDER_ANIM_DEFAULT);
+            if (v == null) return FOLDER_ANIM_DEFAULT;
+            switch (v) {
+                case FOLDER_ANIM_OFF:
+                case FOLDER_ANIM_SLIDE:
+                case FOLDER_ANIM_SLIDE_UP:
+                case FOLDER_ANIM_FADE:
+                case FOLDER_ANIM_SLIDE_FADE:
+                    return v;
+                default:
+                    return FOLDER_ANIM_DEFAULT;
+            }
+        } catch (Exception e) {
+            return FOLDER_ANIM_DEFAULT;
+        }
+    }
+
+    public static void playFolderTransition(android.view.View pane) {
+        if (pane == null) return;
+        String mode = folderAnim(pane.getContext());
+        if (FOLDER_ANIM_OFF.equals(mode)) return;
+        try {
+            pane.animate().cancel();
+            float density = pane.getResources().getDisplayMetrics().density;
+            long dur = 170;
+            android.view.animation.DecelerateInterpolator interp =
+                    new android.view.animation.DecelerateInterpolator();
+            if (FOLDER_ANIM_FADE.equals(mode)) {
+                pane.setAlpha(0.35f);
+                pane.setTranslationX(0f);
+                pane.setTranslationY(0f);
+                pane.animate().alpha(1f).setDuration(dur).setInterpolator(interp).start();
+            } else if (FOLDER_ANIM_SLIDE_UP.equals(mode)) {
+                pane.setAlpha(0.4f);
+                pane.setTranslationX(0f);
+                pane.setTranslationY(22f * density);
+                pane.animate().alpha(1f).translationY(0f).setDuration(dur).setInterpolator(interp).start();
+            } else {
+                pane.setAlpha(FOLDER_ANIM_SLIDE.equals(mode) ? 0.55f : 0f);
+                pane.setTranslationX(26f * density);
+                pane.setTranslationY(0f);
+                pane.animate().alpha(1f).translationX(0f).setDuration(dur).setInterpolator(interp).start();
+            }
+        } catch (Exception ignored) {
+            try {
+                pane.setAlpha(1f);
+                pane.setTranslationX(0f);
+                pane.setTranslationY(0f);
+            } catch (Exception ignored2) {
+            }
         }
     }
 }

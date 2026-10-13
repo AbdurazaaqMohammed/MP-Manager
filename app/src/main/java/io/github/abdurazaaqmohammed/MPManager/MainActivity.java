@@ -1839,6 +1839,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
         File parent = folder.getParentFile() != null ? folder.getParentFile() : folder;
         pane.setAdapter(new MainFilesArrayAdapter(this, files, parent, pane1, false, null));
+        UiPrefs.playFolderTransition(pane);
         // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
         if ((pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2)) setMultiSelectModeUI(false);
         updateNavigationButtons();
@@ -1964,6 +1965,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         if (pane != null) {
             boolean isCurrentPane = pane1 ? lastPaneSelected == 1 : lastPaneSelected == 2;
             pane.setAdapter(new MainFilesArrayAdapter(this, entries.toArray(new ZipEntryInfo[0]), parent, pane1, true, path));
+            UiPrefs.playFolderTransition(pane);
             // Fresh listing = no selection in this pane; sync the bottom bar if it's current.
             if (isCurrentPane) setMultiSelectModeUI(false);
             updateNavigationButtons();

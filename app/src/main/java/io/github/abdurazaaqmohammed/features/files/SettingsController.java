@@ -558,6 +558,27 @@ public class SettingsController {
             }
         });
 
+        AutoCompleteTextView folderAnimTv = root.findViewById(R.id.folderAnimTv);
+        if (folderAnimTv != null) {
+            String[] animValues = {UiPrefs.FOLDER_ANIM_OFF, UiPrefs.FOLDER_ANIM_SLIDE, UiPrefs.FOLDER_ANIM_SLIDE_UP, UiPrefs.FOLDER_ANIM_FADE, UiPrefs.FOLDER_ANIM_SLIDE_FADE};
+            String[] animLabels = {
+                    activity.getString(R.string.folder_anim_off),
+                    activity.getString(R.string.folder_anim_slide),
+                    activity.getString(R.string.folder_anim_slide_up),
+                    activity.getString(R.string.folder_anim_fade),
+                    activity.getString(R.string.folder_anim_slide_fade)};
+            folderAnimTv.setAdapter(dropdownAdapter(animLabels));
+            String currentAnim = UiPrefs.folderAnim(activity);
+            for (int i = 0; i < animValues.length; i++) {
+                if (animValues[i].equals(currentAnim)) {
+                    folderAnimTv.setText(animLabels[i], false);
+                    break;
+                }
+            }
+            folderAnimTv.setOnItemClickListener((p, v, pos, id) ->
+                    settings.edit().putString(UiPrefs.FOLDER_ANIM_KEY, animValues[pos]).apply());
+        }
+
         ArrayAdapter<String> dateAdapter = dropdownAdapter(UiPrefs.DATE_PRESETS);
         dateTv.setAdapter(dateAdapter);
         dateTv.setText(UiPrefs.getDatePattern(activity), false);
