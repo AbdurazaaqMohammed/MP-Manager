@@ -19,7 +19,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:padding="8dp"
+                android:paddingStart="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
                 android:gravity="center_vertical">
 
                 <ImageView
@@ -59,7 +61,7 @@
 
                 <ImageView
                     android:id="@+id/moreOptionsMenu"
-                    android:layout_weight="0.1"
+                    android:layout_weight="0.15"
                     android:layout_width="0dp"
                     android:layout_height="fill_parent"
                     android:src="@drawable/baseline_more_vert_24"
