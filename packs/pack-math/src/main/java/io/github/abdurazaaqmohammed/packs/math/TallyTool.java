@@ -96,7 +96,7 @@ public class TallyTool extends BaseToolPlugin {
         tapCard.setClickable(true);
         tapCard.setFocusable(true);
         tapCard.setRippleColor(ColorStateList.valueOf(
-                MaterialColors.getColor(context, android.R.attr.colorPrimaryContainer, 0xFFDDDDDD)));
+                MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, 0xFFDDDDDD)));
         FrameLayout cardContent = new FrameLayout(context);
         countView = new TextView(context);
         countView.setGravity(Gravity.CENTER);
