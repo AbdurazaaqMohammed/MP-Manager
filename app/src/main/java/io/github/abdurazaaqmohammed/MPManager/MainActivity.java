@@ -546,7 +546,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
     /** Surprise-arrival sidebar refresh (resume, root probe): I/O off-main. */
     public void refreshSidebarAsync(List<String> sectionOrder) {
         try {
-            sidebar.refreshSidebarAsync(sectionOrder);
+            sidebar.refreshSidebarAsync(sectionOrder != null ? sectionOrder : getSidebarSectionOrder());
         } catch (Exception ignored) {
         }
     }
@@ -931,6 +931,12 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                 // Edge-swipe opens bypass openSidebarDrawer(): ensure data here too.
                 try {
                     ensureSidebarReady();
+                } catch (Exception ignored) {
+                }
+                // Packs load on a background thread; rebind so groups that
+                // finished after the first render appear without a restart.
+                try {
+                    refreshSidebarAsync(getSidebarSectionOrder());
                 } catch (Exception ignored) {
                 }
                 isSidebarDrawerOpen = true;

@@ -96,11 +96,30 @@ public final class PackManager {
 
     /** Load every installed pack. Called once from Application.onCreate. */
     public static void loadInstalledPacks(Context context) {
+        boolean any = false;
         for (PackDescriptor p : PackCatalog.load(context)) {
             if (isInstalled(context, p.id)) {
-                loadPack(context, packFile(context, p.id), p.entryClass, p.id);
+                any |= !loadPack(context, packFile(context, p.id), p.entryClass, p.id).isEmpty();
             }
         }
+        // Packs load on a background thread and usually finish AFTER the first
+        // sidebar render, so poke any live activity to rebind the drawer.
+        if (any) notifySidebar();
+    }
+
+    /** Ask the foreground activity to rebuild the sidebar with loaded packs. */
+    public static void notifySidebar() {
+        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        handler.postDelayed(() -> {
+            try {
+                io.github.abdurazaaqmohammed.MPManager.MainActivity activity =
+                        io.github.abdurazaaqmohammed.MPManager.MainActivity.current();
+                if (activity != null) {
+                    activity.refreshSidebarAsync(activity.getSidebarSectionOrder());
+                }
+            } catch (Exception ignored) {
+            }
+        }, 600L);
     }
 
     /**
@@ -143,7 +162,7 @@ public final class PackManager {
             for (ToolPlugin tool : pack.tools()) {
                 try {
                     if (tool == null || tool.id() == null) continue;
-                    PluginRegistry.register(tool);
+                    PluginRegistry.register(tool, packId);
                     loaded.add(tool.id());
                 } catch (Exception ignored) {
                 }
@@ -287,6 +306,7 @@ public final class PackManager {
                         + missing + ". The hosted APK does not match the catalog.");
             }
             backup.delete();
+            notifySidebar();
             try {
                 downloaded.delete();
             } catch (Exception ignored) {
@@ -350,6 +370,7 @@ public final class PackManager {
                     .apply();
         } catch (Exception ignored) {
         }
+        notifySidebar();
     }
 
     public static synchronized void unloadPack(String packId) {

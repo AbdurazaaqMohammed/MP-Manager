@@ -20,6 +20,9 @@ public final class PluginRegistry {
 
     private static final Map<String, ToolPlugin> CUSTOM = new LinkedHashMap<>();
 
+    /** toolId -> owning packId; empty for non-pack (host-registered) tools. */
+    private static final Map<String, String> PACK_OF = new LinkedHashMap<>();
+
     private PluginRegistry() {
     }
 
@@ -28,8 +31,48 @@ public final class PluginRegistry {
         CUSTOM.put(plugin.id(), plugin);
     }
 
+    /** Register a pack tool together with its owning pack id. */
+    public static synchronized void register(ToolPlugin plugin, String packId) {
+        if (plugin == null || plugin.id() == null) return;
+        CUSTOM.put(plugin.id(), plugin);
+        if (packId != null && !packId.isEmpty()) PACK_OF.put(plugin.id(), packId);
+    }
+
     public static synchronized void unregister(String id) {
         CUSTOM.remove(id);
+        PACK_OF.remove(id);
+    }
+
+    /** Distinct loaded packs (in registration order) and their tools. */
+    public static synchronized List<PackTools> installedPacks() {
+        List<PackTools> packs = new ArrayList<>();
+        for (ToolPlugin plugin : CUSTOM.values()) {
+            String packId = PACK_OF.get(plugin.id());
+            if (packId == null) continue;
+            PackTools pack = null;
+            for (PackTools existing : packs) {
+                if (existing.packId.equals(packId)) {
+                    pack = existing;
+                    break;
+                }
+            }
+            if (pack == null) {
+                pack = new PackTools(packId);
+                packs.add(pack);
+            }
+            pack.tools.add(plugin);
+        }
+        return packs;
+    }
+
+    /** A loaded pack and the tools it contributed to the registry. */
+    public static final class PackTools {
+        public final String packId;
+        public final List<ToolPlugin> tools = new ArrayList<>();
+
+        PackTools(String packId) {
+            this.packId = packId;
+        }
     }
 
     /** Custom plugins only (new architecture). */

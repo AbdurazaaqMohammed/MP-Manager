@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
+import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionIcons;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
@@ -72,6 +74,8 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private final Context context;
     private final Callbacks callbacks;
     private static final String BOOKMARK_GROUP_PREFIX = "bookmark_group:";
+    /** id prefix of a pack tool row inside the plugins section. */
+    public static final String PACK_TOOL_PREFIX = "packtool:";
     private final List<SidebarEntry> entries = new ArrayList<>();
     private final Map<String, Boolean> collapsed = new LinkedHashMap<>();
     private final List<String> sectionOrder = new ArrayList<>();
@@ -80,6 +84,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private final Map<String, List<File>> groups = new LinkedHashMap<>();
     private boolean showBookmarks;
     private boolean showGroups;
+    private boolean showPlugins = true;
     private boolean organizeMode;
     private final List<String> toolOrder = new ArrayList<>();
     private final Map<String, String> labels = new LinkedHashMap<>();
@@ -93,22 +98,24 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         sectionOrder.add("storage");
         sectionOrder.add("bookmarks");
         sectionOrder.add("tools");
+        sectionOrder.add("plugins");
     }
 
     public void setData(List<String> order, boolean showBookmarks, boolean showGroups,
             List<StorageUtil.StorageInfo> storage, List<File> defaultBookmarks,
-            Map<String, List<File>> groups, Map<String, String> labels) {
+            Map<String, List<File>> groups, Map<String, String> labels, boolean showPlugins) {
         sectionOrder.clear();
         if (order != null) {
             for (String section : order) {
                 if (section != null && !sectionOrder.contains(section)) sectionOrder.add(section);
             }
         }
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "bookmarks", "tools", "plugins"}) {
             if (!sectionOrder.contains(section)) sectionOrder.add(section);
         }
         this.showBookmarks = showBookmarks;
         this.showGroups = showGroups;
+        this.showPlugins = showPlugins;
         if (!showGroups) {
             sectionOrder.removeIf(section -> section.startsWith(BOOKMARK_GROUP_PREFIX));
         }
@@ -195,6 +202,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
         for (String section : sectionOrder) {
             if ("bookmarks".equals(section) && !showBookmarks) continue;
             if (section.startsWith(BOOKMARK_GROUP_PREFIX) && !showGroups) continue;
+            if ("plugins".equals(section) && !showPlugins) continue;
             entries.add(new SidebarEntry(EntryType.HEADER, section, section,
                     sectionTitle(section), 0, null, null));
             if (Boolean.TRUE.equals(collapsed.get(section))) continue;
@@ -208,6 +216,8 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
             } else if (section.startsWith(BOOKMARK_GROUP_PREFIX)) {
                 String group = section.substring(BOOKMARK_GROUP_PREFIX.length());
                 addBookmarks(group, section, groups.getOrDefault(group, new ArrayList<>()));
+            } else if ("plugins".equals(section)) {
+                addPluginGroups();
             } else {
                 addTools();
             }
@@ -218,6 +228,7 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
     private String sectionTitle(String section) {
         if ("storage".equals(section)) return context.getString(R.string.storage);
         if ("bookmarks".equals(section)) return context.getString(R.string.bookmarks);
+        if ("plugins".equals(section)) return context.getString(R.string.sidebar_plugins);
         if (section.startsWith(BOOKMARK_GROUP_PREFIX)) return section.substring(BOOKMARK_GROUP_PREFIX.length());
         return context.getString(R.string.tools_section);
     }
@@ -230,6 +241,46 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                     "bookmark\u0001" + group + "\u0001" + file.getPath(), label,
                     file.isDirectory() ? R.drawable.folder_24px : R.drawable.baseline_bookmark_24,
                     file, null);
+            if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
+        }
+    }
+
+    public void setShowPlugins(boolean enabled) {
+        showPlugins = enabled;
+    }
+
+    /**
+     * Plugins section body: one row per installed pack tool, flat, no group
+     * headers. Each row uses the tool's own icon. Ordering round-trips
+     * through the shared toolOrder like built-in tools; newly installed
+     * tools are appended.
+     */
+    private void addPluginGroups() {
+        List<PluginRegistry.PackTools> packs = PluginRegistry.installedPacks();
+        if (packs.isEmpty()) return;
+        // index of "packtool:<pack>.<tool>" for order lookups.
+        Map<String, ToolPlugin> byId = new LinkedHashMap<>();
+        for (PluginRegistry.PackTools pack : packs) {
+            for (ToolPlugin tool : pack.tools) {
+                if (tool == null || tool.id() == null) continue;
+                byId.put(PACK_TOOL_PREFIX + pack.packId + "." + tool.id(), tool);
+            }
+        }
+        List<String> order = new ArrayList<>();
+        for (String id : toolOrder) if (byId.containsKey(id) && !order.contains(id)) order.add(id);
+        for (String id : byId.keySet()) if (!order.contains(id)) order.add(id);
+        for (String id : order) {
+            ToolPlugin tool = byId.get(id);
+            String label = tool.title(context);
+            if (label == null || label.isEmpty()) label = tool.id();
+            int icon;
+            try {
+                icon = tool.iconRes(context);
+            } catch (Exception e) {
+                icon = R.drawable.tools_24px;
+            }
+            SidebarEntry entry = new SidebarEntry(EntryType.TOOL, "plugins", id, label,
+                    icon, null, null);
             if (organizeMode || !hiddenItems.contains(entryKey(entry))) entries.add(entry);
         }
     }
@@ -420,10 +471,10 @@ public class SidebarAdapter extends ArrayAdapter<SidebarAdapter.SidebarEntry> {
                 return true;
             });
             ImageView toggle = view.findViewById(R.id.sidebarSectionToggle);
-            boolean collapsed = isCollapsed(entry.section);
-            Drawable d = ResourcesCompat.getDrawable(context.getResources(), collapsed ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px, null);
+            boolean groupCollapsed = Boolean.TRUE.equals(this.collapsed.get(entry.section));
+            Drawable d = ResourcesCompat.getDrawable(context.getResources(), groupCollapsed ? R.drawable.arrow_drop_up_24px : R.drawable.arrow_drop_down_24px, null);
             toggle.setImageDrawable(d.mutate());
-            toggle.setContentDescription(context.getString(collapsed ? R.string.sidebar_expand : R.string.sidebar_collapse));
+            toggle.setContentDescription(context.getString(groupCollapsed ? R.string.sidebar_expand : R.string.sidebar_collapse));
             ((View) toggle.getParent()).setOnClickListener(v -> callbacks.onHeaderToggle(entry));
             toggle.animate().cancel();
             toggle.setRotation(0f);
