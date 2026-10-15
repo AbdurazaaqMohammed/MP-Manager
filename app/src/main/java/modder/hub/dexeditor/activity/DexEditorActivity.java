@@ -105,6 +105,7 @@ import java.util.Objects;
 import io.github.abdurazaaqmohammed.ui.UiFields;
 import io.github.abdurazaaqmohammed.ui.activities.EditorSettingsActivity;
 import io.github.codehasan.colorpicker.extensions.Extensions;
+import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
@@ -123,6 +124,7 @@ import modder.hub.dexeditor.smali.Smali2Java;
 import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.smali.SmaliInstructionHelper;
 import modder.hub.dexeditor.utils.ClassTree;
+import modder.hub.dexeditor.utils.DexBatchExporter;
 import modder.hub.dexeditor.utils.EditorHelper;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
@@ -1606,19 +1608,26 @@ public class DexEditorActivity extends BaseActivity {
         fabBackground = fabLayout;
         FloatingActionButton fabInvertSelect = fabLayout.findViewById(R.id.fab_select_rest);
         FloatingActionButton fabClear = fabLayout.findViewById(R.id.fab_clear);
+        FloatingActionButton fabExport = fabLayout.findViewById(R.id.fab_export);
 
         // Remove fabLayout from its parent (the root of multiple_fabs.xml) before adding to fabDelete's parent
         ((ViewGroup) fabLayout.getParent()).removeView(fabLayout);
         ((ViewGroup) fabDelete.getParent()).addView(fabLayout);
         fabClear.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
         fabInvertSelect.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
+        if (fabExport != null) fabExport.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             fabClear.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
             fabInvertSelect.setImageTintList(ColorStateList.valueOf(0XFFFFFFFF));
+            if (fabExport != null) fabExport.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
         } else {
             LightingColorFilter cf = new LightingColorFilter(Color.BLACK, 0xFFFFFFFF);
             fabClear.setColorFilter(cf);
             fabInvertSelect.setColorFilter(cf);
+            if (fabExport != null) fabExport.setColorFilter(cf);
+        }
+        if (fabExport != null) {
+            fabExport.setOnClickListener(v -> showBatchExportDialog());
         }
         fabInvertSelect.setOnClickListener(v -> {
             Fragment currentFragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + explorerViewPager.getCurrentItem()));
@@ -2578,6 +2587,92 @@ public class DexEditorActivity extends BaseActivity {
                 }
             }.start();
         }
+    }
+
+    private TreeAdapter currentTreeAdapter() {
+        try {
+            Fragment currentFragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + explorerViewPager.getCurrentItem()));
+            if (currentFragment instanceof ExplorerPageFragment) {
+                RecyclerView rv = ((ExplorerPageFragment) currentFragment).rv;
+                if (rv != null && rv.getAdapter() instanceof TreeAdapter adapter) return adapter;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private void showBatchExportDialog() {
+        TreeAdapter adapter = currentTreeAdapter();
+        List<TreeNode> selected = adapter == null ? null : adapter.getSelectedNodes();
+        if (selected == null || selected.isEmpty() || classTree == null) {
+            Extensions.showMessage(this, getString(R.string.dex_export_none));
+            return;
+        }
+        String[] formats = {getString(R.string.dex_export_smali), getString(R.string.dex_export_dex), getString(R.string.dex_export_jar)};
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.dex_export_title)
+                .setItems(formats, (d, which) -> openExportFolderPicker(selected, which))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openExportFolderPicker(List<TreeNode> selected, int format) {
+        FilePickerDialog.Properties props = new FilePickerDialog.Properties();
+        props.selection_type = FilePickerDialog.DIR_SELECT;
+        props.selection_mode = FilePickerDialog.SINGLE_MODE;
+        props.preferenceKey = "dex_export";
+        FilePickerDialog picker = new FilePickerDialog(this, props);
+        picker.setTitle(getString(R.string.dex_export_choose_folder));
+        picker.setDialogSelectionListener(files -> {
+            if (files == null || files.length == 0) return;
+            runBatchExport(selected, format, new File(files[0]));
+        });
+        picker.show();
+    }
+
+    private void runBatchExport(List<TreeNode> selected, int format, File destDir) {
+        if (destDir == null || !destDir.isDirectory()) {
+            showErrorDialog(getString(R.string.dex_export_none));
+            return;
+        }
+        progressDialog = new AlertProgress(DexEditorActivity.this);
+        progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setMessage(getString(R.string.exporting));
+        progressDialog.show();
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    List<String> types = DexBatchExporter.resolveTypes(classTree, selected);
+                    if (types.isEmpty()) throw new Exception(getString(R.string.dex_export_none));
+                    int version = classTree.getOpenedDexVersion();
+                    Map<String, ClassDef> defs = DexBatchExporter.resolveDefs(classTree, types, version);
+                    String done;
+                    if (format == DexBatchExporter.FORMAT_DEX) {
+                        File out = DexBatchExporter.exportDex(defs, version, destDir, "classes");
+                        done = getString(R.string.exported_to_X, out.getAbsolutePath());
+                    } else if (format == DexBatchExporter.FORMAT_JAR) {
+                        File out = DexBatchExporter.exportJar(defs, version, getCacheDir(), destDir, "classes");
+                        done = getString(R.string.exported_to_X, out.getAbsolutePath());
+                    } else {
+                        File smaliDir = new File(destDir, "smali");
+                        smaliDir.mkdirs();
+                        int n = DexBatchExporter.exportSmali(classTree, defs, smaliDir);
+                        done = getString(R.string.exported_to_X, smaliDir.getAbsolutePath()) + " (" + n + ")";
+                    }
+                    String finalDone = done;
+                    runOnUiThread(() -> {
+                        progressDialog.dismiss();
+                        Extensions.showMessage(DexEditorActivity.this, finalDone);
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        progressDialog.dismiss();
+                        showErrorDialog(e.toString());
+                    });
+                }
+            }
+        }.start();
     }
 
     // batch class deletion function
