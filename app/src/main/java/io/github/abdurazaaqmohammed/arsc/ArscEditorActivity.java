@@ -577,6 +577,10 @@ public class ArscEditorActivity extends BaseActivity {
         query.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) query.showDropDown();
         });
+        List<String> prev = loadHistory();
+        if (!prev.isEmpty() && (query.getText() == null || query.getText().length() == 0)) {
+            query.setText(prev.get(0));
+        }
 
         RadioGroup group = new RadioGroup(this);
         group.setOrientation(LinearLayout.HORIZONTAL);
@@ -594,7 +598,7 @@ public class ArscEditorActivity extends BaseActivity {
         groupParams.topMargin = dp(8);
         root.addView(group, groupParams);
 
-        new MaterialAlertDialogBuilder(this)
+        androidx.appcompat.app.AlertDialog valueDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.arsc_search_value))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -607,7 +611,9 @@ public class ArscEditorActivity extends BaseActivity {
                     int kind = rbInt.isChecked() ? 1 : (rbHex.isChecked() ? 2 : 0);
                     pushHistory(q);
                     runSimpleSearch(q, kind);
-                }).show();
+                }).create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(valueDialog, query, true);
+        valueDialog.show();
     }
 
     private void showSearchIdDialog() {
@@ -615,7 +621,7 @@ public class ArscEditorActivity extends BaseActivity {
         input.setHint(getString(R.string.arsc_hex_hint));
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setSingleLine(true);
-        new MaterialAlertDialogBuilder(this)
+        androidx.appcompat.app.AlertDialog idDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(getString(R.string.arsc_search_id))
                 .setView(UiFields.wrap(this, input, "Hex ID", 16))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -643,7 +649,9 @@ public class ArscEditorActivity extends BaseActivity {
                         return;
                     }
                     showEntryDetail(e, re);
-                }).show();
+                }).create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(idDialog, input, false);
+        idDialog.show();
     }
 
     private void runSimpleSearch(String query, int kind) {

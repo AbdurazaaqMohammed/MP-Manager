@@ -40,6 +40,7 @@ import io.github.abdurazaaqmohammed.utils.DialogUtil;
 import io.github.abdurazaaqmohammed.utils.ErrorUtil;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.ProgressManager;
+import io.github.abdurazaaqmohammed.utils.RenameHelper;
 import io.github.abdurazaaqmohammed.utils.RenameUtil;
 import io.github.abdurazaaqmohammed.utils.RootManager;
 import io.github.abdurazaaqmohammed.utils.RootStaging;
@@ -114,26 +115,10 @@ public class EntryDialogs {
         View rnm = LayoutInflater.from(context).inflate(R.layout.enter_name, null);
         EditText renameInput = rnm.findViewById(R.id.m_et_edittext);
         renameInput.setText(fileName);
-        renameInput.requestFocus();
-        renameInput.post(() -> {
-            try {
-                boolean isFile = isInZip ? (entry != null && !entry.isDirectory()) : (file != null && file.isFile());
-                int len = renameInput.length();
-                int end = len;
-                if (isFile && fileName != null) {
-                    int dot = fileName.lastIndexOf('.');
-                    if (dot > 0 && dot < len) end = dot;
-                }
-                if (end < 0) end = 0;
-                if (end > len) end = len;
-                renameInput.setSelection(0, end);
-            } catch (Exception ignored) {
-                try {
-                    renameInput.setSelection(renameInput.length());
-                } catch (Exception ignored2) {}
-            }
-            InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) imm.showSoftInput(renameInput, InputMethodManager.SHOW_IMPLICIT);
+        boolean renameIsFile = isInZip ? (entry != null && !entry.isDirectory()) : (file != null && file.isFile());
+        renameInput.setOnLongClickListener(v -> {
+            RenameHelper.selectBaseName(renameInput, renameIsFile);
+            return true;
         });
         renameDialog
                 .setTitle(context.rss.getString(R.string.rename_1, fileName))
@@ -152,6 +137,10 @@ public class EntryDialogs {
                 })
                 .setPositiveButton(android.R.string.ok, (dialog3, which) -> {
                     String s = renameInput.getText().toString();
+                    if (s.isEmpty()) {
+                        Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
+                        return;
+                    }
                     if (isInZip) {
                         File zipFile = entry.getZipFile();
                         try (ZipFile zf = new ZipFile(zipFile)) {
@@ -165,27 +154,41 @@ public class EntryDialogs {
                                 }
                                 if (!map.isEmpty()) zf.renameFiles(map);
                             } else zf.renameFile((entryName), s);
-                            context.loadZipFolderInPane(zipFile, state.currentZipPath(), pane1, false);
+                            context.refreshPaneAfterChange(pane1, s);
+                            context.flashPaneItem(pane1, s);
+                            context.offerOuterUpdate(entry.getZipFile(), pane1);
                         } catch (Exception e) {
                             new ErrorUtil(context).showError(e);
                         }
                     } else {
                         File ogFolder = file.getParentFile();
-                        if (AccessManager.fileOpsOn(context)) {
-                            try {
-                                AccessManager.rename(context, file.getAbsolutePath(), new File(ogFolder, s).getAbsolutePath(), true);
-                                context.loadFolderInPane(ogFolder, pane1);
-                            } catch (Exception e) {
-                                if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                                else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
-                            }
+                        if (ogFolder == null) {
+                            Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
+                            return;
+                        }
+                        File dest = new File(ogFolder, s);
+                        if (dest.exists() && !RenameHelper.sameFile(file, dest)) {
+                            RenameHelper.askSwapName(context, dialogUtil, file, dest, s, pane1, null);
+                            return;
+                        }
+                        if (RenameHelper.renameFile(context, file, dest)) {
+                            context.refreshPaneAfterChange(pane1, s);
+                            context.flashPaneItem(pane1, s);
                         } else {
-                            if (file.renameTo(new File(ogFolder, s))) context.loadFolderInPane(ogFolder, pane1);
-                            else Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
+                            Extensions.showMessage(context, context.rss.getString(R.string.failed_to_renamex, fileName));
                         }
                     }
                 });
         AlertDialog ad = renameDialog.create();
+        ad.setOnShowListener(d -> {
+            renameInput.requestFocus();
+            RenameHelper.selectBaseName(renameInput, renameIsFile);
+            InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) imm.showSoftInput(renameInput, InputMethodManager.SHOW_IMPLICIT);
+        });
+        try {
+            if (ad.getWindow() != null) ad.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        } catch (Exception ignored) {}
         dialogUtil.styleAlertDialog(ad);
         ad.getButton(AlertDialog.BUTTON_NEUTRAL)
                 .setOnClickListener(v6 -> {
@@ -210,9 +213,11 @@ public class EntryDialogs {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean[] sign = new boolean[1];
         File zipFile = isInZip ? entry.getZipFile() : null;
+        TextView customMsgView = null;
         if (isInZip && zipFile.getName().endsWith(".apk")) {
             LinearLayout ll = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.item_modified_dialog, null);
-            ll.<TextView>findViewById(R.id.modifiedText).setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
+            customMsgView = ll.findViewById(R.id.modifiedText);
+            customMsgView.setText(context.rss.getString(R.string.confirm_delete_f, filesToDisplay));
             CheckBox autosign = ll.findViewById(R.id.autosign);
             autosign.setChecked(sign[0] = settings.getBoolean("autosign", true));
             autosign.setOnCheckedChangeListener((buttonView, isChecked) -> settings.edit().putBoolean("autosign", sign[0] = isChecked).apply());
@@ -253,7 +258,7 @@ public class EntryDialogs {
                                     File finalSelectedFile = selectedFile;
                                     context.handler.post(() -> {
                                         state.clearSelection();
-                                        context.loadFolderInPane(finalSelectedFile.getParentFile(), pane1);
+                                        context.refreshPaneAfterChange(pane1, null);
                                     });
                                 } else context.handler.post(state::clearSelection);
                             } else {
@@ -261,6 +266,9 @@ public class EntryDialogs {
                                 for (int i : state.selectedPositions()) selected.add((ZipEntryInfo) values[i]);
                                 fileOps.deleteZipEntry(selected.toArray(new ZipEntryInfo[0]));
                                 if (sign[0]) wrapper[0].signApk(zipFile);
+                                File changedZip = zipFile != null ? zipFile
+                                        : (selected.isEmpty() ? null : selected.get(0).getZipFile());
+                                context.offerOuterUpdate(changedZip, pane1);
                                 context.handler.post(state::clearSelection);
                             }
                         } else if (!isInZip) {
@@ -281,11 +289,12 @@ public class EntryDialogs {
                             }
                             context.handler.post(() -> {
                                 state.clearSelection();
-                                context.loadFolderInPane(file.getParentFile(), pane1);
+                                context.refreshPaneAfterChange(pane1, null);
                             });
                         } else {
                             fileOps.deleteZipEntry(entry);
                             if (sign[0]) wrapper[0].signApk(zipFile);
+                            context.offerOuterUpdate(zipFile, pane1);
                             context.handler.post(state::clearSelection);
                         }
                         pm.dismiss();
@@ -324,7 +333,119 @@ public class EntryDialogs {
             };
             checkAndRun.run();
         }).setNegativeButton(android.R.string.cancel, (dialog1, which1) -> pm.dismiss());
-        dialogUtil.styleAlertDialog(deleteDialog.create());
+        AlertDialog shownDelete = deleteDialog.create();
+        dialogUtil.styleAlertDialog(shownDelete);
+        appendDeleteSize(shownDelete, customMsgView, isInZip, multi, file, values);
+    }
+
+    private void appendDeleteSize(AlertDialog shown, TextView customMsg, boolean isInZip,
+                                  boolean multi, File file, Object[] values) {
+        if (isInZip) return;
+        TextView target = customMsg != null ? customMsg
+                : (shown == null ? null : shown.findViewById(android.R.id.message));
+        if (target == null) return;
+        List<File> targets = new ArrayList<>();
+        if (multi) {
+            for (int i : state.selectedPositions()) {
+                if (i < 0 || i >= values.length) continue;
+                if (values[i] instanceof File) targets.add((File) values[i]);
+            }
+        } else if (file != null) targets.add(file);
+        if (targets.isEmpty()) return;
+        CharSequence base = target.getText();
+        target.setText(base + "\n" + context.rss.getString(R.string.delete_size_calc));
+        new Thread(() -> {
+            long bytes = 0;
+            long items = 0;
+            long hidden = 0;
+            for (File t : targets) {
+                long[] st = dirStats(t);
+                bytes += st[0];
+                items += st[1];
+                hidden += st[2];
+            }
+            String info = context.rss.getString(R.string.delete_size_info,
+                    android.text.format.Formatter.formatFileSize(context, bytes), items, hidden);
+            context.handler.post(() -> {
+                try {
+                    target.setText(base + "\n" + info);
+                } catch (Exception ignored) {}
+            });
+        }).start();
+    }
+
+    private long[] dirStats(File root) {
+        long bytes = 0;
+        long items = 0;
+        long hidden = 0;
+        try {
+            if (root.isFile()) {
+                return new long[]{root.length(), 1, root.getName().startsWith(".") ? 1 : 0};
+            }
+            java.util.ArrayDeque<File> stack = new java.util.ArrayDeque<>();
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
+            stack.add(root);
+            while (!stack.isEmpty()) {
+                File d = stack.poll();
+                if (d == null) continue;
+                String canon;
+                try {
+                    canon = d.getCanonicalPath();
+                } catch (Exception e) {
+                    continue;
+                }
+                if (!seen.add(canon)) continue;
+                File[] kids;
+                try {
+                    kids = d.listFiles();
+                } catch (Exception e) {
+                    kids = null;
+                }
+                if (kids == null) {
+                    long[] du = duSize(d.getAbsolutePath());
+                    if (du != null) bytes += du[0];
+                    items++;
+                    continue;
+                }
+                if (d != root) {
+                    items++;
+                    if (d.getName().startsWith(".")) hidden++;
+                }
+                for (File k : kids) {
+                    if (k == null) continue;
+                    try {
+                        if (k.isFile()) {
+                            bytes += k.length();
+                            items++;
+                            if (k.getName().startsWith(".")) hidden++;
+                        } else {
+                            stack.add(k);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception ignored) {}
+        return new long[]{bytes, items, hidden};
+    }
+
+    private long[] duSize(String path) {
+        try {
+            if (!AccessManager.fileOpsOn(context)) return null;
+            String cmd = "du -sb " + RootManager.escapeShellArg(path);
+            String out = null;
+            if (AccessManager.active(context) == AccessManager.Backend.ROOT) {
+                RootManager.ShellResult r = RootManager.getInstance(context).execute(cmd, 15);
+                if (r != null && r.isSuccess()) out = r.output();
+            } else if (io.github.abdurazaaqmohammed.utils.ShizukuManager.ready()) {
+                io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.Result r =
+                        io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell.exec(cmd, 15);
+                if (r != null && r.success) out = r.stdout;
+            }
+            if (out == null) return null;
+            return new long[]{Long.parseLong(out.trim().split("\\s+")[0])};
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public void showCompressDialog(File file, String fileName, boolean multi) {

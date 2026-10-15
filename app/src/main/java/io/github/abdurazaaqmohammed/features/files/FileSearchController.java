@@ -77,6 +77,12 @@ public class FileSearchController {
         List<SearchHistoryHelper.Item> historyItems =
                 SearchHistoryHelper.load(activity, SearchHistoryHelper.KEY_MAIN);
 
+        String lastMain = SearchHistoryHelper.lastQuery(activity, SearchHistoryHelper.KEY_MAIN);
+        if (searchQuery.length() == 0 && !lastMain.isEmpty()) {
+            searchQuery.setText(lastMain);
+            searchQuery.setSelection(lastMain.length());
+        }
+
         ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_dropdown_item_1line,
                 new ArrayList<>());
         searchQuery.setAdapter(adapter);
@@ -110,6 +116,13 @@ public class FileSearchController {
                 .create();
 
         dialog.setOnShowListener(d -> {
+            searchQuery.requestFocus();
+            try {
+                android.view.inputmethod.InputMethodManager imm =
+                        (android.view.inputmethod.InputMethodManager) activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.showSoftInput(searchQuery, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            } catch (Exception ignored) {
+            }
             Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             positiveButton.setOnClickListener(v -> {
                 CharSequence q = searchQuery.getText();
@@ -227,7 +240,7 @@ public class FileSearchController {
         scope.setText(startDir.getPath());
         scope.setTextSize(12);
         root.addView(scope);
-        new MaterialAlertDialogBuilder(activity)
+        AlertDialog findDialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.find_in_files))
                 .setView(root)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -238,7 +251,9 @@ public class FileSearchController {
                         return;
                     }
                     runFindInFiles(startDir, q, cbCase.isChecked(), cbRegex.isChecked());
-                }).show();
+                }).create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(findDialog, queryInput, false);
+        findDialog.show();
     }
 
     private void runFindInFiles(File startDir, String query, boolean matchCase, boolean regex) {

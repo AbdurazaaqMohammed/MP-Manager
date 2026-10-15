@@ -414,13 +414,8 @@ public class FileOperationsHelper {
                     })
                     .setNegativeButton(android.R.string.cancel, (d, w) -> latch.countDown());
             AlertDialog dialog = builder.create();
+            io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, input, true);
             dialogUtil.styleAlertDialog(dialog);
-            dialog.setOnShowListener(d -> {
-                input.requestFocus();
-                InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-                if (imm != null) imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
-            });
-            dialog.show();
         });
         try {
             latch.await();

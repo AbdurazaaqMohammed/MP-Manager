@@ -1081,7 +1081,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             } else {
                                 Extensions.showMessage(MainActivity.this, getString(R.string.navigate_create_failed, inputPath));
                             }
-                        }).show();
+                        }).create();
+                io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(ad, input, true);
+                dialogUtil.styleAlertDialog(ad);
                 ad.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
                     int selectionStart = input.getSelectionStart();
                     int selectionEnd = input.getSelectionEnd();
@@ -1129,7 +1131,9 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                                 if (touchViaRoot(ogFolder, inputStr)) loadFolderInPane(ogFolder, isPane1);
                                 else Extensions.showMessage(MainActivity.this, rss.getString(R.string.failed_to_create_file, inputStr));
                             }
-                        }).show();
+                        }).create();
+                io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(ad, input, false);
+                dialogUtil.styleAlertDialog(ad);
                 ad.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v2 -> {
                     CharSequence text = ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).getText();
                     if (TextUtils.isEmpty(text)) {
