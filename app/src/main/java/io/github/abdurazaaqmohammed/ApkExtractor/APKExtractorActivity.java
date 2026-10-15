@@ -570,14 +570,29 @@ public class APKExtractorActivity extends BaseActivity {
                         } catch (Exception ignored2) {}
                         try {
                             String inst = null;
+                            String initiator = null;
+                            String origin = null;
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 try {
                                     InstallSourceInfo si = pm.getInstallSourceInfo(app.packageName);
-                                    if (si != null) inst = si.getInstallingPackageName();
+                                    if (si != null) {
+                                        inst = si.getInstallingPackageName();
+                                        initiator = si.getInitiatingPackageName();
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            try {
+                                                int src = si.getPackageSource();
+                                                if (src == 1) origin = "Local file";
+                                                else if (src == 2) origin = "Downloaded file";
+                                                else if (src == 3) origin = "Other";
+                                            } catch (Exception ignored3) {}
+                                        }
+                                    }
                                 } catch (Exception ignored2) {}
                             }
                             if (inst == null) inst = pm.getInstallerPackageName(app.packageName);
                             appInfo.installer = inst;
+                            appInfo.installInitiator = initiator;
+                            appInfo.installOrigin = origin;
                         } catch (Exception ignored2) {}
                         boolean isSystem = (app.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
                         if (isSystem)

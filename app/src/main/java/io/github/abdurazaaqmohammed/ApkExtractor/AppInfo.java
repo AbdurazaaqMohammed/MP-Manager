@@ -24,6 +24,8 @@ public class AppInfo {
     public int targetSdk;
     public int minSdk;
     public String installer;
+    public String installInitiator;
+    public String installOrigin;
     public String dataDir;
     public String extDataDir;
     public String apkDir;

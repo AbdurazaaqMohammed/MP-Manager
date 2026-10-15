@@ -58,6 +58,10 @@ public final class ExtractorCache {
         int minSdk;
         @SerializedName("in")
         String installer;
+        @SerializedName("ii")
+        String initiator;
+        @SerializedName("io")
+        String origin;
         @SerializedName("dd")
         String dataDir;
         @SerializedName("ed")
@@ -108,6 +112,8 @@ public final class ExtractorCache {
                 ai.targetSdk = r.targetSdk;
                 ai.minSdk = r.minSdk;
                 ai.installer = r.installer;
+                ai.installInitiator = r.initiator;
+                ai.installOrigin = r.origin;
                 ai.dataDir = r.dataDir;
                 ai.extDataDir = r.extDataDir;
                 ai.apkDir = r.apkDir;
@@ -145,6 +151,8 @@ public final class ExtractorCache {
                 r.targetSdk = ai.targetSdk;
                 r.minSdk = ai.minSdk;
                 r.installer = ai.installer;
+                r.initiator = ai.installInitiator;
+                r.origin = ai.installOrigin;
                 r.dataDir = ai.dataDir;
                 r.extDataDir = ai.extDataDir;
                 r.apkDir = ai.apkDir;

@@ -1623,6 +1623,8 @@ Layout Inspector
     <string name="plugin_info">Plugin Info</string>
     <string name="plugin_infos">Plugins are developed as Android apps. Install one and it will show up in this list. On first use you will be prompted to confirm its certificate fingerprint against the one its developer published. If it ever changes, you will be warned.\n\nA plugin can add entries to the sidebar, settings, file menu, text editor or APK dialog. Each plugin runs in its own app process with its own permissions, so a plugin cannot read your files unless you explicitly grant it storage access.\n\nTo make one, copy the samples/plugin-sample module, declare the hooks you use in the manifest, and follow the contract strings in PluginContracts. Then build an APK, host it anywhere, and share the fingerprint with your users.</string>
     <string name="installer">Installer: %1$s</string>
+    <string name="install_initiator">Install initiator</string>
+    <string name="install_origin">Install origin</string>
     <string name="ai_warning">Warning: AI-generated responses are provided solely for informational purposes and may be inaccurate, incomplete, outdated, or unsafe. You are solely responsible for reviewing, verifying, and using any AI output. To the fullest extent permitted by law, the developer of MP Manager is not responsible for any loss, damage, or consequence arising from the use of this AI feature or from reliance on its output. API usage is subject to Google\'s Gemini terms of service, and you are responsible for any charges incurred through your API key.</string>
     <string name="agree">Agree</string>
     <string name="ai_usage_disclaimer">AI Usage Disclaimer</string>

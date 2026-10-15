@@ -147,8 +147,19 @@ public final class AppDetailsDialog {
             addRow(act, root, act.getString(R.string.target_sdk), String.valueOf(ai.targetSdk), null);
         if (ai.minSdk >= 0)
             addRow(act, root, act.getString(R.string.min_sdk), String.valueOf(ai.minSdk), null);
-        if (ai.installer != null && !ai.installer.isEmpty())
-            addRow(act, root, act.getString(R.string.installer), ai.installer, null);
+        TextView installerValue = null;
+        TextView initiatorValue = null;
+        TextView originValue = null;
+        if (ai.installer != null && !ai.installer.isEmpty()) {
+            installerValue = addRow(act, root, act.getString(R.string.installer), installerDisplay(act, ai.installer), null);
+        }
+        if (ai.installInitiator != null && !ai.installInitiator.isEmpty()
+                && !ai.installInitiator.equals(ai.installer)) {
+            initiatorValue = addRow(act, root, act.getString(R.string.install_initiator), installerDisplay(act, ai.installInitiator), null);
+        }
+        if (ai.installOrigin != null && !ai.installOrigin.isEmpty()) {
+            originValue = addRow(act, root, act.getString(R.string.install_origin), ai.installOrigin, null);
+        }
         addRow(act, root, act.getString(R.string.status_label),
                 ai.enabled ? act.getString(R.string.enabled_state) : act.getString(R.string.disabled_state), null);
 
@@ -192,6 +203,20 @@ public final class AppDetailsDialog {
         nameView.setOnLongClickListener(copy);
         pkgView.setOnLongClickListener(copy);
         sigValue.setOnLongClickListener(copy);
+        if (installerValue != null) installerValue.setOnLongClickListener(copy);
+        if (initiatorValue != null) initiatorValue.setOnLongClickListener(copy);
+        if (originValue != null) originValue.setOnLongClickListener(copy);
+    }
+
+    private static String installerDisplay(APKExtractorActivity act, String pkg) {
+        if (pkg == null || pkg.isEmpty()) return pkg;
+        try {
+            PackageManager pm = act.getPackageManager();
+            ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
+            CharSequence label = info == null ? null : pm.getApplicationLabel(info);
+            if (label != null && !label.toString().equals(pkg)) return label + " (" + pkg + ")";
+        } catch (Exception ignored) {}
+        return pkg;
     }
 
     private static TextView addRow(APKExtractorActivity act, LinearLayout root, String label, String value, String tapPath) {
