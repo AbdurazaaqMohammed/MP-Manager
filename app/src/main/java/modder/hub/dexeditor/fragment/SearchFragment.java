@@ -450,6 +450,8 @@ public class SearchFragment extends Fragment {
         SharedPreferences prefs = requireContext().getSharedPreferences("search_prefs", Context.MODE_PRIVATE);
         lastUseExcludeList = prefs.getBoolean("use_exclude_list", false);
 
+        if (lastSearchQuery == null || lastSearchQuery.isEmpty())
+            lastSearchQuery = SearchHistoryHelper.lastQuery(requireContext(), SearchHistoryHelper.KEY_DEX);
         etFind.setText(lastSearchQuery);
         if (searchInResults) {
             etPath.setText("");
@@ -541,6 +543,8 @@ public class SearchFragment extends Fragment {
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
 
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, etFind,
+                lastSearchQuery != null && !lastSearchQuery.isEmpty());
         dialog.show();
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
