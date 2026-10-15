@@ -6,13 +6,19 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.media.ThumbnailUtils;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.LruCache;
@@ -42,6 +48,7 @@ public class FileIconLoader {
 
     private static final ExecutorService iconLoaderService = Executors.newFixedThreadPool(4);
     private static final LruCache<String, Drawable> iconCache = new LruCache<>(100);
+    private static final LruCache<String, Drawable> badgeCache = new LruCache<>(200);
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
@@ -94,6 +101,111 @@ public class FileIconLoader {
         } else {
             fileIconView.setImageDrawable(cachedFolderIcon);
             fileDateView.setVisibility(View.INVISIBLE);
+    public void requestRowBadge(File file, ImageView badgeView, String listedDir) {
+        if (file == null || badgeView == null || isInZip) return;
+        String name = file.getName();
+        if (name == null || name.isEmpty()) return;
+        boolean folderBadge = isDataRoot(listedDir)
+                && io.github.abdurazaaqmohammed.utils.RootManager.isPackageNameValid(name);
+        String lower = name.toLowerCase(Locale.ROOT);
+        boolean splitBadge = file.isFile()
+                && (lower.endsWith(".apks") || lower.endsWith(".xapk")
+                || lower.endsWith(".apkm") || lower.endsWith(".aspk"));
+        if (!folderBadge && !splitBadge) return;
+        String key = (folderBadge ? "pkg:" : "split:") + (folderBadge ? name : file.getPath());
+        Drawable cached = badgeCache.get(key);
+        if (cached != null) {
+            badgeView.setImageDrawable(cached);
+            badgeView.setVisibility(View.VISIBLE);
+            return;
+        }
+        String tag = file.getAbsolutePath();
+        badgeView.setTag(tag);
+        badgeHandler.postDelayed(() -> {
+            if (!tag.equals(badgeView.getTag())) return;
+            iconLoaderService.execute(() -> {
+                if (!tag.equals(badgeView.getTag())) return;
+                try {
+                    Drawable icon = folderBadge ? loadInstalledAppIcon(name)
+                            : ApkIconHelper.getApkIcon(context, tag);
+                    if (icon == null) return;
+                    Drawable circled = circleDrawable(context.getResources(), icon);
+                    if (circled == null) return;
+                    badgeCache.put(key, circled);
+                    context.runOnUiThread(() -> {
+                        if (tag.equals(badgeView.getTag())) {
+                            badgeView.setImageDrawable(circled);
+                            badgeView.setVisibility(View.VISIBLE);
+                        }
+                    });
+                } catch (Exception ignored) {}
+            });
+        }, 350);
+    }
+
+    private Drawable loadInstalledAppIcon(String pkg) {
+        try {
+            return context.getPackageManager().getApplicationIcon(pkg);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isDataRoot(String path) {
+        if (path == null || path.isEmpty()) return false;
+        String p = path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
+        if (p.endsWith("/Android/data") || p.endsWith("/Android/obb") || p.endsWith("/Android/media")) return true;
+        if (p.equals("/data/data")) return true;
+        String leaf = p.substring(p.lastIndexOf('/') + 1);
+        String parent = p.substring(0, p.lastIndexOf('/'));
+        if (!leaf.matches("[0-9]+")) return false;
+        return parent.equals("/data/user") || parent.equals("/data/user_de");
+    }
+
+    private static Drawable circleDrawable(Resources res, Drawable d) {
+        Bitmap bm = toBitmap(d);
+        if (bm == null) return null;
+        int w = bm.getWidth();
+        int h = bm.getHeight();
+        if (w <= 0 || h <= 0) return null;
+        int size = Math.min(w, h);
+        Bitmap square;
+        try {
+            square = Bitmap.createBitmap(bm, (w - size) / 2, (h - size) / 2, size, size);
+        } catch (Exception e) {
+            return null;
+        }
+        try {
+            Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(out);
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            c.drawCircle(size / 2f, size / 2f, size / 2f, paint);
+            paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+            c.drawBitmap(square, 0, 0, paint);
+            return new BitmapDrawable(res, out);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Bitmap toBitmap(Drawable d) {
+        if (d == null) return null;
+        try {
+            if (d instanceof BitmapDrawable) {
+                Bitmap b = ((BitmapDrawable) d).getBitmap();
+                if (b != null) return b;
+            }
+            int w = d.getIntrinsicWidth();
+            int h = d.getIntrinsicHeight();
+            if (w <= 0) w = 192;
+            if (h <= 0) h = 192;
+            Bitmap bm = Bitmap.createBitmap(Math.min(w, 512), Math.min(h, 512), Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(bm);
+            d.setBounds(0, 0, c.getWidth(), c.getHeight());
+            d.draw(c);
+            return bm;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -111,8 +223,12 @@ public class FileIconLoader {
         else ext = "";
 
         if (ApkIconHelper.isApkLikeExt(ext)) {
-            fileIconView.setImageDrawable(cachedApkIcon);
-            if (!isInZip) loadApkIconAsync(path, fileIconView);
+            if (isSplitApkExt(ext)) {
+                fileIconView.setImageDrawable(cachedArchiveIcon);
+            } else {
+                fileIconView.setImageDrawable(cachedApkIcon);
+                if (!isInZip) loadApkIconAsync(path, fileIconView);
+            }
         } else if (FileUtils.matchExt(ext, FileUtils.IMAGE_EXTS)) {
             fileIconView.setImageDrawable(cachedImageIcon);
             if (!isInZip) loadThumbnailAsync(path, fileIconView, false);
@@ -134,6 +250,11 @@ public class FileIconLoader {
         } else {
             fileIconView.setImageDrawable(cachedFileIcon);
         }
+    }
+
+    private static boolean isSplitApkExt(String extWithDot) {
+        return ".apks".equals(extWithDot) || ".xapk".equals(extWithDot)
+                || ".apkm".equals(extWithDot) || ".aspk".equals(extWithDot);
     }
 
     private void loadApkIconAsync(String path, ImageView fileIconView) {
