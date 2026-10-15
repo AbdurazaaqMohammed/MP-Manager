@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuShell;
 import io.github.abdurazaaqmohammed.shizuku.IFileService;
 import io.github.abdurazaaqmohammed.shizuku.ShizukuConnection;
 import io.github.abdurazaaqmohammed.shizuku.ShizukuFileService;
@@ -157,6 +158,7 @@ public final class ShizukuManager {
     public static boolean exists(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
+            if (!isAllowed(path)) return shellTest(path, "-e");
             requireAllowed(path);
             return serviceFast().pathExists(path);
         } catch (Throwable e) {
@@ -167,6 +169,7 @@ public final class ShizukuManager {
     public static boolean isDirectory(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
+            if (!isAllowed(path)) return shellTest(path, "-d");
             requireAllowed(path);
             return serviceFast().pathIsDir(path);
         } catch (Throwable e) {
@@ -177,6 +180,7 @@ public final class ShizukuManager {
     public static boolean isFile(Context context, String path) {
         if (ShizukuConnection.peek() == null) ShizukuConnection.ensureBackground(context);
         try {
+            if (!isAllowed(path)) return !shellTest(path, "-d") && shellTest(path, "-e");
             requireAllowed(path);
             return serviceFast().pathIsFile(path);
         } catch (Throwable e) {
@@ -186,6 +190,7 @@ public final class ShizukuManager {
 
     public static long getFileSize(Context context, String path) {
         try {
+            if (!isAllowed(path)) return shellStat(path, "%s");
             requireAllowed(path);
             return serviceFast().pathSize(path);
         } catch (Throwable e) {
@@ -195,11 +200,66 @@ public final class ShizukuManager {
 
     public static long getMtime(Context context, String path) {
         try {
+            if (!isAllowed(path)) {
+                long m = shellStat(path, "%Y");
+                return m < 0 ? 0 : m;
+            }
             requireAllowed(path);
             return serviceFast().pathMtime(path);
         } catch (Throwable e) {
             return 0;
         }
+    }
+
+    private static boolean shellTest(String path, String op) {
+        try {
+            if (!ShizukuShell.isGranted()) return false;
+            return ShizukuShell.exec("[ " + op + " " + RootManager.escapeShellArg(path) + " ]", 15).success;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    private static long shellStat(String path, String format) {
+        try {
+            if (!ShizukuShell.isGranted()) return -1;
+            ShizukuShell.Result r = ShizukuShell.exec("stat -c " + format + " " + RootManager.escapeShellArg(path), 15);
+            if (r == null || !r.success || r.stdout == null) return -1;
+            return Long.parseLong(r.stdout.trim().split("\\s+")[0]);
+        } catch (Throwable e) {
+            return -1;
+        }
+    }
+
+    public static boolean touchMtimeShell(String path, long millis) {
+        try {
+            if (RootManager.isPathBlocked(path)) return false;
+            long secs = millis / 1000L;
+            return ShizukuShell.exec("touch -d @" + secs + " " + RootManager.escapeShellArg(path), 15).success;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    public static long streamFromShell(String srcPath, OutputStream out, long maxBytes) throws IOException {        byte[] data = ShizukuShell.execBytes("cat " + RootManager.escapeShellArg(srcPath), maxBytes, 120);
+        out.write(data);
+        out.flush();
+        return data.length;
+    }
+
+    public static long streamToShell(File localSrc, String dstPath) throws IOException {
+        if (localSrc == null || !localSrc.isFile() || !localSrc.canRead()) {
+            throw new IOException("Staged file unreadable");
+        }
+        if (RootManager.isPathBlocked(dstPath)) throw new IOException("Blocked: refusing to write critical path");
+        ShizukuShell.Result r = ShizukuShell.exec(
+                "cat " + RootManager.escapeShellArg(localSrc.getAbsolutePath())
+                        + " > " + RootManager.escapeShellArg(dstPath), 120);
+        if (r == null || !r.success) {
+            String err = r == null ? "failed" : (r.stderr == null || r.stderr.isEmpty() ? r.stdout : r.stderr);
+            throw new IOException(err == null || err.isEmpty() ? "Shell write failed" : err.trim());
+        }
+        return localSrc.length();
     }
 
     public static long dirSize(Context context, String path) {
