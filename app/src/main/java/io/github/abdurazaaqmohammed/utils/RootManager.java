@@ -761,66 +761,96 @@ public class RootManager {
     }
 
     public void installSilent(String apkPath) throws IOException {
-        String safeApk = escapeShellArg(apkPath);
-        ShellResult copyResult = executeWithInput(
-                "cp " + safeApk + " /data/local/tmp/_install.apk && pm install -r /data/local/tmp/_install.apk && rm -f /data/local/tmp/_install.apk",
-                null);
-        if (!copyResult.isSuccess() || !copyResult.output.contains("Success")) {
-            throw new IOException("Install failed: " + copyResult.error + " " + copyResult.output);
-        }
+        installWithInstaller(java.util.Collections.singletonList(apkPath), null, 0x2);
     }
 
-    public void installSplitSilent(List<String> apkPaths) throws IOException {
+    /**
+     * Session-based silent install that attributes the install to
+     * {@code installerPkg} (e.g. Play Store spoof). Runs as uid 0, so
+     * PackageManager trusts the {@code -i} installer value the same way
+     * InstallerX's binder path trusts its spoofed caller package.
+     */
+    public void installWithInstaller(List<String> apkPaths, String installerPkg, int flags) throws IOException {
+        if (apkPaths == null || apkPaths.isEmpty()) throw new IOException("No APKs to install");
+        if (installerPkg != null && !installerPkg.isEmpty() && !isPackageNameValid(installerPkg)) {
+            throw new IOException("Invalid installer package: " + installerPkg);
+        }
+        String tag = "_mp" + (System.currentTimeMillis() % 100000);
         StringBuilder copyCmd = new StringBuilder();
         for (int i = 0; i < apkPaths.size(); i++) {
-            String tmpPath = "/data/local/tmp/_split_" + i + ".apk";
+            String tmpPath = "/data/local/tmp/" + tag + "_" + i + ".apk";
             copyCmd.append("cp ").append(escapeShellArg(apkPaths.get(i))).append(" ").append(escapeShellArg(tmpPath)).append(" ; ");
         }
 
         long totalSize = 0;
         for (String p : apkPaths) totalSize += new File(p).length();
-        String createCmd = "pm install-create -r -S " + totalSize;
+
+        String createCmd = PrivilegedInstaller.buildCreateCommand(totalSize, installerPkg, flags);
 
         ShellResult copyResult = executeWithInput(copyCmd.toString(), null);
         if (!copyResult.isSuccess()) {
-            throw new IOException("Failed to copy split APKs: " + copyResult.error);
+            throw new IOException("Failed to copy APKs: " + copyResult.error);
         }
 
         ShellResult createResult = execute(createCmd);
-        if (!createResult.isSuccess()) {
+        for (int attempt = 0; attempt < 2 && !createResult.isSuccess(); attempt++) {
+            String retry = PrivilegedInstaller.downgradeCreateCommand(createCmd,
+                    PrivilegedInstaller.combinedOutput(createResult.output, createResult.error));
+            if (retry == null) break;
+            createCmd = retry;
+            createResult = execute(createCmd);
+        }
+        String sessionId = parseSessionId(createResult.output);
+        if (!createResult.isSuccess() || sessionId == null) {
+            cleanupInstallTag(tag, apkPaths.size());
             throw new IOException("Failed to create install session: " + createResult.error + " " + createResult.output);
         }
 
-        String sessionLine = createResult.output;
-        int bracketStart = sessionLine.lastIndexOf('[');
-        int bracketEnd = sessionLine.lastIndexOf(']');
-        if (bracketStart < 0 || bracketEnd <= bracketStart) {
-            throw new IOException("Failed to parse session ID from: " + sessionLine);
-        }
-        String sessionId = sessionLine.substring(bracketStart + 1, bracketEnd).trim();
-
-        for (int i = 0; i < apkPaths.size(); i++) {
-            String tmpPath = "/data/local/tmp/_split_" + i + ".apk";
-            long size = new File(apkPaths.get(i)).length();
-            String writeCmd = "pm install-write -S " + size + " " + sessionId + " split" + i + " " + escapeShellArg(tmpPath);
-            ShellResult writeResult = execute(writeCmd);
-            if (!writeResult.isSuccess()) {
-                throw new IOException("Failed to stage split APK " + i + ": " + writeResult.error + " " + writeResult.output);
+        try {
+            for (int i = 0; i < apkPaths.size(); i++) {
+                String tmpPath = "/data/local/tmp/" + tag + "_" + i + ".apk";
+                long size = new File(apkPaths.get(i)).length();
+                String writeCmd = "pm install-write -S " + size + " " + sessionId + " split" + i + " " + escapeShellArg(tmpPath);
+                ShellResult writeResult = execute(writeCmd);
+                if (!writeResult.isSuccess()) {
+                    execute("pm install-abandon " + sessionId);
+                    throw new IOException("Failed to stage split APK " + i + ": " + writeResult.error + " " + writeResult.output);
+                }
             }
+
+            ShellResult commitResult = execute("pm install-commit " + sessionId);
+            if (!commitResult.isSuccess() || (!commitResult.output.contains("Success") && !commitResult.output.contains("Session"))) {
+                throw new IOException("Install failed: " + commitResult.error + " " + commitResult.output);
+            }
+        } finally {
+            cleanupInstallTag(tag, apkPaths.size());
         }
+    }
 
-        ShellResult commitResult = execute("pm install-commit " + sessionId);
-
+    private void cleanupInstallTag(String tag, int count) {
         StringBuilder cleanup = new StringBuilder();
-        for (int i = 0; i < apkPaths.size(); i++) {
-            cleanup.append("rm -f '/data/local/tmp/_split_").append(i).append(".apk';");
+        for (int i = 0; i < count; i++) {
+            cleanup.append("rm -f ").append(escapeShellArg("/data/local/tmp/" + tag + "_" + i + ".apk")).append(";");
         }
+        cleanup.append("rm -f '/data/local/tmp/_split_").append(0).append(".apk';");
         cleanup.append("rm -f '/data/local/tmp/_install.apk'");
-        executeWithInput(cleanup.toString(), null);
-
-        if (!commitResult.isSuccess() || (!commitResult.output.contains("Success") && !commitResult.output.contains("Session"))) {
-            throw new IOException("Split install failed: " + commitResult.error + " " + commitResult.output);
+        try {
+            executeWithInput(cleanup.toString(), null);
+        } catch (Exception ignored) {
         }
+    }
+
+    private static String parseSessionId(String output) {
+        if (output == null) return null;
+        int bracketStart = output.lastIndexOf('[');
+        int bracketEnd = output.lastIndexOf(']');
+        if (bracketStart < 0 || bracketEnd <= bracketStart) return null;
+        String id = output.substring(bracketStart + 1, bracketEnd).trim();
+        return id.matches("\\d+") ? id : null;
+    }
+
+    public void installSplitSilent(List<String> apkPaths) throws IOException {
+        installWithInstaller(apkPaths, null, 0x2);
     }
 
     public void uninstallSilent(String packageName) throws IOException {

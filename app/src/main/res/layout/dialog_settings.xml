@@ -581,6 +581,94 @@
                     android:layout_marginTop="4dp" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/shizukuSilentToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/shizuku_silent_install"
+                    android:enabled="false"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/installer_source"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/installerSourceTv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/installerCustomPkgLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/installer_custom_pkg"
+                    android:visibility="gone">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/installerCustomPkgEt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:inputType="text"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:text="@string/installer_spoof_note"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/installAllowTestToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/install_allow_test"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/installAllowDowngradeToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/install_allow_downgrade"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/installGrantAllToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/install_grant_all"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/installBypassLowTargetToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/install_bypass_low_target"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/installAllUsersToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:text="@string/install_all_users"
+                    android:layout_marginTop="4dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/rootFileOpsToggle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -620,6 +708,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/sectionBehaviorCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
@@ -715,6 +804,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/sectionSigningCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
@@ -759,6 +849,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/sectionUpdateCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"

@@ -61,7 +61,9 @@ import io.github.abdurazaaqmohammed.ui.PaneHighlightView;
 import io.github.abdurazaaqmohammed.ui.UIHelper;
 import io.github.abdurazaaqmohammed.ui.dialogs.FilePickerDialog;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
+import io.github.abdurazaaqmohammed.utils.InstallerConfig;
 import io.github.abdurazaaqmohammed.utils.RootManager;
+import io.github.abdurazaaqmohammed.utils.SectionCollapse;
 import io.github.abdurazaaqmohammed.utils.ShizukuManager;
 import io.github.abdurazaaqmohammed.utils.SignatureKeyDialog;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -191,7 +193,7 @@ public class SettingsController {
         });
 
         CompoundButton sidebarPluginsToggle = settingsDialog.findViewById(R.id.sidebarPluginsToggle);
-        sidebarPluginsToggle.setChecked(settings.getBoolean("sidebar_show_plugins", true));
+        sidebarPluginsToggle.setChecked(settings.getBoolean("sidebar_show_plugins", false));
         sidebarPluginsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
             settings.edit().putBoolean("sidebar_show_plugins", isChecked).apply();
             refreshSidebar();
@@ -227,6 +229,7 @@ public class SettingsController {
         checkUpdateNow.setOnClickListener(v1 -> UpdateUtil.checkForUpdates(true, activity));
         settingsDialog.findViewById(R.id.about).setOnClickListener(v -> new UIHelper(activity).showAboutDialog());
         setupPluginSettings(settingsDialog, settings);
+        setupCollapsibleSections(settingsDialog);
     }
 
     public void persist(ScrollView root) {
@@ -392,6 +395,23 @@ public class SettingsController {
         }
 
         container.addView(card);
+        card.setId(R.id.sectionPluginsCard);
+    }
+
+    /**
+     * Makes every titled settings card collapsible, restoring the persisted
+     * collapsed state for each. Runs after all sections (including the dynamic
+     * Plugins card) are attached.
+     */
+    private void setupCollapsibleSections(ScrollView root) {
+        SectionCollapse.applyToSection(root, R.id.sectionAppearanceCard, "appearance");
+        SectionCollapse.applyToSection(root, R.id.sectionFoldersCard, "folders");
+        SectionCollapse.applyToSection(root, R.id.sectionFileOpsCard, "fileops");
+        SectionCollapse.applyToSection(root, R.id.sectionElevatedCard, "elevated");
+        SectionCollapse.applyToSection(root, R.id.sectionBehaviorCard, "behavior");
+        SectionCollapse.applyToSection(root, R.id.sectionSigningCard, "signing");
+        SectionCollapse.applyToSection(root, R.id.sectionUpdateCard, "update");
+        SectionCollapse.applyToSection(root, R.id.sectionPluginsCard, "plugins");
     }
 
     /** Opens an external setting config screen after consent; persists booleans. */
@@ -866,6 +886,15 @@ public class SettingsController {
         MaterialSwitch shizukuStatusSwitch = root.findViewById(R.id.shizukuStatusSwitch);
         MaterialButton grantShizukuBtn = root.findViewById(R.id.grantShizukuBtn);
         MaterialSwitch silentInstallToggle = root.findViewById(R.id.silentInstallToggle);
+        MaterialSwitch shizukuSilentToggle = root.findViewById(R.id.shizukuSilentToggle);
+        AutoCompleteTextView installerSourceTv = root.findViewById(R.id.installerSourceTv);
+        View installerCustomPkgLayout = root.findViewById(R.id.installerCustomPkgLayout);
+        TextInputEditText installerCustomPkgEt = root.findViewById(R.id.installerCustomPkgEt);
+        MaterialSwitch installAllowTestToggle = root.findViewById(R.id.installAllowTestToggle);
+        MaterialSwitch installAllowDowngradeToggle = root.findViewById(R.id.installAllowDowngradeToggle);
+        MaterialSwitch installGrantAllToggle = root.findViewById(R.id.installGrantAllToggle);
+        MaterialSwitch installBypassLowTargetToggle = root.findViewById(R.id.installBypassLowTargetToggle);
+        MaterialSwitch installAllUsersToggle = root.findViewById(R.id.installAllUsersToggle);
         MaterialSwitch rootFileOpsToggle = root.findViewById(R.id.rootFileOpsToggle);
         MaterialSwitch shizukuFileOpsToggle = root.findViewById(R.id.shizukuFileOpsToggle);
         MaterialSwitch rootExtractorToggle = root.findViewById(R.id.rootExtractorToggle);
@@ -914,6 +943,7 @@ public class SettingsController {
             boolean isRoot = mode == RootManager.WorkingMode.ROOT;
             boolean isSh = mode == RootManager.WorkingMode.SHIZUKU;
             silentInstallToggle.setEnabled(isRoot);
+            shizukuSilentToggle.setEnabled(isSh);
             rootFileOpsToggle.setEnabled(isRoot);
             shizukuFileOpsToggle.setEnabled(isSh);
             rootExtractorToggle.setEnabled(isRoot);
@@ -968,6 +998,64 @@ public class SettingsController {
 
         silentInstallToggle.setChecked(settings.getBoolean("silent_install", false));
         silentInstallToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("silent_install", checked).apply());
+
+        shizukuSilentToggle.setChecked(settings.getBoolean("shizuku_silent_install", false));
+        shizukuSilentToggle.setOnCheckedChangeListener((v, checked) -> {
+            settings.edit().putBoolean("shizuku_silent_install", checked).apply();
+            if (checked) new Thread(() -> ShizukuManager.warmUp(activity)).start();
+        });
+
+        String labelSelf = activity.getString(R.string.installer_source_self);
+        String labelPlay = activity.getString(R.string.installer_source_play);
+        String labelShell = activity.getString(R.string.installer_source_shell);
+        String labelCustom = activity.getString(R.string.installer_source_custom);
+        List<String> sourceLabels = new ArrayList<>();
+        sourceLabels.add(labelSelf);
+        sourceLabels.add(labelPlay);
+        sourceLabels.add(labelShell);
+        sourceLabels.add(labelCustom);
+        installerSourceTv.setAdapter(dropdownAdapter(sourceLabels));
+        String currentSource = InstallerConfig.getSource(activity);
+        if (InstallerConfig.SOURCE_PLAY.equals(currentSource)) installerSourceTv.setText(labelPlay, false);
+        else if (InstallerConfig.SOURCE_SHELL.equals(currentSource)) installerSourceTv.setText(labelShell, false);
+        else if (InstallerConfig.SOURCE_CUSTOM.equals(currentSource)) installerSourceTv.setText(labelCustom, false);
+        else installerSourceTv.setText(labelSelf, false);
+        Runnable refreshCustomPkg = () -> installerCustomPkgLayout.setVisibility(
+                InstallerConfig.SOURCE_CUSTOM.equals(InstallerConfig.getSource(activity))
+                        ? View.VISIBLE : View.GONE);
+        refreshCustomPkg.run();
+        installerSourceTv.setOnItemClickListener((parent, view, position, id) -> {
+            String picked = sourceLabels.get(position);
+            if (picked.equals(labelPlay)) InstallerConfig.setSource(activity, InstallerConfig.SOURCE_PLAY);
+            else if (picked.equals(labelShell)) InstallerConfig.setSource(activity, InstallerConfig.SOURCE_SHELL);
+            else if (picked.equals(labelCustom)) InstallerConfig.setSource(activity, InstallerConfig.SOURCE_CUSTOM);
+            else InstallerConfig.setSource(activity, InstallerConfig.SOURCE_SELF);
+            refreshCustomPkg.run();
+        });
+        installerCustomPkgEt.setText(InstallerConfig.getCustomPackage(activity));
+        installerCustomPkgEt.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                String v = s == null ? "" : s.toString().trim();
+                if (!v.isEmpty() && !RootManager.isPackageNameValid(v)) {
+                    installerCustomPkgEt.setError("Invalid package name");
+                    return;
+                }
+                settings.edit().putString("installer_custom_pkg", v).apply();
+            }
+        });
+
+        installAllowTestToggle.setChecked(settings.getBoolean("install_allow_test", false));
+        installAllowTestToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("install_allow_test", checked).apply());
+        installAllowDowngradeToggle.setChecked(settings.getBoolean("install_allow_downgrade", false));
+        installAllowDowngradeToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("install_allow_downgrade", checked).apply());
+        installGrantAllToggle.setChecked(settings.getBoolean("install_grant_all", false));
+        installGrantAllToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("install_grant_all", checked).apply());
+        installBypassLowTargetToggle.setChecked(settings.getBoolean("install_bypass_low_target", false));
+        installBypassLowTargetToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("install_bypass_low_target", checked).apply());
+        installAllUsersToggle.setChecked(settings.getBoolean("install_all_users", false));
+        installAllUsersToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("install_all_users", checked).apply());
 
         rootFileOpsToggle.setChecked(settings.getBoolean("root_file_ops", false));
         rootFileOpsToggle.setOnCheckedChangeListener((v, checked) -> settings.edit().putBoolean("root_file_ops", checked).apply());

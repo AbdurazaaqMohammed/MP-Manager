@@ -42,59 +42,56 @@ public class ApkInstallDialogHelper {
     }
 
     public void installSingleApk(File apkFile) {
-
-        RootManager rm = RootManager.getInstance(activity);
-        if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
-            CharSequence appName = getAppNameForApk(apkFile);
-            ProgressManager pm = showProgress("Installing " + appName + "...");
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            executor.execute(() -> {
-                try {
-                    rm.installSilent(apkFile.getAbsolutePath());
-                    activity.runOnUiThread(() -> {
-                        dismissProgress(pm);
-                        showInstallCompleteDialog(appName, apkFile);
-                    });
-                } catch (Exception e) {
-                    activity.runOnUiThread(() -> {
-                        dismissProgress(pm);
-                        new ErrorUtil(activity).showError(e);
-                    });
-                }
-            });
-            executor.shutdown();
-        } else {
-            InstallUtil.installApk(activity, apkFile);
-            //installWithIntent(apkFile, pm);
-        }
+        List<File> single = new ArrayList<>();
+        single.add(apkFile);
+        installPrivilegedOrFallback(single, getAppNameForApk(apkFile).toString(), apkFile);
     }
 
     public void installSplitApks(List<File> apkFiles, String archiveName) {
         String appName = archiveName != null ? archiveName : "Split APK";
-        ProgressManager pm = showProgress("Installing " + appName + "...");
         File firstApk = apkFiles.isEmpty() ? null : apkFiles.get(0);
+        installPrivilegedOrFallback(new ArrayList<>(apkFiles), appName, firstApk);
+    }
 
-        RootManager rm = RootManager.getInstance(activity);
-        if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            executor.execute(() -> {
-                try {
-                    List<String> paths = new ArrayList<>();
-                    for (File f : apkFiles) paths.add(f.getAbsolutePath());
-                    rm.installSplitSilent(paths);
+    private void installPrivilegedOrFallback(List<File> apkFiles, String appName, File firstApk) {
+        if (PrivilegedInstaller.isPrivilegedSilentReady(activity)) {
+            String installer = InstallerConfig.resolveInstallerPackageName(activity);
+            ProgressManager pm = showProgress("Installing " + appName + " (as " + installer + ")...");
+            PrivilegedInstaller.installAsync(activity, apkFiles, new PrivilegedInstaller.Callback() {
+                @Override
+                public void onSuccess(String recorded) {
                     activity.runOnUiThread(() -> {
                         dismissProgress(pm);
-                        showInstallCompleteDialog(appName, firstApk);
+                        String verified = firstApk != null
+                                ? PrivilegedInstaller.readRecordedInstaller(
+                                        activity, getPackageNameForApk(firstApk) != null
+                                                ? getPackageNameForApk(firstApk) : "")
+                                : recorded;
+                        showInstallCompleteDialog(appName + "\nInstaller: " + verified, firstApk);
                     });
-                } catch (Exception e) {
+                }
+
+                @Override
+                public void onError(Exception e) {
                     activity.runOnUiThread(() -> {
                         dismissProgress(pm);
                         new ErrorUtil(activity).showError(e);
                     });
                 }
             });
-            executor.shutdown();
+            return;
+        }
+
+        if (apkFiles.size() == 1 && apkFiles.get(0) != null) {
+            RootManager rm = RootManager.getInstance(activity);
+            if (rm.isSilentInstallEnabled() && rm.isRootAvailable()) {
+                // Legacy guard: PrivilegedInstaller already checked; kept for safety.
+                InstallUtil.installApk(activity, apkFiles.get(0));
+                return;
+            }
+            InstallUtil.installApk(activity, apkFiles.get(0));
         } else {
+            ProgressManager pm = showProgress("Installing " + appName + "...");
             installSplitWithPackageInstaller(apkFiles, appName, pm, firstApk);
         }
     }
@@ -141,13 +138,13 @@ public class ApkInstallDialogHelper {
         BroadcastReceiver resultReceiver = null;
         try {
             PackageInstaller pi = activity.getPackageManager().getPackageInstaller();
-            PackageInstaller.SessionParams params =new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-
             long totalSize = 0;
             for (File f : apkFiles) totalSize += f.length();
-            params.setSize(totalSize);
-
-            int sessionId = pi.createSession(params);
+            String targetPkg = getPackageNameForApk(firstApk);
+            String installerPkg = InstallerConfig.resolveInstallerPackageName(activity);
+            int sessionId = PrivilegedInstaller.createSessionWithMetadata(activity, pi,
+                    targetPkg != null ? targetPkg : "",
+                    totalSize, installerPkg, PrivilegedInstaller.collectFlags(activity));
             try (PackageInstaller.Session session = pi.openSession(sessionId)) {
                 int idx = 0;
                 for (File apkFile : apkFiles) {
