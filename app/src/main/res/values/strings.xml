@@ -1638,6 +1638,9 @@ Layout Inspector
     <string name="installer">Installer: %1$s</string>
     <string name="install_initiator">Install initiator</string>
     <string name="install_origin">Install origin</string>
+    <string name="rename_taken_title">Name already taken</string>
+    <string name="rename_taken_msg">%1$s already exists here. Swap the two names?</string>
+    <string name="swap_names">Swap names</string>
     <string name="ai_warning">Warning: AI-generated responses are provided solely for informational purposes and may be inaccurate, incomplete, outdated, or unsafe. You are solely responsible for reviewing, verifying, and using any AI output. To the fullest extent permitted by law, the developer of MP Manager is not responsible for any loss, damage, or consequence arising from the use of this AI feature or from reliance on its output. API usage is subject to Google\'s Gemini terms of service, and you are responsible for any charges incurred through your API key.</string>
     <string name="agree">Agree</string>
     <string name="ai_usage_disclaimer">AI Usage Disclaimer</string>
