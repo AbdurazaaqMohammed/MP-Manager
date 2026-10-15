@@ -416,7 +416,7 @@ public class SidebarController {
             data.showGroups = false;
         }
         try {
-            data.showPlugins = prefs.getBoolean("sidebar_show_plugins", true);
+            data.showPlugins = prefs.getBoolean("sidebar_show_plugins", false);
         } catch (Exception ignored) {
             data.showPlugins = true;
         }

@@ -448,6 +448,26 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         apkResults.handleModifiedFileResult(uri, entryPath, zipFileExtra);
     }
 
+    public void offerOuterUpdate(File zipFile, boolean pane1) {
+        try {
+            apkResults.offerOuterUpdate(zipFile, pane1);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public File outermostArchive(File staged) {
+        File cur = staged;
+        try {
+            for (int i = 0; i < 6 && cur != null; i++) {
+                ArchiveParent p = archiveParentOf(cur.getAbsolutePath());
+                if (p == null || p.outerZip == null || !p.outerZip.isFile()) break;
+                cur = p.outerZip;
+            }
+        } catch (Exception ignored) {
+        }
+        return cur;
+    }
+
     public void openBookmarksDrawer() {
         try {
             ensureBookmarksReady();
@@ -1155,10 +1175,41 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
             syncPaneButton.setOnClickListener(v -> {
                 RecyclerView.Adapter a = getCurrentPane().getAdapter();
                 if(a instanceof MainFilesArrayAdapter mainFilesArrayAdapter) {
-                    if (lastPaneSelected == 1)
-                        loadFolderInPane(pane2Folder = mainFilesArrayAdapter.isInZip ? pane1Folder.getParentFile() : pane1Folder, false);
-                    else
-                        loadFolderInPane(pane1Folder = mainFilesArrayAdapter.isInZip ? pane2Folder.getParentFile() : pane2Folder, true);
+                    if (lastPaneSelected == 1) {
+                        int[] saved = capturePaneScroll(true);
+                        boolean wasZip = mainFilesArrayAdapter.isInZip;
+                        File srcZip = pane1Folder;
+                        File target = wasZip && srcZip != null ? srcZip.getParentFile() : srcZip;
+                        String archiveName = wasZip && srcZip != null ? srcZip.getName() : null;
+                        if (wasZip && srcZip != null && isStagedArchive(srcZip)) {
+                            File outer = outermostArchive(srcZip);
+                            if (outer != null && outer.getParentFile() != null) {
+                                target = outer.getParentFile();
+                                archiveName = outer.getName();
+                            }
+                        }
+                        if (target == null) target = srcZip;
+                        loadFolderInPane(pane2Folder = target, false);
+                        restorePaneScroll(false, saved);
+                        if (archiveName != null) flashPaneItem(false, archiveName);
+                    } else {
+                        int[] saved = capturePaneScroll(false);
+                        boolean wasZip = mainFilesArrayAdapter.isInZip;
+                        File srcZip = pane2Folder;
+                        File target = wasZip && srcZip != null ? srcZip.getParentFile() : srcZip;
+                        String archiveName = wasZip && srcZip != null ? srcZip.getName() : null;
+                        if (wasZip && srcZip != null && isStagedArchive(srcZip)) {
+                            File outer = outermostArchive(srcZip);
+                            if (outer != null && outer.getParentFile() != null) {
+                                target = outer.getParentFile();
+                                archiveName = outer.getName();
+                            }
+                        }
+                        if (target == null) target = srcZip;
+                        loadFolderInPane(pane1Folder = target, true);
+                        restorePaneScroll(true, saved);
+                        if (archiveName != null) flashPaneItem(true, archiveName);
+                    }
                 }
             });
 
@@ -1314,6 +1365,7 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                     if (adapter.isInZip) {
                         File zipFile = isPane1 ? pane1Folder : pane2Folder;
                         if (TextUtils.isEmpty(adapter.currentZipPath)) {
+                            if (isStagedArchive(zipFile) && navigateBack(isPane1)) return;
                             if (zipFile.getParentFile() != null)
                                 loadFolderInPane(zipFile.getParentFile(), isPane1);
                         } else {
@@ -1562,6 +1614,22 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
                             for(char c : chars) if (c == File.separatorChar) i++;
                             boolean inOneLevelInZip = i < 2;
                             loadZipFolderInPane(((ZipEntryInfo)adapter.values[0]).getZipFile(), inOneLevelInZip ? "" : s.substring(0, s.lastIndexOf('/', s.lastIndexOf('/') - 1)), adapter.pane1, true);
+                        } else if (adapter.isInZip) {
+                            File zipFile = ((ZipEntryInfo) adapter.values[0]).getZipFile();
+                            if (zipFile != null && isStagedArchive(zipFile) && navigateBack(adapter.pane1)) {
+                                return;
+                            }
+                            String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
+                            File f = new File(path).getParentFile();
+                            if (f != null && (f.canRead() || canListViaRoot(f))) loadFolderInPane(f, lastPaneSelected == 1);
+                            else if (isBackPressedToExit) {
+                                handler.removeCallbacks(resetExitPrompt);
+                                finishAffinity();
+                            } else {
+                                isBackPressedToExit = true;
+                                Extensions.showMessage(this, rss.getString(R.string.press_back_again_to_exit));
+                                handler.postDelayed(resetExitPrompt, 2000);
+                            }
                         } else {
                             String path = this.<TextView>findViewById(R.id.currentFolderPath).getText().toString();
                             File f = new File(path).getParentFile();
@@ -2358,16 +2426,126 @@ public class MainActivity extends BaseActivity implements PaneNavigationControll
         try {
             RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
             if (pane == null || !(pane.getLayoutManager() instanceof LinearLayoutManager lm)) return;
-            // loadZipFolderInPane posts its adapter swap, so post the restore
-            // after it to run in order on the main queue.
             handler.post(() -> {
                 try {
-                    lm.scrollToPositionWithOffset(saved[0], saved[1]);
+                    RecyclerView.Adapter<?> adapter = pane.getAdapter();
+                    int count = adapter == null ? 0 : adapter.getItemCount();
+                    int pos = count <= 0 ? 0 : Math.max(0, Math.min(saved[0], count - 1));
+                    lm.scrollToPositionWithOffset(pos, saved[1]);
                 } catch (Exception ignored) {
                 }
             });
         } catch (Exception ignored) {
         }
+    }
+
+    public void refreshPaneAfterChange(boolean pane1, String followName) {
+        int[] saved = capturePaneScroll(pane1);
+        reloadPane(pane1, false);
+        handler.post(() -> {
+            try {
+                RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+                if (pane == null || !(pane.getLayoutManager() instanceof LinearLayoutManager lm)) return;
+                RecyclerView.Adapter<?> adapter = pane.getAdapter();
+                int pos = -1;
+                if (followName != null && adapter instanceof MainFilesArrayAdapter filesAdapter)
+                    pos = filesAdapter.findPositionByName(followName);
+                if (pos >= 0) {
+                    lm.scrollToPositionWithOffset(pos, saved != null ? saved[1] : 0);
+                } else if (saved != null && adapter != null) {
+                    lm.scrollToPositionWithOffset(
+                            Math.max(0, Math.min(saved[0], adapter.getItemCount() - 1)), saved[1]);
+                }
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    public void flashPaneItem(boolean pane1, String name) {
+        try {
+            markGreen(pane1, name);
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (pane == null || pane.getAdapter() == null) return;
+            RecyclerView.Adapter<?> adapter = pane.getAdapter();
+            if (adapter instanceof MainFilesArrayAdapter filesAdapter) {
+                int pos = filesAdapter.findPositionByName(name);
+                if (pos >= 0) adapter.notifyItemChanged(pos);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private final Set<String> greenNames1 = new HashSet<>();
+    private final Set<String> greenNames2 = new HashSet<>();
+
+    public void markGreen(boolean pane1, String name) {
+        if (name == null) return;
+        try {
+            (pane1 ? greenNames1 : greenNames2).add(name);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public boolean isGreen(boolean pane1, String name) {
+        if (name == null) return false;
+        try {
+            return (pane1 ? greenNames1 : greenNames2).contains(name);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public void clearGreen(boolean pane1) {
+        try {
+            Set<String> set = pane1 ? greenNames1 : greenNames2;
+            if (set.isEmpty()) return;
+            set.clear();
+            RecyclerView pane = findViewById(pane1 ? R.id.listViewPane1 : R.id.listViewPane2);
+            if (pane != null && pane.getAdapter() != null) pane.getAdapter().notifyDataSetChanged();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static final class ArchiveParent {
+        public final File outerZip;
+        public final String entryPath;
+
+        public ArchiveParent(File outerZip, String entryPath) {
+            this.outerZip = outerZip;
+            this.entryPath = entryPath;
+        }
+    }
+
+    private final Map<String, ArchiveParent> archiveParents = new HashMap<>();
+
+    public void noteArchiveParent(File staged, File outer, String entryPath) {
+        if (staged == null || outer == null || entryPath == null) return;
+        try {
+            archiveParents.put(staged.getCanonicalPath(), new ArchiveParent(outer, entryPath));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public ArchiveParent archiveParentOf(String stagedPath) {
+        if (stagedPath == null) return null;
+        try {
+            return archiveParents.get(new File(stagedPath).getCanonicalPath());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean isStagedArchive(File f) {
+        if (f == null) return false;
+        try {
+            String p = f.getCanonicalPath();
+            String cache = getCacheDir().getCanonicalPath();
+            if (p.equals(cache) || p.startsWith(cache + File.separator)) return true;
+            String codeCache = getCodeCacheDir().getCanonicalPath();
+            if (p.equals(codeCache) || p.startsWith(codeCache + File.separator)) return true;
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     private MainFilesArrayAdapter paneFilesAdapter(boolean pane1) {

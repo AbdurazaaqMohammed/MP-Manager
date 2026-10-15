@@ -2,6 +2,7 @@ package io.github.abdurazaaqmohammed.features.apk;
 
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -28,7 +29,9 @@ import io.github.codehasan.colorpicker.extensions.Extensions;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Re-injects editor-modified files back into the open APK/ZIP.
@@ -95,6 +98,7 @@ public class ApkResultHandler {
                                 ProgressManager pm = new ProgressManager(activity, true).show();
                                 pm.setText(activity.rss.getString(R.string.adding, modifiedFileName));
                                 new Thread(() -> {
+                                    List<String> addedNames = new ArrayList<>();
                                     try (ZipFile zf = new ZipFile(zipFile)) {
                                         if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(zipFile);
                                         if (modifiedFileName.startsWith("classes") && modifiedFileName.endsWith(".dex")) {
@@ -102,8 +106,10 @@ public class ApkResultHandler {
                                             File folder = modifiedFile.getParentFile();
                                             File[] dexFiles = folder == null ? null : folder.listFiles((dir, name1) -> name1.endsWith(".dex"));
                                             if (dexFiles == null || dexFiles.length == 0) throw new IOException("No dex files found");
+                                            for (File dexFile : dexFiles) addedNames.add(dexFile.getName());
                                             zf.addFiles(Arrays.asList(dexFiles));
                                         } else {
+                                            addedNames.add(modifiedFileName);
                                             ZipParameters zp = new ZipParameters();
                                             boolean store = modifiedFileName.equals("AndroidManifest.xml") || modifiedFileName.equals("resources.arsc");
                                             zp.setCompressionMethod(store ? CompressionMethod.STORE : CompressionMethod.DEFLATE);
@@ -128,6 +134,10 @@ public class ApkResultHandler {
                                                 new ErrorUtil(activity).showError(ex);
                                             }
                                         });
+                                        activity.handler.post(() -> {
+                                            for (String n : addedNames) activity.flashPaneItem(pane1, n);
+                                        });
+                                        activity.handler.post(() -> chainUpdateOuter(zipFile, wrapper, sign[0], pane1, 0));
                                     } catch (Exception e) {
                                         pm.dismiss();
                                         new ErrorUtil(activity).showError(e);
@@ -139,5 +149,76 @@ public class ApkResultHandler {
                                 doWork.run();
                             }); else doWork.run();
                         }).setNegativeButton(activity.rss.getString(android.R.string.cancel), null).show();
+    }
+
+    public void offerOuterUpdate(File innerZip, boolean pane1) {
+        if (innerZip == null) return;
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            activity.handler.post(() -> offerOuterUpdate(innerZip, pane1));
+            return;
+        }
+        boolean sign = false;
+        try {
+            sign = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity)
+                    .getBoolean("autosign", true);
+        } catch (Exception ignored) {
+        }
+        chainUpdateOuter(innerZip, new SignWrapper[1], sign, pane1, 0);
+    }
+
+    private void chainUpdateOuter(File innerZip, SignWrapper[] wrapper, boolean sign, boolean pane1, int depth) {
+        if (depth > 5 || innerZip == null) return;
+        MainActivity.ArchiveParent parent;
+        try {
+            parent = activity.archiveParentOf(innerZip.getAbsolutePath());
+        } catch (Exception e) {
+            return;
+        }
+        if (parent == null || parent.outerZip == null || parent.entryPath == null) return;
+        if (!parent.outerZip.isFile() || !innerZip.isFile()) return;
+        String innerName = innerZip.getName();
+        String outerName = parent.outerZip.getName();
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle(activity.getString(R.string.add_to_outer_title))
+                .setMessage(activity.getString(R.string.add_to_outer_msg, innerName, outerName))
+                .setPositiveButton(activity.getString(R.string.yes), (d, w) -> {
+                    try {
+                        d.dismiss();
+                    } catch (Exception ignored) {}
+                    boolean outerApk = parent.outerZip.getName().endsWith(".apk");
+                    Runnable apply = () -> {
+                        ProgressManager pm = new ProgressManager(activity, true).show();
+                        pm.setText(activity.rss.getString(R.string.adding, innerName));
+                        new Thread(() -> {
+                            try (ZipFile zf = new ZipFile(parent.outerZip)) {
+                                if (UiPrefs.genBackup(activity)) FileUtils.backupOnce(parent.outerZip);
+                                ZipParameters zp = new ZipParameters();
+                                zp.setCompressionMethod(CompressionMethod.DEFLATE);
+                                zp.setFileNameInZip(parent.entryPath);
+                                zf.addFile(innerZip.getAbsolutePath(), zp);
+                                if (sign && outerApk && wrapper[0] != null)
+                                    wrapper[0].signApk(parent.outerZip);
+                                pm.dismiss();
+                                activity.handler.post(() -> {
+                                    try {
+                                        Extensions.showMessage(activity, activity.rss.getString(R.string.outer_updated_f, innerName, outerName));
+                                    } catch (Exception ignored) {}
+                                    chainUpdateOuter(parent.outerZip, wrapper, sign, pane1, depth + 1);
+                                });
+                            } catch (Exception e) {
+                                pm.dismiss();
+                                new ErrorUtil(activity).showError(e);
+                            }
+                        }).start();
+                    };
+                    if (sign && outerApk && wrapper[0] == null) {
+                        SignWrapper.requireAuth(activity, sw -> {
+                            wrapper[0] = sw;
+                            apply.run();
+                        });
+                    } else apply.run();
+                })
+                .setNegativeButton(activity.getString(android.R.string.cancel), null)
+                .show();
     }
 }

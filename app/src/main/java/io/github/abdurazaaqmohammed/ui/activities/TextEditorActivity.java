@@ -70,6 +70,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         boolean loading;
         boolean modified;
         boolean loadFailed;
+        boolean pendingArchiveUpdate;
     }
 
     private DrawerLayout drawerLayout;
@@ -155,6 +156,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     o.put("zipEntry", t.zipEntryPath);
                 }
                 o.put("modified", t.modified);
+                if (t.pendingArchiveUpdate) o.put("pendingArchive", true);
                 boolean untitledWithText = t.file == null && t.fileUri == null && t.loaded
                         && t.content != null && !t.content.isEmpty();
                 if (t.modified || untitledWithText) {
@@ -213,6 +215,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                 String savedZipEntry = o.optString("zipEntry", null);
                 if (savedZipEntry != null && !savedZipEntry.isEmpty()) t.zipEntryPath = savedZipEntry;
                 t.modified = o.optBoolean("modified", false);
+                t.pendingArchiveUpdate = o.optBoolean("pendingArchive", false);
                 if (o.has("content")) {
                     t.content = o.getString("content");
                     t.loaded = true;
@@ -293,7 +296,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
             }
         });
 
-        btnSave.setOnClickListener(v -> saveFile());
+        btnSave.setOnClickListener(v -> saveButtonFlow());
 
         btnEdit.setOnClickListener(v -> {
             UnifiedEditorFragment f = getFragment();
@@ -760,6 +763,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     : tab.abx ? AbxUtil.encodeString(text) : text.getBytes(StandardCharsets.UTF_8));
             tab.content = text;
             tab.modified = false;
+            Extensions.showMessage(this, getString(R.string.saved));
             if (onDone != null) onDone.run();
         } catch (Exception e) {
             tab.modified = true;
@@ -943,8 +947,26 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     .setNeutralButton(android.R.string.cancel, null)
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
-        } else {
+        } else if (!consumePendingArchiveUpdate(t)) {
             finish();
+        }
+    }
+
+    private boolean consumePendingArchiveUpdate(EditorTab t) {
+        try {
+            if (t == null || !t.pendingArchiveUpdate) return false;
+            t.pendingArchiveUpdate = false;
+            if (t.zipFilePath == null || t.zipFilePath.isEmpty()
+                    || t.file == null || !t.file.isFile()
+                    || !new File(t.zipFilePath).isFile()) {
+                persistSession();
+                return false;
+            }
+            persistSession();
+            finishWithArchiveResult(t);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -996,7 +1018,7 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
                     .setNeutralButton(android.R.string.cancel, null)
                     .setMessage(getString(R.string.confirm_save, t.title))
                     .show();
-        } else super.onBackPressed();
+        } else if (!consumePendingArchiveUpdate(t)) super.onBackPressed();
     }
 
     private void backupForSave(File directFile, String rootOriginal) {
@@ -1020,6 +1042,39 @@ public class TextEditorActivity extends BaseActivity implements UnifiedEditorFra
         EditorTab tab = getCurrentTab();
         if (tab == null) return;
         saveFile(null);
+    }
+
+    private void saveButtonFlow() {
+        UnifiedEditorFragment f = getFragment();
+        EditorTab tab = getCurrentTab();
+        if (f == null || f.getEditor() == null || tab == null) return;
+        saveFile(() -> {
+            try {
+                if (isFinishing() || isDestroyed()) return;
+                if (tab.zipFilePath == null || tab.zipFilePath.isEmpty()) return;
+                if (tab.file == null || !tab.file.isFile()) return;
+                if (!new File(tab.zipFilePath).isFile()) return;
+                tab.pendingArchiveUpdate = true;
+                persistSession();
+            } catch (Exception ignored) {}
+        });
+    }
+
+    private void finishWithArchiveResult(EditorTab tab) {
+        if (tab == null) return;
+        manualFinish = true;
+        Uri dataUri = tab.fileUri != null ? tab.fileUri
+                : (tab.file != null ? Uri.fromFile(tab.file)
+                : (currentFile != null ? Uri.fromFile(currentFile) : null));
+        Intent resultIntent = new Intent();
+        if (dataUri != null) {
+            resultIntent.setData(dataUri);
+            resultIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+        if (tab.zipFilePath != null) resultIntent.putExtra("zipFilePath", tab.zipFilePath);
+        if (tab.zipEntryPath != null) resultIntent.putExtra("zipEntryPath", tab.zipEntryPath);
+        setResult(757, resultIntent);
+        finish();
     }
 
     private void saveFile(Runnable onDone) {
