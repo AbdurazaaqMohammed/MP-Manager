@@ -158,7 +158,11 @@ public final class AccessManager {
                 throw new IOException("Shizuku file access is disabled or unavailable");
             }
             try (OutputStream os = new FileOutputStream(dst)) {
-                ShizukuManager.streamFrom(context, srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
+                if (ShizukuManager.isAllowed(srcAbsPath)) {
+                    ShizukuManager.streamFrom(context, srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
+                } else {
+                    ShizukuManager.streamFromShell(srcAbsPath, os, RootManager.MAX_STAGE_BYTES);
+                }
             } catch (IOException e) {
                 //noinspection ResultOfMethodCallIgnored
                 dst.delete();
@@ -193,7 +197,11 @@ public final class AccessManager {
             if (!prefs.getBoolean("shizuku_file_ops", false) || !ShizukuManager.ready()) {
                 throw new IOException("Shizuku file access is disabled or unavailable");
             }
-            ShizukuManager.streamTo(context, stagedCopy, originalAbsPath);
+            if (ShizukuManager.isAllowed(originalAbsPath)) {
+                ShizukuManager.streamTo(context, stagedCopy, originalAbsPath);
+            } else {
+                ShizukuManager.streamToShell(stagedCopy, originalAbsPath);
+            }
         } else {
             throw new IOException("No elevated access enabled");
         }
@@ -304,6 +312,10 @@ public final class AccessManager {
 
     public static boolean touchMtime(Context context, String path, long millis) {
         try {
+            if (new File(path).setLastModified(millis)) return true;
+        } catch (Exception ignored) {
+        }
+        try {
             Backend backend = active(context);
             if (backend == Backend.ROOT) {
                 long secs = millis / 1000L;
@@ -312,13 +324,15 @@ public final class AccessManager {
                         .isSuccess();
             }
             if (backend == Backend.SHIZUKU) {
-                ShizukuManager.touchMtime(context, path, millis);
-                return true;
+                if (ShizukuManager.isAllowed(path)) {
+                    ShizukuManager.touchMtime(context, path, millis);
+                    return true;
+                }
+                return ShizukuManager.touchMtimeShell(path, millis);
             }
-            return new File(path).exists() && new File(path).setLastModified(millis);
-        } catch (Exception e) {
-            return false;
+        } catch (Exception ignored) {
         }
+        return false;
     }
 
     public static long dirSize(Context context, String path) {

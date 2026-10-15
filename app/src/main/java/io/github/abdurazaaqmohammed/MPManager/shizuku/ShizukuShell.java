@@ -6,6 +6,7 @@ import android.os.Build;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -176,8 +177,68 @@ public final class ShizukuShell {
         }
     }
 
-    private static Thread drain(InputStream is, StringBuilder sb) {
-        Thread t = new Thread(() -> {
+    public static byte[] execBytes(String command, long maxBytes, long timeoutSeconds) throws IOException {
+        if (!isGranted()) throw new IOException("Shizuku not granted");
+        ShizukuRemoteProcess p;
+        try {
+            p = (ShizukuRemoteProcess) new ShizukuProcessFactory()
+                    .newProcess(new String[]{"sh", "-c", command}, null, "/");
+        } catch (Throwable t) {
+            throw new IOException(t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage(), t);
+        }
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        boolean[] truncated = new boolean[1];
+        Thread reader = new Thread(() -> {
+            try {
+                InputStream is = p.getInputStream();
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = is.read(buf)) != -1) {
+                    if (bos.size() + n > maxBytes) {
+                        int keep = (int) (maxBytes - bos.size());
+                        if (keep > 0) bos.write(buf, 0, keep);
+                        truncated[0] = true;
+                        break;
+                    }
+                    bos.write(buf, 0, n);
+                }
+            } catch (IOException ignored) {
+            }
+        });
+        reader.start();
+        Thread errT = drain(p.getErrorStream(), new StringBuilder());
+        boolean finished;
+        try {
+            finished = p.waitForTimeout(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrupted", e);
+        }
+        if (!finished) {
+            try {
+                p.destroy();
+            } catch (Throwable ignored) {
+            }
+            throw new IOException("timeout");
+        }
+        try {
+            reader.join(5000);
+            errT.join(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        int exit;
+        try {
+            exit = p.exitValue();
+        } catch (Throwable t) {
+            throw new IOException("process failed");
+        }
+        if (exit != 0) throw new IOException("exit " + exit);
+        if (truncated[0]) throw new IOException("File too large");
+        return bos.toByteArray();
+    }
+
+    private static Thread drain(InputStream is, StringBuilder sb) {        Thread t = new Thread(() -> {
             try (BufferedReader r = new BufferedReader(new InputStreamReader(is))) {
                 String line;
                 while ((line = r.readLine()) != null) {

@@ -121,7 +121,11 @@ public class ShizukuFile extends File {
      * and from there to the phantom-child crash) without guessing from names.
      */
     private static void resolveSymlinks(List<ShizukuFile> links) {
-        if (links.isEmpty() || !ShizukuShell.isGranted()) return;
+        if (links.isEmpty() || !ShizukuShell.isGranted()) {
+            for (ShizukuFile link : links) link.setDirectory(false);
+            return;
+        }
+        boolean[] marked = new boolean[links.size()];
         try {
             StringBuilder cmd = new StringBuilder();
             for (int i = 0; i < links.size(); i++) {
@@ -131,19 +135,25 @@ public class ShizukuFile extends File {
                         .append("; } || { [ -e ").append(p).append(" ] && echo LINK_FILE_").append(i).append("; };");
             }
             ShizukuShell.Result r = ShizukuShell.exec(cmd.toString());
-            if (!r.success || r.stdout == null) return;
-            for (String line : r.stdout.split("\n")) {
-                String t = line.trim();
-                try {
-                    if (t.startsWith("LINK_DIR_")) {
-                        links.get(Integer.parseInt(t.substring("LINK_DIR_".length()))).setDirectory(true);
-                    } else if (t.startsWith("LINK_FILE_")) {
-                        links.get(Integer.parseInt(t.substring("LINK_FILE_".length()))).setDirectory(false);
+            if (r.success && r.stdout != null) {
+                for (String line : r.stdout.split("\n")) {
+                    String t = line.trim();
+                    try {
+                        if (t.startsWith("LINK_DIR_")) {
+                            marked[Integer.parseInt(t.substring("LINK_DIR_".length()))] = true;
+                            links.get(Integer.parseInt(t.substring("LINK_DIR_".length()))).setDirectory(true);
+                        } else if (t.startsWith("LINK_FILE_")) {
+                            marked[Integer.parseInt(t.substring("LINK_FILE_".length()))] = true;
+                            links.get(Integer.parseInt(t.substring("LINK_FILE_".length()))).setDirectory(false);
+                        }
+                    } catch (Exception ignored) {
                     }
-                } catch (Exception ignored) {
                 }
             }
         } catch (Exception ignored) {
+        }
+        for (int i = 0; i < links.size(); i++) {
+            if (!marked[i]) links.get(i).setDirectory(false);
         }
     }
 

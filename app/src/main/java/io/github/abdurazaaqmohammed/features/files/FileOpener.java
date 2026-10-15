@@ -141,6 +141,10 @@ public class FileOpener {
      * @param zipEntryPath  the entry path inside {@code zipFile}, or null
      */
     public void showOpenWithDialog(File file, String fileName, File zipFile, String zipEntryPath) {
+        showOpenWithDialog(file, fileName, zipFile, zipEntryPath, null);
+    }
+
+    public void showOpenWithDialog(File file, String fileName, File zipFile, String zipEntryPath, File originalFile) {
         if (file == null) {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
@@ -169,6 +173,11 @@ public class FileOpener {
                 () -> runBuiltinTool(BUILTIN_HEX, file, fileName, zipFile, zipEntryPath),
                 () -> runBuiltinTool(BUILTIN_MEDIA, file, fileName, zipFile, zipEntryPath),
                 () -> runBuiltinTool(BUILTIN_APK, file, fileName, zipFile, zipEntryPath)));
+        if (zipFile == null && originalFile != null && file != null
+                && !originalFile.getAbsolutePath().equals(file.getAbsolutePath())) {
+            actionHandlers.set(0, () -> openTextEditorWithOriginal(file, originalFile));
+            actionHandlers.set(3, () -> openHexEditorWithOriginal(file, originalFile));
+        }
         String lower = fileName.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".ttf") || lower.endsWith(".otf") || lower.endsWith(".woff") || lower.endsWith(".woff2")) {
             actionIds.add(BUILTIN_FONT);
@@ -333,7 +342,11 @@ public class FileOpener {
                 return;
             case BUILTIN_ARCHIVE:
                 if (file == null || !file.isFile()) return;
-                withReadableCopy(file, readable -> context.loadZipFolderInPane(readable, "", pane1, true));
+                withReadableCopy(file, readable -> {
+                    if (zipFile != null && zipEntryPath != null)
+                        context.noteArchiveParent(readable, zipFile, zipEntryPath);
+                    context.loadZipFolderInPane(readable, "", pane1, true);
+                });
                 return;
             case BUILTIN_IMAGE:
                 if (file == null) return;
@@ -454,7 +467,7 @@ public class FileOpener {
             if (real != null && !real.equals(actionMime) && tryLaunchDefaultApp(uri, real)) return;
             String reported = MimeUtil.getReportedMimeType(context, readable);
             if (reported != null && !reported.equals(actionMime) && (real == null || !reported.equals(real)) && tryLaunchDefaultApp(uri, reported)) return;
-            showOpenWithDialog(readable, fileName);
+            showOpenWithDialog(readable, fileName, null, null, file);
         });
     }
 
@@ -842,7 +855,10 @@ public class FileOpener {
         String ext = '.' + FilenameUtils.getExtension(fileName).toLowerCase();
         if (fileName.endsWith(".txt") || fileName.endsWith(".json")
             || fileName.endsWith(".java") || fileName.endsWith(".smali") || fileName.endsWith(".pro")
-            || fileName.endsWith(".gradle") || fileName.endsWith(".properties")) {
+            || fileName.endsWith(".gradle") || fileName.endsWith(".properties") || fileName.endsWith(".prop")
+            || fileName.endsWith(".conf") || fileName.endsWith(".cfg") || fileName.endsWith(".ini")
+            || fileName.endsWith(".log") || fileName.endsWith(".md") || fileName.endsWith(".csv")
+            || fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".toml")) {
             openTextEditorRootAware(file);
         } else if(HashUtil.isChecksumFile(fileName)) {
             withReadableCopy(file, checksumDialogs::showHashVerifyDialog);
@@ -991,13 +1007,23 @@ public class FileOpener {
         }).start();
     }
 
+    private static boolean appReadable(File file) {
+        try {
+            if (file instanceof io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile)
+                return new File(file.getAbsolutePath()).canRead();
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     public void withReadableCopy(File file, ReadableCallback cb) {
         if (file == null) {
             Extensions.showMessage(context, R.string.cannot_open_item);
             return;
         }
         try {
-            if (file != null && file.exists() && file.canRead()) {
+            if (file != null && file.exists() && file.canRead() && appReadable(file)) {
                 cb.onReady(file);
                 return;
             }
@@ -1040,6 +1066,31 @@ public class FileOpener {
         withReadableCopy(file, readable ->
                 context.startActivity(rootAwareEditorIntent(readable, file)
                         .putExtra("path", readable.getAbsolutePath())));
+    }
+
+    private void openTextEditorWithOriginal(File readable, File original) {
+        if (readable == null || !readable.isFile()) {
+            Extensions.showMessage(context, R.string.cannot_open_item);
+            return;
+        }
+        File orig = original != null ? original : readable;
+        context.startActivity(rootAwareEditorIntent(readable, orig)
+                .putExtra("path", readable.getAbsolutePath()));
+    }
+
+    private void openHexEditorWithOriginal(File readable, File original) {
+        if (readable == null || !readable.isFile()) {
+            Extensions.showMessage(context, R.string.cannot_open_item);
+            return;
+        }
+        File orig = original != null ? original : readable;
+        Intent i = new Intent(context, HexEditorActivity.class)
+                .putExtra("path", readable.getAbsolutePath());
+        if (!readable.getAbsolutePath().equals(orig.getAbsolutePath())) {
+            i.putExtra("rootOriginalPath", orig.getAbsolutePath());
+            Extensions.showMessage(context, R.string.opened_with_root);
+        }
+        context.startActivity(i);
     }
 
     /**
