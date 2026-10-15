@@ -38,8 +38,11 @@ import java.util.concurrent.Executors;
 
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
+import io.github.abdurazaaqmohammed.MPManager.shizuku.ShizukuFile;
 import io.github.abdurazaaqmohammed.domain.files.ZipEntryInfo;
+import io.github.abdurazaaqmohammed.utils.AccessManager;
 import io.github.abdurazaaqmohammed.utils.ApkIconHelper;
+import io.github.abdurazaaqmohammed.utils.RootFile;
 import io.github.abdurazaaqmohammed.utils.FileSize;
 import io.github.abdurazaaqmohammed.utils.FileUtils;
 import io.github.abdurazaaqmohammed.utils.UiPrefs;
@@ -49,6 +52,9 @@ public class FileIconLoader {
     private static final ExecutorService iconLoaderService = Executors.newFixedThreadPool(4);
     private static final LruCache<String, Drawable> iconCache = new LruCache<>(100);
     private static final LruCache<String, Drawable> badgeCache = new LruCache<>(200);
+    private static final LruCache<String, Long> mtimeCache = new LruCache<>(200);
+    private static final LruCache<String, Long> sizeCache = new LruCache<>(200);
+    private static final Handler badgeHandler = new Handler(Looper.getMainLooper());
 
     private static Drawable cachedFolderIcon, cachedApkIcon, cachedImageIcon, cachedVideoIcon,
             cachedDexIcon, cachedArscIcon,
@@ -93,14 +99,139 @@ public class FileIconLoader {
     }
 
     public void setupFileView(File file, ImageView fileIconView, TextView fileDateView) {
-        if (file.isFile()) {
+        if (treatAsFolder(file)) {
+            fileIconView.setImageDrawable(cachedFolderIcon);
+            showFolderDate(file, fileDateView);
+        } else {
+            long len = 0;
+            long mt = 0;
+            try {
+                len = file.length();
+            } catch (Exception ignored) {}
+            try {
+                mt = file.lastModified();
+            } catch (Exception ignored) {}
+            if ((len > 0 || mt > 0) || isGhostFile(file) || !AccessManager.fileOpsOn(context)) {
+                fileDateView.setTag(null);
+                if (isGhostFile(file)) {
+                    fileDateView.setVisibility(View.INVISIBLE);
+                } else {
+                    fileDateView.setVisibility(View.VISIBLE);
+                    fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+                    fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, mt)).append(' ').append(FileSize.getHumanReadableFileSize(len)));
+                }
+            } else {
+                showFileStatsAsync(file, fileDateView);
+            }
+            setupNonFolderIconView(file.getPath(), fileIconView);
+        }
+    }
+
+    private void showFileStatsAsync(File file, TextView fileDateView) {
+        String tag = file.getAbsolutePath();
+        Long cachedSize = sizeCache.get(tag);
+        Long cachedMtime = mtimeCache.get(tag);
+        if (cachedSize != null && cachedMtime != null && (cachedSize > 0 || cachedMtime > 0)) {
+            fileDateView.setTag(null);
             fileDateView.setVisibility(View.VISIBLE);
             fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
-            setupNonFolderIconView(file.getPath(), fileIconView);
-            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, file.lastModified())).append(' ').append(FileSize.getHumanReadableFileSize(file.length())));
-        } else {
-            fileIconView.setImageDrawable(cachedFolderIcon);
+            fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, cachedMtime)).append(' ').append(FileSize.getHumanReadableFileSize(cachedSize)));
+            return;
+        }
+        fileDateView.setVisibility(View.INVISIBLE);
+        fileDateView.setTag(tag);
+        iconLoaderService.execute(() -> {
+            if (!tag.equals(fileDateView.getTag())) return;
+            long size = -1;
+            long mtime = 0;
+            try {
+                size = AccessManager.getSize(context, tag);
+            } catch (Exception ignored) {}
+            try {
+                mtime = AccessManager.getMtime(context, tag);
+            } catch (Exception ignored) {}
+            if ((size <= 0 && mtime <= 0) || !tag.equals(fileDateView.getTag())) return;
+            sizeCache.put(tag, Math.max(0, size));
+            mtimeCache.put(tag, Math.max(0, mtime));
+            final long finalSize = Math.max(0, size);
+            final long finalMtime = Math.max(0, mtime);
+            context.runOnUiThread(() -> {
+                if (tag.equals(fileDateView.getTag())) {
+                    fileDateView.setVisibility(View.VISIBLE);
+                    fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+                    fileDateView.setText(new StringBuilder(UiPrefs.formatDate(context, finalMtime)).append(' ').append(FileSize.getHumanReadableFileSize(finalSize)));
+                }
+            });
+        });
+    }
+
+    private static boolean treatAsFolder(File file) {
+        try {
+            if (file instanceof ShizukuFile || (file instanceof RootFile && ((RootFile) file).hasRootStat()))
+                return file.isDirectory();
+            if (file.isDirectory()) return file.exists();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean isGhostFile(File file) {
+        try {
+            if (file instanceof ShizukuFile || file instanceof RootFile) return false;
+            return !file.exists();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void showFolderDate(File file, TextView fileDateView) {
+        long mtime = 0;
+        try {
+            mtime = file.lastModified();
+        } catch (Exception ignored) {}
+        if (mtime > 0) {
+            fileDateView.setTag(null);
+            fileDateView.setVisibility(View.VISIBLE);
+            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+            fileDateView.setText(UiPrefs.formatDate(context, mtime));
+            return;
+        }
+        if (!AccessManager.fileOpsOn(context)) {
+            fileDateView.setTag(null);
             fileDateView.setVisibility(View.INVISIBLE);
+            return;
+        }
+        String tag = file.getAbsolutePath();
+        Long cached = mtimeCache.get(tag);
+        if (cached != null && cached > 0) {
+            fileDateView.setTag(null);
+            fileDateView.setVisibility(View.VISIBLE);
+            fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+            fileDateView.setText(UiPrefs.formatDate(context, cached));
+            return;
+        }
+        fileDateView.setVisibility(View.INVISIBLE);
+        fileDateView.setTag(tag);
+        iconLoaderService.execute(() -> {
+            if (!tag.equals(fileDateView.getTag())) return;
+            long m = 0;
+            try {
+                m = AccessManager.getMtime(context, tag);
+            } catch (Exception ignored) {}
+            if (m <= 0 || !tag.equals(fileDateView.getTag())) return;
+            mtimeCache.put(tag, m);
+            final long finalM = m;
+            context.runOnUiThread(() -> {
+                if (tag.equals(fileDateView.getTag())) {
+                    fileDateView.setVisibility(View.VISIBLE);
+                    fileDateView.setTextSize(UiPrefs.dateSize(UiPrefs.getScale(context)));
+                    fileDateView.setText(UiPrefs.formatDate(context, finalM));
+                }
+            });
+        });
+    }
+
     public void requestRowBadge(File file, ImageView badgeView, String listedDir) {
         if (file == null || badgeView == null || isInZip) return;
         String name = file.getName();
