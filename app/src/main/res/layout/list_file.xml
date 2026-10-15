@@ -6,12 +6,25 @@
     android:padding="4dp"
     android:orientation="horizontal">
 
-    <ImageView
-        android:id="@+id/fileIcon"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:contentDescription="@string/file_icon"
-        android:layout_gravity="center_vertical"/>
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/fileIcon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:contentDescription="@string/file_icon"
+            android:layout_gravity="center_vertical"/>
+
+        <ImageView
+            android:id="@+id/appBadge"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="bottom|end"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
