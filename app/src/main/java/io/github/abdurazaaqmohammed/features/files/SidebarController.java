@@ -28,6 +28,8 @@ import io.github.abdurazaaqmohammed.ApkExtractor.APKExtractorActivity;
 import io.github.abdurazaaqmohammed.MPManager.MainActivity;
 import io.github.abdurazaaqmohammed.MPManager.R;
 import io.github.abdurazaaqmohammed.adapters.SidebarAdapter;
+import io.github.abdurazaaqmohammed.plugins.api.PluginRegistry;
+import io.github.abdurazaaqmohammed.plugins.api.ToolPlugin;
 import io.github.abdurazaaqmohammed.plugins.ext.ExtensionRegistry;
 import io.github.abdurazaaqmohammed.plugins.ext.SidebarAction;
 import io.github.abdurazaaqmohammed.plugins.ipc.ExternalActions;
@@ -35,6 +37,7 @@ import io.github.abdurazaaqmohammed.plugins.ipc.PluginContracts;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginHost;
 import io.github.abdurazaaqmohammed.plugins.ipc.PluginTrust;
 import io.github.abdurazaaqmohammed.tools.StorageManagerActivity;
+import io.github.abdurazaaqmohammed.tools.ToolRunnerActivity;
 import io.github.abdurazaaqmohammed.tools.ToolsHubActivity;
 import io.github.abdurazaaqmohammed.tools.WifiManagerActivity;
 import io.github.abdurazaaqmohammed.utils.StorageUtil;
@@ -158,7 +161,7 @@ public class SidebarController {
             if (saved != null) sectionOrder.addAll(saved);
         } catch (Exception ignored) {
         }
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "bookmarks", "tools", "plugins"}) {
             if (!sectionOrder.contains(section)) sectionOrder.add(section);
         }
         if (prefs.getBoolean("sidebar_show_bookmark_groups", false)) {
@@ -177,7 +180,7 @@ public class SidebarController {
         sidebarAdapter.setToolOrder(toolOrder);
         sidebarAdapter.setHiddenItems(prefs.getStringSet("sidebar_hidden_items", Collections.emptySet()));
         Set<String> collapsed = prefs.getStringSet("sidebar_collapsed_sections", Collections.emptySet());
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "bookmarks", "tools", "plugins"}) {
             sidebarAdapter.setCollapsedState(section, collapsed.contains(section));
         }
         // Data intentionally NOT loaded here: ensureSidebarData() fills the
@@ -298,7 +301,7 @@ public class SidebarController {
             if (saved != null) order.addAll(saved);
         } catch (Exception ignored) {
         }
-        for (String section : new String[]{"storage", "bookmarks", "tools"}) {
+        for (String section : new String[]{"storage", "bookmarks", "tools", "plugins"}) {
             if (!order.contains(section)) order.add(section);
         }
         if (PreferenceManager.getDefaultSharedPreferences(activity)
@@ -317,7 +320,8 @@ public class SidebarController {
             SidebarData data = loadSidebarData(sectionOrder);
             if (data == null) return;
             sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
-                    data.storage, data.bookmarks, data.groups, data.labels);
+                    data.storage, data.bookmarks, data.groups, data.labels,
+                    data.showPlugins);
         } catch (Exception ignored) {
         }
     }
@@ -342,7 +346,8 @@ public class SidebarController {
                     try {
                         if (sidebarAdapter == null || activity.isFinishing() || activity.isDestroyed()) return;
                         sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
-                                data.storage, data.bookmarks, data.groups, data.labels);
+                                data.storage, data.bookmarks, data.groups, data.labels,
+                                data.showPlugins);
                     } catch (Exception ignored) {
                     }
                 });
@@ -385,7 +390,8 @@ public class SidebarController {
                     try {
                         if (sidebarAdapter == null || activity.isFinishing() || activity.isDestroyed()) return;
                         sidebarAdapter.setData(data.order, data.showBookmarks, data.showGroups,
-                                data.storage, data.bookmarks, data.groups, data.labels);
+                                data.storage, data.bookmarks, data.groups, data.labels,
+                                data.showPlugins);
                     } catch (Exception ignored) {
                     }
                 });
@@ -408,6 +414,11 @@ public class SidebarController {
             data.showGroups = prefs.getBoolean("sidebar_show_bookmark_groups", false);
         } catch (Exception ignored) {
             data.showGroups = false;
+        }
+        try {
+            data.showPlugins = prefs.getBoolean("sidebar_show_plugins", true);
+        } catch (Exception ignored) {
+            data.showPlugins = true;
         }
         data.groups = new LinkedHashMap<>();
         try {
@@ -439,6 +450,7 @@ public class SidebarController {
         List<String> order;
         boolean showBookmarks;
         boolean showGroups;
+        boolean showPlugins = true;
         List<StorageUtil.StorageInfo> storage;
         List<File> bookmarks;
         Map<String, List<File>> groups;
@@ -486,6 +498,10 @@ public class SidebarController {
                 activity.openLayoutInspectorTool();
                 break;
             default: {
+                if (id != null && id.startsWith(SidebarAdapter.PACK_TOOL_PREFIX)) {
+                    openPackTool(id.substring(SidebarAdapter.PACK_TOOL_PREFIX.length()));
+                    break;
+                }
                 if (id != null && id.startsWith("ext:")) {
                     openExternalSidebar(id);
                     break;
@@ -500,6 +516,20 @@ public class SidebarController {
                 break;
             }
         }
+    }
+
+    /** Launches an installed pack tool in the shared runner activity. */
+    private void openPackTool(String packAndToolId) {
+        int dot = packAndToolId.indexOf('.');
+        if (dot <= 0) return;
+        String toolId = packAndToolId.substring(dot + 1);
+        ToolPlugin tool = PluginRegistry.findCustom(toolId);
+        String title = tool != null ? tool.title(activity) : null;
+        if (title == null || title.isEmpty()) title = toolId;
+        Intent intent = new Intent(activity, ToolRunnerActivity.class);
+        intent.putExtra("tool_id", toolId);
+        intent.putExtra("tool_title", title);
+        activity.startActivity(intent);
     }
 
     /** Launches an external (out-of-process) sidebar plugin after consent. */

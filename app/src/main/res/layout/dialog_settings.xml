@@ -684,6 +684,14 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/include_bookmark_groups_sidebar" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/sidebarPluginsToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/show_plugin_groups_sidebar" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

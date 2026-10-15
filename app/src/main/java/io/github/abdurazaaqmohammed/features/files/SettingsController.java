@@ -190,6 +190,13 @@ public class SettingsController {
             refreshSidebar();
         });
 
+        CompoundButton sidebarPluginsToggle = settingsDialog.findViewById(R.id.sidebarPluginsToggle);
+        sidebarPluginsToggle.setChecked(settings.getBoolean("sidebar_show_plugins", true));
+        sidebarPluginsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            settings.edit().putBoolean("sidebar_show_plugins", isChecked).apply();
+            refreshSidebar();
+        });
+
         EditText searchHistoryLimitEt = settingsDialog.findViewById(R.id.searchHistoryLimitEt);
         if (searchHistoryLimitEt != null) {
             int limit = settings.getInt("search_history_limit", 50);

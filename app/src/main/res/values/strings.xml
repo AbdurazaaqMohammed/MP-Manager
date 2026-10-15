@@ -927,6 +927,8 @@ Layout Inspector
     <string name="sidebar_layout_inspector">Layout Inspector</string>
     <string name="sidebar_wifi">Wi-Fi Manager</string>
     <string name="sidebar_tools">Plugins</string>
+    <string name="sidebar_plugins">Plugins</string>
+    <string name="show_plugin_groups_sidebar">Show plugins in sidebar</string>
     <string name="plugin_open">Open</string>
     <string name="plugin_create_shortcut">Create shortcut</string>
     <string name="plugin_expand">Expand</string>
