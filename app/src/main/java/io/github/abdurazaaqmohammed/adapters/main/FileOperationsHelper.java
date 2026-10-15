@@ -507,10 +507,16 @@ public class FileOperationsHelper {
                         } catch (Exception e) {
                             dismissActiveProgress();
                             new ErrorUtil(context).showError(e);
+                            return;
                         }
+                        openZipFile(zipFile, currentPath);
+                        context.offerOuterUpdate(zipFile, adapter.pane1);
                     }).start();
                 }));
-        openZipFile(zipFile, currentPath);
+        else {
+            openZipFile(zipFile, currentPath);
+            context.offerOuterUpdate(zipFile, adapter.pane1);
+        }
         return true;
     }
 
