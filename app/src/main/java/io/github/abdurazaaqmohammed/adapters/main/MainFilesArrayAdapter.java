@@ -106,6 +106,30 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
     private final Set<Integer> selectedPositions = new HashSet<>();
     private Integer rangeStartPosition = null;
 
+    private static final int GREEN_NAME = 0xFF7ED957;
+
+    public int findPositionByName(String name) {
+        if (name == null) return -1;
+        for (int i = 0; i < values.length; i++) {
+            Object o = values[i];
+            String n = null;
+            if (o instanceof File) n = ((File) o).getName();
+            else if (o instanceof ZipEntryInfo) n = ((ZipEntryInfo) o).getName();
+            if (name.equals(n)) return i;
+        }
+        return -1;
+    }
+
+    public void flashItem(String name) {
+        if (name == null) return;
+        context.markGreen(pane1, name);
+        int pos = findPositionByName(name);
+        if (pos < 0) return;
+        try {
+            notifyItemChanged(pos);
+        } catch (Exception ignored) {}
+    }
+
     private static Object[] getNewValues(Object[] values, File parentFile) {
         Object[] letUpDir = new File[values.length + 1];
         letUpDir[0] = parentFile;
@@ -275,12 +299,21 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView fileNameView, fileDateView;
-        final ImageView fileIconView;
+        final ImageView fileIconView, appBadgeView;
+        final int defaultNameColor;
         ViewHolder(View v) {
             super(v);
             fileNameView = v.findViewById(R.id.fileName);
             fileIconView = v.findViewById(R.id.fileIcon);
+            appBadgeView = v.findViewById(R.id.appBadge);
             fileDateView = v.findViewById(R.id.fileDate);
+            int color;
+            try {
+                color = fileNameView.getCurrentTextColor();
+            } catch (Exception e) {
+                color = 0xFFFFFFFF;
+            }
+            defaultNameColor = color;
         }
     }
 
@@ -354,6 +387,11 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
         holder.fileNameView.setText("");
         holder.fileDateView.setText("");
         holder.fileIconView.setImageDrawable(null);
+        if (holder.appBadgeView != null) {
+            holder.appBadgeView.setImageDrawable(null);
+            holder.appBadgeView.setVisibility(View.GONE);
+            holder.appBadgeView.setTag(null);
+        }
 
         holder.fileNameView.setTextSize(nameTextSize);
         holder.fileNameView.setMaxLines(nameMaxLines);
@@ -377,9 +415,19 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             file = (File) item;
             iconLoader.setupFileView(file, holder.fileIconView, holder.fileDateView);
             holder.fileNameView.setText(fileName = (position == 0 ? ".." : file.getName()));
+            if (position == 0) {
+                holder.fileDateView.setVisibility(View.GONE);
+                holder.fileDateView.setTag(null);
+            } else if (holder.appBadgeView != null && file.getParent() != null) {
+                iconLoader.requestRowBadge(file, holder.appBadgeView, file.getParent());
+            }
         }
 
-        convertView.setBackgroundColor(selectedPositions.contains(position) ? Color.DKGRAY : Color.TRANSPARENT);
+        boolean selected = selectedPositions.contains(position);
+        convertView.setBackgroundColor(selected ? Color.DKGRAY : Color.TRANSPARENT);
+        try {
+            holder.fileNameView.setTextColor(context.isGreen(pane1, fileName) ? GREEN_NAME : holder.defaultNameColor);
+        } catch (Exception ignored) {}
         final int finalPosition = position;
         final File finalFile = file;
         final ZipEntryInfo finalEntry = entry;
@@ -391,14 +439,17 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
             originalClickListener = v -> context.loadFolderInPane(finalEntry.getZipFile().getParentFile(), pane1);
         } else {
             originalClickListener = isMultiSelectMode ? v -> {
+                context.clearGreen(pane1);
                 context.setSelectedPane(pane1 ? 1 : 2);
                 handleMultiSelect(finalPosition);
             } : !isInZip && finalFile != null && finalPosition != 0 && !isDirCached(finalFile) ?
                 v -> {
+                    context.clearGreen(pane1);
                     context.setSelectedPane(pane1 ? 1 : 2);
                     context.setCurrentFolder(finalFile.getParentFile(), getOldValues());
                     fileOpener.handleFileClick(finalFile, finalFileName);
                 } : (View.OnClickListener) v -> {
+                context.clearGreen(pane1);
                 context.setSelectedPane(pane1 ? 1 : 2);
                 if (isInZip)
                     fileOps.handleZipEntryClick(finalEntry);
@@ -426,6 +477,7 @@ public class MainFilesArrayAdapter extends RecyclerView.Adapter<MainFilesArrayAd
      * state (selection etc.) is also fresher than bind-time snapshots.
      */
     private void showRowMenu(int finalPosition, File file, ZipEntryInfo entry, String fileName, Object item) {
+        context.clearGreen(pane1);
         context.setSelectedPane(pane1 ? 1 : 2);
         if (isInZip) {
             context.setCurrentFolder(currentZipPath, Arrays.asList(values));
