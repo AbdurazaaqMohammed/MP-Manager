@@ -294,6 +294,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
         layoutExcludeList.setVisibility(View.GONE);
         cbExactlyMatch.setVisibility(View.GONE);
         cbHex.setVisibility(View.GONE);
+        if (lastSearchQuery == null || lastSearchQuery.isEmpty())
+            lastSearchQuery = SearchHistoryHelper.lastQuery(this, SearchHistoryHelper.KEY_ARSC_PLUS);
         etFind.setText(lastSearchQuery == null ? "" : lastSearchQuery);
         etPath.setText(initialPath != null ? initialPath : (lastSearchPath == null ? "" : lastSearchPath));
         cbSearchSubfolders.setVisibility(View.VISIBLE);
@@ -352,6 +354,8 @@ public class ArscEditorPlusActivity extends BaseActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, null)
                 .create();
+        io.github.abdurazaaqmohammed.utils.KeyboardUtil.focusOnShow(dialog, etFind,
+                lastSearchQuery != null && !lastSearchQuery.isEmpty());
         dialog.show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String q = etFind.getText() == null ? "" : etFind.getText().toString();
