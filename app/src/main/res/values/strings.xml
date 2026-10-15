@@ -267,6 +267,12 @@
     <string name="type">Type</string>
     <string name="size">Size</string>
     <string name="modified">Modified</string>
+    <string name="mtime_edit_title">Edit last modified</string>
+    <string name="mtime_option_picker">Date &amp; time picker</string>
+    <string name="mtime_option_millis">Epoch milliseconds</string>
+    <string name="mtime_option_now">Now</string>
+    <string name="mtime_updated">Last modified updated</string>
+    <string name="mtime_failed">Failed to update last modified</string>
     <string name="items">%1$d items</string>
     <string name="verify_progress">Verifying checksums…</string>
     <string name="expected_hash">Expected: %1$s</string>
