@@ -119,6 +119,17 @@ public final class SearchHistoryHelper {
         save(context, key, items);
     }
 
+    public static String lastQuery(Context context, String key) {
+        List<Item> items = load(context, key);
+        for (Item it : items) {
+            if (it != null && !it.pinned && it.query != null && !it.query.isEmpty()) return it.query;
+        }
+        for (Item it : items) {
+            if (it != null && it.query != null && !it.query.isEmpty()) return it.query;
+        }
+        return "";
+    }
+
     public static void remove(Context context, String key, String query) {
         List<Item> items = load(context, key);
         for (int i = items.size() - 1; i >= 0; i--) {
