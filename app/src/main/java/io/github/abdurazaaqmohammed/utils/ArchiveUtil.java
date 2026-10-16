@@ -18,6 +18,8 @@ import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 
+import net.lingala.zip4j.ZipFile;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -36,7 +38,7 @@ public class ArchiveUtil {
     public static boolean isSupportedArchive(String fileName) {
         if (fileName == null) return false;
         String lower = fileName.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".7z") || lower.endsWith(".rar") || lower.endsWith(".tar")
+        return lower.endsWith(".zip") || lower.endsWith(".7z") || lower.endsWith(".rar") || lower.endsWith(".tar")
                 || lower.endsWith(".tar.gz") || lower.endsWith(".tgz")
                 || lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2")
                 || lower.endsWith(".tar.xz") || lower.endsWith(".txz")
@@ -52,9 +54,19 @@ public class ArchiveUtil {
     }
 
     public static void extract(File archive, File destDir, boolean preserveTime) throws IOException {
+        extract(archive, destDir, preserveTime, null);
+    }
+
+    /**
+     * Extracts an archive, optionally with a password for encrypted zip/7z.
+     * A null password extracts normally; encrypted archives then fail with a
+     * password exception that callers can use to prompt and retry.
+     */
+    public static void extract(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
         if (!destDir.exists()) destDir.mkdirs();
         String lower = archive.getName().toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime);
+        if (lower.endsWith(".zip")) extractZip(archive, destDir, password);
+        else if (lower.endsWith(".7z")) extract7z(archive, destDir, preserveTime, password);
         else if (lower.endsWith(".rar")) extractRar(archive, destDir, preserveTime);
         else if (lower.endsWith(".tar")) extractTar(new FileInputStream(archive), destDir, preserveTime);
         else if (lower.endsWith(".tgz")) extractTar(new GzipCompressorInputStream(new FileInputStream(archive), true), destDir, preserveTime);
@@ -85,8 +97,8 @@ public class ArchiveUtil {
         else throw new IOException("Unsupported archive format: " + output.getName());
     }
 
-    private static void extract7z(File archive, File destDir, boolean preserveTime) throws IOException {
-        try (SevenZFile sevenZFile = new SevenZFile(archive)) {
+    private static void extract7z(File archive, File destDir, boolean preserveTime, char[] password) throws IOException {
+        try (SevenZFile sevenZFile = password == null ? new SevenZFile(archive) : new SevenZFile(archive, password)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 String name = sanitizeEntryName(entry.getName());
@@ -105,6 +117,55 @@ public class ArchiveUtil {
                 }
             }
         }
+    }
+
+    /**
+     * Zip extraction via zip4j: extractAll handles nested folders, mtimes and
+     * parent dirs, and refuses entries escaping the destination (canonical
+     * path check), so no manual traversal sanitizing is needed here.
+     */
+    private static void extractZip(File archive, File destDir, char[] password) throws IOException {
+        try (ZipFile zf = new ZipFile(archive)) {
+            if (password != null) zf.setPassword(password);
+            zf.extractAll(destDir.getAbsolutePath());
+        }
+    }
+
+    /**
+     * True when the archive cannot be opened without a password. Zip checks
+     * the central-directory flag; 7z (when only contents are encrypted) is
+     * detected by attempting to open it. Other formats return false.
+     */
+    public static boolean needsPassword(File archive) throws IOException {
+        String lower = archive.getName().toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".zip")) {
+            try (ZipFile zf = new ZipFile(archive)) {
+                return zf.isEncrypted();
+            }
+        }
+        if (lower.endsWith(".7z")) {
+            try (SevenZFile ignored = new SevenZFile(archive)) {
+                return false;
+            } catch (org.apache.commons.compress.PasswordRequiredException e) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * True when the failure is a password problem (missing or wrong), as
+     * opposed to a corrupted archive or I/O error, so the caller can re-prompt.
+     */
+    public static boolean isPasswordError(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof net.lingala.zip4j.exception.ZipException
+                    && ((net.lingala.zip4j.exception.ZipException) t).getType() == net.lingala.zip4j.exception.ZipException.Type.WRONG_PASSWORD)
+                return true;
+            if (t instanceof org.apache.commons.compress.PasswordRequiredException) return true;
+            if (t == t.getCause()) break;
+        }
+        return false;
     }
 
     private static void extractRar(File archive, File destDir, boolean preserveTime) throws IOException {

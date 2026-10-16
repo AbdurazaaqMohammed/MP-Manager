@@ -2,6 +2,8 @@ package io.github.abdurazaaqmohammed.adapters.main;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.text.Editable;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,7 +20,10 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
 import com.reandroid.apkeditor.Util;
+
+import java.util.concurrent.CountDownLatch;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.model.FileHeader;
@@ -686,12 +691,22 @@ public class FileOperationsHelper {
         else if (baseName.endsWith(".tar.xz")) folderName = baseName.substring(0, baseName.length() - ".tar.xz".length());
         else folderName = baseName.substring(0, baseName.lastIndexOf('.'));
         File destDir = FileUtils.getUnusedFile(new File(parent, folderName));
-        destDir.mkdirs();
-        ProgressManager pm = new ProgressManager(context, true);
-        pm.setText(context.rss.getString(R.string.extracting_to_folder, destDir.getName()));
-        pm.show();
         new Thread(() -> {
+            char[] password = null;
             try {
+                // Ask for a password BEFORE showing any progress UI, so
+                // cancelling the prompt means nothing was ever started.
+                boolean encrypted = RootStaging.needsStaging(context, archive)
+                        ? ArchiveUtil.needsPassword(RootStaging.stageForRead(context, archive.getAbsolutePath()))
+                        : ArchiveUtil.needsPassword(archive);
+                if (encrypted) {
+                    password = promptForPassword(false);
+                    if (password == null) return;
+                }
+                destDir.mkdirs();
+                ProgressManager pm = new ProgressManager(context, true);
+                pm.setText(context.rss.getString(R.string.extracting_to_folder, destDir.getName()));
+                pm.show();
                 // Root-only archives are unreadable to zip4j/tar readers:
                 // stage a copy into cache first (binary-safe).
                 File readable = archive;
@@ -703,7 +718,22 @@ public class FileOperationsHelper {
                 }
                 try {
                     boolean keepTime = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("preserve_mtime", true);
-                    ArchiveUtil.extract(readable, destDir, keepTime);
+                    while (true) {
+                        try {
+                            ArchiveUtil.extract(readable, destDir, keepTime, password);
+                            break;
+                        } catch (Exception e) {
+                            // Missing or wrong password: prompt and retry
+                            // until it succeeds or the user cancels. On a
+                            // retry the previous password was wrong — say so.
+                            if (!ArchiveUtil.isPasswordError(e)) throw e;
+                            password = promptForPassword(password != null);
+                            if (password == null) {
+                                pm.dismiss();
+                                return;
+                            }
+                        }
+                    }
                 } finally {
                     if (staged != null) {
                         //noinspection ResultOfMethodCallIgnored
@@ -713,10 +743,38 @@ public class FileOperationsHelper {
                 pm.dismiss();
                 context.handler.post(() -> context.loadFolderInPane(parent, adapter.pane1));
             } catch (Exception e) {
-                pm.dismiss();
-                new ErrorUtil(context).showError(e);
+                destDir.delete();
+                context.handler.post(() -> new ErrorUtil(context).showError(e));
             }
         }).start();
+    }
+
+    /** Shown on the background thread; blocks until dismissed. Null = cancel. */
+    private char[] promptForPassword(boolean wrongRetry) {
+        final char[][] result = new char[1][];
+        final CountDownLatch latch = new CountDownLatch(1);
+        context.handler.post(() -> {
+            TextInputEditText input = new TextInputEditText(context);
+            input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            if (wrongRetry) input.setHint(R.string.wrong_unzip_password);
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.password)
+                    .setView(input)
+                    .setPositiveButton(android.R.string.ok, (d, w) -> result[0] = passwordOf(input))
+                    .setNegativeButton(android.R.string.cancel, (d, w) -> result[0] = null)
+                    .setOnDismissListener(d -> latch.countDown())
+                    .show();
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException ignored) {
+        }
+        return result[0];
+    }
+
+    private static char[] passwordOf(TextInputEditText input) {
+        Editable text = input.getText();
+        return text == null ? new char[0] : text.toString().toCharArray();
     }
 
 }
