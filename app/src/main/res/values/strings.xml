@@ -116,6 +116,8 @@
     <string name="pw_zip">Password (no encryption if empty)</string>
     <string name="extract">Extract</string>
     <string name="extracting_to_folder">Extracting to %1$s</string>
+    <string name="password">Password</string>
+    <string name="wrong_unzip_password">Wrong password</string>
     <string name="archive_format">Archive format</string>
     <string name="back">Back</string>
     <string name="forward">Forward</string>

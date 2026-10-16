@@ -467,6 +467,20 @@ public class EntryDialogs {
         AutoCompleteTextView archiveFormatInput = compressView.findViewById(R.id.compress_format);
         archiveFormatInput.setText(archiveFormats[0]);
         archiveFormatInput.setAdapter(new ArrayAdapter<>(context, R.layout.dropdownitem, archiveFormats));
+        // Keep the filename extension in sync with the picked format, so
+        // "name.zip" + switching to .7z does not produce "name.zip.7z".
+        archiveFormatInput.setOnItemClickListener((parent2, view2, position2, id2) -> {
+            String picked = archiveFormats[position2];
+            String current = filenameEditText.getText().toString().trim();
+            String stripped = current;
+            for (String ext : archiveFormats) {
+                if (stripped.toLowerCase(Locale.ENGLISH).endsWith(ext)) {
+                    stripped = stripped.substring(0, stripped.length() - ext.length());
+                    break;
+                }
+            }
+            if (!stripped.isEmpty()) filenameEditText.setText(stripped + picked);
+        });
 
         AutoCompleteTextView compressLevelInput = compressView.findViewById(R.id.compress_level);
         compressLevelInput.setText(settings.getString("compressLevel", CompressionLevel.NO_COMPRESSION.name()));
