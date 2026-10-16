@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="4dp"
@@ -20,10 +21,12 @@
 
         <ImageView
             android:id="@+id/appBadge"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:visibility="gone" />
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="bottom|right"
+            android:contentDescription="@string/app_icon"
+            android:visibility="gone"
+            tools:ignore="RtlHardcoded" />
     </FrameLayout>
 
     <LinearLayout
