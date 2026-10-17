@@ -64,7 +64,7 @@ public class CertUtil {
         return null;
     }
 
-    private static byte[] extractCertFromSigningBlock(File apk) throws IOException {
+    public static byte[] extractCertFromSigningBlock(File apk) throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(apk, "r")) {
             long fileLen = raf.length();
             if (fileLen < 32 + 24) return null;
