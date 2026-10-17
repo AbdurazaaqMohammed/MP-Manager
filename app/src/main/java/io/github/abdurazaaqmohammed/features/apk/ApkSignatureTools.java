@@ -43,34 +43,9 @@ public class ApkSignatureTools {
         this.pane1 = pane1;
     }
 
+
     public void showCertificateDialog(File apkFile) {
-        ProgressManager pm = new ProgressManager(context, true).show();
-        new Thread(() -> {
-            try {
-                List<X509Certificate> certs = CertUtil.getCertificates(apkFile);
-                CharSequence text;
-                if (certs == null || certs.isEmpty()) text = context.getString(R.string.no_signature_found);
-                else {
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < certs.size(); i++) {
-                        if (i > 0) sb.append("\n\n");
-                        sb.append(context.getString(R.string.cert, i + 1)).append('\n');
-                        sb.append(CertUtil.describe(certs.get(i)));
-                    }
-                    text = sb;
-                }
-                pm.dismiss();
-                context.handler.post(() -> dialogUtil.getDialogBuilder()
-                        .setTitle(R.string.view_certificate)
-                        .setMessage(text)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .setNeutralButton(android.R.string.copy, (d, w) -> CopyUtil.copyToClipboard(context, text))
-                        .show());
-            } catch (Exception e) {
-                pm.dismiss();
-                new ErrorUtil(context).showError(e);
-            }
-        }).start();
+        SignatureInfoDialog.show(context, dialogUtil, apkFile);
     }
 
     public void batchSignApks(List<File> apks) {
